@@ -122,10 +122,13 @@ export type Roll = {
   changes?: { at: string; from: string; to: string; kept?: "bentrok" }[];
   /** The figure matched (its key), how it scored, and the figures tied with it. */
   figure?: { key: string; score: number; tied: string[]; at: string };
-  /** The one re-roll (v3): when, and the figure before and after. Never shown to staff. */
-  reroll?: { at: string; from: string; to: string; score: number };
+  /**
+   * The one re-roll (v3): when, the figure before and after, and (17 Nov 2026) the rarity before
+   * and after with its draw. Never shown to staff.
+   */
+  reroll?: RerollRecord;
   /** Re-rolls Admin WAM gave back (resetAt), so the person could re-roll again. Never shown to staff. */
-  rerolls?: { at: string; from: string; to: string; score: number; resetAt: string }[];
+  rerolls?: (RerollRecord & { resetAt: string })[];
 };
 
 export const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";
@@ -135,6 +138,12 @@ export const columnsFor = (catalog: Pick<Catalog, "figuresReady">) => catalog.fi
 const dnaOf = (combo: string) => createHash("sha256").update(`dna:${combo}`).digest("hex").slice(0, 10);
 /** A figure card's combo: the figure and its place, so the unique combo index guards the quota too. */
 const figureCombo = (figureId: string, slot: number) => `tokoh|${figureId}|${slot}`;
+
+export type RerollRecord = {
+  at: string; from: string; to: string; score: number;
+  /** The rarity before and after, and the number drawn for it (from 0 to ODDS_TOTAL − 1). */
+  tierFrom?: string; tierTo?: string; tierRoll?: number;
+};
 
 /** What a person's card shows. */
 export type CardView = {
@@ -416,10 +425,11 @@ export async function ensureCard(form: QForm, employeeId: string, answers: Answe
 
 /**
  * The one re-roll of my figure (v3, Hanung 16 Nov 2026), while Admin WAM keeps it open: a figure
- * drawn with crypto randomness from the free ones of my persona (else from every free one). One
- * update lets the old figure go and takes the new one, and only while I still hold the old one,
- * so a second tap never re-rolls twice; the unique indexes refuse a figure someone took a moment
- * ago, which is drawn again. The level and the number stay; the result is final.
+ * drawn with crypto randomness from the free ones of my persona (else from every free one), and
+ * (17 Nov 2026, the owner's choice) the rarity drawn again with the same odds and caps, my own
+ * card not counted. One update lets the old figure go and takes the new one, and only while I
+ * still hold the old one, so a second tap never re-rolls twice; the unique indexes refuse a figure
+ * someone took a moment ago, which is drawn again. The number stays; the result is final.
  */
 export async function rerollCard(form: Pick<QForm, "id">, employeeId: string): Promise<CardView> {
   const catalog = await catalogOf(form.id);
@@ -438,9 +448,15 @@ export async function rerollCard(form: Pick<QForm, "id">, employeeId: string): P
     const from = catalog.figures.find(item => item.id === row.figure_id)?.key ?? row.figure_id;
     const at = new Date().toISOString();
     const combo = figureCombo(pick.figure.id, 1);
-    const roll: Roll = { ...row.roll, reroll: { at, from, to: pick.figure.key, score: pick.score } };
+    // The rarity again, within the caps; my own card leaves its level first.
+    const { data: others, error: othersError } = await client.from("cq_person_cards").select("tier_key").eq("form_id", form.id).eq("trial", false).neq("employee_id", employeeId);
+    if (othersError) failed(othersError);
+    const taken: Record<string, number> = {};
+    for (const other of (others ?? []) as { tier_key: string }[]) taken[other.tier_key] = (taken[other.tier_key] ?? 0) + 1;
+    const tier = drawTier(catalog.tiers, taken, secure);
+    const roll: Roll = { ...row.roll, reroll: { at, from, to: pick.figure.key, score: pick.score, tierFrom: row.tier_key, tierTo: tier.key, tierRoll: tier.roll } };
     const { data, error } = await client.from("cq_person_cards")
-      .update({ figure_id: pick.figure.id, figure_slot: 1, reason: reasonText(persona?.class ?? "", pick.figure.name, pick.why), combo, dna: dnaOf(combo), roll, updated_at: at })
+      .update({ figure_id: pick.figure.id, figure_slot: 1, tier_key: tier.key, reason: reasonText(persona?.class ?? "", pick.figure.name, pick.why), combo, dna: dnaOf(combo), roll, updated_at: at })
       .eq("form_id", form.id).eq("employee_id", employeeId).eq("figure_id", row.figure_id).eq("trial", false)
       .select(columnsFor(catalog)).maybeSingle();
     if (error) { if (error.code === "23505") continue; failed(error); }
