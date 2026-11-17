@@ -301,7 +301,11 @@
  * The page of my tokoh (17 Nov 2026): deep in the card's colour at the top behind the card, a soft
  * glow of its rarity, a sprinkle of stars, and light where the words are.
  */
-.charPage { position: relative; min-height: 100dvh; overflow: hidden; padding-bottom: var(--space-2xl);
+/* Edge to edge: out past the questionnaire frame's side padding, and down to the bottom of the screen. */
+.charPage { position: relative; flex: 1 0 auto; min-height: 100dvh; overflow: hidden; padding-bottom: var(--space-2xl);
+  margin-inline: calc(-1 * max(var(--space-md), env(safe-area-inset-left, 0px))) calc(-1 * max(var(--space-md), env(safe-area-inset-right, 0px)));
+  padding-inline: max(0px, env(safe-area-inset-left, 0px)) max(0px, env(safe-area-inset-right, 0px)); padding-top: env(safe-area-inset-top, 0px);
+  background-color: #fff;
   background:
     radial-gradient(ellipse 90% 380px at 50% 260px, color-mix(in oklab, var(--glow) 34%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in oklab, var(--tone-deep) 92%, #000) 0, var(--tone-deep) 120px, color-mix(in oklab, var(--stage-tone) 75%, var(--tone-deep)) 250px, color-mix(in oklab, var(--stage-tone) 18%, #fff) 450px, color-mix(in oklab, var(--stage-tone) 7%, #fff) 800px, #fff 1300px); }
@@ -321,3 +325,4 @@
 
 .feats { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
 .feats li::marker { color: var(--tone-ink); }
+
