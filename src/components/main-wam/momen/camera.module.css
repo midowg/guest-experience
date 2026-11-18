@@ -10,13 +10,13 @@
   background: var(--mw-bg); color: var(--mw-text-1);
 }
 /* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
-:global(:root:has([data-momen-camera])) { --mw-toast-bottom: 176px; }
+:global(:root:has([data-momen-camera])) { --mw-toast-bottom: 208px; }
 
 .bar { display: flex; align-items: center; justify-content: space-between; height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
 .stage { position: relative; flex: 1 1 auto; min-height: 220px; }
 .stageInner { position: absolute; inset: 0; container-type: size; }
 .view {
-  --w: min(calc(100cqw + var(--mw-space-32)), calc(100cqh * 0.8));
+  --w: min(100cqw, calc(100cqh * 0.8));
   position: relative; width: var(--w); aspect-ratio: 4 / 5; margin: calc((100cqh - var(--w) * 1.25) / 2) 0 0 calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
   background: var(--mw-photo-bg);
 }
@@ -32,7 +32,7 @@
 .offAction { margin-top: var(--mw-space-8); }
 .status { position: absolute; top: var(--mw-space-12); left: 50%; z-index: 2; transform: translateX(-50%); white-space: nowrap; }
 
-.dock { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-24); padding: var(--mw-space-24) 0 calc(var(--mw-safe-bottom) + var(--mw-space-16)); }
+.dock { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-24); padding: var(--mw-space-20) var(--mw-space-8) calc(var(--mw-safe-bottom) + var(--mw-space-32) + var(--mw-space-8)); }
 .controls { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; justify-items: center; }
 .gallery {
   position: relative; display: block; width: var(--mw-touch); height: var(--mw-touch); padding: 0; border: 0; border-radius: var(--mw-radius-12);
