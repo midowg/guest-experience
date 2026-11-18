@@ -10,7 +10,7 @@
 .back { min-height: var(--mw-topbar-h); padding: 0 6px; display: grid; grid-template-columns: minmax(44px, auto) minmax(0, 1fr) auto; column-gap: 2px; }
 .backTitle { grid-column: 2; min-width: 0; font: var(--mw-type-subtitle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .start { grid-column: 1; justify-self: start; display: flex; align-items: center; }
-.end { display: flex; align-items: center; gap: var(--mw-space-4); flex: none; min-width: 0; }
+.end { display: flex; align-items: center; gap: var(--mw-space-8); flex: none; min-width: 0; }
 .back .end { grid-column: 3; justify-self: end; }
 
 /* Beranda: greeting, name, "Hari ke-2 dari 4"; the bell on the right (the only bell in the app). */
@@ -30,3 +30,9 @@
 .actionNote { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .actionRow { display: flex; gap: var(--mw-space-12); }
 .actionRow > * { flex: 1 1 0; min-width: 0; }
+
+/* Zoom 200 % (under 300 px): a title wraps and the bar grows instead of cutting it ("Rundown live"). */
+@media (max-width: 299.98px) {
+  .largeTitle, .backTitle, .kicker, .name, .day { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .back { padding-block: var(--mw-space-4); }
+}

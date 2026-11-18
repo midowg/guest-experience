@@ -1,29 +1,49 @@
 /* Jejak karbon (E01) and its Beranda card. Tokens only; the bar's segments are --mw-chart-emisi-1…3 (≥ 3:1 on the page and on cards, light and dark). */
 
-/* The Beranda card: icon, name and figure, › */
-.card { flex-direction: row; align-items: center; gap: var(--mw-space-12); color: var(--mw-on-emisi-container); }
-.cardText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); }
-.cardTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
-.cardFigure { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--mw-space-4) var(--mw-space-8); }
-.cardNumber { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
-.cardUnit { font: var(--mw-type-body-small); }
-.cardNote { font: var(--mw-type-body-small); opacity: 0.85; }
-.cardChevron { flex: none; width: 20px; height: 20px; }
+/* The Beranda tile: icon 44 (tonal green), name + one line + a thin bar, the figure in the accent green, ›. Green only on icon, figure, bar. */
+.tile { flex-direction: row; align-items: center; gap: var(--mw-space-12); min-height: 64px; }
+.tile .tileIcon { width: 44px; height: 44px; align-self: flex-start; }
+.tileMain { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); }
+.tileTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.tileSub { display: block; font: var(--mw-type-body-small); color: var(--mw-text-2); min-width: 0; }
+.tileMain .bar { height: 6px; margin-top: var(--mw-space-4); }
+.tileEnd { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+.tileNumber { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--mw-emisi-accent); }
+.tileUnit { font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
+.cardChevron { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
+.legend { display: inline; margin: 0; padding: 0; list-style: none; }
+.legendItem { display: inline; font: inherit; color: inherit; white-space: nowrap; }
+.legendItem:not(:last-child)::after { content: ","; }
+.legendName { overflow-wrap: anywhere; }
+.legendPercent { font-variant-numeric: tabular-nums; }
+.dot { flex: none; width: 8px; height: 8px; border-radius: var(--mw-radius-full); }
+/* Narrow phones: the figure goes under the bar (aligned with the text); at zoom 200 % the text goes under the icon. */
+@media (max-width: 339.98px) {
+  .tile { flex-wrap: wrap; }
+  .tileEnd { order: 3; flex-basis: 100%; flex-direction: row; align-items: baseline; gap: var(--mw-space-4); padding-left: calc(44px + var(--mw-space-12)); }
+  .cardChevron { order: 2; }
+}
+@media (max-width: 299.98px) {
+  .tileMain { flex-basis: 100%; order: 2; }
+  .cardChevron { order: 1; margin-left: auto; }
+  .tileEnd { padding-left: 0; }
+}
 
 /* The main card on the page */
-.main { gap: var(--mw-space-16); color: var(--mw-on-emisi-container); }
+.main { gap: var(--mw-space-16); }
 .mainHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
 .eyebrow { display: inline-flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-label); min-width: 0; }
 .figureBlock { display: flex; flex-direction: column; gap: var(--mw-space-4); }
 .figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--mw-space-8); }
-.number { font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); font-variant-numeric: tabular-nums; }
-.unit { font: var(--mw-type-subtitle); }
+.number { font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); font-variant-numeric: tabular-nums; color: var(--mw-emisi-accent); }
+.unit { font: var(--mw-type-subtitle); color: var(--mw-emisi-accent); }
 .perPerson { font: var(--mw-type-subtitle); }
-.updated { font: var(--mw-type-caption); opacity: 0.85; }
+.updated { font: var(--mw-type-caption); color: var(--mw-text-2); }
 
 /* Dari mana asalnya */
 .sources { display: flex; flex-direction: column; gap: var(--mw-space-12); }
-.bar { display: flex; gap: 2px; height: 12px; margin: 0; padding: 0; border-radius: var(--mw-radius-full); overflow: hidden; list-style: none; }
+.bar { display: flex; gap: 2px; height: 8px; margin: 0; padding: 0; border-radius: var(--mw-radius-full); overflow: hidden; list-style: none; }
+.barTall { height: 16px; }
 .seg { height: 100%; min-width: 4px; flex: var(--share, 1) 1 0; }
 .seg1 { background: var(--mw-chart-emisi-1); }
 .seg2 { background: var(--mw-chart-emisi-2); }
@@ -32,7 +52,7 @@
 .sourceText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); }
 .sourceTop { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mw-space-8); }
 .sourceName { display: flex; align-items: center; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-body-strong); }
-.swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.swatch { flex: none; width: 10px; height: 10px; border-radius: var(--mw-radius-full); }
 .sourceValue { flex: none; font: var(--mw-type-body-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sourceNote { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 

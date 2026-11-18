@@ -52,10 +52,32 @@ describe("Jejak karbon: kartu Beranda", () => {
     expect(card.getAttribute("aria-label")).toBeNull();
   });
 
+  it("a thin stacked bar (decoration) and a one-line legend that says every source with its percentage", () => {
+    const { container } = render(<CarbonCard view={view()} />);
+    const bar = container.querySelector('[aria-hidden="true"][class*="bar"]');
+    expect(bar).toBeTruthy();
+    expect(bar!.querySelectorAll("span").length).toBe(3);
+    const legend = container.querySelector("ul")!;
+    expect(legend.querySelectorAll("li").length).toBe(3);
+    expect(legend.textContent).toMatch(/Hotel\s*\d+%/);
+    expect(legend.textContent).toMatch(/Perjalanan\s*\d+%/);
+    expect(legend.textContent).toMatch(/Makan\s*\d+%/);
+  });
+
+  it("a list tile: leaf icon, one line 'perkiraan · sources', the total at the end, no second link", () => {
+    const { container } = render(<CarbonCard view={view()} />);
+    const link = screen.getByRole("link", { name: /Jejak karbon WAM 2026/ });
+    expect(container.querySelectorAll("a").length).toBe(1);
+    expect(link.querySelector("svg.lucide-leaf")).toBeTruthy();
+    expect(link.textContent).toMatch(/perkiraan\s·\sHotel\s\d+%\sPerjalanan\s\d+%\sMakan\s\d+%/);
+    expect(link.querySelector('[class*="tileNumber"]')!.textContent).toBe("13,3");
+  });
+
   it("nothing counted yet: says so kindly and still opens the page; from Saya it keeps Saya's address", () => {
     render(<CarbonCard view={{ kind: "belum" }} from="saya" />);
     const card = screen.getByRole("link", { name: /Perkiraan belum tersedia/ });
     expect(card.getAttribute("href")).toBe(mainWamPath.carbon("saya"));
+    expect(card.querySelector("ul")).toBeNull();
   });
 
   it("speaks English", () => {

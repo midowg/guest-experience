@@ -6,7 +6,7 @@ import { CalendarCheck, CalendarDays, ChevronRight, Clock, MapPin } from "lucide
 import type { NowView } from "@/lib/main-wam/peserta/home";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
-import { Card, CardHead, StatusPill } from "@/components/main-wam/ui";
+import { Card, CardHead, SrOnly, StatusPill } from "@/components/main-wam/ui";
 import { Until } from "../Live";
 import css from "../peserta.module.css";
 
@@ -25,7 +25,7 @@ export function NowCard({ view, absen, serverNow }: { view: NowView; absen?: Rea
   }
   if (view.kind === "selesai") {
     const next = view.tomorrow;
-    return <Card as="article" href={mainWamPath.agenda(next?.day ?? undefined)} aria-label={next ? t("peserta.now.doneLabelNext", { when: next.when, title: next.title }) : t("peserta.now.doneLabel")}>
+    return <Card as="article" href={mainWamPath.agenda(next?.day ?? undefined)}>
       <CardHead icon={<CalendarCheck />} iconTone="success" title={t("peserta.now.doneTitle")} sub={next ? `${next.when} · ${next.title}` : undefined}
         end={<ChevronRight aria-hidden className={css.trailIcon} />} />
     </Card>;
@@ -33,14 +33,14 @@ export function NowCard({ view, absen, serverNow }: { view: NowView; absen?: Rea
   const pill = view.status === "present"
     ? <StatusPill status="present">{view.statusText}</StatusPill>
     : <StatusPill status={view.status} />;
-  const label = [view.title, view.status === "live" ? t("peserta.now.spokenLive") : view.status === "present" ? t("peserta.now.spokenPresent") : view.status === "done" ? t("peserta.now.spokenDone") : view.when ?? t("peserta.now.spokenNext"), t("peserta.now.spokenDetail")].join(", ");
   return <Card as="article">
-    <Link href={mainWamPath.session(view.sessionId)} className={css.nowLink} aria-label={label}>
+    <Link href={mainWamPath.session(view.sessionId)} className={css.nowLink}>
       <span className={css.nowStatus}>
         {pill}
         {view.when && <span className={css.nowWhen}>{view.whenAt ? <Until at={view.whenAt} serverNow={serverNow} initial={view.when} /> : view.when}</span>}
       </span>
       <h2 className={css.nowTitle}>{view.title}</h2>
+      <SrOnly>{`, ${t("peserta.now.spokenDetail")}`}</SrOnly>
       <span className={css.meta}>
         <span className={css.metaItem}><Clock aria-hidden /><span>{view.time}</span></span>
         {view.place && <span className={css.metaItem}><MapPin aria-hidden /><span>{view.place}</span></span>}

@@ -54,9 +54,9 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
     <List>
       <ListRow leading={<Avatar name={name} photo={photo} size={48} />} title={fullName} sub={line || undefined}
         trailing={<Camera aria-hidden className={css.trailIcon} />} chevron={false} onClick={() => setSheet("foto")}
-        aria-label={t("peserta.me.changePhoto", { name: fullName })} aria-haspopup="dialog" />
+        spoken={t("peserta.me.changePhoto")} aria-haspopup="dialog" />
       {room
-        ? <ListRow icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} aria-label={t("peserta.me.roomLabel", { title: room.title, sub: room.sub })} />
+        ? <ListRow icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} />
         : <ListRow icon={<KeyRound />} title={t("screen.room")} sub={t("peserta.me.roomWaiting")} href={mainWamPath.room} />}
     </List>
     <ScreenSection>

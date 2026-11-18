@@ -7,7 +7,7 @@
 a.banner, button.banner { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 a.banner:active, button.banner:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 @media (hover: hover) { a.banner:hover, button.banner:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
-.bannerText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.bannerText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .bannerTitle { font: var(--mw-type-body-strong); color: var(--mw-text-1); }
 .bannerBody { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .bannerTitle + .bannerBody { margin-top: 2px; }
@@ -44,3 +44,10 @@ a.banner:active, button.banner:active { background-image: linear-gradient(var(--
 
 .spinner { flex: none; width: 24px; height: 24px; color: var(--mw-primary); }
 .spinnerSm { width: 20px; height: 20px; }
+
+/* Zoom 200 % (under 300 px): the banner's action goes under its text instead of squeezing it to a few letters. */
+@media (max-width: 299.98px) {
+  .banner { flex-wrap: wrap; }
+  .bannerText { flex: 1 1 calc(100% - 32px - var(--mw-space-12)); }
+  .bannerAction { margin: 0 -8px -12px; margin-left: auto; align-self: flex-end; }
+}

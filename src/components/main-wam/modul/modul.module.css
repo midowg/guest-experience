@@ -74,8 +74,8 @@
 /* ── Awarding ───────────────────────────────────────────────────────────────────────────────────── */
 .cardTitle { margin: 0; font: var(--mw-type-subtitle); color: var(--mw-text-1); }
 .cardSub { margin: var(--mw-space-4) 0 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.cardFoot { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-12); min-height: var(--mw-touch); }
-.winner { display: flex; align-items: center; gap: var(--mw-space-16); margin-top: var(--mw-space-4); }
+.cardFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-12); min-height: var(--mw-touch); }
+.winner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-16); margin-top: var(--mw-space-4); }
 .winnerText { flex: 1 1 auto; min-width: 0; }
 .winnerLabel { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .winnerName { margin: 0; font: var(--mw-type-subtitle); color: var(--mw-text-1); }
@@ -127,7 +127,7 @@
 .thumb { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
 .thumbBox { position: relative; aspect-ratio: 1; border-radius: var(--mw-radius-12); overflow: hidden; }
 .thumbRank { position: absolute; top: var(--mw-space-8); left: var(--mw-space-8); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface); font: var(--mw-type-caption-strong); }
-.thumbCaption { font: var(--mw-type-caption); color: var(--mw-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thumbCaption { font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .cardActions { display: flex; flex-direction: column; gap: var(--mw-space-8); margin-top: var(--mw-space-4); }
 .cardNote { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .pillRow { display: flex; }

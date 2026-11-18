@@ -174,7 +174,7 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.guides.none": "No guides yet",
   "peserta.guides.openFile": "Open file",
   "peserta.guides.openImage": "{title}, open full image",
-  "peserta.me.changePhoto": "{name}, change profile photo",
+  "peserta.me.changePhoto": "change profile photo",
   "peserta.me.roomLabel": "{title}, {sub}, room",
   "peserta.me.roomWaiting": "Room not published yet",
   "peserta.me.eventInfo": "Event info",

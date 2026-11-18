@@ -69,11 +69,11 @@ describe("a screen in English", () => {
     expect(screen.getByText("Event info")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Travel" })).toBeTruthy();
     expect(screen.getByText("Room not published yet")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Rani Contoh, change profile photo" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Rani Contoh.*change profile photo/ })).toBeTruthy();
     unmount();
     render(<SayaScreen {...props} />);
     expect(screen.getByText("Info acara")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Rani Contoh, ganti foto profil" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Rani Contoh.*ganti foto profil/ })).toBeTruthy();
   });
 
   it("a status pill in a server component follows the language", () => {

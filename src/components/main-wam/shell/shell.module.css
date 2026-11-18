@@ -48,7 +48,7 @@
 .app:has([data-mw-hide-topbar]) .top, .app:has([data-mw-hide-topbar]) .compact { display: none; }
 
 .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; outline: none; }
-.app[data-mw-nav] .main { padding-bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom)); }
+.app[data-mw-nav] .main { padding-bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom) + var(--mw-space-8)); }
 .app:has([data-mw-hide-nav]) .main { padding-bottom: 0; }
 
 /* Bottom bar: 4 tabs (5 for panitia), 64 + the home bar's safe area, fixed under the column. */

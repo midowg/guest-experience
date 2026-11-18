@@ -173,7 +173,7 @@ export const idPeserta = {
   "peserta.guides.none": "Panduan belum tersedia",
   "peserta.guides.openFile": "Buka berkas",
   "peserta.guides.openImage": "{title}, buka gambar penuh",
-  "peserta.me.changePhoto": "{name}, ganti foto profil",
+  "peserta.me.changePhoto": "ganti foto profil",
   "peserta.me.roomLabel": "{title}, {sub}, kamar",
   "peserta.me.roomWaiting": "Kamar belum diterbitkan",
   "peserta.me.eventInfo": "Info acara",

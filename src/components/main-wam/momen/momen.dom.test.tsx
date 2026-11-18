@@ -313,6 +313,16 @@ describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the 
     expect(css).not.toMatch(/\.actions \{[^}]*margin-top: auto/);
     expect(css).toMatch(/\.pile \{[^}]*height: min\(calc\(100cqh/);
   });
+  it("the front card is centred (left margin = right margin) and the quick reactions keep 8 px between their 44 px targets on any width", () => {
+    expect(css).toMatch(/\.pile \{[^}]*margin-left: calc\(\(100cqw - var\(--w\)\) \/ 2\)/);
+    expect(css).toMatch(/\.deck\[data-panel\] \.pile \{ --w: 100cqw;/);
+    expect(css).toMatch(/\.actions \{ container-type: inline-size;/);
+    const reactions = readFileSync(join(process.cwd(), "src/components/main-wam/momen/reactions.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    // 7 buttons of 44 and 6 gaps of 8 = 356; each step down drops one emoji (never the "+").
+    expect(reactions).toMatch(/@container \(max-width: 355px\) \{ \.quick > :nth-child\(6\)/);
+    expect(reactions).toMatch(/@container \(max-width: 303px\) \{ \.quick > :nth-child\(5\)/);
+    expect(reactions).not.toMatch(/max-width: 359px/);
+  });
   it("the stack draws its cards, the line and the actions inside one stage", () => {
     const { container } = render(<ToastProvider><MomenStack {...{
       mode: "baru" as const, session: null, sessionTitle: null, items: sampleFeedSemua, next: null, total: 24, startIndex: 2, offset: 0,

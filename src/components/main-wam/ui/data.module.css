@@ -38,10 +38,12 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 .sessions > :last-child .rail::before { bottom: auto; height: 22px; }
 .sessions > :only-child .rail::before { display: none; }
 .sessionBody { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--mw-space-4); }
-.sessionTitle { font: var(--mw-type-body-strong); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sessionTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
 .place { display: flex; align-items: center; gap: var(--mw-space-4); max-width: 100%; min-width: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .place > svg { flex: none; width: 16px; height: 16px; }
-.place > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.place { align-items: flex-start; }
+.place > svg { margin-top: 2px; }
+.place > span { min-width: 0; overflow-wrap: anywhere; }
 .trail { flex: none; display: flex; align-items: center; min-height: 22px; color: var(--mw-text-3); }
 .trail > svg { width: 20px; height: 20px; }
 .ok { color: var(--mw-success); }
@@ -66,7 +68,6 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
   .sessionBody { order: 2; flex: 1 1 100%; }
   .sessionBody > * { max-width: 100%; }
   .sessionBody [class] { white-space: normal; }
-  .place > span { white-space: nowrap; }
 }
 @keyframes mw-ring {
   0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-primary) 30%, transparent); }
@@ -85,7 +86,7 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 }
 .tile:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 @media (hover: hover) { .tile:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
-.tileLabel { flex: 1 1 auto; min-width: 0; font: var(--mw-type-label); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tileLabel { flex: 1 1 auto; min-width: 0; font: var(--mw-type-label); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tileBadge { flex: none; margin-right: var(--mw-space-4); }
 
 /* StackPreview: three small tilted photos, the words, a tonal "Lihat". */

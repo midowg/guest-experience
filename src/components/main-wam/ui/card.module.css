@@ -46,7 +46,7 @@
 /* SectionHeader: title (+ sub) and a text link, 44 tall. */
 .section { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: var(--mw-touch); }
 .sectionText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.sectionTitle { font: var(--mw-type-subtitle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sectionTitle { font: var(--mw-type-subtitle); overflow-wrap: anywhere; }
 .sectionSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .link {
   flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-4);

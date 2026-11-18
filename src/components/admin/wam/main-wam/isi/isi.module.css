@@ -61,6 +61,12 @@
   .actions { justify-content: flex-start; }
 }
 
+/* A touch screen: the session title (it opens the sheet) is a 44 px target and the row's buttons keep 8 px apart. */
+@media (pointer: coarse) {
+  .sessionTitle { display: inline-flex; align-items: center; min-height: 44px; }
+  .actions { gap: 8px; }
+}
+
 /* Icon buttons (44 × 44 touch). */
 .iconButton { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--cs-muted); cursor: pointer; }
 .iconButton:hover:not(:disabled) { border-color: var(--cs-line); background: var(--cs-surface-2); color: var(--cs-text); }

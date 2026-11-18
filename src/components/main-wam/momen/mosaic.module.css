@@ -9,7 +9,7 @@
 .box:fullscreen { aspect-ratio: auto; width: 100vw; height: 100vh; border-radius: 0; background: var(--mw-surface-2); }
 .inner { position: relative; }
 .canvas { display: block; width: 100%; height: 100%; }
-.zoom { position: absolute; right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 2; display: flex; flex-direction: column; gap: var(--mw-space-4); }
+.zoom { position: absolute; right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 2; display: flex; flex-direction: column; gap: var(--mw-space-8); }
 .zoomBtn { background: var(--mw-surface); box-shadow: var(--mw-elev-1); }
 .tag {
   position: absolute; z-index: 1; transform: translate(-50%, calc(-100% - 4px)); min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--mw-radius-full);

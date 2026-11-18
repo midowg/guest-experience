@@ -143,7 +143,7 @@ describe("Main WAM: light and dark tokens", () => {
       for (const kind of ["primary", "success", "warning", "error", "momen", "emisi", "wellbeing", "awarding", "accent"]) {
         text.push([`on-${kind}-container`, `${kind}-container`]);
       }
-      text.push(["on-primary", "primary"], ["on-error", "error"], ["on-accent", "accent"], ["on-accent-2", "accent"], ["error", "surface"], ["error", "bg"], ["primary-strong", "surface"], ["primary-strong", "bg"],
+      text.push(["on-primary", "primary"], ["on-error", "error"], ["on-accent", "accent"], ["on-accent-2", "accent"], ["error", "surface"], ["error", "bg"], ["emisi-accent", "surface"], ["emisi-accent", "bg"], ["primary-strong", "surface"], ["primary-strong", "bg"],
         ["inverse-on-surface", "inverse-surface"], ["inverse-on-surface-2", "inverse-surface"], ["inverse-primary", "inverse-surface"]);
       const low = text.filter(([front, back]) => contrast(pick(front), pick(back)) < 4.5).map(([front, back]) => `${front} on ${back} ${contrast(pick(front), pick(back)).toFixed(2)}`);
       expect(low).toEqual([]);

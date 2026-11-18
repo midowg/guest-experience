@@ -89,9 +89,12 @@ export function RoomSkeleton() {
 /** Beranda's Jejak karbon card while its number is counted (as tall as the card, so nothing jumps). */
 export function CarbonCardSkeleton() {
   return <SkeletonGroup label="Memuat jejak karbon">
-    <Card variant="emisi" className={css.skeletonCarbon}>
-      <Skeleton shape="box" width={40} height={40} />
-      <span className={css.skeletonCarbonText}><Skeleton width="60%" /><Skeleton shape="title" width="40%" /></span>
+    <Card>
+      <span className={css.skeletonCarbon}>
+        <Skeleton shape="box" width={44} height={44} />
+        <span className={css.skeletonCarbonText}><Skeleton width="55%" /><Skeleton width="80%" /><Skeleton shape="block" height={6} /></span>
+        <Skeleton shape="title" width={44} />
+      </span>
     </Card>
   </SkeletonGroup>;
 }
@@ -100,13 +103,13 @@ export function CarbonCardSkeleton() {
 export function CarbonSkeleton() {
   return <ScreenContent>
     <SkeletonGroup label="Memuat jejak karbon" className={css.skeletonStack}>
-      <Card variant="emisi">
+      <Card>
         <Skeleton width="40%" />
         <Skeleton shape="title" width="55%" />
         <Skeleton width="35%" />
       </Card>
       <Skeleton width="45%" />
-      <Skeleton shape="block" height={12} />
+      <Skeleton shape="block" height={16} />
       <List>
         {[0, 1, 2].map(row => <div key={row} className={css.skeletonListRow}>
           <Skeleton shape="box" width={40} height={40} />

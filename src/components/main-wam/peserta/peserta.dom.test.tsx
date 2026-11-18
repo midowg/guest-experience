@@ -126,7 +126,7 @@ describe("Saya", () => {
 
   it("the profile card opens Foto profil; the room opens Kamar; Jejak karbon only while its module is on", () => {
     const { unmount } = render(<SayaScreen {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Rani Contoh, ganti foto profil" }));
+    fireEvent.click(screen.getByRole("button", { name: /Rani Contoh.*ganti foto profil/ }));
     expect(screen.getByRole("dialog", { name: "Foto profil" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Kamar 208/ }).getAttribute("href")).toBe(mainWamPath.room);
     expect(screen.queryByRole("link", { name: /Jejak karbon/ })).toBeNull();

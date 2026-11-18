@@ -216,9 +216,9 @@ describe("Momen stack and words", () => {
     for (const tilt of tilts) {
       expect(Math.abs(tilt.angle)).toBeGreaterThanOrEqual(TILT_MIN);
       expect(Math.abs(tilt.angle)).toBeLessThanOrEqual(TILT_MAX);
-      // Never far to the left (the front card sits at the screen's left margin), a little to the right, and down.
-      expect(tilt.x).toBeGreaterThanOrEqual(-1);
-      expect(tilt.x).toBeLessThanOrEqual(10);
+      // A little either way (the front card is centred, so the pile is balanced), and down.
+      expect(tilt.x).toBeGreaterThanOrEqual(-5);
+      expect(tilt.x).toBeLessThanOrEqual(5);
       expect(tilt.y).toBeGreaterThanOrEqual(8);
       expect(tilt.y).toBeLessThanOrEqual(13);
       // The more it leans the smaller it is, so the corners stay inside the screen.

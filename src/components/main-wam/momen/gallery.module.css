@@ -1,9 +1,9 @@
 /* M05 Galeri (prototype .wam-photogrid, .wam-photo). Tokens only. */
-.bar { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-width: 0; }
-.chip { flex: 0 1 auto; min-width: 0; max-width: 60%; }
-.caption { flex: 0 1 auto; min-width: 0; font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.caption:has(.captionName) { display: flex; }
-.captionName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-4) var(--mw-space-8); min-width: 0; }
+.chip { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.caption { flex: 0 1 auto; min-width: 0; font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.caption:has(.captionName) { display: flex; gap: var(--mw-space-4); }
+.captionName { min-width: 0; overflow-wrap: anywhere; }
 .captionCount { flex: none; }
 .mosaicLink { display: flex; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mw-space-4); margin: 0; padding: 0; list-style: none; }

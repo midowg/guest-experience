@@ -30,7 +30,7 @@
 /* Rows of chips: hscroll goes to the screen edge and scrolls; wrap wraps. */
 .scroll { display: flex; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--mw-space-16)); padding: var(--mw-space-4) var(--mw-space-16); }
 .scroll::-webkit-scrollbar { display: none; }
-.wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-8); }
+.wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-16) var(--mw-space-8); }
 
 /* TagChip on the dark camera: "Untuk: Semua ▾", "Sesi: Team building ✕". 36 tall, touch 44, round. */
 .tag {
@@ -49,10 +49,10 @@ a.tag, button.tag { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tagClearable { padding-right: 0; }
 .tagClear {
   position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
-  margin-left: calc(-1 * var(--mw-space-4)); border-radius: var(--mw-radius-full); color: inherit; cursor: pointer;
+  margin-left: 0; border-radius: var(--mw-radius-full); color: inherit; cursor: pointer;
 }
-.tagClear::after { content: ""; position: absolute; inset: -4px; }
+.tagClear::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .tagClear:active, .tagMain:active { opacity: 0.72; }
-.tagRow { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--mw-space-8); }
+.tagRow { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--mw-space-16) var(--mw-space-8); }
 
 @media (prefers-reduced-motion: reduce) { .filter { transition: none; } }

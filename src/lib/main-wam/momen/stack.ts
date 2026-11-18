@@ -22,7 +22,7 @@ export function swipeDecision(dx: number, width: number, speed: number): "next" 
 
 /**
  * How a card behind the front photo lies in the pile (Instagram Instants): a tilt of 2 to 7 degrees either way, a small
- * shift (-1 to 10 px sideways, 8 to 13 px down) and a scale that shrinks with the tilt (so the corners stay inside the screen), all from the photo's id, so the
+ * shift (-5 to 5 px sideways, 8 to 13 px down) and a scale that shrinks with the tilt (so the corners stay inside the screen), all from the photo's id, so the
  * same photo lies the same way every time and the next card only straightens when it comes to the front. Pure.
  */
 export type PileTilt = { angle: number; x: number; y: number; scale: number };
@@ -38,9 +38,8 @@ export function pileTilt(id: string): PileTilt {
   const round = (value: number) => Math.round(value * 100) / 100;
   return {
     angle: round(sign * magnitude),
-    // Sideways: mostly to the right, where the stack keeps room (the front card sits at the left margin: a card must not leave the
-    // screen there); down: the bottom edge peeks. The scale shrinks with the tilt so the rotated corners stay on the screen.
-    x: round(-1 + part(16) * 11),
+    // Sideways: either way, evenly (the front card is centred, 24 from each edge: a corner must not leave the screen); down: the bottom edge peeks. The scale shrinks with the tilt so the rotated corners stay on the screen.
+    x: round(-5 + part(16) * 10),
     y: round(8 + part(24) * 5),
     scale: round(1 - 0.016 * magnitude),
   };

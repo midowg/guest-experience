@@ -1,15 +1,15 @@
 "use client";
 
-import { useId, useState, type CSSProperties } from "react";
-import { BedDouble, ChevronDown, CircleHelp, Footprints, Info, TrainFront, Utensils } from "lucide-react";
+import { useId, useState } from "react";
+import { BedDouble, ChevronDown, CircleHelp, Footprints, Info, Leaf, TrainFront, Utensils } from "lucide-react";
 import { carbonFactorLines, type CarbonSource, type CarbonView } from "@/lib/main-wam/peserta/carbon";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
 import { Card, EmptyState, IconBox, List, Pill, SectionHeader } from "@/components/main-wam/ui";
+import { CarbonBar, swatchClass } from "./CarbonBar";
 import css from "./karbon.module.css";
 
 const SOURCE_ICON: Record<CarbonSource, typeof BedDouble> = { hotel: BedDouble, perjalanan: TrainFront, makan: Utensils };
-const SWATCH = { 1: css.seg1, 2: css.seg2, 3: css.seg3 } as const;
 
 /**
  * Jejak karbon (E01, revisi 18 Nov; opened from Beranda or Saya, BOD from Ringkasan): the total as an
@@ -25,9 +25,9 @@ export function CarbonScreen({ view, howOpen = false }: { view: CarbonView; /** 
     <p className={css.auto}><Info aria-hidden />{t("peserta.carbon.auto")}</p>
   </ScreenContent>;
   return <ScreenContent>
-    <Card variant="emisi" as="article" className={css.main} aria-label={t("peserta.carbon.eyebrow")}>
+    <Card as="article" className={css.main} aria-label={t("peserta.carbon.eyebrow")}>
       <div className={css.mainHead}>
-        <span className={css.eyebrow}><IconBox icon={<Footprints />} tone="emisi" smallIcon />{t("peserta.carbon.eyebrow")}</span>
+        <span className={css.eyebrow}><IconBox icon={<Leaf />} tone="emisi" smallIcon />{t("peserta.carbon.eyebrow")}</span>
         <Pill>{t("peserta.carbon.estimate")}</Pill>
       </div>
       <div className={css.figureBlock}>
@@ -40,17 +40,15 @@ export function CarbonScreen({ view, howOpen = false }: { view: CarbonView; /** 
     <ScreenSection>
       <SectionHeader title={t("peserta.carbon.fromWhere")} />
       <div className={css.sources}>
-        <div className={css.bar} role="img" aria-label={view.barLabel}>
-          {view.sources.map(source => <span key={source.key} className={`${css.seg} ${SWATCH[source.swatch]}`} style={{ "--share": source.percent } as CSSProperties} />)}
-        </div>
+        <CarbonBar tall sources={view.sources} label={view.barLabel} />
         <List as="ul" label={t("peserta.carbon.sources")} inset={0}>
           {view.sources.map(source => {
             const Icon = SOURCE_ICON[source.key];
             return <li key={source.key} className={css.source}>
-              <IconBox icon={<Icon />} />
+              <IconBox icon={<Icon />} tone="emisi" />
               <span className={css.sourceText}>
                 <span className={css.sourceTop}>
-                  <span className={css.sourceName}><span className={`${css.swatch} ${SWATCH[source.swatch]}`} aria-hidden />{source.title}</span>
+                  <span className={css.sourceName}><span className={`${css.swatch} ${swatchClass(source.swatch)}`} aria-hidden />{source.title}</span>
                   <span className={css.sourceValue}>{source.amount} · {source.percent}%</span>
                 </span>
                 {source.note && <span className={css.sourceNote}>{source.note}</span>}

@@ -45,13 +45,17 @@
 .quickButton:active { transform: scale(0.88); }
 .quickButton[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
 .quickButton:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
-@media (max-width: 359px) { .quick > :nth-child(6) { display: none; } }
+/* Seven 44 targets need 8 between them (356); the row gives way by its own width, not the screen's: the sixth emoji first, then the fifth. */
+@container (max-width: 355px) { .quick > :nth-child(6) { display: none; } }
+@container (max-width: 303px) { .quick > :nth-child(5) { display: none; } }
+@container (max-width: 251px) { .quick > :nth-child(4) { display: none; } }
+@container (max-width: 199px) { .quick > :nth-child(3) { display: none; } }
 
 /* The sheet: groups under small heads, a grid of 44 targets. */
 .groups { display: flex; flex-direction: column; gap: var(--mw-space-16); padding-bottom: var(--mw-space-8); }
 .group { display: flex; flex-direction: column; gap: var(--mw-space-4); }
 .groupHead { margin: 0; font: var(--mw-type-label); color: var(--mw-text-2); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mw-touch), 1fr)); gap: var(--mw-space-4); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mw-touch), 1fr)); gap: var(--mw-space-8); }
 .cell {
   display: inline-flex; align-items: center; justify-content: center; height: var(--mw-touch); min-width: var(--mw-touch); padding: 0; border: 0;
   border-radius: var(--mw-radius-12); background: transparent; color: var(--mw-text-1); font-size: 26px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;

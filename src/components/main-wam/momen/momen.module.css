@@ -23,16 +23,17 @@
    item's is not, in Chromium, and the cards would resolve 100cqh to 0). */
 .deckInner { position: absolute; inset: 0; container-type: size; }
 .deck:focus-visible { outline-offset: 4px; border-radius: var(--mw-radius-24); }
-/* The pile: as wide as the deck (less 16 for the cards behind) and as tall as it, but never taller than 9:16
+/* The pile: centred in the deck (16 and 16 from the screen's edges on the panel; the front card leaves 8 + 8 more for the cards behind, so
+   the margins left and right are equal), as wide as the deck (less 16 for the cards behind) and as tall as it, but never taller than 9:16
    nor, when the room is short, wider than 4:5 allows. The photo fills it (object-fit: cover). */
 .pile {
   --w: min(calc(100cqw - var(--mw-space-16)), calc((100cqh - var(--mw-space-16)) * 0.8));
   position: relative; width: var(--w); height: min(calc(100cqh - var(--mw-space-16)), calc(var(--w) * 1.78));
-  margin-left: calc((100cqw - var(--mw-space-16) - var(--w)) / 2);
+  margin-left: calc((100cqw - var(--w)) / 2);
 }
 
 /* A panel (empty, all seen, hidden, loading) is not a photo: it takes the whole deck, not a 4:5 card, and a short deck drops its icon. */
-.deck[data-panel] .pile { --w: calc(100cqw - var(--mw-space-16)); height: calc(100cqh - var(--mw-space-16)); margin-left: 0; }
+.deck[data-panel] .pile { --w: 100cqw; height: calc(100cqh - var(--mw-space-16)); margin-left: 0; }
 @container (max-height: 300px) {
   .panel { padding: var(--mw-space-16); gap: var(--mw-space-8); }
   .panelInner { gap: var(--mw-space-8); }
@@ -92,11 +93,11 @@
   font: var(--mw-type-caption); color: var(--mw-text-2); text-align: center;
 }
 .hint > svg { flex: none; width: 16px; height: 16px; }
-.count { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count { display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-4); font: var(--mw-type-label); font-variant-numeric: tabular-nums; text-align: center; overflow-wrap: anywhere; }
 .count > svg { width: 16px; height: 16px; }
 
 /* The row under the photo: the quick reactions (nothing on one's own photo, but its height stays, so the card does not jump). */
-.actions { display: flex; align-items: center; justify-content: center; min-height: var(--mw-touch); padding: var(--mw-space-12) 0; }
+.actions { container-type: inline-size; display: flex; align-items: center; justify-content: center; min-height: var(--mw-touch); padding: var(--mw-space-12) 0; }
 
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

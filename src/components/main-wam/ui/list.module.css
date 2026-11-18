@@ -15,13 +15,18 @@
   position: relative; display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 56px;
   padding: var(--mw-space-16); text-align: left; color: var(--mw-text-1); transition: background-color var(--mw-motion-press);
 }
+/* A row whose trailing end is a button (Hubungi): at zoom 200 % the button drops under the words. */
+@media (max-width: 299.98px) {
+  .row:has(.trail > button, .trail > a) { flex-wrap: wrap; }
+  .row:has(.trail > button, .trail > a) .trail { margin-left: auto; }
+}
 a.row, button.row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 a.row:active, button.row:active { background-color: var(--mw-press); }
 @media (hover: hover) { a.row:hover, button.row:hover { background-color: var(--mw-press); } }
 .lead { flex: none; display: flex; align-items: center; color: var(--mw-text-2); }
 .text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.title { font: var(--mw-type-body-strong); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.title { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .trail { flex: none; display: flex; align-items: center; gap: var(--mw-space-4); color: var(--mw-text-3); }
 .trail > svg { width: 20px; height: 20px; }
 .value { font: var(--mw-type-body); color: var(--mw-text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -34,8 +39,8 @@ a.stat, button.stat { cursor: pointer; -webkit-tap-highlight-color: transparent;
 a.stat:active, button.stat:active { background-color: var(--mw-press); }
 @media (hover: hover) { a.stat:hover, button.stat:hover { background-color: var(--mw-press); } }
 .statText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.statTitle { font: var(--mw-type-body-strong); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.statSub { font: var(--mw-type-body-small); color: var(--mw-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.statTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.statSub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .statStatus { align-self: flex-start; margin-top: var(--mw-space-8); }
 .statEnd { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--mw-space-4); }
 .statValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -44,3 +49,12 @@ a.stat:active, button.stat:active { background-color: var(--mw-press); }
 .statStatic { padding-right: calc(var(--mw-space-16) + var(--mw-space-24) + var(--mw-space-4)); }
 
 @media (prefers-reduced-motion: reduce) { .row, a.stat, button.stat { transition: none; } }
+
+/* Zoom 200 % (under 300 px): StatRow's text goes under the icon, the value under the text; nothing is squeezed to one letter per line. */
+@media (max-width: 299.98px) {
+  .stat { flex-wrap: wrap; row-gap: var(--mw-space-8); }
+  .statStatic { padding-right: var(--mw-space-16); }
+  .statChev { order: 1; margin-left: auto; }
+  .statText { order: 2; flex: 1 1 100%; }
+  .statEnd { order: 3; flex: 1 1 100%; flex-direction: row; align-items: baseline; justify-content: flex-start; }
+}

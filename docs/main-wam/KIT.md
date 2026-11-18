@@ -37,6 +37,10 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
 8. **Status selalu kata** (+ ikon atau titik), tidak pernah warna saja: `StatusPill`, `Pill`.
 9. **Warna kategori** (momen, emisi, awarding) hanya di kartu modulnya, maksimal satu per layar. Ikon di
    daftar dan tile tetap netral. Warna semantik hanya untuk status.
+   Emisi = hijau (`--mw-emisi*`, `--mw-emisi-accent` untuk angka sorotan, `--mw-chart-emisi-1…3` tiga nuansa batang);
+   kartu Jejak karbon di Beranda = list tile (ikon daun 44 tonal hijau, judul, satu baris, batang 6 px, angka di kanan).
+   Jarak antar target sentuh >= 8 px dihitung dengan area ::after: baris chip yang membungkus memakai row-gap 16;
+   ikon aksi bilah atas, tombol aksi Toast, dan tombol zoom mozaik berjarak 8.
 10. **Teks**: bahasa Indonesia, sentence case, tanpa emoji, tanpa tanda seru. Jam `08.00–12.00`,
     tanggal `Sel, 5 Jan`, angka `1.240`, `13,6`, `93%`. Nama orang = nama panggilan.
 11. **Data contoh** di galeri/tes: nama samaran (Rani, Sari, Dimas, Contoh Satu). Foto = `PhotoFill`
@@ -53,6 +57,14 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
     fokus lewat skrip yang bukan kontrol (judul sheet, `<main>`) diberi `tabIndex={-1}` dan tanpa cincin
     (aturan tema untuk `h1`–`h6`/`main[tabindex="-1"]`). Fokus lewat skrip setelah ketukan pakai
     `quietFocus(el)` (`ui/useModal.ts`): tanpa cincin sampai ada tombol keyboard ditekan.
+15. **Teks tidak pernah dipotong diam-diam (QA UI/UX, 320 sampai 195 px).** Judul dan keterangan baris
+    (`ListRow`, `StatRow`, `SessionRow`, kartu Sekarang, baris kamar) membungkus dengan `overflow-wrap: anywhere`;
+    tidak ada `line-clamp` atau `text-overflow: ellipsis` pada isi yang hanya ada di situ. Pengecualian yang
+    disengaja: judul notifikasi (2 baris, isi penuh ada di sheet saat diketuk), judul bilah atas, kicker/nama sapaan.
+    Baris yang ujungnya tombol (`ListRow trailing={<Button>}`) menurunkan tombol ke baris bawah di bawah 300 px.
+    `DayTabs` membungkus jadi 2 x 2 bila empat hari tidak muat (tiap tab minimal 44).
+16. **Nama aksesibel** sebuah tautan/kartu memakai kata yang tampil (jangan `aria-label` yang menyusun ulang);
+    keterangan tambahan lewat `spoken` atau `<SrOnly>` (kartu Sekarang, baris profil di Saya).
 
 ## 2. Tema dan token
 
@@ -126,6 +138,8 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
 | `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya sendiri, mengikuti tema) | tidak |
+
+Tumpukan foto Momen: kartu depan di tengah (margin kiri = kanan, 24 px dari tepi layar; kartu belakang miring bergeser -5 sampai 5 px, sudutnya tetap di dalam layar). Baris reaksi cepat memilih jumlah tombol dari lebar barisnya sendiri (container query), supaya jarak antar tombol 44 px tetap ≥ 8 px: 7 tombol ≥ 356 px, 6 ≥ 304, 5 ≥ 252, lalu 3.
 
 Momen mengikuti tema seperti tab lain (tidak ada bilah atau latar gelap tersendiri). ‹/✕ kembali ke layar sebelumnya bila
 ada riwayat di aplikasi, kalau tidak ke `back.href` (dibuka dari notifikasi atau QR). Toast

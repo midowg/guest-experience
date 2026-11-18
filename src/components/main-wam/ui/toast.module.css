@@ -22,12 +22,12 @@
   font: var(--mw-type-label-lg); color: var(--mw-inverse-primary); white-space: nowrap; cursor: pointer;
 }
 /* Two actions: the text on top, the actions under it at the end (a narrow phone has no room for both beside the text). */
-.actions { flex: none; display: inline-flex; align-items: center; }
+.actions { flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-8); }
 .actions .action { margin: -10px 0; }
 .actions .action:last-child { margin-right: -8px; }
 .two { flex-wrap: wrap; row-gap: 0; }
 .two .text { flex: 1 1 calc(100% - 60px); }
-.two .actions { margin-left: auto; margin-top: calc(-1 * var(--mw-space-4)); margin-bottom: calc(-1 * var(--mw-space-8)); }
+.two .actions { margin-left: auto; margin-top: calc(-1 * var(--mw-space-4)); margin-bottom: calc(-1 * var(--mw-space-4)); }
 .action:active { background: color-mix(in srgb, var(--mw-inverse-on-surface) 10%, transparent); }
 .action:focus-visible { outline-color: var(--mw-inverse-primary); }
 /* Remaining time of the undo window, shrinking to nothing; pauses with the timer. */
@@ -46,3 +46,10 @@
   .timer { animation-timing-function: steps(var(--mw-toast-steps, 5), end); }
 }
 @keyframes mw-toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Zoom 200 % (under 300 px): the text takes the full width and the action goes under it, so the words are not squeezed. */
+@media (max-width: 299.98px) {
+  .toast { flex-wrap: wrap; row-gap: var(--mw-space-4); }
+  .toast .text { flex: 1 1 calc(100% - 32px); }
+  .toast .action { margin: calc(-1 * var(--mw-space-4)) -8px -4px auto; }
+}

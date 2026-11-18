@@ -11,7 +11,7 @@
 /* Pill: 24 tall, caption strong, never truncated (short words only); in a row narrower than its words (zoom 200 %) it wraps and grows rather than leave its card. */
 .pill {
   flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); min-height: 24px; max-width: 100%; padding: 2px var(--mw-space-8);
-  border-radius: var(--mw-radius-full); font: var(--mw-type-caption-strong); white-space: nowrap;
+  border-radius: var(--mw-radius-full); font: var(--mw-type-caption-strong); white-space: normal; overflow-wrap: anywhere;
   background: var(--mw-surface-2); color: var(--mw-text-2); font-variant-numeric: tabular-nums;
 }
 .pill > svg { flex: none; width: 16px; height: 16px; }

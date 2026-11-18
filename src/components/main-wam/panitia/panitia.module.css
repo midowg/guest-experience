@@ -4,19 +4,19 @@
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: var(--mw-space-24); }
 
 /* Rundown live row (.wam-rundownrow): time, title, place + status + "diubah", actions at the end. */
-.rrow { position: relative; display: flex; align-items: center; gap: var(--mw-space-4); min-height: 72px; padding: var(--mw-space-12) var(--mw-space-4) var(--mw-space-12) var(--mw-space-16); scroll-margin-top: calc(var(--mw-topbar-h, 56px) + var(--mw-space-16)); }
+.rrow { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-4); min-height: 72px; padding: var(--mw-space-12) var(--mw-space-4) var(--mw-space-12) var(--mw-space-16); scroll-margin-top: calc(var(--mw-topbar-h, 56px) + var(--mw-space-16)); }
 .rrowLive { background: var(--mw-primary-container); }
-.rrowText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.rrowText { flex: 1 1 9rem; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 .rrowTime { font: var(--mw-type-label); color: var(--mw-text-1); font-variant-numeric: tabular-nums; }
 .rrowTitle { font: var(--mw-type-body-strong); color: var(--mw-text-1); overflow-wrap: anywhere; }
 .rrowDone .rrowTime, .rrowDone .rrowTitle { color: var(--mw-text-2); }
 .rrowCancelled .rrowTitle, .rrowCancelled .rrowTime { color: var(--mw-text-2); text-decoration: line-through; }
 .rrowMeta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-4) var(--mw-space-8); margin-top: var(--mw-space-4); }
 .rrowPlace { font: var(--mw-type-caption); color: var(--mw-text-2); }
-.rrowActions { flex: none; display: flex; align-items: center; }
-.rrowModule { margin-right: var(--mw-space-4); }
-.edited { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.edited > svg { flex: none; width: 16px; height: 16px; }
+.rrowActions { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; max-width: 100%; margin-left: auto; }
+.rrowModule { margin-right: var(--mw-space-8); }
+.edited { display: inline-flex; align-items: flex-start; gap: var(--mw-space-4); min-width: 0; max-width: 100%; font: var(--mw-type-caption); color: var(--mw-text-2); font-variant-numeric: tabular-nums; }
+.edited > svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
 
 /* History (Riwayat perubahan). */
 .history { display: flex; flex-direction: column; gap: var(--mw-space-4); padding: var(--mw-space-12) var(--mw-space-16); }

@@ -6,16 +6,16 @@
 
 /* ── NowCard (.wam-nowcard) ── */
 .nowLink { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; color: inherit; text-decoration: none; border-radius: var(--mw-radius-12); -webkit-tap-highlight-color: transparent; }
-.nowStatus { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: 24px; }
-.nowWhen { font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
+.nowStatus { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: 24px; }
+.nowWhen { font: var(--mw-type-caption); color: var(--mw-text-2); }
 .nowTitle {
   margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); color: var(--mw-text-1);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  overflow-wrap: anywhere;
 }
 .meta { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
-.metaItem { display: flex; align-items: center; gap: var(--mw-space-4); min-width: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.metaItem > svg { flex: none; width: 16px; height: 16px; }
-.metaItem > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metaItem { display: flex; align-items: flex-start; gap: var(--mw-space-4); min-width: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.metaItem > svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.metaItem > span { min-width: 0; overflow-wrap: anywhere; }
 
 /* Contextual card: head row + one tonal button; the survey's button ends with ↗. */
 .labelIcon { display: inline-flex; align-items: center; gap: var(--mw-space-8); white-space: nowrap; }
@@ -61,7 +61,7 @@
 .kvValue { min-width: 0; font: var(--mw-type-body); color: var(--mw-text-1); }
 /* Its button drops to its own line when the row is too narrow (zoom 200%, audit T-P03). */
 .personRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-12); min-width: 0; }
-.personName { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.personName { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
 .personText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .personRole { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 
@@ -109,8 +109,8 @@
 .members { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .member { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 52px; }
 .memberText { display: flex; flex-direction: column; min-width: 0; }
-.memberName { font: var(--mw-type-body-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.memberDept { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.memberName { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.memberDept { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .room .memberDept { color: var(--mw-on-accent-container); opacity: 0.85; }
 .groupHeadBlock { display: flex; flex-direction: column; }
 .groupTitle { margin: 0; font: var(--mw-type-subtitle); }
@@ -169,6 +169,7 @@
 .notifText { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
 .notifTitle { min-width: 0; font: var(--mw-type-body); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .notifUnread .notifTitle { font: var(--mw-type-body-strong); }
+@media (max-width: 299.98px) { .notifTitle { display: block; -webkit-line-clamp: none; overflow: visible; } }
 .notifTime { flex: none; font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
 .sheetMeta { margin: 0; font: var(--mw-type-caption); color: var(--mw-text-2); }
 
@@ -177,7 +178,7 @@
 .wordmark { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); font-family: var(--mw-display-font, inherit); font-weight: 800; color: var(--mw-primary-strong); }
 .pageTitle { margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); font-family: var(--mw-display-font, inherit); }
 .form { display: flex; flex-direction: column; gap: var(--mw-space-16); }
-.forgot { align-self: flex-end; margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-12)) 0 0; }
+.forgot { align-self: flex-end; margin: calc(-1 * var(--mw-space-4)) calc(-1 * var(--mw-space-12)) 0 0; }
 .loginNote { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); text-align: center; }
 .eye {
   flex: none; width: 44px; height: 44px; margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-12)) calc(-1 * var(--mw-space-8)) 0;
