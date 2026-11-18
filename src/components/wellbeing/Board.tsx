@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import { ChevronRight, Crown, Flag, Gift, Medal, MoreVertical, Plus, Target, Timer, Trophy } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { useResource } from "@/components/app-shell/resource";
-import type { WbBoard, WbBoardRow } from "@/lib/wellbeing/app-types";
+import type { WbBoard, WbBoardPerson, WbBoardRow } from "@/lib/wellbeing/app-types";
 import { DIMENSIONS, dimensionLabels, monthRange, previousMonth, wibToday } from "@/lib/wellbeing/rules";
 import type { BoardDim, BoardPeriod } from "./api";
 import { keys, reducedMotion, useWellbeing } from "./context";
@@ -53,6 +53,7 @@ export function Board({ period, dim, onChange }: { period: BoardPeriod; dim: Boa
             ? <>
                 {period === "month" && <p className={css.raceInfo}><Timer size={16} aria-hidden="true" /><span>Berakhir <b>{formatDate(monthRange(today).to, { day: "numeric", month: "long" })}</b> · {daysLeftLabel(today).toLowerCase()}</span></p>}
                 <div style={{ marginTop: 16 }}><Empty icon={<Trophy size={24} aria-hidden="true" />}>{period === "month" ? "Belum ada yang mendapat poin bulan ini. Jadilah yang pertama." : "Belum ada poin."}</Empty></div>
+                {(data.unranked?.length ?? 0) > 0 && <AllButton label="Lihat semua karyawan" />}
               </>
             : <>
                 <Arena board={data} period={period} dim={dim} today={today} prize={period === "month" ? prize : null} />
@@ -156,10 +157,17 @@ function Standing({ board, period }: { board: WbBoard; period: BoardPeriod }) {
 }
 
 /** #4 to #8, then (further down) the one above me, me and the one below, and Lihat semua. */
-function Chasers({ board }: { board: WbBoard }) {
+/** Opens Lihat semua. */
+function AllButton({ label = "Lihat semua peringkat" }: { label?: string }) {
   const { openBoard } = useWellbeing();
+  return <button type="button" className={cx(css.btn, css.btnTonal, css.block, css.allBtn)} onClick={openBoard} aria-haspopup="dialog">
+    {label}<ChevronRight size={20} aria-hidden="true" /></button>;
+}
+
+function Chasers({ board }: { board: WbBoard }) {
   const { chasers, mine, hidden } = boardView(board);
-  if (!chasers.length && !mine.length) return null;
+  // Only a podium so far: Lihat semua still lists who has no points yet.
+  if (!chasers.length && !mine.length) return hidden > 0 ? <div className={css.sec}><AllButton /></div> : null;
   const metaOf = (row: WbBoardRow) => row.me && board.ahead ? `${num(board.ahead.points - row.points)} poin lagi ke #${board.ahead.rank}` : row.department;
 
   return <section className={css.sec} aria-labelledby="chasers-title">
@@ -172,8 +180,7 @@ function Chasers({ board }: { board: WbBoard }) {
       {mine.length > 0 && <li className={css.lbGap} aria-hidden="true"><MoreVertical size={16} /></li>}
       {mine.map(row => <LeaderRow key={row.employeeId} row={row} meta={metaOf(row)} />)}
     </ol>
-    {hidden > 0 && <button type="button" className={cx(css.btn, css.btnTonal, css.block, css.allBtn)} onClick={openBoard} aria-haspopup="dialog">
-      Lihat semua peringkat<ChevronRight size={20} aria-hidden="true" /></button>}
+    {hidden > 0 && <AllButton />}
   </section>;
 }
 
@@ -190,8 +197,11 @@ export function BoardSheet({ open, period, dim, onClose }: { open: boolean; peri
     footer={data?.me ? <MineFoot board={data} /> : undefined}>
     {!data
       ? board.error ? <ErrorState message={board.error} onRetry={() => void board.reload()} /> : <SkRows rows={8} />
-      : !data.items.length ? <Empty icon={<Trophy size={24} aria-hidden="true" />}>Belum ada poin.</Empty>
-      : <AllRanks board={data} />}
+      : !data.items.length && !data.unranked?.length ? <Empty icon={<Trophy size={24} aria-hidden="true" />}>Belum ada poin.</Empty>
+      : <>
+          {data.items.length > 0 && <AllRanks board={data} />}
+          {(data.unranked?.length ?? 0) > 0 && <NoPoints people={data.unranked} period={period} />}
+        </>}
   </Panel>;
 }
 
@@ -207,6 +217,28 @@ function AllRanks({ board }: { board: WbBoard }) {
       <LeaderRow row={row} meta={row.department} rowRef={row.me ? element => { if (element) element.id = MINE_ID; } : undefined} />
     </Fragment>)}
   </ol>;
+}
+
+/**
+ * Who has no points in the period yet, by name, without a place (18 Nov 2026): everyone active is
+ * on the list, as in the old app (someone with only older points was missing from Bulan ini).
+ */
+function NoPoints({ people, period }: { people: WbBoardPerson[]; period: BoardPeriod }) {
+  const photoOf = useRowPhoto();
+  return <>
+    <h3 className={css.groupLabel} id="no-points-title">Belum dapat poin{period === "month" ? " bulan ini" : ""} · {num(people.length)}</h3>
+    <ul className={cx(css.card, css.list, css.lbList)} aria-labelledby="no-points-title">
+      {people.map(person => <li key={person.employeeId} className={css.lbRow} data-me={person.me} aria-current={person.me ? "true" : undefined}>
+        <span className={css.lbRank} aria-hidden="true">–</span>
+        <Avatar name={person.name} photo={photoOf(person)} />
+        <span className={css.rowMain}>
+          <span className={css.lbName}><span className={css.rowTitle}>{person.name}</span>{person.me && <span className={css.meTag}>kamu</span>}</span>
+          {person.department && <span className={css.rowMeta}>{person.department}</span>}
+        </span>
+        <b className={css.lbPts}>{num(person.points)}<span className="sr-only"> poin</span></b>
+      </li>)}
+    </ul>
+  </>;
 }
 
 /** My row under the full list: always in sight; a tap scrolls the list to my place. */

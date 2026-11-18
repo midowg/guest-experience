@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { board, ledgerItems, placeOf, streakDays, streakStart, weekSeries, type LedgerActivity } from "./member-rules";
+import { board, ledgerItems, placeOf, streakDays, streakStart, unrankedOf, weekSeries, type LedgerActivity } from "./member-rules";
 
 const today = "2026-11-17";
 
@@ -36,6 +36,12 @@ describe("board", () => {
     { id: "d", name: "Contoh Empat", department: "HR", points: 300 },
     { id: "e", name: "Contoh Lima", department: "HR", points: 0 },
   ];
+  it("lists who has no points (or below zero) by name, without a place, for Lihat semua (18 Nov 2026)", () => {
+    const rows = unrankedOf([...people, { id: "f", name: "Contoh Enam", department: "Sales", points: -50 }], "e");
+    expect(rows.map(row => [row.employeeId, row.points, row.me])).toEqual([["f", -50, false], ["e", 0, true]]);
+    expect(board(people, "e").items.some(item => item.employeeId === "e")).toBe(false);
+  });
+
   it("ranks people with points, ties sharing a place and listed by name", () => {
     const { items, me } = board(people, "c");
     expect(items.map(row => [row.name, row.rank])).toEqual([["Contoh Dua", 1], ["Contoh Satu", 2], ["Contoh Tiga", 2], ["Contoh Empat", 4]]);

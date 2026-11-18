@@ -249,10 +249,13 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     const rows = people.map(person => ({ employeeId: person.id, name: person.name, department: person.department, points: pointsOf(person), me: false }));
     const mine = myPoints(period, dim);
     if (mine > 0) rows.push({ employeeId: sampleMe.id, name: sampleMe.name, department: sampleMe.department, points: mine, me: true });
-    const ranked: WbBoardRow[] = rank(rows);
+    const ranked: WbBoardRow[] = rank(rows.filter(row => row.points > 0));
     const champions = rank(people.map(person => ({ employeeId: person.id, name: person.name, department: person.department, me: false,
       points: dim === "all" ? sum(Object.values(person.lastMonth)) : person.lastMonth[dim] })));
-    return { migrated: true, period, dim, items: ranked, me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null, ...aroundMe(ranked) };
+    // No points in the period: under Lihat semua without a place (18 Nov 2026); me too while I have none.
+    const unranked = [...rows.filter(row => row.points <= 0), ...(mine > 0 ? [] : [{ employeeId: sampleMe.id, name: sampleMe.name, department: sampleMe.department, points: mine, me: true }])]
+      .sort((a, b) => a.name.localeCompare(b.name, "id"));
+    return { migrated: true, period, dim, items: ranked, me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null, ...aroundMe(ranked), unranked };
   }
 
   function streak() {
@@ -390,7 +393,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       activities.push(activity);
       return { activity, totals: totals() };
     }, 0.2, request),
-    leaderboard: (period, dim) => call(() => notReady ? { migrated: false, period, dim, items: [], me: null, of: 0, lastMonthChampion: null, near: [], ahead: null } : board(period, dim)),
+    leaderboard: (period, dim) => call(() => notReady ? { migrated: false, period, dim, items: [], me: null, of: 0, lastMonthChampion: null, near: [], ahead: null, unranked: [] } : board(period, dim)),
     ledger: () => call<WbLedger>(() => {
       if (notReady) return { migrated: false, items: [], total: 0 };
       const items: WbLedgerItem[] = [

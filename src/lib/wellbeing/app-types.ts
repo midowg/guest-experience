@@ -106,7 +106,13 @@ export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: Dimensi
   /** Everyone with points (the top 30 before 18 Nov 2026). */
   items: WbBoardRow[]; me: WbBoardRow | null; of: number; lastMonthChampion: WbBoardRow | null;
   /** Around me (two above, two below; also past the top 30), and the nearest person with more points (18 Nov 2026). Empty / null when I have no points. */
-  near: WbBoardRow[]; ahead: WbBoardRow | null };
+  near: WbBoardRow[]; ahead: WbBoardRow | null;
+  /**
+   * Active employees with no points (or below zero) in the period, by name (18 Nov 2026): listed
+   * under Lihat semua without a place, so everyone from the old app is there, as it listed all.
+   */
+  unranked: WbBoardPerson[] };
+export type WbBoardPerson = { employeeId: string; name: string; department: string; points: number; me: boolean; photo?: string | null };
 
 /** GET /api/wellbeing/ledger: every point that counts for me, newest first (activities and admin points). */
 export type WbLedgerItem = { date: string; title: string; sub: string; points: number; kind: "activity" | "admin" | "import"; dimension: DimensionId | null };

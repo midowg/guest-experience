@@ -53,6 +53,11 @@ versi Journey stabil.
 
 ## Tampilan balapan (18 Nov 2026)
 
+**Semua karyawan tercantum (18 Nov 2026):** aplikasi lama menampilkan semua akun, termasuk yang 0 poin. Di Journey,
+Peringkat hanya memberi tempat kepada yang punya poin di periode itu, jadi akun yang poinnya hanya dari bulan lalu
+tidak terlihat di "Bulan ini". Sekarang **Lihat semua** juga menampilkan "Belum dapat poin bulan ini" (urut nama,
+tanpa nomor). Kalau belum ada yang berpoin, tombol **Lihat semua karyawan** membuka daftar yang sama.
+
 Aplikasi karyawan sifatnya kompetitif (juara bulanan dapat hadiah), jadi tampilannya mengikuti aplikasi olahraga
 (Strava, Apple Fitness, Nike Run Club) tanpa meninggalkan aturan desain rumah (HIG + Material, kontras, target
 sentuh, mode gelap).

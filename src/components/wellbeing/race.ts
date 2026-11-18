@@ -50,7 +50,7 @@ export const medalOf = (rank: number): Medal | null => rank === 1 ? "gold" : ran
  * above me, me and the one below. `podiumGap` is how far I am from the podium (null on it, or
  * without points); `hidden` is how many rows only the full list shows.
  */
-export function boardView(board: Pick<WbBoard, "items" | "me" | "near">, upTo = 8) {
+export function boardView(board: Pick<WbBoard, "items" | "me" | "near"> & { unranked?: WbBoard["unranked"] }, upTo = 8) {
   const podium = board.items.slice(0, 3);
   const chasers = board.items.slice(3, upTo);
   const shown = new Set([...podium, ...chasers].map(row => row.employeeId));
@@ -64,7 +64,8 @@ export function boardView(board: Pick<WbBoard, "items" | "me" | "near">, upTo = 
   const last = podium.at(-1);
   const podiumGap = board.me && last && board.me.rank > 3 ? Math.max(0, last.points - board.me.points) : null;
   const listed = new Set([...shown, ...mine.map(row => row.employeeId)]);
-  const hidden = board.items.filter(row => !listed.has(row.employeeId)).length;
+  // Lihat semua also lists who has no points yet (18 Nov 2026).
+  const hidden = board.items.filter(row => !listed.has(row.employeeId)).length + (board.unranked?.length ?? 0);
   return { podium, chasers, mine, podiumGap, hidden };
 }
 

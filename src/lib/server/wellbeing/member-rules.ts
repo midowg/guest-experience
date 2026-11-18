@@ -1,5 +1,5 @@
 import { addDays, aroundMe, dimensionLabels, rank, type DimensionId, type ReviewStatus } from "@/lib/wellbeing/rules";
-import type { WbBoardRow, WbLedgerItem } from "@/lib/wellbeing/app-types";
+import type { WbBoardPerson, WbBoardRow, WbLedgerItem } from "@/lib/wellbeing/app-types";
 
 /*
  * The employee app's sums (17 Nov 2026), pure so they are tested without a database: the streak,
@@ -37,6 +37,12 @@ export type BoardPerson = { id: string; name: string; department: string; points
  * listed by name. `me` is the signed-in person's row (null without points); `top` rows are listed
  * (all of them unless given: the app shows a few and the rest under Lihat semua, 18 Nov 2026).
  */
+/** Everyone left out of the places (no points above zero in the period), by name, for Lihat semua (18 Nov 2026). */
+export function unrankedOf(people: readonly BoardPerson[], meId: string): WbBoardPerson[] {
+  return people.filter(person => person.points <= 0).sort((a, b) => a.name.localeCompare(b.name, "id"))
+    .map(person => ({ employeeId: person.id, name: person.name, department: person.department, points: person.points, me: person.id === meId, ...(person.photo ? { photo: person.photo } : {}) }));
+}
+
 export function board(people: readonly BoardPerson[], meId: string, top = Number.POSITIVE_INFINITY):{ items: WbBoardRow[]; me: WbBoardRow | null; near: WbBoardRow[]; ahead: WbBoardRow | null } {
   const ordered = people.filter(person => person.points > 0).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "id"));
   const rows: WbBoardRow[] = rank(ordered).map(person => ({ rank: person.rank, employeeId: person.id, name: person.name, department: person.department, points: person.points, me: person.id === meId,

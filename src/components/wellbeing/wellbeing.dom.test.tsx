@@ -271,7 +271,7 @@ describe("WellbeingApp", () => {
     const sheet = await screen.findByRole("dialog");
     const count = Number(/· (\d+) karyawan berpoin/.exec(sheet.textContent ?? "")?.[1]);
     expect(count).toBeGreaterThan(rows.length + 3);
-    expect(within(sheet).getAllByRole("listitem")).toHaveLength(count);
+    expect(within(within(sheet).getByRole("list", { name: "Peringkat" })).getAllByRole("listitem")).toHaveLength(count);
     // My row stays under the list.
     expect(within(sheet).getByRole("button", { name: /^Posisimu: peringkat \d+, [\d.]+ poin, [\d.]+ poin lagi ke #\d+\. Tampilkan di daftar$/ })).toBeTruthy();
   });
@@ -283,6 +283,20 @@ describe("WellbeingApp", () => {
     expect(within(standing).getByText("Belum masuk peringkat")).toBeTruthy();
     fireEvent.click(within(standing).getByRole("button", { name: "Catat aktivitas" }));
     expect(await within(dialog()).findByText("Kegiatan harian")).toBeTruthy();
+  });
+
+  it("lists everyone without points this month under Lihat semua, without a place (18 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wlm/peringkat");
+    app(mockApi({ latency: [0, 0], empty: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "Lihat semua peringkat" }, { timeout: 3000 }));
+    const sheet = await screen.findByRole("dialog");
+    const none = within(sheet).getByRole("list", { name: /^Belum dapat poin bulan ini · \d+$/ });
+    const mine = within(none).getAllByRole("listitem").find(row => row.getAttribute("aria-current") === "true")!;
+    expect(within(mine).getByText("kamu")).toBeTruthy();
+    expect(mine.textContent).toContain("–");
+    // Nobody is in both lists.
+    const ranked = within(within(sheet).getByRole("list", { name: "Peringkat" })).getAllByRole("listitem").map(row => row.textContent);
+    expect(ranked.some(text => text?.includes("kamu"))).toBe(false);
   });
 
   it("burns the streak flame once today is logged, an outline until then, and lights it on the first save of the day (18 Nov 2026)", async () => {

@@ -79,7 +79,7 @@ export function Avatar({ name, photo, size = "md" }: { name: string; photo?: str
 /** A board row's photo: mine from Foto profil at once (the board catches up on its next refresh). */
 export function useRowPhoto() {
   const { me } = useWellbeing();
-  return (row: WbBoardRow) => row.me ? me.photo ?? null : row.photo ?? null;
+  return (row: Pick<WbBoardRow, "me" | "photo">) => row.me ? me.photo ?? null : row.photo ?? null;
 }
 
 /**
