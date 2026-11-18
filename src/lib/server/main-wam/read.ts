@@ -10,9 +10,12 @@ import type {
   MwActivityGroup, MwAttendance, MwAwardApproval, MwAwardCategory, MwGroup, MwGuide, MwPhoto, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, RundownChange, TripDirection,
 } from "@/lib/main-wam/types";
 import { MAIN_WAM_MODULES_MIGRATION, MAIN_WAM_MOMEN_MIGRATION } from "@/lib/main-wam/settings";
+import { demoSample, samplePresence } from "@/lib/main-wam/demo-sample";
+import { sampleActivityGroups, sampleAttendance, sampleAwards, sampleGroups, sampleGuides, samplePeople, sampleRundownLog, sampleSeats, sampleSessionIds, sampleSessions, sampleTrips } from "@/lib/main-wam/sample";
 import { isSupabaseConfigured } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { demoOn, demoRundown } from "./demo";
 import { mwMissing, mwWaiting, type DbError, type Read } from "./errors";
 
 /*
@@ -31,14 +34,37 @@ function settle<T>(error: DbError | null, empty: T): Read<T> | null {
 }
 const notConfigured = <T>(empty: T): Read<T> | null => (isSupabaseConfigured() ? null : { data: empty, migrated: false });
 
+/*
+ * Mode demo (docs/main-wam/KONTRAK.md §12): where a table is empty, the sample stands in, moved to today,
+ * only while Admin has the demo on. `sampleFor` is asked after the real read came back empty, so a real
+ * event never pays for it; the sample's "me" (Rani) becomes the person asking.
+ */
+const SAMPLE_ME = samplePeople.rani.id;
+const asMe = <T,>(value: T, employeeId: string): T => JSON.parse(JSON.stringify(value).replaceAll(SAMPLE_ME, employeeId)) as T;
+/** Sample rows have this id prefix (src/lib/main-wam/sample.ts uid()). */
+const SAMPLE_PREFIX = "00000000-0000-4000-8";
+/** The sample guides without their files (there is no file behind them to open). */
+const sampleGuidesNoFiles = () => sampleGuides.map(guide => ({ ...guide, file: null }));
+async function sampleOr<T>(real: Read<T>, empty: boolean, sample: () => T, when: () => Promise<boolean> = demoOn): Promise<Read<T>> {
+  if (!empty || !(await when())) return real;
+  return { data: demoSample(sample()), migrated: true };
+}
+
 /* ── Rundown ──────────────────────────────────────────────────────────────────────────────────── */
 
 /** Every session (drafts and cancelled too: the caller filters for participants), in order. */
-async function allSessionsUncached(): Promise<Read<MwSession[]>> {
+async function realSessions(): Promise<Read<MwSession[]>> {
   const early = notConfigured<MwSession[]>([]);
   if (early) return early;
   const { data, error } = await db().from("mw_sessions").select(SESSION_COLUMNS).order("starts_at").order("sort").limit(500);
   return settle(error, [] as MwSession[]) ?? { data: (data ?? []).map(row => sessionFromRow(row)).sort(byStart), migrated: true };
+}
+/** Admin WAM's own view: what is saved, never the sample (Mode demo changes only what the app shows). */
+export const allSessionsReal = cache(realSessions);
+async function allSessionsUncached(): Promise<Read<MwSession[]>> {
+  const real = await allSessionsReal();
+  // Mode demo: no published session yet (drafts do not count), so the sample rundown.
+  return sampleOr(real, !real.data.some(session => session.status !== "draf"), () => sampleSessions, demoRundown);
 }
 export const allSessions = cache(allSessionsUncached);
 
@@ -57,6 +83,11 @@ export async function sessionById(id: string): Promise<MwSession | null> {
 
 /** Riwayat perubahan: of one session, or the latest of all (newest first). */
 export async function rundownLog(sessionId?: string, limit = 50): Promise<Read<RundownChange[]>> {
+  const real = await rundownLogReal(sessionId, limit);
+  return sampleOr(real, real.data.length === 0 && (!sessionId || sessionId === sampleSessionIds.pemaparan), () => (sessionId ? sampleRundownLog.filter(row => row.sessionId === sessionId) : sampleRundownLog), demoRundown);
+}
+/** Admin WAM's view of the log: what is saved. */
+export async function rundownLogReal(sessionId?: string, limit = 50): Promise<Read<RundownChange[]>> {
   let query = db().from("mw_rundown_log").select(RUNDOWN_LOG_COLUMNS).order("changed_at", { ascending: false }).limit(limit);
   if (sessionId) query = query.eq("session_id", sessionId);
   const { data, error } = await query;
@@ -69,25 +100,41 @@ export async function attendanceOf(filter: { employeeId?: string; sessionId?: st
   if (filter.employeeId) query = query.eq("employee_id", filter.employeeId);
   if (filter.sessionId) query = query.eq("session_id", filter.sessionId);
   const { data, error } = await query;
-  return settle(error, [] as MwAttendance[]) ?? {
+  const real = settle(error, [] as MwAttendance[]) ?? {
     migrated: true,
-    data: (data ?? []).map(row => ({ sessionId: row.session_id, employeeId: row.employee_id, checkedInAt: row.checked_in_at, method: row.method === "manual" ? "manual" : "qr", recordedBy: row.recorded_by ?? null })),
+    data: (data ?? []).map(row => ({ sessionId: row.session_id, employeeId: row.employee_id, checkedInAt: row.checked_in_at, method: row.method === "manual" ? "manual" : "qr", recordedBy: row.recorded_by ?? null } as MwAttendance)),
   };
+  if (real.data.length || !(await demoRundown())) return real;
+  // Mode demo: the sample's check-ins (the asker's own when it is one person; a session's, with the sample's people).
+  if (filter.sessionId) return { data: samplePresence(filter.sessionId), migrated: true };
+  const mine = filter.employeeId ? asMe(sampleAttendance, filter.employeeId).filter(row => row.employeeId === filter.employeeId) : sampleAttendance;
+  return { data: demoSample(mine), migrated: true };
 }
 
 /* ── Kelompok ─────────────────────────────────────────────────────────────────────────────────── */
 
-async function listGroupsUncached(): Promise<Read<MwGroup[]>> {
+async function listGroupsRealUncached(): Promise<Read<MwGroup[]>> {
   const early = notConfigured<MwGroup[]>([]);
   if (early) return early;
   const { data, error } = await db().from("mw_groups").select(GROUP_COLUMNS).order("sort").order("number").limit(200);
   return settle(error, [] as MwGroup[]) ?? { data: (data ?? []).map(row => groupFromRow(row as Record<string, unknown>)), migrated: true };
 }
+/** Admin WAM's view: what is saved. */
+export const listGroupsReal = cache(listGroupsRealUncached);
 /** Every kelompok with its members (the caller checks settings.groupsPublished for participants). */
-export const listGroups = cache(listGroupsUncached);
+export const listGroups = cache(async (): Promise<Read<MwGroup[]>> => {
+  const real = await listGroupsReal();
+  return sampleOr(real, real.data.length === 0, () => sampleGroups);
+});
 
 /** Kelompok kegiatan: of one session, or the ones a person is in (every session). */
 export async function activityGroups(filter: { sessionId?: string; employeeId?: string }): Promise<Read<MwActivityGroup[]>> {
+  const real = await realActivityGroups(filter);
+  if (real.data.length || !(await demoRundown())) return real;
+  const mine = filter.employeeId ? asMe(sampleActivityGroups, filter.employeeId).filter(group => group.members.includes(filter.employeeId!)) : sampleActivityGroups;
+  return { data: demoSample(filter.sessionId ? mine.filter(group => group.sessionId === filter.sessionId) : mine), migrated: true };
+}
+async function realActivityGroups(filter: { sessionId?: string; employeeId?: string }): Promise<Read<MwActivityGroup[]>> {
   if (filter.employeeId) {
     const { data: mine, error } = await db().from("mw_activity_group_members").select("activity_group_id").eq("employee_id", filter.employeeId).limit(100);
     const early = settle(error, [] as MwActivityGroup[]);
@@ -109,7 +156,8 @@ async function listTripsUncached(direction: TripDirection | "beide"): Promise<Re
   let query = db().from("mw_trips").select(TRIP_COLUMNS).order("sort").order("starts_at").limit(200);
   if (direction !== "beide") query = query.eq("direction", direction);
   const { data, error } = await query;
-  return settle(error, [] as MwTrip[]) ?? { data: (data ?? []).map(row => tripFromRow(row)), migrated: true };
+  const real = settle(error, [] as MwTrip[]) ?? { data: (data ?? []).map(row => tripFromRow(row)), migrated: true };
+  return sampleOr(real, real.data.length === 0, () => sampleTrips.filter(trip => direction === "beide" || trip.direction === direction), demoRundown);
 }
 const listTripsCached = cache(listTripsUncached);
 /** The steps there (berangkat) or back (pulang), or both, in order. */
@@ -118,7 +166,8 @@ export const listTrips = (direction?: TripDirection) => listTripsCached(directio
 /** A person's seats and vehicles, every step. */
 export const seatsOf = cache(async (employeeId: string): Promise<Read<MwTripSeat[]>> => {
   const { data, error } = await db().from("mw_trip_seats").select(TRIP_SEAT_COLUMNS).eq("employee_id", employeeId).limit(100);
-  return settle(error, [] as MwTripSeat[]) ?? { data: (data ?? []).map(row => tripSeatFromRow(row)), migrated: true };
+  const real = settle(error, [] as MwTripSeat[]) ?? { data: (data ?? []).map(row => tripSeatFromRow(row)), migrated: true };
+  return sampleOr(real, real.data.length === 0, () => asMe(sampleSeats, employeeId), demoRundown);
 });
 
 /* ── Panduan ──────────────────────────────────────────────────────────────────────────────────── */
@@ -127,7 +176,8 @@ async function listGuidesUncached(all: boolean): Promise<Read<MwGuide[]>> {
   let query = db().from("mw_guides").select(GUIDE_COLUMNS).order("sort").order("title").limit(100);
   if (!all) query = query.eq("published", true);
   const { data, error } = await query;
-  return settle(error, [] as MwGuide[]) ?? { data: (data ?? []).map(row => guideFromRow(row)), migrated: true };
+  const real = settle(error, [] as MwGuide[]) ?? { data: (data ?? []).map(row => guideFromRow(row)), migrated: true };
+  return all ? real : sampleOr(real, real.data.length === 0, sampleGuidesNoFiles);
 }
 const listGuidesCached = cache(listGuidesUncached);
 /** The guides, published only unless `all` (Admin WAM). */
@@ -137,8 +187,10 @@ export const listGuides = (all = false) => listGuidesCached(all);
 export async function guideBySlug(slug: string): Promise<MwGuide | null> {
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) return null;
   const { data, error } = await db().from("mw_guides").select(GUIDE_COLUMNS).eq("slug", slug).eq("published", true).maybeSingle();
-  if (error) { if (mwMissing(error)) return null; databaseError(error); }
-  return data ? guideFromRow(data) : null;
+  if (error && !mwMissing(error)) databaseError(error);
+  if (data) return guideFromRow(data);
+  // Mode demo: a sample guide while none is published.
+  return (await listGuides()).data.find(guide => guide.slug === slug && guide.id.startsWith(SAMPLE_PREFIX)) ?? null;
 }
 
 /** A guide's file key, for the file route (published only). */
@@ -174,7 +226,8 @@ async function awardCategoriesUncached(all: boolean): Promise<Read<MwAwardCatego
   let query = db().from("mw_award_categories").select(AWARD_COLUMNS).order("sort").order("title").limit(50);
   if (!all) query = query.eq("published", true);
   const { data, error } = await query;
-  return settle(error, [] as MwAwardCategory[]) ?? { data: (data ?? []).map(row => awardFromRow(row as Record<string, unknown>)), migrated: true };
+  const real = settle(error, [] as MwAwardCategory[]) ?? { data: (data ?? []).map(row => awardFromRow(row as Record<string, unknown>)), migrated: true };
+  return all ? real : sampleOr(real, real.data.length === 0, () => sampleAwards.filter(category => category.nomineeKind !== "foto"));
 }
 const awardCategoriesCached = cache(awardCategoriesUncached);
 /** Award categories with their nominees, published only unless `all`; once per request (Beranda panitia asks twice). */

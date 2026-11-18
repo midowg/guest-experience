@@ -36,9 +36,8 @@ export function reportNotes(reports: readonly ModerationReport[], max = 2): stri
 /** A card of the queue (K08). */
 export type ModerationCard = {
   id: string;
-  /** The uploader's nama panggilan, "Kelompok 7", when it was sent. */
+  /** The uploader's nama panggilan. */
   owner: string;
-  group: string | null;
   createdAt: string;
   status: PhotoStatus;
   reports: number;
@@ -54,8 +53,8 @@ export type ModerationCard = {
   hiddenReason?: string;
 };
 
-/** "Hana · Kelompok 7 · 09.40" (another day: "· Sen, 4 Jan · 20.15"). */
-export const ownerLine = (card: Pick<ModerationCard, "owner" | "group" | "createdAt">, now: Date) => [card.owner, card.group, dayClock(card.createdAt, now)].filter(Boolean).join(" · ");
+/** "Hana · 09.40" (another day: "· Sen, 4 Jan · 20.15"). */
+export const ownerLine = (card: Pick<ModerationCard, "owner" | "createdAt">, now: Date) => [card.owner, dayClock(card.createdAt, now)].filter(Boolean).join(" · ");
 
 /** What panitia may do to a photo in each status. */
 export type ModerationAction = "sembunyikan" | "tampilkan" | "hapus";

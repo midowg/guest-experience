@@ -42,7 +42,7 @@ function SummaryValue({ row }: { row: SummaryRow }) {
   return <>{value.value}</>;
 }
 
-/** B01: Ringkasan, at most four rows (a module that is off has no row; Jejak karbon is a number only). */
+/** B01: Ringkasan, at most four rows (a module that is off has no row; Jejak karbon opens its page). */
 export function RingkasanCard({ rows, children }: { rows: SummaryRow[]; children?: React.ReactNode }) {
   if (!rows.length && !children) return null;
   return <Card as="section" aria-labelledby="mw-ringkasan">

@@ -26,6 +26,8 @@ export type ModuleConfig = {
   survei: { formSlug: string | null };
   /** Mozaik: the grid (DESIGN: 40 × 15 = 600 tiles) and how often it is rebuilt. */
   mozaik: { columns: number; rows: number };
+  /** Mode demo: every screen with sample data, for trying the app before the event (docs/main-wam/KONTRAK.md §12). Off by default. */
+  demo: boolean;
 };
 
 /** Theme colour slots (the UI kit's DEFAULT_THEME keys, src/components/main-wam/theme/tokens.ts). */
@@ -91,6 +93,11 @@ export type MainWamSettings = {
   /** Kelompok are shown to participants (L01); before, "Kelompok belum diterbitkan". */
   groupsPublished: boolean;
   carbon: CarbonInputs;
+  /**
+   * Mode demo only (readMainWamSettings, never in what Admin saves): the rundown is empty, so the sample
+   * rundown is shown and the event's dates follow it (src/lib/main-wam/demo.ts). False everywhere else.
+   */
+  sampleRundown: boolean;
   updatedAt: string | null;
   /** False before migration 202611200001: everything above is the default, nothing can be saved. */
   migrated: boolean;
@@ -106,6 +113,12 @@ export type RoomPerson = { id: string; name: string; department: string; me: boo
 /** The person's room from HR's published pairing (Kuesioner → Kamar), everyone in it. */
 export type ViewerRoom = { id: string; name: string; kind: string; floor: string; note: string; people: RoomPerson[] };
 
+/** The roles the "Lihat sebagai" switch offers in Mode demo. */
+export const DEMO_ROLES = ["peserta", "panitia", "bod"] as const;
+export type DemoRole = (typeof DEMO_ROLES)[number];
+/** Mode demo's part of a viewer: whether the switch shows, the role drawn, and the account's real roles (what the server really allows). */
+export type ViewerDemo = { canSwitch: boolean; role: DemoRole; simulated: boolean; realRoles: PraWamRole[] };
+
 /** The signed-in person as Main WAM sees them (mainWamViewer, src/lib/server/main-wam/viewer.ts). */
 export type MainWamViewer = {
   id: string;
@@ -115,7 +128,10 @@ export type MainWamViewer = {
   fullName: string;
   department: string;
   photo: string | null;
+  /** What Main WAM draws for: in Mode demo a penguji's chosen role stands in for the account's own (see `demo`). */
   roles: PraWamRole[];
+  /** Set only while Mode demo is on (src/lib/main-wam/demo.ts); absent otherwise, so nothing else changes. */
+  demo?: ViewerDemo;
   /** On the penguji list, or panitia/admin (who always test). */
   tester: boolean;
   group: ViewerGroup | null;
@@ -263,7 +279,6 @@ export type NoteTone = (typeof NOTE_TONES)[number];
 /** Who a panitia's announcement is for (K06). */
 export type AnnouncementAudience =
   | { type: "semua" }
-  | { type: "kelompok"; groupIds: string[] }
   | { type: "departemen"; departments: string[] }
   | { type: "panitia" };
 export type MwNotification = {

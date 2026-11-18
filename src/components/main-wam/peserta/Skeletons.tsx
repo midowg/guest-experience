@@ -5,7 +5,7 @@ import css from "./peserta.module.css";
 /*
  * The loading.tsx of agen A's screens (one shape per screen, inside the frame: the bars stay), here
  * so the previews show the very same: Beranda (P01__status#memuat), Agenda (P03__status), Detail
- * sesi, a list screen (Saya, Panduan, Notifikasi, Pengaturan), Kelompok & kamar, Perjalanan.
+ * sesi, a list screen (Saya, Panduan, Notifikasi, Pengaturan), Kamar, Perjalanan.
  */
 
 export function BerandaSkeleton() {
@@ -78,11 +78,41 @@ export function ListSkeleton({ label, groups = [2, 2, 3] }: { label: string; gro
   </ScreenContent>;
 }
 
-export function GroupRoomSkeleton() {
+export function RoomSkeleton() {
   return <ScreenContent>
-    <SkeletonGroup label="Memuat kelompok dan kamar" className={css.skeletonStack}>
+    <SkeletonGroup label="Memuat kamar" className={css.skeletonStack}>
       <Skeleton shape="block" height={260} />
-      <Skeleton shape="block" height={220} />
+    </SkeletonGroup>
+  </ScreenContent>;
+}
+
+/** Beranda's Jejak karbon card while its number is counted (as tall as the card, so nothing jumps). */
+export function CarbonCardSkeleton() {
+  return <SkeletonGroup label="Memuat jejak karbon">
+    <Card variant="emisi" className={css.skeletonCarbon}>
+      <Skeleton shape="box" width={40} height={40} />
+      <span className={css.skeletonCarbonText}><Skeleton width="60%" /><Skeleton shape="title" width="40%" /></span>
+    </Card>
+  </SkeletonGroup>;
+}
+
+/** Jejak karbon (E01) while it loads: the main card, the bar and three rows. */
+export function CarbonSkeleton() {
+  return <ScreenContent>
+    <SkeletonGroup label="Memuat jejak karbon" className={css.skeletonStack}>
+      <Card variant="emisi">
+        <Skeleton width="40%" />
+        <Skeleton shape="title" width="55%" />
+        <Skeleton width="35%" />
+      </Card>
+      <Skeleton width="45%" />
+      <Skeleton shape="block" height={12} />
+      <List>
+        {[0, 1, 2].map(row => <div key={row} className={css.skeletonListRow}>
+          <Skeleton shape="box" width={40} height={40} />
+          <span><Skeleton width="55%" /><Skeleton width="35%" /></span>
+        </div>)}
+      </List>
     </SkeletonGroup>
   </ScreenContent>;
 }

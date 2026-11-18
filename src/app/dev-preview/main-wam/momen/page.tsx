@@ -15,7 +15,7 @@ import { Images } from "lucide-react";
 import { sessionChoice } from "@/lib/main-wam/momen/sessions";
 import { flushedText, newPhotosText, sentText } from "@/lib/main-wam/momen/stack";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
-import { SAMPLE_TOTAL, sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleReactions, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
+import { SAMPLE_TOTAL, sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleReactions, sampleReactors, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
 import { sampleSessionIds, sampleSessions, sampleTime } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
 import { DemoToast } from "./DemoToast";
@@ -28,11 +28,11 @@ export const dynamic = "force-dynamic";
  */
 
 const LAYAR = [
-  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-sheet-reaksi", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong",
+  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-sheet-reaksi", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong",
   "M02-dari-galeri", "M03", "M04",
   "M05", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
   "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
-  "U01", "U01-umum", "U01-pilih-sesi", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
+  "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
   "P01-kartu", "P04-baris", "M01-memuat-halaman",
 ] as const;
 
@@ -76,6 +76,10 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M01-reaksi-saya": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(24, HEART)), demo: {} })} />);
     case "M01-reaksi-banyak": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, manyReactions), demo: {} })} />);
     case "M01-sheet-reaksi": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(24, HEART)), demo: { sheet: "reaksi" } })} />);
+    case "M01-daftar-reaksi": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(8, HEART)), demo: { sheet: "daftar", reactors: sampleReactors(sampleReactions(8, HEART)) } })} />);
+    case "M01-daftar-reaksi-banyak": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, manyReactions), demo: { sheet: "daftar", reactors: sampleReactors(manyReactions) } })} />);
+    case "M01-daftar-reaksi-memuat": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(8, HEART)), demo: { sheet: "daftar", reactors: "memuat" } })} />);
+    case "M01-daftar-reaksi-gagal": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(8, HEART)), demo: { sheet: "daftar", reactors: "gagal" } })} />);
     case "M01-memuat": return at(momen, <MomenStack {...stack({ demo: { loading: true } })} />);
     case "M01-memuat-halaman": return at(momen, <StackSkeleton />);
     case "M01-kosong": return at(momen, <MomenStack {...stack({ items: [], total: 0, anyPhotos: false, demo: {} })} />);
@@ -109,11 +113,11 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
   /* M06: Mozaik. */
   const mozaik = mainWamPath.mosaic();
   switch (layar) {
-    case "M06": return at(mozaik, <Mosaic initial={sampleMosaic()} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
-    case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic()} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
     case "M06-tandai-kosong": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 0)} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
     case "M06-memuat": return at(mozaik, <MosaicSkeleton />);
-    case "M06-lengkap": return at(mozaik, <Mosaic initial={sampleMosaic(1)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06-lengkap": return at(mozaik, <Mosaic initial={sampleMosaic(1, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
   }
 
   /* U01–U05, O04: the camera at Team building (15.20). */
@@ -124,7 +128,6 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
   switch (layar) {
     case "U01": return at(kamera, camera({ phase: "kamera", live: "contoh" }), "teamBuilding");
     case "U01-umum": return at(kamera, camera({ phase: "kamera", live: "contoh" }, { now: new Date("2027-01-05T14:45:00+07:00") }), "teamBuilding");
-    case "U01-pilih-sesi": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "sesi" }), "teamBuilding");
     case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={sentText(1, lang)} sub={t(lang, "momen.cam.sentSession", { title: "Team building" })} action={t(lang, "momen.cam.undo")} secondary={t(lang, "ui.see")} timer thumb /></>, "teamBuilding");
     case "U02-dibatalkan": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={t(lang, "momen.cam.cancelledOne")} tone="info" /></>, "teamBuilding");
     case "U03": return at(kamera, <>{camera({ phase: "kamera", live: "contoh", pill: 2, offline: true })}<DemoToast text={t(lang, "momen.cam.sendsOnline")} action="Batalkan" thumb /></>, "teamBuilding");

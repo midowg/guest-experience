@@ -1,10 +1,10 @@
 -- Execute ONLY against the disposable PostgreSQL migration-check container.
--- Migrations 202611200201 and 202611210001 (Main WAM area B, Momen + Mozaik, reactions): who sees which photo (kelompok photos only
+-- Migrations 202611200201, 202611210001 and 202611230001 (Main WAM area B, Momen + Mozaik, reactions, who reacted): who sees which photo (kelompok photos only
 -- for their kelompok, Batalkan's 5 seconds, reported photos hidden for the reporter), keyset paging
 -- of the stack and the gallery, the session counts, reports (one per person, the third hides the
 -- photo once), the mosaic's stable placement and its version (ETag), a nominated photo that cannot
 -- be deleted (with 202611200003), one reaction per person on a photo (set, replaced, taken back, counted, never
--- on one's own, a hidden or an unseen photo), and that none of it is open to the public keys.
+-- on one's own, a hidden or an unseen photo), the list of who reacted with what (only on a photo the viewer may see), and that none of it is open to the public keys.
 begin;
 set local role service_role;
 do $$
@@ -163,6 +163,28 @@ begin
   perform public.mw_photo_react(p_mid, rani, g4, null);
   raise notice 'PASS: reactions (one per person, replaced, taken back, counted, never on one''s own, hidden or unseen photo)';
 
+  -- Who reacted with what: rows of (employee_id, emoji, created_at), the newest first, only on a photo the viewer may see.
+  perform public.mw_photo_react(p_mid, rani, g4, fire);
+  update public.mw_photo_reactions set created_at = now() - interval '1 hour' where photo_id = p_mid and employee_id <> rani;
+  select count(*) into n from public.mw_photo_reactions where photo_id = p_mid;
+  if (select count(*) from public.mw_photo_reactors(p_mid, rani)) <> n or n < 2 then raise exception 'the list should hold every reaction of the photo: % of %', (select count(*) from public.mw_photo_reactors(p_mid, rani)), n; end if;
+  if (select employee_id from public.mw_photo_reactors(p_mid, rani) limit 1) <> rani or (select emoji from public.mw_photo_reactors(p_mid, rani) limit 1) <> fire then raise exception 'the newest reaction (Rani''s fire) should come first'; end if;
+  if (select count(distinct employee_id) from public.mw_photo_reactors(p_mid, dimas)) <> n then raise exception 'one row per person'; end if;
+  if (select count(*) from public.mw_photo_reactors(p_mid, sari)) <> n then raise exception 'the owner sees who reacted to their photo'; end if;
+  perform public.mw_photo_react(p_mid, rani, g4, null);
+  if exists (select 1 from public.mw_photo_reactors(p_mid, dimas) where employee_id = rani) then raise exception 'a reaction taken back should leave the list'; end if;
+  -- A photo the viewer may not see has no list: hidden by panitia, within its 5 seconds, another kelompok's, unknown. Its owner still sees it (Fotoku).
+  insert into public.mw_photo_reactions (photo_id, employee_id, emoji) values (p_hidden, rani, heart), (p_fresh, rani, heart), (p_k2, rani, heart);
+  if exists (select 1 from public.mw_photo_reactors(p_hidden, rani)) or exists (select 1 from public.mw_photo_reactors(p_fresh, rani)) or exists (select 1 from public.mw_photo_reactors(p_k2, rani)) then
+    raise exception 'a photo the viewer may not see should list nobody';
+  end if;
+  if (select count(*) from public.mw_photo_reactors(p_hidden, ayu)) <> 1 or (select count(*) from public.mw_photo_reactors(p_fresh, yoga)) <> 1 or (select count(*) from public.mw_photo_reactors(p_k2, dimas)) <> 1 then
+    raise exception 'the owner should see the list of their own photo, whatever its status';
+  end if;
+  if exists (select 1 from public.mw_photo_reactors(gen_random_uuid(), rani)) then raise exception 'unknown photo'; end if;
+  delete from public.mw_photo_reactions where photo_id in (p_hidden, p_fresh, p_k2);
+  raise notice 'PASS: who reacted with what (only on a photo the viewer sees)';
+
   -- Reports: not one's own; one per person; the third reporter hides it once.
   begin perform * from public.mw_photo_report(p_mid, sari, 'tidak_pantas', '', 3); raise exception 'UNEXPECTED: reporting one''s own photo';
   exception when raise_exception then if sqlerrm <> 'MW_PHOTO_OWN' then raise; end if; end;
@@ -170,6 +192,8 @@ begin
   if r.reporters <> 1 or r.hidden or r.owner_id <> sari then raise exception 'first report: %', r; end if;
   -- Hidden for the reporter only.
   if exists (select 1 from public.mw_photos_for(rani, g4, 'semua') where id = p_mid) then raise exception 'a reported photo shown to its reporter'; end if;
+  if exists (select 1 from public.mw_photo_reactors(p_mid, rani)) then raise exception 'a photo hidden for its reporter should list nobody for them'; end if;
+  if not exists (select 1 from public.mw_photo_reactors(p_mid, dimas)) then raise exception 'others still see who reacted'; end if;
   begin perform public.mw_photo_react(p_mid, rani, g4, fire); raise exception 'UNEXPECTED: a reaction on a photo hidden for its reporter';
   exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
   if not exists (select 1 from public.mw_photos_for(dimas, g2, 'semua') where id = p_mid) then raise exception 'one report should not hide it for others'; end if;
@@ -270,6 +294,8 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin perform public.mw_photo_reactions(gen_random_uuid(), gen_random_uuid()); raise exception 'UNEXPECTED: anon reads reactions';
   exception when insufficient_privilege then null; end;
+  begin perform * from public.mw_photo_reactors(gen_random_uuid(), gen_random_uuid()); raise exception 'UNEXPECTED: anon reads who reacted';
+  exception when insufficient_privilege then null; end;
   begin perform count(*) from public.mw_photo_reactions; raise exception 'UNEXPECTED: anon reads the reactions table';
   exception when insufficient_privilege then null; end;
   begin perform public.mw_mosaic_version(100); raise exception 'UNEXPECTED: anon reads the mosaic version';
@@ -282,6 +308,8 @@ do $$ begin
   begin perform * from public.mw_photo_report(gen_random_uuid(), gen_random_uuid(), 'tidak_pantas', '', 3); raise exception 'UNEXPECTED: authenticated reports';
   exception when insufficient_privilege then null; end;
   begin perform public.mw_photo_react(gen_random_uuid(), gen_random_uuid(), null, chr(10084)); raise exception 'UNEXPECTED: authenticated reacts';
+  exception when insufficient_privilege then null; end;
+  begin perform * from public.mw_photo_reactors(gen_random_uuid(), gen_random_uuid()); raise exception 'UNEXPECTED: authenticated reads who reacted';
   exception when insufficient_privilege then null; end;
   begin perform * from public.mw_photo_session_counts(gen_random_uuid(), null, 'semua'); raise exception 'UNEXPECTED: authenticated counts';
   exception when insufficient_privilege then null; end;

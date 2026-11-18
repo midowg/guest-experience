@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, FlaskConical, X } from "lucide-react";
 import { mainWamScreen, showsBell, showsBottomBar, type MainWamScreen } from "@/lib/main-wam/screen";
 import { mainWamPath } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
@@ -39,7 +39,7 @@ export type ShellGreeting = {
  * Safe areas (notch, home bar) are padded; on a wide screen the app is a phone-wide column.
  * Wrap it in <MainWamTheme>. `screen` forces a frame (previews only).
  */
-export function MainWamShell({ children, greeting, unread = 0, badges, committee = false, screen: forced }: {
+export function MainWamShell({ children, greeting, unread = 0, badges, committee = false, demo = false, screen: forced }: {
   children: ReactNode;
   /** Beranda's head (from the layout, on the server). */
   greeting?: ShellGreeting;
@@ -49,6 +49,8 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   badges?: TabBadges;
   /** The viewer is panitia: the bottom bar has the fifth tab, Panitia (decided on the server, showsCommitteeTab). */
   committee?: boolean;
+  /** Mode demo is on: a small "Mode demo · data contoh" strip above the top bar, so sample data is never taken for real (Admin WAM → Pengaturan). */
+  demo?: boolean;
   /** Preview only: draw this frame instead of the address's. */
   screen?: MainWamScreen | null;
 }) {
@@ -130,12 +132,13 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
     }
   }
 
-  return <div className={css.app} data-mw-nav={nav ? "" : undefined}
+  return <div className={css.app} data-mw-nav={nav ? "" : undefined} data-mw-demo={demo && !camera ? "" : undefined}
     style={nav ? { ["--mw-toast-bottom" as string]: "calc(var(--mw-nav-h) + var(--mw-space-16))" } : undefined}>
     <ToastProvider>
       <ActionsSlotContext.Provider value={slot}>
         <div className={css.column}>
           <a className={css.skip} href="#isi">{t("shell.skip")}</a>
+          {demo && !camera && <div className={css.demo} role="status"><FlaskConical aria-hidden />{t("demo.banner")}</div>}
           {top}
           <main id="isi" tabIndex={-1} className={css.main}>{children}</main>
           {nav && <BottomNav current={screen?.tab ?? null} badges={badges} committee={committee} />}

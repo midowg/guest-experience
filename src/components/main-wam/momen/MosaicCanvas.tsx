@@ -12,7 +12,7 @@ import css from "./mosaic.module.css";
  * The Mozaik drawn on one <canvas> (RISET §9: never hundreds of animated elements): cells square,
  * the grid centred in a 16:9 box (the venue TV's shape). Empty cells are thin outlines (inside the
  * letters tinted with the event colour); a filled cell shows its 160 px tile, inside the letters
- * under the event colour, so "WAM 2026" stands out as photos arrive. Tiles are cached per photo, so
+ * under the event colour and outside them faded, so "WAM 2026" stands out as photos arrive. Tiles are cached per photo, so
  * a refresh draws only what changed. Zoom with + / − (or two fingers), pan by scrolling.
  * "Tandai fotoku": the others dimmed, one's own outlined and numbered.
  */
@@ -40,7 +40,7 @@ function readColors(element: HTMLElement): Colors {
   const token = (name: string) => style.getPropertyValue(name).trim() || "transparent";
   const accent = token("--mw-accent");
   return {
-    outline: token("--mw-outline-2"), accent, accentSoft: rgba(accent, 0.12), accentLine: rgba(accent, 0.55), primary: token("--mw-primary"),
+    outline: token("--mw-outline-2"), accent, accentSoft: rgba(accent, 0.28), accentLine: rgba(accent, 0.8), primary: token("--mw-primary"),
     // The placeholder tokens are gradients: a cell takes their first colour.
     ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
   };
@@ -131,6 +131,9 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
           context.strokeRect(x + 0.5, y + 0.5, side - 1, side - 1);
           continue;
         }
+        // A photo outside the letters is shown faded, so the letters (full strength, under the event colour) stay readable
+        // however colourful the photos around them are.
+        if (!letter) context.globalAlpha *= 0.38;
         const image = images.current.get(tile.id);
         if (image?.complete && image.naturalWidth) {
           const crop = Math.min(image.naturalWidth, image.naturalHeight);

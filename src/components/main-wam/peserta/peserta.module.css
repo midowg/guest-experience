@@ -74,6 +74,7 @@
 }
 .footLink > svg { width: 16px; height: 16px; }
 .version { margin: 0; text-align: center; font: var(--mw-type-caption); color: var(--mw-text-2); }
+.settingsFoot { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); }
 .bullets { display: flex; flex-direction: column; gap: var(--mw-space-16); margin: 0; padding: 0; list-style: none; }
 .bullets > li { display: flex; align-items: center; gap: var(--mw-space-12); font: var(--mw-type-body); color: var(--mw-text-1); }
 .faq { display: flex; flex-direction: column; gap: var(--mw-space-16); margin: 0; }
@@ -87,7 +88,7 @@
 .statusError { color: var(--mw-error); }
 .buttonRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-12); }
 
-/* ── Kelompok & kamar (L01 x-room, x-member) ── */
+/* ── Kamar (L01 x-room, x-member) ── */
 .room {
   display: flex; flex-direction: column; gap: var(--mw-space-16); padding: var(--mw-space-20); border-radius: var(--mw-radius-16);
   background: var(--mw-accent-container); color: var(--mw-on-accent-container);
@@ -256,3 +257,6 @@
   .splash { animation: mw-splash-gone 0s linear 1.2s forwards; }
   .splashHold { animation: none; }
 }
+
+.skeletonCarbon { flex-direction: row; align-items: center; gap: var(--mw-space-12); }
+.skeletonCarbonText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-8); }

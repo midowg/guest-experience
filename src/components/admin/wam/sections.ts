@@ -10,7 +10,7 @@ import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
  */
 export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner"
   // Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): Pengaturan (fondasi), Isi acara and its tabs (agen E), Modul acara and its tab (agen D).
-  | "mw-pengaturan" | "mw-isi" | "mw-kelompok" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent";
+  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -45,8 +45,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "tv", label: "TV Announcement", group: "Untuk peserta", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
   // Main WAM: the app during WAM itself, hidden until its mode is switched (17 Nov 2026).
   { key: "mw-pengaturan", label: "Pengaturan", group: "Main WAM", href: mainWamAdminPath.settings, icon: SlidersHorizontal, summary: "Mode acara, penguji, modul yang aktif, dan tema Main WAM." },
-  { key: "mw-isi", label: "Isi acara", group: "Main WAM", href: mainWamAdminPath.rundown, icon: ListChecks, summary: "Rundown, kelompok, kamar, perjalanan, dan panduan untuk peserta." },
-  { key: "mw-kelompok", label: "Kelompok", group: "Main WAM", href: mainWamAdminPath.groups, icon: ListChecks, summary: "Kelompok, koordinator, anggota, dan kelompok kegiatan.", owner: "mw-isi" },
+  { key: "mw-isi", label: "Isi acara", group: "Main WAM", href: mainWamAdminPath.rundown, icon: ListChecks, summary: "Rundown, kamar, perjalanan, dan panduan untuk peserta." },
   { key: "mw-kamar", label: "Kamar", group: "Main WAM", href: mainWamAdminPath.rooms, icon: ListChecks, summary: "Lantai dan catatan kamar dari pembagian kamar HR.", owner: "mw-isi" },
   { key: "mw-perjalanan", label: "Perjalanan", group: "Main WAM", href: mainWamAdminPath.travel, icon: ListChecks, summary: "Kumpul, kereta, shuttle, dan kursi tiap orang.", owner: "mw-isi" },
   { key: "mw-panduan", label: "Panduan", group: "Main WAM", href: mainWamAdminPath.guides, icon: ListChecks, summary: "Denah, hotel dan fasilitas, dress code, tata tertib.", owner: "mw-isi" },

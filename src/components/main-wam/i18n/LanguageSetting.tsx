@@ -11,13 +11,14 @@ import css from "./language.module.css";
  * `mw_lang` cookie). Choosing one changes the screen at once; the server then reads it again
  * (router.refresh in LangProvider) so what it wrote follows. Each language is named in itself.
  */
-export function LanguageSetting() {
+export function LanguageSetting({ bare = false }: { /** Without its own card and label (inside a sheet that already names it). */ bare?: boolean }) {
   const { lang, setLang } = useLang();
   const t = useT();
-  return <Card className={css.card}>
-    <span className={css.label}>{t("lang.label")}</span>
+  const body = <>
+    {!bare && <span className={css.label}>{t("lang.label")}</span>}
     <Segmented label={t("lang.group")} value={lang} onChange={(next: Lang) => setLang(next)}
       options={LANGS.map(value => ({ value, label: LANG_NAMES[value] }))} />
     <p className={css.note}>{t("lang.note")}</p>
-  </Card>;
+  </>;
+  return bare ? <div className={css.bare}>{body}</div> : <Card className={css.card}>{body}</Card>;
 }

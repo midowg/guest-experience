@@ -27,7 +27,7 @@ export type TravelProps = {
 /**
  * Perjalanan (L03, revisi 16 Nov): Berangkat and Pulang (the segmented switches at once, both are
  * here), the steps as a line (kumpul with "Buka peta", the train as a ticket with the person's
- * coach and seat, the shuttle with their bus, arriving at the hotel to Kelompok & kamar), a changed
+ * coach and seat, the shuttle with their bus, arriving at the hotel to Kamar), a changed
  * gathering time on top, and the coordinator to call.
  */
 export function TravelScreen({ initial, labels, steps, coordinators, changed, migrated }: TravelProps) {
@@ -41,7 +41,7 @@ export function TravelScreen({ initial, labels, steps, coordinators, changed, mi
     <Segmented label={t("peserta.travel.direction")} value={direction} onChange={value => setDirection(value as TripDirection)}
       options={[{ value: "berangkat", label: labels.berangkat }, { value: "pulang", label: labels.pulang }]} />
     {!migrated || !list.length
-      ? <Card><EmptyState size="s" icon={<TrainFront />} title={t("peserta.travel.empty")}>{t("peserta.group.waiting")}</EmptyState></Card>
+      ? <Card><EmptyState size="s" icon={<TrainFront />} title={t("peserta.travel.empty")}>{t("peserta.room.waiting")}</EmptyState></Card>
       : <ol className={css.stepper} aria-label={t(direction === "berangkat" ? "peserta.travel.stepsOut" : "peserta.travel.stepsBack")}>
         {list.map(step => {
           const Mark = MARK[step.kind];
@@ -49,7 +49,7 @@ export function TravelScreen({ initial, labels, steps, coordinators, changed, mi
             <span className={css.stepMark} aria-hidden><Mark /></span>
             <div className={css.stepBody}>
               {step.toRoom
-                ? <Link href={mainWamPath.groupRoom} className={css.stepLink}>
+                ? <Link href={mainWamPath.room} className={css.stepLink}>
                   <span><span className={css.stepTitle}>{step.title}</span>{step.sub && <span className={css.stepSub}>{step.sub}</span>}</span>
                   <ChevronRight aria-hidden />
                 </Link>

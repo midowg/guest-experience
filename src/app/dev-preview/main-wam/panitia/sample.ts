@@ -4,7 +4,7 @@ import type { ModerationCard } from "@/lib/main-wam/panitia/moderation";
 import { liveOfDay, type LiveSession } from "@/lib/main-wam/panitia/rundown";
 import { summaryRows, type SummaryInput } from "@/lib/main-wam/panitia/summary";
 import { timeRange, wibDate } from "@/lib/main-wam/rundown";
-import { sampleGroups, sampleNotifications, samplePeople, sampleSession, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings, sampleSilentQuestion } from "@/lib/main-wam/sample";
+import { sampleNotifications, samplePeople, sampleSession, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings, sampleSilentQuestion } from "@/lib/main-wam/sample";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import type { AnnounceData } from "@/lib/server/main-wam/panitia/announce";
@@ -58,7 +58,7 @@ export const rundownHistory: RundownHistory[] = [
 const ABSENT: [key: string, group: number][] = [["bima", 4], ["tari", 4], ["wawan", 4], ["gilang", 1], ["putri", 9], ["hana", 7], ["yoga", 6], ["dewi", 3]];
 const FILL_DEPARTMENTS = ["Sales & Marketing", "CoE", "HRGA", "Finance", "Art & Creative Support"];
 const person = (key: string, group: number, extra: Partial<AttendeeRow> = {}): AttendeeRow => ({
-  id: samplePeople[key].id, name: samplePeople[key].name, department: samplePeople[key].department, group: `Kelompok ${group}`, photo: null, checkedInAt: null, method: null, ...extra,
+  id: samplePeople[key].id, name: samplePeople[key].name, department: samplePeople[key].department, photo: null, checkedInAt: null, method: null, ...extra,
 });
 
 /** Pemaparan departemen at 10.15: 112 of 120 present (Rani by QR 07.52, Sari recorded 08.10), 8 not yet. */
@@ -70,7 +70,7 @@ export function attendanceRows(allPresent = false): AttendeeRow[] {
   ];
   for (let index = 1; rows.length < 120; index += 1) {
     const minute = String(30 + (index % 30)).padStart(2, "0");
-    rows.push({ id: `00000000-0000-4000-8099-${String(index).padStart(12, "0")}`, name: `Zaki ${String(index).padStart(3, "0")}`, department: FILL_DEPARTMENTS[index % 5], group: `Kelompok ${(index % 12) + 1}`, photo: null, checkedInAt: at(D2, `07:${minute}`), method: "qr" });
+    rows.push({ id: `00000000-0000-4000-8099-${String(index).padStart(12, "0")}`, name: `Zaki ${String(index).padStart(3, "0")}`, department: FILL_DEPARTMENTS[index % 5], photo: null, checkedInAt: at(D2, `07:${minute}`), method: "qr" });
   }
   return rows;
 }
@@ -91,7 +91,6 @@ export const announceSample: AnnounceData = {
   migrated: true,
   counts: {
     semua: 122, panitia: 8,
-    groups: sampleGroups.map(group => ({ id: group.id, label: `Kelompok ${group.number} · ${group.name}`, count: 10 })),
     departments: [["Art & Creative Support", 18], ["BOD", 2], ["CoE", 30], ["Corporate", 8], ["Finance", 16], ["HRGA", 14], ["Sales & Marketing", 34]].map(([name, count]) => ({ name: name as string, count: count as number })),
   },
   sent: sampleNotifications.filter(note => note.kind === "pengumuman").map(note => ({ id: note.id, title: note.title, body: note.body, at: note.createdAt, by: "Dimas", audience: "Semua peserta", pinnedUntil: note.pinnedUntil })),
@@ -100,7 +99,7 @@ export const announceSample: AnnounceData = {
 /* ── K08 Moderasi ─────────────────────────────────────────────────────────────────────────────── */
 
 const card = (key: string, group: number, created: string, extra: Partial<ModerationCard>): ModerationCard => ({
-  id: `00000000-0000-4000-8010-${String(Object.keys(samplePeople).indexOf(key) + 1).padStart(12, "0")}`, owner: samplePeople[key].name, group: `Kelompok ${group}`,
+  id: `00000000-0000-4000-8010-${String(Object.keys(samplePeople).indexOf(key) + 1).padStart(12, "0")}`, owner: samplePeople[key].name,
   createdAt: created, status: "tampil", reports: 1, reasons: [], notes: [], thumb: null, large: null, hiddenBy: null, hiddenAt: null, ...extra,
 });
 export const moderationReported: ModerationCard[] = [

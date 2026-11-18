@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2, Clock, Megaphone, Send, ShieldCheck, Trash2, Users, UsersRound } from "lucide-react";
+import { Building2, Clock, Megaphone, Send, ShieldCheck, Trash2, Users } from "lucide-react";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
-import { ActionBar, Banner, Button, ConfirmDialog, EmptyState, IconBox, List, ListRow, Pill, SectionHeader, Sheet, SwitchRow, Text, TextField, useToast, type IconProp } from "@/components/main-wam/ui";
+import { ActionBar, Banner, Button, ConfirmDialog, IconBox, List, ListRow, Pill, SectionHeader, Sheet, SwitchRow, Text, TextField, useToast, type IconProp } from "@/components/main-wam/ui";
 import { clockMinutes, count, dayClock, formatMinutes, parseClock } from "@/lib/main-wam/panitia/format";
 import { ANNOUNCE_BODY_MAX, ANNOUNCE_TITLE_MAX, announceSchema, type AnnounceInput } from "@/lib/main-wam/panitia/schemas";
 import { wibDate, wibInstant } from "@/lib/main-wam/rundown";
@@ -31,7 +31,7 @@ export function pinInstant(typed: string, now: Date): { iso: string; tomorrow: b
 }
 
 /**
- * K06 Kirim pengumuman: Judul (60), Isi (300), Penerima (Semua · N orang, Kelompok tertentu,
+ * K06 Kirim pengumuman: Judul (60), Isi (300), Penerima (Semua · N orang,
  * Departemen tertentu, Panitia saja), "Sematkan di Beranda" until a time, and Kirim, which asks
  * "Kirim ke N orang?" first (it cannot be taken back). Under it, what panitia sent lately and by
  * whom ("dikirim Dimas · 10.28"): a sent one can be taken off Beranda or removed.
@@ -43,9 +43,8 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState<AudienceType>("semua");
-  const [groups, setGroups] = useState<Set<string>>(new Set());
   const [departments, setDepartments] = useState<Set<string>>(new Set());
-  const [picker, setPicker] = useState<"kelompok" | "departemen" | null>(null);
+  const [picker, setPicker] = useState<"departemen" | null>(null);
   const [pin, setPin] = useState(false);
   const [until, setUntil] = useState(() => defaultPinTime(now));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,12 +56,11 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
   const [working, setWorking] = useState(false);
 
   const reach = type === "semua" ? counts.semua : type === "panitia" ? counts.panitia
-    : type === "kelompok" ? counts.groups.filter(group => groups.has(group.id)).reduce((sum, group) => sum + group.count, 0)
-      : counts.departments.filter(item => departments.has(item.name)).reduce((sum, item) => sum + item.count, 0);
+    : counts.departments.filter(item => departments.has(item.name)).reduce((sum, item) => sum + item.count, 0);
   const pinAt = pin ? pinInstant(until, now) : null;
 
   function input(): AnnounceInput | null {
-    const audience = type === "kelompok" ? { type, groupIds: [...groups] } : type === "departemen" ? { type, departments: [...departments] } : { type };
+    const audience = type === "departemen" ? { type, departments: [...departments] } : { type };
     const found: Record<string, string> = {};
     if (pin && !pinAt) found.until = "Tulis jam seperti 15.00.";
     const parsed = announceSchema.safeParse({ title, body, audience, pinnedUntil: pinAt?.iso ?? null });
@@ -118,14 +116,13 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
 
   const options: { value: AudienceType; icon: IconProp; title: string; sub?: string }[] = [
     { value: "semua", icon: Users, title: `Semua · ${count(counts.semua)} orang` },
-    { value: "kelompok", icon: UsersRound, title: "Kelompok tertentu", sub: type === "kelompok" && groups.size ? `${counts.groups.filter(group => groups.has(group.id)).map(group => group.label).join(", ")} · ${count(reach)} orang` : undefined },
     { value: "departemen", icon: Building2, title: "Departemen tertentu", sub: type === "departemen" && departments.size ? `${[...departments].join(", ")} · ${count(reach)} orang` : undefined },
     { value: "panitia", icon: ShieldCheck, title: "Panitia saja", sub: type === "panitia" ? `${count(counts.panitia)} orang` : undefined },
   ];
   const choose = (value: AudienceType) => {
     setType(value);
     setErrors(current => ({ ...current, audience: "" }));
-    if (value === "kelompok" || value === "departemen") setPicker(value);
+    if (value === "departemen") setPicker(value);
   };
   const pinned = (item: SentAnnouncement) => !!item.pinnedUntil && Date.parse(item.pinnedUntil) > now.getTime();
 
@@ -139,7 +136,7 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
         <legend>Penerima</legend>
         {options.map(option => <label key={option.value} className={css.radio}>
           <input className={css.radioInput} type="radio" name="penerima" value={option.value} checked={type === option.value} onChange={() => choose(option.value)}
-            onClick={() => { if (type === option.value && (option.value === "kelompok" || option.value === "departemen")) setPicker(option.value); }} />
+            onClick={() => { if (type === option.value && option.value === "departemen") setPicker(option.value); }} />
           <IconBox icon={option.icon} />
           <span className={css.radioText}><span className={css.radioTitle}>{option.title}</span>{option.sub && <span className={css.radioSub}>{option.sub}</span>}</span>
           <span className={css.radioMark} aria-hidden />
@@ -168,14 +165,8 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
     <ConfirmDialog open={confirming} onCancel={() => setConfirming(false)} onConfirm={send} busy={sending} busyLabel="Mengirim…"
       title={`Kirim ke ${count(reach)} orang?`} body="Tidak bisa ditarik setelah terkirim." confirmLabel="Kirim" />
 
-    <Sheet open={picker !== null} onClose={() => setPicker(null)} title={picker === "kelompok" ? "Pilih kelompok" : "Pilih departemen"} flush
+    <Sheet open={picker !== null} onClose={() => setPicker(null)} title="Pilih departemen" flush
       footer={<Button block onClick={() => setPicker(null)}>Selesai</Button>}>
-      {picker === "kelompok" && (counts.groups.length
-        ? <List plain inset={16} label="Kelompok">
-          {counts.groups.map(group => <CheckboxRow key={group.id} title={group.label} sub={`${count(group.count)} orang`} checked={groups.has(group.id)}
-            onToggle={() => setGroups(current => { const next = new Set(current); if (next.has(group.id)) next.delete(group.id); else next.add(group.id); return next; })} />)}
-        </List>
-        : <EmptyState icon={<UsersRound />} title="Kelompok belum dibuat." size="s" headingLevel={3}>Kelompok diatur di Admin WAM.</EmptyState>)}
       {picker === "departemen" && <List plain inset={16} label="Departemen">
         {counts.departments.map(item => <CheckboxRow key={item.name} title={item.name} sub={`${count(item.count)} orang`} checked={departments.has(item.name)}
           onToggle={() => setDepartments(current => { const next = new Set(current); if (next.has(item.name)) next.delete(item.name); else next.add(item.name); return next; })} />)}

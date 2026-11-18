@@ -77,7 +77,7 @@ describe("the room (S5: read only where it shows)", () => {
     expect((await gate.requireMainWamPage(mainWamPath.agenda())).viewer.room).toBeNull();
     expect((await gate.requireMainWamPage(mainWamPath.home)).viewer.room).toBeNull();
     expect(viewerRoom).not.toHaveBeenCalled();
-    for (const here of [mainWamPath.me, mainWamPath.groupRoom, mainWamPath.travel("pulang")]) {
+    for (const here of [mainWamPath.me, mainWamPath.room, mainWamPath.travel("pulang")]) {
       expect((await gate.requireMainWamPage(here)).viewer.room).toMatchObject({ name: "208" });
     }
     expect(viewerRoom).toHaveBeenCalledTimes(3);

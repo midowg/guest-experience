@@ -39,7 +39,7 @@ export type TravelStep = {
   sub: string;
   ticket: Ticket | null;
   mapUrl: string;
-  /** "Tiba di hotel" opens Kelompok & kamar. */
+  /** "Tiba di hotel" opens Kamar. */
   toRoom: boolean;
 };
 

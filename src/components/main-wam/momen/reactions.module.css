@@ -4,27 +4,30 @@
  * light photo too; the person's own is filled with the primary colour.
  */
 
-/* Inside the card, bottom left, above the tap areas (z 2) and under the options button. They wrap upward
-   (the first row is at the bottom); at most three rows, so the photo stays the photo. The box lets swipes
-   and taps through, only the pills take them. */
+/* Inside the card, bottom left, above the tap areas (z 2) and under the options button. ONE button: the pills lie side by side
+   and overlap like a group of avatars (each one covers the left edge of the one after it by 6 px, which is only its padding, so every
+   emoji and count stays readable; the first, the most given, is in front). A pill is opaque where it overlaps (the scrim alone would show
+   the one under it through), and a thin light ring parts them. The button is at least 44 high to tap. */
 .pills {
-  position: absolute; left: var(--mw-space-8); right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 4;
-  display: flex; flex-wrap: wrap-reverse; align-items: flex-end; gap: var(--mw-space-8) var(--mw-space-8);
-  max-height: calc(var(--mw-space-32) * 3 + var(--mw-space-16)); overflow: hidden; pointer-events: none;
+  position: absolute; left: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 4; max-width: calc(100% - var(--mw-space-16));
+  display: inline-flex; align-items: center; height: var(--mw-touch); margin: 0; padding: 0 var(--mw-space-8) 0 0; border: 0; background: none; color: var(--mw-media-on);
+  font: var(--mw-type-label); cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: var(--mw-radius-full);
+  transition: transform var(--mw-motion-press);
 }
+.pills[data-static] { pointer-events: none; cursor: default; }
+.pills:active { transform: scale(0.97); }
+.pills:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
 .pill {
-  position: relative; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-space-32); padding: 0 var(--mw-space-12) 0 var(--mw-space-8);
-  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on);
-  font: var(--mw-type-label); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent;
-  transition: transform var(--mw-motion-press), background-color var(--mw-motion-press);
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-space-32); padding: 0 var(--mw-space-12) 0 var(--mw-space-8);
+  border-radius: var(--mw-radius-full); color: var(--mw-media-on); font: var(--mw-type-label); font-variant-numeric: tabular-nums;
+  background: var(--mw-media-scrim);
+  box-shadow: 0 0 0 2px var(--mw-media-on-2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-media-on) 34%, transparent);
 }
-/* The tap area is wider than the pill (44 high), as the kit's small controls. */
-.pill::after { content: ""; position: absolute; inset: -6px -4px; }
-.pill[data-static] { cursor: default; }
-.pill[data-static]::after { display: none; }
+/* Overlap: from the second pill on, six pixels under the one before it (the first has the highest z-index). */
+.pill + .pill { margin-left: -6px; }
+.pill:nth-child(1) { z-index: 5; } .pill:nth-child(2) { z-index: 4; } .pill:nth-child(3) { z-index: 3; } .pill:nth-child(4) { z-index: 2; } .pill:nth-child(5) { z-index: 1; }
 .pill[data-mine] { background: var(--mw-primary); color: var(--mw-on-primary); }
-.pill:active { transform: scale(0.94); }
-.pill:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
+.pillRest { padding: 0 var(--mw-space-8) 0 var(--mw-space-12); }
 .pillEmoji { font-size: 16px; line-height: 1; }
 .pillCount { line-height: 1; }
 /* A reaction that was just chosen pops in. */
@@ -57,8 +60,33 @@
 .cell[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
 .cell:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: -3px; }
 
+/* Who reacted (the sheet behind the pills): tabs, then one row per person (avatar, nama panggilan, emoji). */
+.whoTabs { flex: none; display: flex; gap: var(--mw-space-8); overflow-x: auto; margin: 0 calc(var(--mw-space-16) * -1) var(--mw-space-8); padding: 0 var(--mw-space-16) var(--mw-space-4); scrollbar-width: none; }
+.whoTabs::-webkit-scrollbar { display: none; }
+.whoTab {
+  flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-touch); padding: 0 var(--mw-space-16); border: 0; border-radius: var(--mw-radius-full);
+  background: var(--mw-surface-2); color: var(--mw-text-1); font: var(--mw-type-label); font-size: 17px; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap;
+}
+.whoTab[aria-pressed="true"] { background: var(--mw-primary-container); color: var(--mw-on-primary-container, var(--mw-text-1)); box-shadow: inset 0 0 0 2px var(--mw-primary); }
+.whoTab:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
+.whoTabCount { font: var(--mw-type-label); font-variant-numeric: tabular-nums; color: var(--mw-text-2); }
+.whoTab[aria-pressed="true"] .whoTabCount { color: inherit; }
+.whoList { flex: none; list-style: none; margin: 0; padding: 0; }
+.whoItem + .whoItem { border-top: 1px solid var(--mw-outline); }
+.whoRow { display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: var(--mw-touch); padding: var(--mw-space-8) 0; border: 0; background: none; color: var(--mw-text-1); font: inherit; text-align: left; }
+button.whoRow { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.whoRow:active { background: var(--mw-surface-2); }
+button.whoRow:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: -3px; }
+.whoText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.whoName { font: var(--mw-type-body-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whoHint { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.whoEmoji { flex: none; font-size: 26px; line-height: 1; }
+.whoSkeleton { display: flex; flex-direction: column; }
+.whoEmpty { margin: 0; padding: var(--mw-space-24) 0; text-align: center; font: var(--mw-type-body); color: var(--mw-text-2); }
+.whoMessage { display: flex; flex-direction: column; align-items: flex-start; gap: var(--mw-space-12); }
+
 @media (prefers-reduced-motion: reduce) {
-  .pill, .quickButton { transition: none; }
-  .pill:active, .quickButton:active { transform: none; }
+  .pills, .quickButton { transition: none; }
+  .pills:active, .quickButton:active { transform: none; }
   .pill[data-mine] .pillEmoji { animation: none; }
 }

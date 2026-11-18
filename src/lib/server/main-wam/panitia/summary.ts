@@ -5,11 +5,13 @@ import { silentShownCount, silentState } from "@/lib/main-wam/module-state";
 import { agendaDay, eventDates, eventDay, timeRange, wibDate } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
+import { demoAttendeeIds, samplePresence } from "@/lib/main-wam/demo-sample";
 import { databaseError } from "../../http";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAttendees, mainWamPeople } from "../people";
 import { allSessions, awardApprovals, awardCategories, silentQuestions, silentResults } from "../read";
+import { demoRundown } from "../demo";
 import { carbonForEvent } from "./carbon";
 import { db } from "./common";
 import { waitingCount } from "./moderation";
@@ -22,10 +24,18 @@ import { eventDayTabs, type RundownDay } from "./rundown";
  * as Absen sesi and Detail sesi (audit R5).
  */
 
+/** The people of the event; with the sample rundown in Mode demo, the sample's (so the sample's attendance adds up). */
+const eventAttendees = (settings: MainWamContext["settings"]): Promise<string[]> => (settings.sampleRundown ? Promise.resolve(demoAttendeeIds()) : mainWamAttendees());
+
 /** Who checked in at each of these sessions (one query). */
 async function presentBySession(sessionIds: string[]): Promise<{ present: Map<string, Set<string>>; migrated: boolean }> {
   const present = new Map<string, Set<string>>(sessionIds.map(id => [id, new Set<string>()]));
   if (!sessionIds.length) return { present, migrated: true };
+  // Mode demo with the sample rundown: the sample's check-ins (nothing real to read for its sessions).
+  if (await demoRundown()) {
+    for (const id of sessionIds) for (const row of samplePresence(id)) present.get(id)?.add(row.employeeId);
+    return { present, migrated: true };
+  }
   const { data, error } = await db().from("mw_attendance").select("session_id,employee_id").in("session_id", sessionIds).limit(20000);
   if (error) { if (mwMissing(error)) return { present, migrated: false }; databaseError(error); }
   for (const row of data ?? []) present.get(row.session_id as string)?.add(row.employee_id as string);
@@ -43,7 +53,7 @@ export async function bodSummary(context: MainWamContext, now = new Date()): Pro
   const { modules, event } = context.settings;
   const today = wibDate(now.toISOString());
   const day = eventDay(today, event)?.day ?? null;
-  const [sessions, expected] = await Promise.all([allSessions(), modules.absen ? mainWamAttendees() : Promise.resolve([] as string[])]);
+  const [sessions, expected] = await Promise.all([allSessions(), modules.absen ? eventAttendees(context.settings) : Promise.resolve([] as string[])]);
 
   const attendance = async () => {
     if (!modules.absen || day === null) return { percent: null, day };
@@ -96,7 +106,7 @@ export async function attendanceDay(context: MainWamContext, asked: string | num
   const { event } = context.settings;
   const day = agendaDay(asked, wibDate(now.toISOString()), event);
   const date = eventDates(event)[day - 1] ?? "";
-  const [sessions, expected, people] = await Promise.all([allSessions(), mainWamAttendees(), mainWamPeople()]);
+  const [sessions, expected, people] = await Promise.all([allSessions(), eventAttendees(context.settings), mainWamPeople()]);
   const ofDay = attendanceOfDate(sessions.data, date);
   const { present, migrated } = await presentBySession(ofDay.map(session => session.id));
   const stats = sessionStats(ofDay, present, expected, now);
@@ -121,12 +131,12 @@ export type PanitiaHome = { tiles: KelolaTile[]; attention: AttentionItem[]; rep
 /** Kelola, Perlu perhatian and the sessions running now, for the Panitia hub. Fails soft: a part that cannot be read is left out, never the hub. */
 export async function panitiaHome(context: MainWamContext, now = new Date()): Promise<PanitiaHome> {
   const { modules, event } = context.settings;
-  const [reported, sessions] = await Promise.all([waitingCount(), allSessions().catch(() => ({ data: [] as MwSession[], migrated: false }))]);
+  const [reported, sessions] = await Promise.all([waitingCount(context.viewer), allSessions().catch(() => ({ data: [] as MwSession[], migrated: false }))]);
   const required = async () => {
     if (!modules.absen) return [];
     const open = requiredOpen(sessions.data, now);
     if (!open.length) return [];
-    const [expected, { present }] = await Promise.all([mainWamAttendees(), presentBySession(open.map(session => session.id))]);
+    const [expected, { present }] = await Promise.all([eventAttendees(context.settings), presentBySession(open.map(session => session.id))]);
     const everyone = new Set(expected);
     return open.map(session => ({ session, expected: everyone.size, present: [...(present.get(session.id) ?? [])].filter(id => everyone.has(id)).length }));
   };

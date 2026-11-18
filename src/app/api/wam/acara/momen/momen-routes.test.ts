@@ -21,6 +21,7 @@ vi.mock("@/lib/server/main-wam/momen/feed", () => ({
   listFeed: async () => { calls.push("listFeed"); return { items: [], next: null, total: 0, migrated: true }; },
   sessionCounts: async () => [],
   markSeen: async (_viewer: unknown, ids: string[]) => { calls.push(`seen:${ids.length}`); return ids.length; },
+  photoReactors: async () => { calls.push("reactors"); return { reactors: [{ person: { id: "sari", name: "Sari", photo: null }, emoji: "🔥", mine: false, at: "2027-01-05T03:00:00Z" }] }; },
   setReaction: async (_viewer: unknown, _id: string, emoji: string | null) => { calls.push(`react:${emoji}`); return { reactions: emoji ? [{ emoji, count: 1, mine: true }] : [] }; },
   personLimit: async (scope: string, _person: string, limit: number) => { calls.push(`limit:${scope}:${limit}`); if (limited) throw new ServiceError(429, "Terlalu sering dalam waktu singkat. Coba lagi beberapa menit lagi."); },
   reportPhoto: async () => ({ hiddenForMe: true }),
@@ -68,13 +69,14 @@ describe("Momen APIs refuse who they are not for", () => {
         startRoute.POST(json("/api/wam/acara/momen/unggah", start)),
         seenRoute.POST(json("/api/wam/acara/momen/dilihat", { ids: [ID] })),
         photoRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: site } }), params()),
+        reactionRoute.GET(new Request(`${site}/x`), params()),
         reactionRoute.PUT(json("/x", { emoji: HEART }, "PUT"), params()),
         reactionRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: site } }), params()),
         reportRoute.POST(json("/x", { reason: "tidak_pantas" }), params()),
         fileRoute.GET(new Request(`${site}/x`), params()),
         mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`)),
       ]);
-      expect(answers.map(answer => answer.status)).toEqual(Array(9).fill(status));
+      expect(answers.map(answer => answer.status)).toEqual(Array(10).fill(status));
     }
     expect(calls).toEqual([]);
   });
@@ -120,6 +122,26 @@ describe("the reaction API", () => {
     expect((await del()).status).toBe(429);
     expect(calls.filter(call => call.startsWith("react:"))).toEqual([]);
     expect(calls).toContain("limit:mw-foto-reaksi:200");
+  });
+});
+
+describe("the list of who reacted (GET on the reaction address)", () => {
+  const get = (id = ID) => reactionRoute.GET(new Request(`${site}/x`), params(id));
+
+  it("answers who reacted with what, never from a cache, with a limit per person", async () => {
+    const answer = await get();
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("cache-control")).toBe("no-store");
+    expect((await answer.json()).data.reactors).toEqual([{ person: { id: "sari", name: "Sari", photo: null }, emoji: "🔥", mine: false, at: "2027-01-05T03:00:00Z" }]);
+    expect(calls).toEqual(["limit:mw-foto-reaktor:120", "reactors"]);
+  });
+
+  it("refuses an address that is not a photo id and a person over the limit", async () => {
+    expect((await get("bukan-id")).status).toBe(422);
+    expect(calls).toEqual([]);
+    limited = true;
+    expect((await get()).status).toBe(429);
+    expect(calls).not.toContain("reactors");
   });
 });
 

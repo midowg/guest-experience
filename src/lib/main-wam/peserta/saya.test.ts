@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import {
-  sampleActivityGroups, sampleGroup4, sampleGuides, sampleNotifications, samplePeopleList, sampleRoom3, sampleRoom5, sampleRoomBod, sampleSeats, sampleSessions,
+  sampleGuides, sampleNotifications, sampleRoom3, sampleRoom5, sampleRoomBod, sampleSeats,
   sampleSettings, sampleTrips, sampleViewers,
 } from "../sample";
 import type { MwNotification } from "../types";
@@ -10,17 +10,17 @@ import { dateLabel, dayTime, durationLabel, untilLabel } from "./format";
 import { denahFor, fileShown, guideLine, paragraphs, shownGuides } from "./guides";
 import { firstSentence, groupNotifications, noteHash, noteLine, noteTarget } from "./notifications";
 import { afterSignIn } from "./onboarding";
-import { activityRows, memberRows, profileLine, roomRow, roomSub, roomWith, stayTime } from "./saya";
+import { profileLine, roomRow, roomSub, roomWith, stayTime } from "./saya";
 import { coordinatorOf, directionLabel, ticketOf, travelDirection, travelSteps } from "./travel";
 
-/* Saya (P05/P05B), Kelompok & kamar (L01), Perjalanan (L03), Panduan (L04), Notifikasi (N01), Masuk (O02). */
+/* Saya (P05/P05B), Kamar (L01), Perjalanan (L03), Panduan (L04), Notifikasi (N01), Masuk (O02). */
 
 const at = (date: string, time: string) => new Date(`${date}T${time}:00+07:00`);
 const rani = sampleViewers.peserta;
 
 describe("Saya", () => {
   it("the profile line and the room row, whatever the room's size", () => {
-    expect(profileLine(rani)).toBe("CoE · Kelompok 4 · Arjuno");
+    expect(profileLine(rani)).toBe("CoE");
     expect(profileLine(sampleViewers.bod)).toBe("BOD");
     expect(roomRow(sampleRoom3)).toEqual({ title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" });
     expect(roomRow(sampleRoom5).sub).toBe("5 orang · bersama Gilang, Raka, dan 2 lainnya");
@@ -31,25 +31,7 @@ describe("Saya", () => {
   });
 });
 
-describe("Kelompok & kamar", () => {
-  const people = new Map(samplePeopleList().map(person => [person.id, person]));
-  it("the coordinator first, then you, then the rest in Admin WAM's order", () => {
-    const rows = memberRows(sampleGroup4, people, rani.id);
-    expect(rows.slice(0, 5).map(row => row.label)).toEqual(["Fajar · Koordinator", "Rani (kamu)", "Sari", "Bima", "Ayu"]);
-    expect(rows).toHaveLength(10);
-    expect(memberRows(sampleGroup4, new Map(), rani.id)).toEqual([]);
-  });
-
-  it("the kelompok kegiatan in the order of their sessions, with the note in place of the place", () => {
-    const rows = activityRows(sampleActivityGroups, sampleSessions);
-    expect(rows.map(row => [row.title, row.sub])).toEqual([
-      ["Team building · Pos 2", "Sel, 5 Jan · 15.00 · Lawn"],
-      ["Trekking Coban Rondo · Angkot 3", "Rab, 6 Jan · kumpul lobby 05.45"],
-      ["Gala Dinner & Awarding · Meja 7", "Rab, 6 Jan · 19.00 · Ballroom"],
-    ]);
-    expect(activityRows(sampleActivityGroups, sampleSessions.map(session => ({ ...session, status: "draf" as const })))).toEqual([]);
-  });
-
+describe("Kamar", () => {
   it("check-in and check-out", () => {
     expect(stayTime(sampleSettings().event.checkInAt)).toBe("Sen, 4 Jan · 15.30");
     expect(stayTime(null)).toBe("");

@@ -1,12 +1,10 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { cache } from "react";
 import { after } from "next/server";
 import { canReport, canSee } from "@/lib/main-wam/momen/access";
-import { parseReactions, type ReactionCount } from "@/lib/main-wam/momen/reactions";
+import { isReactionEmoji, parseReactions, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { encodeCursor, MOMEN_AREA_MIGRATION, REPORT_THRESHOLD, REPORTS_PER_10_MINUTES, type FeedMode, type ReportInput } from "@/lib/main-wam/momen/filters";
-import { groupLabel } from "@/lib/main-wam/momen/stack";
-import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
+import { UMUM, type FeedPhoto, type Reactor, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import { PHOTO_AUDIENCES, PHOTO_STATUSES, type MainWamViewer, type MwPhoto } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { rateLimitSecret, ServiceError } from "../../config";
@@ -15,6 +13,7 @@ import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing, mwWaiting, type DbError } from "../errors";
 import type { MainWamContext } from "../gate";
 import { trySendMainWamNote } from "../notes";
+import { demoFeed, demoSessionCounts } from "../demo-momen";
 import { mainWamPeople } from "../people";
 import { viewAddress } from "./storage";
 
@@ -32,35 +31,23 @@ const oneOf = <T extends string>(values: readonly T[], value: unknown, fallback:
 const waiting = () => mwWaiting(MOMEN_AREA_MIGRATION);
 /** The feed answers `reactions` from this migration on; before it the feed itself is "waiting" (audit R13: the name goes to the log only). */
 const REACTIONS_MIGRATION = "202611210001_main_wam_reactions.sql";
+const REACTORS_MIGRATION = "202611230001_main_wam_reactors.sql";
 
 export type FeedRow = {
   id: string; owner_id: string; audience: string; group_id: string | null; session_id: string | null; width: number; height: number;
   taken_at: string; visible_at: string; status: string; file_key: string; thumb_key: string | null; reactions: unknown; seen: boolean; total: number | string;
 };
 
-/** Every member's kelompok as the cards say it ("Kelompok 2 · Kawi"), once kelompok are published. */
-const ownerGroups = cache(async (published: boolean): Promise<Map<string, string>> => {
-  const out = new Map<string, string>();
-  if (!published) return out;
-  const { data, error } = await db().from("mw_group_members").select("employee_id,mw_groups(number,name)").limit(2000);
-  if (error) return out;
-  for (const row of (data ?? []) as unknown as { employee_id: string; mw_groups: { number: number; name: string } | null }[]) {
-    if (row.mw_groups) out.set(row.employee_id, groupLabel(row.mw_groups));
-  }
-  return out;
-});
-
-/** Rows of the feed as the app shows them: nama panggilan, the owner's kelompok, view addresses. */
+/** Rows of the feed as the app shows them: nama panggilan, view addresses. */
 export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now = Date.now()): Promise<FeedPhoto[]> {
   if (!rows.length) return [];
-  const [people, groups] = await Promise.all([mainWamPeople(), ownerGroups(context.settings.groupsPublished)]);
+  const people = await mainWamPeople();
   return Promise.all(rows.map(async row => {
     const person = people.get(row.owner_id);
     // The small copy keeps its address for the hour (the grid stays cached); the large one closes within 15 minutes (audit L5).
     const [kecil, besar] = await Promise.all([row.thumb_key ? viewAddress(row.thumb_key, "kecil", now) : viewAddress(row.file_key, "besar", now), viewAddress(row.file_key, "besar", now)]);
     return {
       id: row.id, owner: { id: row.owner_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null },
-      ownerGroup: groups.get(row.owner_id) ?? person?.department ?? "",
       audience: oneOf(PHOTO_AUDIENCES, row.audience, "semua"), sessionId: row.session_id, width: row.width, height: row.height,
       takenAt: row.taken_at, visibleAt: row.visible_at, status: oneOf(PHOTO_STATUSES, row.status, "tampil"),
       reactions: parseReactions(row.reactions), seen: !!row.seen, mine: row.owner_id === context.viewer.id, src: { kecil, besar },
@@ -88,8 +75,10 @@ export async function listFeed(context: MainWamContext, query: FeedQuery): Promi
     p_session: query.session && query.session !== UMUM ? query.session : null, p_umum: query.session === UMUM, p_unseen: query.mode === "baru",
     p_cursor_at: query.cursor?.at ?? null, p_cursor_id: query.cursor?.id ?? null, p_cursor_rest: query.cursor ? !!query.cursor.rest : null, p_direction: direction, p_limit: query.limit,
   });
-  if (error) { if (mwMissing(error)) return { items: [], next: null, total: 0, migrated: false }; databaseError({ message: error.message ?? "", code: error.code }); }
+  if (error) { if (mwMissing(error)) return (await demoFeed(context, query)) ?? { items: [], next: null, total: 0, migrated: false }; databaseError({ message: error.message ?? "", code: error.code }); }
   const rows = (data ?? []) as FeedRow[];
+  // Mode demo: the sample photos while there is none (demo-momen.ts); null, and nothing changes, when the demo is off.
+  if (!rows.length && !query.cursor) { const demo = await demoFeed(context, query); if (demo) return demo; }
   const items = await feedPhotos(rows, context);
   const last = rows.at(-1);
   const next = direction !== "newer" && last && rows.length >= query.limit ? encodeCursor(query.mode, last.visible_at, last.id, last.seen) : null;
@@ -100,8 +89,9 @@ export async function listFeed(context: MainWamContext, query: FeedQuery): Promi
 export async function sessionCounts(context: MainWamContext, view: FeedView): Promise<SessionCount[] | null> {
   const group = context.viewer.group?.id ?? null;
   const { data, error } = await db().rpc("mw_photo_session_counts", { p_viewer: context.viewer.id, p_group: group, p_view: view });
-  if (error) { if (mwMissing(error)) return null; databaseError({ message: error.message ?? "", code: error.code }); }
-  return ((data ?? []) as { session_id: string | null; photos: number | string }[]).map(row => ({ sessionId: row.session_id, photos: Number(row.photos) || 0 })).filter(row => row.photos > 0);
+  if (error) { if (mwMissing(error)) return await demoSessionCounts(context, view); databaseError({ message: error.message ?? "", code: error.code }); }
+  const real = ((data ?? []) as { session_id: string | null; photos: number | string }[]).map(row => ({ sessionId: row.session_id, photos: Number(row.photos) || 0 })).filter(row => row.photos > 0);
+  return real.length ? real : (await demoSessionCounts(context, view)) ?? real;
 }
 
 /* ── One photo ────────────────────────────────────────────────────────────────────────────────── */
@@ -160,6 +150,27 @@ export async function setReaction(viewer: MainWamViewer, id: string, emoji: stri
     mwFail(error as DbError, REACTIONS_MIGRATION);
   }
   return { reactions: parseReactions(data) };
+}
+
+/** The most people a list of who reacted holds (a photo has at most as many reactions as there are people at the event). */
+const REACTORS_MAX = 600;
+/**
+ * Who reacted with what on a photo the person sees (the same 404 as every other single-photo call: hidden, in its
+ * 5 seconds, not for them, unknown). The database checks it again; the names are the nama panggilan; the person's
+ * own reaction is marked. Newest first.
+ */
+export async function photoReactors(viewer: MainWamViewer, id: string): Promise<{ reactors: Reactor[] }> {
+  const photo = await visiblePhoto(viewer, id);
+  const { data, error } = await db().rpc("mw_photo_reactors", { p_photo: photo.id, p_viewer: viewer.id });
+  if (error) mwFail(error as DbError, REACTORS_MIGRATION);
+  const people = await mainWamPeople();
+  const reactors: Reactor[] = [];
+  for (const row of (data ?? []) as { employee_id: string; emoji: string; created_at: string }[]) {
+    if (!isReactionEmoji(row.emoji) || reactors.length >= REACTORS_MAX) continue;
+    const person = people.get(row.employee_id);
+    reactors.push({ person: { id: row.employee_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null }, emoji: row.emoji, mine: row.employee_id === viewer.id, at: row.created_at });
+  }
+  return { reactors };
 }
 
 /** A limit per person (not per network: at the venue everyone shares one address). */

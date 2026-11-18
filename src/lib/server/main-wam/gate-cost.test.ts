@@ -97,12 +97,12 @@ describe("the gate's cost per request (S5)", () => {
     expect(cost().queries).toBeLessThanOrEqual(6);
   });
 
-  it("Saya, Kelompok & kamar, Perjalanan read the room, once, however often they ask", async () => {
-    const context = await gate.requireMainWamPage("/wam/acara/saya/kelompok");
+  it("Saya, Kamar, Perjalanan read the room, once, however often they ask", async () => {
+    const context = await gate.requireMainWamPage("/wam/acara/saya/kamar");
     expect(context.viewer.room).toMatchObject({ name: "208", floor: "2", people: [{ name: "Rani", me: true }] });
     const before = fake.queries.length;
     await viewer.viewerRoom(ME);
-    await gate.requireMainWamPage("/wam/acara/saya/kelompok");
+    await gate.requireMainWamPage("/wam/acara/saya/kamar");
     expect(fake.queries.length).toBe(before);
     expect(fake.queries.filter(q => q.table === "cq_stay_members").length).toBe(2);
   });

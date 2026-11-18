@@ -71,3 +71,25 @@ it("waits for the migration: nothing can be saved", () => {
   expect(screen.getByRole("radio", { name: /Main WAM \(uji\)/ }).matches(":disabled")).toBe(true);
   expect((screen.getByRole("switch", { name: "Absen QR" }) as HTMLInputElement).disabled).toBe(true);
 });
+
+it("shows Mode demo, off by default, and saves it on its own without touching the modules", async () => {
+  request.mockResolvedValue({ message: "Mode demo menyala. Matikan sebelum acara.", data: { ...settings, moduleConfig: { ...settings.moduleConfig, demo: true } } });
+  draw();
+  const card = screen.getByRole("region", { name: "Mode demo" });
+  expect(within(card).getByText(/Menampilkan semua layar dengan data contoh untuk dicoba\. Data nyata tidak diubah\. Matikan sebelum acara\./)).toBeTruthy();
+  const toggle = within(card).getByRole("switch", { name: "Mode demo (data contoh)" }) as HTMLInputElement;
+  expect(toggle.checked).toBe(false);
+  fireEvent.click(toggle);
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toEqual({ moduleConfig: { demo: true } });
+  expect(await screen.findByText("Mode demo menyala. Matikan sebelum acara.")).toBeTruthy();
+  // The saved modules still show as chosen, not as the demo draws them.
+  expect((within(screen.getByRole("region", { name: "Modul" })).getByRole("switch", { name: "Mozaik" }) as HTMLInputElement).checked).toBe(false);
+});
+
+it("says who is panitia, with a way to the accounts", () => {
+  draw();
+  const card = screen.getByRole("region", { name: "Siapa panitia?" });
+  expect(within(card).getByText("Atur di Admin WAM → Akun (centang Panitia). Penguji tambahan dipilih di sini.")).toBeTruthy();
+  expect(within(card).getByRole("link", { name: /Buka Akun/ }).getAttribute("href")).toBe("/admin/wam/akun");
+});

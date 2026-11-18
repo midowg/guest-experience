@@ -286,19 +286,19 @@ describe("Kirim pengumuman (K06)", () => {
     await waitFor(() => expect(api.removeAnnouncement).toHaveBeenCalledWith(item.id));
   });
 
-  it("sends to the chosen kelompok and pins until a time", async () => {
+  it("sends to the chosen department and pins until a time", async () => {
     const api = fakeApi();
     withApi(api, <AnnounceForm {...announceSample} sent={[]} now="2027-01-05T10:28:00+07:00" />);
     fireEvent.change(screen.getByLabelText("Judul"), { target: { value: "Kumpul di pos" } });
-    fireEvent.click(screen.getByRole("radio", { name: /Kelompok tertentu/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Kelompok 4 · Arjuno/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Departemen tertentu/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /CoE/ }));
     fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
     fireEvent.click(screen.getByRole("switch", { name: "Sematkan di Beranda" }));
     fireEvent.change(screen.getByLabelText("Sampai"), { target: { value: "15.00" } });
     fireEvent.click(screen.getByRole("button", { name: "Kirim" }));
-    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Kirim ke 10 orang?" })).getByRole("button", { name: "Kirim" }));
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Kirim ke 30 orang?" })).getByRole("button", { name: "Kirim" }));
     await waitFor(() => expect(api.announce).toHaveBeenCalled());
-    expect(api.announce).toHaveBeenCalledWith(expect.objectContaining({ audience: { type: "kelompok", groupIds: [announceSample.counts.groups[3].id] }, pinnedUntil: new Date("2027-01-05T15:00:00+07:00").toISOString() }));
+    expect(api.announce).toHaveBeenCalledWith(expect.objectContaining({ audience: { type: "departemen", departments: ["CoE"] }, pinnedUntil: new Date("2027-01-05T15:00:00+07:00").toISOString() }));
   });
 });
 
@@ -307,7 +307,7 @@ describe("Moderasi Momen (K08)", () => {
     const api = fakeApi();
     withApi(api, <Moderation migrated now="2027-01-05T10:16:00+07:00" reported={moderationReported} hidden={moderationHidden} />);
     expect(screen.getByRole("radio", { name: "Dilaporkan (3)" })).toBeTruthy();
-    expect(screen.getByText("Hana · Kelompok 7 · 09.40")).toBeTruthy();
+    expect(screen.getByText("Hana · 09.40")).toBeTruthy();
     expect(screen.getByText("Saya ada di foto ini dan tidak setuju · 2")).toBeTruthy();
     fireEvent.click(within(screen.getByRole("article", { name: "Foto dari Hana" })).getByRole("button", { name: "Sembunyikan" }));
     const ask = screen.getByRole("dialog", { name: "Sembunyikan foto ini?" });
@@ -367,13 +367,13 @@ describe("Panitia hub (K01) and Beranda card (B01)", () => {
     expect(screen.queryByText("Sedang berjalan")).toBeNull();
   });
 
-  it("draws Ringkasan's rows; Jejak karbon is a number, not a link", () => {
+  it("draws Ringkasan's rows; Jejak karbon opens its page", () => {
     render(<RingkasanCard rows={bodRows.biasa} />);
     // A row's name is its visible text, no separate label (WCAG 2.5.3, audit T-S05).
     expect(screen.getByRole("link", { name: /^Kehadiran hari ini\s*93%$/ }).getAttribute("aria-label")).toBeNull();
     expect(screen.getByRole("link", { name: /^Awarding perlu persetujuan\s*2$/ }).getAttribute("href")).toBe(mainWamPath.awardApproval);
     expect(screen.getByText("13,6")).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /Jejak karbon/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Jejak karbon/ }).getAttribute("href")).toBe(mainWamPath.carbon());
     cleanup();
     render(<RingkasanCard rows={bodRows.kosong} />);
     expect(screen.getAllByText("Belum ada").length).toBe(3);

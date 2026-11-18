@@ -30,7 +30,7 @@ export default async function MainWamAppLayout({ children }: { children: ReactNo
   if (gate.kind === "tutup") notFound();
   if (gate.kind === "login" || !viewer) return gate.kind === "login" && gate.page === "main" ? children : <SignInFirst />;
   const [unread, lang] = await Promise.all([unreadCount(viewer.id).catch(() => 0), readLang()]);
-  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread} committee={showsCommitteeTab(viewer)}>
+  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread} committee={showsCommitteeTab(viewer)} demo={settings.moduleConfig.demo}>
     {children}
     {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
     {moduleOn(settings.modules, "absen") && <AbsenQueue />}

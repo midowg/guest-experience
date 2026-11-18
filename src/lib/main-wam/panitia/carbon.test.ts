@@ -45,6 +45,12 @@ describe("Jejak karbon", () => {
     expect(partial.parts.hotel).toBe(7200);
   });
 
+  it("says what it counted, for the page that shows the sources", () => {
+    expect(carbonEstimate({ ...example, rooms: 60, nights: 3 }).basis).toEqual({ people: 120, rooms: 60, nights: 3, roomNights: 180, portions: 1440, trainLegs: 2, busLegs: 1 });
+    // A leg without km or riders was not counted, so it is not named.
+    expect(carbonEstimate({ ...example, trainLegs: [{ km: 0, passengers: 5 }], busLegs: [{ km: 10, buses: 0 }] }).basis).toMatchObject({ trainLegs: 0, busLegs: 0, rooms: 0, nights: 0 });
+  });
+
   it("is empty with nothing to count, and never negative", () => {
     const none = carbonEstimate({ people: 0, roomNights: 0, trainLegs: [], busLegs: [], portions: 0, bills: noBills });
     expect(none).toMatchObject({ kg: 0, tonnes: 0, empty: true });
@@ -69,7 +75,7 @@ describe("Jejak karbon from Admin WAM's data", () => {
     const sessions = [...Array.from({ length: 12 }, () => meal), { kind: "makan" as const, status: "batal" as const }, { kind: "sesi" as const, status: "terbit" as const }];
     const data = carbonDataFrom({ people: 120, rooms: 60, nights: nightsBetween("2027-01-04", "2027-01-07"), trips, seats: new Map([["k1", 118]]), sessions, bills: noBills });
     expect(data).toEqual({
-      people: 120, roomNights: 180, portions: 1440, bills: noBills,
+      people: 120, roomNights: 180, rooms: 60, nights: 3, portions: 1440, bills: noBills,
       trainLegs: [{ km: 350, passengers: 118 }, { km: 350, passengers: 120 }],
       busLegs: [{ km: 180, buses: 4 }],
     });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Hourglass, Images, LayoutGrid, Lock, RotateCcw, Trash2 } from "lucide-react";
+import { Camera, Hourglass, Images, LayoutGrid, RotateCcw, Trash2 } from "lucide-react";
 import { Button, Chip, ConfirmDialog, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, Stack } from "@/components/main-wam/shell";
@@ -60,7 +60,6 @@ function QueuedTile({ item, onOpen }: { item: QueueItem; onOpen: () => void }) {
  * M05 Galeri: Semua / Fotoku and "Semua sesi ▾", a grid of three (keyset pages as it scrolls, or
  * Muat lagi), and the way to the Mozaik. A tap opens the stack at that photo; in Fotoku it opens the
  * photo's sheet (Hapus foto), and photos still waiting on this phone come first, marked Antre or Gagal.
- * A lock = a photo an earlier version sent only to a kelompok (nothing sends one now).
  */
 export function Gallery(props: GalleryProps) {
   const { view, session } = props;
@@ -146,11 +145,10 @@ export function Gallery(props: GalleryProps) {
         {waiting.map(item => <li key={item.clientId}><QueuedTile item={item} onOpen={() => setQueued(item)} /></li>)}
         {items.map(photo => {
           const alt = photo.mine ? t("momen.altMine") : t("momen.altBy", { name: photo.owner.name });
-          const label = `${alt}${photo.audience === "kelompok" ? t("momen.gal.onlyGroup") : ""}${photo.status !== "tampil" ? t("momen.gal.hiding") : ""}`;
+          const label = `${alt}${photo.status !== "tampil" ? t("momen.gal.hiding") : ""}`;
           const inner = <>
             <PhotoFill tone={tone(photo.id)} className={css.fill} />
             <GridImg photo={photo} />
-            {photo.audience === "kelompok" && <span className={css.badge} aria-hidden><Lock /></span>}
             {photo.status !== "tampil" && <span className={css.state} aria-hidden>{photo.status === "ditinjau" ? t("momen.gal.reviewing") : t("momen.gal.hidden")}</span>}
           </>;
           return <li key={photo.id}>

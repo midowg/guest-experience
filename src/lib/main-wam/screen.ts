@@ -59,6 +59,9 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
   const [first, second, third] = sub.split("/");
   switch (first) {
     case "masuk": return null;
+    case "jejak-karbon": return second === "saya"
+      ? { tab: "saya", level: "detail", title: say("screen.carbon"), back: saya }
+      : { tab: "beranda", level: "detail", title: say("screen.carbon"), back: home };
     case "mulai": return { tab: null, level: "tugas", title: say("screen.notifications") };
     case "notifikasi": return { tab: "beranda", level: "detail", title: say("screen.notifications"), back: home };
     // P04: the bar has only ‹ (revisi 16 Nov); the session's own title is the screen's headline.
@@ -71,7 +74,7 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
       return { tab: "momen", level: "detail", title: say("screen.moments"), back: momen };
     case "saya": {
       if (!second) return { tab: "saya", level: "akar", title: say("screen.me") };
-      const titles: Record<string, string> = { kelompok: say("screen.groupRoom"), perjalanan: say("screen.travel"), panduan: say("screen.guides"), pengaturan: say("screen.settings"), bantuan: say("screen.help") };
+      const titles: Record<string, string> = { kamar: say("screen.room"), perjalanan: say("screen.travel"), panduan: say("screen.guides"), pengaturan: say("screen.settings"), bantuan: say("screen.help") };
       if (second === "panduan" && third) return { tab: "saya", level: "detail", title: say("screen.guides"), back: { href: mainWamPath.guides, title: say("screen.guides") } };
       return { tab: "saya", level: "detail", title: titles[second] ?? say("screen.me"), back: saya };
     }

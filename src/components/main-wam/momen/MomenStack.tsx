@@ -9,11 +9,11 @@ import { Banner, Button, IconBox, IconButton, Spinner, TopBar, useToast } from "
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
 import { HEART, myReaction, withReaction, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { stackCount, stackCountSpoken, type StackMode } from "@/lib/main-wam/momen/stack";
-import { UMUM, type FeedAnswer, type FeedPhoto, type SessionFilter } from "@/lib/main-wam/momen/types";
+import { UMUM, type FeedAnswer, type FeedPhoto, type Reactor, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { PhotoStatus } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { DeletePhotoDialog, PhotoOptionsSheet, refusedForGood, ReportSheet } from "./MomenSheets";
-import { QuickReactions, ReactionSheet } from "./Reactions";
+import { QuickReactions, ReactionSheet, ReactorsSheet } from "./Reactions";
 import { StackDeck } from "./StackDeck";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 import css from "./momen.module.css";
@@ -41,7 +41,7 @@ export type MomenStackProps = {
   /** Dev preview only: a fixed state to look at (a sheet open, offline, loading, …), no network. */
   demo?: StackDemo;
 };
-export type StackDemo = { sheet?: "pilihan" | "lapor" | "hapus" | "reaksi"; hiddenForMe?: boolean; offline?: boolean; loading?: boolean; hint?: boolean };
+export type StackDemo = { sheet?: "pilihan" | "lapor" | "hapus" | "reaksi" | "daftar"; hiddenForMe?: boolean; offline?: boolean; loading?: boolean; hint?: boolean; /** The list "who reacted" the sheet shows (no network). */ reactors?: Reactor[] | "memuat" | "gagal" };
 
 const HINT_KEY = "mw-momen-geser";
 const subscribeOnline = (notify: () => void) => { window.addEventListener("online", notify); window.addEventListener("offline", notify); return () => { window.removeEventListener("online", notify); window.removeEventListener("offline", notify); }; };
@@ -55,7 +55,8 @@ function readFlag(key: string): boolean {
  * M01–M04: Momen as a stack of photos to swipe through (Instagram Instants), every photo for everyone,
  * new photos first, then "Kamu sudah lihat semua" (M03). The title bar has only the camera and the gallery.
  * Reactions (WhatsApp style): a quick row under the photo and "+" for the sheet of every emoji, the ones a
- * photo got as small pills inside it; one per person, a tap on the same one takes it back, a double tap on
+ * photo got as overlapping pills inside it (a tap on them opens the list of who reacted with what, where one's
+ * own reaction can be taken back); one per person, a tap on the same quick emoji takes it back, a double tap on
  * the photo is the red heart. "…" on the photo → Laporkan foto (M04) or Hapus foto (one's own). Opened from
  * the gallery (`foto`), it starts at that photo with ‹ Galeri. The server gave the first page; more pages
  * come five cards ahead; seen photos are told to the server in small batches.
@@ -79,7 +80,7 @@ export function MomenStack(props: MomenStackProps) {
   const reactionRuns = useRef(new Map<string, number>());
   const demo = props.demo;
   const [hiddenForMe, setHiddenForMe] = useState<Set<string>>(() => new Set(demo?.hiddenForMe && props.items[props.startIndex] ? [props.items[props.startIndex].id] : []));
-  const [sheet, setSheet] = useState<"pilihan" | "lapor" | "hapus" | "reaksi" | null>(demo?.sheet ?? null);
+  const [sheet, setSheet] = useState<"pilihan" | "lapor" | "hapus" | "reaksi" | "daftar" | null>(demo?.sheet ?? null);
   const [deleting, setDeleting] = useState(false);
   const [spoken, setSpoken] = useState("");
   const [hintSeen, setHintSeen] = useState(true);
@@ -272,7 +273,7 @@ export function MomenStack(props: MomenStackProps) {
 
       <div className={css.stage}>
       <StackDeck items={noCard ? [] : items} index={noCard ? 0 : index} onIndex={move} onLike={photo => { if (myReaction(reactionsOf(photo)) !== HEART) void react(photo, HEART); }}
-        onReact={(photo, emoji) => void react(photo, emoji)} onOptions={photoActions ? () => setSheet("pilihan") : undefined} reactionsOf={reactionsOf} now={now} panel={panel}
+        onReactors={() => setSheet("daftar")} onOptions={photoActions ? () => setSheet("pilihan") : undefined} reactionsOf={reactionsOf} now={now} panel={panel}
         label={t("ui.moments")} describe={at => stackCountSpoken(mode, props.offset + at, props.total, lang)} />
 
       <p className={css.hint}>{hint}</p>
@@ -285,6 +286,8 @@ export function MomenStack(props: MomenStackProps) {
       </div>
     </div>
 
+    {current && <ReactorsSheet open={sheet === "daftar"} onClose={() => setSheet(null)} photoId={current.id} demo={demo?.reactors}
+      onRemove={async emoji => { if (!current.mine && myReaction(reactionsOf(current)) === emoji) await react(current, emoji); }} />}
     {current && !current.mine && <ReactionSheet open={sheet === "reaksi"} onClose={() => setSheet(null)} chosen={chosen} onPick={emoji => { setSheet(null); void react(current, emoji); }} />}
     {current && <PhotoOptionsSheet open={sheet === "pilihan"} onClose={() => setSheet(null)} owner={current.owner.name} mine={current.mine}
       onReport={() => setSheet("lapor")} onDelete={() => setSheet("hapus")} />}

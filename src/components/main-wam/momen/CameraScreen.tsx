@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, X } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
-import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, TagChip, TagChipRow, useToast } from "@/components/main-wam/ui";
+import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
-import { choiceSub, tagGroups } from "@/lib/main-wam/momen/sessions";
 import { queuedPill, sentText } from "@/lib/main-wam/momen/stack";
 import { autoTag } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
-import { PickList } from "./Choices";
 import { decodeFile, grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto, type Picture } from "./upload/compress";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
@@ -22,8 +20,8 @@ import css from "./camera.module.css";
 
 /*
  * U01–U05 and O04: the camera, Instagram Instants style: one press = one photo sent, no review, no
- * form. One chip over the shutter: "Sesi: <the session running now> ✕" (✕ = Umum, a tap = choose
- * another session). Every photo is for everyone (no audience to choose).
+ * form. No chip and no sheet to choose a session: a photo is tagged behind the scenes with the session running when
+ * it is taken (no tag when none runs, or when the address names one: ?sesi=). Every photo is for everyone.
  *
  * The camera itself (RISET §1): on a home-screen iPhone a web page's camera permission is asked
  * again at every launch (WebKit 327237), so the shutter opens the phone's own camera through
@@ -38,10 +36,9 @@ import css from "./camera.module.css";
  */
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
-export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "sesi" | "galeri" | "cara" };
+export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara" };
 
 const PERMISSION_KEY = "mw-momen-kamera";
-const CHOICE_KEY = "mw-momen-kamera-pilihan";
 
 function store(kind: "local" | "session", key: string, value?: string): string | null {
   try {
@@ -76,10 +73,8 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const [phase, setPhase] = useState<"izin" | "kamera" | null>(demo?.phase ?? null);
   const [live, setLive] = useState<Live>(demo?.live === "contoh" ? "menyala" : demo?.live ?? (migrated ? "memuat" : "menunggu"));
   const [facing, setFacing] = useState<"environment" | "user">("environment");
-  // The tag: the one chosen (or Umum), else the session running now (it follows the clock).
-  const [chosenTag, setTag] = useState<string | null>(initialSession === UMUM ? null : initialSession);
-  const [touched, setTouched] = useState(initialSession !== null);
-  const tag = touched ? chosenTag : autoTag(sessions, now)?.id ?? null;
+  // The tag, out of sight: the session the address names ("umum" = none), else the session running now (it follows the clock).
+  const tag = initialSession !== null ? (initialSession === UMUM ? null : initialSession) : autoTag(sessions, now)?.id ?? null;
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
@@ -88,22 +83,6 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const shutterInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const wantLive = useRef(false);
-
-  /* Restore the chips after a reload (an Android phone may close the page while its camera is open). */
-  /* eslint-disable react-hooks/set-state-in-effect -- browser storage, read after hydration */
-  useEffect(() => {
-    if (demo) return;
-    const saved = store("session", CHOICE_KEY);
-    if (saved) {
-      try {
-        const choice = JSON.parse(saved) as { tag: string | null; touched: boolean };
-        if (choice.touched && initialSession === null) { setTag(choice.tag); setTouched(true); }
-        return;
-      } catch { /* start fresh */ }
-    }
-  }, [demo, initialSession]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  useEffect(() => { if (!demo) store("session", CHOICE_KEY, JSON.stringify({ tag, touched })); }, [tag, touched, demo]);
 
   /* The clock (server time): the automatic tag follows the running session while not touched. */
   useEffect(() => {
@@ -265,8 +244,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     if (window.history.length > 1) router.back(); else router.push(mainWamPath.moments());
   }
 
-  /* Words on the chips and in the sheets. */
-  const tagSheet = useMemo(() => tagGroups(sessions, now, lang), [sessions, now, lang]);
+  /* Words on the buttons and in the sheets. */
   const shutterLabel = t("momen.cam.shutterAll");
   const waiting = demo?.pill ?? queue.summary.waiting;
   const offline = demo?.offline ?? queue.summary.offline;
@@ -305,12 +283,6 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div></div>
 
     <div className={css.dock}>
-      <TagChipRow>
-        {tagSession
-          ? <TagChip label={t("momen.cam.sessionLabel")} value={tagSession.title} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"}
-            onClear={() => { setTag(null); setTouched(true); }} clearLabel={t("momen.cam.clearTag")} />
-          : <TagChip label={t("momen.cam.sessionLabel")} value={t("momen.general")} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"} />}
-      </TagChipRow>
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
           {last
@@ -325,10 +297,6 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
-    <Sheet open={sheet === "sesi"} onClose={() => setSheet(null)} title={t("momen.cam.tagTitle")} history={live !== "menyala"}>
-      <PickList label={t("momen.cam.tagTitle")} value={tag ?? UMUM} onChange={value => { setTag(value === UMUM ? null : value); setTouched(true); setSheet(null); }}
-        groups={[{ rows: [{ value: UMUM, title: t("momen.general"), sub: t("momen.noSession") }] }, ...tagSheet.map(day => ({ head: day.head, rows: day.rows.map(row => ({ value: row.id, title: row.title, sub: choiceSub(row, lang) })) }))]} />
-    </Sheet>
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
       <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
         action={<Button icon={Settings} onClick={() => setSheet("cara")}>{t("momen.cam.openSettings")}</Button>} />

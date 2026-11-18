@@ -17,25 +17,23 @@ export type AttendeeRow = {
   /** Nama panggilan. */
   name: string;
   department: string;
-  /** "Kelompok 4", or null before kelompok are set. */
-  group: string | null;
   photo: string | null;
   checkedInAt: string | null;
   method: MwAttendanceMethod | null;
 };
 
-/** "Finance · Kelompok 4". */
-export const attendeeLine = (row: Pick<AttendeeRow, "department" | "group">) => [row.department, row.group].filter(Boolean).join(" · ");
+/** "Finance" (kelompok are gone from the app). */
+export const attendeeLine = (row: Pick<AttendeeRow, "department">) => row.department;
 /** "07.52 · Scan QR". */
 export const presentLine = (row: AttendeeRow) => (row.checkedInAt && row.method ? `${clock(row.checkedInAt)} · ${methodLabels[row.method]}` : "");
 
 const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 /** Rows whose name, department or kelompok contains the words typed (any order, accents ignored). */
-export function searchAttendees<T extends Pick<AttendeeRow, "name" | "department" | "group">>(rows: readonly T[], query: string): T[] {
+export function searchAttendees<T extends Pick<AttendeeRow, "name" | "department">>(rows: readonly T[], query: string): T[] {
   const words = fold(query).split(/\s+/).filter(Boolean);
   if (!words.length) return [...rows];
   return rows.filter(row => {
-    const text = fold(`${row.name} ${row.department} ${row.group ?? ""}`);
+    const text = fold(`${row.name} ${row.department}`);
     return words.every(word => text.includes(word));
   });
 }

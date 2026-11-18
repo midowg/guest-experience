@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { ONBOARDED_KEY } from "@/lib/main-wam/peserta/onboarding";
 import { groupNotifications } from "@/lib/main-wam/peserta/notifications";
 import { sampleNotifications, sampleSessionIds } from "@/lib/main-wam/sample";
-import { mainWamApi, mainWamPath, praWamApi, praWamPath } from "@/lib/routes";
+import { mainWamApi, mainWamPath, praWamApi } from "@/lib/routes";
 import { NowCard } from "./beranda/NowCard";
 import { HomeCard } from "./beranda/HomeCard";
 import { InfoLainnya } from "./agenda/InfoLainnya";
@@ -122,17 +122,18 @@ describe("Notifikasi", () => {
 });
 
 describe("Saya", () => {
-  const props = { name: "Rani", fullName: "Rani Contoh", line: "CoE · Kelompok 4 · Arjuno", photo: null, room: { title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" }, mcp: false };
+  const props = { name: "Rani", fullName: "Rani Contoh", line: "CoE", photo: null, room: { title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" } };
 
-  it("the profile card opens Foto profil; the room opens Kelompok & kamar; Akses MCP only with access", () => {
+  it("the profile card opens Foto profil; the room opens Kamar; Jejak karbon only while its module is on", () => {
     const { unmount } = render(<SayaScreen {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "Rani Contoh, ganti foto profil" }));
     expect(screen.getByRole("dialog", { name: "Foto profil" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Kamar 208/ }).getAttribute("href")).toBe(mainWamPath.groupRoom);
-    expect(screen.queryByRole("link", { name: /Akses MCP/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Kamar 208/ }).getAttribute("href")).toBe(mainWamPath.room);
+    expect(screen.queryByRole("link", { name: /Jejak karbon/ })).toBeNull();
+    expect(screen.queryByText(/Kelompok/)).toBeNull();
     unmount();
-    render(<SayaScreen {...props} mcp />);
-    expect(screen.getByRole("link", { name: /Akses MCP/ }).getAttribute("href")).toBe(`${praWamPath.settings}#mcp`);
+    render(<SayaScreen {...props} carbon />);
+    expect(screen.getByRole("link", { name: /Jejak karbon/ }).getAttribute("href")).toBe(mainWamPath.carbon("saya"));
   });
 
   it("Bantuan is a page of its own (a link, not a sheet)", () => {

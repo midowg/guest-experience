@@ -1,10 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { photoPath } from "@/lib/pra-wam/photo";
+import { samplePeople } from "@/lib/main-wam/sample";
 import type { MwPerson } from "@/lib/main-wam/types";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "../pra-wam/appraisal";
+import { demoOn } from "./demo";
 
 /*
  * Everyone as Main WAM shows them (aturan-wam §4): the nama panggilan (callName, from listPeople),
@@ -30,8 +32,11 @@ async function photosUncached(): Promise<Map<string, string>> {
 }
 
 async function peopleUncached(): Promise<Map<string, MwPerson & { fullName: string; active: boolean }>> {
-  const [people, photos] = await Promise.all([listPeople(), photosUncached()]);
-  return new Map(people.map(person => [person.id, { id: person.id, name: person.name, fullName: person.fullName, department: person.department, active: person.active, photo: photos.get(person.id) ?? null }]));
+  const [people, photos, demo] = await Promise.all([listPeople(), photosUncached(), demoOn()]);
+  const map = new Map(people.map(person => [person.id, { id: person.id, name: person.name, fullName: person.fullName, department: person.department, active: person.active, photo: photos.get(person.id) ?? null }]));
+  // Mode demo: the sample's made-up people can be looked up too (a sample group's members, a sample photo's owner); they never replace a real one.
+  if (demo) for (const person of Object.values(samplePeople)) if (!map.has(person.id)) map.set(person.id, { ...person, active: true, photo: null });
+  return map;
 }
 
 /** id → the person (nama panggilan, department, photo); `fullName` only for admin views. */

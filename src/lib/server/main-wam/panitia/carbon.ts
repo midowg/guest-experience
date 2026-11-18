@@ -4,6 +4,7 @@ import { wibDate } from "@/lib/main-wam/rundown";
 import type { MainWamSettings } from "@/lib/main-wam/types";
 import { currentForm } from "../../pra-wam/questionnaire";
 import { allSessions, listTrips } from "../read";
+import { samplePeople } from "@/lib/main-wam/sample";
 import { mainWamEventPeople } from "../people";
 import { db } from "./common";
 
@@ -40,7 +41,7 @@ export async function carbonForEvent(settings: MainWamSettings): Promise<CarbonR
     const first = settings.event.checkInAt ? wibDate(settings.event.checkInAt) : settings.event.startDate;
     const last = settings.event.checkOutAt ? wibDate(settings.event.checkOutAt) : settings.event.endDate;
     const result = carbonEstimate(carbonDataFrom({
-      people: people.accounts.length, rooms, nights: nightsBetween(first, last), trips: trips.data, seats, sessions: sessions.data, bills: settings.carbon,
+      people: settings.sampleRundown ? Object.keys(samplePeople).length : people.accounts.length, rooms, nights: nightsBetween(first, last), trips: trips.data, seats, sessions: sessions.data, bills: settings.carbon,
     }));
     return result.empty ? null : result;
   } catch { return null; }

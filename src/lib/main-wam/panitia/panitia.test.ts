@@ -26,14 +26,14 @@ describe("format", () => {
 });
 
 describe("Absen sesi (K05)", () => {
-  const row = (name: string, extra: Partial<AttendeeRow> = {}): AttendeeRow => ({ id: name, name, department: "Finance", group: "Kelompok 4", photo: null, checkedInAt: null, method: null, ...extra });
-  const rows = [row("Tari", { department: "Art & Creative Support" }), row("Bima"), row("Rani", { checkedInAt: at("07:52").toISOString(), method: "qr" }), row("Sari", { checkedInAt: at("08:10").toISOString(), method: "manual" }), row("André", { department: "CoE", group: null })];
+  const row = (name: string, extra: Partial<AttendeeRow> = {}): AttendeeRow => ({ id: name, name, department: "Finance", photo: null, checkedInAt: null, method: null, ...extra });
+  const rows = [row("Tari", { department: "Art & Creative Support" }), row("Bima"), row("Rani", { checkedInAt: at("07:52").toISOString(), method: "qr" }), row("Sari", { checkedInAt: at("08:10").toISOString(), method: "manual" }), row("André", { department: "CoE" })];
 
   it("splits Belum hadir and Hadir by name, with how and when", () => {
     const { absent, present } = splitAttendance(rows);
     expect(absent.map(item => item.name)).toEqual(["André", "Bima", "Tari"]);
     expect(present.map(presentLine)).toEqual(["07.52 · Scan QR", "08.10 · Dicatat panitia"]);
-    expect(attendeeLine(rows[0])).toBe("Art & Creative Support · Kelompok 4");
+    expect(attendeeLine(rows[0])).toBe("Art & Creative Support");
     expect(attendeeLine(rows[4])).toBe("CoE");
   });
 
@@ -41,10 +41,10 @@ describe("Absen sesi (K05)", () => {
     expect(rows.filter(mayUndo).map(item => item.name)).toEqual(["Sari"]);
   });
 
-  it("finds by name, department or kelompok, accents and case ignored", () => {
+  it("finds by name or department, accents and case ignored", () => {
     expect(searchAttendees(rows, "andre").map(item => item.name)).toEqual(["André"]);
     expect(searchAttendees(rows, "  creative tar ").map(item => item.name)).toEqual(["Tari"]);
-    expect(searchAttendees(rows, "kelompok 4").length).toBe(4);
+    expect(searchAttendees(rows, "finance").length).toBe(3);
     expect(searchAttendees(rows, "").length).toBe(5);
   });
 
@@ -82,8 +82,8 @@ describe("Moderasi Momen (K08)", () => {
     expect(reasonLines(three)).toEqual(["Saya ada di foto ini dan tidak setuju · 2", "Tidak pantas atau menyinggung · 1"]);
     expect(reasonLines([report("b", "data_pribadi", "09:12")])).toEqual(["Memperlihatkan data pribadi atau rahasia"]);
     expect(reportNotes(three)).toEqual(["Tolong hapus, saya belum siap difoto."]);
-    expect(ownerLine({ owner: "Hana", group: "Kelompok 7", createdAt: at("09:40").toISOString() }, at("10:15"))).toBe("Hana · Kelompok 7 · 09.40");
-    expect(ownerLine({ owner: "Gilang", group: null, createdAt: at("20:15", "2027-01-04").toISOString() }, at("10:15"))).toBe("Gilang · Sen, 4 Jan · 20.15");
+    expect(ownerLine({ owner: "Hana", createdAt: at("09:40").toISOString() }, at("10:15"))).toBe("Hana · 09.40");
+    expect(ownerLine({ owner: "Gilang", createdAt: at("20:15", "2027-01-04").toISOString() }, at("10:15"))).toBe("Gilang · Sen, 4 Jan · 20.15");
   });
 
   it("offers Sembunyikan and Tampilkan lagi for a waiting photo, Tampilkan lagi and Hapus for a hidden one", () => {
@@ -150,7 +150,7 @@ describe("Kehadiran (B02) and Ringkasan (B01)", () => {
       ["Silent Meeting", { kind: "angka", value: "47", unit: "masukan" }],
       ["Jejak karbon", { kind: "angka", value: "13,6", unit: "t CO₂e" }],
     ]);
-    expect(rows.map(row => row.href)).toEqual([mainWamPath.attendanceSummary(3), mainWamPath.awardApproval, mainWamPath.silentRecap, null]);
+    expect(rows.map(row => row.href)).toEqual([mainWamPath.attendanceSummary(3), mainWamPath.awardApproval, mainWamPath.silentRecap, mainWamPath.carbon()]);
     expect(summaryRows({ ...input, modules: { ...modules, voting: false, karbon: false } }).map(row => row.key)).toEqual(["kehadiran", "silent"]);
     expect(summaryRows({ ...input, attendance: { percent: null, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }).map(row => row.value.kind)).toEqual(["kosong", "kosong", "kosong", "kosong"]);
     // While a Silent Meeting is open its row says Dibuka, never a count (audit H2).
@@ -218,13 +218,14 @@ describe("API input", () => {
     expect(moderateSchema.safeParse({ action: "hapus", from: "disembunyikan", note: "x".repeat(201) }).error?.issues[0].message).toBe("Catatan paling panjang 200 karakter.");
   });
 
-  it("asks for a title, keeps the limits, and needs a choice for kelompok or departemen", () => {
+  it("asks for a title, keeps the limits, and needs a choice of departemen, and no longer takes kelompok", () => {
     const empty = announceSchema.safeParse({ title: "  ", audience: { type: "semua" } });
     expect(empty.success).toBe(false);
     expect(empty.error?.issues[0].message).toBe("Judul wajib diisi.");
     expect(announceSchema.safeParse({ title: "x".repeat(61), audience: { type: "semua" } }).success).toBe(false);
     expect(announceSchema.safeParse({ title: "Team building mulai 15.00 di Lawn", body: "x".repeat(301), audience: { type: "semua" } }).success).toBe(false);
-    expect(announceSchema.safeParse({ title: "Kumpul", audience: { type: "kelompok", groupIds: [] } }).success).toBe(false);
+    expect(announceSchema.safeParse({ title: "Kumpul", audience: { type: "departemen", departments: [] } }).success).toBe(false);
+    expect(announceSchema.safeParse({ title: "Kumpul", audience: { type: "kelompok", groupIds: ["a"] } }).success).toBe(false);
     expect(announceSchema.parse({ title: "Kumpul", audience: { type: "panitia" } })).toEqual({ title: "Kumpul", body: "", audience: { type: "panitia" }, pinnedUntil: null });
   });
 });

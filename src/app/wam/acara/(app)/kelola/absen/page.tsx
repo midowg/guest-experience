@@ -12,6 +12,6 @@ export default async function AbsenSesiPage({ searchParams }: { searchParams: Pr
   const { sesi } = await searchParams;
   const context = await requireActionPage("kelola", mainWamPath.attendanceManual(sesi));
   pageNeedsModule(context, "absen");
-  const data = await attendanceData(sesi);
+  const data = await attendanceData(sesi, new Date(), context.viewer);
   return <AbsenManual key={data.session?.id ?? "none"} {...data} />;
 }

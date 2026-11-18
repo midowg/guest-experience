@@ -21,14 +21,14 @@ export const DEFAULT_EVENT: MainWamEventInfo = {
 };
 /** Every module off, Silent Meeting included (it is Pra WAM's, not Main WAM's; migration 202611220001 switches it off in a database that had it on). */
 export const DEFAULT_MODULES: ModuleSwitches = Object.fromEntries(MAIN_WAM_MODULES.map(key => [key, false])) as ModuleSwitches;
-export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 30, rows: 20 } };
+export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 30, rows: 20 }, demo: false };
 export const DEFAULT_THEME_SETTINGS: MainWamThemeSettings = { colors: {}, displayFont: null, images: {} };
 export const DEFAULT_CONTACTS: MainWamContacts = { kamar: null, perjalanan: null, umum: null };
 export const DEFAULT_CARBON: CarbonInputs = { listrikKwh: null, airM3: null, lpgKg: null, sampahKg: null, final: false };
 
 export const defaultSettings = (): MainWamSettings => ({
   mode: "pra", modules: { ...DEFAULT_MODULES }, moduleConfig: structuredClone(DEFAULT_MODULE_CONFIG), theme: structuredClone(DEFAULT_THEME_SETTINGS),
-  event: { ...DEFAULT_EVENT }, contacts: { ...DEFAULT_CONTACTS }, groupsPublished: false, carbon: { ...DEFAULT_CARBON }, updatedAt: null, migrated: false,
+  event: { ...DEFAULT_EVENT }, contacts: { ...DEFAULT_CONTACTS }, groupsPublished: false, carbon: { ...DEFAULT_CARBON }, sampleRundown: false, updatedAt: null, migrated: false,
 });
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
@@ -58,6 +58,8 @@ export function parseModuleConfig(value: unknown): ModuleConfig {
   return {
     survei: { formSlug: typeof survei.formSlug === "string" && SLUG.test(survei.formSlug) ? survei.formSlug : null },
     mozaik: { columns: grid(mozaik.columns, DEFAULT_MODULE_CONFIG.mozaik.columns), rows: grid(mozaik.rows, DEFAULT_MODULE_CONFIG.mozaik.rows) },
+    // Mode demo: only `true` turns it on (a missing or odd value is off).
+    demo: raw.demo === true,
   };
 }
 
@@ -133,6 +135,7 @@ export function settingsFromRow(row: SettingsRow | null, dates?: { startDate: st
     contacts: parseContacts(row.contacts),
     groupsPublished: instant(row.groups_published_at) !== null,
     carbon: parseCarbon(row.carbon),
+    sampleRundown: false,
     updatedAt: instant(row.updated_at),
     migrated: true,
   };
@@ -147,6 +150,8 @@ export const settingsInputSchema = z.object({
   moduleConfig: z.object({
     survei: z.object({ formSlug: z.string().regex(SLUG, "Alamat kuesioner tidak dikenali.").nullable() }).optional(),
     mozaik: z.object({ columns: z.number().int().min(4).max(80), rows: z.number().int().min(4).max(80) }).optional(),
+    /** Mode demo (sample data, docs/main-wam/KONTRAK.md §12). */
+    demo: z.boolean().optional(),
   }).optional(),
   theme: z.object({
     /** null clears a colour back to the default. */
@@ -164,6 +169,7 @@ export function settingsPatch(current: MainWamSettings, input: SettingsInput): R
   if (input.moduleConfig) patch.module_config = {
     survei: input.moduleConfig.survei ?? current.moduleConfig.survei,
     mozaik: input.moduleConfig.mozaik ?? current.moduleConfig.mozaik,
+    demo: input.moduleConfig.demo ?? current.moduleConfig.demo,
   };
   if (input.theme) {
     const colors = { ...current.theme.colors };

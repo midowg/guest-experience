@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { adminPeople } from "@/lib/server/main-wam/admin/common";
 import { adminSessions } from "@/lib/server/main-wam/admin/sessions";
-import { listGuides, rundownLog } from "@/lib/server/main-wam/read";
+import { listGuides, rundownLogReal as rundownLog } from "@/lib/server/main-wam/read";
 import { mainWamSettingsState, readMainWamSettings } from "@/lib/server/main-wam/settings";
 
 export const dynamic = "force-dynamic";

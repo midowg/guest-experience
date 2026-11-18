@@ -1,11 +1,14 @@
 import "server-only";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { DEMO_WRITE_MESSAGE, isSimulated } from "@/lib/main-wam/demo";
 import { mainWamGate, moduleAllows, opensMainWamHome, type MainWamAction } from "@/lib/main-wam/access";
 import type { MainWamModule, MainWamSettings, MainWamViewer } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import { ServiceError } from "../config";
 import { currentMember } from "../pra-wam/session";
+import { demoPlaceFor } from "./demo";
 import { readMainWamSettings } from "./settings";
 import { mainWamViewer, testsMainWam, viewerRoom } from "./viewer";
 
@@ -34,7 +37,23 @@ export async function requireMainWamPage(here: string): Promise<MainWamContext> 
   if (gate.kind === "login") redirect(gate.page === "main" ? mainWamPath.login(here) : praWamPath.login(here));
   if (gate.kind === "tutup" || !viewer) notFound();
   if (!showsRoom(here)) return { viewer, settings };
-  return { viewer: { ...viewer, room: await viewerRoom(viewer.id) }, settings };
+  const room = await viewerRoom(viewer.id);
+  // Mode demo: a sample room while HR's pairing is not there.
+  return { viewer: { ...viewer, room: room ?? (viewer.demo ? demoPlaceFor(viewer).room : null) }, settings };
+}
+
+/**
+ * Mode demo: someone drawn as a role their account is not (the "Lihat sebagai" switch) only reads, and so does
+ * everyone while the sample rundown stands in. A write
+ * (every write carries the site's Origin: checkOrigin refuses one without; a same-origin read does not) is
+ * answered with a friendly refusal before anything is saved. Without the demo (`viewer.demo` unset) it does nothing.
+ */
+async function refuseDemoWrite(viewer: MainWamViewer, settings: MainWamSettings): Promise<void> {
+  // Also while the sample rundown stands in (demo and nothing real yet): every id on screen is a sample's, so nothing can be saved.
+  if (!isSimulated(viewer) && !settings.sampleRundown) return;
+  let origin: string | null = null;
+  try { origin = (await headers()).get("origin"); } catch { /* no request */ }
+  if (origin) throw new ServiceError(403, DEMO_WRITE_MESSAGE);
 }
 
 /**
@@ -59,6 +78,7 @@ export async function requireMainWamApi(): Promise<MainWamContext> {
   const gate = mainWamGate(settings.mode, viewer);
   if (gate.kind === "login") throw new ServiceError(401, "Sesi berakhir. Masuk kembali sebelum melanjutkan.");
   if (gate.kind === "tutup" || !viewer) throw notThere();
+  await refuseDemoWrite(viewer, settings);
   return { viewer, settings };
 }
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { settingsForDemo } from "@/lib/main-wam/demo-sample";
 import { defaultSettings, settingsFromRow, settingsPatch, type SettingsInput, type SettingsRow } from "@/lib/main-wam/settings";
 import type { MainWamSettings } from "@/lib/main-wam/types";
 import { isSupabaseConfigured, ServiceError } from "../config";
@@ -40,9 +41,23 @@ async function readSettingsUncached(): Promise<MainWamSettings> {
 /** The settings as saved (throws on a database failure other than a missing migration). */
 export const mainWamSettingsState = cache(readSettingsUncached);
 
-/** The settings every page and API decides by: the defaults on any failure. */
+/** Mode demo: no published session yet, so the sample rundown stands in (a failed count counts as none, like a missing table). */
+async function noRealRundown(): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true;
+  const { count, error } = await createPrivilegedClient().from("mw_sessions").select("id", { count: "exact", head: true }).neq("status", "draf");
+  return !!error || !count;
+}
+
+/**
+ * The settings every page and API decides by: the defaults on any failure. While Mode demo is on
+ * (moduleConfig.demo) they are drawn with every module on and sample facts where the real ones are empty
+ * (settingsForDemo); what is saved is never rewritten, and Admin reads it as it is (mainWamSettingsState).
+ */
 export const readMainWamSettings = cache(async (): Promise<MainWamSettings> => {
-  try { return await mainWamSettingsState(); } catch { return defaultSettings(); }
+  try {
+    const saved = await mainWamSettingsState();
+    return saved.moduleConfig.demo ? settingsForDemo(saved, await noRealRundown().catch(() => true)) : saved;
+  } catch { return defaultSettings(); }
 });
 
 /** Admin WAM → Main WAM → Pengaturan: mode, modules, module settings, theme colours and font. */

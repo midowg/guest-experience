@@ -101,7 +101,7 @@ petakan di `DISPLAY_FONT_VARS` (`MainWamTheme.tsx`). Tanpa itu, kunci ditolak.
 (`readMainWamMode`) dan memberi `mode` ke `MainWamTheme`, jadi tidak ada kedip. Mengganti pilihan
 (`MainWamModeSetting`/`applyMainWamMode`) menulis cookie, mengubah `data-mw-mode` di akar dan kedua tag
 `theme-color` seketika, lalu `router.refresh()`. **Semua layar mengikuti tema**, termasuk Momen: tidak ada
-permukaan gelap tersendiri, **termasuk kamera Momen dan pemindai QR Absen**: bilah atas, chip Untuk/Sesi, tombol
+permukaan gelap tersendiri, **termasuk kamera Momen dan pemindai QR Absen**: bilah atas, tombol
 jepret, latar di sekitar jendela bidik, placeholder sebelum kamera siap (`--mw-photo-bg`/`--mw-surface-2`), kartu
 dan teks bantuan semuanya lewat token tema. Hanya isi jendela bidik (video langsung) yang alami; tanda di atasnya
 (sudut bingkai QR) memakai `--mw-media-on` + bayangan token. Tidak ada lagi `--mw-camera*`, `--mw-ondark*`,
@@ -205,7 +205,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 
 ```tsx
 <List>
-  <ListRow icon={<BedDouble />} title="Kelompok & kamar" sub="Kamar 208 · bersama Sari" value="Lt. 2" href={mainWamPath.groupRoom} />
+  <ListRow icon={<BedDouble />} title="Kamar" sub="Kamar 208 · bersama Sari" value="Lt. 2" href={mainWamPath.room} />
 </List>
 <Card flush>
   <SessionList label="Sesi hari ini">
@@ -218,10 +218,10 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `Chip` | `icon`, `href` | informasi ("Kelompok 4", "Aula Utama"), bukan kontrol |
+| `Chip` | `icon`, `href` | informasi ("Aula Utama", "Lt. 2"), bukan kontrol |
 | `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
 | `ChipRow` | `scroll` (geser ke tepi layar) atau bungkus; `label` | deretan chip |
-| `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera (mengikuti tema; "Sesi: Team building ✕") |
+| `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | chip bertanda di atas media (dulu "Sesi: Team building ✕" di kamera Momen; kamera sekarang tanpa chip, jadi belum dipakai layar mana pun) |
 | `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`** | 2–4 tampilan satu daftar (Semua / Fotoku di Galeri). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
 | `Switch` | `checked`, `onChange`, `label` (atau `labelledBy`) | nyala/mati langsung berlaku |
 | `SwitchRow` | `title`, `sub`, `checked`, `onChange`, `inList` | sakelar berteks ("Kabari peserta"); seluruh baris bisa diketuk |
@@ -370,4 +370,8 @@ Aturan lengkap dan keputusan: `KONTRAK.md` §11. Ringkasnya untuk yang membuat l
   dan rundown (`timeRange(session, lang)`, `dayWord(date, today, lang)`). Jam tetap WIB.
 - **Pengaturan → Bahasa / Language**: `<LanguageSetting />` (`@/components/main-wam/i18n`), `Segmented` Indonesia | English di dalam `Card`.
 - Cek tata letak: teks EN biasanya lebih pendek; yang lebih panjang ("Gathering time changed · was 05:45", "Departure · Mon, 4 Jan")
-  sudah dicek di 390 px (Beranda, Agenda, Momen, Saya, Pengaturan, Perjalanan, Masuk, Kelompok & kamar). Label tab bawah tetap satu kata.
+  sudah dicek di 390 px (Beranda, Agenda, Momen, Saya, Pengaturan, Perjalanan, Masuk, Kamar). Label tab bawah tetap satu kata.
+
+## 8. Mode demo (banner dan pengalih peran)
+
+`<MainWamShell demo>` menggambar strip "Mode demo · data contoh" (token `--mw-warning-container`) di atas bilah atas; layout nyata mengisinya dari `settings.moduleConfig.demo`, `DevFrame` dari propnya. Kartu "Lihat sebagai" (`components/main-wam/demo/DemoSwitch`, di Saya lewat prop `demo` pada `SayaScreen`) hanya muncul untuk penguji. Pratinjau: `/dev-preview/main-wam/demo?layar=saya|beranda|panitia&peran=peserta|panitia|bod`. Aturan lengkap: KONTRAK §12.

@@ -6,6 +6,7 @@ import type { MainWamSettings } from "@/lib/main-wam/types";
 import { databaseError } from "../../http";
 import { readObject } from "../../r2";
 import { createPrivilegedClient } from "../../supabase/admin";
+import { demoMosaic } from "../demo-momen";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { viewAddress, viewWindow } from "./storage";
@@ -112,15 +113,17 @@ export async function mosaicManifest(context: MainWamContext, now = new Date(), 
   const head = given ?? await mosaicHead(context, now);
   const cells = await mosaicCells(settings);
   const empty: MosaicManifest = { version: NOT_MIGRATED.version, columns, rows, cells, tiles: [], filled: 0, total, people: 0, mine: 0, updatedAt: now.toISOString(), complete: false, migrated: false };
-  if (!head.migrated) return empty;
+  if (!head.migrated) return (await demoMosaic(empty)) ?? empty;
   const { data, error } = await db().from("mw_mosaic_tiles").select("tile,photo_id,mw_photos!inner(owner_id,status,tile_key)")
     .eq("mw_photos.status", "tampil").lt("tile", total).order("tile").limit(6400);
-  if (error) { if (mwMissing(error)) return empty; databaseError({ message: error.message ?? "", code: error.code }); }
+  if (error) { if (mwMissing(error)) return (await demoMosaic(empty)) ?? empty; databaseError({ message: error.message ?? "", code: error.code }); }
   const placed = ((data ?? []) as unknown as TileRow[]).filter(row => row.mw_photos?.tile_key);
   const owners = new Set(placed.map(row => row.mw_photos!.owner_id));
   const tiles: MosaicTile[] = await Promise.all(placed.map(async row => ({
     cell: row.tile, id: row.photo_id, src: await viewAddress(row.mw_photos!.tile_key, "ubin", now.getTime()), mine: row.mw_photos!.owner_id === viewer.id,
   })));
+  // Mode demo: a part-filled sample while no photo is placed (demo-momen.ts); null when the demo is off.
+  if (!tiles.length) { const demo = await demoMosaic(empty); if (demo) return { ...demo, version: head.version }; }
   return {
     version: head.version, columns, rows, cells, tiles, filled: tiles.length, total, people: owners.size, mine: tiles.filter(tile => tile.mine).length,
     updatedAt: now.toISOString(), complete: tiles.length >= total, migrated: true,

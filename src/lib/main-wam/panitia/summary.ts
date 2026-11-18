@@ -147,7 +147,7 @@ export function summaryRows(input: SummaryInput): SummaryRow[] {
     // Tonnes from 0,1 t, kilograms below it (never "0,0 t": audit R16).
     const amount = input.carbonKg === null ? null : carbonAmount(input.carbonKg);
     const value: SummaryValue = amount === null ? none : { kind: "angka", value: amount.value, unit: amount.unit };
-    rows.push({ key: "karbon", title: "Jejak karbon", value, href: null });
+    rows.push({ key: "karbon", title: "Jejak karbon", value, href: mainWamPath.carbon() });
   }
   return rows;
 }

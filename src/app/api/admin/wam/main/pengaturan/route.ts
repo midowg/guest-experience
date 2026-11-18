@@ -13,6 +13,7 @@ export async function PUT(request: Request) {
     checkOrigin(request);
     const input = validate(settingsInputSchema, await readJson(request, 10_000));
     const settings = await saveMainWamSettings(input);
-    return success(settings, input.mode ? `Mode acara: ${mainWamModeLabels[settings.mode]}.` : "Pengaturan Main WAM tersimpan.");
+    const demo = input.moduleConfig?.demo;
+    return success(settings, input.mode ? `Mode acara: ${mainWamModeLabels[settings.mode]}.` : demo === undefined ? "Pengaturan Main WAM tersimpan." : demo ? "Mode demo menyala. Matikan sebelum acara." : "Mode demo mati.");
   });
 }

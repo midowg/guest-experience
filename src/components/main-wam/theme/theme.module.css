@@ -43,7 +43,7 @@
   --mw-on-error: #FFFFFF;
   --mw-error-pressed: #B91C1C;
 
-  /* 1.4 Aksen kategori (modul) */
+  /* 1.4 Aksen kategori (modul). chart-emisi-1…3: segmen batang Jejak karbon, masing-masing ≥ 3:1 di atas latar dan kartu (terang dan gelap). */
   --mw-momen: #7C3AED;
   --mw-momen-container: #EDE9FE;
   --mw-on-momen-container: #5B21B6;
@@ -58,7 +58,7 @@
   --mw-on-awarding-container: #9A3412;
   --mw-chart-emisi-1: #115E59;
   --mw-chart-emisi-2: #0D9488;
-  --mw-chart-emisi-3: #5EEAD4;
+  --mw-chart-emisi-3: #64748B;
 
   /* 1.5 Acara (slot tema KV), inverse, media */
   --mw-accent: var(--mw-kv-accent, #1E3A5F);
@@ -216,6 +216,9 @@
   --mw-emisi: #5EEAD4;
   --mw-emisi-container: #11403B;
   --mw-on-emisi-container: #C9F5EC;
+  --mw-chart-emisi-1: #5EEAD4;
+  --mw-chart-emisi-2: #0D9488;
+  --mw-chart-emisi-3: #94A3B8;
   --mw-awarding: #FDBA74;
   --mw-awarding-container: #4A2A14;
   --mw-on-awarding-container: #FFDCC4;
@@ -284,6 +287,9 @@
     --mw-emisi: #5EEAD4;
     --mw-emisi-container: #11403B;
     --mw-on-emisi-container: #C9F5EC;
+    --mw-chart-emisi-1: #5EEAD4;
+    --mw-chart-emisi-2: #0D9488;
+    --mw-chart-emisi-3: #94A3B8;
     --mw-awarding: #FDBA74;
     --mw-awarding-container: #4A2A14;
     --mw-on-awarding-container: #FFDCC4;

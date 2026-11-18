@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { mainWamCan } from "@/lib/main-wam/access";
+import { demoAttendeeIds, isSampleId, samplePresence } from "@/lib/main-wam/demo-sample";
 import { acceptedScanTime, isQrToken, windowOutcome, type CheckInOutcome } from "@/lib/main-wam/modul/absen";
 import { SESSION_COLUMNS, sessionFromRow } from "@/lib/main-wam/rows";
 import { byStart, checkInState, checkInWindow, sessionEnd, wibTime } from "@/lib/main-wam/rundown";
@@ -10,6 +11,7 @@ import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
 import { sessionQrPdf } from "../../pra-wam/qr-pdf";
 import { createPrivilegedClient } from "../../supabase/admin";
+import { demoRundown } from "../demo";
 import { mwFail, mwMissing } from "../errors";
 import { mainWamAttendees } from "../people";
 import { allSessions, attendanceOf } from "../read";
@@ -66,6 +68,8 @@ export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "
  * active WAM accounts, not BOD), how many checked in. Null when it cannot be read.
  */
 export async function presentCount(sessionId: string): Promise<{ present: number; expected: number } | null> {
+  // Mode demo: a sample session (only the sample's rundown has such ids) counts the sample's people.
+  if (isSampleId(sessionId) && await demoRundown()) return { present: samplePresence(sessionId).length, expected: demoAttendeeIds().length };
   const [present, attendees] = await Promise.all([
     db().from("mw_attendance").select("employee_id").eq("session_id", sessionId).limit(5000),
     mainWamAttendees().catch(() => null),

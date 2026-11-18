@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** GET: reported and hidden photos (K08, panitia), with short-lived addresses of the photos. */
 export async function GET() {
   return handle(async () => {
-    apiOnlyFor(await requireMainWamApi(), "kelola");
-    return success(await moderationData(), "Moderasi dimuat.");
+    const context = apiOnlyFor(await requireMainWamApi(), "kelola");
+    return success(await moderationData(new Date(), context.viewer), "Moderasi dimuat.");
   });
 }

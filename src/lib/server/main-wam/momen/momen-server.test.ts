@@ -16,6 +16,7 @@ let counts = { tenMinutes: 0, today: 0 };
 let inserted: Record<string, unknown>[] = [];
 let deleted: string[] = [];
 let rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+let reactorsAnswer: { data: unknown; error: { message: string; code?: string } | null } = { data: [], error: null };
 let reactAnswer: { data: unknown; error: { message: string; code?: string } | null } = { data: [], error: null };
 let reportAnswer: { data: unknown; error: { message: string; code?: string } | null } = { data: [{ reporters: 1, hidden: false, owner_id: "sari" }], error: null };
 let deleteError: { message: string; code?: string } | null = null;
@@ -75,6 +76,7 @@ vi.mock("../../supabase/admin", () => ({
       if (name === "consume_rate_limit") return Promise.resolve({ data: true, error: null });
       if (name === "mw_photo_report") return Promise.resolve(reportAnswer);
       if (name === "mw_photo_react") return Promise.resolve(reactAnswer);
+      if (name === "mw_photo_reactors") return Promise.resolve(reactorsAnswer);
       if (name === "mw_photo_feed") return Promise.resolve({ data: feedRows.slice(0, Number(args.p_limit)), error: null });
       if (name === "mw_mosaic_version") return Promise.resolve({ data: versionAnswer, error: null });
       return Promise.resolve({ data: [], error: null });
@@ -83,7 +85,7 @@ vi.mock("../../supabase/admin", () => ({
 }));
 vi.mock("../read", () => ({ allSessions: async () => ({ data: [{ id: "00000000-0000-4000-8000-0000000000aa", status: "terbit" }, { id: "00000000-0000-4000-8000-0000000000bb", status: "draf" }], migrated: true }) }));
 vi.mock("../notes", () => ({ trySendMainWamNote: vi.fn(async () => 1) }));
-vi.mock("../people", () => ({ mainWamPeople: async () => new Map() }));
+vi.mock("../people", () => ({ mainWamPeople: async () => new Map([["sari", { id: "sari", name: "Sari", photo: null }], ["11111111-1111-4111-8111-111111111111", { id: "11111111-1111-4111-8111-111111111111", name: "Rani", photo: "/foto/rani" }]]) }));
 vi.mock("next/server", () => ({ after: (work: () => unknown) => { void work(); } }));
 vi.mock("./storage", async original => {
   const real = await original<typeof import("./storage")>();
@@ -136,6 +138,7 @@ const statusOf = (promise: Promise<unknown>) => promise.then(() => 200, (error: 
 beforeEach(() => {
   records = new Map(); counts = { tenMinutes: 0, today: 0 }; inserted = []; deleted = []; rpcCalls = []; removed.length = 0;
   reportAnswer = { data: [{ reporters: 1, hidden: false, owner_id: "sari" }], error: null };
+  reactorsAnswer = { data: [], error: null };
   reactAnswer = { data: [{ emoji: HEART, count: 2, mine: true }, { emoji: "😂", count: 1, mine: false }], error: null };
   deleteError = null; insertError = null; recordError = null; versionAnswer = "fingerprint-1"; tileRows = []; feedRows = [];
   uploadsRemoved.length = 0; steps.length = 0; copyFails = false; checkFails = false; duringCheck = null;
@@ -262,6 +265,47 @@ describe("reacting to a photo", () => {
     expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(409);
     reactAnswer = { data: null, error: { message: "Could not find the function public.mw_photo_react", code: "PGRST202" } };
     expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(503);
+  });
+});
+
+describe("who reacted with what", () => {
+  const rani = "11111111-1111-4111-8111-111111111111";
+  const reactorCalls = () => rpcCalls.filter(call => call.name === "mw_photo_reactors");
+  const rows = [
+    { employee_id: rani, emoji: HEART, created_at: "2027-01-05T03:02:00Z" },
+    { employee_id: "sari", emoji: "😂", created_at: "2027-01-05T03:01:00Z" },
+    { employee_id: "someone-new", emoji: "🔥", created_at: "2027-01-05T03:00:00Z" },
+    { employee_id: "sari", emoji: "🤡", created_at: "2027-01-05T03:00:00Z" },
+  ];
+
+  it("answers each reaction with the nama panggilan, marks the person's own, drops what is off the list, and asks the database as the person", async () => {
+    records.set(record({ ownerId: "bukan-rani" }).id, record({ ownerId: "bukan-rani" }));
+    reactorsAnswer = { data: rows, error: null };
+    const answer = await feed.photoReactors(context().viewer, record().id);
+    expect(answer.reactors).toEqual([
+      { person: { id: rani, name: "Rani", photo: "/foto/rani" }, emoji: HEART, mine: true, at: "2027-01-05T03:02:00Z" },
+      { person: { id: "sari", name: "Sari", photo: null }, emoji: "😂", mine: false, at: "2027-01-05T03:01:00Z" },
+      { person: { id: "someone-new", name: "Rekan", photo: null }, emoji: "🔥", mine: false, at: "2027-01-05T03:00:00Z" },
+    ]);
+    expect(reactorCalls()).toEqual([{ name: "mw_photo_reactors", args: { p_photo: record().id, p_viewer: rani } }]);
+  });
+
+  it("answers 404 for a photo the person cannot see (hidden, in its 5 seconds, another kelompok's, unknown) without asking the database", async () => {
+    records.set(record().id, record({ status: "disembunyikan" }));
+    const OTHER = "55555555-5555-4555-8555-555555555555";
+    records.set(OTHER, record({ id: OTHER, audience: "kelompok", groupId: "other" }));
+    const fresh = "66666666-6666-4666-8666-666666666666";
+    records.set(fresh, record({ id: fresh, visibleAt: new Date(Date.now() + 60_000).toISOString() }));
+    for (const id of [record().id, OTHER, fresh, "77777777-7777-4777-8777-777777777777", "bukan-id"]) expect(await statusOf(feed.photoReactors(context().viewer, id)), id).toBe(404);
+    expect(reactorCalls()).toEqual([]);
+  });
+
+  it("lets the owner see who reacted to their own photo, and says a waiting migration is a plain 503", async () => {
+    records.set(record().id, record({ ownerId: rani }));
+    reactorsAnswer = { data: rows.slice(1, 2), error: null };
+    expect((await feed.photoReactors(context().viewer, record().id)).reactors).toHaveLength(1);
+    reactorsAnswer = { data: null, error: { message: "Could not find the function public.mw_photo_reactors", code: "PGRST202" } };
+    expect(await statusOf(feed.photoReactors(context().viewer, record().id))).toBe(503);
   });
 });
 

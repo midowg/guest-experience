@@ -19,8 +19,6 @@ export const UMUM = "umum";
 export type FeedPhoto = {
   id: string;
   owner: { id: string; name: string; photo: string | null };
-  /** "Kelompok 2 · Kawi", or the department before kelompok are published. */
-  ownerGroup: string;
   /** Always "semua" for a photo sent now; an earlier version could send "kelompok" (then only its kelompok sees it). */
   audience: PhotoAudience;
   sessionId: string | null;
@@ -38,6 +36,9 @@ export type FeedPhoto = {
   /** Short-lived storage addresses: the small copy (grid, stack under it) and the large one. */
   src: { kecil: string | null; besar: string | null };
 };
+
+/** One person's reaction to a photo, for the list "who reacted with what" (the person's own marked). */
+export type Reactor = { person: { id: string; name: string; photo: string | null }; emoji: string; mine: boolean; at: string };
 
 /** One page of a view; `next` continues it (null at the end); `total` on the first page. */
 export type FeedPage = { items: FeedPhoto[]; next: string | null; total: number | null };

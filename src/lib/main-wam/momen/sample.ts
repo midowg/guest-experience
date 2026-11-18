@@ -1,7 +1,7 @@
 import { samplePeople, sampleSessionIds } from "../sample";
 import { letterCells, cellOrder } from "./mosaic";
 import { HEART, type ReactionCount } from "./reactions";
-import type { FeedPhoto, MosaicManifest, SessionCount } from "./types";
+import type { FeedPhoto, MosaicManifest, Reactor, SessionCount } from "./types";
 
 /*
  * Momen's sample data for dev-preview pages and tests (area B), on top of the fondasi's sample
@@ -13,14 +13,6 @@ import type { FeedPhoto, MosaicManifest, SessionCount } from "./types";
 const D2 = "2027-01-05", D1 = "2027-01-04";
 const at = (date: string, time: string) => `${date}T${time}:00+07:00`;
 const uid = (n: number) => `00000000-0000-4000-8b00-${String(n).padStart(12, "0")}`;
-
-/** The owner's kelompok as the cards show it (sample.ts: Arjuno = Kelompok 4, Kawi = 2, …). */
-const GROUP_OF: Record<string, string> = {
-  fajar: "Kelompok 4 · Arjuno", rani: "Kelompok 4 · Arjuno", sari: "Kelompok 4 · Arjuno", bima: "Kelompok 4 · Arjuno", ayu: "Kelompok 4 · Arjuno",
-  raka: "Kelompok 4 · Arjuno", lina: "Kelompok 4 · Arjuno", tari: "Kelompok 4 · Arjuno", wawan: "Kelompok 4 · Arjuno", nina: "Kelompok 4 · Arjuno",
-  dimas: "Kelompok 2 · Kawi", dewi: "Kelompok 3 · Welirang", yoga: "Kelompok 6 · Butak", gilang: "Kelompok 7 · Semeru", putri: "Kelompok 8 · Wilis",
-  hana: "Kelompok 9 · Lawu", maya: "Kelompok 1 · Bromo", hadi: "Kelompok 5 · Panderman",
-};
 
 /** `total` reactions spread over the usual emoji (half the red heart, a quarter laughing, …), none for 0. */
 export function sampleReactions(total: number, mine: string | null = null): ReactionCount[] {
@@ -40,7 +32,7 @@ type Seed = [key: string, date: string, time: string, reacted: number, extra?: P
 function photo(n: number, [key, date, time, reacted, extra = {}]: Seed, viewerKey = "rani"): FeedPhoto {
   const person = samplePeople[key];
   return {
-    id: uid(n), owner: { id: person.id, name: person.name, photo: null }, ownerGroup: GROUP_OF[key] ?? person.department,
+    id: uid(n), owner: { id: person.id, name: person.name, photo: null },
     audience: "semua", sessionId: sampleSessionIds.pemaparan, width: 1280, height: 1600, takenAt: at(date, time), visibleAt: at(date, time),
     status: "tampil", reactions: sampleReactions(reacted), seen: false, mine: key === viewerKey, src: { kecil: null, besar: null }, ...extra,
   };
@@ -57,14 +49,14 @@ const ALL: Seed[] = [
 /** M01: 24 new photos for everyone (the third is Dimas, 10.02, 24 reactions). */
 export const sampleFeedSemua: FeedPhoto[] = ALL.map((seed, index) => photo(index + 1, seed));
 
-/** M05 Galeri: 21 photos (Fajar's, Raka's and Wawan's carry the lock: an earlier version sent them only to the kelompok). */
+/** M05 Galeri: 21 photos. */
 export const sampleGalleryAll: FeedPhoto[] = (["rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "fajar"] as const)
   .map((key, index) => photo(200 + index, [key, index < 15 ? D2 : D1, `${String(10 - Math.floor(index / 4)).padStart(2, "0")}:${String(59 - (index % 4) * 13).padStart(2, "0")}`, index % 5,
-    { audience: index === 1 || index === 5 || index === 8 ? "kelompok" : "semua", seen: true }]));
+    { seen: true }]));
 
-/** M05 Fotoku: Rani's six photos (one only for the kelompok, one in review). */
+/** M05 Fotoku: Rani's six photos (one in review). */
 export const sampleGalleryMine: FeedPhoto[] = [0, 1, 2, 3, 4, 5].map(index => photo(300 + index, ["rani", D2, `0${9 - Math.floor(index / 3)}:${String(50 - index * 7).padStart(2, "0")}`, index,
-  { audience: index === 2 ? "kelompok" : "semua", status: index === 4 ? "ditinjau" : "tampil", seen: true }]));
+  { status: index === 4 ? "ditinjau" : "tampil", seen: true }]));
 
 /** "Saring sesi" (M01__status#pilih-sesi): only sessions with photos, Umum last. */
 export const sampleSessionCounts: SessionCount[] = [
@@ -78,11 +70,19 @@ export const SAMPLE_TOTAL = 486;
 /** The prototype's Mozaik grid (M06: 30 × 20 = 600 cells). */
 export const SAMPLE_MOSAIC_GRID = { columns: 30, rows: 20 } as const;
 
+/** A 160 px gradient as a data address: a stand-in for a photo's tile (no real pictures in the repo). */
+function tilePicture(index: number): string {
+  const hue = (index * 47) % 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 8 8"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 62% 66%)"/><stop offset="1" stop-color="hsl(${(hue + 40) % 360} 55% 42%)"/></linearGradient></defs><rect width="8" height="8" fill="url(#g)"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 /**
  * A Mozaik filled to `share` of its cells (M06: 312 of 600, 52%), in the real fill order, with
- * `mine` of the viewer's photos in it (4 at 52%). Tiles have no picture (placeholders).
+ * `mine` of the viewer's photos in it (4 at 52%). Tiles have no picture (placeholders), or with `pictures` a small
+ * coloured gradient each (dev preview: so the letters stand out the way real photos make them stand out).
  */
-export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; rows: number } = SAMPLE_MOSAIC_GRID): MosaicManifest {
+export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; rows: number } = SAMPLE_MOSAIC_GRID, pictures = false): MosaicManifest {
   const { columns, rows } = grid;
   const total = columns * rows;
   const filled = Math.round(total * share);
@@ -93,9 +93,31 @@ export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; ro
   const letterPlaced = placed.filter(cell => cells[cell] !== ".");
   const step = Math.max(1, Math.floor(letterPlaced.length / Math.max(1, mine)));
   const mineCells = new Set(letterPlaced.filter((_, index) => index % step === 0).slice(0, mine));
-  const tiles = placed.map((cell, index) => ({ cell, id: uid(1000 + index), src: null, mine: mineCells.has(cell) }));
+  const tiles = placed.map((cell, index) => ({ cell, id: uid(1000 + index), src: pictures ? tilePicture(index) : null, mine: mineCells.has(cell) }));
   return {
     version: `sample-${filled}`, columns, rows, cells, tiles, filled, total, people: filled >= total ? 118 : 86, mine: mineCells.size,
     updatedAt: at(D2, "10:05"), complete: filled >= total, migrated: true,
   };
+}
+
+/**
+ * The list "who reacted with what" for a photo with these counts (the sheet's demo, no network): people from the sample
+ * list, each with one emoji, the viewer's own (Rani) included when `mine` names the emoji.
+ */
+export function sampleReactors(reactions: readonly ReactionCount[], mine: string | null = null): Reactor[] {
+  const keys = Object.keys(samplePeople).filter(key => key !== "rani");
+  let cursor = 0;
+  const out: Reactor[] = [];
+  const EXTRA = ["Anto", "Bayu", "Citra", "Dian", "Eko", "Farah", "Gita", "Heru", "Indah", "Joko", "Kiki", "Lukman"];
+  const base = Date.parse(at(D2, "10:03"));
+  for (const entry of reactions) {
+    for (let n = 0; n < entry.count; n++) {
+      const isMine = entry.mine && n === 0;
+      // One reaction per person: when the sample people run out, more colleagues are made up.
+      const taken = cursor++;
+      const person = isMine ? samplePeople.rani : taken < keys.length ? samplePeople[keys[taken]] : { id: uid(2000 + taken), name: EXTRA[(taken - keys.length) % EXTRA.length] };
+      out.push({ person: { id: person.id, name: person.name, photo: null }, emoji: entry.emoji, mine: isMine && (mine === null || mine === entry.emoji), at: new Date(base - out.length * 60_000).toISOString() });
+    }
+  }
+  return out;
 }

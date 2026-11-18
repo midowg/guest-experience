@@ -40,7 +40,7 @@ vi.mock("../../supabase/admin", () => ({
 
 const { loadHome } = await import("./home");
 const { loadAgenda, loadSession } = await import("./agenda");
-const { loadGroupRoom, loadMe, loadTravel } = await import("./saya");
+const { loadRoom, loadMe, loadTravel } = await import("./saya");
 const { contactsOf } = await import("./contacts");
 
 const context = (viewer: MainWamViewer, settings: Partial<MainWamSettings> = {}) => ({ viewer, settings: sampleSettings(settings) });
@@ -125,14 +125,11 @@ describe("Agenda and Detail sesi", () => {
 });
 
 describe("Saya's loaders", () => {
-  it("Kelompok & kamar: the person's own kelompok and kelompok kegiatan; nothing before publishing", async () => {
-    const data = await loadGroupRoom(context(sampleViewers.peserta));
-    expect(data.group).toMatchObject({ title: "Kelompok 4 · Arjuno", size: 10 });
-    expect(read.activityGroups).toHaveBeenCalledWith({ employeeId: sampleViewers.peserta.id });
-    vi.clearAllMocks();
-    const hidden = await loadGroupRoom(context(sampleViewers.peserta, { groupsPublished: false }));
-    expect(hidden.group).toBeNull();
+  it("Kamar: only the contact for Bantuan kamar is read (no kelompok any more)", async () => {
+    const data = await loadRoom(context(sampleViewers.peserta));
+    expect(data).toEqual({ roomHelp: expect.anything() });
     expect(read.listGroups).not.toHaveBeenCalled();
+    expect(read.activityGroups).not.toHaveBeenCalled();
   });
 
   it("Perjalanan: the person's own seats, the coordinators", async () => {

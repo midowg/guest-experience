@@ -10,7 +10,7 @@ import { previewTime, previewViewer } from "../sample";
 
 export const dynamic = "force-dynamic";
 
-/** P05 / P05B Saya with sample data (dev-preview): ?peran=peserta|panitia|bod, ?buka=foto|keluar, ?status=memuat|tanpa-kamar. */
+/** P05 / P05B Saya with sample data (dev-preview): ?peran=peserta|panitia|bod, ?buka=foto|keluar, ?status=memuat|tanpa-kamar, ?karbon=mati (module off). */
 export default async function PreviewSaya({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
@@ -21,6 +21,6 @@ export default async function PreviewSaya({ searchParams }: { searchParams: Prom
   const room = params.status === "tanpa-kamar" || !viewer.room ? null : roomRow(viewer.room, lang);
   const open = params.buka === "foto" || params.buka === "keluar" ? params.buka : null;
   return <Frame path={mainWamPath.me} peran={params.peran} now={now} lang={lang}>
-    <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer, lang)} photo={null} room={room} mcp={params.peran === "bod"} open={open} />
+    <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer)} photo={null} room={room} carbon={params.karbon !== "mati"} open={open} />
   </Frame>;
 }

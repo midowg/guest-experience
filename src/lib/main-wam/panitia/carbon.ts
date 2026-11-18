@@ -29,6 +29,9 @@ export type CarbonData = {
   people: number;
   /** Rooms in use × nights. */
   roomNights: number;
+  /** The two factors of `roomNights`, for the page that says "60 kamar × 3 malam" (0 or left out: not known). */
+  rooms?: number;
+  nights?: number;
   /** Each train leg: its km and how many ride it. */
   trainLegs: { km: number; passengers: number }[];
   /** Each bus leg: its km and how many buses run it. */
@@ -38,6 +41,9 @@ export type CarbonData = {
   /** The hotel's bills (Admin WAM → Info acara, after the event). */
   bills: Pick<CarbonInputs, "listrikKwh" | "airM3" | "lpgKg" | "sampahKg">;
 };
+
+/** What was counted, in the words of the page: "60 kamar × 3 malam", "1.440 porsi", the kinds of trip. */
+export type CarbonBasis = { people: number; rooms: number; nights: number; roomNights: number; portions: number; trainLegs: number; busLegs: number };
 
 export type CarbonResult = {
   /** Everything, kg CO₂e. */
@@ -49,6 +55,7 @@ export type CarbonResult = {
   hotelFrom: "tagihan" | "perkiraan";
   /** Nothing to count yet (no people, rooms, trips or meals). */
   empty: boolean;
+  basis: CarbonBasis;
 };
 
 const positive = (value: number | null | undefined) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0);
@@ -70,6 +77,10 @@ export function carbonEstimate(data: CarbonData): CarbonResult {
     parts: { perjalanan: kereta + bus, hotel, makan },
     hotelFrom: fromBills ? "tagihan" : "perkiraan",
     empty: kg <= 0,
+    basis: {
+      people: positive(data.people), rooms: positive(data.rooms), nights: positive(data.nights), roomNights: positive(data.roomNights), portions: positive(data.portions),
+      trainLegs: data.trainLegs.filter(leg => positive(leg.km) > 0 && positive(leg.passengers) > 0).length, busLegs: data.busLegs.filter(leg => positive(leg.km) > 0 && positive(leg.buses) > 0).length,
+    },
   };
 }
 
@@ -99,6 +110,8 @@ export function carbonDataFrom(input: {
   return {
     people: input.people,
     roomNights: input.rooms * input.nights,
+    rooms: input.rooms,
+    nights: input.nights,
     trainLegs: input.trips.filter(trip => trip.kind === "kereta" && positive(trip.distanceKm) > 0)
       .map(trip => ({ km: positive(trip.distanceKm), passengers: input.seats.get(trip.id) || input.people })),
     busLegs: input.trips.filter(trip => trip.kind === "bus" && positive(trip.distanceKm) > 0)

@@ -21,7 +21,7 @@ import type { MainWamThemeInput } from "@/lib/main-wam/types";
  *     return <DevFrame path={mainWamPath.agenda()} peran={peran} waktu={waktu}><AgendaScreen … /></DevFrame>;
  *   }
  */
-export function DevFrame({ path, peran, waktu, unread = 3, theme, lang = "id", children }: {
+export function DevFrame({ path, peran, waktu, unread = 3, theme, lang = "id", demo = false, children }: {
   /** The address the screen stands for (its frame: tab, level, title). */
   path: string;
   /** peserta (default) | panitia | bod | admin. */
@@ -32,13 +32,15 @@ export function DevFrame({ path, peran, waktu, unread = 3, theme, lang = "id", c
   /** ?lang=en (previewLang): the frame and the greeting in that language; the screen needs the same `lang` for what it computes. */
   lang?: Lang;
   theme?: MainWamThemeInput | null;
+  /** Mode demo's strip over the top bar (the real layout passes settings.moduleConfig.demo). */
+  demo?: boolean;
   children: ReactNode;
 }) {
   const viewer = sampleViewer(peran);
   const screen = mainWamScreen(path.split(/[?#]/)[0], lang);
   return <MainWamTheme theme={theme} mode="light">
     <LangProvider lang={lang}>
-      <MainWamShell screen={screen} unread={unread} committee={showsCommitteeTab(viewer)} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer), lang)}>
+      <MainWamShell screen={screen} unread={unread} committee={showsCommitteeTab(viewer)} demo={demo} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer), lang)}>
         {children}
       </MainWamShell>
     </LangProvider>

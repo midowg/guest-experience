@@ -481,8 +481,10 @@ export const mainWamPath = {
   session: (id: string) => `${MAIN_WAM_PATH}/agenda/${enc(id)}`,
   /** P05 Saya (BOD: P05B with Akses MCP). */
   me: `${MAIN_WAM_PATH}/saya`,
-  /** L01 Kelompok & kamar. */
-  groupRoom: `${MAIN_WAM_PATH}/saya/kelompok`,
+  /** L01 Kamar (penghuni berapa pun, check-in/out, bantuan kamar). */
+  room: `${MAIN_WAM_PATH}/saya/kamar`,
+  /** E01 Jejak karbon (module karbon): total, per person, where it comes from. `from`: the tab it was opened from (Beranda by default, or Saya), so that tab stays lit. */
+  carbon: (from?: "saya") => `${MAIN_WAM_PATH}/jejak-karbon${from === "saya" ? "/saya" : ""}`,
   /** L03 Perjalanan, berangkat (default) or pulang. */
   travel: (direction?: "berangkat" | "pulang") => `${MAIN_WAM_PATH}/saya/perjalanan${mwQuery({ arah: direction === "pulang" ? "pulang" : undefined })}`,
   /** L04 Panduan: Denah, Hotel & fasilitas, Dress code, Tata tertib. */
@@ -564,7 +566,7 @@ export const mainWamApi = {
   /** GET: the photo's file, small (stack, grid) or large; a redirect to storage. */
   /** kecil = 480 px, besar = 1600 px, ubin = 160 px (Mozaik). */
   photoFile: (id: string, size: "kecil" | "besar" | "ubin" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
-  /** PUT: suka; DELETE: batal suka. */
+  /** GET: siapa bereaksi apa (daftar); PUT: bereaksi; DELETE: batal bereaksi. */
   photoReaction: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/reaksi`,
   /** POST {reason, note}: Laporkan foto (M04); DELETE: Tampilkan lagi (for the reporter). */
   photoReport: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/laporan`,
@@ -617,9 +619,6 @@ export const mainWamAdminPath = {
   settings: `${MAIN_WAM_ADMIN}/pengaturan`,
   /* E · isi acara */
   rundown: `${MAIN_WAM_ADMIN}/rundown`,
-  groups: `${MAIN_WAM_ADMIN}/kelompok`,
-  /** Kelompok, tab Kelompok kegiatan (pos, angkot, meja). */
-  activityGroups: `${MAIN_WAM_ADMIN}/kelompok?tab=kegiatan`,
   rooms: `${MAIN_WAM_ADMIN}/kamar`,
   travel: `${MAIN_WAM_ADMIN}/perjalanan`,
   guides: `${MAIN_WAM_ADMIN}/panduan`,

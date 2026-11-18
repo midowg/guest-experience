@@ -1,49 +1,102 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Bell, Check, CircleAlert, CircleCheck, Eye, EyeOff, KeyRound, Send } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Bell, Check, CircleAlert, CircleCheck, ExternalLink, Eye, EyeOff, Globe, KeyRound, LifeBuoy, MessageCircle, Palette, Send, SquarePlus } from "lucide-react";
 import { passwordRules } from "@/lib/pra-wam/password";
-import type { MessageKey } from "@/lib/main-wam/i18n";
-import { praWamApi } from "@/lib/routes";
+import { LANG_NAMES, type MessageKey } from "@/lib/main-wam/i18n";
+import type { Contact } from "@/lib/main-wam/peserta/contact";
+import { mainWamPath, praWamApi, praWamPath } from "@/lib/routes";
 import type { MainWamMode } from "@/lib/main-wam/appearance";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
 import { MainWamModeSetting } from "@/components/main-wam/theme";
-import { Banner, Button, Card, List, ListRow, Pill, Sheet, Spinner, SwitchRow, TextField, useToast } from "@/components/main-wam/ui";
-import { LanguageSetting, useKnown, useT } from "@/components/main-wam/i18n";
+import { Banner, Button, List, ListRow, Pill, Sheet, Spinner, SwitchRow, TextField, useToast } from "@/components/main-wam/ui";
+import { LanguageSetting, useKnown, useLang, useT } from "@/components/main-wam/i18n";
+import { ContactSheet } from "../ContactSheet";
 import { InstallSteps } from "../InstallSteps";
 import { MwRequestError, failText, mwRequest } from "../request";
-import { pushWords, usePushDevice, type PushState } from "../usePushDevice";
+import { isStandalone, pushWords, usePushDevice, type PushState } from "../usePushDevice";
 import css from "../peserta.module.css";
 
+type Panel = "notifikasi" | "pasang" | "tampilan" | "bahasa" | "password" | "panitia";
+
 /**
- * Pengaturan (S02, revisi 16 Nov malam): Tampilan (Terang, Gelap, Sistem; this device), Notifikasi (this phone's permission) and Ganti password,
- * each in a sheet, and the version, small. The per-topic switches are gone; quiet hours still hold
- * (aturan-wam §7a). The same Web Push and password API as WAM.
+ * Pengaturan (S02, revisi 18 Nov): three groups, each row one short line and one sheet or page.
+ * Aplikasi: Notifikasi (this phone's permission, a test), Pasang ke layar utama (how, per device),
+ * Tampilan (Terang, Gelap, Sistem) and Bahasa, all kept on this device. Akun: Ganti password.
+ * Bantuan: the Bantuan page and Hubungi panitia. At the bottom the version and, for a BOD with
+ * access, Akses MCP. The per-topic switches are gone; quiet hours still hold (aturan-wam §7a).
+ * The same Web Push and password API as WAM.
  */
-export function SettingsScreen({ version, mode = "system", preview }: { version: string; /** This device's pick (cookie, read by the page). */ mode?: MainWamMode; preview?: { push?: PushState; open?: "notifikasi" | "password" } }) {
+export function SettingsScreen({ version, mode = "system", help = null, mcp = false, preview }: {
+  version: string;
+  /** This device's pick (cookie, read by the page). */
+  mode?: MainWamMode;
+  /** The panitia contact for "Hubungi panitia"; none = no such row. */
+  help?: Contact | null;
+  /** BOD with Akses MCP (Pra WAM's Pengaturan holds McpCard). */
+  mcp?: boolean;
+  preview?: { push?: PushState; open?: Panel; installed?: boolean };
+}) {
   const t = useT();
+  const { lang } = useLang();
   const push = usePushDevice({ preview: preview?.push });
-  const [open, setOpen] = useState<"notifikasi" | "password" | null>(preview?.open ?? null);
+  const [open, setOpen] = useState<Panel | null>(preview?.open ?? null);
+  const [picked, setPicked] = useState(mode);
+  const [installed, setInstalled] = useState(preview?.installed ?? false);
+  // Opened from its icon or from a browser tab: only the phone knows, after the first paint.
+  useEffect(() => {
+    if (preview?.installed !== undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the browser after the first paint
+    setInstalled(isStandalone());
+  }, [preview?.installed]);
   const words = pushWords[push.state];
+  const close = () => setOpen(null);
   return <ScreenContent>
     <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.appearance.title")}</h2>
-      <Card>
-        <MainWamModeSetting initial={mode} />
-        <p className={css.textMuted}>{t("peserta.appearance.note")}</p>
-      </Card>
-      <LanguageSetting />
+      <h2 className={css.groupHead}>{t("peserta.settings.groupApp")}</h2>
+      <List>
+        <ListRow icon={<Bell />} title={t("peserta.settings.notifications")} sub={t("peserta.settings.notificationsSub")} onClick={() => setOpen("notifikasi")} aria-haspopup="dialog"
+          trailing={<Pill tone={words.tone} icon={push.state === "on" ? <Check /> : undefined}>{t(words.pill)}</Pill>} />
+        <ListRow icon={<SquarePlus />} title={t("peserta.settings.install")} sub={t(installed ? "peserta.settings.installed" : "peserta.settings.installSub")} onClick={() => setOpen("pasang")} aria-haspopup="dialog" />
+        <ListRow icon={<Palette />} title={t("peserta.appearance.title")} sub={t("peserta.settings.appearanceSub")} value={t(`peserta.appearance.${picked}`)} onClick={() => setOpen("tampilan")} aria-haspopup="dialog" />
+        <ListRow icon={<Globe />} title={t("peserta.settings.language")} sub={t("lang.sub")} value={LANG_NAMES[lang]} onClick={() => setOpen("bahasa")} aria-haspopup="dialog" />
+      </List>
     </ScreenSection>
-    <List>
-      <ListRow icon={<Bell />} title={t("peserta.settings.notifications")} sub={t("peserta.settings.permission")} onClick={() => setOpen("notifikasi")} chevron aria-haspopup="dialog"
-        trailing={<Pill tone={words.tone} icon={push.state === "on" ? <Check /> : undefined}>{t(words.pill)}</Pill>} />
-      <ListRow icon={<KeyRound />} title={t("peserta.settings.changePassword")} onClick={() => setOpen("password")} chevron aria-haspopup="dialog" />
-    </List>
-    <p className={css.version}>{t("peserta.settings.version", { version })}</p>
-    <Sheet open={open === "notifikasi"} onClose={() => setOpen(null)} title={t("peserta.settings.notifications")} subtitle={t("peserta.settings.permission")} locked={push.busy}>
+    <ScreenSection>
+      <h2 className={css.groupHead}>{t("peserta.settings.groupAccount")}</h2>
+      <List>
+        <ListRow icon={<KeyRound />} title={t("peserta.settings.changePassword")} sub={t("peserta.settings.passwordSub")} onClick={() => setOpen("password")} aria-haspopup="dialog" />
+      </List>
+    </ScreenSection>
+    <ScreenSection>
+      <h2 className={css.groupHead}>{t("peserta.settings.groupHelp")}</h2>
+      <List>
+        <ListRow icon={<LifeBuoy />} title={t("peserta.me.help")} sub={t("peserta.settings.helpSub")} href={mainWamPath.help} />
+        {help && <ListRow icon={<MessageCircle />} title={t("peserta.settings.contact")} sub={t("peserta.settings.contactSub")} onClick={() => setOpen("panitia")} aria-haspopup="dialog" />}
+      </List>
+    </ScreenSection>
+    <div className={css.settingsFoot}>
+      <p className={css.version}>{t("peserta.settings.version", { version })}</p>
+      {mcp && <a className={css.footLink} href={`${praWamPath.settings}#mcp`}>{t("peserta.me.mcp")}<ExternalLink aria-hidden /></a>}
+    </div>
+
+    <Sheet open={open === "notifikasi"} onClose={close} title={t("peserta.settings.notifications")} subtitle={t("peserta.settings.permission")} locked={push.busy}>
       <NotificationPanel push={push} />
     </Sheet>
-    <PasswordSheet open={open === "password"} onClose={() => setOpen(null)} />
+    <Sheet open={open === "pasang"} onClose={close} title={t("peserta.settings.install")} subtitle={installed ? t("peserta.settings.installedNote") : undefined}>
+      <InstallSteps />
+    </Sheet>
+    <Sheet open={open === "tampilan"} onClose={close} title={t("peserta.appearance.title")}>
+      <div className={css.sheetStack}>
+        <MainWamModeSetting initial={picked} onChange={setPicked} />
+        <p className={css.textMuted}>{t("peserta.appearance.note")}</p>
+      </div>
+    </Sheet>
+    <Sheet open={open === "bahasa"} onClose={close} title={t("lang.sheetTitle")}>
+      <LanguageSetting bare />
+    </Sheet>
+    <PasswordSheet open={open === "password"} onClose={close} />
+    {help && <ContactSheet contact={help} title={t("peserta.session.contactCommittee")} open={open === "panitia"} onClose={close} />}
   </ScreenContent>;
 }
 

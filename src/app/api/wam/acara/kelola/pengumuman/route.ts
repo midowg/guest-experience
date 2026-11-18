@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 /** GET: the announcements panitia sent lately, with who sent them (K06). */
 export async function GET() {
   return handle(async () => {
-    apiOnlyFor(await requireMainWamApi(), "kelola");
-    return success(await listSent(), "Pengumuman dimuat.");
+    const context = apiOnlyFor(await requireMainWamApi(), "kelola");
+    return success(await listSent(context.viewer), "Pengumuman dimuat.");
   });
 }
 

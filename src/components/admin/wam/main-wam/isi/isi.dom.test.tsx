@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { sampleAdminGroups, sampleAdminGuides, sampleAdminLog, sampleAdminPeople, sampleAdminSessions, sampleAdminSettings } from "@/lib/main-wam/admin/sample";
-import { samplePeople, sampleSessionIds } from "@/lib/main-wam/sample";
+import { sampleAdminGuides, sampleAdminLog, sampleAdminPeople, sampleAdminSessions, sampleAdminSettings } from "@/lib/main-wam/admin/sample";
+import { sampleSessionIds } from "@/lib/main-wam/sample";
 import { eventDates } from "@/lib/main-wam/rundown";
 import { mainWamAdminApi, wamAdminPath } from "@/lib/routes";
 import { AdminApiError } from "@/components/admin/shared/api";
@@ -10,7 +10,6 @@ const request = vi.fn();
 vi.mock("@/components/admin/shared/api", async importOriginal => ({ ...(await importOriginal<object>()), adminRequest: (...args: unknown[]) => request(...args) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode; scroll?: boolean }) => { delete props.scroll; return <a href={href} {...props}>{children}</a>; } }));
 const { RundownEditor } = await import("./RundownEditor");
-const { GroupsEditor } = await import("./GroupsEditor");
 const { EventInfoEditor } = await import("./EventInfoEditor");
 
 // jsdom has no modal dialogs.
@@ -146,39 +145,6 @@ describe("Rundown", () => {
     fireEvent.click(within(sheet).getByRole("button", { name: "Simpan 1 sesi" }));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
     expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toMatchObject({ action: "impor", sessions: [{ title: "Rapat pagi", date: "2027-01-06", start: "13:00", end: "14:00", status: "draf" }] });
-  });
-});
-
-describe("Kelompok", () => {
-  it("flags who has no kelompok and asks before publishing", async () => {
-    request.mockResolvedValue({ message: "Kelompok diterbitkan. Peserta sekarang melihat kelompoknya.", data: { ...sampleAdminSettings(), groupsPublished: true } });
-    render(<GroupsEditor initial={sampleAdminGroups} migrated people={sampleAdminPeople} published={false} crumbs={[]} title="Main WAM · Kelompok" />);
-    const flagged = screen.getByRole("region", { name: "Belum punya kelompok" });
-    expect(flagged.textContent).toContain(samplePeople.arman.fullName);
-    expect(flagged.textContent).not.toContain(samplePeople.rani.fullName);
-    fireEvent.click(screen.getByRole("button", { name: "Terbitkan" }));
-    expect(request).not.toHaveBeenCalled();
-    // The confirmation's own "Terbitkan" (the dialog opens after the page's button).
-    await waitFor(() => expect(screen.getAllByRole("button", { name: "Terbitkan" })).toHaveLength(2));
-    fireEvent.click(screen.getAllByRole("button", { name: "Terbitkan" })[1]);
-    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-    expect(request.mock.calls[0][0]).toBe(mainWamAdminApi.eventInfo);
-    expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toEqual({ groupsPublished: true });
-    expect(await screen.findByText("Terbit")).toBeTruthy();
-  });
-
-  it("saves a kelompok's members and koordinator as a whole; moving someone is said", async () => {
-    request.mockResolvedValue({ message: "ok", data: { groups: sampleAdminGroups } });
-    render(<GroupsEditor initial={sampleAdminGroups} migrated people={sampleAdminPeople} published crumbs={[]} title="Main WAM · Kelompok" />);
-    fireEvent.click(screen.getByRole("button", { name: "Ubah Kelompok 2 · Kawi" }));
-    const sheet = screen.getByRole("dialog", { name: "Ubah kelompok" });
-    fireEvent.click(within(sheet).getByRole("checkbox", { name: /Rani Contoh/ }));
-    expect(within(sheet).getByText("Pindah dari Kelompok 4 · Arjuno")).toBeTruthy();
-    fireEvent.change(within(sheet).getByLabelText(/Koordinator/), { target: { value: samplePeople.rani.id } });
-    fireEvent.click(within(sheet).getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-    expect(request.mock.calls[0][0]).toBe(mainWamAdminApi.groupMembers(sampleAdminGroups[1].id));
-    expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toEqual({ employeeIds: [samplePeople.dimas.id, samplePeople.rani.id], coordinatorId: samplePeople.rani.id });
   });
 });
 

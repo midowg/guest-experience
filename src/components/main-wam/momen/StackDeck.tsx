@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Ellipsis, Lock } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Ellipsis } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { Avatar, IconButton, Pill, PhotoFill } from "@/components/main-wam/ui";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
-import { photoAlt, photoMeta, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
+import { photoAlt, photoMeta, pileTilt, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
 import { ReactionPills } from "./Reactions";
 import { useFreshAddress } from "./useFreshAddress";
@@ -17,8 +17,10 @@ import css from "./momen.module.css";
  * swipe (so a tap still reaches the side buttons), pointercancel puts the card back. At most three
  * cards in the page; the next large photo is fetched ahead. Swipe left = next, right = previous; one
  * tap on a side does the same (WCAG 2.5.1, 2.5.7), and the arrow keys when the stack has focus.
- * Inside the front card: the owner's pill and the photo's options on top, the reactions it got as small
- * pills at the bottom left (a tap on one reacts with it, on another person's photo). Reduced motion: no throw or tilt, the next photo fades in.
+ * Inside the front card: the owner's pill and the photo's options on top, the reactions it got as overlapping
+ * pills at the bottom left (one tap on them opens the list of who reacted with what). The cards behind lie at a
+ * tilt of their own (pileTilt, from the photo's id) so it shows there are more; the next one straightens as it
+ * comes to the front. Reduced motion: no throw, the next photo fades in (the tilt stays as it is).
  */
 
 const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
@@ -43,14 +45,14 @@ function CardPhoto({ photo, large, alt }: { photo: FeedPhoto; large: boolean; al
   </>;
 }
 
-export function StackDeck({ items, index, onIndex, onLike, onReact, onOptions, reactionsOf, now, panel, label, describe, children }: {
+export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions, reactionsOf, now, panel, label, describe, children }: {
   items: FeedPhoto[];
   index: number;
   onIndex: (next: number, how: "swipe" | "tap" | "key") => void;
   /** Double tap on the photo (never on one's own): the red heart. */
   onLike: (photo: FeedPhoto) => void;
-  /** A tap on a reaction pill of another person's photo: react with that emoji, or take it back. */
-  onReact?: (photo: FeedPhoto, emoji: string) => void;
+  /** A tap on the reaction pills of the front photo: open the list of who reacted with what. */
+  onReactors?: (photo: FeedPhoto) => void;
   /** The "…" on the front card. */
   onOptions?: (photo: FeedPhoto) => void;
   /** The reactions to show on a photo (the screen keeps the ones just given); the photo's own when left out. */
@@ -175,7 +177,9 @@ export function StackDeck({ items, index, onIndex, onLike, onReact, onOptions, r
         const isFront = offset === 0;
         if (isFront && showPanel) return null;
         const alt = photoAlt(photo, now, lang);
-        return <div key={photo.id} ref={isFront ? front : undefined} className={css.card} data-place={place}
+        const tilt = isFront ? null : pileTilt(photo.id);
+        const lie = tilt ? { "--tilt": `${tilt.angle}deg`, "--peek-x": `${tilt.x}px`, "--peek-y": `${tilt.y}px`, "--peek-scale": tilt.scale } as CSSProperties : undefined;
+        return <div key={photo.id} ref={isFront ? front : undefined} className={css.card} data-place={place} style={lie}
           role={isFront ? "group" : undefined} aria-roledescription={isFront ? "slide" : undefined} aria-label={isFront ? `${describe(index)}. ${alt}` : undefined}
           aria-hidden={isFront ? undefined : true}
           {...(isFront ? { ...swipe, onClick: onMiddleTap, onClickCapture: swallow } : {})}>
@@ -186,14 +190,13 @@ export function StackDeck({ items, index, onIndex, onLike, onReact, onOptions, r
           </>}
           {isFront && photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.yourPhoto")}</Pill></span>}
           {isFront && onOptions && <IconButton className={css.options} variant="onmedia" icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => onOptions(photo)} />}
-          {isFront && <ReactionPills reactions={reactionsOf ? reactionsOf(photo) : photo.reactions} mine={photo.mine} onReact={onReact ? emoji => onReact(photo, emoji) : undefined} />}
+          {isFront && <ReactionPills reactions={reactionsOf ? reactionsOf(photo) : photo.reactions} mine={photo.mine} onOpen={onReactors ? () => onReactors(photo) : undefined} />}
           <div className={css.info} aria-hidden>
             <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>
               <span className={css.name}>{photo.owner.name}</span>
               <span className={css.meta}>{photoMeta(photo, now, lang)}</span>
             </span>
-            {photo.audience === "kelompok" && <Lock className={css.lock} aria-hidden />}
           </div>
         </div>;
       })}

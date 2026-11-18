@@ -21,6 +21,15 @@
 }
 .skip:focus { transform: none; }
 
+/* Mode demo: a slim strip over the top bar (it carries the safe area, so the bar under it does not add it twice). */
+.demo {
+  display: flex; align-items: center; justify-content: center; gap: var(--mw-space-8); min-height: 24px; padding: calc(var(--mw-safe-top) + var(--mw-space-4)) var(--mw-space-16) var(--mw-space-4);
+  background: var(--mw-warning-container); color: var(--mw-on-warning-container); font: var(--mw-type-caption); text-align: center;
+}
+.demo > svg { flex: none; width: 14px; height: 14px; }
+.app[data-mw-demo] .top, .app[data-mw-demo] .compact { padding-top: 0; }
+.app[data-mw-demo] .compact { top: 0; }
+
 /* Top bars. The safe area above the first bar is the bar's own colour. */
 .top { position: relative; z-index: 20; padding-top: var(--mw-safe-top); }
 .topSticky { position: sticky; top: 0; transition: background-color var(--mw-motion-fast), box-shadow var(--mw-motion-fast); }

@@ -21,11 +21,11 @@ export function applyMainWamMode(mode: MainWamMode) {
 }
 
 /** Tampilan (Pengaturan): Terang, Gelap or Sistem, kept on this device. Sistem follows the phone's own setting. */
-export function MainWamModeSetting({ initial }: { initial: MainWamMode }) {
+export function MainWamModeSetting({ initial, onChange }: { initial: MainWamMode; /** Told after a new mode is painted (Pengaturan's row shows it). */ onChange?: (mode: MainWamMode) => void }) {
   const t = useT();
   const router = useRouter();
   const [mode, setMode] = useState(initial);
   return <Segmented label={t("peserta.appearance.title")} value={mode}
     options={MAIN_WAM_MODES.map(value => ({ value, label: t(`peserta.appearance.${value}`) }))}
-    onChange={next => { setMode(next); applyMainWamMode(next); router.refresh(); }} />;
+    onChange={next => { setMode(next); applyMainWamMode(next); onChange?.(next); router.refresh(); }} />;
 }

@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HEART, withReaction } from "@/lib/main-wam/momen/reactions";
-import { sampleFeedSemua, sampleMosaic, sampleReactions, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
+import { pileTilt } from "@/lib/main-wam/momen/stack";
+import { sampleFeedSemua, sampleMosaic, sampleReactions, sampleReactors, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
 import { sessionChoice } from "@/lib/main-wam/momen/sessions";
 import { sampleSessionIds, sampleSessions } from "@/lib/main-wam/sample";
 import { mainWamApi } from "@/lib/routes";
@@ -17,6 +18,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), 
 /** The server's answer to a reaction: the photo's reactions with the person's emoji in (PUT) or out (DELETE), from sample photo 3 (24 reactions). */
 const request = vi.fn(async (...args: unknown[]) => {
   const options = (args[1] ?? {}) as { method?: string; json?: { emoji: string } };
+  if (!options.method) return { data: { reactors: sampleReactors(sampleReactions(24)) }, message: "" };
   const base = sampleReactions(24);
   return { data: { reactions: options.method === "PUT" ? withReaction(base, options.json!.emoji) : base }, message: "" };
 });
@@ -50,7 +52,13 @@ describe("the stack", () => {
     const region = screen.getByRole("region", { name: "Momen" });
     expect(region.getAttribute("aria-roledescription")).toBe("carousel");
     expect(region.querySelectorAll("[data-place]")).toHaveLength(3);
-    expect(screen.getByRole("group", { name: /^3 dari 24./ }).getAttribute("aria-label")).toBe("3 dari 24. Foto oleh Dimas, Kelompok 2 · Kawi, 10.02");
+    expect(screen.getByRole("group", { name: /^3 dari 24./ }).getAttribute("aria-label")).toBe("3 dari 24. Foto oleh Dimas, 10.02");
+    // The cards behind lie at a tilt of their own (2 to 7 degrees, from the photo's id); the front one is straight.
+    const [front, next, later] = [...region.querySelectorAll<HTMLElement>("[data-place]")];
+    expect(front.style.getPropertyValue("--tilt")).toBe("");
+    expect(next.style.getPropertyValue("--tilt")).toBe(`${pileTilt(sampleFeedSemua[3].id).angle}deg`);
+    expect(later.style.getPropertyValue("--tilt")).toBe(`${pileTilt(sampleFeedSemua[4].id).angle}deg`);
+    expect(next.style.getPropertyValue("--tilt")).not.toBe(later.style.getPropertyValue("--tilt"));
     fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
     expect(onIndex).toHaveBeenLastCalledWith(3, "tap");
     fireEvent.click(screen.getByRole("button", { name: "Foto sebelumnya" }));
@@ -73,9 +81,11 @@ describe("the stack", () => {
     mozaik: true, migrated: true, anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: now.toISOString(), demo: {},
   };
 
-  const pill = (emoji: string, n: number, mine = false) => `${emoji} ${n} reaksi${mine ? ", kamu bereaksi" : ""}`;
+  /** The pills on the front photo, in order: "❤️12" and a * for the person's own; "+3" for the rest. */
+  const pillsButton = () => screen.getByRole("button", { name: /reaksi.*Ketuk untuk melihat siapa saja/ });
+  const pillList = () => [...pillsButton().children].map(item => `${item.textContent}${item.hasAttribute("data-mine") ? "*" : ""}`);
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
-  const shown = (name: string) => screen.queryByRole("button", { name });
+  const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
   it("has the camera and the gallery beside the title, and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
@@ -98,22 +108,32 @@ describe("the stack", () => {
     expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
   });
 
-  it("shows the reactions a photo got as pills inside it, each with a spoken name, and the row of quick emoji under it", () => {
+  it("shows the reactions a photo got as overlapping pills inside it (one button, most given first), and the row of quick emoji under it", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     const front = screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ });
-    const pills = within(front).getByRole("group", { name: "Reaksi pada foto" });
-    expect(within(pills).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual([pill(HEART, 12), pill("😂", 3), pill("🔥", 5), pill("👏", 4)]);
+    const button = within(front).getByRole("button", { name: "24 reaksi. Ketuk untuk melihat siapa saja" });
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+    // One button for all of them (the pills inside are only drawn): 12 hearts, then 5, 4 and 3.
+    expect(within(button).queryAllByRole("button")).toHaveLength(0);
+    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😂3"]);
     const row = screen.getByRole("group", { name: "Reaksi cepat" });
-    expect(within(row).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual([HEART, "😂", "🔥", "👏", "😮", "🙏"].map(emoji => `Reaksi ${emoji}`).concat("Pilih reaksi lain"));
+    expect(within(row).getAllByRole("button").map(item => item.getAttribute("aria-label"))).toEqual([HEART, "😂", "🔥", "👏", "😮", "🙏"].map(emoji => `Reaksi ${emoji}`).concat("Pilih reaksi lain"));
     expect(row.parentElement!.className).toContain("actions");
+  });
+
+  it("shows a few pills, then \"+N\", and the person's own reaction is always one of the pills", () => {
+    const many = [{ emoji: HEART, count: 12, mine: false }, { emoji: "😂", count: 6, mine: false }, { emoji: "🎉", count: 4, mine: false }, { emoji: "🔥", count: 3, mine: false }, { emoji: "👏", count: 3, mine: false }, { emoji: "🙏", count: 1, mine: true }];
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions: many } : photo));
+    render(<ToastProvider><MomenStack {...props} items={items} /></ToastProvider>);
+    expect(pillList()).toEqual(["❤️12", "😂6", "🎉4", "🙏1*", "+6"]);
   });
 
   it("reacts at once (optimistic) with a quick emoji, the pill is the person's own, and the server is asked", async () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
-    expect(shown(pill("😮", 1, true))).toBeNull();
+    expect(mineQuick("😮")).toBe(false);
     fireEvent.click(quick("😮"));
-    expect(shown(pill("😮", 1, true))!.getAttribute("aria-pressed")).toBe("true");
-    expect(quick("😮").getAttribute("aria-pressed")).toBe("true");
+    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😮1*", "+3"]);
+    expect(mineQuick("😮")).toBe(true);
     expect(document.body.textContent).toContain("Kamu bereaksi 😮");
     await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "PUT", json: { emoji: "😮" } }));
   });
@@ -122,9 +142,8 @@ describe("the stack", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick("😮"));
     fireEvent.click(quick("😮"));
-    expect(shown(pill("😮", 1, true))).toBeNull();
-    expect(shown(pill("😮", 1))).toBeNull();
-    expect(quick("😮").getAttribute("aria-pressed")).toBe("false");
+    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😂3"]);
+    expect(mineQuick("😮")).toBe(false);
     expect(document.body.textContent).toContain("Reaksimu dibatalkan");
     await waitFor(() => expect(request).toHaveBeenLastCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "DELETE" }));
   });
@@ -132,29 +151,66 @@ describe("the stack", () => {
   it("one reaction per person: another emoji replaces the first (the old count goes down, the new one goes up)", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick(HEART));
-    expect(shown(pill(HEART, 13, true))).toBeTruthy();
+    expect(pillList()[0]).toBe("❤️13*");
     fireEvent.click(quick("🔥"));
-    expect(shown(pill(HEART, 12))).toBeTruthy();
-    expect(shown(pill("🔥", 6, true))).toBeTruthy();
-    expect(screen.getAllByRole("button", { pressed: true }).filter(button => /bereaksi|Reaksi/.test(button.getAttribute("aria-label") ?? ""))).toHaveLength(2);
+    expect(pillList()).toEqual(["❤️12", "🔥6*", "👏4", "😂3"]);
+    expect(screen.getAllByRole("button", { pressed: true }).filter(button => /^Reaksi /.test(button.getAttribute("aria-label") ?? ""))).toHaveLength(1);
   });
 
-  it("a tap on a pill reacts with that emoji, or takes it back", async () => {
+  it("a tap on the pills does not react: it opens the list of who reacted with what (tabs Semua and each emoji)", async () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
-    fireEvent.click(shown(pill("😂", 3))!);
-    expect(shown(pill("😂", 4, true))).toBeTruthy();
-    await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "PUT", json: { emoji: "😂" } }));
-    fireEvent.click(shown(pill("😂", 4, true))!);
-    expect(shown(pill("😂", 3))).toBeTruthy();
+    fireEvent.click(pillsButton());
+    const sheet = await screen.findByRole("dialog", { name: "Reaksi · 24" });
+    await within(sheet).findByRole("list");
+    expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id));
+    expect(request.mock.calls.filter(call => (call[1] as { method?: string } | undefined)?.method)).toHaveLength(0);
+    const tabs = within(sheet).getByRole("group", { name: "Saring reaksi" });
+    expect(within(tabs).getAllByRole("button").map(item => item.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Semua 24", "❤️ 12", "🔥 5", "👏 4", "😂 3"]);
+    expect(within(tabs).getByRole("button", { name: /^Semua/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(sheet).getAllByRole("listitem")).toHaveLength(24);
+    fireEvent.click(within(tabs).getByRole("button", { name: /😂 3 reaksi/ }));
+    const rows = within(sheet).getAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    for (const row of rows) expect(row.textContent).toContain("😂");
+  });
+
+  it("in the list one's own row says Kamu, and a tap on it takes the reaction back (the row goes, the pills follow)", async () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions: sampleReactions(24, HEART) } : photo));
+    request.mockImplementationOnce(async () => ({ data: { reactors: sampleReactors(sampleReactions(24, HEART)) }, message: "" }));
+    render(<ToastProvider><MomenStack {...props} items={items} /></ToastProvider>);
+    fireEvent.click(pillsButton());
+    const sheet = await screen.findByRole("dialog", { name: "Reaksi · 24" });
+    await within(sheet).findByRole("list");
+    const mine = within(sheet).getByRole("button", { name: "Hapus reaksimu ❤️" });
+    expect(mine.textContent).toContain("Rani · Kamu");
+    expect(mine.textContent).toContain("Ketuk untuk menghapus");
+    // Another person's row is not a button.
+    expect(within(sheet).getAllByRole("button").filter(item => /^Hapus reaksimu/.test(item.getAttribute("aria-label") ?? ""))).toHaveLength(1);
+    fireEvent.click(mine);
+    expect(within(sheet).queryByRole("button", { name: "Hapus reaksimu ❤️" })).toBeNull();
+    expect(within(sheet).getAllByRole("listitem")).toHaveLength(23);
+    await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "DELETE" }));
+    expect(pillList()[0]).toBe("❤️12");
+  });
+
+  it("the list says when it is loading, empty or could not load (and tries again)", async () => {
+    request.mockImplementationOnce(async () => { throw new Error("Gagal."); });
+    render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
+    fireEvent.click(pillsButton());
+    const sheet = await screen.findByRole("dialog", { name: "Reaksi" });
+    expect(await within(sheet).findByText("Daftar reaksi belum bisa dimuat.")).toBeTruthy();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Coba lagi" }));
+    await within(sheet).findByRole("list");
+    expect(within(sheet).getAllByRole("listitem")).toHaveLength(24);
   });
 
   it("puts the count back and says so when the server refuses (rollback)", async () => {
     request.mockImplementationOnce(async () => { throw new Error("Gagal."); });
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick("😮"));
-    expect(shown(pill("😮", 1, true))).toBeTruthy();
-    await waitFor(() => expect(shown(pill("😮", 1, true))).toBeNull());
-    expect(shown(pill(HEART, 12))).toBeTruthy();
+    expect(pillList()).toContain("😮1*");
+    await waitFor(() => expect(pillList()).not.toContain("😮1*"));
+    expect(pillList()[0]).toBe("❤️12");
     expect(screen.getByText("Gagal.")).toBeTruthy();
   });
 
@@ -167,7 +223,7 @@ describe("the stack", () => {
     expect(within(sheet).getAllByRole("button", { name: /^Reaksi / }).length).toBeGreaterThanOrEqual(55);
     fireEvent.click(within(sheet).getByRole("button", { name: "Reaksi 🥳" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Pilih reaksi" })).toBeNull());
-    expect(shown(pill("🥳", 1, true))).toBeTruthy();
+    expect(pillList()).toContain("🥳1*");
     await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "PUT", json: { emoji: "🥳" } }));
   });
 
@@ -178,31 +234,31 @@ describe("the stack", () => {
     const sheet = screen.getByRole("dialog", { name: "Pilih reaksi" });
     expect(within(sheet).getByRole("button", { name: "Reaksi 🔥" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(within(sheet).getByRole("button", { name: "Reaksi 🔥" }));
-    expect(shown(pill("🔥", 5))).toBeTruthy();
+    expect(pillList()).toContain("🔥5");
   });
 
   it("a double tap on the photo is the red heart, once (a third tap does not take it back)", async () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     const card = screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ });
     fireEvent.click(card); fireEvent.click(card);
-    expect(shown(pill(HEART, 13, true))).toBeTruthy();
+    expect(pillList()[0]).toBe("❤️13*");
     fireEvent.click(card); fireEvent.click(card);
-    expect(shown(pill(HEART, 13, true))).toBeTruthy();
+    expect(pillList()[0]).toBe("❤️13*");
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   });
 
-  it("on one's own photo: the reactions it got as pills that only show, no quick row, no heart button, the Fotomu pill, 'Sudah kamu lihat' after the new ones", () => {
+  it("on one's own photo: the pills open the list too, but no quick row, no heart button, the Fotomu pill, 'Sudah kamu lihat' after the new ones", async () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: sampleReactions(7) } : photo));
     render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={2} /></ToastProvider>);
     expect(screen.getByText("Fotomu")).toBeTruthy();
-    const pills = within(screen.getByRole("group", { name: /^Foto ke-[0-9] dari 2 foto baru/ })).getByRole("group", { name: "Reaksi pada fotomu" });
-    expect(within(pills).queryAllByRole("button")).toHaveLength(0);
-    expect(within(pills).getAllByRole("img").map(item => item.getAttribute("aria-label"))).toEqual([pill(HEART, 4), pill("😂", 1), pill("🔥", 1), pill("👏", 1)]);
+    const button = within(screen.getByRole("group", { name: /^Foto ke-[0-9] dari 2 foto baru/ })).getByRole("button", { name: "7 reaksi pada fotomu. Ketuk untuk melihat siapa saja" });
+    expect(pillList()).toEqual(["❤️4", "😂1", "🔥1", "👏1"]);
     expect(screen.queryByRole("group", { name: "Reaksi cepat" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Reaksi / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Suka/ })).toBeNull();
-    fireEvent.click(within(pills).getAllByRole("img")[0]);
-    expect(request).not.toHaveBeenCalled();
+    fireEvent.click(button);
+    expect(await screen.findByRole("dialog", { name: /^Reaksi/ })).toBeTruthy();
+    expect(request.mock.calls.filter(call => (call[1] as { method?: string } | undefined)?.method)).toHaveLength(0);
     expect(screen.getByText("Sudah kamu lihat")).toBeTruthy();
     expect(screen.queryByText(/dari 2 baru/)).toBeNull();
     cleanup();
@@ -214,8 +270,16 @@ describe("the stack", () => {
   it("a photo nobody reacted to has no pills, and one's own keeps the same height of row under it (the card does not jump)", () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: [] } : photo));
     const { container } = render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={2} /></ToastProvider>);
-    expect(screen.queryByRole("group", { name: /^Reaksi pada/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ketuk untuk melihat siapa saja/ })).toBeNull();
     expect(container.querySelector('[class*="actions"]')).toBeTruthy();
+  });
+
+  it("no kelompok anywhere: the owner's pill says the name and the time, no lock", () => {
+    const { container } = render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
+    expect(container.textContent).not.toMatch(/Kelompok/);
+    const info = container.querySelector('[class*="who"]')!;
+    expect(info.textContent).toBe("Dimas10.02");
+    expect(container.querySelector("svg.lucide-lock")).toBeNull();
   });
 
   it("the options (…) sit on the photo, and reporting is still there for another person's photo", () => {
@@ -259,15 +323,23 @@ describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the 
     expect(stage.querySelector('[role="region"]')).toBeTruthy();
     expect(stage.querySelector('[class*="actions"]')).toBeTruthy();
   });
-  it("the reactions sit inside the photo, bottom left, wrapping upward; the owner's pill moved to the top", () => {
+  it("the reactions sit inside the photo, bottom left, as ONE button of overlapping pills; the owner's pill moved to the top", () => {
     const reactions = readFileSync(join(process.cwd(), "src/components/main-wam/momen/reactions.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(reactions).toMatch(/\.pills \{[^}]*position: absolute;[^}]*left: var\(--mw-space-8\);[^}]*bottom: var\(--mw-space-8\)[^}]*flex-wrap: wrap-reverse/);
-    expect(reactions).toMatch(/\.pills \{[^}]*pointer-events: none/);
-    expect(reactions).toMatch(/\.pill \{[^}]*background: var\(--mw-media-scrim\);[^}]*color: var\(--mw-media-on\)/);
+    expect(reactions).toMatch(/\.pills \{[^}]*position: absolute;[^}]*left: var\(--mw-space-8\);[^}]*bottom: var\(--mw-space-8\)[^}]*height: var\(--mw-touch\)/);
+    expect(reactions).not.toMatch(/wrap-reverse/);
+    // The pills overlap (each covers a little of the one before), but only inside its own padding, so the emoji and the count stay visible.
+    expect(reactions).toMatch(/\.pill \+ \.pill \{ margin-left: -6px; \}/);
+    expect(reactions).toMatch(/\.pill \{[^}]*padding: 0 var\(--mw-space-12\) 0 var\(--mw-space-8\)/);
+    expect(reactions).toMatch(/\.pill \{[^}]*color: var\(--mw-media-on\)/);
+    expect(reactions).toMatch(/\.pill:nth-child\(1\) \{ z-index: 5; \} \.pill:nth-child\(2\) \{ z-index: 4; \}/);
     expect(reactions).toMatch(/\.pill\[data-mine\] \{[^}]*background: var\(--mw-primary\)/);
-    expect(reactions).toMatch(/\.pill::after \{[^}]*inset: -6px/);
     expect(reactions).toMatch(/\.quickButton \{[^}]*width: var\(--mw-touch\);[^}]*height: var\(--mw-touch\)/);
     expect(reactions).toMatch(/@media \(prefers-reduced-motion: reduce\)[^]*\.pill\[data-mine\] \.pillEmoji \{ animation: none; \}/);
+    // The cards behind lie at a tilt of their own; the front one is straight; reduced motion keeps the tilt but not the move.
+    expect(css).toMatch(/\.card\[data-place="next"\] \{[^}]*rotate\(var\(--tilt/);
+    expect(css).toMatch(/\.card\[data-place="later"\] \{[^}]*rotate\(var\(--tilt/);
+    expect(css).not.toMatch(/\.card\[data-place="front"\] \{[^}]*rotate/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.card \{ transition: none; \}/);
     expect(css).toMatch(/\.info \{[^}]*top: var\(--mw-space-8\)/);
     expect(css).not.toMatch(/\.info \{[^}]*bottom:/);
     expect(css).toMatch(/\.options \{[^}]*top: var\(--mw-space-8\);[^}]*right: var\(--mw-space-8\)/);
@@ -295,14 +367,13 @@ describe("the camera", () => {
   const camera = (demo: Parameters<typeof CameraScreen>[0]["demo"]) => <ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00"
     absen migrated initialSession={null} demo={demo} /></ToastProvider>;
 
-  it("tags the running session; ✕ makes it Umum; the shutter says the photo goes to everyone (no \"Untuk\" to choose)", () => {
+  it("has no session chip and no sheet to choose a session; the shutter says the photo goes to everyone (the tag stays behind the scenes)", () => {
     render(camera({ phase: "kamera", live: "contoh" }));
-    expect(screen.getByText("Team building")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ambil foto, langsung terkirim ke semua peserta" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Hapus tag sesi, jadikan Umum" }));
-    expect(screen.getByText("Umum")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Untuk:/ })).toBeNull();
-    expect(document.body.textContent).not.toMatch(/Kelompokku|Untuk:/);
+    expect(screen.queryByText("Team building")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Sesi|Hapus tag sesi|Untuk:/ })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Sesi:|Kelompokku|Untuk:|Tag sesi/);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("without permission: the shutter waits, the gallery still works, Izinkan asks again (U05)", () => {

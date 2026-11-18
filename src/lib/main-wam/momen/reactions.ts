@@ -27,6 +27,8 @@ export const QUICK_REACTIONS: readonly string[] = [HEART, "😂", "🔥", "👏"
 
 /** How many reactions one person may send per 10 minutes (an attack is not a reaction; changing one's mind counts). */
 export const REACTIONS_PER_10_MINUTES = 200;
+/** Opening the list of who reacted: 120 per 10 minutes per person. */
+export const REACTORS_PER_10_MINUTES = 120;
 
 /** A photo's reactions as the app uses them: how many per emoji, and whether the viewer's one is that emoji. */
 export type ReactionCount = { emoji: string; count: number; mine: boolean };

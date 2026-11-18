@@ -10,7 +10,7 @@ export const metadata = { title: "Moderasi Momen · WAM", robots: { index: false
 export default async function ModerasiPage({ searchParams }: { searchParams: Promise<{ lihat?: string }> }) {
   const { lihat } = await searchParams;
   const tab = lihat === "disembunyikan" ? "disembunyikan" : "dilaporkan";
-  await requireActionPage("kelola", mainWamPath.moderation(tab));
-  const data = await moderationData();
+  const context = await requireActionPage("kelola", mainWamPath.moderation(tab));
+  const data = await moderationData(new Date(), context.viewer);
   return <Moderation {...data} tab={tab} />;
 }

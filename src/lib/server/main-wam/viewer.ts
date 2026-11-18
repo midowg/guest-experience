@@ -1,11 +1,13 @@
 import "server-only";
 import { cache } from "react";
 import { isTester } from "@/lib/main-wam/access";
+import { demoViewer } from "@/lib/main-wam/demo";
 import type { MainWamSettings, MainWamViewer, ViewerGroup, ViewerRoom } from "@/lib/main-wam/types";
 import { callName } from "@/lib/pra-wam/call-name";
 import { createPrivilegedClient } from "../supabase/admin";
 import { currentMember, type Member } from "../pra-wam/session";
 import { currentForm } from "../pra-wam/questionnaire";
+import { demoPlaceFor, readDemoRole } from "./demo";
 import { mainWamPeople } from "./people";
 import { readMainWamSettings, testerIds } from "./settings";
 
@@ -81,12 +83,13 @@ async function roomOf(employeeId: string): Promise<ViewerRoom | null> {
 export const viewerRoom = cache(roomOf);
 
 /** Main WAM's view of a WAM member (the session is WAM's: same cookie, same checks); `room` is left null. */
-export async function viewerOf(member: Member, listed: Promise<Set<string>> = testerIds(), settings?: Promise<MainWamSettings>): Promise<MainWamViewer> {
-  const [onList, group] = await Promise.all([
+export async function viewerOf(member: Member, listed: Promise<Set<string>> = testerIds(), settings: Promise<MainWamSettings> = readMainWamSettings()): Promise<MainWamViewer> {
+  const [onList, group, read] = await Promise.all([
     listed.then(ids => ids.has(member.id)).catch(() => false),
     groupOf(member.id, settings).catch(() => null),
+    settings.catch(() => null),
   ]);
-  return {
+  const base: MainWamViewer = {
     id: member.id,
     name: callName({ fullName: member.name, nickname: member.nickname }),
     fullName: member.name,
@@ -96,6 +99,12 @@ export async function viewerOf(member: Member, listed: Promise<Set<string>> = te
     tester: isTester(member, onList),
     group, room: null,
   };
+  if (!read?.moduleConfig.demo) return base;
+  // Mode demo: a penguji may be drawn as another role (the cookie from "Lihat sebagai"); everyone gets a
+  // sample group while they have none. Their account's real roles stay in `demo.realRoles`, which the gate and the writers go by.
+  const { roles, demo } = demoViewer({ roles: base.roles, tester: base.tester }, base.tester ? await readDemoRole() : null);
+  const drawn = { ...base, roles, demo };
+  return { ...drawn, group: base.group ?? demoPlaceFor(drawn).group };
 }
 
 /**

@@ -40,7 +40,6 @@ export const announceSchema = z.object({
   body: z.string().trim().max(ANNOUNCE_BODY_MAX, `Isi paling panjang ${ANNOUNCE_BODY_MAX} karakter.`).default(""),
   audience: z.discriminatedUnion("type", [
     z.object({ type: z.literal("semua") }),
-    z.object({ type: z.literal("kelompok"), groupIds: z.array(id).min(1, "Pilih kelompoknya.").max(50) }),
     z.object({ type: z.literal("departemen"), departments: z.array(z.string().trim().min(1).max(120)).min(1, "Pilih departemennya.").max(50) }),
     z.object({ type: z.literal("panitia") }),
   ], { message: "Pilih penerima." }),

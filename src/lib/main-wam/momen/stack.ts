@@ -20,6 +20,32 @@ export function swipeDecision(dx: number, width: number, speed: number): "next" 
   return dx < 0 ? "next" : "prev";
 }
 
+/**
+ * How a card behind the front photo lies in the pile (Instagram Instants): a tilt of 2 to 7 degrees either way, a small
+ * shift (-1 to 10 px sideways, 8 to 13 px down) and a scale that shrinks with the tilt (so the corners stay inside the screen), all from the photo's id, so the
+ * same photo lies the same way every time and the next card only straightens when it comes to the front. Pure.
+ */
+export type PileTilt = { angle: number; x: number; y: number; scale: number };
+export const TILT_MIN = 2;
+export const TILT_MAX = 7;
+export function pileTilt(id: string): PileTilt {
+  // FNV-1a over the id's characters, then three independent fractions out of it.
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < id.length; index++) hash = Math.imul(hash ^ id.charCodeAt(index), 0x01000193) >>> 0;
+  const part = (shift: number) => ((hash >>> shift) & 0xff) / 255;
+  const magnitude = TILT_MIN + part(0) * (TILT_MAX - TILT_MIN);
+  const sign = (hash >>> 8) & 1 ? 1 : -1;
+  const round = (value: number) => Math.round(value * 100) / 100;
+  return {
+    angle: round(sign * magnitude),
+    // Sideways: mostly to the right, where the stack keeps room (the front card sits at the left margin: a card must not leave the
+    // screen there); down: the bottom edge peeks. The scale shrinks with the tilt so the rotated corners stay on the screen.
+    x: round(-1 + part(16) * 11),
+    y: round(8 + part(24) * 5),
+    scale: round(1 - 0.016 * magnitude),
+  };
+}
+
 /** "10.02" today, "Kemarin · 21.10", "Sen, 4 Jan · 21.10" (WIB). */
 export function photoTime(iso: string, now: Date, lang: Lang = "id"): string {
   const time = clock(lang, wibTime(iso));
@@ -31,17 +57,14 @@ export function photoTime(iso: string, now: Date, lang: Lang = "id"): string {
   return `${date} · ${time}`;
 }
 
-/** The line under the name on a card: "Kelompok 2 · Kawi · 10.02". */
-export const photoMeta = (photo: Pick<FeedPhoto, "ownerGroup" | "takenAt">, now: Date, lang: Lang = "id") => [photo.ownerGroup, photoTime(photo.takenAt, now, lang)].filter(Boolean).join(" · ");
+/** The line under the name on a card: the time ("10.02", "Kemarin · 21.10"). */
+export const photoMeta = (photo: Pick<FeedPhoto, "takenAt">, now: Date, lang: Lang = "id") => photoTime(photo.takenAt, now, lang);
 
-/** What a screen reader says for a photo: "Foto oleh Dimas, Kelompok 2 · Kawi, 10.02". */
-export function photoAlt(photo: Pick<FeedPhoto, "owner" | "ownerGroup" | "takenAt" | "mine">, now: Date, lang: Lang = "id"): string {
+/** What a screen reader says for a photo: "Foto oleh Dimas, 10.02". */
+export function photoAlt(photo: Pick<FeedPhoto, "owner" | "takenAt" | "mine">, now: Date, lang: Lang = "id"): string {
   const who = photo.mine ? t(lang, "momen.altMine") : t(lang, "momen.altBy", { name: photo.owner.name });
-  return [who, photo.ownerGroup, photoTime(photo.takenAt, now, lang)].filter(Boolean).join(", ");
+  return [who, photoTime(photo.takenAt, now, lang)].join(", ");
 }
-
-/** "Kelompok 4 · Arjuno" for a viewer's kelompok. */
-export const groupLabel = (group: { number: number; name: string }, lang: Lang = "id") => t(lang, "peserta.group.title", { number: group.number, name: group.name });
 
 /** The stack's line under the cards. */
 export type StackMode = "baru" | "sesi" | "galeri";

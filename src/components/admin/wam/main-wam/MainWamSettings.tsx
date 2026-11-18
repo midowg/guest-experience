@@ -15,6 +15,7 @@ import {
 } from "@/lib/main-wam/types";
 import { mainWamAdminApi, mainWamApi, mainWamPath } from "@/lib/routes";
 import type { Tester } from "@/lib/server/main-wam/settings";
+import { CommitteeCard, DemoCard } from "./DemoCards";
 import css from "./main-wam-settings.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -68,7 +69,9 @@ export function MainWamSettings({ initial, testers: firstTesters, testersMigrate
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     <div className={css.grid}>
       <ModeCard id={`${id}-mode`} mode={settings.mode} locked={locked} busy={busy === "mode"} onSave={mode => run("mode", apply({ mode }))} />
+      <DemoCard id={`${id}-demo`} enabled={settings.moduleConfig.demo} locked={locked} busy={busy === "demo"} onSave={demo => run("demo", apply({ moduleConfig: { demo } }))} />
       <TestersCard id={`${id}-penguji`} initial={firstTesters} migrated={testersMigrated && settings.migrated} people={people} onMessage={setMessage} />
+      <CommitteeCard id={`${id}-panitia`} />
       <ModulesCard id={`${id}-modul`} settings={settings} forms={forms} locked={locked} busy={busy === "modul"}
         onSave={(modules, formSlug) => run("modul", apply({ modules, moduleConfig: { survei: { formSlug } } }))} />
       <ThemeCard id={`${id}-tema`} settings={settings} locked={locked} busy={busy} storage={storage} run={run} onSaved={setSettings} />

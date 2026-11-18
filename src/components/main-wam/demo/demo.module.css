@@ -1,0 +1,5 @@
+/* Mode demo: the "Lihat sebagai" card in Saya. Tokens only. */
+.head { display: flex; align-items: center; gap: var(--mw-space-8); }
+.icon { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
+.title { margin: 0; font: var(--mw-type-subtitle); color: var(--mw-text-1); }
+.hint { margin: var(--mw-space-4) 0 var(--mw-space-12); font: var(--mw-type-body-small); color: var(--mw-text-2); }

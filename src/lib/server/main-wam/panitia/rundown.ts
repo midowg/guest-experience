@@ -1,4 +1,6 @@
 import "server-only";
+import { demoSample } from "@/lib/main-wam/demo-sample";
+import { sampleSessions } from "@/lib/main-wam/sample";
 import { silentShownCount, silentState, type SilentResult } from "@/lib/main-wam/module-state";
 import { clock, shortDate } from "@/lib/main-wam/panitia/format";
 import { describeChange, liveOfDay, planShift, scheduleNotice, type LiveSession } from "@/lib/main-wam/panitia/rundown";
@@ -9,6 +11,7 @@ import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
+import { demoRundown } from "../demo";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAudience, sendMainWamNote } from "../notes";
@@ -33,10 +36,13 @@ type VersionedSession = MwSession & { version: string };
 async function sessionsWithVersion(): Promise<{ data: VersionedSession[]; migrated: boolean }> {
   const { data, error } = await db().from("mw_sessions").select(`${SESSION_COLUMNS},updated_at`).order("starts_at").order("sort").limit(500);
   if (error) {
-    if (mwMissing(error)) return { data: [], migrated: false };
-    databaseError(error);
+    if (mwMissing(error) && !(await demoRundown())) return { data: [], migrated: false };
+    if (!mwMissing(error)) databaseError(error);
   }
-  return { data: ((data ?? []) as Record<string, unknown>[]).map(row => ({ ...sessionFromRow(row), version: String(row.updated_at ?? "") })), migrated: true };
+  const real = ((data ?? []) as Record<string, unknown>[]).map(row => ({ ...sessionFromRow(row), version: String(row.updated_at ?? "") }));
+  // Mode demo with the sample rundown: its sessions (their version is only a label: every write is refused, gate.ts).
+  if (!real.some(session => session.status !== "draf") && await demoRundown()) return { data: demoSample(sampleSessions).map(session => ({ ...session, version: "demo" })), migrated: true };
+  return { data: real, migrated: true };
 }
 
 export type RundownDay = { key: string; day: string; date: string; today: boolean; href: string };

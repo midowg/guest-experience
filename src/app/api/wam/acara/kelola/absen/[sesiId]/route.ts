@@ -1,7 +1,9 @@
+import { sampleOnlyFor } from "@/lib/main-wam/demo";
 import { presentSchema } from "@/lib/main-wam/panitia/schemas";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireMainWamApi } from "@/lib/server/main-wam/gate";
+import { demoAttendeeRows } from "@/lib/server/main-wam/demo-panitia";
 import { sessionRows, setAttendance } from "@/lib/server/main-wam/panitia/attendance";
 import { apiOnlyFor, limitPerPerson } from "@/lib/server/main-wam/panitia/common";
 
@@ -16,8 +18,10 @@ const sessionId = async ({ params }: Params) => {
 /** GET: who is present at a session (K05, panitia, module Absen QR). */
 export async function GET(_request: Request, context: Params) {
   return handle(async () => {
-    apiOnlyFor(await requireMainWamApi(), "kelola", "absen");
-    const { rows } = await sessionRows(await sessionId(context));
+    const gate = apiOnlyFor(await requireMainWamApi(), "kelola", "absen");
+    const id = await sessionId(context);
+    // Mode demo: a role the account is not reads the sample's people, never the real ones.
+    const { rows } = sampleOnlyFor(gate.viewer, "kelola") ? { rows: demoAttendeeRows(id) } : await sessionRows(id);
     return success({ rows }, "Daftar hadir dimuat.");
   });
 }

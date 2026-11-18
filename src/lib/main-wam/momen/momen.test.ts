@@ -4,7 +4,7 @@ import { centerCrop, fitSide, halvingSteps, largeTries, squareCrop } from "./ima
 import { cellBounds, cellLabel, cellOrder, gridGeometry, hashSeed, letterCells, mosaicPercent, mosaicText } from "./mosaic";
 import { afterFailure, backoffDelay, nextDue, nextWake, outcomeOf, queueSummary, resetBackoff, type QueueItem } from "./queue";
 import { sampleFeedSemua, sampleMosaic } from "./sample";
-import { flushedText, newPhotosText, photoAlt, photoMeta, photoTime, queuedPill, sentText, stackCount, stackCountSpoken, swipeDecision } from "./stack";
+import { flushedText, newPhotosText, photoAlt, photoMeta, photoTime, pileTilt, queuedPill, sentText, stackCount, stackCountSpoken, swipeDecision, TILT_MAX, TILT_MIN } from "./stack";
 
 const RANI = "00000000-0000-4000-8000-000000000001";
 const now = new Date("2027-01-05T10:05:00+07:00");
@@ -204,9 +204,33 @@ describe("Momen stack and words", () => {
     expect(photoTime("2027-01-04T21:10:00+07:00", now)).toBe("Kemarin · 21.10");
     expect(photoTime("2027-01-03T21:10:00+07:00", now)).toMatch(/3 Jan · 21\.10$/);
     const dimas = sampleFeedSemua[2];
-    expect(photoMeta(dimas, now)).toBe("Kelompok 2 · Kawi · 10.02");
-    expect(photoAlt(dimas, now)).toBe("Foto oleh Dimas, Kelompok 2 · Kawi, 10.02");
-    expect(photoAlt({ ...dimas, mine: true }, now)).toBe("Fotomu, Kelompok 2 · Kawi, 10.02");
+    // No kelompok on a card any more: the time only (the name pill carries the nama panggilan).
+    expect(photoMeta(dimas, now)).toBe("10.02");
+    expect(photoAlt(dimas, now)).toBe("Foto oleh Dimas, 10.02");
+    expect(photoAlt({ ...dimas, mine: true }, now)).toBe("Fotomu, 10.02");
+  });
+
+  it("lay the cards behind at a tilt of 2 to 7 degrees either way, always the same for the same photo", () => {
+    const ids = Array.from({ length: 400 }, (_, index) => `00000000-0000-4000-8b00-${String(index * 7919).padStart(12, "0")}`);
+    const tilts = ids.map(pileTilt);
+    for (const tilt of tilts) {
+      expect(Math.abs(tilt.angle)).toBeGreaterThanOrEqual(TILT_MIN);
+      expect(Math.abs(tilt.angle)).toBeLessThanOrEqual(TILT_MAX);
+      // Never far to the left (the front card sits at the screen's left margin), a little to the right, and down.
+      expect(tilt.x).toBeGreaterThanOrEqual(-1);
+      expect(tilt.x).toBeLessThanOrEqual(10);
+      expect(tilt.y).toBeGreaterThanOrEqual(8);
+      expect(tilt.y).toBeLessThanOrEqual(13);
+      // The more it leans the smaller it is, so the corners stay inside the screen.
+      expect(tilt.scale).toBeCloseTo(1 - 0.016 * Math.abs(tilt.angle), 1);
+      expect(tilt.scale).toBeLessThan(1);
+    }
+    expect(ids.map(pileTilt)).toEqual(tilts);
+    expect(tilts.some(tilt => tilt.angle < 0)).toBe(true);
+    expect(tilts.some(tilt => tilt.angle > 0)).toBe(true);
+    // Different photos lie differently (many distinct angles and shifts).
+    expect(new Set(tilts.map(tilt => tilt.angle)).size).toBeGreaterThan(100);
+    expect(new Set(tilts.map(tilt => tilt.x)).size).toBeGreaterThan(20);
   });
 
   it("count the stack: new photos, one session, from the gallery", () => {

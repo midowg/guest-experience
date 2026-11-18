@@ -8,7 +8,6 @@ import { mainWamAdminPath } from "@/lib/routes";
  */
 export const mainWamContentTabs: readonly PageTab[] = [
   { key: "rundown", label: "Rundown", href: mainWamAdminPath.rundown },
-  { key: "kelompok", label: "Kelompok", href: mainWamAdminPath.groups },
   { key: "kamar", label: "Kamar", href: mainWamAdminPath.rooms },
   { key: "perjalanan", label: "Perjalanan", href: mainWamAdminPath.travel },
   { key: "panduan", label: "Panduan", href: mainWamAdminPath.guides },

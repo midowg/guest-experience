@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { LangProvider } from "@/components/main-wam/i18n";
-import { sampleFeedSemua } from "@/lib/main-wam/momen/sample";
+import { sampleFeedSemua, sampleReactors } from "@/lib/main-wam/momen/sample";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /* Momen in English: the labels, counts and a sheet follow the language; Indonesian stays the default. */
@@ -33,7 +33,7 @@ describe("Momen in English", () => {
     expect(screen.getByText("3 of 24 new")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Quick reactions" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "React 🔥" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "❤️ 12 reactions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "24 reactions. Tap to see who" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Photo options" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Pick another reaction" }));
     const sheet = screen.getByRole("dialog", { name: "Pick a reaction" });
@@ -41,17 +41,23 @@ describe("Momen in English", () => {
     expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 
-  it("says one reaction in the singular, and which one is yours", () => {
+  it("says one reaction in the singular, and the list of who reacted in English", async () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions: [{ emoji: "🙏", count: 1, mine: true }] } : photo));
-    view("en", <MomenStack {...props} items={items} />);
-    expect(screen.getByRole("button", { name: "🙏 1 reaction, you reacted" })).toBeTruthy();
+    view("en", <MomenStack {...props} items={items} demo={{ sheet: "daftar", reactors: sampleReactors([{ emoji: "🙏", count: 1, mine: true }]) }} />);
+    expect(screen.getByRole("button", { name: "1 reaction. Tap to see who" })).toBeTruthy();
+    const sheet = screen.getByRole("dialog", { name: "Reactions · 1" });
+    expect(within(sheet).getByRole("group", { name: "Filter reactions" })).toBeTruthy();
+    expect(within(sheet).getByRole("button", { name: "🙏 1 reaction" })).toBeTruthy();
+    const mine = within(sheet).getByRole("button", { name: "Remove your reaction 🙏" });
+    expect(mine.textContent).toContain("Rani · You");
+    expect(mine.textContent).toContain("Tap to remove");
   });
 
   it("the same screen in Indonesian is what it was", () => {
     view("id", <MomenStack {...props} />);
     expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Reaksi cepat" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "❤️ 12 reaksi" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "24 reaksi. Ketuk untuk melihat siapa saja" })).toBeTruthy();
   });
 
   it("the report sheet: title, reasons and the validation message", async () => {

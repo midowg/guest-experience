@@ -1,18 +1,20 @@
 import "server-only";
 import type { AnnounceInput } from "@/lib/main-wam/panitia/schemas";
-import type { AnnouncementAudience } from "@/lib/main-wam/types";
+import { sampleOnlyFor } from "@/lib/main-wam/demo";
+import type { AnnouncementAudience, MainWamViewer } from "@/lib/main-wam/types";
 import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
+import { demoOn } from "../demo";
+import { demoSent } from "../demo-panitia";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAudience, sendMainWamNote } from "../notes";
 import { mainWamEventPeople, mainWamPeople } from "../people";
-import { listGroups } from "../read";
 import { db } from "./common";
 import { waitingUpdate } from "./rundown";
 
 /*
- * Kirim pengumuman (K06): to everyone, some kelompok, some departments, or panitia only, through
+ * Kirim pengumuman (K06): to everyone, some departments, or panitia only, through
  * fondasi's one inbox (sendMainWamNote: lonceng + push; a panitia's announcement always reaches the
  * phone, also in jam tenang). "Sematkan di Beranda" pins it until a time. The panitia see what was
  * sent and by whom ("dikirim Dimas · 10.28"), unpin it, or remove it.
@@ -21,7 +23,6 @@ import { waitingUpdate } from "./rundown";
 export type AudienceCounts = {
   semua: number;
   panitia: number;
-  groups: { id: string; label: string; count: number }[];
   departments: { name: string; count: number }[];
 };
 export type SentAnnouncement = { id: string; title: string; body: string; at: string; by: string | null; audience: string; pinnedUntil: string | null };
@@ -29,7 +30,7 @@ export type AnnounceData = { migrated: boolean; counts: AudienceCounts; sent: Se
 
 /** How many each choice reaches now (within the people Main WAM is on for). */
 async function audienceCounts(context: MainWamContext): Promise<AudienceCounts> {
-  const [within, people, groups, roles] = await Promise.all([mainWamAudience(context.settings), mainWamPeople(), listGroups(), mainWamEventPeople()]);
+  const [within, people, roles] = await Promise.all([mainWamAudience(context.settings), mainWamPeople(), mainWamEventPeople()]);
   const inside = new Set(within);
   const departments = new Map<string, number>();
   for (const id of within) {
@@ -39,7 +40,6 @@ async function audienceCounts(context: MainWamContext): Promise<AudienceCounts> 
   return {
     semua: within.length,
     panitia: [...roles.panitia].filter(id => inside.has(id)).length,
-    groups: groups.data.map(group => ({ id: group.id, label: `Kelompok ${group.number} · ${group.name}`, count: group.members.filter(member => inside.has(member.employeeId)).length })),
     departments: [...departments.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name, "id")),
   };
 }
@@ -65,12 +65,19 @@ async function sentAnnouncements(limit = 20): Promise<{ migrated: boolean; sent:
 }
 
 export async function announceData(context: MainWamContext): Promise<AnnounceData> {
-  const [counts, sent] = await Promise.all([audienceCounts(context), sentAnnouncements()]);
+  const [counts, sent] = await Promise.all([audienceCounts(context), sentOrSample(context.viewer)]);
   return { migrated: sent.migrated && context.settings.migrated, counts, sent: sent.sent };
 }
 
-export async function listSent(): Promise<{ migrated: boolean; sent: SentAnnouncement[] }> {
-  return sentAnnouncements(50);
+export async function listSent(viewer?: Pick<MainWamViewer, "demo">): Promise<{ migrated: boolean; sent: SentAnnouncement[] }> {
+  return sentOrSample(viewer, 50);
+}
+
+/** Mode demo: the sample's sent announcements while there are none, or always for a role the account is not (who sent what is theirs to read). */
+async function sentOrSample(viewer: Pick<MainWamViewer, "demo"> | undefined, limit = 20): Promise<{ migrated: boolean; sent: SentAnnouncement[] }> {
+  if (viewer && sampleOnlyFor(viewer, "kelola")) return { migrated: true, sent: demoSent() };
+  const real = await sentAnnouncements(limit);
+  return real.sent.length || !(await demoOn()) ? real : { migrated: true, sent: demoSent() };
 }
 
 /** The pin must end later today or tomorrow: after now, within 48 hours. */
@@ -84,10 +91,6 @@ function checkPin(pinnedUntil: string | null, now: Date) {
 /** Sends it now; how many received it. */
 export async function sendAnnouncement(context: MainWamContext, input: AnnounceInput, now = new Date()): Promise<number> {
   checkPin(input.pinnedUntil, now);
-  if (input.audience.type === "kelompok") {
-    const known = new Set((await listGroups()).data.map(group => group.id));
-    if (input.audience.groupIds.some(id => !known.has(id))) throw new ServiceError(422, "Kelompok tidak dikenali. Muat ulang halaman.");
-  }
   const audience: AnnouncementAudience = input.audience;
   try {
     return await sendMainWamNote({ kind: "pengumuman", title: input.title, body: input.body, to: { audience }, pinnedUntil: input.pinnedUntil, by: context.viewer.id });

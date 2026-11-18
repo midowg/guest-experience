@@ -10,7 +10,7 @@ import { isR2Configured, presignDownload } from "../../r2";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing } from "../errors";
 import { mainWamPeople } from "../people";
-import { allSessions, awardApprovals, awardCategories, listGroups, silentQuestions, silentResults } from "../read";
+import { allSessionsReal as allSessions, awardApprovals, awardCategories, listGroupsReal as listGroups, silentQuestions, silentResults } from "../read";
 import { voteCounts } from "./awards";
 
 /*

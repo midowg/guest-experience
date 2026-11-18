@@ -1,4 +1,6 @@
 import "server-only";
+import { demoSample } from "@/lib/main-wam/demo-sample";
+import { sampleNotifications } from "@/lib/main-wam/sample";
 import { announcementKind, notePushTopic, noteTone } from "@/lib/main-wam/notify";
 import { NOTE_KIND } from "@/lib/main-wam/rows";
 import type { AnnouncementAudience, MainWamSettings, MwNotification, NoteKind, NoteTone, PinnedNote } from "@/lib/main-wam/types";
@@ -8,6 +10,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "../pra-wam/events";
 import { schedulePush } from "../pra-wam/push";
+import { demoOn } from "./demo";
 import { mwFail, mwMissing } from "./errors";
 import { mainWamEventPeople } from "./people";
 import { readMainWamSettings, testerIds } from "./settings";
@@ -46,13 +49,6 @@ export async function resolveAudience(audience: AnnouncementAudience, settings?:
   switch (audience.type) {
     case "semua": return { ids: [...within], label: "Semua peserta" };
     case "panitia": return { ids: keep([...(await mainWamEventPeople()).panitia]), label: "Panitia" };
-    case "kelompok": {
-      const [{ data: members }, { data: groups }] = await Promise.all([
-        db().from("mw_group_members").select("employee_id").in("group_id", audience.groupIds),
-        db().from("mw_groups").select("number,name").in("id", audience.groupIds).order("number"),
-      ]);
-      return { ids: keep((members ?? []).map(row => row.employee_id as string)), label: (groups ?? []).map(group => `Kelompok ${group.number} · ${group.name}`).join(", ") || "Kelompok" };
-    }
     case "departemen": {
       const { data } = await db().from("employees").select("id").in("department", audience.departments).eq("active", true);
       return { ids: keep((data ?? []).map(row => row.id as string)), label: audience.departments.join(", ") };
@@ -141,6 +137,14 @@ function itemOf(row: NoteRow): MwNotification {
  * announcement's time (audit S8: never a cut of receipts in no order, which could drop the newest).
  */
 export async function myMainWamNotifications(employeeId: string): Promise<{ items: MwNotification[]; unread: number; migrated: boolean }> {
+  const real = await realNotifications(employeeId);
+  if (real.items.length || !(await demoOn())) return real;
+  // Mode demo: the sample's notifications while the inbox is empty.
+  const items = demoSample(sampleNotifications).map(item => ({ ...item, tone: noteTone(item) }));
+  return { items, unread: items.filter(item => !item.readAt).length, migrated: true };
+}
+
+async function realNotifications(employeeId: string): Promise<{ items: MwNotification[]; unread: number; migrated: boolean }> {
   const inbox = (withNotes: boolean) => db().from("pw_announcements")
     .select(`id,title,body,created_at,pw_notification_receipts!inner(read_at)${withNotes ? `,${NOTE_META}` : ""}`)
     .eq("pw_notification_receipts.employee_id", employeeId)
@@ -165,6 +169,13 @@ export async function myMainWamNotifications(employeeId: string): Promise<{ item
  * its tone. Read on their own (the pin's index), so a long inbox never pushes a pinned one out (S8).
  */
 export async function pinnedForMe(employeeId: string, now = new Date()): Promise<PinnedNote[]> {
+  const real = await realPinned(employeeId, now);
+  if (real.length || !(await demoOn())) return real;
+  return demoSample(sampleNotifications, now).map(item => ({ ...item, tone: noteTone(item) }))
+    .filter((item): item is PinnedNote => item.kind === "pengumuman" && !!item.pinnedUntil && Date.parse(item.pinnedUntil) > now.getTime());
+}
+
+async function realPinned(employeeId: string, now: Date): Promise<PinnedNote[]> {
   try {
     const { data, error } = await db().from("pw_announcements")
       .select("id,title,body,created_at,pw_notification_receipts!inner(read_at),mw_notes!inner(kind,link,pinned_until,tone)")

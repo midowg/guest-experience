@@ -27,7 +27,7 @@ describe("Main WAM's settings from the database", () => {
     expect(settings.migrated).toBe(true);
     expect(settings.mode).toBe("uji");
     expect(settings.modules).toMatchObject({ absen: true, voting: false, mozaik: true, silent: false });
-    expect(settings.moduleConfig).toEqual({ survei: { formSlug: "survei-wam" }, mozaik: { columns: 32, rows: 12 } });
+    expect(settings.moduleConfig).toEqual({ survei: { formSlug: "survei-wam" }, mozaik: { columns: 32, rows: 12 }, demo: false });
     // Only a #RRGGBB colour, uppercased; a key that is not ours is dropped.
     expect(settings.theme.colors).toEqual({ accent: "#1E3A5F" });
     expect(settings.theme.images).toEqual({ splash: { key: KEY, version: "17", mime: "image/webp" } });

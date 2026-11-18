@@ -12,7 +12,7 @@
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .banner { margin-top: var(--mw-space-12); }
 
-/* Galeri mode: the frame's bar is replaced by ‹ "Galeri · Kelompokku" and "4 dari 21". */
+/* Galeri mode: the frame's bar is replaced by ‹ "Galeri" and "4 dari 21". */
 .ownBar { padding-top: var(--mw-safe-top); }
 .ownCount { font: var(--mw-type-label); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--mw-space-8); }
 
@@ -45,8 +45,11 @@
   touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   transition: transform 260ms var(--mw-ease-standard), filter 260ms var(--mw-ease-standard), opacity 160ms linear;
 }
-.card[data-place="next"] { z-index: 1; transform: translateX(var(--mw-space-12)) rotate(3deg) scale(0.95); filter: brightness(0.9); pointer-events: none; }
-.card[data-place="later"] { z-index: 0; transform: translateX(var(--mw-space-20)) rotate(6deg) scale(0.9); filter: brightness(0.8); pointer-events: none; }
+/* The cards behind lie at a tilt of their own (StackDeck sets --tilt, --peek-x/y, --peek-scale from the photo's id: 2 to 7 degrees either
+   way, a small shift, smaller the more it leans so the corners stay on the screen); the front one is straight, so the next card
+   straightens as it comes forward. "later" is a little lower and darker still. */
+.card[data-place="next"] { z-index: 1; transform: translate(var(--peek-x, 6px), var(--peek-y, 8px)) rotate(var(--tilt, 3deg)) scale(var(--peek-scale, 0.95)); filter: brightness(0.88); pointer-events: none; }
+.card[data-place="later"] { z-index: 0; transform: translate(calc(var(--peek-x, 10px) * 1.4), calc(var(--peek-y, 12px) * 1.4)) rotate(var(--tilt, 6deg)) scale(calc(var(--peek-scale, 0.9) - 0.03)); filter: brightness(0.76); pointer-events: none; }
 .card[data-dragging] { transition: none; will-change: transform; cursor: grabbing; }
 .fill { position: absolute; inset: 0; }
 .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; }
@@ -64,7 +67,6 @@
 .who { min-width: 0; display: flex; flex-direction: column; }
 .name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lock { flex: none; width: 16px; height: 16px; }
 
 /* One tap on a side of the photo: the button alternative to swiping (WCAG 2.5.1 / 2.5.7). */
 .tap { position: absolute; top: 0; bottom: 0; z-index: 2; width: 36%; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -99,7 +101,7 @@
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
-  /* No throw, no tilt: the next photo simply fades in. */
+  /* No throw: the next photo simply fades in (the cards behind keep their tilt, as a still picture). */
   .card { transition: none; }
   .card[data-place="front"] { animation: fade 120ms linear; }
   .burst { animation: none; opacity: 0; }

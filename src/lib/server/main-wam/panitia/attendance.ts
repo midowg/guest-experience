@@ -1,15 +1,19 @@
 import "server-only";
+import { sampleOnlyFor } from "@/lib/main-wam/demo";
+import { isSampleId } from "@/lib/main-wam/demo-sample";
 import { mayRecord, pickAttendanceSession, sessionChoice, windowCaption, type AttendeeRow } from "@/lib/main-wam/panitia/attendance";
 import { shortDate } from "@/lib/main-wam/panitia/format";
 import { timeRange, wibDate } from "@/lib/main-wam/rundown";
-import type { MwSession } from "@/lib/main-wam/types";
+import type { MainWamViewer, MwSession } from "@/lib/main-wam/types";
 import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
+import { demoAttendanceSessions, demoAttendeeRows } from "../demo-panitia";
+import { demoRundown } from "../demo";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAttendees, mainWamPeople } from "../people";
-import { allSessions, attendanceOf, listGroups, sessionById } from "../read";
-import { db, groupLabels } from "./common";
+import { allSessions, attendanceOf, sessionById } from "../read";
+import { db } from "./common";
 import { waitingUpdate } from "./rundown";
 
 /*
@@ -30,15 +34,17 @@ export type AttendanceData = {
 };
 
 /** The sessions that take attendance: published, marked "pakai absen", in order. */
-async function attendanceSessions(): Promise<{ data: MwSession[]; migrated: boolean }> {
+async function attendanceSessions(sample = false): Promise<{ data: MwSession[]; migrated: boolean }> {
+  if (sample) return { data: demoAttendanceSessions(), migrated: true };
   const { data, migrated } = await allSessions();
   return { data: data.filter(session => session.status === "terbit" && session.usesAttendance), migrated };
 }
 
 /** Everyone expected at a session, with their check-in (one query for the session's rows). */
 export async function sessionRows(sessionId: string): Promise<{ rows: AttendeeRow[]; migrated: boolean }> {
-  const [expected, people, groups, present] = await Promise.all([mainWamAttendees(), mainWamPeople(), listGroups(), attendanceOf({ sessionId })]);
-  const labels = groupLabels(groups.data);
+  // Mode demo: a sample session (only the sample's rundown has such ids) lists the sample's people.
+  if (isSampleId(sessionId) && await demoRundown()) return { rows: demoAttendeeRows(sessionId), migrated: true };
+  const [expected, people, present] = await Promise.all([mainWamAttendees(), mainWamPeople(), attendanceOf({ sessionId })]);
   const byPerson = new Map(present.data.map(row => [row.employeeId, row]));
   // Someone recorded who is not (or no longer) on the list still counts as present.
   const ids = [...new Set([...expected, ...present.data.map(row => row.employeeId)])];
@@ -46,18 +52,20 @@ export async function sessionRows(sessionId: string): Promise<{ rows: AttendeeRo
     const person = people.get(id);
     if (!person) return [];
     const check = byPerson.get(id);
-    return [{ id, name: person.name, department: person.department, group: labels.get(id) ?? null, photo: person.photo ?? null, checkedInAt: check?.checkedInAt ?? null, method: check?.method ?? null }];
+    return [{ id, name: person.name, department: person.department, photo: person.photo ?? null, checkedInAt: check?.checkedInAt ?? null, method: check?.method ?? null }];
   });
   return { rows, migrated: present.migrated };
 }
 
 /** What Absen sesi shows: the session list, the chosen session, and its people. */
-export async function attendanceData(asked: string | undefined, now = new Date()): Promise<AttendanceData> {
-  const { data: sessions, migrated } = await attendanceSessions();
+export async function attendanceData(asked: string | undefined, now = new Date(), viewer?: Pick<MainWamViewer, "demo">): Promise<AttendanceData> {
+  // Mode demo: drawn as panitia without being panitia, the names of real people are not theirs to read: the sample's.
+  const sample = !!viewer && sampleOnlyFor(viewer, "kelola");
+  const { data: sessions, migrated } = await attendanceSessions(sample);
   const chosen = pickAttendanceSession(sessions, now, asked);
   const options = sessions.map(session => ({ id: session.id, title: session.title, time: timeRange(session), day: shortDate(wibDate(session.startsAt)), required: session.required }));
   if (!chosen) return { migrated, sessions: options, session: null, rows: [], now: now.toISOString() };
-  const { rows, migrated: rowsMigrated } = await sessionRows(chosen.id);
+  const { rows, migrated: rowsMigrated } = sample ? { rows: demoAttendeeRows(chosen.id), migrated: true } : await sessionRows(chosen.id);
   return {
     migrated: migrated && rowsMigrated, sessions: options, rows, now: now.toISOString(),
     session: { id: chosen.id, title: chosen.title, label: sessionChoice(chosen), caption: windowCaption(chosen, now), canRecord: mayRecord(chosen, now) },

@@ -6,12 +6,15 @@ import { mainWamPath } from "@/lib/routes";
 import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
 import { isR2Configured, presignDownload, removeObjects } from "../../r2";
+import { sampleOnlyFor } from "@/lib/main-wam/demo";
+import { demoModeration } from "../demo-panitia";
+import { demoOn } from "../demo";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
+import type { MainWamViewer } from "@/lib/main-wam/types";
 import { trySendMainWamNote } from "../notes";
 import { mainWamPeople } from "../people";
-import { listGroups } from "../read";
-import { db, groupLabels } from "./common";
+import { db } from "./common";
 import { waitingUpdate } from "./rundown";
 
 /*
@@ -45,17 +48,27 @@ async function queueSource(): Promise<{ reports: ModerationReport[]; decisions: 
 }
 
 /** How many photos wait for panitia (K01's badge and Perlu perhatian). Never throws. */
-export async function waitingCount(): Promise<number> {
+export async function waitingCount(viewer?: Pick<MainWamViewer, "demo">): Promise<number> {
+  // Mode demo: the sample's two waiting photos, in place of the real queue for a role the account is not, or while the queue is empty.
+  if (viewer && sampleOnlyFor(viewer, "kelola")) return demoModeration().reported.length;
   try {
     const { reports, decisions } = await queueSource();
-    return waitingPhotos(reports, decisions).size;
+    const count = waitingPhotos(reports, decisions).size;
+    return count || !(await demoOn()) ? count : demoModeration().reported.length;
   } catch { return 0; }
 }
 
 export type ModerationData = { migrated: boolean; reported: ModerationCard[]; hidden: ModerationCard[]; now: string };
 
 /** Both tabs of Moderasi Momen: Dilaporkan (waiting, newest report first) and Disembunyikan (newest first). */
-export async function moderationData(now = new Date()): Promise<ModerationData> {
+export async function moderationData(now = new Date(), viewer?: Pick<MainWamViewer, "demo">): Promise<ModerationData> {
+  const sample = () => ({ migrated: true, ...demoModeration(now), now: now.toISOString() });
+  if (viewer && sampleOnlyFor(viewer, "kelola")) return sample();
+  const real = await realModeration(now);
+  return real.reported.length || real.hidden.length || !(await demoOn()) ? real : sample();
+}
+
+async function realModeration(now: Date): Promise<ModerationData> {
   const source = await queueSource();
   if (!source.migrated) return { migrated: false, reported: [], hidden: [], now: now.toISOString() };
   const waiting = waitingPhotos(source.reports, source.decisions);
@@ -64,14 +77,13 @@ export async function moderationData(now = new Date()): Promise<ModerationData> 
   const ids = [...new Set([...waiting, ...(hiddenRows ?? []).map(row => row.id as string)])];
   if (!ids.length) return { migrated: true, reported: [], hidden: [], now: now.toISOString() };
 
-  const [{ data: photos, error }, { data: allReports, error: reportsError }, people, groups] = await Promise.all([
+  const [{ data: photos, error }, { data: allReports, error: reportsError }, people] = await Promise.all([
     db().from("mw_photos").select("id,owner_id,created_at,status,file_key,thumb_key,hidden_by,hidden_at,hidden_reason").in("id", ids),
     db().from("mw_photo_reports").select("photo_id,reason,note,created_at").in("photo_id", ids).limit(5000),
-    mainWamPeople(), listGroups(),
+    mainWamPeople(),
   ]);
   if (error) databaseError(error);
   if (reportsError) databaseError(reportsError);
-  const labels = groupLabels(groups.data);
   const reportsOf = new Map<string, ModerationReport[]>();
   for (const report of ((allReports ?? []) as ReportRow[]).map(asReport)) reportsOf.set(report.photoId, [...(reportsOf.get(report.photoId) ?? []), report]);
   const signed = isR2Configured();
@@ -81,7 +93,7 @@ export async function moderationData(now = new Date()): Promise<ModerationData> 
     const reports = reportsOf.get(photo.id) ?? [];
     const [thumb, large] = await Promise.all([link(photo.thumb_key ?? photo.file_key), link(photo.file_key)]);
     return {
-      id: photo.id, owner: people.get(photo.owner_id)?.name ?? "Tanpa nama", group: labels.get(photo.owner_id) ?? null, createdAt: photo.created_at, status: photo.status,
+      id: photo.id, owner: people.get(photo.owner_id)?.name ?? "Tanpa nama", createdAt: photo.created_at, status: photo.status,
       reports: reports.length, reasons: reasonLines(reports), notes: reportNotes(reports), thumb, large,
       hiddenBy: photo.status === "disembunyikan" && photo.hidden_by ? people.get(photo.hidden_by)?.name ?? null : null, hiddenAt: photo.status === "disembunyikan" ? photo.hidden_at : null,
       hiddenReason: photo.status === "disembunyikan" ? photo.hidden_reason ?? "" : "",
