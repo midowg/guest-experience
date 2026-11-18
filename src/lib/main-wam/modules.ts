@@ -6,10 +6,15 @@ import { MAIN_WAM_MODULES, type MainWamModule, type ModuleSwitches } from "./typ
  * its APIs refuse (gate.ts requireModule). Pure.
  */
 
-export const moduleInfo: Record<MainWamModule, { label: string; hint: string }> = {
+/**
+ * Every module is off until an admin switches it on (DEFAULT_MODULES, settings.ts). Silent Meeting is the
+ * one the owner left out of WAM: it belongs to Pra WAM, so it stays off here unless the event uses it
+ * (`note` is shown with its switch in Admin WAM → Main WAM → Pengaturan).
+ */
+export const moduleInfo: Record<MainWamModule, { label: string; hint: string; note?: string }> = {
   absen: { label: "Absen QR", hint: "Scan QR di sesi yang ditandai pakai absen; panitia bisa mencatat manual." },
   voting: { label: "Voting Awarding", hint: "Kartu Beranda saat voting dibuka, aksi di sesi Awarding, persetujuan BOD." },
-  silent: { label: "Silent Meeting", hint: "Masukan tanpa nama, dibuka dan ditutup mengikuti jam sesinya." },
+  silent: { label: "Silent Meeting", hint: "Masukan tanpa nama, dibuka dan ditutup mengikuti jam sesinya.", note: "Silent Meeting dipakai di Pra WAM; nyalakan hanya bila acara WAM memang memakainya." },
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
   mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
   karbon: { label: "Jejak karbon", hint: "Satu baris angka di Ringkasan BOD, dihitung dari data acara." },

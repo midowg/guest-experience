@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, House, Images, UserRound, type LucideIcon } from "lucide-react";
-import { mainWamTabs, type MainWamTab } from "@/lib/main-wam/screen";
+import { CalendarDays, ClipboardList, House, Images, UserRound, type LucideIcon } from "lucide-react";
+import { mainWamTabsFor, type MainWamTab } from "@/lib/main-wam/screen";
 import { useT } from "@/components/main-wam/i18n";
 import { Badge } from "../ui/Status";
 import { cx } from "../ui/Pressable";
 import css from "./shell.module.css";
 
-const ICONS: Record<(typeof mainWamTabs)[number]["icon"], LucideIcon> = { house: House, "calendar-days": CalendarDays, images: Images, "user-round": UserRound };
+const ICONS: Record<ReturnType<typeof mainWamTabsFor>[number]["icon"], LucideIcon> = { house: House, "calendar-days": CalendarDays, images: Images, "user-round": UserRound, "clipboard-list": ClipboardList };
 
 export type TabBadges = Partial<Record<MainWamTab, number | "dot">>;
 
@@ -19,19 +19,21 @@ function badgeWords(badge: number | "dot" | undefined, t: ReturnType<typeof useT
 }
 
 /**
- * The bottom bar (DS #4, revisi 16 Nov): Beranda · Agenda · Momen · Saya, the same for every role.
+ * The bottom bar (DS #4, revisi 16 Nov): Beranda · Agenda · Momen · Saya, and for panitia a fifth, Panitia, at the right end.
  * Addresses from mainWamTabs (src/lib/main-wam/screen.ts, built on mainWamPath); the lit tab comes
  * from the address (the shell passes `current`), aria-current="page". Links are next/link: no full
  * reload, prefetched.
  */
-export function BottomNav({ current, badges = {}, className }: {
+export function BottomNav({ current, badges = {}, committee = false, className }: {
   current: MainWamTab | null;
+  /** Draw the fifth tab, Panitia (the viewer is panitia). */
+  committee?: boolean;
   badges?: TabBadges;
   className?: string;
 }) {
   const t = useT();
   return <nav aria-label={t("shell.nav")} className={cx(css.nav, className)}>
-    {mainWamTabs.map(tab => {
+    {mainWamTabsFor(committee).map(tab => {
       const Icon = ICONS[tab.icon];
       const badge = badges[tab.key];
       const words = badgeWords(badge, t);

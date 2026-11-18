@@ -1,5 +1,5 @@
 import "server-only";
-import { attentionItems, kelolaTiles, requiredOpen, silentWaitingToday, type AttentionItem, type KelolaTile } from "@/lib/main-wam/panitia/attention";
+import { attentionItems, kelolaTiles, requiredOpen, runningSessions, type RunningSession, silentWaitingToday, type AttentionItem, type KelolaTile } from "@/lib/main-wam/panitia/attention";
 import { awardStatus, dayAverage, departmentStats, sessionStats, summaryRows, type SessionStat, type SummaryRow } from "@/lib/main-wam/panitia/summary";
 import { silentShownCount, silentState } from "@/lib/main-wam/module-state";
 import { agendaDay, eventDates, eventDay, timeRange, wibDate } from "@/lib/main-wam/rundown";
@@ -114,11 +114,11 @@ export async function attendanceDay(context: MainWamContext, asked: string | num
   };
 }
 
-/* ── K01 Beranda panitia ──────────────────────────────────────────────────────────────────────── */
+/* ── K01 Panitia (hub) ──────────────────────────────────────────────────────────────────────── */
 
-export type PanitiaHome = { tiles: KelolaTile[]; attention: AttentionItem[]; reported: number };
+export type PanitiaHome = { tiles: KelolaTile[]; attention: AttentionItem[]; reported: number; running: RunningSession[] };
 
-/** Kelola and Perlu perhatian. Fails soft: a part that cannot be read is left out, never the Beranda. */
+/** Kelola, Perlu perhatian and the sessions running now, for the Panitia hub. Fails soft: a part that cannot be read is left out, never the hub. */
 export async function panitiaHome(context: MainWamContext, now = new Date()): Promise<PanitiaHome> {
   const { modules, event } = context.settings;
   const [reported, sessions] = await Promise.all([waitingCount(), allSessions().catch(() => ({ data: [] as MwSession[], migrated: false }))]);
@@ -141,6 +141,6 @@ export async function panitiaHome(context: MainWamContext, now = new Date()): Pr
     });
   };
   const [requiredValue, silentValue] = await Promise.all([required().catch(() => []), silent().catch(() => [])]);
-  return { reported, tiles: kelolaTiles(modules, reported), attention: attentionItems({ modules, reported, required: requiredValue, silent: silentValue }) };
+  return { reported, tiles: kelolaTiles(modules, reported), attention: attentionItems({ modules, reported, required: requiredValue, silent: silentValue }), running: runningSessions(sessions.data, now) };
 }
 

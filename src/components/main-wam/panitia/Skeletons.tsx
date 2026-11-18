@@ -55,3 +55,11 @@ export function KehadiranSkeleton() {
     <Days /><div className={css.avg}><Skeleton shape="title" width="60%" height={36} /><Skeleton shape="line" width="35%" /></div><Rows count={5} tall={76} />
   </div></SkeletonGroup></ScreenContent>;
 }
+
+export function PanitiaSkeleton() {
+  return <ScreenContent><SkeletonGroup label="Memuat halaman panitia"><div style={{ display: "flex", flexDirection: "column", gap: "var(--mw-space-12)" }}>
+    <Card><Skeleton shape="title" width="30%" /><div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--mw-space-8)", marginTop: 12 }}>
+      {[0, 1, 2, 3].map(index => <Skeleton key={index} shape="block" height={88} style={{ borderRadius: "var(--mw-radius-12)" }} />)}
+    </div></Card>
+  </div></SkeletonGroup></ScreenContent>;
+}

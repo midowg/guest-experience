@@ -107,7 +107,16 @@ describe("(app)/layout: the frame", () => {
     viewer = person(true, ["panitia"]);
     const out = await AppLayout({ children: page }) as ReactElement<{ unread: number; greeting: { name: string } }>;
     expect(typeOf(out)).toBe(MainWamShell);
-    expect(out.props).toMatchObject({ unread: 2, greeting: { name: "Dimas" } });
+    expect(out.props).toMatchObject({ unread: 2, greeting: { name: "Dimas" }, committee: true });
+  });
+
+  it("the Panitia tab only for the panitia role: not a peserta, a BOD, or an admin who is not panitia", async () => {
+    mode = "semua";
+    for (const [roles, tab] of [[[], false], [["bod"], false], [["admin"], false], [["panitia"], true], [["admin", "panitia"], true]] as const) {
+      viewer = person(roles.includes("admin" as never), [...roles]);
+      const out = await AppLayout({ children: page }) as ReactElement<{ committee: boolean }>;
+      expect(out.props.committee, roles.join("+") || "peserta").toBe(tab);
+    }
   });
 });
 

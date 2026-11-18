@@ -8,7 +8,8 @@ import { announceSample, attendanceData, bodRows, moderationHidden, moderationRe
 import { PanitiaApiContext, PanitiaError, type PanitiaApi } from "./api";
 import { AbsenManual } from "./AbsenManual";
 import { AnnounceForm } from "./AnnounceForm";
-import { KelolaCards, RingkasanCard } from "./BerandaCards";
+import { RingkasanCard } from "./BerandaCards";
+import { PanitiaHub } from "./PanitiaHub";
 import { Moderation } from "./Moderation";
 import { RundownLive } from "./RundownLive";
 
@@ -262,7 +263,7 @@ describe("Kirim pengumuman (K06)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Kirim" }));
     await waitFor(() => expect(screen.getByText("Terkirim ke 122 orang")).toBeTruthy());
     expect(api.announce).toHaveBeenCalledWith({ title: "Team building mulai 15.00 di Lawn", body: "Pakai kaos kelompok dan sepatu olahraga.", audience: { type: "semua" }, pinnedUntil: null });
-    expect(api.navigate).toHaveBeenCalledWith(mainWamPath.home);
+    expect(api.navigate).toHaveBeenCalledWith(mainWamPath.committee);
   });
 
   it("goes from a sent announcement straight to Hapus, and Batal hands focus back (afterModal removed)", async () => {
@@ -353,14 +354,17 @@ describe("Moderasi Momen (K08)", () => {
   });
 });
 
-describe("Beranda cards (K01, B01)", () => {
-  it("draws Kelola and Perlu perhatian as links, with the reports said in words", () => {
-    render(<KelolaCards tiles={panitiaHome.tiles} attention={panitiaHome.attention} />);
+describe("Panitia hub (K01) and Beranda card (B01)", () => {
+  it("draws what is running, Kelola and Perlu perhatian as links, with the reports said in words", () => {
+    render(<PanitiaHub tiles={panitiaHome.tiles} attention={panitiaHome.attention} running={panitiaHome.running} />);
+    expect(screen.getByRole("heading", { name: "Sedang berjalan" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Kelola" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /^Moderasi\s*, 3 laporan$/ }).getAttribute("href")).toBe(mainWamPath.moderation());
     expect(screen.getByRole("link", { name: /8 orang belum absen/ }).getAttribute("href")).toBe(mainWamPath.attendanceManual(sampleSessionIds.pemaparan));
     cleanup();
-    render(<KelolaCards tiles={panitiaHome.tiles} attention={[]} />);
+    render(<PanitiaHub tiles={panitiaHome.tiles} attention={[]} />);
     expect(screen.queryByText("Perlu perhatian")).toBeNull();
+    expect(screen.queryByText("Sedang berjalan")).toBeNull();
   });
 
   it("draws Ringkasan's rows; Jejak karbon is a number, not a link", () => {

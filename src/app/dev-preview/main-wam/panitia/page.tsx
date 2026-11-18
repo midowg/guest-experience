@@ -4,11 +4,12 @@ import { DevFrame } from "@/components/main-wam/dev/DevFrame";
 import { BerandaScreen } from "@/components/main-wam/peserta/beranda/BerandaScreen";
 import { AbsenManual } from "@/components/main-wam/panitia/AbsenManual";
 import { AnnounceForm } from "@/components/main-wam/panitia/AnnounceForm";
-import { KelolaCards, RingkasanCard, RingkasanSkeleton } from "@/components/main-wam/panitia/BerandaCards";
+import { RingkasanCard, RingkasanSkeleton } from "@/components/main-wam/panitia/BerandaCards";
 import { Kehadiran } from "@/components/main-wam/panitia/Kehadiran";
 import { Moderation } from "@/components/main-wam/panitia/Moderation";
+import { PanitiaHub } from "@/components/main-wam/panitia/PanitiaHub";
 import { RundownLive } from "@/components/main-wam/panitia/RundownLive";
-import { AbsenSkeleton, AnnounceSkeleton, KehadiranSkeleton, ModerationSkeleton, RundownSkeleton } from "@/components/main-wam/panitia/Skeletons";
+import { AbsenSkeleton, AnnounceSkeleton, KehadiranSkeleton, ModerationSkeleton, PanitiaSkeleton, RundownSkeleton } from "@/components/main-wam/panitia/Skeletons";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Banner, Text } from "@/components/main-wam/ui";
 import { clock } from "@/lib/main-wam/panitia/format";
@@ -27,26 +28,31 @@ const at = (time: string, date = "2027-01-05") => `${date}T${time}:00+07:00`;
 
 /**
  * Beranda whole, as the app draws it ((app)/page.tsx): agen A's BerandaScreen with its preview data,
- * area C's card in the role's slot, Absen and Momen as A's stand-ins (audit T-K04).
+ * BOD's card in its slot (panitia have none: their tools are the Panitia tab), Absen and Momen as A's stand-ins (audit T-K04).
  */
-function Beranda({ peran, waktu, card }: { peran: "panitia" | "bod"; waktu: string; card: ReactNode }) {
+function Beranda({ peran, waktu, card }: { peran: "panitia" | "bod"; waktu: string; card?: ReactNode }) {
   const now = sampleTime(waktu);
   return <BerandaScreen data={previewHome(now, sampleViewer(peran))} serverNow={now.toISOString()} since={clock(now.toISOString())} live={false}
-    slots={{ absen: <AbsenStandIn />, panitia: peran === "panitia" ? card : null, bod: peran === "bod" ? card : null, momen: <MomenStandIn /> }} />;
+    slots={{ absen: <AbsenStandIn />, bod: peran === "bod" ? card : null, momen: <MomenStandIn /> }} />;
 }
 
 type Screen = { path: string; peran: string; waktu?: string; body: ReactNode };
 
 /**
  * Area C (panitia + BOD) in the real frame, sample data, no sign-in, 404 in production:
- * ?layar=k01|k02|k05|k06|k08|b01|b02 &varian=… (see each case). Buttons answer through a stand-in API.
+ * ?layar=hub|beranda|k02|k05|k06|k08|b01|b02 &varian=… (see each case). Buttons answer through a stand-in API.
  */
 export default async function DevMainWamPanitia({ searchParams }: { searchParams: Promise<{ layar?: string; varian?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { layar = "k01", varian = "" } = await searchParams;
+  const { layar = "hub", varian = "" } = await searchParams;
   const screens: Record<string, () => Screen> = {
-    k01: () => ({ path: mainWamPath.home, peran: "panitia", waktu: "panitia", body:
-      <Beranda peran="panitia" waktu="panitia" card={<KelolaCards tiles={panitiaHome.tiles} attention={varian === "tenang" ? [] : panitiaHome.attention} />} /> }),
+    // K01 Panitia, the fifth tab's hub. ?varian=tenang (nothing to watch), kosong (nothing running), memuat.
+    hub: () => varian === "memuat"
+      ? { path: mainWamPath.committee, peran: "panitia", waktu: "panitia", body: <PanitiaSkeleton /> }
+      : { path: mainWamPath.committee, peran: "panitia", waktu: "panitia", body:
+        <PanitiaHub tiles={panitiaHome.tiles} attention={varian === "tenang" ? [] : panitiaHome.attention} running={varian === "tenang" || varian === "kosong" ? [] : panitiaHome.running} /> },
+    // Beranda of a panitia: the same as a peserta's, no card of the tools.
+    beranda: () => ({ path: mainWamPath.home, peran: "panitia", waktu: "panitia", body: <Beranda peran="panitia" waktu="panitia" /> }),
     k02: () => {
       if (varian === "memuat") return { path: mainWamPath.rundownLive(2), peran: "panitia", body: <RundownSkeleton /> };
       const variant = varian === "disimpan" || varian === "tanpa-kabar" ? "disimpan" : varian === "silent-dibuka" ? "silent-dibuka" : "awal";
@@ -95,6 +101,6 @@ export default async function DevMainWamPanitia({ searchParams }: { searchParams
       ? { path: mainWamPath.attendanceSummary(3), peran: "bod", body: <KehadiranSkeleton /> }
       : { path: mainWamPath.attendanceSummary(3), peran: "bod", body: <Kehadiran data={varian === "kosong" ? { ...attendanceDaySample, average: null, firstStart: "06.00", departments: [], sessions: attendanceDaySample.sessions.map(session => ({ ...session, percent: null, state: "upcoming" as const })) } : attendanceDaySample} /> },
   };
-  const screen = (screens[layar] ?? screens.k01)();
+  const screen = (screens[layar] ?? screens.hub)();
   return <DevFrame path={screen.path} peran={screen.peran} waktu={screen.waktu}>{screen.body}</DevFrame>;
 }

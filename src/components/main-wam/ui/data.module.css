@@ -75,6 +75,8 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 
 /* ShortcutTile: Kelola 2 × 2, icon + label in a row, 64 tall, badge on the right. */
 .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-8); }
+/* On a narrow phone (320, 360) two tiles side by side cut "Pengumuman" and "Moderasi": one per row instead, nothing clipped. */
+@media (max-width: 379.98px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
 .tile {
   position: relative; min-width: 0; height: 64px; display: flex; align-items: center; gap: var(--mw-space-8);
   padding: var(--mw-space-12) var(--mw-space-8) var(--mw-space-12) var(--mw-space-12); border-radius: var(--mw-radius-16);

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { LangProvider } from "@/components/main-wam/i18n";
 import { MainWamTheme } from "@/components/main-wam/theme";
 import { MainWamShell } from "@/components/main-wam/shell";
-import { mainWamRole } from "@/lib/main-wam/access";
+import { mainWamRole, showsCommitteeTab } from "@/lib/main-wam/access";
 import type { Lang } from "@/lib/main-wam/i18n";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { sampleSettings, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
@@ -38,7 +38,7 @@ export function DevFrame({ path, peran, waktu, unread = 3, theme, lang = "id", c
   const screen = mainWamScreen(path.split(/[?#]/)[0], lang);
   return <MainWamTheme theme={theme} mode="light">
     <LangProvider lang={lang}>
-      <MainWamShell screen={screen} unread={unread} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer), lang)}>
+      <MainWamShell screen={screen} unread={unread} committee={showsCommitteeTab(viewer)} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer), lang)}>
         {children}
       </MainWamShell>
     </LangProvider>

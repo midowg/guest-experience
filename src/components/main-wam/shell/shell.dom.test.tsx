@@ -28,6 +28,17 @@ describe("BottomNav", () => {
     expect(links.filter(link => link.getAttribute("aria-current") === "page").map(link => link.textContent)).toEqual(["Agenda"]);
   });
 
+  it("draws a fifth tab, Panitia, at the right end after Saya, only for panitia (committee)", () => {
+    const { unmount } = render(<BottomNav current="panitia" committee />);
+    const links = within(screen.getByRole("navigation", { name: "Navigasi utama" })).getAllByRole("link");
+    expect(links.map(link => link.textContent)).toEqual(["Beranda", "Agenda", "Momen", "Saya", "Panitia"]);
+    expect(links[4].getAttribute("href")).toBe(mainWamPath.committee);
+    expect(links.filter(link => link.getAttribute("aria-current") === "page").map(link => link.textContent)).toEqual(["Panitia"]);
+    unmount();
+    render(<BottomNav current="beranda" />);
+    expect(screen.queryByRole("link", { name: "Panitia" })).toBeNull();
+  });
+
   it("says a badge in the tab's name (count or dot) and lights nothing when no tab is current", () => {
     render(<BottomNav current={null} badges={{ momen: 12, saya: "dot", agenda: 0 }} />);
     expect(screen.getByRole("link", { name: "Momen, 12 baru" })).toBeTruthy();
@@ -45,6 +56,23 @@ describe("MainWamShell", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Detail sesi" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Kembali" }).getAttribute("href")).toBe(mainWamPath.agenda());
     expect(screen.getByRole("main").textContent).toBe("Isi");
+  });
+
+  it("lights Panitia on the hub and on every tool under it, for panitia; the bar has no Panitia tab otherwise", () => {
+    for (const path of [mainWamPath.committee, mainWamPath.rundownLive(), mainWamPath.attendanceManual(), mainWamPath.moderation()]) {
+      nav.pathname = path;
+      const { unmount } = render(<MainWamShell greeting={greeting} committee><p>Isi</p></MainWamShell>);
+      expect(screen.getByRole("link", { name: "Panitia" }).getAttribute("aria-current"), path).toBe("page");
+      unmount();
+    }
+    nav.pathname = mainWamPath.committee;
+    render(<MainWamShell greeting={greeting} committee><p>Isi</p></MainWamShell>);
+    expect(screen.getByRole("heading", { level: 1, name: "Panitia" })).toBeTruthy();
+    cleanup();
+    nav.pathname = mainWamPath.home;
+    render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
+    expect(screen.queryByRole("link", { name: "Panitia" })).toBeNull();
+    expect(within(screen.getByRole("navigation", { name: "Navigasi utama" })).getAllByRole("link")).toHaveLength(4);
   });
 
   it("draws Beranda's greeting with the only bell, and the unread count in its name", () => {

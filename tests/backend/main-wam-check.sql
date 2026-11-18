@@ -261,6 +261,23 @@ begin
 end $$;
 reset role;
 
+-- Migration 202611220001: Silent Meeting's module goes off, the other switches stay, and running it again changes nothing.
+do $$
+declare v_after jsonb;
+begin
+  update public.mw_settings set modules = '{"absen": true, "silent": true, "mozaik": true}';
+  for i in 1..2 loop
+    update public.mw_settings set modules = jsonb_set(modules, '{silent}', 'false'::jsonb)
+    where jsonb_typeof(modules) = 'object' and modules -> 'silent' = 'true'::jsonb;
+  end loop;
+  select modules into v_after from public.mw_settings;
+  if v_after <> '{"absen": true, "silent": false, "mozaik": true}'::jsonb then raise exception 'silent should be off and the others kept, got %', v_after; end if;
+  update public.mw_settings set modules = '{}'::jsonb;
+  update public.mw_settings set modules = jsonb_set(modules, '{silent}', 'false'::jsonb) where jsonb_typeof(modules) = 'object' and modules -> 'silent' = 'true'::jsonb;
+  if (select modules from public.mw_settings) <> '{}'::jsonb then raise exception 'a row without silent should stay as it is'; end if;
+  raise notice 'PASS: the panitia-tab migration switches only Silent Meeting off, safe to run twice';
+end $$;
+
 -- Row level security is on for every Main WAM table.
 do $$ begin
   if exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'mw\_%' and not c.relrowsecurity) then

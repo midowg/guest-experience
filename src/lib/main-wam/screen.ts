@@ -16,19 +16,26 @@ import { t, type Lang } from "./i18n";
  * history to go back to (opened from a notification or a QR).
  */
 
-export const MAIN_WAM_TABS = ["beranda", "agenda", "momen", "saya"] as const;
+export const MAIN_WAM_TABS = ["beranda", "agenda", "momen", "saya", "panitia"] as const;
 export type MainWamTab = (typeof MAIN_WAM_TABS)[number];
 export type MainWamLevel = "akar" | "detail" | "tugas";
 /** `title` "" = a bar without a title (revisi 16 Nov "Kepala tanpa judul"); `label` then names the screen for screen readers. */
 export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; label?: string; back?: { href: string; title: string }; camera?: boolean };
 
-/** The four tabs, in order: label, address and the Lucide icon name (SPEC §0.3). */
-export const mainWamTabs: { key: MainWamTab; label: string; href: string; icon: "house" | "calendar-days" | "images" | "user-round" }[] = [
+type TabIcon = "house" | "calendar-days" | "images" | "user-round" | "clipboard-list";
+type TabDef = { key: MainWamTab; label: string; href: string; icon: TabIcon };
+/** The four tabs everyone has, in order: label, address and the Lucide icon name (SPEC §0.3). */
+export const mainWamTabs: TabDef[] = [
   { key: "beranda", label: "Beranda", href: mainWamPath.home, icon: "house" },
   { key: "agenda", label: "Agenda", href: mainWamPath.agenda(), icon: "calendar-days" },
   { key: "momen", label: "Momen", href: mainWamPath.moments(), icon: "images" },
   { key: "saya", label: "Saya", href: mainWamPath.me, icon: "user-round" },
 ];
+
+/** The fifth tab, at the right end after Saya: only for people who are panitia (mainWamShowsCommitteeTab). */
+export const mainWamCommitteeTab: TabDef = { key: "panitia", label: "Panitia", href: mainWamPath.committee, icon: "clipboard-list" };
+/** The tabs the bar draws: the four, plus Panitia for someone who is panitia. */
+export const mainWamTabsFor = (committee: boolean): TabDef[] => (committee ? [...mainWamTabs, mainWamCommitteeTab] : mainWamTabs);
 
 const strip = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
@@ -68,10 +75,13 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
       if (second === "panduan" && third) return { tab: "saya", level: "detail", title: say("screen.guides"), back: { href: mainWamPath.guides, title: say("screen.guides") } };
       return { tab: "saya", level: "detail", title: titles[second] ?? say("screen.me"), back: saya };
     }
+    // The panitia hub is the root of the fifth tab; its tools are details of it (back goes to the hub).
     case "kelola": {
-      if (second === "pengumuman") return { tab: "beranda", level: "tugas", title: "Pengumuman baru", back: home };
+      const hub = { href: mainWamPath.committee, title: say("screen.committee") };
+      if (!second) return { tab: "panitia", level: "akar", title: say("screen.committee") };
+      if (second === "pengumuman") return { tab: "panitia", level: "tugas", title: "Pengumuman baru", back: hub };
       const titles: Record<string, string> = { rundown: "Rundown live", absen: "Absen sesi", moderasi: "Moderasi Momen" };
-      return { tab: "beranda", level: "detail", title: titles[second] ?? "Kelola", back: home };
+      return { tab: "panitia", level: "detail", title: titles[second] ?? say("screen.committee"), back: hub };
     }
     case "ringkasan": {
       const titles: Record<string, string> = { kehadiran: "Kehadiran", "silent-meeting": "Rekap Silent Meeting", awarding: "Awarding" };

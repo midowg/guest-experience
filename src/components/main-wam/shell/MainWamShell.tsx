@@ -39,7 +39,7 @@ export type ShellGreeting = {
  * Safe areas (notch, home bar) are padded; on a wide screen the app is a phone-wide column.
  * Wrap it in <MainWamTheme>. `screen` forces a frame (previews only).
  */
-export function MainWamShell({ children, greeting, unread = 0, badges, screen: forced }: {
+export function MainWamShell({ children, greeting, unread = 0, badges, committee = false, screen: forced }: {
   children: ReactNode;
   /** Beranda's head (from the layout, on the server). */
   greeting?: ShellGreeting;
@@ -47,6 +47,8 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
   unread?: number;
   /** Counts or dots on the tabs. */
   badges?: TabBadges;
+  /** The viewer is panitia: the bottom bar has the fifth tab, Panitia (decided on the server, showsCommitteeTab). */
+  committee?: boolean;
   /** Preview only: draw this frame instead of the address's. */
   screen?: MainWamScreen | null;
 }) {
@@ -136,7 +138,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
           <a className={css.skip} href="#isi">{t("shell.skip")}</a>
           {top}
           <main id="isi" tabIndex={-1} className={css.main}>{children}</main>
-          {nav && <BottomNav current={screen?.tab ?? null} badges={badges} />}
+          {nav && <BottomNav current={screen?.tab ?? null} badges={badges} committee={committee} />}
         </div>
       </ActionsSlotContext.Provider>
     </ToastProvider>

@@ -96,6 +96,7 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
     expect(mainWamPath.camera({ sesi: "umum" })).toBe("/wam/acara/momen/kamera?sesi=umum");
     expect(mainWamPath.gallery({ lihat: "saya" })).toBe("/wam/acara/momen/galeri?lihat=saya");
     expect(mainWamPath.mosaic(true)).toBe("/wam/acara/momen/mozaik?tandai=1");
+    expect(mainWamPath.committee).toBe("/wam/acara/kelola");
     expect(mainWamPath.moderation()).toBe("/wam/acara/kelola/moderasi");
     expect(mainWamPath.moderation("disembunyikan")).toBe("/wam/acara/kelola/moderasi?lihat=disembunyikan");
     expect(mainWamPath.checkIn("tok_1")).toBe("/wam/acara/absen/tok_1");

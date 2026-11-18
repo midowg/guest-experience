@@ -504,6 +504,8 @@ export const mainWamPath = {
   mosaic: (mark = false) => `${MAIN_WAM_PATH}/momen/mozaik${mwQuery({ tandai: mark ? "1" : undefined })}`,
 
   /* C · panitia and BOD */
+  /** K01 Panitia, the hub behind the fifth tab: Kelola (4 shortcuts) and Perlu perhatian. Panitia only (the tab); the tools below open from it. */
+  committee: `${MAIN_WAM_PATH}/kelola`,
   /** K02 Rundown live, on a day (1–4). */
   rundownLive: (day?: number) => `${MAIN_WAM_PATH}/kelola/rundown${mwQuery({ hari: day })}`,
   /** K05 Absen sesi: who is present, Catat hadir. */

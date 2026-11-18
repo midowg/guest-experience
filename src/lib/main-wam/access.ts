@@ -53,6 +53,13 @@ export function mainWamRole(who: WithRoles): MainWamRole {
   return "peserta";
 }
 
+/**
+ * Whether the bottom bar has the fifth tab, Panitia: only for someone who really is panitia (the role
+ * on the account), not a BOD, a peserta, or an admin who is not panitia. The hub page itself uses the
+ * "kelola" gate (panitia or admin), so an admin can still open it by its address.
+ */
+export const showsCommitteeTab = (who: WithRoles) => has(who, "panitia");
+
 /** Everything a role may do in Main WAM. Peserta is everyone's base; roles add, they never change the tabs. */
 export const MAIN_WAM_ACTIONS = [
   /** Absen: scan the QR (BOD do not check in). */

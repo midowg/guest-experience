@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mainWamPath } from "@/lib/routes";
-import { mainWamScreen, mainWamTabs, showsBell, showsBottomBar } from "./screen";
+import { mainWamScreen, mainWamTabs, mainWamTabsFor, showsBell, showsBottomBar } from "./screen";
 
 const at = (path: string) => mainWamScreen(path.split("?")[0]);
 
@@ -9,6 +9,27 @@ describe("Main WAM's frame, from the address alone", () => {
     expect(mainWamTabs.map(tab => [tab.key, tab.label, tab.href])).toEqual([
       ["beranda", "Beranda", "/wam/acara"], ["agenda", "Agenda", "/wam/acara/agenda"], ["momen", "Momen", "/wam/acara/momen"], ["saya", "Saya", "/wam/acara/saya"],
     ]);
+  });
+
+  it("adds Panitia at the right end, after Saya, only when asked (the viewer is panitia)", () => {
+    expect(mainWamTabsFor(false)).toEqual(mainWamTabs);
+    expect(mainWamTabsFor(true).map(tab => [tab.key, tab.label, tab.href, tab.icon])).toEqual([
+      ...mainWamTabs.map(tab => [tab.key, tab.label, tab.href, tab.icon]), ["panitia", "Panitia", "/wam/acara/kelola", "clipboard-list"],
+    ]);
+  });
+
+  it("draws the Panitia hub as the root of its tab, and every panitia tool under it with the tab lit and back to the hub", () => {
+    expect(at(mainWamPath.committee)).toMatchObject({ tab: "panitia", level: "akar", title: "Panitia" });
+    expect(mainWamScreen(mainWamPath.committee, "en")).toMatchObject({ tab: "panitia", title: "Committee" });
+    expect(showsBottomBar(at(mainWamPath.committee))).toBe(true);
+    expect(showsBell(at(mainWamPath.committee))).toBe(false);
+    for (const [path, title] of [[mainWamPath.rundownLive(2), "Rundown live"], [mainWamPath.attendanceManual("s1"), "Absen sesi"], [mainWamPath.moderation("disembunyikan"), "Moderasi Momen"]] as const) {
+      expect(at(path), path).toMatchObject({ tab: "panitia", level: "detail", title });
+      expect(at(path)?.back?.href, path).toBe(mainWamPath.committee);
+      expect(showsBottomBar(at(path)), path).toBe(true);
+    }
+    expect(at(mainWamPath.announce)).toMatchObject({ tab: "panitia", level: "tugas", back: { href: mainWamPath.committee } });
+    expect(showsBottomBar(at(mainWamPath.announce))).toBe(false);
   });
 
   it("draws the tab roots with the bottom bar, the bell on Beranda only", () => {
@@ -35,9 +56,9 @@ describe("Main WAM's frame, from the address alone", () => {
       [mainWamPath.guide("denah-venue"), "saya", "Panduan", mainWamPath.guides],
       [mainWamPath.settings, "saya", "Pengaturan", mainWamPath.me],
       [mainWamPath.help, "saya", "Bantuan", mainWamPath.me],
-      [mainWamPath.rundownLive(2), "beranda", "Rundown live", mainWamPath.home],
-      [mainWamPath.attendanceManual("s1"), "beranda", "Absen sesi", mainWamPath.home],
-      [mainWamPath.moderation("disembunyikan"), "beranda", "Moderasi Momen", mainWamPath.home],
+      [mainWamPath.rundownLive(2), "panitia", "Rundown live", mainWamPath.committee],
+      [mainWamPath.attendanceManual("s1"), "panitia", "Absen sesi", mainWamPath.committee],
+      [mainWamPath.moderation("disembunyikan"), "panitia", "Moderasi Momen", mainWamPath.committee],
       [mainWamPath.attendanceSummary(), "beranda", "Kehadiran", mainWamPath.home],
       [mainWamPath.silentRecap, "beranda", "Rekap Silent Meeting", mainWamPath.home],
       // B06 (revisi 16 Nov, T-K05): "Awarding".

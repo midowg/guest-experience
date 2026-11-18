@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mainWamPath } from "@/lib/routes";
 import { sampleAwards, sampleSession, sampleSessionIds, sampleSessions, sampleSettings } from "../sample";
 import type { MwAwardApproval } from "../types";
-import { attentionItems, kelolaTiles, requiredOpen, silentWaitingToday } from "./attention";
+import { attentionItems, kelolaTiles, requiredOpen, runningSessions, silentWaitingToday } from "./attention";
 import { attendeeLine, mayRecord, mayUndo, pickAttendanceSession, presentLine, searchAttendees, splitAttendance, windowCaption, type AttendeeRow } from "./attendance";
 import { clock, dayClock, editedLabel, parseClock, signedDuration } from "./format";
 import { allowedActions, hiddenLine, moderationReason, ownerLine, reasonLines, reportNotes, waitingPhotos, type ModerationReport } from "./moderation";
@@ -171,7 +171,7 @@ describe("Kehadiran (B02) and Ringkasan (B01)", () => {
   });
 });
 
-describe("Beranda panitia (K01)", () => {
+describe("Panitia hub (K01)", () => {
   it("shows four shortcuts (Absen only with module Absen QR) and the reports badge", () => {
     expect(kelolaTiles(modules, 3).map(tile => [tile.label, tile.badge])).toEqual([["Rundown live", undefined], ["Absen", undefined], ["Pengumuman", undefined], ["Moderasi", 3]]);
     expect(kelolaTiles({ ...modules, absen: false }, 0).map(tile => tile.label)).toEqual(["Rundown live", "Pengumuman", "Moderasi"]);
@@ -190,6 +190,15 @@ describe("Beranda panitia (K01)", () => {
     expect(items[2].href).toBe(`${mainWamPath.rundownLive(2)}#sesi-${silent.id}`);
     expect(attentionItems({ modules: { ...modules, absen: false, silent: false }, reported: 0, required: [{ session: pemaparan, present: 112, expected: 120 }], silent: [{ session: silent, day: 2 }] })).toEqual([]);
     expect(attentionItems({ modules, reported: 0, required: [{ session: pemaparan, present: 120, expected: 120 }], silent: [] })).toEqual([]);
+  });
+
+  it("names the sessions running now (started, not ended), none before the first or after the last", () => {
+    const now = runningSessions(sampleSessions, at("10:15"));
+    expect(now.map(session => session.title)).toEqual(["Pemaparan departemen"]);
+    expect(now[0].time).toBe("08.00–12.00");
+    expect(now[0].href).toBe(`${mainWamPath.rundownLive()}#sesi-${now[0].id}`);
+    expect(runningSessions(sampleSessions, at("03:00"))).toEqual([]);
+    expect(runningSessions(sampleSessions.map(session => ({ ...session, status: "batal" as const })), at("10:15"))).toEqual([]);
   });
 });
 

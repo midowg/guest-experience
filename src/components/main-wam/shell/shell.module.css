@@ -42,7 +42,7 @@
 .app[data-mw-nav] .main { padding-bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom)); }
 .app:has([data-mw-hide-nav]) .main { padding-bottom: 0; }
 
-/* Bottom bar: 4 tabs, 64 + the home bar's safe area, fixed under the column. */
+/* Bottom bar: 4 tabs (5 for panitia), 64 + the home bar's safe area, fixed under the column. */
 .nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 30; width: min(100%, var(--mw-column));
   display: flex; padding: 0 var(--mw-safe-right) var(--mw-safe-bottom) var(--mw-safe-left);

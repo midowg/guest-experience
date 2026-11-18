@@ -46,7 +46,7 @@ src/app/wam/layout.tsx              (sudah ada) service worker, WamNavigator, ma
 └─ acara/layout.tsx                 tema Main WAM (MainWamTheme), hanya untuk yang boleh melihat Main WAM (M6)
    ├─ not-found.tsx                 404 Main WAM untuk penguji/mode semua; selain itu 404 situs biasa
    ├─ masuk/page.tsx                O02 Masuk (tanpa kerangka, tanpa gate)
-   └─ (app)/layout.tsx              gate + MainWamShell (bilah atas, 4 tab, toast); error.tsx di dalamnya
+   └─ (app)/layout.tsx              gate + MainWamShell (bilah atas, 4 tab + tab Panitia untuk panitia, toast); error.tsx di dalamnya
       ├─ page.tsx                   Beranda            ├─ momen/...    B
       ├─ agenda/..., saya/...       A                  ├─ kelola/...   C
       ├─ notifikasi/, mulai/        A                  ├─ ringkasan/.. C, D
@@ -112,13 +112,13 @@ Layout `(app)` juga memeriksa gate (tidak menggambar kerangka untuk orang yang b
 "Layouts and auth checks"). Tes `src/app/wam/acara/acara-pages.test.ts` gagal bila ada `page.tsx` di
 `acara/(app)` tanpa `require*Page(` atau `route.ts` di `api/wam/acara` (selain `tema`) tanpa `require*Api(`.
 
-**Hak per peran** (`mainWamCan(who, action)`, `moduleAllows`), peserta adalah dasar semua orang; peran tidak mengubah tab:
+**Hak per peran** (`mainWamCan(who, action)`, `moduleAllows`), peserta adalah dasar semua orang; peran tidak mengubah empat tab pertama. **Tab ke-5 "Panitia"** (`showsCommitteeTab`, `access.ts`) di ujung kanan, setelah Saya, hanya untuk yang akunnya berperan **panitia** (dicek di server oleh layout; bukan peserta, BOD, atau admin yang tidak panitia). Isinya hub `/wam/acara/kelola` (`mainWamPath.committee`, gate `kelola`): Sedang berjalan, Kelola 2×2, Perlu perhatian; Rundown live, Absen, Pengumuman, dan Moderasi adalah layar di bawahnya, tombol kembalinya ke hub, tab Panitia menyala. Beranda panitia = Beranda peserta (tanpa kartu panitia). Admin yang bukan panitia tidak punya tabnya tetapi bisa membuka hub lewat alamatnya (gate `kelola` tidak berubah):
 
 | Aksi | Peserta | Panitia | Admin | BOD | Modul |
 | --- | --- | --- | --- | --- | --- |
 | `absen` (scan QR) | ya | ya | ya | tidak | absen |
 | `foto` (Momen) | ya | ya | ya | ya | — |
-| `silent-kirim` | ya | ya | ya | tidak | silent |
+| `silent-kirim` | ya | ya | ya | tidak | silent (**mati bawaan**: Silent Meeting dipakai di Pra WAM, bukan Main WAM) |
 | `voting` | ya | ya | ya | tidak | voting |
 | `kelola` (Rundown live, Absen manual, Pengumuman, Moderasi) | tidak | ya | ya | tidak | — (Absen manual butuh `absen`) |
 | `silent-kontrol` (buka/tutup) | tidak | ya | ya | tidak | silent |
@@ -238,7 +238,7 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 | --- | --- |
 | A | `home` / (P01/P02, B01, K01) · `login(next)` /masuk (O02) · `onboarding` /mulai (O03) · `notifications` /notifikasi (N01) · `agenda(hari?)` /agenda (P03) · `session(id)` /agenda/{id} (P04) · `me` /saya (P05/P05B) · `groupRoom` /saya/kelompok (L01) · `travel(arah?)` /saya/perjalanan (L03) · `guides` /saya/panduan, `guide(slug)` (L04) · `settings` /saya/pengaturan (S02) · `help` /saya/bantuan (halaman, bukan sheet) |
 | B | `moments({lihat, sesi, foto})` /momen (M01–M03) · `camera({sesi, untuk})` /momen/kamera (U01–U05, O04) · `gallery({lihat, sesi})` /momen/galeri (M05) · `mosaic(tandai)` /momen/mozaik (M06) |
-| C | `rundownLive(hari?)` /kelola/rundown (K02, K03 sheet) · `attendanceManual(sesi?)` /kelola/absen (K05) · `announce` /kelola/pengumuman (K06) · `moderation(lihat?)` /kelola/moderasi (K08) · `attendanceSummary(hari?)` /ringkasan/kehadiran (B02) |
+| C | `committee` /kelola (K01, hub tab Panitia) · `rundownLive(hari?)` /kelola/rundown (K02, K03 sheet) · `attendanceManual(sesi?)` /kelola/absen (K05) · `announce` /kelola/pengumuman (K06) · `moderation(lihat?)` /kelola/moderasi (K08) · `attendanceSummary(hari?)` /ringkasan/kehadiran (B02) |
 | D | `scan` /absen (A01, A05) · `checkIn(token)` /absen/{token} (A02–A04; isi QR cetak) · `silentMeeting(sesi?)` /silent-meeting (T01–T03) · `awards` /awarding (V01) · `awardCategory(id)` /awarding/{id} (V02) · `silentRecap` /ringkasan/silent-meeting (B05) · `awardApproval` /ringkasan/awarding (B06) |
 
 **API `mainWamApi`** (`/api/wam/acara…`)
@@ -273,16 +273,15 @@ Setiap agen hanya menulis di foldernya. Placeholder fondasi (bertanda `PLACEHOLD
 | --- | --- | --- | --- | --- |
 | **A peserta/handbook** | O02, O03, P01/P02 (Beranda + kartu kontekstual), P03, P04, P05/P05B, L01, L03, L04, N01, S02 | `src/app/wam/acara/(app)/{page.tsx,loading.tsx,agenda,saya,notifikasi,mulai}/**`, `src/app/wam/acara/masuk/**`, `src/components/main-wam/peserta/**`, `src/lib/main-wam/peserta/**`, `src/lib/server/main-wam/peserta/**`, `src/app/api/wam/acara/{beranda,agenda,notifikasi,panduan}/**`, `src/app/dev-preview/main-wam/peserta/**` | `202611200101–0199` | `tests/backend/main-wam-peserta-check.sql` |
 | **B Momen + Mozaik** | M01–M06, U01–U05, O04 | `src/app/wam/acara/(app)/momen/**`, `src/components/main-wam/momen/**`, `src/lib/main-wam/momen/**`, `src/lib/server/main-wam/momen/**`, `src/app/api/wam/acara/{momen,mozaik}/**`, `src/app/dev-preview/main-wam/momen/**` | `0201–0299` | `main-wam-momen-check.sql` |
-| **C panitia + BOD** | K01 (kartu), K02, K03, K05, K06, K08, B01 (kartu Ringkasan), B02 | `src/app/wam/acara/(app)/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan/kehadiran}/**`, `src/components/main-wam/panitia/**`, `src/lib/main-wam/panitia/**` (mis. hitung Jejak karbon), `src/lib/server/main-wam/panitia/**`, `src/app/api/wam/acara/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan}/**`, `src/app/dev-preview/main-wam/panitia/**` | `0301–0399` | `main-wam-panitia-check.sql` |
+| **C panitia + BOD** | K01 (hub tab Panitia), K02, K03, K05, K06, K08, B01 (kartu Ringkasan), B02 | `src/app/wam/acara/(app)/{kelola,kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan/kehadiran}/**`, `src/components/main-wam/panitia/**`, `src/lib/main-wam/panitia/**` (mis. hitung Jejak karbon), `src/lib/server/main-wam/panitia/**`, `src/app/api/wam/acara/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan}/**`, `src/app/dev-preview/main-wam/panitia/**` | `0301–0399` | `main-wam-panitia-check.sql` |
 | **D modul** | A01–A05, T01–T03, V01–V02, B05, B06, aksi modul di P04, admin Awarding + Silent Meeting | `src/app/wam/acara/(app)/{absen,silent-meeting,awarding,ringkasan/silent-meeting,ringkasan/awarding}/**`, `src/components/main-wam/modul/**`, `src/lib/main-wam/modul/**`, `src/lib/server/main-wam/modul/**`, `src/app/api/wam/acara/{absen,silent-meeting,awarding,kelola/qr}/**`, `src/app/admin/wam/main/{awarding,silent-meeting}/**`, `src/components/admin/wam/main-wam/modul/**`, `src/app/api/admin/wam/main/{awarding,silent-meeting}/**`, `src/app/dev-preview/main-wam/modul/**` | `0401–0499` | `main-wam-modul-check.sql` |
 | **E Admin WAM konten** | Admin: Rundown, Kelompok (+ kegiatan, terbitkan), Kamar (lantai), Perjalanan (+ kursi), Panduan (+ berkas), info acara (hotel, check-in/out, kontak, tagihan hotel) | `src/app/admin/wam/main/{rundown,kelompok,kamar,perjalanan,panduan,info-acara}/**`, `src/components/admin/wam/main-wam/isi/**`, `src/lib/main-wam/admin/**`, `src/lib/server/main-wam/admin/**`, `src/app/api/admin/wam/main/{sesi,kelompok,kelompok-kegiatan,kamar,perjalanan,panduan,info-acara}/**`, `src/app/dev-preview/main-wam/admin/**` | `0501–0599` | `main-wam-admin-check.sql` |
 | fondasi | gate, layout, pengaturan, tema KV | lihat §1 | `0001–0099` | `main-wam-check.sql` |
 
-**Slot lintas area** (sudah dibuat, berisi `return null`):
+**Slot lintas area** (sudah dibuat, berisi `return null`). Slot `BerandaPanitia` dihapus 18 Nov (keputusan 20): kartu panitia pindah ke hub tab Panitia (`PanitiaHub`).:
 
 | Slot | Pemilik | Dipasang oleh | Props |
 | --- | --- | --- | --- |
-| `BerandaPanitia` (`components/main-wam/panitia/BerandaPanitia.tsx`) | C | A, Beranda di bawah Sekarang | `{ context: MainWamContext; now: Date }` |
 | `BerandaBod` (`components/main-wam/panitia/BerandaBod.tsx`) | C | A, Beranda di bawah Sekarang | sama |
 | `BerandaMomen` (`components/main-wam/momen/BerandaMomen.tsx`) | B | A, Beranda setelah kartu kontekstual | sama |
 | `SessionPhotos` (`components/main-wam/momen/SessionPhotos.tsx`) | B | A, Detail sesi | `{ session; context }` |
@@ -437,6 +436,8 @@ milik D), tanpa mengimpor kode area lain.
 | 15 | Gambar KV lewat situs, alamat berversi; publik hanya `splash`/`icon` di mode `semua`; versi lain 404; cache 1 hari (bukan immutable setahun); byte disimpan di memori server | splash tampil sebelum login; R2 tetap privat; KV tidak bocor sebelum peluncuran (audit M6, R9, L6, L3) |
 | 16 | `/wam` → Main WAM dengan pengalihan di Beranda Pra WAM; Pra WAM di `?versi=pra` | Pra WAM tidak dihapus; mode bawaan tidak mengubah apa pun (dites) |
 | 17 | Admin Main WAM di bawah `/admin/wam/main`, hak akses "Admin WAM" | tanpa grant/migrasi baru; tab-halaman agar menu tidak membengkak |
+| 21 | Tab ke-5 "Panitia" untuk panitia; kartu Kelola dan Perlu perhatian pindah dari Beranda ke hub `/wam/acara/kelola`; tab hanya untuk peran panitia (bukan admin tak-panitia) | alat panitia punya rumah sendiri dan Beranda panitia sama dengan peserta; hub tetap digerbang `kelola` seperti layar di bawahnya |
+| 22 | Silent Meeting dikeluarkan dari WAM: modul `silent` mati bawaan, migrasi `202611220001` mematikannya di baris yang sudah ada; kode, tabel, dan tes tidak dihapus; modul mati tanpa jejak; Admin WAM menampilkan banner "Modul mati" | itu bagian Pra WAM, bukan Main WAM (keputusan pemilik, 18 Nov); bisa dinyalakan lagi di Pengaturan |
 | 20 | Tema, KV, kerangka, dan `loading.tsx` Main WAM hanya setelah gate (`mainWamShown`); belum login di `pra`/`uji` → `SignInFirst` | tampilan acara tidak sampai ke orang yang bukan penguji (audit M6, §9 #6) |
 | 21 | Gate ringan; kamar dibaca malas hanya di Saya dan turunannya; viewer memakai bacaan pengaturan milik gate | ±15 kueri dalam 6 putaran per permintaan menjadi 6 kueri dalam 3 putaran (`gate-cost.test.ts`, audit S5) |
 | 22 | Satu definisi orang acara: `mainWamAttendees()` | tiga hitungan berbeda membuat "Hadir 96 dari 120" beda dengan Kehadiran B02 (audit R5) |
@@ -515,7 +516,7 @@ berawalan bahasa. Tanpa dependensi baru (kamus objek biasa, ±0 KB library).
 6. Pratinjau: `?lang=en` lewat `previewLang(params)` (`components/main-wam/dev/lang.ts`), `Frame`/`DevFrame` menerima `lang`.
 
 **Tetap Indonesia (belum diterjemahkan, sengaja atau belum sempat):**
-- Seluruh layar **panitia, BOD, dan Admin WAM** (Rundown live, Absen manual, Pengumuman, Moderasi, Ringkasan,
+- Seluruh layar **panitia, BOD, dan Admin WAM** (kecuali judul tab dan hub: "Panitia" / "Committee", kunci `shell.tab.panitia` dan `screen.committee`) (Rundown live, Absen manual, Pengumuman, Moderasi, Ringkasan,
   Kehadiran, rekap Silent Meeting, persetujuan Awarding, QR cetak); judul bilahnya juga Indonesia.
 - **Isi dari admin/pengguna**: judul dan tempat sesi, urutan tampil, dress code, "yang perlu dibawa", isi Panduan,
   pengumuman, nama kelompok/kamar/lantai, judul kategori dan nominasi, pertanyaan Silent Meeting, alasan

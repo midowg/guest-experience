@@ -139,7 +139,7 @@ function ModulesCard({ id, settings, forms, locked, busy, onSave }: { id: string
     <p className={css.note}>Modul yang mati tidak meninggalkan jejak di aplikasi: tanpa kartu di Beranda, aksi di sesi, atau baris di Ringkasan BOD.</p>
     <ul className={css.rows}>
       {MAIN_WAM_MODULES.map(key => <li key={key} className={css.row}>
-        <span className={css.rowText}><span>{moduleInfo[key].label}</span><span>{moduleInfo[key].hint}</span></span>
+        <span className={css.rowText}><span>{moduleInfo[key].label}</span><span>{moduleInfo[key].hint}</span>{moduleInfo[key].note && <span>{moduleInfo[key].note}</span>}</span>
         <label className={css.switch}>
           <input type="checkbox" role="switch" checked={modules[key]} disabled={locked} aria-label={moduleInfo[key].label} onChange={change => setModules({ ...modules, [key]: change.target.checked })} />
           <span className={css.track} aria-hidden />

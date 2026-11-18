@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTester, liveForEveryone, mainWamCan, mainWamGate, mainWamRole, moduleAllows, opensMainWamHome, MAIN_WAM_ACTIONS } from "./access";
+import { isTester, liveForEveryone, mainWamCan, mainWamGate, mainWamRole, moduleAllows, opensMainWamHome, showsCommitteeTab, MAIN_WAM_ACTIONS } from "./access";
 import { DEFAULT_MODULES } from "./settings";
 import type { MainWamMode } from "./types";
 
@@ -102,5 +102,33 @@ describe("what each role may do", () => {
 
   it("answers for every action it lists", () => {
     for (const action of MAIN_WAM_ACTIONS) expect(typeof mainWamCan(peserta, action)).toBe("boolean");
+  });
+});
+
+describe("the Panitia tab", () => {
+  it("is for someone who really is panitia: not a peserta, a BOD or an admin who is not panitia", () => {
+    expect(showsCommitteeTab({ roles: [] })).toBe(false);
+    expect(showsCommitteeTab({ roles: ["bod"] })).toBe(false);
+    expect(showsCommitteeTab({ roles: ["admin"] })).toBe(false);
+    expect(showsCommitteeTab({ roles: ["ga"] })).toBe(false);
+    expect(showsCommitteeTab({ roles: ["panitia"] })).toBe(true);
+    expect(showsCommitteeTab({ roles: ["admin", "panitia"] })).toBe(true);
+  });
+
+  it("goes with the page's gate: whoever the tab is for may open the hub", () => {
+    for (const roles of [["panitia"], ["admin", "panitia"], ["bod", "panitia"]] as const) {
+      expect(showsCommitteeTab({ roles: [...roles] })).toBe(true);
+      expect(mainWamCan({ roles: [...roles] }, "kelola")).toBe(true);
+    }
+  });
+});
+
+describe("Silent Meeting is off by default (Pra WAM's, not Main WAM's)", () => {
+  it("every module starts off, Silent Meeting included, and an action of it is refused until it is switched on", () => {
+    expect(DEFAULT_MODULES.silent).toBe(false);
+    expect(moduleAllows({ roles: [] }, "silent-kirim", DEFAULT_MODULES)).toBe(false);
+    expect(moduleAllows({ roles: ["panitia"] }, "silent-kontrol", DEFAULT_MODULES)).toBe(false);
+    expect(moduleAllows({ roles: ["bod"] }, "silent-rekap", DEFAULT_MODULES)).toBe(false);
+    expect(moduleAllows({ roles: [] }, "silent-kirim", { ...DEFAULT_MODULES, silent: true })).toBe(true);
   });
 });

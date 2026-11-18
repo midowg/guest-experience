@@ -121,6 +121,7 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | Tingkat | Bilah atas | Bilah bawah |
 | --- | --- | --- |
 | `akar` Beranda | sapaan, nama (h1), "Hari ke-2 dari 4", lonceng (satu-satunya) | ya |
+| `akar` Panitia (`/kelola`, hub) | judul besar "Panitia" (h1) | ya, tab Panitia menyala; juga di Rundown live, Absen, Pengumuman, Moderasi |
 | `akar` lain | judul besar (h1); bilah ringkas muncul setelah judul tergulir | ya |
 | `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
@@ -156,6 +157,8 @@ import { ScreenContent, ScreenSection, Stack, ShellActions, ShellChrome } from "
 <ShellChrome hideNav />              {/* layar tugas yang alamatnya belum ditandai tugas */}
 ```
 
+Tab ke-5 **Panitia** (ikon `clipboard-list`, ujung kanan setelah Saya): `<MainWamShell committee>` (layout memberi `showsCommitteeTab(viewer)`, hanya untuk peran panitia); `BottomNav committee`; daftar tab `mainWamTabsFor(committee)`. Bilah 5 tab tetap rapi dan setiap tab ≥ 44 di 320, 360, 390, 412 px (64 × 64 di 320). `DevFrame` memberinya otomatis untuk `peran=panitia`.
+
 Lencana tab: `<MainWamShell badges={{ momen: 12, saya: "dot" }}>` (fondasi). `BottomNav` bisa dirender
 sendiri untuk pratinjau (`current`, `tone`, `badges`).
 
@@ -189,7 +192,7 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | `List` | `inset` 68 (bawaan, sesudah ikon) · 16 · 0, `plain` (tanpa kartu, di sheet), `bleed`, `label` | wadah baris berpemisah |
 | `ListRow` | `icon` atau `leading` (Avatar), `title` (≤ 2 baris), `sub`, `value`, `trailing` (Pill, Badge, Switch), `chevron` (bawaan saat bisa diketuk), `disabled`, `spoken` | baris menu, info, pengaturan |
 | `StatRow` | `icon`, `title`, `sub`, `value`, `unit`, `status` (Pill), `href`/`onClick`, `spoken` | Ringkasan BOD (maks 4). Tanpa href = statis (Jejak karbon), nilai tetap sejajar |
-| `ShortcutGrid` + `ShortcutTile` | `icon`, `label`, `badge`, `badgeLabel` | Kelola panitia 2 × 2 (Rundown live, Absen, Pengumuman, Moderasi). Nama: label lalu ", 3 laporan" tersembunyi; lencana tidak dibaca |
+| `ShortcutGrid` + `ShortcutTile` | `icon`, `label`, `badge`, `badgeLabel` | Kelola panitia 2 × 2 di hub tab Panitia (satu kolom di bawah 380 px, supaya kata tidak terpotong) (Rundown live, Absen, Pengumuman, Moderasi). Nama: label lalu ", 3 laporan" tersembunyi; lencana tidak dibaca |
 | `SessionList` + `SessionRow` | `start`, `end`, `title`, `place`, `status` `upcoming` · `live` · `done` · `cancelled`, `checkedIn`, `extra` (Chip Absen, StatusPill changed), `href` | Agenda. `live` menyala + "Sedang berlangsung"; `cancelled` dicoret, "Dibatalkan", tidak bisa dibuka. Di bawah 300 px (zoom 200 %): jam satu baris "08.00–12.00" dengan › di ujungnya, judul selebar baris di bawahnya, tanpa rel |
 | `StackPreview` | `photos` (≤ 3, `{src}`), `title`, `sub`, `cta`, `href` | kartu Momen di Beranda (satu tautan). Saat sempit, teks lalu "Lihat" turun ke baris berikutnya |
 | `PhotoFill` | `photo {src, alt}`, `tone` 1–6 | foto atau placeholder netral, mengisi kotaknya |

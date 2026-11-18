@@ -55,3 +55,16 @@ export function attentionItems(input: { modules: ModuleSwitches; reported: numbe
   }
   return items;
 }
+
+/** A session that is on now, for the line "Sedang berjalan" on the Panitia hub. */
+export type RunningSession = { id: string; title: string; place: string; time: string; href: string };
+
+/** Published sessions that have started and not ended (a session with no end counts for 2 hours), at most 3, earliest first. */
+export function runningSessions(sessions: readonly Pick<MwSession, "id" | "title" | "place" | "status" | "startsAt" | "endsAt">[], now: Date): RunningSession[] {
+  const at = now.getTime();
+  return sessions
+    .filter(session => session.status === "terbit" && Date.parse(session.startsAt) <= at && at < (session.endsAt ? Date.parse(session.endsAt) : Date.parse(session.startsAt) + 2 * 3_600_000))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+    .slice(0, 3)
+    .map(session => ({ id: session.id, title: session.title, place: session.place, time: `${clock(session.startsAt)}${session.endsAt ? `–${clock(session.endsAt)}` : ""}`, href: mainWamPath.rundownLive() + `#sesi-${session.id}` }));
+}

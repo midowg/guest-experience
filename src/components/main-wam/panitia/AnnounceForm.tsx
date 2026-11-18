@@ -87,7 +87,7 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
       const answer = await api.announce(value);
       setConfirming(false);
       toast.show({ text: `Terkirim ke ${count(answer.count)} orang`, tone: "success" });
-      api.navigate(mainWamPath.home);
+      api.navigate(mainWamPath.committee);
     } catch (error) {
       setConfirming(false);
       if (error instanceof PanitiaError && error.fieldErrors?.pinnedUntil) setErrors({ until: error.fieldErrors.pinnedUntil[0] });

@@ -25,7 +25,7 @@ vi.mock("./rundown", () => ({ rundownLiveData: async () => ({}), changeSession: 
 vi.mock("./attendance", () => ({ attendanceData: async () => ({ session: null }), sessionRows: async () => ({ rows: [], migrated: true }), setAttendance: async () => ({ rows: [] }) }));
 vi.mock("./announce", () => ({ announceData: async () => ({}), listSent: async () => ({ migrated: true, sent: [] }), sendAnnouncement: async () => 3, unpinAnnouncement: async () => undefined, removeAnnouncement: async () => undefined }));
 vi.mock("./moderation", () => ({ moderationData: async () => ({}), moderatePhoto: async () => undefined, waitingCount: async () => 0 }));
-vi.mock("./summary", () => ({ bodSummary: async () => ({ migrated: true, rows: [] }), attendanceDay: async () => ({}), panitiaHome: async () => ({ tiles: [], attention: [], reported: 0 }) }));
+vi.mock("./summary", () => ({ bodSummary: async () => ({ migrated: true, rows: [] }), attendanceDay: async () => ({}), panitiaHome: async () => ({ tiles: [], attention: [], reported: 0, running: [] }) }));
 
 const ID = "00000000-0000-4000-8004-000000000010";
 const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "11111111-1111-4111-8111-111111111111", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.includes("panitia") || roles.includes("admin"), group: null, room: null });
@@ -103,6 +103,7 @@ describe("area C's APIs", () => {
 describe("area C's pages", () => {
   const search = (values: Record<string, string> = {}) => ({ searchParams: Promise.resolve(values) });
   const pages = {
+    hub: async () => (await import("@/app/wam/acara/(app)/kelola/page")).default(),
     rundown: async () => (await import("@/app/wam/acara/(app)/kelola/rundown/page")).default(search()),
     absen: async () => (await import("@/app/wam/acara/(app)/kelola/absen/page")).default(search()),
     pengumuman: async () => (await import("@/app/wam/acara/(app)/kelola/pengumuman/page")).default(),
@@ -141,15 +142,11 @@ describe("area C's pages", () => {
 
 describe("Beranda slots", () => {
   it("draw nothing for someone the card is not for", async () => {
-    const { BerandaPanitia } = await import("@/components/main-wam/panitia/BerandaPanitia");
     const { BerandaBod } = await import("@/components/main-wam/panitia/BerandaBod");
     const now = new Date("2027-01-05T10:15:00+07:00");
     viewer = PEOPLE.peserta;
-    expect(await BerandaPanitia({ context: { viewer: PEOPLE.peserta, settings }, now })).toBeNull();
     expect(await BerandaBod({ context: { viewer: PEOPLE.peserta, settings }, now })).toBeNull();
     expect(await BerandaBod({ context: { viewer: PEOPLE.panitia, settings }, now })).toBeNull();
-    expect(await BerandaPanitia({ context: { viewer: PEOPLE.bod, settings }, now })).toBeNull();
-    expect(await BerandaPanitia({ context: { viewer: PEOPLE.panitia, settings }, now })).not.toBeNull();
     expect(await BerandaBod({ context: { viewer: PEOPLE.bod, settings }, now })).not.toBeNull();
     // Every module off: BOD's card has no row left, so no card.
     expect(await BerandaBod({ context: { viewer: PEOPLE.bod, settings: { ...settings, modules: { ...allOn, absen: false, voting: false, silent: false, karbon: false } } }, now })).toBeNull();

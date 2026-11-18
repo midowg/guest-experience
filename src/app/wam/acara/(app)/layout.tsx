@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { MomenQueueRunner } from "@/components/main-wam/momen/upload/QueueRunner";
 import { AbsenQueue } from "@/components/main-wam/modul/absen/AbsenQueue";
 import { MainWamShell, SignInFirst } from "@/components/main-wam/shell";
-import { mainWamGate, mainWamRole } from "@/lib/main-wam/access";
+import { mainWamGate, mainWamRole, showsCommitteeTab } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { moduleOn } from "@/lib/main-wam/modules";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
@@ -13,7 +13,7 @@ import { mainWamViewer } from "@/lib/server/main-wam/viewer";
 
 /*
  * Every signed-in Main WAM screen shares one frame (the UI kit's MainWamShell: top bar, the four
- * tabs, toasts), drawn here once and kept while the screens under it change; each screen has its
+ * tabs (five for panitia), toasts), drawn here once and kept while the screens under it change; each screen has its
  * own loading.tsx inside it, and error.tsx here catches any screen without its own (in the frame).
  * What the frame draws comes from the address (src/lib/main-wam/screen.ts).
  *
@@ -30,7 +30,7 @@ export default async function MainWamAppLayout({ children }: { children: ReactNo
   if (gate.kind === "tutup") notFound();
   if (gate.kind === "login" || !viewer) return gate.kind === "login" && gate.page === "main" ? children : <SignInFirst />;
   const [unread, lang] = await Promise.all([unreadCount(viewer.id).catch(() => 0), readLang()]);
-  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread}>
+  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread} committee={showsCommitteeTab(viewer)}>
     {children}
     {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
     {moduleOn(settings.modules, "absen") && <AbsenQueue />}

@@ -24,7 +24,7 @@ const stateWords = { belum: "Belum dibuka", buka: "Dibuka", tutup: "Ditutup" } a
  * closed from 5 feedbacks of 5 people (never while open, audit H2), never what they wrote (the BOD
  * read the recap in the app). Once opened, the question, topics and session stay.
  */
-export function SilentAdmin({ initial }: { initial: AdminSilent }) {
+export function SilentAdmin({ initial, moduleOn = true }: { initial: AdminSilent; /** Modul Silent Meeting menyala di Pengaturan; mati: banner, isi tetap bisa disiapkan. */ moduleOn?: boolean }) {
   const [data, setData] = useState(initial);
   const [message, setMessage] = useState<Message>(null);
   const [editing, setEditing] = useState<string | "baru" | null>(null);
@@ -44,6 +44,7 @@ export function SilentAdmin({ initial }: { initial: AdminSilent }) {
   }
 
   return <div className={css.stack}>
+    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Silent Meeting dipakai di Pra WAM; di aplikasi Main WAM tidak tampil di mana pun sampai modulnya dinyalakan di Pengaturan. Pertanyaan di bawah tetap tersimpan.</Notice>}
     {!data.migrated && <Notice tone="warning">{WAITING_TEXT}</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     <p className={css.note}>Silent Meeting dibuka dan ditutup mengikuti jam sesinya. Panitia bisa membukanya lebih awal atau menutupnya lebih awal dari Rundown live; yang sudah ditutup tidak bisa dibuka lagi. Masukan disimpan tanpa nama dan tanpa jam. Jumlahnya tampil setelah ditutup, bila ada minimal 5 masukan dari 5 orang.</p>

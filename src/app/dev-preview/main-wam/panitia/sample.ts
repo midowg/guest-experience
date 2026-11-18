@@ -1,5 +1,5 @@
 import type { AttendeeRow } from "@/lib/main-wam/panitia/attendance";
-import { attentionItems, kelolaTiles } from "@/lib/main-wam/panitia/attention";
+import { attentionItems, kelolaTiles, runningSessions } from "@/lib/main-wam/panitia/attention";
 import type { ModerationCard } from "@/lib/main-wam/panitia/moderation";
 import { liveOfDay, type LiveSession } from "@/lib/main-wam/panitia/rundown";
 import { summaryRows, type SummaryInput } from "@/lib/main-wam/panitia/summary";
@@ -115,8 +115,10 @@ export const moderationHidden: ModerationCard[] = [
 /* ── K01 and B01 ──────────────────────────────────────────────────────────────────────────────── */
 
 export const panitiaHome = {
+  // The hub as the app draws it by default: Silent Meeting is off (Pra WAM's), so no row about it.
   tiles: kelolaTiles(modules, 3),
-  attention: attentionItems({ modules, reported: 3, required: [{ session: sampleSession("pemaparan"), present: 112, expected: 120 }], silent: [{ session: sampleSession("silent"), day: 2 }] }),
+  running: runningSessions(sampleSessions, new Date(at(D2, "10:15"))),
+  attention: attentionItems({ modules: { ...modules, silent: false }, reported: 3, required: [{ session: sampleSession("pemaparan"), present: 112, expected: 120 }], silent: [{ session: sampleSession("silent"), day: 2 }] }),
 };
 
 const summaryBase: SummaryInput = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbonKg: 13_640 };

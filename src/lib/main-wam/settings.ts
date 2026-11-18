@@ -19,6 +19,7 @@ export const MAIN_WAM_MODULES_MIGRATION = "202611200003_main_wam_modules.sql";
 export const DEFAULT_EVENT: MainWamEventInfo = {
   name: "WAM 2026", startDate: "2027-01-04", endDate: "2027-01-07", venue: "Kota Batu", hotel: "", address: "", checkInAt: null, checkOutAt: null,
 };
+/** Every module off, Silent Meeting included (it is Pra WAM's, not Main WAM's; migration 202611220001 switches it off in a database that had it on). */
 export const DEFAULT_MODULES: ModuleSwitches = Object.fromEntries(MAIN_WAM_MODULES.map(key => [key, false])) as ModuleSwitches;
 export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 30, rows: 20 } };
 export const DEFAULT_THEME_SETTINGS: MainWamThemeSettings = { colors: {}, displayFont: null, images: {} };
