@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ChevronDown, ImageUp, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ChevronDown, Dices, ImageUp, MoreVertical, Pencil, Plus, ScrollText, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { SectionToolbar } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
@@ -10,7 +10,7 @@ import {
   artKindLabels, ODDS_TOTAL, oddsLabel, partKinds, serialLabel, slotOfFile,
   type ArtKind, type Character, type CharacterInput, type Tier,
 } from "@/lib/pra-wam/cards";
-import { figureOfFile, legendClasses } from "@/lib/pra-wam/figures";
+import { colorsOf, figureOfFile, legendClasses } from "@/lib/pra-wam/figures";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
 import { praWamCardsApi } from "@/lib/routes";
 import type { AdminCards } from "@/lib/server/pra-wam/cards-admin";
@@ -35,10 +35,6 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, confirmElement] = useConfirm();
   const { catalog } = data;
-  const nameOf = new Map(catalog.characters.map(character => [character.id, character]));
-  const tierOf = new Map(catalog.tiers.map(tier => [tier.key, tier]));
-  /** The draw record names characters by their fixed key; show their names. */
-  const named = (key: string) => catalog.characters.find(character => character.key === key)?.name ?? key;
   const real = data.drawn.filter(card => !card.trial);
   // The tokoh card (13 Nov 2026): the characters are the personas behind the figures.
   const tokoh = catalog.figures.length > 0;
@@ -51,7 +47,8 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
     });
   }
   const trials = data.drawn.length - real.length;
-  const figureName = (key: string) => catalog.figures.find(figure => figure.key === key)?.name ?? key;
+  /** Whose draw record is open below their row. */
+  const [record, setRecord] = useState<string | null>(null);
 
   /** One person may re-roll again (their figure, rarity and number stay). */
   async function giveReroll(employeeId: string, name: string) {
@@ -168,36 +165,109 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
         {trials > 0 && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void removeTrials()}><Trash2 size={18} aria-hidden /> Hapus {trials} kartu uji</Button>}
       </div>
       {!data.following && real.length > 0 && <p className={styles.muted}>Karakter sudah terkunci: kuesioner tidak dibuka atau tenggatnya lewat.</p>}
-      {data.drawn.length ? <div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th scope="col">Nomor</th><th scope="col">Nama</th><th scope="col">{catalog.figures.length ? "Tokoh" : "Karakter"}</th><th scope="col">Level</th><th scope="col">Diundi</th><th scope="col">Catatan undian</th></tr></thead>
-        <tbody>{data.drawn.map(card => {
-          const tier = tierOf.get(card.tierKey);
-          const roll = card.roll;
-          return <tr key={card.employeeId}>
-            <td>{serialLabel(card.serial)}</td>
-            <td><strong>{card.name}</strong><br /><span className={styles.muted}>{card.department}</span></td>
-            <td>{card.figureId ? <><strong>{catalog.figures.find(figure => figure.id === card.figureId)?.name ?? "?"}</strong><br /><span className={styles.muted}>{nameOf.get(card.characterId)?.class ?? ""}</span></> : nameOf.get(card.characterId)?.name ?? "?"}</td>
-            <td><span className={styles.tier} style={{ background: tier?.color }}>{tier?.name ?? card.tierKey}</span></td>
-            <td>{when(card.drawnAt)}</td>
-            <td><details><summary>Lihat</summary>
-              <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf.get(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf.get(key)?.name ?? key).join(", ")}` : ""}.</p>
-              <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
-              {roll.figure ? <p>Tokoh: {catalog.figures.find(figure => figure.key === roll.figure!.key)?.name ?? roll.figure.key}, skor {roll.figure.score}{roll.figure.tied.length > 1 ? `, diundi di antara yang seri: ${roll.figure.tied.map(key => catalog.figures.find(figure => figure.key === key)?.name ?? key).join(", ")}` : ""}.{card.reason ? ` ${card.reason}` : ""}</p> : null}
-              {roll.rerolls?.map(done => <p key={done.at}>Re-roll {when(done.at)}: {figureName(done.from)} → {figureName(done.to)} (diberikan lagi {when(done.resetAt)}).</p>)}
-              {roll.reroll ? <p>Re-roll {when(roll.reroll.at)}: {figureName(roll.reroll.from)} → {figureName(roll.reroll.to)}{roll.reroll.tierTo ? `, ${tierOf.get(roll.reroll.tierFrom ?? "")?.name ?? roll.reroll.tierFrom} → ${tierOf.get(roll.reroll.tierTo)?.name ?? roll.reroll.tierTo}` : ""}.{" "}
-                <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void giveReroll(card.employeeId, card.name)}>Beri re-roll lagi</Button></p> : null}
-              {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
-              <p className={styles.muted}>DNA {card.dna}</p>
-            </details></td>
-          </tr>;
-        })}</tbody>
-      </table></div> : <p className={styles.muted}>Belum ada kartu. Kartu diundi saat seseorang selesai mengisi semua bagian wajib.</p>}
+      {data.drawn.length ? <ul className={styles.drawnList}>
+        {data.drawn.map(card => <DrawnRow key={card.employeeId} card={card} catalog={catalog} busy={busy} open={record === card.employeeId}
+          onRecord={() => setRecord(current => current === card.employeeId ? null : card.employeeId)} onReroll={() => void giveReroll(card.employeeId, card.name)} />)}
+      </ul> : <p className={styles.muted}>Belum ada kartu. Kartu diundi saat seseorang selesai mengisi semua bagian wajib.</p>}
     </section>
     {confirmElement}
   </div>;
 }
 
 type Run = (key: string, work: () => Promise<{ message: string; cards?: AdminCards | null }>) => Promise<boolean>;
+type DrawnCard = AdminCards["drawn"][number];
+
+/** A figure's small picture for the list: its RPG form when the card is Legendary, its persona's colour behind. */
+function Thumb({ catalog, figureKey, figureId, tierKey, characterId, label, faded }: {
+  catalog: AdminCards["catalog"]; figureKey?: string; figureId?: string | null; tierKey: string; characterId: string; label: string; faded?: boolean;
+}) {
+  const figure = catalog.figures.find(item => (figureKey ? item.key === figureKey : item.id === figureId));
+  const persona = catalog.characters.find(item => item.id === (figure?.personaId ?? characterId));
+  const [light, deep] = colorsOf(persona?.key ?? "");
+  const image = tierKey === "legendary" && figure?.legendImage ? figure.legendImage : figure?.image ?? null;
+  const tier = catalog.tiers.find(item => item.key === tierKey);
+  return <figure className={`${styles.thumbCard} ${faded ? styles.thumbFaded : ""}`} style={{ background: `linear-gradient(160deg, ${light}, ${deep})`, borderColor: tier?.color }}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- card art served by this site; next/image cannot help in this list */}
+    {image ? <img src={image} alt="" loading="lazy" /> : <span aria-hidden>?</span>}
+    <figcaption className="sr-only">{label}</figcaption>
+  </figure>;
+}
+
+/**
+ * One card drawn (18 Nov 2026, the owner's request): the card, before and after when it was
+ * re-rolled (figure and rarity), who has it, and its actions behind a three-dot menu: the draw's
+ * record, and giving the re-roll back.
+ */
+function DrawnRow({ card, catalog, busy, open, onRecord, onReroll }: {
+  card: DrawnCard; catalog: AdminCards["catalog"]; busy: string; open: boolean; onRecord: () => void; onReroll: () => void;
+}) {
+  const menu = useRef<HTMLDetailsElement>(null);
+  const roll = card.roll;
+  const tierOf = (key: string | undefined) => catalog.tiers.find(tier => tier.key === key);
+  const figureName = (key: string) => catalog.figures.find(figure => figure.key === key)?.name ?? key;
+  const named = (key: string) => catalog.characters.find(character => character.key === key)?.name ?? key;
+  const figure = catalog.figures.find(item => item.id === card.figureId);
+  const persona = catalog.characters.find(item => item.id === card.characterId);
+  const tier = tierOf(card.tierKey);
+  const reroll = roll.reroll;
+  const before = reroll ? tierOf(reroll.tierFrom ?? card.tierKey) : undefined;
+  // Close the menu on a click elsewhere or Escape.
+  useEffect(() => {
+    const close = (event: Event) => {
+      const details = menu.current;
+      if (!details?.open) return;
+      if (event instanceof KeyboardEvent ? event.key === "Escape" : !(event.target instanceof Node && details.contains(event.target))) details.open = false;
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", close); };
+  }, []);
+  const act = (work: () => void) => () => { if (menu.current) menu.current.open = false; work(); };
+  return <li className={`${styles.drawn} ${card.trial ? styles.drawnTrial : ""}`}>
+    <div className={styles.drawnRow}>
+      <div className={styles.thumbs}>
+        {reroll && <>
+          <Thumb catalog={catalog} figureKey={reroll.from} tierKey={reroll.tierFrom ?? card.tierKey} characterId={card.characterId} label={`Sebelum: ${figureName(reroll.from)}`} faded />
+          <ArrowRight className={styles.thumbArrow} size={18} aria-hidden />
+        </>}
+        <Thumb catalog={catalog} figureId={card.figureId} tierKey={card.tierKey} characterId={card.characterId} label={reroll ? `Sesudah: ${figure?.name ?? ""}` : figure?.name ?? ""} />
+      </div>
+      <div className={styles.drawnText}>
+        <strong>{card.name}</strong>
+        <span className={styles.muted}>{card.department}</span>
+        <span className={styles.drawnFacts}>
+          <span>{serialLabel(card.serial)}</span>
+          <span>{figure?.name ?? persona?.name ?? "?"}</span>
+          {figure && persona && <span className={styles.muted}>{persona.class}</span>}
+        </span>
+        <span className={styles.drawnFacts}>
+          {reroll && before && before.key !== card.tierKey
+            ? <><span className={styles.tier} style={{ background: before.color }}>{before.name}</span><ArrowRight size={14} aria-hidden /><span className={styles.tier} style={{ background: tier?.color }}>{tier?.name ?? card.tierKey}</span></>
+            : <span className={styles.tier} style={{ background: tier?.color }}>{tier?.name ?? card.tierKey}</span>}
+          {reroll && <span className={styles.rerolled}><Dices size={14} aria-hidden /> Re-roll</span>}
+          {card.trial && <span className={styles.rerolled}>Uji</span>}
+        </span>
+      </div>
+      <span className={styles.drawnWhen}>{when(card.drawnAt)}</span>
+      <details ref={menu} className={styles.rowMenu}>
+        <summary aria-label={`Aksi untuk kartu ${card.name}`}><MoreVertical size={18} aria-hidden /></summary>
+        <div className={styles.rowMenuList} role="group" aria-label={`Aksi untuk kartu ${card.name}`}>
+          <button type="button" onClick={act(onRecord)}><ScrollText size={16} aria-hidden /> {open ? "Tutup catatan undian" : "Lihat catatan undian"}</button>
+          {reroll && <button type="button" disabled={!!busy} onClick={act(onReroll)}><Dices size={16} aria-hidden /> Beri re-roll lagi</button>}
+        </div>
+      </details>
+    </div>
+    {open && <div className={styles.drawnRecord}>
+      <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf(key)?.name ?? key).join(", ")}` : ""}.</p>
+      <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
+      {roll.figure ? <p>Tokoh: {figureName(roll.figure.key)}, skor {roll.figure.score}{roll.figure.tied.length > 1 ? `, diundi di antara yang seri: ${roll.figure.tied.map(figureName).join(", ")}` : ""}.{roll.figure.gender ? ` Jenis kelamin: ${roll.figure.gender}.` : ""}{card.reason ? ` ${card.reason}` : ""}</p> : null}
+      {roll.rerolls?.map(done => <p key={done.at}>Re-roll {when(done.at)}: {figureName(done.from)} → {figureName(done.to)}{done.tierTo ? `, ${tierOf(done.tierFrom)?.name ?? done.tierFrom} → ${tierOf(done.tierTo)?.name ?? done.tierTo}` : ""} (diberikan lagi {when(done.resetAt)}).</p>)}
+      {reroll ? <p>Re-roll {when(reroll.at)}: {figureName(reroll.from)} → {figureName(reroll.to)}{reroll.tierTo ? `, ${tierOf(reroll.tierFrom)?.name ?? reroll.tierFrom} → ${tierOf(reroll.tierTo)?.name ?? reroll.tierTo}` : ""}.</p> : null}
+      {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
+      <p className={styles.muted}>DNA {card.dna}</p>
+    </div>}
+  </li>;
+}
 
 /** The levels: name, colour, odds in percent (adding up to 100), an optional cap, and the line under the banner. */
 function Tiers({ tiers, taken, busy, run, errors }: { tiers: Tier[]; taken: AdminCards["drawn"]; busy: string; run: Run; errors: Record<string, string> }) {
