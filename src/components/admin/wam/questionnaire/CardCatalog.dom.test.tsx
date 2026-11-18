@@ -69,8 +69,14 @@ it("gives one person their re-roll again, after asking (16 Nov 2026)", async () 
   };
   render(<CardCatalog initial={tokoh} />);
   expect(screen.getByText(/1 dari 1 orang sudah memakai re-roll/)).toBeTruthy();
+  // The card before and after the re-roll, side by side.
+  expect(screen.getByText("Sebelum: Edmund Hillary")).toBeTruthy();
+  expect(screen.getByText("Sesudah: Affandi")).toBeTruthy();
+  // The actions are behind the three dots: the draw's record, and giving the re-roll back.
+  fireEvent.click(screen.getByLabelText("Aksi untuk kartu Dewi", { selector: "summary" }));
+  fireEvent.click(screen.getByRole("button", { name: /Lihat catatan undian/ }));
   expect(screen.getByText(/Edmund Hillary → Affandi/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Beri re-roll lagi" }));
+  fireEvent.click(screen.getByRole("button", { name: /Beri re-roll lagi/ }));
   const dialog = await screen.findByRole("dialog", { name: /Beri Dewi re-roll lagi/ });
   fireEvent.click(Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Beri re-roll lagi")!);
   await waitFor(() => expect(adminRequest).toHaveBeenCalledWith("/api/admin/wam/questionnaire/cards", { method: "PATCH", body: JSON.stringify({ resetReroll: employeeId }) }));

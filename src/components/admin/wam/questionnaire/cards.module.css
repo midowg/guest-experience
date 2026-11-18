@@ -64,3 +64,35 @@
 .table summary { cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; font-weight: 700; color: var(--blue); }
 .color { width: 44px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
 .tier { display: inline-block; padding: 1px var(--space-2); border-radius: 999px; color: #141325; font-size: .75rem; font-weight: 800; white-space: nowrap; box-shadow: inset 0 0 0 1px rgba(20, 19, 37, .25); }
+
+/* The cards drawn (18 Nov 2026): one row each, the card before and after a re-roll, actions behind three dots. */
+.drawnList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.drawn { border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.drawnTrial { border-style: dashed; }
+.drawnRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+.thumbs { display: flex; align-items: center; gap: 6px; }
+.thumbCard { position: relative; width: 52px; height: 65px; margin: 0; border-radius: 9px; overflow: hidden; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); display: grid; place-items: center; color: #fff; font-weight: 800; }
+.thumbCard img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
+.thumbFaded { opacity: .55; filter: grayscale(.35); width: 40px; height: 50px; }
+.thumbArrow { color: var(--ink-soft); flex: none; }
+.drawnText { display: grid; gap: 2px; min-width: 0; }
+.drawnText strong { overflow-wrap: anywhere; }
+.drawnFacts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .8125rem; }
+.rerolled { display: inline-flex; align-items: center; gap: 4px; padding: 1px var(--space-2); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .75rem; font-weight: 800; }
+.drawnWhen { font-size: .8125rem; color: var(--ink-soft); white-space: nowrap; }
+.rowMenu { position: relative; }
+.rowMenu > summary { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; list-style: none; cursor: pointer; }
+.rowMenu > summary::-webkit-details-marker { display: none; }
+.rowMenu > summary:hover, .rowMenu[open] > summary { border-color: var(--blue); color: var(--blue); }
+.rowMenuList { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; display: grid; min-width: 14rem; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(20, 30, 50, .15); }
+.rowMenuList button { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: .875rem; text-align: left; cursor: pointer; }
+.rowMenuList button:hover { background: var(--page); }
+.rowMenuList button:disabled { opacity: .5; cursor: default; }
+.drawnRecord { padding: 0 var(--space-3) var(--space-3); border-top: 1px solid var(--line); font-size: .875rem; }
+.drawnRecord p { margin: var(--space-2) 0 0; max-width: 46rem; }
+.drawnRow { grid-template-areas: "thumbs text when menu"; }
+.thumbs { grid-area: thumbs; } .drawnText { grid-area: text; } .drawnWhen { grid-area: when; } .rowMenu { grid-area: menu; }
+/* On a phone: the cards and the menu on top, the words below at full width. */
+@media (max-width: 640px) {
+  .drawnRow { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "thumbs menu" "text text" "when when"; row-gap: var(--space-2); }
+}
