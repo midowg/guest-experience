@@ -208,7 +208,6 @@ export const idPeserta = {
   "peserta.group.members": "Anggota {title}",
   "peserta.group.less": "Ringkas",
   "peserta.group.more": "{n} lainnya",
-  "peserta.group.gallery": "Galeri",
   "peserta.group.notIn": "Belum masuk kelompok",
   "peserta.group.notPublished": "Kelompok belum diterbitkan",
   "peserta.group.askCommittee": "Tanya panitia bila seharusnya ada.",

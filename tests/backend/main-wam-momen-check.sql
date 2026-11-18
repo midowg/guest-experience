@@ -1,9 +1,10 @@
 -- Execute ONLY against the disposable PostgreSQL migration-check container.
--- Migration 202611200201 (Main WAM area B, Momen + Mozaik): who sees which photo (kelompok photos only
+-- Migrations 202611200201 and 202611210001 (Main WAM area B, Momen + Mozaik, reactions): who sees which photo (kelompok photos only
 -- for their kelompok, Batalkan's 5 seconds, reported photos hidden for the reporter), keyset paging
 -- of the stack and the gallery, the session counts, reports (one per person, the third hides the
 -- photo once), the mosaic's stable placement and its version (ETag), a nominated photo that cannot
--- be deleted (with 202611200003), and that none of it is open to the public keys.
+-- be deleted (with 202611200003), one reaction per person on a photo (set, replaced, taken back, counted, never
+-- on one's own, a hidden or an unseen photo), and that none of it is open to the public keys.
 begin;
 set local role service_role;
 do $$
@@ -11,7 +12,8 @@ declare
   rani uuid; sari uuid; dimas uuid; bima uuid; ayu uuid; yoga uuid;
   g4 uuid; g2 uuid; team uuid; pem uuid;
   p_old uuid; p_mid uuid; p_new uuid; p_k4 uuid; p_k2 uuid; p_rani uuid; p_fresh uuid; p_hidden uuid;
-  r record; n integer; ids uuid[]; v1 text; v2 text; cat uuid; msg text;
+  r record; n integer; ids uuid[]; v1 text; v2 text; cat uuid; msg text; reacts jsonb;
+  heart text := chr(10084) || chr(65039); laugh text := chr(128514); fire text := chr(128293);
   base timestamptz := now() - interval '2 hours';
 begin
   insert into public.employees (full_name, nickname) values ('Rani Contoh Momen', 'Rani') returning id into rani;
@@ -88,10 +90,13 @@ begin
   select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, true, false, null, null, null, 'older', 10) f;
   if ids is distinct from array[p_rani, p_new] then raise exception 'Umum: %', ids; end if;
 
-  -- Hearts, mine, seen; "baru" is every photo of the view, one's own included: unseen ones first, then seen and own.
-  insert into public.mw_photo_hearts (photo_id, employee_id) values (p_mid, rani), (p_mid, dimas);
+  -- Reactions, mine, seen; "baru" is every photo of the view, one's own included: unseen ones first, then seen and own.
+  perform public.mw_photo_react(p_mid, rani, g4, heart);
+  perform public.mw_photo_react(p_mid, dimas, g2, heart);
   select * into r from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_mid;
-  if r.hearts <> 2 or not r.hearted then raise exception 'hearts of p_mid for Rani: % %', r.hearts, r.hearted; end if;
+  if r.reactions is distinct from jsonb_build_array(jsonb_build_object('emoji', heart, 'count', 2, 'mine', true)) then raise exception 'reactions of p_mid for Rani: %', r.reactions; end if;
+  select * into r from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_new;
+  if r.reactions is distinct from '[]'::jsonb then raise exception 'a photo nobody reacted to: %', r.reactions; end if;
   insert into public.mw_photo_seen (photo_id, employee_id) values (p_old, rani);
   select array_agg(f.id order by f.seen, f.visible_at desc, f.id desc) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
   if ids is distinct from array[p_new, p_mid, p_rani, p_old] then raise exception 'baru for Rani (unseen first, then own and seen): %', ids; end if;
@@ -119,7 +124,44 @@ begin
   -- Session counts (null = Umum).
   if (select photos from public.mw_photo_session_counts(rani, g4, 'kelompok') where session_id = team) <> 2 then raise exception 'Team building should count 2 in Kelompokku'; end if;
   if (select photos from public.mw_photo_session_counts(dimas, g2, 'semua') where session_id is null) <> 2 then raise exception 'Umum should count 2 in Semua'; end if;
-  raise notice 'PASS: the feed pages, counts, hearts and seen';
+  raise notice 'PASS: the feed pages, counts, reactions and seen';
+
+  -- Reactions: one per person (a new emoji replaces the old), counted by emoji, the most given first, taken back with null.
+  reacts := public.mw_photo_react(p_mid, bima, g4, laugh);
+  if jsonb_array_length(reacts) <> 2 or reacts -> 0 <> jsonb_build_object('emoji', heart, 'count', 2, 'mine', false) or reacts -> 1 <> jsonb_build_object('emoji', laugh, 'count', 1, 'mine', true) then
+    raise exception 'two hearts, one laugh, for Bima: %', reacts;
+  end if;
+  reacts := public.mw_photo_react(p_mid, rani, g4, laugh);
+  if (select count(*) from public.mw_photo_reactions where photo_id = p_mid) <> 3 then raise exception 'a new emoji should replace the old one, not add'; end if;
+  if reacts -> 0 <> jsonb_build_object('emoji', laugh, 'count', 2, 'mine', true) or reacts -> 1 <> jsonb_build_object('emoji', heart, 'count', 1, 'mine', false) then
+    raise exception 'Rani changed her heart to a laugh: %', reacts;
+  end if;
+  reacts := public.mw_photo_react(p_mid, rani, g4, laugh);
+  if (select count(*) from public.mw_photo_reactions where photo_id = p_mid) <> 3 then raise exception 'the same emoji again should change nothing'; end if;
+  reacts := public.mw_photo_react(p_mid, rani, g4, null);
+  if reacts is distinct from public.mw_photo_reactions(p_mid, rani) or jsonb_array_length(reacts) <> 2 or reacts::text like '%"mine": true%' then raise exception 'taken back by Rani: %', reacts; end if;
+  perform public.mw_photo_react(p_mid, rani, g4, null);
+  if (select count(*) from public.mw_photo_reactions where photo_id = p_mid) <> 2 then raise exception 'taking back twice should be harmless'; end if;
+  perform public.mw_photo_react(p_mid, rani, g4, heart);
+  -- Never on one's own photo, nor on one the person cannot see: hidden, within its 5 seconds, another kelompok's, unknown.
+  begin perform public.mw_photo_react(p_mid, sari, g4, heart); raise exception 'UNEXPECTED: a reaction on one''s own photo';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_OWN' then raise; end if; end;
+  begin perform public.mw_photo_react(p_hidden, rani, g4, heart); raise exception 'UNEXPECTED: a reaction on a hidden photo';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
+  begin perform public.mw_photo_react(p_fresh, rani, g4, heart); raise exception 'UNEXPECTED: a reaction within the 5 seconds';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
+  begin perform public.mw_photo_react(p_k2, rani, g4, heart); raise exception 'UNEXPECTED: a reaction on another kelompok''s photo';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
+  begin perform public.mw_photo_react(gen_random_uuid(), rani, g4, heart); raise exception 'UNEXPECTED: a reaction on no photo';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
+  -- A short text only (the app checks its list): 1 to 16 characters.
+  begin perform public.mw_photo_react(p_mid, rani, g4, ''); raise exception 'UNEXPECTED: an empty emoji';
+  exception when check_violation then null; end;
+  begin perform public.mw_photo_react(p_mid, rani, g4, repeat('a', 17)); raise exception 'UNEXPECTED: a 17-character emoji';
+  exception when check_violation then null; end;
+  if (select count(*) from public.mw_photo_reactions where photo_id = p_mid) <> 3 then raise exception 'a refused reaction left a row'; end if;
+  perform public.mw_photo_react(p_mid, rani, g4, null);
+  raise notice 'PASS: reactions (one per person, replaced, taken back, counted, never on one''s own, hidden or unseen photo)';
 
   -- Reports: not one's own; one per person; the third reporter hides it once.
   begin perform * from public.mw_photo_report(p_mid, sari, 'tidak_pantas', '', 3); raise exception 'UNEXPECTED: reporting one''s own photo';
@@ -128,6 +170,8 @@ begin
   if r.reporters <> 1 or r.hidden or r.owner_id <> sari then raise exception 'first report: %', r; end if;
   -- Hidden for the reporter only.
   if exists (select 1 from public.mw_photos_for(rani, g4, 'semua') where id = p_mid) then raise exception 'a reported photo shown to its reporter'; end if;
+  begin perform public.mw_photo_react(p_mid, rani, g4, fire); raise exception 'UNEXPECTED: a reaction on a photo hidden for its reporter';
+  exception when raise_exception then if sqlerrm <> 'MW_PHOTO_NOT_FOUND' then raise; end if; end;
   if not exists (select 1 from public.mw_photos_for(dimas, g2, 'semua') where id = p_mid) then raise exception 'one report should not hide it for others'; end if;
   update public.mw_photo_reports set created_at = now() - interval '1 hour' where photo_id = p_mid and reporter_id = rani;
   select * into r from public.mw_photo_report(p_mid, rani, 'tidak_pantas', '', 3);
@@ -191,10 +235,10 @@ begin
   raise notice 'PASS: the mosaic places photos in a stable order, its version follows the tiles';
 
   -- Audit M3: a photo nominated for Awarding is not deleted (Hapus foto answers 409 on 23503), and
-  -- its nomination stays; no longer nominated, it is deleted with its hearts and its mosaic cell.
+  -- its nomination stays; no longer nominated, it is deleted with its reactions and its mosaic cell.
   insert into public.mw_award_categories (title, method, nominee_kind) values ('Foto terbaik uji', 'juri', 'foto') returning id into cat;
   insert into public.mw_award_nominees (category_id, photo_id) values (cat, p_old);
-  insert into public.mw_photo_hearts (photo_id, employee_id) values (p_old, rani);
+  perform public.mw_photo_react(p_old, rani, g4, fire);
   begin
     delete from public.mw_photos where id = p_old;
     raise exception 'UNEXPECTED: a nominated photo deleted';
@@ -208,8 +252,8 @@ begin
   end if;
   delete from public.mw_award_nominees where category_id = cat;
   delete from public.mw_photos where id = p_old;
-  if exists (select 1 from public.mw_photo_hearts where photo_id = p_old) or exists (select 1 from public.mw_mosaic_tiles where photo_id = p_old) then
-    raise exception 'hearts and the mosaic cell should go with the photo';
+  if exists (select 1 from public.mw_photo_reactions where photo_id = p_old) or exists (select 1 from public.mw_mosaic_tiles where photo_id = p_old) then
+    raise exception 'reactions and the mosaic cell should go with the photo';
   end if;
   raise notice 'PASS: a nominated photo cannot be deleted (23503)';
 end $$;
@@ -222,6 +266,12 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin perform public.mw_mosaic_place(array[1], 0); raise exception 'UNEXPECTED: anon places mosaic tiles';
   exception when insufficient_privilege then null; end;
+  begin perform public.mw_photo_react(gen_random_uuid(), gen_random_uuid(), null, chr(10084)); raise exception 'UNEXPECTED: anon reacts';
+  exception when insufficient_privilege then null; end;
+  begin perform public.mw_photo_reactions(gen_random_uuid(), gen_random_uuid()); raise exception 'UNEXPECTED: anon reads reactions';
+  exception when insufficient_privilege then null; end;
+  begin perform count(*) from public.mw_photo_reactions; raise exception 'UNEXPECTED: anon reads the reactions table';
+  exception when insufficient_privilege then null; end;
   begin perform public.mw_mosaic_version(100); raise exception 'UNEXPECTED: anon reads the mosaic version';
   exception when insufficient_privilege then null; end;
   raise notice 'PASS: Momen functions closed to anon';
@@ -230,6 +280,8 @@ reset role;
 set local role authenticated;
 do $$ begin
   begin perform * from public.mw_photo_report(gen_random_uuid(), gen_random_uuid(), 'tidak_pantas', '', 3); raise exception 'UNEXPECTED: authenticated reports';
+  exception when insufficient_privilege then null; end;
+  begin perform public.mw_photo_react(gen_random_uuid(), gen_random_uuid(), null, chr(10084)); raise exception 'UNEXPECTED: authenticated reacts';
   exception when insufficient_privilege then null; end;
   begin perform * from public.mw_photo_session_counts(gen_random_uuid(), null, 'semua'); raise exception 'UNEXPECTED: authenticated counts';
   exception when insufficient_privilege then null; end;

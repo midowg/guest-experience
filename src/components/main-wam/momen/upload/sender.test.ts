@@ -11,7 +11,7 @@ import { memoryStore } from "./store";
  */
 
 const item = (n: number, over: Partial<QueueItem> = {}): QueueItem => ({
-  clientId: `00000000-0000-4000-8000-00000000000${n}`, batch: "b", audience: "semua", sessionId: null, takenAt: "2027-01-05T08:20:00.000Z", createdAt: n,
+  clientId: `00000000-0000-4000-8000-00000000000${n}`, batch: "b", sessionId: null, takenAt: "2027-01-05T08:20:00.000Z", createdAt: n,
   width: 1280, height: 1600, besar: new ArrayBuffer(10), kecil: new ArrayBuffer(5), ubin: new ArrayBuffer(2), state: "antre", attempts: 0, nextAt: 0,
   error: null, offline: false, photoId: null, deferred: false, ...over,
 });

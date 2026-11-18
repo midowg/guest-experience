@@ -13,7 +13,7 @@ import { checkUploaded, keepUploaded, photoIdFor, removePhotoFiles, removeUpload
 
 /*
  * Sending a Momen photo (U01–U04, KONTRAK §8): two steps, as the MoM photos.
- *   1. start: the server checks who sends (kelompok published for "Kelompokku", the limits), picks
+ *   1. start: the server checks the limits (every photo is for everyone: no audience any more), picks
  *      the files (from the owner and the phone's clientId) and signs three uploads (type and size)
  *      under tmp/ (audit L4: what is never kept is deleted by the bucket's lifecycle rule).
  *   2. the browser puts the three JPEGs straight into storage (never through this server).
@@ -25,14 +25,6 @@ import { checkUploaded, keepUploaded, photoIdFor, removePhotoFiles, removeUpload
 const db = () => createPrivilegedClient();
 const notReady = () => new ServiceError(503, "Penyimpanan foto belum disiapkan. Hubungi admin WAM.");
 const unknownUpload = () => new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
-const noGroup = () => new ServiceError(409, "Kelompokmu belum diterbitkan panitia. Pilih Untuk: Semua.");
-
-/** "Untuk: Kelompokku" needs the person's kelompok (published); answers the group id to keep. */
-function groupFor(context: MainWamContext, audience: PhotoStart["audience"]): string | null {
-  if (audience !== "kelompok") return null;
-  if (!context.viewer.group) throw noGroup();
-  return context.viewer.group.id;
-}
 
 /** The session tag kept: a published session; anything else (deleted meanwhile) makes it Umum. */
 async function keptSession(sessionId: string | null): Promise<string | null> {
@@ -57,7 +49,6 @@ export async function startUpload(context: MainWamContext, input: PhotoStart, no
   const id = photoIdFor(context.viewer.id, input.clientId);
   const kept = await photoRecord(id);
   if (kept) return { kind: "selesai", id: kept.id, visibleAt: kept.visibleAt };
-  groupFor(context, input.audience);
   await personLimit("mw-foto-unggah", context.viewer.id, PHOTOS_PER_10_MINUTES * 2);
   const recent = await sentRecently(context.viewer.id, now);
   if (recent.tenMinutes >= PHOTOS_PER_10_MINUTES) throw new ServiceError(429, `Paling banyak ${PHOTOS_PER_10_MINUTES} foto per 10 menit. Foto ini menunggu dan terkirim sendiri nanti.`);
@@ -75,7 +66,6 @@ export async function confirmUpload(context: MainWamContext, input: PhotoConfirm
   if (!tokenMatches(input.token, { id, ...sizes, width: input.width, height: input.height }, now.getTime())) throw unknownUpload();
   const kept = await photoRecord(id);
   if (kept) return { id: kept.id, visibleAt: kept.visibleAt };
-  const groupId = groupFor(context, input.audience);
   const sessionId = await keptSession(input.sessionId);
   // A repeat that lost the race (an answer lost, the queue sent it again): the first one kept the
   // photo and removed the uploads, so this one finds them gone. Its answer is the kept photo.
@@ -88,7 +78,7 @@ export async function confirmUpload(context: MainWamContext, input: PhotoConfirm
     keys = await keepUploaded(id);
   } catch (error) { const again = await keptMeanwhile(); if (again) return again; throw error; }
   const { data, error } = await db().from("mw_photos").insert({
-    id, owner_id: context.viewer.id, client_id: input.clientId.toLowerCase(), audience: input.audience, group_id: groupId, session_id: sessionId,
+    id, owner_id: context.viewer.id, client_id: input.clientId.toLowerCase(), audience: "semua", group_id: null, session_id: sessionId,
     file_key: keys.besar, thumb_key: keys.kecil, tile_key: keys.ubin, size: input.size, width: input.width, height: input.height,
     taken_at: keptTakenAt(input.takenAt, now),
   }).select("id,visible_at").single();
@@ -108,7 +98,7 @@ export const NOMINATED_PHOTO = "Foto ini masuk nominasi Awarding, jadi tidak bis
 
 /**
  * Batalkan (within the 5 seconds) or Hapus foto, by the photo's owner only: the row and its three
- * files go, and with them its hearts, reports and Mozaik cell. Panitia remove others' photos through
+ * files go, and with them its reactions, reports and Mozaik cell. Panitia remove others' photos through
  * moderation (K08, mw_moderate_photo: hidden first, logged, the owner told), never here (audit M2).
  * A photo cancelled before it was kept: the sender names its clientId, and only its own files
  * (kept or still uploaded) are removed. A nominated photo stays: 409 (the database refuses, 23503).

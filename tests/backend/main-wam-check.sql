@@ -232,7 +232,7 @@ begin
   where c.contype = 'f' and array_length(c.conkey, 1) = 1
     and c.conrelid::regclass::text in ('mw_testers', 'mw_guides', 'mw_sessions', 'mw_rundown_log', 'mw_attendance', 'mw_groups', 'mw_group_members',
       'mw_activity_groups', 'mw_activity_group_members', 'mw_stay_room_details', 'mw_trips', 'mw_trip_seats', 'mw_notes',
-      'mw_photos', 'mw_photo_hearts', 'mw_photo_reports', 'mw_photo_seen', 'mw_mosaic_tiles');
+      'mw_photos', 'mw_photo_hearts', 'mw_photo_reactions', 'mw_photo_reports', 'mw_photo_seen', 'mw_mosaic_tiles');
   if checked < 30 then raise exception 'the foreign key check looked at % keys only', checked; end if;
   if missing is not null then raise exception 'foreign keys without an index: %', missing; end if;
   if (select confdeltype from pg_constraint where conrelid = 'public.mw_attendance'::regclass and contype = 'f'

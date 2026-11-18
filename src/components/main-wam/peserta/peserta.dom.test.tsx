@@ -103,7 +103,7 @@ describe("Notifikasi", () => {
     expect(screen.getAllByRole("img", { name: "Belum dibaca" })).toHaveLength(3);
     // T-P01: each row says its news; the two kinds' own words are not what the rows say.
     expect(screen.getByRole("button", { name: /Pemaparan selesai 12\.30/ })).toBeTruthy();
-    for (const text of ["Dimas dan 4 lainnya menyukai fotomu", "Absen tercatat: Pemaparan departemen", "Kamarmu siap: Kamar 208, lantai 2"]) expect(screen.getByText(text)).toBeTruthy();
+    for (const text of ["Dimas dan 4 lainnya bereaksi di fotomu", "Absen tercatat: Pemaparan departemen", "Kamarmu siap: Kamar 208, lantai 2"]) expect(screen.getByText(text)).toBeTruthy();
     expect(screen.queryByText("Jadwal berubah")).toBeNull();
     expect(screen.queryByText("Momen")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Team building mulai 15.00 di Lawn/ }));

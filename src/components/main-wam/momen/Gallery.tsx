@@ -2,17 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Hourglass, Images, Lock, RotateCcw, Trash2, Users } from "lucide-react";
-import { Button, ConfirmDialog, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
+import { Camera, Hourglass, Images, LayoutGrid, Lock, RotateCcw, Trash2 } from "lucide-react";
+import { Button, Chip, ConfirmDialog, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, Stack } from "@/components/main-wam/shell";
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
 import type { SessionChoice } from "@/lib/main-wam/momen/sessions";
-import { groupLabel, photoAlt } from "@/lib/main-wam/momen/stack";
+import { photoAlt } from "@/lib/main-wam/momen/stack";
 import type { FeedAnswer, FeedPhoto, FeedView, SessionCount, SessionFilter } from "@/lib/main-wam/momen/types";
-import type { ViewerGroup } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { refusedForGood, SessionFilterSheet } from "./MomenSheets";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
@@ -29,8 +28,6 @@ export type GalleryProps = {
   total: number;
   counts: SessionCount[] | null;
   sessions: SessionChoice[];
-  group: ViewerGroup | null;
-  groupsPublished: boolean;
   mozaik: boolean;
   migrated: boolean;
   nowIso: string;
@@ -60,13 +57,13 @@ function QueuedTile({ item, onOpen }: { item: QueueItem; onOpen: () => void }) {
 }
 
 /**
- * M05 Galeri: Semua / Kelompokku / Fotoku and "Semua sesi ▾", a grid of three (keyset pages as it
- * scrolls, or Muat lagi). A tap opens the stack at that photo; in Fotoku it opens the photo's sheet
- * (Hapus foto), and photos still waiting on this phone come first, marked Antre or Gagal. A lock =
- * only for the kelompok.
+ * M05 Galeri: Semua / Fotoku and "Semua sesi ▾", a grid of three (keyset pages as it scrolls, or
+ * Muat lagi), and the way to the Mozaik. A tap opens the stack at that photo; in Fotoku it opens the
+ * photo's sheet (Hapus foto), and photos still waiting on this phone come first, marked Antre or Gagal.
+ * A lock = a photo an earlier version sent only to a kelompok (nothing sends one now).
  */
 export function Gallery(props: GalleryProps) {
-  const { view, session, group } = props;
+  const { view, session } = props;
   const t = useT();
   const known = useKnown();
   const { lang } = useLang();
@@ -132,18 +129,17 @@ export function Gallery(props: GalleryProps) {
   // A long session name gives way; the count always shows ("Batu Night Spect… · 0 foto").
   const caption = session
     ? <><span className={css.captionName}>{sessionTitle ?? t("momen.sessionWord")}</span><span className={css.captionCount}>{t("momen.captionCount", { n: total })}</span></>
-    : view === "kelompok" && group ? t("momen.photosGroup", { n: total, group: groupLabel(group, lang) }) : t("momen.photosN", { n: total });
+    : t("momen.photosN", { n: total });
   const waiting = view === "saya" ? queue.items.filter(item => !session || (session === UMUM ? !item.sessionId : item.sessionId === session)) : [];
 
   let body: ReactNode;
   if (!props.migrated) body = <EmptyState icon={Hourglass} title={t("peserta.waiting.title")}>{t("momen.gal.waitingBody")}</EmptyState>;
-  else if (view === "kelompok" && !group) body = <EmptyState icon={Users} title={props.groupsPublished ? t("momen.stack.notInGroup") : t("momen.stack.groupsNotPublished")} />;
   else if (!items.length && !waiting.length) {
     // Filtered to a session without photos: a way back to every session (audit T-M02).
     const action = session
       ? <Button variant="text" onClick={() => filterTo(view, null)}>{t("momen.allSessions")}</Button>
       : view === "saya" ? <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button> : undefined;
-    body = <EmptyState icon={Images} title={session ? t("momen.stack.sessionEmpty") : view === "saya" ? t("momen.gal.empty.mine") : view === "kelompok" ? t("momen.gal.empty.group") : t("momen.noneYet")} action={action} />;
+    body = <EmptyState icon={Images} title={session ? t("momen.stack.sessionEmpty") : view === "saya" ? t("momen.gal.empty.mine") : t("momen.noneYet")} action={action} />;
   } else {
     body = <>
       <ul className={css.grid} aria-label={t("momen.gal.listLabel")}>
@@ -160,7 +156,7 @@ export function Gallery(props: GalleryProps) {
           return <li key={photo.id}>
             {view === "saya"
               ? <Pressable className={css.tile} onClick={() => setMine(photo)} aria-label={label} title={photoAlt(photo, now, lang)}>{inner}</Pressable>
-              : <Pressable className={css.tile} href={mainWamPath.moments({ lihat: view === "kelompok" ? "kelompok" : undefined, sesi: session ?? undefined, foto: photo.id })} aria-label={label}>{inner}</Pressable>}
+              : <Pressable className={css.tile} href={mainWamPath.moments({ sesi: session ?? undefined, foto: photo.id })} aria-label={label}>{inner}</Pressable>}
           </li>;
         })}
       </ul>
@@ -173,14 +169,15 @@ export function Gallery(props: GalleryProps) {
     <MomenQueueRunner />
     <Stack>
       <Segmented label={t("momen.gal.filterLabel")} value={view} onChange={value => filterTo(value, session)}
-        options={[{ value: "semua", label: t("momen.all") }, { value: "kelompok", label: t("momen.myGroup") }, { value: "saya", label: t("momen.myPhotos") }]} />
+        options={[{ value: "semua", label: t("momen.all") }, { value: "saya", label: t("momen.myPhotos") }]} />
       <div className={css.bar}>
         <FilterChip menu name={t("momen.filterSessionTitle")} className={css.chip} active={session !== null} expanded={picking} disabled={!props.counts} onClick={() => setPicking(true)}>
           {session === UMUM ? t("momen.general") : sessionTitle ?? t("momen.allSessions")}
         </FilterChip>
         {/* With a session chosen the count shows even at 0 ("Batu Night Spectacular · 0 foto", audit T-M02). */}
-        {props.migrated && !(view === "kelompok" && !group) && (total > 0 || !!session) && <span className={css.caption}>{caption}</span>}
+        {props.migrated && (total > 0 || !!session) && <span className={css.caption}>{caption}</span>}
       </div>
+      {props.mozaik && <div className={css.mosaicLink}><Chip icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.mosaic")}</Chip></div>}
       {body}
     </Stack>
 

@@ -2,26 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Heart, Hourglass, Images, LayoutGrid, MoveHorizontal, Users } from "lucide-react";
+import { Camera, Check, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Hourglass, Images, LayoutGrid, MoveHorizontal } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ShellActions, ShellChrome } from "@/components/main-wam/shell";
-import { Banner, Button, Chip, FilterChip, IconBox, IconButton, Pressable, Segmented, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
+import { Banner, Button, IconBox, IconButton, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
-import type { SessionChoice } from "@/lib/main-wam/momen/sessions";
+import { HEART, myReaction, withReaction, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { stackCount, stackCountSpoken, type StackMode } from "@/lib/main-wam/momen/stack";
-import { UMUM, type FeedAnswer, type FeedPhoto, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
-import type { PhotoStatus, ViewerGroup } from "@/lib/main-wam/types";
+import { UMUM, type FeedAnswer, type FeedPhoto, type SessionFilter } from "@/lib/main-wam/momen/types";
+import type { PhotoStatus } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
-import { DeletePhotoDialog, PhotoOptionsSheet, refusedForGood, ReportSheet, SessionFilterSheet } from "./MomenSheets";
+import { DeletePhotoDialog, PhotoOptionsSheet, refusedForGood, ReportSheet } from "./MomenSheets";
+import { QuickReactions, ReactionSheet } from "./Reactions";
 import { StackDeck } from "./StackDeck";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 import css from "./momen.module.css";
 
 export type MomenStackProps = {
   mode: StackMode;
-  view: "semua" | "kelompok";
   session: SessionFilter;
-  /** The chip's and the line's name of the session filter ("Pemaparan departemen", "Umum"). */
+  /** The line's name of the session filter ("Pemaparan departemen", "Umum"). */
   sessionTitle: string | null;
   items: FeedPhoto[];
   next: string | null;
@@ -30,10 +30,6 @@ export type MomenStackProps = {
   startIndex: number;
   /** Galeri: photos newer than the first one loaded (the counter starts after them). */
   offset: number;
-  counts: SessionCount[] | null;
-  sessions: SessionChoice[];
-  group: ViewerGroup | null;
-  groupsPublished: boolean;
   mozaik: boolean;
   migrated: boolean;
   /** The view has photos at all (baru with none new = "Kamu sudah lihat semua"). */
@@ -45,7 +41,7 @@ export type MomenStackProps = {
   /** Dev preview only: a fixed state to look at (a sheet open, offline, loading, …), no network. */
   demo?: StackDemo;
 };
-export type StackDemo = { sheet?: "sesi" | "pilihan" | "lapor" | "hapus"; hiddenForMe?: boolean; offline?: boolean; loading?: boolean; hint?: boolean };
+export type StackDemo = { sheet?: "pilihan" | "lapor" | "hapus" | "reaksi"; hiddenForMe?: boolean; offline?: boolean; loading?: boolean; hint?: boolean };
 
 const HINT_KEY = "mw-momen-geser";
 const subscribeOnline = (notify: () => void) => { window.addEventListener("online", notify); window.addEventListener("offline", notify); return () => { window.removeEventListener("online", notify); window.removeEventListener("offline", notify); }; };
@@ -56,14 +52,16 @@ function readFlag(key: string): boolean {
 }
 
 /**
- * M01–M04: Momen as a stack of photos to swipe through (Instagram Instants), Semua / Kelompokku and
- * "Semua sesi ▾", new photos first, then "Kamu sudah lihat semua" (M03). Suka (button or a double
- * tap), "…" → Laporkan foto (M04) or Hapus foto (one's own). Opened from the gallery (`foto`), it
- * starts at that photo with ‹ Galeri. The server gave the first page; more pages come five cards
- * ahead; seen photos are told to the server in small batches.
+ * M01–M04: Momen as a stack of photos to swipe through (Instagram Instants), every photo for everyone,
+ * new photos first, then "Kamu sudah lihat semua" (M03). The title bar has only the camera and the gallery.
+ * Reactions (WhatsApp style): a quick row under the photo and "+" for the sheet of every emoji, the ones a
+ * photo got as small pills inside it; one per person, a tap on the same one takes it back, a double tap on
+ * the photo is the red heart. "…" on the photo → Laporkan foto (M04) or Hapus foto (one's own). Opened from
+ * the gallery (`foto`), it starts at that photo with ‹ Galeri. The server gave the first page; more pages
+ * come five cards ahead; seen photos are told to the server in small batches.
  */
 export function MomenStack(props: MomenStackProps) {
-  const { mode, view, session, group, mozaik, migrated } = props;
+  const { mode, session, mozaik, migrated } = props;
   const t = useT();
   const known = useKnown();
   const { lang } = useLang();
@@ -76,10 +74,12 @@ export function MomenStack(props: MomenStackProps) {
   const [index, setIndex] = useState(props.startIndex);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [hearts, setHearts] = useState<Record<string, { hearts: number; hearted: boolean }>>({});
+  /** The reactions just given (shown at once, replaced by the server's answer); the photo's own list until then. */
+  const [given, setGiven] = useState<Record<string, ReactionCount[]>>({});
+  const reactionRuns = useRef(new Map<string, number>());
   const demo = props.demo;
   const [hiddenForMe, setHiddenForMe] = useState<Set<string>>(() => new Set(demo?.hiddenForMe && props.items[props.startIndex] ? [props.items[props.startIndex].id] : []));
-  const [sheet, setSheet] = useState<"sesi" | "pilihan" | "lapor" | "hapus" | null>(demo?.sheet ?? null);
+  const [sheet, setSheet] = useState<"pilihan" | "lapor" | "hapus" | "reaksi" | null>(demo?.sheet ?? null);
   const [deleting, setDeleting] = useState(false);
   const [spoken, setSpoken] = useState("");
   const [hintSeen, setHintSeen] = useState(true);
@@ -93,7 +93,8 @@ export function MomenStack(props: MomenStackProps) {
   useEffect(() => { setHintSeen(demo ? !demo.hint : readFlag(HINT_KEY)); }, [demo]);
 
   const current = index < items.length ? items[index] : null;
-  const shownHearts = current ? hearts[current.id] ?? { hearts: current.hearts, hearted: current.hearted } : null;
+  const reactionsOf = useCallback((photo: FeedPhoto) => given[photo.id] ?? photo.reactions, [given]);
+  const chosen = current ? myReaction(reactionsOf(current)) : null;
 
   /* Seen: told to the server every few seconds and when the app goes to the background. */
   const sendSeen = useCallback((keepalive = false) => {
@@ -124,12 +125,12 @@ export function MomenStack(props: MomenStackProps) {
     if (!next || loading) return;
     setLoading(true);
     try {
-      const { data } = await praWamRequest<FeedAnswer>(mainWamApi.photos({ lihat: view === "kelompok" ? "kelompok" : undefined, sesi: session ?? undefined, sebelum: next }));
+      const { data } = await praWamRequest<FeedAnswer>(mainWamApi.photos({ sesi: session ?? undefined, sebelum: next }));
       setItems(list => [...list, ...data.items.filter(item => !list.some(other => other.id === item.id))]);
       setNext(data.next);
       setLoadError(false);
     } catch { setLoadError(true); } finally { setLoading(false); }
-  }, [next, loading, view, session]);
+  }, [next, loading, session]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- starts a request (its "loading" flag), not derived state
   useEffect(() => { if (!demo && next && !loading && !loadError && items.length - index <= 5) void loadMore(); }, [items.length, index, next, loading, loadError, loadMore, demo]);
 
@@ -139,20 +140,28 @@ export function MomenStack(props: MomenStackProps) {
     if (!hintSeen) { setHintSeen(true); try { window.localStorage.setItem(HINT_KEY, "1"); } catch { /* not kept */ } }
   }
 
-  function filterTo(nextView: "semua" | "kelompok", nextSession: SessionFilter) {
-    router.replace(mainWamPath.moments({ lihat: nextView === "kelompok" ? "kelompok" : undefined, sesi: nextSession ?? undefined }), { scroll: false });
+  function allSessions() {
+    router.replace(mainWamPath.moments(), { scroll: false });
   }
 
-  async function toggleHeart(photo: FeedPhoto, on?: boolean) {
-    const before = hearts[photo.id] ?? { hearts: photo.hearts, hearted: photo.hearted };
-    const want = on ?? !before.hearted;
-    if (want === before.hearted) return;
-    setHearts(map => ({ ...map, [photo.id]: { hearts: Math.max(0, before.hearts + (want ? 1 : -1)), hearted: want } }));
+  /**
+   * React to a photo with `emoji` (the same one again takes it back; another replaces the old one). The count moves
+   * at once; the server's answer replaces it, and a failure puts back what was there. Only the latest tap of a photo
+   * counts when answers come out of order.
+   */
+  async function react(photo: FeedPhoto, emoji: string) {
+    if (photo.mine) return;
+    const before = reactionsOf(photo);
+    const want = myReaction(before) === emoji ? null : emoji;
+    const run = (reactionRuns.current.get(photo.id) ?? 0) + 1;
+    reactionRuns.current.set(photo.id, run);
+    setGiven(map => ({ ...map, [photo.id]: withReaction(before, want) }));
+    setSpoken(want ? t("momen.react.set", { emoji: want }) : t("momen.react.unset"));
     try {
-      const { data } = await praWamRequest<{ hearts: number; hearted: boolean }>(mainWamApi.photoHeart(photo.id), { method: want ? "PUT" : "DELETE" });
-      setHearts(map => ({ ...map, [photo.id]: data }));
+      const { data } = await praWamRequest<{ reactions: ReactionCount[] }>(mainWamApi.photoReaction(photo.id), want ? { method: "PUT", json: { emoji: want } } : { method: "DELETE" });
+      if (reactionRuns.current.get(photo.id) === run) setGiven(map => ({ ...map, [photo.id]: data.reactions }));
     } catch (error) {
-      setHearts(map => ({ ...map, [photo.id]: before }));
+      if (reactionRuns.current.get(photo.id) === run) setGiven(map => ({ ...map, [photo.id]: before }));
       toast.show({ text: known(errorText(error)), tone: "error" });
     }
   }
@@ -188,7 +197,7 @@ export function MomenStack(props: MomenStackProps) {
   }
 
   /* What stands in the front card's place. */
-  const galeriHref = mainWamPath.gallery({ lihat: view === "kelompok" ? "kelompok" : undefined, sesi: session ?? undefined });
+  const galeriHref = mainWamPath.gallery({ sesi: session ?? undefined });
   let panel: ReactNode = null;
   let noCard = false;
   if (demo?.loading) {
@@ -197,9 +206,6 @@ export function MomenStack(props: MomenStackProps) {
   } else if (!migrated) {
     noCard = true;
     panel = <><IconBox icon={Hourglass} size={64} round /><h2 className={css.panelTitle}>{t("peserta.waiting.title")}</h2><p className={css.panelBody}>{t("momen.stack.waitingBody")}</p></>;
-  } else if (view === "kelompok" && !group) {
-    noCard = true;
-    panel = <><IconBox icon={Users} size={64} round /><h2 className={css.panelTitle}>{props.groupsPublished ? t("momen.stack.notInGroup") : t("momen.stack.groupsNotPublished")}</h2></>;
   } else if (props.own && current?.id === props.own.id && props.own.status !== "tampil") {
     panel = <><IconBox icon={EyeOff} size={64} round />
       <h2 className={css.panelTitle}>{props.own.status === "disembunyikan" ? t("momen.stack.ownHidden") : t("momen.stack.ownHiddenTemp")}</h2>
@@ -209,13 +215,11 @@ export function MomenStack(props: MomenStackProps) {
       <Button variant="tonal" size="m" onClick={() => showAgain(current)}>{t("momen.stack.showAgain")}</Button></>;
   } else if (!items.length && !(mode === "baru" && props.anyPhotos)) {
     noCard = true;
-    panel = view === "kelompok"
-      ? <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.groupEmpty")}</h2></>
-      : <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{session ? t("momen.stack.sessionEmpty") : t("momen.noneYet")}</h2>
-        {session
-          ? <Button variant="tonal" size="m" onClick={() => filterTo(view, null)}>{t("momen.allSessions")}</Button>
-          : <><p className={css.panelBody}>{t("momen.stack.beFirst", { event: props.eventName })}</p>
-            <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button></>}</>;
+    panel = <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{session ? t("momen.stack.sessionEmpty") : t("momen.noneYet")}</h2>
+      {session
+        ? <Button variant="tonal" size="m" onClick={allSessions}>{t("momen.allSessions")}</Button>
+        : <><p className={css.panelBody}>{t("momen.stack.beFirst", { event: props.eventName })}</p>
+          <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button></>}</>;
   } else if (!current && next) {
     panel = loadError
       ? <><IconBox icon={CloudOff} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.loadFailed")}</h2><Button variant="tonal" size="m" onClick={() => { setLoadError(false); void loadMore(); }}>{t("shell.retry")}</Button></>
@@ -233,7 +237,7 @@ export function MomenStack(props: MomenStackProps) {
   /* The line under the cards. */
   const position = props.offset + index;
   let hint: ReactNode = null;
-  if (migrated && !(view === "kelompok" && !group)) {
+  if (migrated) {
     if (mode === "sesi" && props.total > 0) hint = <span className={css.count}>{stackCount("sesi", 0, props.total, sessionTitle ?? undefined, lang)}</span>;
     else if (mode === "baru" && current && !panel) hint = <>
       {/* The first `total` cards are the new ones; after them come the ones seen before and the person's own. */}
@@ -245,53 +249,43 @@ export function MomenStack(props: MomenStackProps) {
     else if (mode === "baru" && !current && !next && items.length > 0) hint = <span className={css.count}><Check aria-hidden />{t("momen.stack.countOf", { a: items.length, b: items.length })}</span>;
   }
 
-  const sessionLabel = session === UMUM ? t("momen.general") : sessionTitle ?? t("momen.allSessions");
-  // Suka and Pilihan foto for a photo on show; one's own hidden photo keeps Pilihan foto (Hapus foto).
+  // Reactions for a photo on show (another person's); one's own hidden photo keeps Pilihan foto (Hapus foto).
   const ownHidden = !!props.own && current?.id === props.own.id;
   const photoActions = !!current && !noCard && !panel;
-  const optionsAction = photoActions || (ownHidden && !!current);
+  const ownHiddenOptions = ownHidden && !!current && !photoActions;
   return <>
     {!demo && <MomenQueueRunner />}
     {mode === "galeri" ? <>
       <ShellChrome hideTopBar />
       <div className={css.ownBar}>
-        <TopBar variant="back" title={view === "kelompok" ? t("momen.stack.galleryTitleGroup") : t("momen.stack.galleryTitleAll")} backHref={galeriHref}
+        <TopBar variant="back" title={t("momen.stack.galleryTitleAll")} backHref={galeriHref}
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }}
           actions={items.length ? <span className={css.ownCount}>{stackCount("galeri", Math.min(position, props.total - 1), props.total, undefined, lang)}</span> : null} />
       </div>
     </> : <ShellActions>
-      <Chip icon={Grid3x3} href={galeriHref}>{t("momen.gallery")}</Chip>
-      {mozaik && <Chip icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.mosaic")}</Chip>}
+      <IconButton variant="tonal" icon={Camera} label={t("momen.takePhoto")} href={mainWamPath.camera()} />
+      <IconButton variant="tonal" icon={Grid3x3} label={t("momen.gallery")} href={galeriHref} />
     </ShellActions>}
 
     <div className={css.view}>
-      {mode !== "galeri" && <div className={css.filter}>
-        <Segmented label={t("momen.stack.filterLabel")} value={view} onChange={value => filterTo(value, session)}
-          options={[{ value: "semua", label: t("momen.all") }, { value: "kelompok", label: t("momen.myGroup") }]} />
-        <FilterChip menu name={t("momen.filterSessionTitle")} className={css.filterChip} active={session !== null} expanded={sheet === "sesi"} disabled={!props.counts} onClick={() => setSheet("sesi")}>{sessionLabel}</FilterChip>
-      </div>}
       {!online && <Banner tone="offline" className={css.banner}>{t("momen.stack.offline")}</Banner>}
 
       <div className={css.stage}>
-      <StackDeck items={noCard ? [] : items} index={noCard ? 0 : index} onIndex={move} onLike={photo => toggleHeart(photo, true)} now={now} panel={panel}
+      <StackDeck items={noCard ? [] : items} index={noCard ? 0 : index} onIndex={move} onLike={photo => { if (myReaction(reactionsOf(photo)) !== HEART) void react(photo, HEART); }}
+        onReact={(photo, emoji) => void react(photo, emoji)} onOptions={photoActions ? () => setSheet("pilihan") : undefined} reactionsOf={reactionsOf} now={now} panel={panel}
         label={t("ui.moments")} describe={at => stackCountSpoken(mode, props.offset + at, props.total, lang)} />
 
       <p className={css.hint}>{hint}</p>
       <p className={css.sr} aria-live="polite">{spoken}</p>
 
       <div className={css.actions}>
-        {photoActions && shownHearts && current!.mine
-          ? <span className={css.react} data-static role="img" aria-label={t("momen.stack.likesOnYours", { n: shownHearts.hearts })}><Heart aria-hidden />{shownHearts.hearts}</span>
-          : photoActions && shownHearts ? <button type="button" className={css.react} aria-pressed={shownHearts.hearted} onClick={() => toggleHeart(current!)}
-          aria-label={t(shownHearts.hearted ? "momen.stack.unlike" : "momen.stack.like", { n: shownHearts.hearts })}><Heart aria-hidden />{shownHearts.hearts}</button> : <span />}
-        <Pressable href={mainWamPath.camera()} className={css.camera} aria-label={t("momen.stack.openCamera")}><Camera aria-hidden /></Pressable>
-        {optionsAction ? <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} /> : <span />}
+        {photoActions && !current!.mine && <QuickReactions chosen={chosen} onPick={emoji => void react(current!, emoji)} onMore={() => setSheet("reaksi")} />}
+        {ownHiddenOptions && <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} />}
       </div>
       </div>
     </div>
 
-    {props.counts && <SessionFilterSheet open={sheet === "sesi"} onClose={() => setSheet(null)} sessions={props.sessions} counts={props.counts} value={session} now={now}
-      onChange={value => filterTo(view, value)} />}
+    {current && !current.mine && <ReactionSheet open={sheet === "reaksi"} onClose={() => setSheet(null)} chosen={chosen} onPick={emoji => { setSheet(null); void react(current, emoji); }} />}
     {current && <PhotoOptionsSheet open={sheet === "pilihan"} onClose={() => setSheet(null)} owner={current.owner.name} mine={current.mine}
       onReport={() => setSheet("lapor")} onDelete={() => setSheet("hapus")} />}
     <ReportSheet open={sheet === "lapor"} onClose={() => setSheet(null)} onSubmit={report} />

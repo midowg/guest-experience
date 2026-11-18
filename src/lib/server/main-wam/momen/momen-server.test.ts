@@ -3,8 +3,8 @@ import type { MainWamContext } from "../gate";
 import type { PhotoRecord } from "./feed";
 
 /*
- * Area B's server rules, without a database: who may send to Kelompokku, the upload's token, the
- * limits, a photo sent twice kept once, and who may delete, report or open a photo (and who gets 404).
+ * Area B's server rules, without a database: the upload's token (every photo is for everyone), the
+ * limits, a photo sent twice kept once, who may delete, report, react to or open a photo (and who gets 404).
  */
 
 const SECRET = "s".repeat(40);
@@ -16,6 +16,7 @@ let counts = { tenMinutes: 0, today: 0 };
 let inserted: Record<string, unknown>[] = [];
 let deleted: string[] = [];
 let rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+let reactAnswer: { data: unknown; error: { message: string; code?: string } | null } = { data: [], error: null };
 let reportAnswer: { data: unknown; error: { message: string; code?: string } | null } = { data: [{ reporters: 1, hidden: false, owner_id: "sari" }], error: null };
 let deleteError: { message: string; code?: string } | null = null;
 let insertError: { message: string; code?: string } | null = null;
@@ -73,6 +74,7 @@ vi.mock("../../supabase/admin", () => ({
       rpcCalls.push({ name, args });
       if (name === "consume_rate_limit") return Promise.resolve({ data: true, error: null });
       if (name === "mw_photo_report") return Promise.resolve(reportAnswer);
+      if (name === "mw_photo_react") return Promise.resolve(reactAnswer);
       if (name === "mw_photo_feed") return Promise.resolve({ data: feedRows.slice(0, Number(args.p_limit)), error: null });
       if (name === "mw_mosaic_version") return Promise.resolve({ data: versionAnswer, error: null });
       return Promise.resolve({ data: [], error: null });
@@ -122,7 +124,8 @@ function context(over: Partial<MainWamContext["viewer"]> = {}): MainWamContext {
     settings: { groupsPublished: true, modules: { mozaik: true } } as MainWamContext["settings"],
   };
 }
-const start = { clientId: "22222222-2222-4222-8222-222222222222", audience: "semua" as const, sessionId: null, takenAt: new Date().toISOString(), width: 1280, height: 1600, size: 400_000, thumbSize: 40_000, tileSize: 9_000 };
+const HEART = "\u2764\uFE0F";
+const start = { clientId: "22222222-2222-4222-8222-222222222222", sessionId: null, takenAt: new Date().toISOString(), width: 1280, height: 1600, size: 400_000, thumbSize: 40_000, tileSize: 9_000 };
 const record = (over: Partial<PhotoRecord> = {}): PhotoRecord => ({
   id: "33333333-3333-4333-8333-333333333333", ownerId: "sari", audience: "semua", groupId: null, sessionId: null, width: 1280, height: 1600, takenAt: "2026-01-05T03:00:00Z",
   createdAt: "2026-01-05T03:00:00Z", visibleAt: "2026-01-05T03:00:05Z", status: "tampil",
@@ -133,6 +136,7 @@ const statusOf = (promise: Promise<unknown>) => promise.then(() => 200, (error: 
 beforeEach(() => {
   records = new Map(); counts = { tenMinutes: 0, today: 0 }; inserted = []; deleted = []; rpcCalls = []; removed.length = 0;
   reportAnswer = { data: [{ reporters: 1, hidden: false, owner_id: "sari" }], error: null };
+  reactAnswer = { data: [{ emoji: HEART, count: 2, mine: true }, { emoji: "😂", count: 1, mine: false }], error: null };
   deleteError = null; insertError = null; recordError = null; versionAnswer = "fingerprint-1"; tileRows = []; feedRows = [];
   uploadsRemoved.length = 0; steps.length = 0; copyFails = false; checkFails = false; duringCheck = null;
 });
@@ -166,23 +170,23 @@ describe("sending a photo", () => {
     expect(await upload.startUpload(context(), start)).toMatchObject({ kind: "selesai", id: first.id });
   });
 
-  it("refuses Kelompokku before the kelompok is published (409), and over the limits (429)", async () => {
-    expect(await statusOf(upload.startUpload(context({ group: null }), { ...start, audience: "kelompok" }))).toBe(409);
+  it("refuses a person over the limits (429), and starts for a person with no kelompok too (every photo is for everyone)", async () => {
+    expect((await upload.startUpload(context({ group: null }), start)).kind).toBe("unggah");
     counts = { tenMinutes: 30, today: 30 };
     expect(await statusOf(upload.startUpload(context(), start))).toBe(429);
     counts = { tenMinutes: 0, today: 200 };
     expect(await statusOf(upload.startUpload(context(), start))).toBe(429);
   });
 
-  it("keeps a photo only with its own token; the kelompok and the session come from the server", async () => {
-    const begun = await upload.startUpload(context(), { ...start, audience: "kelompok" });
+  it("keeps a photo only with its own token; it is always for everyone (an audience in the request is ignored) and the session comes from the server", async () => {
+    const begun = await upload.startUpload(context(), start);
     if (begun.kind !== "unggah") throw new Error("expected an upload");
-    expect(await statusOf(upload.confirmUpload(context(), { ...start, audience: "kelompok", token: `${Math.floor(Date.now() / 1000) + 60}.${"0".repeat(64)}` }))).toBe(403);
+    expect(await statusOf(upload.confirmUpload(context(), { ...start, token: `${Math.floor(Date.now() / 1000) + 60}.${"0".repeat(64)}` }))).toBe(403);
     // Another person replaying the token: a different photo id, refused.
-    expect(await statusOf(upload.confirmUpload(context({ id: "44444444-4444-4444-8444-444444444444" }), { ...start, audience: "kelompok", token: begun.token }))).toBe(403);
-    const done = await upload.confirmUpload(context(), { ...start, audience: "kelompok", sessionId: "00000000-0000-4000-8000-0000000000bb", token: begun.token });
+    expect(await statusOf(upload.confirmUpload(context({ id: "44444444-4444-4444-8444-444444444444" }), { ...start, token: begun.token }))).toBe(403);
+    const done = await upload.confirmUpload(context(), { ...start, audience: "kelompok", group: "x", sessionId: "00000000-0000-4000-8000-0000000000bb", token: begun.token } as unknown as Parameters<typeof upload.confirmUpload>[1]);
     expect(done.id).toBe(begun.id);
-    expect(inserted[0]).toMatchObject({ id: begun.id, audience: "kelompok", group_id: g4.id, session_id: null, tile_key: `main-wam/momen/${begun.id}-ubin.jpg` });
+    expect(inserted[0]).toMatchObject({ id: begun.id, audience: "semua", group_id: null, session_id: null, tile_key: `main-wam/momen/${begun.id}-ubin.jpg` });
   });
 });
 
@@ -217,6 +221,47 @@ describe("uploads never kept do not pile up (audit L4)", () => {
     // Not kept by anyone: the check's 422 stands.
     records.delete(begun.id); duringCheck = null;
     expect(await statusOf(upload.confirmUpload(context(), { ...start, token: begun.token }))).toBe(422);
+  });
+});
+
+describe("reacting to a photo", () => {
+  const OTHER = "55555555-5555-4555-8555-555555555555";
+  const reactCalls = () => rpcCalls.filter(call => call.name === "mw_photo_react");
+
+  it("asks the database with the person and the kelompok the server knows, and answers the photo's reactions", async () => {
+    records.set(record().id, record());
+    const answer = await feed.setReaction(context().viewer, record().id, HEART);
+    expect(answer).toEqual({ reactions: [{ emoji: HEART, count: 2, mine: true }, { emoji: "😂", count: 1, mine: false }] });
+    expect(reactCalls()).toEqual([{ name: "mw_photo_react", args: { p_photo: record().id, p_viewer: context().viewer.id, p_group: g4.id, p_emoji: HEART } }]);
+    reactAnswer = { data: [], error: null };
+    expect(await feed.setReaction(context().viewer, record().id, null)).toEqual({ reactions: [] });
+    expect(reactCalls()[1].args.p_emoji).toBeNull();
+  });
+
+  it("never on one's own photo (409), but one's own reaction may be taken back", async () => {
+    records.set(record().id, record({ ownerId: context().viewer.id }));
+    expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(409);
+    expect(reactCalls()).toEqual([]);
+    expect(await statusOf(feed.setReaction(context().viewer, record().id, null))).toBe(200);
+  });
+
+  it("answers 404, nothing about the photo, for one the person cannot see: hidden, in its 5 seconds, another kelompok's, unknown", async () => {
+    records.set(record().id, record({ status: "ditinjau" }));
+    records.set(OTHER, record({ id: OTHER, audience: "kelompok", groupId: "other" }));
+    const fresh = "66666666-6666-4666-8666-666666666666";
+    records.set(fresh, record({ id: fresh, visibleAt: new Date(Date.now() + 60_000).toISOString() }));
+    for (const id of [record().id, OTHER, fresh, "77777777-7777-4777-8777-777777777777", "bukan-id"]) expect(await statusOf(feed.setReaction(context().viewer, id, HEART)), id).toBe(404);
+    expect(reactCalls()).toEqual([]);
+  });
+
+  it("turns the database's refusals into plain answers (404 not found, 409 own photo) and a waiting migration into 503", async () => {
+    records.set(record().id, record());
+    reactAnswer = { data: null, error: { message: "MW_PHOTO_NOT_FOUND" } };
+    expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(404);
+    reactAnswer = { data: null, error: { message: "MW_PHOTO_OWN" } };
+    expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(409);
+    reactAnswer = { data: null, error: { message: "Could not find the function public.mw_photo_react", code: "PGRST202" } };
+    expect(await statusOf(feed.setReaction(context().viewer, record().id, HEART))).toBe(503);
   });
 });
 
@@ -334,10 +379,22 @@ describe("view addresses per size (audit L5, R3)", () => {
     }
   });
 
+  it("the feed gives each photo its reactions (most first, the viewer's marked), dropping what is off the list", async () => {
+    const base = { id: record().id, owner_id: "sari", audience: "semua", group_id: null, session_id: null, width: 1, height: 1, taken_at: "", visible_at: "", status: "tampil", file_key: "main-wam/momen/a.jpg", thumb_key: null, seen: false, total: 1 };
+    const [photo, bare, odd] = await feed.feedPhotos([
+      { ...base, reactions: [{ emoji: HEART, count: 12, mine: true }, { emoji: "😂", count: 3, mine: false }] },
+      { ...base, reactions: [] },
+      { ...base, reactions: [{ emoji: "🤡", count: 9, mine: false }, { emoji: HEART, count: 0, mine: false }, { emoji: "🔥", count: "2", mine: true }, "x", null] },
+    ], context());
+    expect(photo.reactions).toEqual([{ emoji: HEART, count: 12, mine: true }, { emoji: "😂", count: 3, mine: false }]);
+    expect(bare.reactions).toEqual([]);
+    expect(odd.reactions).toEqual([{ emoji: "🔥", count: 2, mine: true }]);
+  });
+
   it("the feed signs the small copy as kecil and the large one as besar", async () => {
     const [photo] = await feed.feedPhotos([{
       id: record().id, owner_id: "sari", audience: "semua", group_id: null, session_id: null, width: 1, height: 1, taken_at: "", visible_at: "", status: "tampil",
-      file_key: "main-wam/momen/a.jpg", thumb_key: "main-wam/momen/a-kecil.jpg", hearts: 0, hearted: false, seen: false, total: 1,
+      file_key: "main-wam/momen/a.jpg", thumb_key: "main-wam/momen/a-kecil.jpg", reactions: [], seen: false, total: 1,
     }], context());
     expect(photo.src).toEqual({ kecil: "https://r2/main-wam/momen/a-kecil.jpg?get&size=kecil", besar: "https://r2/main-wam/momen/a.jpg?get&size=besar" });
   });
@@ -346,7 +403,7 @@ describe("view addresses per size (audit L5, R3)", () => {
 describe("the stack lists the person's own photos too (Momen, tumpukan)", () => {
   const row = (id: string, owner: string, seen: boolean, at: string) => ({
     id, owner_id: owner, audience: "semua", group_id: null, session_id: null, width: 1, height: 1, taken_at: at, visible_at: at, status: "tampil",
-    file_key: `main-wam/momen/${id}.jpg`, thumb_key: null, hearts: 0, hearted: false, seen, total: 1,
+    file_key: `main-wam/momen/${id}.jpg`, thumb_key: null, reactions: [], seen, total: 1,
   });
   const NEW = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", OWN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const viewer = context().viewer.id;

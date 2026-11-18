@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { PHOTO_AUDIENCES, REPORT_REASONS } from "../types";
+import { REPORT_REASONS } from "../types";
+import { isReactionEmoji } from "./reactions";
 import { UMUM, type FeedView, type SessionFilter } from "./types";
 
 /*
@@ -15,10 +16,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (value: unknown): value is string => typeof value === "string" && UUID.test(value);
 const one = (value: string | string[] | undefined | null) => (Array.isArray(value) ? value[0] : value) ?? undefined;
 
-/** ?lihat=: Semua (default), Kelompokku, Fotoku (gallery only). */
+/** ?lihat=: Semua (default) or Fotoku (gallery only). There is no Kelompokku any more: every photo is for everyone. */
 export function parseView(raw: string | string[] | undefined | null, allowSaya = true): FeedView {
   const value = one(raw);
-  if (value === "kelompok") return "kelompok";
   if (value === "saya" && allowSaya) return "saya";
   return "semua";
 }
@@ -86,7 +86,6 @@ export const GALLERY_PICK_MAX = 10;
 const size = (max: number) => z.number().int().min(1, "Berkas kosong.").max(max, "Foto terlalu besar. Ambil ulang fotonya.");
 export const photoStartSchema = z.object({
   clientId: z.string().regex(UUID, "Foto tidak dikenali. Ambil ulang fotonya."),
-  audience: z.enum(PHOTO_AUDIENCES),
   sessionId: z.string().regex(UUID).nullable(),
   takenAt: z.string().regex(ISO).refine(value => Number.isFinite(Date.parse(value)), "Waktu foto tidak dikenali."),
   width: z.number().int().min(1).max(4000),
@@ -103,6 +102,8 @@ export type PhotoConfirm = z.infer<typeof photoConfirmSchema>;
 
 /** DELETE photo: `clientId` lets the sender clean up an upload that was cancelled before it was kept. */
 export const photoDeleteSchema = z.object({ clientId: z.string().regex(UUID).optional() });
+/** PUT reaction: the emoji, only from the app's list (reactions.ts). */
+export const reactionSchema = z.object({ emoji: z.string().refine(isReactionEmoji, "Reaksi ini belum tersedia.") });
 export const photosSeenSchema = z.object({ ids: z.array(z.string().regex(UUID)).min(1).max(100) });
 export const reportSchema = z.object({
   reason: z.enum(REPORT_REASONS, "Pilih satu alasan."),

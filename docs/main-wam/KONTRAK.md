@@ -149,8 +149,8 @@ sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek S
 | `mw_trips`, `mw_trip_seats` | langkah berangkat/pulang (`kumpul`/`kereta`/`bus`/`tiba`/`lain`), kursi/kendaraan per orang, `distance_km`, `vehicles` (Jejak karbon) | |
 | `mw_guides` | panduan: `slug`, `kind` (`denah`/`hotel`/`dresscode`/`tata_tertib`/`lain`), `title`, `body` teks, berkas opsional di R2 `main-wam/panduan/…`, `published` | |
 | `mw_notes` | metadata notifikasi Main WAM di atas `pw_announcements`: `kind`, `link` (`/wam/acara…`), `pinned_until` (pengumuman penting), `tone` (`info`/`warning`, kosong = aturan `noteTone`), `audience` jsonb | |
-| `mw_photos` | `owner_id`, `client_id` (idempoten per HP), `audience` (`semua`/`kelompok` + `group_id`), `session_id`, `file_key`/`thumb_key` (R2 `main-wam/momen/…`), ukuran, `taken_at`, `created_at`, `visible_at` (= +5 detik), `status` (`tampil`/`ditinjau`/`disembunyikan`), `hidden_*` | kelompok yang punya foto tidak bisa dihapus |
-| `mw_photo_hearts`, `mw_photo_reports`, `mw_photo_seen` | hati; laporan (unik per pelapor, `lainnya` wajib catatan, `unhidden_at` = "Tampilkan lagi" untuk pelapor); foto yang sudah dilihat | |
+| `mw_photos` | `owner_id`, `client_id` (idempoten per HP), `audience` (`semua`/`kelompok` + `group_id`; **foto baru selalu `semua`**: tidak ada lagi "Untuk: Kelompokku", kolom ini hanya untuk foto lama), `session_id`, `file_key`/`thumb_key` (R2 `main-wam/momen/…`), ukuran, `taken_at`, `created_at`, `visible_at` (= +5 detik), `status` (`tampil`/`ditinjau`/`disembunyikan`), `hidden_*` | kelompok yang punya foto tidak bisa dihapus |
+| `mw_photo_reactions` (migrasi `202611210001`), `mw_photo_hearts` (lama, tidak dibaca/ditulis lagi), `mw_photo_reports`, `mw_photo_seen` | reaksi: satu emoji per orang per foto (`photo_id`+`employee_id` kunci, `emoji` 1–16 karakter; daftar yang boleh ada di `lib/main-wam/momen/reactions.ts`, dicek server); hati lama; laporan (unik per pelapor, `lainnya` wajib catatan, `unhidden_at` = "Tampilkan lagi" untuk pelapor); foto yang sudah dilihat | |
 | `mw_mosaic_tiles` | ubin → foto (satu foto satu ubin) | |
 | `mw_award_categories`, `mw_award_nominees`, `mw_award_votes`, `mw_award_approvals` | kategori (`voting`/`juri`/`otomatis`, jendela, diumumkan), nominasi (orang/foto/label), satu suara per orang per kategori (bisa diubah), persetujuan BOD | trigger: suara hanya di jendela kategori voting terbit, tidak untuk diri sendiri (orang atau pemilik foto), jam server |
 | `mw_silent_questions`, `mw_silent_feedback`, `mw_silent_openers` | satu pertanyaan per sesi, `opened_at`/`closed_at` (Buka/Tutup sekarang, masing-masing sekali; tutup final), `finalized_at` + `feedback_count`/`opener_count` (diisi saat tutup final); masukan **tanpa orang, tanpa waktu**, id acak; pembuka = HMAC orang, sekali per pertanyaan, tanpa waktu, dihapus saat tutup final | `mw_silent_state` (sama dengan `silentState`); trigger: masukan dan pembuka hanya saat dibuka, tutup tidak bisa dibatalkan, pertanyaan/sesi/topik tetap setelah dibuka, jam sesi digeser setelah tutup tidak membuka lagi; FK sesi `restrict` |
@@ -167,7 +167,7 @@ sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek S
   masuk, status dibaca, Web Push yang ada), dengan event WAM 2027 dan `mw_notes` untuk jenis, tautan,
   sematan, audiens. Tidak ada topik push baru (Pengaturan Pra WAM tidak berubah); pemetaan di
   `notePushTopic`: pengumuman dan jadwal → `pengumuman` (selalu, juga jam tenang), absen/silent/voting/
-  survei/kamar/foto disembunyikan → `forum` (tidak di jam tenang), hati → lonceng saja.
+  survei/kamar/foto disembunyikan → `forum` (tidak di jam tenang), reaksi → lonceng saja (belum dikirim).
 - **Login, sesi, password, push, foto profil**: semua dipakai ulang lewat `praWamApi` (§5).
 - **R2**: helper `src/lib/server/r2.ts` (`presignUpload`, `verifyUpload`, `presignDownload`, `readObject`,
   `removeObjects`). Prefix: `main-wam/momen/` (B; unggahan sementara di `tmp/main-wam/momen/`, §8, §10),
@@ -247,7 +247,7 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 | --- | --- |
 | fondasi | `themeImage(slot, v)`: mode `semua` → `splash`/`icon` publik; lainnya hanya untuk yang melihat Main WAM dan Admin WAM; `v` harus versi aktif (selain itu 404 `no-store`); cache 1 hari |
 | A | `home`, `agenda`, `session(id)`, `notifications`, `guideFile(id)`; login/password/push/foto profil tetap `praWamApi` |
-| B | `photos(filter)`, `photoStart`, `photoConfirm`, `photosSeen`, `photo(id)`, `photoFile(id, ukuran)`, `photoHeart(id)`, `photoReport(id)`, `mosaic` |
+| B | `photos(filter)`, `photoStart`, `photoConfirm`, `photosSeen`, `photo(id)`, `photoFile(id, ukuran)`, `photoReaction(id)`, `photoReport(id)`, `mosaic` |
 | C | `rundownSession(id)`, `rundownLog`, `attendance(sesiId)`, `announcements`, `announcement(id)`, `moderation`, `moderatePhoto(id)`, `summary` |
 | D | `checkIn(token)`, `sessionQr(sesiId)`, `silent`, `silentFeedback`, `silentControl(id)`, `silentRecap`, `awards`, `vote(id)`, `approveAward(id)` |
 
@@ -327,7 +327,7 @@ milik D), tanpa mengimpor kode area lain.
 - **Notifikasi**: selalu `sendMainWamNote`/`trySendMainWamNote` (jangan menulis `pw_announcements` sendiri).
   Kabar tentang satu sesi memakai `tag` `sesi-<id>` supaya menggantikan kabar sebelumnya.
 - **Tumpukan Momen (keputusan PM, 18 Nov)**: tumpukan memuat **semua** foto tampilan itu, **foto sendiri ikut** (pil "Fotomu",
-  jumlah suka yang diterima tanpa tombol hati). Urutan dua lintasan, masing-masing terbaru dulu: foto orang lain yang belum
+  reaksi yang diterima hanya sebagai pil di dalam foto, tanpa baris reaksi cepat). Urutan dua lintasan, masing-masing terbaru dulu: foto orang lain yang belum
   dilihat, lalu yang sudah dilihat dan milik sendiri. `mw_photo_feed(…, p_unseen, p_cursor_at, p_cursor_id, p_cursor_rest, p_direction, …)`:
   `p_unseen` hanya untuk arah `older`; kursor menyebut lintasannya (`p_cursor_rest` false = belum dilihat, true = sudah/sendiri; di
   alamat API `b~…` dan `r~…`), jadi foto yang baru dilihat tidak menggeser kursor; `total` = sisa di lintasan kursor (halaman pertama:
@@ -389,7 +389,7 @@ milik D), tanpa mengimpor kode area lain.
     - BOD, panitia, dan admin aplikasi tidak bisa menghubungkan masukan dengan orang. Jumlah tidak
       terlihat selama dibuka dan tutup itu final, jadi tidak ada selisih rekap yang bisa dipakai.
     - Admin DB yang sengaja menganalisis urutan fisik baris **selama dibuka**: tiap masukan punya
-      `xmin`/`ctid` sendiri. Urutannya bisa dibandingkan dengan baris lain yang punya jam (foto, hati,
+      `xmin`/`ctid` sendiri. Urutannya bisa dibandingkan dengan baris lain yang punya jam (foto, reaksi,
       absen), dan dengan baris pembuka. Pembuka bisa dicocokkan ke orang bila ia juga memegang rahasia
       server. Hasilnya hanya **dugaan** ("ditulis setelah X, Y, dan Z membuka formulir, sekitar 13.42").
       Untuk dua penulis yang mengirim berdekatan, hasilnya tidak pasti.
@@ -442,6 +442,8 @@ milik D), tanpa mengimpor kode area lain.
 | 22 | Satu definisi orang acara: `mainWamAttendees()` | tiga hitungan berbeda membuat "Hadir 96 dari 120" beda dengan Kehadiran B02 (audit R5) |
 | 23 | Pesan "menunggu pembaruan sistem" tanpa nama migrasi | istilah teknis tidak untuk peserta/admin; nama berkas di log server (audit R13, T-A01) |
 | 24 | Tanpa `alter default privileges` (audit L2 ditolak) | berlaku untuk seluruh proyek Supabase, termasuk migrasi tim lain; revoke per objek di tiap migrasi Main WAM sudah diuji (`main-wam-check.sql`) |
+| 25 | **Momen disederhanakan (pemilik, 18 Nov)**: bilah atas hanya judul + tombol kamera + tombol galeri (tanpa Semua/Kelompokku dan chip sesi di tumpukan); tidak ada lagi audiens "Kelompokku" (foto baru selalu `semua`; UI dan API unggah tidak menawarkannya, `lihat=kelompok` jatuh ke Semua, kolom `audience`/`group_id` dan view SQL `kelompok` dibiarkan untuk foto lama); hati diganti **reaksi** ala WhatsApp/Telegram | lebih sedikit kontrol di layar yang dipakai sambil berjalan; reaksi lebih ekspresif dan tetap tanpa daftar siapa dan tanpa komentar |
+| 26 | Reaksi: baris cepat (❤️ 😂 🔥 👏 😮 🙏 + "+") di bawah foto, sheet "Pilih reaksi" (±60 emoji dalam 5 kelompok), pil (emoji + jumlah) di sudut kiri bawah di dalam foto; satu orang satu reaksi (emoji lain menggantikan, ketuk lagi membatalkan); foto sendiri hanya pil yang tampil; ganda-ketuk foto = ❤️. Server: PUT/DELETE `/api/wam/acara/momen/[id]/reaksi` (emoji dari daftar tetap, 200 per 10 menit per orang), fungsi `mw_photo_react` (hanya foto yang terlihat dan bukan milik sendiri); `mw_photo_feed` mengembalikan `reactions` jsonb `[{emoji, count, mine}]` menggantikan `hearts, hearted`. Migrasi **baru** `202611210001` (yang sudah dijalankan tidak diubah); hati lama dipindah jadi ❤️ (kecuali di foto sendiri). Berkas untuk dijalankan pemilik: `D:\projects\events\2027-01-werkudara-wam\main-wam-update-reactions.sql` | satu orang satu reaksi menjaga hitungan tetap sederhana; daftar tertutup mencegah teks bebas di foto orang |
 
 ## 10. Belum diputuskan / perlu tindak lanjut
 

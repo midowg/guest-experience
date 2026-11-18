@@ -1,4 +1,3 @@
-import type { PhotoAudience } from "../types";
 
 /*
  * The phone's queue of photos to send (RISET §3, U02–U04): a photo is saved on the phone first and
@@ -19,7 +18,6 @@ export type QueueItem = {
   clientId: string;
   /** Photos picked together (U04) share a batch: one toast for all. */
   batch: string;
-  audience: PhotoAudience;
   sessionId: string | null;
   takenAt: string;
   createdAt: number;

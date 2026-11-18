@@ -1,4 +1,5 @@
 import type { PhotoAudience, PhotoStatus } from "../types";
+import type { ReactionCount } from "./reactions";
 
 /*
  * Momen's own types (area B, docs/main-wam/KONTRAK.md §6): what the stack (M01–M03), the gallery
@@ -6,8 +7,8 @@ import type { PhotoAudience, PhotoStatus } from "../types";
  * (MwPhoto, PhotoAudience, ReportReason) stay in ../types.ts.
  */
 
-/** The views of Momen: Semua, Kelompokku and (gallery only) Fotoku. */
-export const FEED_VIEWS = ["semua", "kelompok", "saya"] as const;
+/** The views of Momen: Semua and (gallery only) Fotoku. (Kelompokku is gone: every photo is for everyone.) */
+export const FEED_VIEWS = ["semua", "saya"] as const;
 export type FeedView = (typeof FEED_VIEWS)[number];
 
 /** One session's id, "umum" (photos without a session), or null (every session). */
@@ -20,6 +21,7 @@ export type FeedPhoto = {
   owner: { id: string; name: string; photo: string | null };
   /** "Kelompok 2 · Kawi", or the department before kelompok are published. */
   ownerGroup: string;
+  /** Always "semua" for a photo sent now; an earlier version could send "kelompok" (then only its kelompok sees it). */
   audience: PhotoAudience;
   sessionId: string | null;
   width: number;
@@ -29,8 +31,8 @@ export type FeedPhoto = {
   /** Shown to others from here; the order of the lists. */
   visibleAt: string;
   status: PhotoStatus;
-  hearts: number;
-  hearted: boolean;
+  /** The reactions on it, most first, and which one is the viewer's. */
+  reactions: ReactionCount[];
   seen: boolean;
   mine: boolean;
   /** Short-lived storage addresses: the small copy (grid, stack under it) and the large one. */

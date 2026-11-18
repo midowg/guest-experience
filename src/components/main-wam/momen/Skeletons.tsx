@@ -10,19 +10,17 @@ import mosaic from "./mosaic.module.css";
  * shape of its screen, so nothing jumps when it arrives.
  */
 
-/** M01 memuat: Galeri and Mozaik beside the title (audit T-M05), the filter row, the card as a panel with a spinner place, the actions. */
+/** M01 memuat: the camera and the gallery beside the title (audit T-M05), the card as a panel with a spinner place, the reaction row. */
 export function StackSkeleton() {
-  const chip = { borderRadius: "var(--mw-radius-12)" };
   return <div className={stack.view}>
     <ShellActions>
-      <span className={stack.skeletonChips} aria-hidden><Skeleton shape="block" width={81} height={32} style={chip} /><Skeleton shape="block" width={88} height={32} style={chip} /></span>
+      <span className={stack.skeletonChips} aria-hidden><Skeleton shape="block" width={44} height={44} style={{ borderRadius: 999 }} /><Skeleton shape="block" width={44} height={44} style={{ borderRadius: 999 }} /></span>
     </ShellActions>
     <SkeletonGroup label="Memuat momen" style={{ display: "contents" }}>
-      <div className={stack.filter}><Skeleton shape="block" height={40} style={{ flex: 1, borderRadius: 999 }} /><Skeleton shape="block" width={128} height={36} style={{ borderRadius: 999 }} /></div>
       <div className={stack.stage}>
         <div className={stack.deck}><div className={stack.deckInner}><div className={stack.pile}><div className={stack.panel} /></div></div></div>
         <p className={stack.hint} />
-        <div className={stack.actions}><span /><span className={stack.camera} aria-hidden /><span /></div>
+        <div className={stack.actions}><Skeleton shape="block" width={296} height={44} style={{ borderRadius: 999, maxWidth: "100%" }} /></div>
       </div>
     </SkeletonGroup>
   </div>;

@@ -4,7 +4,7 @@ import { centerCrop, fitSide, halvingSteps, largeTries, squareCrop } from "./ima
 import { cellBounds, cellLabel, cellOrder, gridGeometry, hashSeed, letterCells, mosaicPercent, mosaicText } from "./mosaic";
 import { afterFailure, backoffDelay, nextDue, nextWake, outcomeOf, queueSummary, resetBackoff, type QueueItem } from "./queue";
 import { sampleFeedSemua, sampleMosaic } from "./sample";
-import { audienceWords, flushedText, newPhotosText, photoAlt, photoMeta, photoTime, queuedPill, sentText, stackCount, stackCountSpoken, swipeDecision } from "./stack";
+import { flushedText, newPhotosText, photoAlt, photoMeta, photoTime, queuedPill, sentText, stackCount, stackCountSpoken, swipeDecision } from "./stack";
 
 const RANI = "00000000-0000-4000-8000-000000000001";
 const now = new Date("2027-01-05T10:05:00+07:00");
@@ -12,10 +12,11 @@ const now = new Date("2027-01-05T10:05:00+07:00");
 describe("Momen filters", () => {
   it("read lihat, sesi and foto from the address, safely", () => {
     expect(parseView(undefined)).toBe("semua");
-    expect(parseView("kelompok")).toBe("kelompok");
+    // There is no Kelompokku any more: an old address falls back to Semua.
+    expect(parseView("kelompok")).toBe("semua");
     expect(parseView("saya")).toBe("saya");
     expect(parseView("saya", false)).toBe("semua");
-    expect(parseView(["kelompok", "semua"])).toBe("kelompok");
+    expect(parseView(["saya", "semua"])).toBe("saya");
     expect(parseSession("umum")).toBe("umum");
     expect(parseSession(RANI.toUpperCase())).toBe(RANI);
     expect(parseSession("x' or 1=1")).toBeNull();
@@ -38,12 +39,13 @@ describe("Momen filters", () => {
     expect(decodeCursor("s~" + "9".repeat(200))).toBeNull();
   });
 
-  const start = { clientId: RANI, audience: "semua", sessionId: null, takenAt: "2027-01-05T08:20:00.000Z", width: 1280, height: 1600, size: 420_000, thumbSize: 40_000, tileSize: 9_000 };
+  const start = { clientId: RANI, sessionId: null, takenAt: "2027-01-05T08:20:00.000Z", width: 1280, height: 1600, size: 420_000, thumbSize: 40_000, tileSize: 9_000 };
   it("accept an upload only within the sizes the app makes", () => {
     expect(photoStartSchema.safeParse(start).success).toBe(true);
     expect(photoStartSchema.safeParse({ ...start, size: 3_000_000 }).success).toBe(false);
     expect(photoStartSchema.safeParse({ ...start, tileSize: 100_000 }).success).toBe(false);
-    expect(photoStartSchema.safeParse({ ...start, audience: "tim" }).success).toBe(false);
+    // The audience is not asked any more: whatever a phone still sends is dropped, never kept.
+    expect(photoStartSchema.safeParse({ ...start, audience: "kelompok" })).toMatchObject({ success: true, data: expect.not.objectContaining({ audience: expect.anything() }) });
     expect(photoStartSchema.safeParse({ ...start, clientId: "1" }).success).toBe(false);
     expect(photoStartSchema.safeParse({ ...start, takenAt: "kemarin" }).success).toBe(false);
     expect(photoConfirmSchema.safeParse({ ...start, token: "123.abc" }).success).toBe(false);
@@ -85,7 +87,7 @@ describe("Momen photo sizes", () => {
 
 describe("Momen queue", () => {
   const item = (over: Partial<QueueItem> = {}): QueueItem => ({
-    clientId: RANI, batch: "b1", audience: "semua", sessionId: null, takenAt: now.toISOString(), createdAt: 1, width: 1280, height: 1600,
+    clientId: RANI, batch: "b1", sessionId: null, takenAt: now.toISOString(), createdAt: 1, width: 1280, height: 1600,
     besar: new ArrayBuffer(1), kecil: new ArrayBuffer(1), ubin: new ArrayBuffer(1), state: "antre", attempts: 0, nextAt: 0, error: null, offline: false, photoId: null, deferred: false, ...over,
   });
 
@@ -215,11 +217,9 @@ describe("Momen stack and words", () => {
   });
 
   it("say where a photo went (U02–U04) and what waits (U03)", () => {
-    const group = { id: "g4", number: 4, name: "Arjuno", coordinator: false, size: 10 };
-    expect(sentText(1, "semua", group)).toBe("Terkirim ke semua peserta");
-    expect(sentText(1, "kelompok", group)).toBe("Terkirim ke Kelompok 4");
-    expect(sentText(3, "semua", group)).toBe("3 foto terkirim ke semua");
-    expect(audienceWords("kelompok", null)).toBe("kelompokmu");
+    expect(sentText(1)).toBe("Terkirim ke semua peserta");
+    expect(sentText(3)).toBe("3 foto terkirim ke semua");
+    expect(sentText(1, "en")).toBe("Sent to all participants");
     expect(flushedText(2)).toBe("2 foto terkirim");
     expect(flushedText(1)).toBe("Foto terkirim");
     expect(queuedPill(2, true)).toBe("Offline · 2 foto antre");

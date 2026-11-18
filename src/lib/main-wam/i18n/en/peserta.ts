@@ -209,7 +209,6 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.group.members": "Members of {title}",
   "peserta.group.less": "Show less",
   "peserta.group.more": "{n} more",
-  "peserta.group.gallery": "Gallery",
   "peserta.group.notIn": "Not in a group yet",
   "peserta.group.notPublished": "Groups are not published yet",
   "peserta.group.askCommittee": "Ask the committee if you should be in one.",

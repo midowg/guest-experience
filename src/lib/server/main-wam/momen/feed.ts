@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { cache } from "react";
 import { after } from "next/server";
 import { canReport, canSee } from "@/lib/main-wam/momen/access";
+import { parseReactions, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { encodeCursor, MOMEN_AREA_MIGRATION, REPORT_THRESHOLD, REPORTS_PER_10_MINUTES, type FeedMode, type ReportInput } from "@/lib/main-wam/momen/filters";
 import { groupLabel } from "@/lib/main-wam/momen/stack";
 import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
@@ -19,8 +20,8 @@ import { viewAddress } from "./storage";
 
 /*
  * Momen's reads and small writes (area B) on top of migration 202611200201: the stack and the
- * gallery (one query a page: hearts, mine, seen and the total come with the photos), the session
- * counts, "seen", hearts and reports. Who may see what is decided in the database
+ * gallery (one query a page: reactions, mine, seen and the total come with the photos), the session
+ * counts, "seen", reactions and reports. Who may see what is decided in the database
  * (mw_photos_for) and, for one photo, by canSee; the person's kelompok always comes from the
  * server (the viewer), never from the request.
  */
@@ -29,10 +30,12 @@ const db = () => createPrivilegedClient();
 const oneOf = <T extends string>(values: readonly T[], value: unknown, fallback: T): T => (values.includes(value as T) ? (value as T) : fallback);
 /** Before migration 202611200201: a plain 503 for the person; the migration's name goes to the server log only (audit R13). */
 const waiting = () => mwWaiting(MOMEN_AREA_MIGRATION);
+/** The feed answers `reactions` from this migration on; before it the feed itself is "waiting" (audit R13: the name goes to the log only). */
+const REACTIONS_MIGRATION = "202611210001_main_wam_reactions.sql";
 
 export type FeedRow = {
   id: string; owner_id: string; audience: string; group_id: string | null; session_id: string | null; width: number; height: number;
-  taken_at: string; visible_at: string; status: string; file_key: string; thumb_key: string | null; hearts: number; hearted: boolean; seen: boolean; total: number | string;
+  taken_at: string; visible_at: string; status: string; file_key: string; thumb_key: string | null; reactions: unknown; seen: boolean; total: number | string;
 };
 
 /** Every member's kelompok as the cards say it ("Kelompok 2 · Kawi"), once kelompok are published. */
@@ -60,7 +63,7 @@ export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now =
       ownerGroup: groups.get(row.owner_id) ?? person?.department ?? "",
       audience: oneOf(PHOTO_AUDIENCES, row.audience, "semua"), sessionId: row.session_id, width: row.width, height: row.height,
       takenAt: row.taken_at, visibleAt: row.visible_at, status: oneOf(PHOTO_STATUSES, row.status, "tampil"),
-      hearts: Number(row.hearts) || 0, hearted: !!row.hearted, seen: !!row.seen, mine: row.owner_id === context.viewer.id, src: { kecil, besar },
+      reactions: parseReactions(row.reactions), seen: !!row.seen, mine: row.owner_id === context.viewer.id, src: { kecil, besar },
     } satisfies FeedPhoto;
   }));
 }
@@ -79,7 +82,6 @@ export type FeedQuery = {
 /** One page of a view; empty with `migrated: false` before migration 202611200201. */
 export async function listFeed(context: MainWamContext, query: FeedQuery): Promise<{ items: FeedPhoto[]; next: string | null; total: number; migrated: boolean }> {
   const group = context.viewer.group?.id ?? null;
-  if (query.view === "kelompok" && !group) return { items: [], next: null, total: 0, migrated: true };
   const direction = query.direction ?? "older";
   const { data, error } = await db().rpc("mw_photo_feed", {
     p_viewer: context.viewer.id, p_group: group, p_view: query.view,
@@ -97,7 +99,6 @@ export async function listFeed(context: MainWamContext, query: FeedQuery): Promi
 /** "Saring sesi": photos per session of a view (null = Umum), only sessions that have any. */
 export async function sessionCounts(context: MainWamContext, view: FeedView): Promise<SessionCount[] | null> {
   const group = context.viewer.group?.id ?? null;
-  if (view === "kelompok" && !group) return [];
   const { data, error } = await db().rpc("mw_photo_session_counts", { p_viewer: context.viewer.id, p_group: group, p_view: view });
   if (error) { if (mwMissing(error)) return null; databaseError({ message: error.message ?? "", code: error.code }); }
   return ((data ?? []) as { session_id: string | null; photos: number | string }[]).map(row => ({ sessionId: row.session_id, photos: Number(row.photos) || 0 })).filter(row => row.photos > 0);
@@ -144,17 +145,21 @@ export async function markSeen(viewer: MainWamViewer, ids: string[]): Promise<nu
   return known.length;
 }
 
-/** Suka / batal suka; answers the photo's hearts now. */
-export async function setHeart(viewer: MainWamViewer, id: string, on: boolean): Promise<{ hearts: number; hearted: boolean }> {
+/**
+ * Reacts to a photo with `emoji` (from the app's list: the route checked it), or takes the reaction back (null);
+ * answers the photo's reactions now. The person must see the photo, and it is never their own (the database
+ * checks both again: the kelompok comes from the server).
+ */
+export async function setReaction(viewer: MainWamViewer, id: string, emoji: string | null): Promise<{ reactions: ReactionCount[] }> {
   const photo = await visiblePhoto(viewer, id);
-  const table = db().from("mw_photo_hearts");
-  const { error } = on
-    ? await table.upsert({ photo_id: photo.id, employee_id: viewer.id }, { onConflict: "photo_id,employee_id", ignoreDuplicates: true })
-    : await table.delete().eq("photo_id", photo.id).eq("employee_id", viewer.id);
-  if (error) mwFail(error as DbError, MOMEN_AREA_MIGRATION);
-  const { count, error: countError } = await db().from("mw_photo_hearts").select("photo_id", { count: "exact", head: true }).eq("photo_id", photo.id);
-  if (countError) mwFail(countError as DbError, MOMEN_AREA_MIGRATION);
-  return { hearts: count ?? 0, hearted: on };
+  if (emoji && photo.ownerId === viewer.id) throw new ServiceError(409, "Ini fotomu sendiri. Reaksi untuk foto rekan.");
+  const { data, error } = await db().rpc("mw_photo_react", { p_photo: photo.id, p_viewer: viewer.id, p_group: viewer.group?.id ?? null, p_emoji: emoji });
+  if (error) {
+    if (error.message === "MW_PHOTO_NOT_FOUND") throw notFound();
+    if (error.message === "MW_PHOTO_OWN") throw new ServiceError(409, "Ini fotomu sendiri. Reaksi untuk foto rekan.");
+    mwFail(error as DbError, REACTIONS_MIGRATION);
+  }
+  return { reactions: parseReactions(data) };
 }
 
 /** A limit per person (not per network: at the venue everyone shares one address). */

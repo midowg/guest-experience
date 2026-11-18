@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Heart, Lock } from "lucide-react";
+import { Ellipsis, Lock } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
-import { Avatar, Pill, PhotoFill } from "@/components/main-wam/ui";
+import { Avatar, IconButton, Pill, PhotoFill } from "@/components/main-wam/ui";
+import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { photoAlt, photoMeta, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
+import { ReactionPills } from "./Reactions";
 import { useFreshAddress } from "./useFreshAddress";
 import css from "./momen.module.css";
 
@@ -15,7 +17,8 @@ import css from "./momen.module.css";
  * swipe (so a tap still reaches the side buttons), pointercancel puts the card back. At most three
  * cards in the page; the next large photo is fetched ahead. Swipe left = next, right = previous; one
  * tap on a side does the same (WCAG 2.5.1, 2.5.7), and the arrow keys when the stack has focus.
- * Reduced motion: no throw or tilt, the next photo fades in.
+ * Inside the front card: the owner's pill and the photo's options on top, the reactions it got as small
+ * pills at the bottom left (a tap on one reacts with it, on another person's photo). Reduced motion: no throw or tilt, the next photo fades in.
  */
 
 const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
@@ -40,12 +43,18 @@ function CardPhoto({ photo, large, alt }: { photo: FeedPhoto; large: boolean; al
   </>;
 }
 
-export function StackDeck({ items, index, onIndex, onLike, now, panel, label, describe, children }: {
+export function StackDeck({ items, index, onIndex, onLike, onReact, onOptions, reactionsOf, now, panel, label, describe, children }: {
   items: FeedPhoto[];
   index: number;
   onIndex: (next: number, how: "swipe" | "tap" | "key") => void;
-  /** Double tap on the photo (the heart button is the other way). */
+  /** Double tap on the photo (never on one's own): the red heart. */
   onLike: (photo: FeedPhoto) => void;
+  /** A tap on a reaction pill of another person's photo: react with that emoji, or take it back. */
+  onReact?: (photo: FeedPhoto, emoji: string) => void;
+  /** The "…" on the front card. */
+  onOptions?: (photo: FeedPhoto) => void;
+  /** The reactions to show on a photo (the screen keeps the ones just given); the photo's own when left out. */
+  reactionsOf?: (photo: FeedPhoto) => ReactionCount[];
   now: Date;
   /** Shown in the front card's place instead (end, empty, hidden for me, loading). */
   panel?: ReactNode;
@@ -139,13 +148,13 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
     if (event.key === "ArrowLeft") { event.preventDefault(); go(-1, "key"); }
   }
 
-  /** A tap in the middle of the photo; two quick ones = suka. */
+  /** A tap in the middle of the photo; two quick ones = the red heart (not on one's own photo). */
   function onMiddleTap(event: ReactMouseEvent<HTMLDivElement>) {
-    if (swallowClick.current || event.target !== event.currentTarget || !current) return;
+    if (swallowClick.current || event.target !== event.currentTarget || !current || current.mine) return;
     const at = event.timeStamp;
     if (at - lastTap.current < 320) {
       lastTap.current = 0;
-      if (!current.hearted) onLike(current);
+      onLike(current);
       setBurst(value => value + 1);
     } else lastTap.current = at;
   }
@@ -173,9 +182,11 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
           <CardPhoto photo={photo} large={isFront} alt={alt} />
           {isFront && <>
             {taps}
-            {burst > 0 && <Heart key={burst} aria-hidden className={css.burst} />}
+            {burst > 0 && <span key={burst} aria-hidden className={css.burst}>{HEART}</span>}
           </>}
           {isFront && photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.yourPhoto")}</Pill></span>}
+          {isFront && onOptions && <IconButton className={css.options} variant="onmedia" icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => onOptions(photo)} />}
+          {isFront && <ReactionPills reactions={reactionsOf ? reactionsOf(photo) : photo.reactions} mine={photo.mine} onReact={onReact ? emoji => onReact(photo, emoji) : undefined} />}
           <div className={css.info} aria-hidden>
             <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>

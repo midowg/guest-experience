@@ -115,7 +115,7 @@ describe("Notifikasi", () => {
     expect(earlier.map(row => [row.title, row.time])).toEqual([["Kamar", "Sen, 4 Jan"]]);
     // T-P01: the row says the news, not its kind.
     expect([...today, ...earlier].map(row => row.line)).toEqual([
-      "Team building mulai 15.00 di Lawn", "Pemaparan selesai 12.30", "Dimas dan 4 lainnya menyukai fotomu",
+      "Team building mulai 15.00 di Lawn", "Pemaparan selesai 12.30", "Dimas dan 4 lainnya bereaksi di fotomu",
       "Absen tercatat: Pemaparan departemen", "Jalan ke Aula Utama lewat lobby timur", "Kamarmu siap: Kamar 208, lantai 2",
     ]);
     expect(today[0]).toMatchObject({ href: null, meta: "Pengumuman panitia · 10.30" });

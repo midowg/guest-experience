@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CameraOff, CloudOff, Globe, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, Users, X } from "lucide-react";
+import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, X } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, TagChip, TagChipRow, useToast } from "@/components/main-wam/ui";
@@ -10,11 +10,11 @@ import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
 import { choiceSub, tagGroups } from "@/lib/main-wam/momen/sessions";
-import { groupLabel, queuedPill, sentText } from "@/lib/main-wam/momen/stack";
+import { queuedPill, sentText } from "@/lib/main-wam/momen/stack";
 import { autoTag } from "@/lib/main-wam/rundown";
-import type { MwSession, PhotoAudience, ViewerGroup } from "@/lib/main-wam/types";
+import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
-import { PickList, RadioCards } from "./Choices";
+import { PickList } from "./Choices";
 import { decodeFile, grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto, type Picture } from "./upload/compress";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
@@ -22,8 +22,8 @@ import css from "./camera.module.css";
 
 /*
  * U01–U05 and O04: the camera, Instagram Instants style: one press = one photo sent, no review, no
- * form. Two chips over the shutter: "Untuk: Semua ▾" (Semua peserta / Kelompokku, remembered) and
- * "Sesi: <the session running now> ✕" (✕ = Umum, a tap = choose another session).
+ * form. One chip over the shutter: "Sesi: <the session running now> ✕" (✕ = Umum, a tap = choose
+ * another session). Every photo is for everyone (no audience to choose).
  *
  * The camera itself (RISET §1): on a home-screen iPhone a web page's camera permission is asked
  * again at every launch (WebKit 327237), so the shutter opens the phone's own camera through
@@ -38,10 +38,9 @@ import css from "./camera.module.css";
  */
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
-export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "untuk" | "sesi" | "galeri" | "cara" };
+export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "sesi" | "galeri" | "cara" };
 
 const PERMISSION_KEY = "mw-momen-kamera";
-const AUDIENCE_KEY = "mw-momen-untuk";
 const CHOICE_KEY = "mw-momen-kamera-pilihan";
 
 function store(kind: "local" | "session", key: string, value?: string): string | null {
@@ -55,15 +54,11 @@ function store(kind: "local" | "session", key: string, value?: string): string |
 const newId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID()
   : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (Number(c) ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (Number(c) / 4)))).toString(16)));
 
-export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik, absen, migrated, initialAudience, initialSession, demo }: {
+export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession, demo }: {
   sessions: MwSession[];
   nowIso: string;
-  group: ViewerGroup | null;
-  groupsPublished: boolean;
-  mozaik: boolean;
   absen: boolean;
   migrated: boolean;
-  initialAudience: PhotoAudience | null;
   /** From the address: a session id, "umum", or none (the running session). */
   initialSession: string | null;
   /** Dev preview only: a fixed state to look at. */
@@ -81,7 +76,6 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   const [phase, setPhase] = useState<"izin" | "kamera" | null>(demo?.phase ?? null);
   const [live, setLive] = useState<Live>(demo?.live === "contoh" ? "menyala" : demo?.live ?? (migrated ? "memuat" : "menunggu"));
   const [facing, setFacing] = useState<"environment" | "user">("environment");
-  const [audience, setAudience] = useState<PhotoAudience>(initialAudience === "kelompok" && group ? "kelompok" : "semua");
   // The tag: the one chosen (or Umum), else the session running now (it follows the clock).
   const [chosenTag, setTag] = useState<string | null>(initialSession === UMUM ? null : initialSession);
   const [touched, setTouched] = useState(initialSession !== null);
@@ -99,20 +93,17 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   /* eslint-disable react-hooks/set-state-in-effect -- browser storage, read after hydration */
   useEffect(() => {
     if (demo) return;
-    const remembered = store("local", AUDIENCE_KEY);
     const saved = store("session", CHOICE_KEY);
     if (saved) {
       try {
-        const choice = JSON.parse(saved) as { audience: PhotoAudience; tag: string | null; touched: boolean };
-        if (choice.audience === "semua" || (choice.audience === "kelompok" && group)) setAudience(choice.audience);
+        const choice = JSON.parse(saved) as { tag: string | null; touched: boolean };
         if (choice.touched && initialSession === null) { setTag(choice.tag); setTouched(true); }
         return;
       } catch { /* start fresh */ }
     }
-    if (!initialAudience && remembered === "kelompok" && group) setAudience("kelompok");
-  }, [demo, group, initialAudience, initialSession]);
+  }, [demo, initialSession]);
   /* eslint-enable react-hooks/set-state-in-effect */
-  useEffect(() => { if (!demo) store("session", CHOICE_KEY, JSON.stringify({ audience, tag, touched })); }, [audience, tag, touched, demo]);
+  useEffect(() => { if (!demo) store("session", CHOICE_KEY, JSON.stringify({ tag, touched })); }, [tag, touched, demo]);
 
   /* The clock (server time): the automatic tag follows the running session while not touched. */
   useEffect(() => {
@@ -211,7 +202,7 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
         const [besar, kecil, ubin] = await Promise.all([prepared.besar.arrayBuffer(), prepared.kecil.arrayBuffer(), prepared.ubin.arrayBuffer()]);
         thumb ??= URL.createObjectURL(prepared.kecil);
         ready.push({
-          clientId: newId(), batch, audience, sessionId: tag, takenAt: new Date(Date.now() + clockOffset.current).toISOString(), createdAt: Date.now() + ready.length,
+          clientId: newId(), batch, sessionId: tag, takenAt: new Date(Date.now() + clockOffset.current).toISOString(), createdAt: Date.now() + ready.length,
           width: prepared.width, height: prepared.height, besar, kecil, ubin, state: "antre", attempts: 0, nextAt: 0, error: null, offline: false, photoId: null,
           deferred: navigator.onLine === false,
         });
@@ -238,11 +229,11 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
     const see = async () => {
       const id = await momenQueue().sentId(ids[0], 3000);
       stop();
-      router.push(id ? mainWamPath.moments({ lihat: audience === "kelompok" ? "kelompok" : undefined, foto: id }) : mainWamPath.gallery({ lihat: "saya" }));
+      router.push(id ? mainWamPath.moments({ foto: id }) : mainWamPath.gallery({ lihat: "saya" }));
     };
     if (ready[0].deferred) toast.show({ text: t("momen.cam.sendsOnline"), thumb: picture, action: { label: t("momen.cam.undo"), onAction: cancel } });
     else toast.show({
-      text: sentText(ready.length, audience, group, lang), sub: t("momen.cam.sentSession", { title: tagSession?.title ?? t("momen.general") }), thumb: picture, timer: true, duration: 5000,
+      text: sentText(ready.length, lang), sub: t("momen.cam.sentSession", { title: tagSession?.title ?? t("momen.general") }), thumb: picture, timer: true, duration: 5000,
       action: { label: t("momen.cam.undo"), onAction: cancel }, secondary: { label: t("ui.see"), onAction: () => { void see(); } },
     });
     if (problem) toast.show({ text: problem, tone: "error" });
@@ -276,7 +267,7 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
 
   /* Words on the chips and in the sheets. */
   const tagSheet = useMemo(() => tagGroups(sessions, now, lang), [sessions, now, lang]);
-  const shutterLabel = audience === "kelompok" && group ? t("momen.cam.shutterGroup", { n: group.number }) : t("momen.cam.shutterAll");
+  const shutterLabel = t("momen.cam.shutterAll");
   const waiting = demo?.pill ?? queue.summary.waiting;
   const offline = demo?.offline ?? queue.summary.offline;
   const showPill = waiting > 0 && (offline || queue.items.some(item => item.attempts > 0));
@@ -315,7 +306,6 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
 
     <div className={css.dock}>
       <TagChipRow>
-        <TagChip label={t("momen.cam.forLabel")} value={audience === "kelompok" ? t("momen.myGroup") : t("momen.all")} onClick={() => setSheet("untuk")} expanded={sheet === "untuk"} />
         {tagSession
           ? <TagChip label={t("momen.cam.sessionLabel")} value={tagSession.title} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"}
             onClear={() => { setTag(null); setTouched(true); }} clearLabel={t("momen.cam.clearTag")} />
@@ -335,16 +325,6 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
-    <Sheet open={sheet === "untuk"} onClose={() => setSheet(null)} title={t("momen.cam.forTitle")} history={live !== "menyala"}>
-      <RadioCards label={t("momen.cam.forPhotos")} value={audience} onChange={value => {
-        const next = value as PhotoAudience;
-        setAudience(next); store("local", AUDIENCE_KEY, next); setSheet(null);
-      }} options={[
-        { value: "semua", title: t("momen.cam.allParticipants"), sub: mozaik ? t("momen.cam.joinsMosaic") : undefined, icon: Globe },
-        ...(group ? [{ value: "kelompok", title: t("momen.myGroup"), sub: t("momen.cam.groupSub", { group: groupLabel(group, lang), size: group.size }), icon: Users }] : []),
-      ]} />
-      {!group && <p className={css.note}>{groupsPublished ? t("momen.cam.noGroup") : t("momen.stack.groupsNotPublished") + "."}</p>}
-    </Sheet>
     <Sheet open={sheet === "sesi"} onClose={() => setSheet(null)} title={t("momen.cam.tagTitle")} history={live !== "menyala"}>
       <PickList label={t("momen.cam.tagTitle")} value={tag ?? UMUM} onChange={value => { setTag(value === UMUM ? null : value); setTouched(true); setSheet(null); }}
         groups={[{ rows: [{ value: UMUM, title: t("momen.general"), sub: t("momen.noSession") }] }, ...tagSheet.map(day => ({ head: day.head, rows: day.rows.map(row => ({ value: row.id, title: row.title, sub: choiceSub(row, lang) })) }))]} />

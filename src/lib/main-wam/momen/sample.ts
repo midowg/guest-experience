@@ -1,5 +1,6 @@
 import { samplePeople, sampleSessionIds } from "../sample";
 import { letterCells, cellOrder } from "./mosaic";
+import { HEART, type ReactionCount } from "./reactions";
 import type { FeedPhoto, MosaicManifest, SessionCount } from "./types";
 
 /*
@@ -21,35 +22,43 @@ const GROUP_OF: Record<string, string> = {
   hana: "Kelompok 9 · Lawu", maya: "Kelompok 1 · Bromo", hadi: "Kelompok 5 · Panderman",
 };
 
-type Seed = [key: string, date: string, time: string, hearts: number, extra?: Partial<FeedPhoto>];
-function photo(n: number, [key, date, time, hearts, extra = {}]: Seed, viewerKey = "rani"): FeedPhoto {
+/** `total` reactions spread over the usual emoji (half the red heart, a quarter laughing, …), none for 0. */
+export function sampleReactions(total: number, mine: string | null = null): ReactionCount[] {
+  const shares: [string, number][] = [[HEART, 0.5], ["😂", 0.25], ["🔥", 0.5], ["👏", 1]];
+  const out: ReactionCount[] = [];
+  let left = total;
+  for (const [emoji, share] of shares) {
+    const n = share === 1 ? left : Math.ceil(left * share);
+    if (n > 0) out.push({ emoji, count: n, mine: emoji === mine });
+    left -= n;
+    if (left <= 0) break;
+  }
+  return out;
+}
+
+type Seed = [key: string, date: string, time: string, reacted: number, extra?: Partial<FeedPhoto>];
+function photo(n: number, [key, date, time, reacted, extra = {}]: Seed, viewerKey = "rani"): FeedPhoto {
   const person = samplePeople[key];
   return {
     id: uid(n), owner: { id: person.id, name: person.name, photo: null }, ownerGroup: GROUP_OF[key] ?? person.department,
     audience: "semua", sessionId: sampleSessionIds.pemaparan, width: 1280, height: 1600, takenAt: at(date, time), visibleAt: at(date, time),
-    status: "tampil", hearts, hearted: false, seen: false, mine: key === viewerKey, src: { kecil: null, besar: null }, ...extra,
+    status: "tampil", reactions: sampleReactions(reacted), seen: false, mine: key === viewerKey, src: { kecil: null, besar: null }, ...extra,
   };
 }
 
 const ALL: Seed[] = [
   ["putri", D2, "10:04", 3], ["gilang", D2, "10:03", 1], ["dimas", D2, "10:02", 24], ["hana", D2, "10:00", 5], ["yoga", D2, "09:58", 7],
-  ["dewi", D2, "09:57", 2], ["fajar", D2, "09:55", 10, { hearted: true }], ["nina", D2, "09:53", 4], ["wawan", D2, "09:48", 9], ["ayu", D2, "09:45", 0],
+  ["dewi", D2, "09:57", 2], ["fajar", D2, "09:55", 10, { reactions: sampleReactions(10, HEART) }], ["nina", D2, "09:53", 4], ["wawan", D2, "09:48", 9], ["ayu", D2, "09:45", 0],
   ["maya", D2, "09:41", 6], ["raka", D2, "09:37", 2], ["lina", D2, "09:30", 1], ["tari", D2, "09:22", 3], ["bima", D2, "09:15", 8],
   ["hadi", D2, "08:58", 2], ["sari", D2, "08:41", 4], ["gilang", D2, "08:20", 0], ["putri", D2, "07:35", 5], ["yoga", D2, "07:10", 1],
   ["dewi", D2, "06:30", 3], ["hana", D1, "21:10", 11], ["dimas", D1, "19:45", 2], ["nina", D1, "17:20", 6],
 ];
 
-/** M01: 24 new photos for everyone (the third is Dimas, 10.02, 24 hearts). */
+/** M01: 24 new photos for everyone (the third is Dimas, 10.02, 24 reactions). */
 export const sampleFeedSemua: FeedPhoto[] = ALL.map((seed, index) => photo(index + 1, seed));
 
-/** M02: Kelompok 4's new photos (the second is Fajar, 09.55, liked), some only for the kelompok. */
-export const sampleFeedKelompok: FeedPhoto[] = ([
-  ["sari", D2, "10:01", 2, { audience: "kelompok" }], ["fajar", D2, "09:55", 10, { hearted: true }], ["wawan", D2, "09:48", 9, { audience: "kelompok" }],
-  ["ayu", D2, "09:45", 0], ["bima", D1, "21:10", 3],
-] as Seed[]).map((seed, index) => photo(100 + index, seed));
-
-/** M05 Kelompokku: 21 photos, Fajar's, Raka's and Wawan's only for the kelompok (the lock). */
-export const sampleGalleryKelompok: FeedPhoto[] = (["rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "fajar"] as const)
+/** M05 Galeri: 21 photos (Fajar's, Raka's and Wawan's carry the lock: an earlier version sent them only to the kelompok). */
+export const sampleGalleryAll: FeedPhoto[] = (["rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "fajar"] as const)
   .map((key, index) => photo(200 + index, [key, index < 15 ? D2 : D1, `${String(10 - Math.floor(index / 4)).padStart(2, "0")}:${String(59 - (index % 4) * 13).padStart(2, "0")}`, index % 5,
     { audience: index === 1 || index === 5 || index === 8 ? "kelompok" : "semua", seen: true }]));
 

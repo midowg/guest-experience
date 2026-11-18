@@ -12,7 +12,6 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 /** U01–U05 and O04: the camera (photo sent when taken, Batalkan 5 s, queue offline, gallery). Area B. */
 export default async function KameraPage({ searchParams }: { searchParams: Promise<Search> }) {
   const search = await searchParams;
-  const untuk = one(search.untuk);
-  const context = await requireActionPage("foto", mainWamPath.camera({ sesi: one(search.sesi), untuk: untuk === "kelompok" || untuk === "semua" ? untuk : undefined }));
+  const context = await requireActionPage("foto", mainWamPath.camera({ sesi: one(search.sesi) }));
   return <CameraScreen {...await cameraScreen(context, search)} />;
 }

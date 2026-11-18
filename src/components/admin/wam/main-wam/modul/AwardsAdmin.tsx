@@ -204,19 +204,19 @@ function NomineesForm({ category, data, busy, onSave, onCancel }: { category: Mw
       <ConsoleButton variant="primary" icon={<Plus size={16} aria-hidden />} disabled={!typed.trim() || taken.has(typed.trim().toLowerCase())} onClick={() => add({ employeeId: null, photoId: null, label: typed.trim(), name: typed.trim() })}>Tambah</ConsoleButton>
     </div>}
     {category.nomineeKind === "foto" && (data.photos.length
-      ? <fieldset className={css.photos}><legend className="sr-only">Foto Momen paling disukai</legend>
+      ? <fieldset className={css.photos}><legend className="sr-only">Foto Momen dengan reaksi terbanyak</legend>
         {data.photos.map(photo => {
           const chosen = taken.has(photo.id);
           return <label key={photo.id} className={css.photo}>
-            <input type="checkbox" checked={chosen} aria-label={`Foto ${photo.owner}, ${photo.hearts} hati`}
+            <input type="checkbox" checked={chosen} aria-label={`Foto ${photo.owner}, ${photo.reactions} reaksi`}
               onChange={() => (chosen ? setList(current => current.filter(row => row.photoId !== photo.id)) : add({ employeeId: null, photoId: photo.id, label: "", name: `Foto · ${photo.owner}` }))} />
             {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed storage address */}
             {photo.src ? <img src={photo.src} alt="" loading="lazy" /> : <span className={css.noImage} />}
-            <span>{photo.owner} · {photo.hearts} hati</span>
+            <span>{photo.owner} · {photo.reactions} reaksi</span>
           </label>;
         })}
       </fieldset>
-      : <p className={css.note}>Belum ada foto Momen yang disukai.</p>)}
+      : <p className={css.note}>Belum ada foto Momen yang mendapat reaksi.</p>)}
     <div className={css.actions}>
       <ConsoleButton variant="primary" disabled={busy} onClick={() => onSave(list.map(({ employeeId, photoId, label, reason }) => ({ employeeId, photoId, label, reason })))}>{busy ? "Menyimpan…" : "Simpan nominasi"}</ConsoleButton>
       <ConsoleButton onClick={onCancel} disabled={busy}>Batal</ConsoleButton>

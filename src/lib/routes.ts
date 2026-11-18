@@ -463,8 +463,8 @@ const mwQuery = (values: Record<string, string | number | undefined | null | fal
   const search = new URLSearchParams(Object.entries(values).filter((entry): entry is [string, string | number] => entry[1] !== undefined && entry[1] !== null && entry[1] !== false && entry[1] !== "").map(([key, value]) => [key, String(value)])).toString();
   return search ? `?${search}` : "";
 };
-export type MainWamMomentsFilter = { lihat?: "semua" | "kelompok"; sesi?: string; foto?: string };
-export type MainWamGalleryFilter = { lihat?: "semua" | "kelompok" | "saya"; sesi?: string };
+export type MainWamMomentsFilter = { sesi?: string; foto?: string };
+export type MainWamGalleryFilter = { lihat?: "semua" | "saya"; sesi?: string };
 export const mainWamPath = {
   /* A · peserta */
   /** Beranda (P01/P02; BOD B01 and panitia K01 add their card). */
@@ -497,8 +497,8 @@ export const mainWamPath = {
   /** M01–M03 Momen, the stack: Semua or Kelompokku, one session, opening at one photo. */
   moments: (filter: MainWamMomentsFilter = {}) => `${MAIN_WAM_PATH}/momen${mwQuery(filter)}`,
   /** U01–U05 Kamera: `sesi` overrides the automatic tag ("umum" = no tag). */
-  camera: (filter: { sesi?: string; untuk?: "semua" | "kelompok" } = {}) => `${MAIN_WAM_PATH}/momen/kamera${mwQuery(filter)}`,
-  /** M05 Galeri: Semua, Kelompokku or Fotoku, one session. */
+  camera: (filter: { sesi?: string } = {}) => `${MAIN_WAM_PATH}/momen/kamera${mwQuery(filter)}`,
+  /** M05 Galeri: Semua or Fotoku, one session. */
   gallery: (filter: MainWamGalleryFilter = {}) => `${MAIN_WAM_PATH}/momen/galeri${mwQuery(filter)}`,
   /** M06 Mozaik; `mark` turns "Tandai fotoku" on. */
   mosaic: (mark = false) => `${MAIN_WAM_PATH}/momen/mozaik${mwQuery({ tandai: mark ? "1" : undefined })}`,
@@ -551,7 +551,7 @@ export const mainWamApi = {
   /* B · momen */
   /** GET: the stack or the gallery (?lihat=&sesi=&sebelum=). */
   photos: (filter: MainWamGalleryFilter & { sebelum?: string } = {}) => `${MAIN_WAM_API}/momen${mwQuery(filter)}`,
-  /** POST {clientId, audience, sessionId, size, width, height, takenAt}: an upload address for one photo. */
+  /** POST {clientId, sessionId, size, width, height, takenAt}: an upload address for one photo. */
   photoStart: `${MAIN_WAM_API}/momen/unggah`,
   /** POST {key, token, …}: the photo is uploaded; check it and keep it. */
   photoConfirm: `${MAIN_WAM_API}/momen/simpan`,
@@ -563,7 +563,7 @@ export const mainWamApi = {
   /** kecil = 480 px, besar = 1600 px, ubin = 160 px (Mozaik). */
   photoFile: (id: string, size: "kecil" | "besar" | "ubin" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
   /** PUT: suka; DELETE: batal suka. */
-  photoHeart: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/hati`,
+  photoReaction: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/reaksi`,
   /** POST {reason, note}: Laporkan foto (M04); DELETE: Tampilkan lagi (for the reporter). */
   photoReport: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/laporan`,
   /** GET: the mosaic's tiles and progress. */

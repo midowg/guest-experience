@@ -69,7 +69,7 @@ Nama token = nama prototipe dengan awalan `--mw-`:
 | `--text-X` + `--ls-X` | `--mw-type-X` + `--mw-ls-X` | `font: var(--mw-type-body-small)` |
 | `--space-N`, `--radius-N`, `--elev-N` | `--mw-space-N`, `--mw-radius-N`, `--mw-elev-N` | `gap: var(--mw-space-12)` |
 | `--motion-*`, `--ease-*` | `--mw-motion-*`, `--mw-ease-*` | `transition: background-color var(--mw-motion-press)` |
-| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, hati) dan di atas gambar langsung kamera/pemindai: putih tetap di kedua mode |
+| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, tombol ⋯, pil reaksi) dan di atas gambar langsung kamera/pemindai: putih tetap di kedua mode |
 | (baru) | `--mw-photo-bg`, `--mw-ph-1…6`, `--mw-ph-glow`, `--mw-ph-shade` | latar foto yang belum termuat dan placeholder netral (punya nilai gelap sendiri) |
 | (baru) | `--mw-safe-top/bottom/left/right`, `--mw-nav-h`, `--mw-touch`, `--mw-column` | area aman iPhone, bilah bawah 64, sentuh 44, kolom 480 |
 
@@ -219,14 +219,14 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
 | `ChipRow` | `scroll` (geser ke tepi layar) atau bungkus; `label` | deretan chip |
 | `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera (mengikuti tema; "Sesi: Team building ✕") |
-| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`** | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
+| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`** | 2–4 tampilan satu daftar (Semua / Fotoku di Galeri). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
 | `Switch` | `checked`, `onChange`, `label` (atau `labelledBy`) | nyala/mati langsung berlaku |
 | `SwitchRow` | `title`, `sub`, `checked`, `onChange`, `inList` | sakelar berteks ("Kabari peserta"); seluruh baris bisa diketuk |
 
 ```tsx
 "use client";
 <Segmented label="Tampilkan foto" value={view} onChange={setView}
-  options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }]} />
+  options={[{ value: "semua", label: "Semua" }, { value: "saya", label: "Fotoku" }]} />
 <FilterChip menu name="Sesi" expanded={picking} active={sesi !== null} onClick={() => setPicking(true)}>
   {sesi?.title ?? "Semua sesi"}
 </FilterChip>

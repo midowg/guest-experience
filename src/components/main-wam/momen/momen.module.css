@@ -1,25 +1,22 @@
 /*
  * Momen (M01–M03): the stack, in the app's theme like every tab (light or dark; no surface of its own).
  * Prototype .wam-stackview, .wam-stackcard, .wam-react, .wam-camerabtn. Tokens only. Only what sits on a
- * photo (the name pill, the heart) keeps the fixed media colours: they sit on a scrim, not on the page. The card takes the height that is left
+ * photo (the name pill, the options, the reaction pills) keeps the fixed media colours: they sit on a scrim, not on the page. The card takes the height that is left
  * (the deck is a flex item and a size container), from 4:5 up to 9:16, so the actions sit right under it on any screen.
  */
-/* The page's column is the height of the screen (the frame's <main> grows to it): the filter on top, then the
-   stage, which holds the cards, the line under them and the actions. The cards take whatever height is left
+/* The page's column is the height of the screen (the frame's <main> grows to it): the title bar (with the camera and the gallery) above, then the
+   stage, which holds the cards, the line under them and the quick reactions. The cards take whatever height is left
    (a flex item, no fixed number), up to a 9:16 card; the line and the actions follow right under them, and
    on a very tall screen the three are centred together instead of drifting apart. */
 .view { --mw-deck-max: calc((min(100vw, var(--mw-column)) - var(--mw-space-48)) * 1.78 + var(--mw-space-16)); flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--mw-space-16); }
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
-.filter { display: flex; align-items: center; gap: var(--mw-space-12); min-height: var(--mw-touch); }
-.filter > :first-child { flex: 1 1 auto; min-width: 0; }
-.filterChip { flex: 0 1 auto; min-width: 0; max-width: 40%; }
 .banner { margin-top: var(--mw-space-12); }
 
 /* Galeri mode: the frame's bar is replaced by ‹ "Galeri · Kelompokku" and "4 dari 21". */
 .ownBar { padding-top: var(--mw-safe-top); }
 .ownCount { font: var(--mw-type-label); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--mw-space-8); }
 
-/* The deck takes the space between the filter and the line under it (flex 1), at least 240 and at most
+/* The deck takes the space between the title bar and the line under it (flex 1), at least 240 and at most
    a 9:16 card (+16 for the cards peeking behind). Short screens scroll instead of squeezing the card. */
 .deck { position: relative; flex: 1 1 0; min-height: 240px; max-height: var(--mw-deck-max); margin-top: var(--mw-space-12); outline: none; }
 /* The size container is absolutely placed: its height is known before its cards are laid out (a flex
@@ -56,12 +53,14 @@
 .photo[data-loaded="false"] { opacity: 0; }
 .photo[data-loaded="true"] { opacity: 1; transition: opacity 200ms linear; }
 
+/* The owner's pill sits on top (the reaction pills take the bottom), the options button at the top right. */
 .info {
-  position: absolute; left: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 3; display: flex; align-items: center; gap: var(--mw-space-8);
-  max-width: calc(100% - var(--mw-space-16)); padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-8) var(--mw-space-8);
+  position: absolute; left: var(--mw-space-8); top: var(--mw-space-8); z-index: 3; display: flex; align-items: center; gap: var(--mw-space-8);
+  max-width: calc(100% - var(--mw-space-8) * 3 - var(--mw-touch)); padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-8) var(--mw-space-8);
   border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); pointer-events: none;
 }
-.mineTag { position: absolute; left: var(--mw-space-12); top: var(--mw-space-12); z-index: 3; pointer-events: none; }
+.mineTag { position: absolute; left: var(--mw-space-12); top: calc(var(--mw-space-8) * 2 + 48px); z-index: 3; pointer-events: none; }
+.options { position: absolute; top: var(--mw-space-8); right: var(--mw-space-8); z-index: 5; }
 .who { min-width: 0; display: flex; flex-direction: column; }
 .name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -74,7 +73,7 @@
 .tapNext { right: 0; }
 .tap:disabled { cursor: default; }
 
-.burst { position: absolute; left: 50%; top: 50%; z-index: 4; width: 96px; height: 96px; margin: -48px 0 0 -48px; color: var(--mw-media-on); fill: var(--mw-media-on); pointer-events: none; animation: burst 700ms var(--mw-ease-decelerate) forwards; }
+.burst { position: absolute; left: 50%; top: 50%; z-index: 4; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: flex; align-items: center; justify-content: center; font-size: 80px; line-height: 1; pointer-events: none; animation: burst 700ms var(--mw-ease-decelerate) forwards; }
 @keyframes burst { 0% { transform: scale(0.4); opacity: 0; } 25% { transform: scale(1.1); opacity: 0.95; } 70% { transform: scale(1); opacity: 0.95; } 100% { transform: scale(1); opacity: 0; } }
 
 /* A panel in the card's place: loading, empty, all seen, hidden. */
@@ -94,23 +93,8 @@
 .count { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count > svg { width: 16px; height: 16px; }
 
-.actions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: var(--mw-space-12) 0 var(--mw-space-12); }
-.actions > :first-child { justify-self: start; }
-.actions > :last-child { justify-self: end; }
-.react {
-  display: inline-flex; align-items: center; gap: var(--mw-space-8); height: var(--mw-touch); min-width: var(--mw-touch); padding: 0 var(--mw-space-16) 0 var(--mw-space-12);
-  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-surface-2); color: var(--mw-text-1); font: var(--mw-type-label-lg); font-variant-numeric: tabular-nums; cursor: pointer;
-}
-.react > svg { width: 24px; height: 24px; transition: transform var(--mw-motion-press); }
-.react[aria-pressed="true"] > svg { color: var(--mw-error); fill: currentColor; }
-.react:active > svg { transform: scale(0.85); }
-.camera {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--mw-space-64); height: var(--mw-space-64); border-radius: var(--mw-radius-full);
-  background: var(--mw-primary); color: var(--mw-on-primary); transition: background-color var(--mw-motion-press);
-}
-.camera > svg { width: 28px; height: 28px; }
-.camera:active { background: var(--mw-primary-strong); }
-.camera:focus-visible { outline-offset: 3px; }
+/* The row under the photo: the quick reactions (nothing on one's own photo, but its height stays, so the card does not jump). */
+.actions { display: flex; align-items: center; justify-content: center; min-height: var(--mw-touch); padding: var(--mw-space-12) 0; }
 
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -120,11 +104,9 @@
   .card[data-place="front"] { animation: fade 120ms linear; }
   .burst { animation: none; opacity: 0; }
   .photo[data-loaded="true"] { transition: none; }
-  .react > svg { transition: none; }
 }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-.react[data-static] { cursor: default; }
 /* The panel takes swipes and side taps like a card; its own buttons stay above the tap areas. */
 .panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
 .panelInner a, .panelInner button { pointer-events: auto; }

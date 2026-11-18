@@ -172,7 +172,7 @@ export const sampleGuides: MwGuide[] = [
 export const sampleNotifications: MwNotification[] = [
   { id: uid(9, 1), kind: "pengumuman", title: "Team building mulai 15.00 di Lawn", body: "Pakai kaos tim dan sepatu olahraga. Kumpul per kelompok di pos masing-masing.", createdAt: at(D2, "10:30"), readAt: null, link: null, pinnedUntil: at(D2, "15:00"), fromPraWam: false },
   { id: uid(9, 2), kind: "jadwal", title: "Jadwal berubah", body: "Pemaparan selesai 12.30. Makan siang dan Silent Meeting mundur 30 menit.", createdAt: at(D2, "10:20"), readAt: null, link: null, pinnedUntil: null, fromPraWam: false },
-  { id: uid(9, 3), kind: "momen", title: "Momen", body: "Dimas dan 4 lainnya menyukai fotomu.", createdAt: at(D2, "10:08"), readAt: null, link: null, pinnedUntil: null, fromPraWam: false },
+  { id: uid(9, 3), kind: "momen", title: "Momen", body: "Dimas dan 4 lainnya bereaksi di fotomu.", createdAt: at(D2, "10:08"), readAt: null, link: null, pinnedUntil: null, fromPraWam: false },
   { id: uid(9, 4), kind: "absen", title: "Absen", body: "Absen tercatat: Pemaparan departemen.", createdAt: at(D2, "07:52"), readAt: at(D2, "08:00"), link: null, pinnedUntil: null, fromPraWam: false },
   { id: uid(9, 5), kind: "pengumuman", title: "Jalan ke Aula Utama lewat lobby timur", body: "Lift barat sedang dirawat.", createdAt: at(D2, "07:10"), readAt: at(D2, "07:20"), link: null, pinnedUntil: null, fromPraWam: false },
   { id: uid(9, 6), kind: "kamar", title: "Kamar", body: "Kamarmu siap: Kamar 208, lantai 2.", createdAt: at(D1, "15:10"), readAt: at(D1, "15:30"), link: null, pinnedUntil: null, fromPraWam: false },
@@ -181,7 +181,7 @@ export const sampleNotifications: MwNotification[] = [
 /* ── Momen ────────────────────────────────────────────────────────────────────────────────────── */
 
 /** A sample photo with a picture to show (placeholder photography, dev-preview only). */
-export type SamplePhoto = MwPhoto & { src: string; owner: MwPerson; hearts: number; hearted: boolean };
+export type SamplePhoto = MwPhoto & { src: string; owner: MwPerson; reactions: number };
 const OWNERS = ["dimas", "fajar", "sari", "yoga", "dewi", "rani", "hana", "putri", "gilang", "bima", "ayu", "nina"];
 export const samplePhotos: SamplePhoto[] = OWNERS.map((key, index) => {
   const minute = String(59 - index * 4).padStart(2, "0");
@@ -191,7 +191,7 @@ export const samplePhotos: SamplePhoto[] = OWNERS.map((key, index) => {
     id: uid(10, index + 1), ownerId: person(key).id, audience: kelompok ? "kelompok" : "semua", groupId: kelompok ? sampleGroup4.id : null,
     sessionId: index < 8 ? sampleSessionIds.pemaparan : null, width: 1600, height: 2000, takenAt: created, createdAt: created, visibleAt: created, status: "tampil",
     src: `https://picsum.photos/seed/main-wam-${index + 1}/800/1000`, owner: { id: person(key).id, name: person(key).name, department: person(key).department, photo: null },
-    hearts: [24, 10, 7, 3, 12, 5, 0, 2, 9, 1, 4, 6][index], hearted: index === 1,
+    reactions: [24, 10, 7, 3, 12, 5, 0, 2, 9, 1, 4, 6][index],
   };
 });
 

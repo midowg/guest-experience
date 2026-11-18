@@ -3,7 +3,7 @@ import { canSee } from "@/lib/main-wam/momen/access";
 import { GALLERY_PAGE, parsePhotoId, parseSession, parseView, STACK_PAGE } from "@/lib/main-wam/momen/filters";
 import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
 import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
-import type { MwSession, PhotoAudience, PhotoStatus, ViewerGroup } from "@/lib/main-wam/types";
+import type { MwSession, PhotoStatus } from "@/lib/main-wam/types";
 import type { MainWamContext } from "../gate";
 import { readLang } from "../lang";
 import { allSessions } from "../read";
@@ -28,7 +28,6 @@ const titleOf = (session: SessionFilter, sessions: readonly { id: string; title:
 
 export type StackScreen = {
   mode: "baru" | "sesi" | "galeri";
-  view: "semua" | "kelompok";
   session: SessionFilter;
   sessionTitle: string | null;
   items: FeedPhoto[];
@@ -38,8 +37,6 @@ export type StackScreen = {
   offset: number;
   counts: SessionCount[] | null;
   sessions: SessionChoice[];
-  group: ViewerGroup | null;
-  groupsPublished: boolean;
   mozaik: boolean;
   migrated: boolean;
   anyPhotos: boolean;
@@ -51,13 +48,13 @@ export type StackScreen = {
 export async function stackScreen(context: MainWamContext, search: Search, now = new Date()): Promise<StackScreen> {
   const { viewer, settings } = context;
   const lang = await readLang();
-  const view = parseView(search.lihat, false) as "semua" | "kelompok";
+  const view = "semua" as const;
   const session = parseSession(search.sesi);
   const foto = parsePhotoId(search.foto);
   const [sessions, counts] = await Promise.all([publishedSessions(), sessionCounts(context, view)]);
   const base = {
-    view, session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)), group: viewer.group,
-    groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, nowIso: now.toISOString(),
+    session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
+    mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, nowIso: now.toISOString(),
   };
 
   // Opened at one photo (Galeri, Mozaik, a note about one's own photo).
@@ -66,7 +63,7 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
     if (photo.ownerId === viewer.id && photo.status !== "tampil") {
       const [item] = await feedPhotos([{
         id: photo.id, owner_id: photo.ownerId, audience: photo.audience, group_id: photo.groupId, session_id: photo.sessionId, width: photo.width, height: photo.height,
-        taken_at: photo.takenAt, visible_at: photo.visibleAt, status: photo.status, file_key: photo.fileKey, thumb_key: photo.thumbKey, hearts: 0, hearted: false, seen: true, total: 1,
+        taken_at: photo.takenAt, visible_at: photo.visibleAt, status: photo.status, file_key: photo.fileKey, thumb_key: photo.thumbKey, reactions: [], seen: true, total: 1,
       }], context);
       return { ...base, mode: "galeri", items: [item], next: null, total: 1, startIndex: 0, offset: 0, migrated: settings.migrated, own: { id: photo.id, status: photo.status, reason: "" } };
     }
@@ -94,11 +91,11 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
 
 export type GalleryScreen = {
   view: FeedView; session: SessionFilter; sessionTitle: string | null; items: FeedPhoto[]; next: string | null; total: number; counts: SessionCount[] | null;
-  sessions: SessionChoice[]; group: ViewerGroup | null; groupsPublished: boolean; mozaik: boolean; migrated: boolean; nowIso: string;
+  sessions: SessionChoice[]; mozaik: boolean; migrated: boolean; nowIso: string;
 };
 
 export async function galleryScreen(context: MainWamContext, search: Search, now = new Date()): Promise<GalleryScreen> {
-  const { viewer, settings } = context;
+  const { settings } = context;
   const lang = await readLang();
   const view = parseView(search.lihat);
   const session = parseSession(search.sesi);
@@ -107,27 +104,26 @@ export async function galleryScreen(context: MainWamContext, search: Search, now
   ]);
   return {
     view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
-    group: viewer.group, groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, migrated: settings.migrated && page.migrated, nowIso: now.toISOString(),
+    mozaik: settings.modules.mozaik, migrated: settings.migrated && page.migrated, nowIso: now.toISOString(),
   };
 }
 
 export type CameraScreenData = {
-  sessions: MwSession[]; nowIso: string; group: ViewerGroup | null; groupsPublished: boolean; mozaik: boolean; absen: boolean; migrated: boolean;
-  initialAudience: PhotoAudience | null; initialSession: string | null;
+  sessions: MwSession[]; nowIso: string; absen: boolean; migrated: boolean;
+  initialSession: string | null;
 };
 
-/** The camera: the sessions it can tag (only what a sheet row needs), the person's kelompok, the address's choices. */
+/** The camera: the sessions it can tag (only what a sheet row needs), the address's choice. */
 export async function cameraScreen(context: MainWamContext, search: Search, now = new Date()): Promise<CameraScreenData> {
-  const { viewer, settings } = context;
+  const { settings } = context;
   const sessions = (await publishedSessions()).map(session => ({
     ...session, place: "", mapGuideId: null, dresscode: "", bring: "", lineup: [], meal: "", contactId: null, description: "", changedAt: null, changedBy: null,
   }));
   // Before area B's migration the camera says "menunggu pembaruan sistem" (its uploads would wait anyway).
   const probe = await listFeed(context, { view: "saya", session: null, mode: "semua", limit: 1 });
   const sesi = parseSession(search.sesi);
-  const untuk = Array.isArray(search.untuk) ? search.untuk[0] : search.untuk;
   return {
-    sessions, nowIso: now.toISOString(), group: viewer.group, groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, absen: settings.modules.absen,
-    migrated: settings.migrated && probe.migrated, initialAudience: untuk === "kelompok" ? "kelompok" : untuk === "semua" ? "semua" : null, initialSession: sesi,
+    sessions, nowIso: now.toISOString(), absen: settings.modules.absen,
+    migrated: settings.migrated && probe.migrated, initialSession: sesi,
   };
 }

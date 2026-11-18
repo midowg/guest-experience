@@ -1,0 +1,64 @@
+/*
+ * Reactions (Momen): the pills inside the photo, the quick row under it, the sheet of every emoji.
+ * Tokens only. What sits on a photo (the pills) uses the fixed media colours on a scrim, so it reads on a
+ * light photo too; the person's own is filled with the primary colour.
+ */
+
+/* Inside the card, bottom left, above the tap areas (z 2) and under the options button. They wrap upward
+   (the first row is at the bottom); at most three rows, so the photo stays the photo. The box lets swipes
+   and taps through, only the pills take them. */
+.pills {
+  position: absolute; left: var(--mw-space-8); right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 4;
+  display: flex; flex-wrap: wrap-reverse; align-items: flex-end; gap: var(--mw-space-8) var(--mw-space-8);
+  max-height: calc(var(--mw-space-32) * 3 + var(--mw-space-16)); overflow: hidden; pointer-events: none;
+}
+.pill {
+  position: relative; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-space-32); padding: 0 var(--mw-space-12) 0 var(--mw-space-8);
+  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on);
+  font: var(--mw-type-label); font-variant-numeric: tabular-nums; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent;
+  transition: transform var(--mw-motion-press), background-color var(--mw-motion-press);
+}
+/* The tap area is wider than the pill (44 high), as the kit's small controls. */
+.pill::after { content: ""; position: absolute; inset: -6px -4px; }
+.pill[data-static] { cursor: default; }
+.pill[data-static]::after { display: none; }
+.pill[data-mine] { background: var(--mw-primary); color: var(--mw-on-primary); }
+.pill:active { transform: scale(0.94); }
+.pill:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
+.pillEmoji { font-size: 16px; line-height: 1; }
+.pillCount { line-height: 1; }
+/* A reaction that was just chosen pops in. */
+.pill[data-mine] .pillEmoji { animation: pop 260ms var(--mw-ease-decelerate); }
+@keyframes pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+/* The quick row: 44 round buttons; "+" last. On a very narrow screen the sixth emoji gives way (7 × 44 would not fit 320). */
+.quick { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 360px; margin: 0 auto; }
+.quickButton {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--mw-touch); height: var(--mw-touch); padding: 0;
+  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-surface-2); color: var(--mw-text-1); font-size: 22px; line-height: 1; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: transform var(--mw-motion-press), background-color var(--mw-motion-press);
+}
+.quickButton > svg { width: 24px; height: 24px; }
+.quickButton:active { transform: scale(0.88); }
+.quickButton[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
+.quickButton:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
+@media (max-width: 359px) { .quick > :nth-child(6) { display: none; } }
+
+/* The sheet: groups under small heads, a grid of 44 targets. */
+.groups { display: flex; flex-direction: column; gap: var(--mw-space-16); padding-bottom: var(--mw-space-8); }
+.group { display: flex; flex-direction: column; gap: var(--mw-space-4); }
+.groupHead { margin: 0; font: var(--mw-type-label); color: var(--mw-text-2); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mw-touch), 1fr)); gap: var(--mw-space-4); }
+.cell {
+  display: inline-flex; align-items: center; justify-content: center; height: var(--mw-touch); min-width: var(--mw-touch); padding: 0; border: 0;
+  border-radius: var(--mw-radius-12); background: transparent; color: var(--mw-text-1); font-size: 26px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cell:active { background: var(--mw-surface-2); }
+.cell[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
+.cell:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: -3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pill, .quickButton { transition: none; }
+  .pill:active, .quickButton:active { transform: none; }
+  .pill[data-mine] .pillEmoji { animation: none; }
+}

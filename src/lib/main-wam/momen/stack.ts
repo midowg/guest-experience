@@ -1,6 +1,5 @@
 import { clock, shortDateOfInstant, t, type Lang } from "../i18n";
 import { wibDate, wibTime } from "../rundown";
-import type { MainWamViewer, PhotoAudience } from "../types";
 import type { FeedPhoto } from "./types";
 
 /*
@@ -58,15 +57,9 @@ export function stackCountSpoken(mode: StackMode, index: number, total: number, 
 
 /* ── Sent, queued, cancelled (U02–U04) ────────────────────────────────────────────────────────── */
 
-/** Who a photo went to, as the toasts say it: "semua peserta" / "Kelompok 4". */
-export function audienceWords(audience: PhotoAudience, group: MainWamViewer["group"] | null | undefined, many = false, lang: Lang = "id"): string {
-  if (audience === "kelompok") return group ? t(lang, "momen.aud.group", { n: group.number }) : t(lang, "momen.aud.yourGroup");
-  return t(lang, many ? "momen.aud.everyone" : "momen.aud.allParticipants");
-}
-
-/** U02 "Terkirim ke semua peserta", U04 "3 foto terkirim ke semua". */
-export function sentText(count: number, audience: PhotoAudience, group: MainWamViewer["group"] | null | undefined, lang: Lang = "id"): string {
-  return count > 1 ? t(lang, "momen.sentMany", { count, to: audienceWords(audience, group, true, lang) }) : t(lang, "momen.sentOne", { to: audienceWords(audience, group, false, lang) });
+/** U02 "Terkirim ke semua peserta", U04 "3 foto terkirim ke semua" (every photo is for everyone). */
+export function sentText(count: number, lang: Lang = "id"): string {
+  return count > 1 ? t(lang, "momen.sentMany", { count, to: t(lang, "momen.aud.everyone") }) : t(lang, "momen.sentOne", { to: t(lang, "momen.aud.allParticipants") });
 }
 
 /** U03 toast after the signal comes back: "2 foto terkirim". */

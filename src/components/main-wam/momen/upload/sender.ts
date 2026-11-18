@@ -203,7 +203,7 @@ export class MomenQueue {
     this.changed();
     try {
       const agreed: PhotoStart = {
-        clientId: item.clientId, audience: item.audience, sessionId: item.sessionId, takenAt: item.takenAt, width: item.width, height: item.height,
+        clientId: item.clientId, sessionId: item.sessionId, takenAt: item.takenAt, width: item.width, height: item.height,
         size: item.besar.byteLength, thumbSize: item.kecil.byteLength, tileSize: item.ubin.byteLength,
       };
       const start = await momenFetch<UploadStart>(mainWamApi.photoStart, { method: "POST", json: agreed });

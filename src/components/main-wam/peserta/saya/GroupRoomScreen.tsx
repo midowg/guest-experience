@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bus, ChevronDown, ChevronUp, Images, KeyRound, LifeBuoy, Users, Utensils } from "lucide-react";
+import { Bus, ChevronDown, ChevronUp, KeyRound, LifeBuoy, Users, Utensils } from "lucide-react";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { MEMBERS_SHOWN, type ActivityRow, type MemberRow } from "@/lib/main-wam/peserta/saya";
 import type { ActivityGroupKind, RoomPerson } from "@/lib/main-wam/types";
@@ -78,7 +78,6 @@ export function GroupRoomScreen({ room, stay, group, groupsPublished, activities
           {rest > 0
             ? <Button variant="text" size="m" icon={all ? <ChevronUp /> : <ChevronDown />} onClick={() => setAll(!all)} aria-expanded={all} aria-controls="anggota-kelompok">{all ? t("peserta.group.less") : t("peserta.group.more", { n: rest })}</Button>
             : <span />}
-          <Button variant="text" size="m" icon={<Images />} href={mainWamPath.gallery({ lihat: "kelompok" })}>{t("peserta.group.gallery")}</Button>
         </div>
       </Card>
       : <Card><EmptyState size="s" icon={<Users />} title={groupsPublished ? t("peserta.group.notIn") : t("peserta.group.notPublished")}>

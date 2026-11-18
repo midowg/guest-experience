@@ -25,7 +25,7 @@ const db = () => createPrivilegedClient();
 const isId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
 export type AdminPerson = { id: string; fullName: string; department: string };
-export type AdminPhoto = { id: string; owner: string; hearts: number; src: string | null };
+export type AdminPhoto = { id: string; owner: string; reactions: number; src: string | null };
 export type AdminTally = { categoryId: string; total: number; rows: { nomineeId: string; votes: number; rank: number }[] };
 export type AdminAwards = {
   migrated: boolean;
@@ -40,12 +40,12 @@ export type AdminAwards = {
   approverNames: Record<string, string>;
 };
 
-/** The photos most liked (for a Foto Momen terbaik category), with small signed pictures. */
+/** The photos with the most reactions (for a Foto Momen terbaik category), with small signed pictures. */
 async function likedPhotos(limit = 60): Promise<AdminPhoto[]> {
-  const hearts = await db().from("mw_photo_hearts").select("photo_id").limit(20000);
-  if (hearts.error) return [];
+  const reactions = await db().from("mw_photo_reactions").select("photo_id").limit(20000);
+  if (reactions.error) return [];
   const counts = new Map<string, number>();
-  for (const row of (hearts.data ?? []) as { photo_id: string }[]) counts.set(row.photo_id, (counts.get(row.photo_id) ?? 0) + 1);
+  for (const row of (reactions.data ?? []) as { photo_id: string }[]) counts.set(row.photo_id, (counts.get(row.photo_id) ?? 0) + 1);
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id]) => id);
   if (!top.length) return [];
   const { data, error } = await db().from("mw_photos").select("id,owner_id,thumb_key,file_key").in("id", top).eq("status", "tampil").eq("audience", "semua");
@@ -54,10 +54,10 @@ async function likedPhotos(limit = 60): Promise<AdminPhoto[]> {
   const storage = isR2Configured();
   const rows = (data ?? []) as { id: string; owner_id: string; thumb_key: string | null; file_key: string }[];
   const photos = await Promise.all(rows.map(async row => ({
-    id: row.id, owner: people.get(row.owner_id)?.fullName ?? "Peserta", hearts: counts.get(row.id) ?? 0,
+    id: row.id, owner: people.get(row.owner_id)?.fullName ?? "Peserta", reactions: counts.get(row.id) ?? 0,
     src: storage ? await presignDownload(row.thumb_key ?? row.file_key, { seconds: 1800 }).catch(() => null) : null,
   })));
-  return photos.sort((a, b) => b.hearts - a.hearts);
+  return photos.sort((a, b) => b.reactions - a.reactions);
 }
 
 /** Everything the Awarding page needs, in one round of reads. Counts only of closed voting (audit M1). */

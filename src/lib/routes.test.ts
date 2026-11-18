@@ -92,7 +92,7 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
     expect(mainWamPath.travel()).toBe("/wam/acara/saya/perjalanan");
     expect(mainWamPath.travel("pulang")).toBe("/wam/acara/saya/perjalanan?arah=pulang");
     expect(mainWamPath.moments()).toBe("/wam/acara/momen");
-    expect(mainWamPath.moments({ lihat: "kelompok", sesi: "s1" })).toBe("/wam/acara/momen?lihat=kelompok&sesi=s1");
+    expect(mainWamPath.moments({ sesi: "s1", foto: "p1" })).toBe("/wam/acara/momen?sesi=s1&foto=p1");
     expect(mainWamPath.camera({ sesi: "umum" })).toBe("/wam/acara/momen/kamera?sesi=umum");
     expect(mainWamPath.gallery({ lihat: "saya" })).toBe("/wam/acara/momen/galeri?lihat=saya");
     expect(mainWamPath.mosaic(true)).toBe("/wam/acara/momen/mozaik?tandai=1");
@@ -110,7 +110,8 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
 
   it("put the APIs under /api/wam/acara and Admin WAM's under /api/admin/wam/main", () => {
     expect(mainWamApi.themeImage("splash", "17")).toBe("/api/wam/acara/tema/splash?v=17");
-    expect(mainWamApi.photos({ lihat: "kelompok", sebelum: "x" })).toBe("/api/wam/acara/momen?lihat=kelompok&sebelum=x");
+    expect(mainWamApi.photos({ lihat: "saya", sebelum: "x" })).toBe("/api/wam/acara/momen?lihat=saya&sebelum=x");
+    expect(mainWamApi.photoReaction("p1")).toBe("/api/wam/acara/momen/p1/reaksi");
     expect(mainWamApi.photoFile("p1", "kecil")).toBe("/api/wam/acara/momen/p1/berkas?ukuran=kecil");
     expect(mainWamApi.vote("c1")).toBe("/api/wam/acara/awarding/c1/suara");
     for (const value of Object.values(mainWamApi)) {

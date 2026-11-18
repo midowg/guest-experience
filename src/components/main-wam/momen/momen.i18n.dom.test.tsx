@@ -1,9 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { LangProvider } from "@/components/main-wam/i18n";
-import { sampleFeedSemua, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
-import { sessionChoice } from "@/lib/main-wam/momen/sessions";
-import { sampleSessions, sampleViewer } from "@/lib/main-wam/sample";
+import { sampleFeedSemua } from "@/lib/main-wam/momen/sample";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /* Momen in English: the labels, counts and a sheet follow the language; Indonesian stays the default. */
@@ -24,25 +22,36 @@ afterEach(() => cleanup());
 
 const now = new Date("2027-01-05T10:05:00+07:00");
 const props = {
-  mode: "baru" as const, view: "semua" as const, session: null, sessionTitle: null, items: sampleFeedSemua, next: null, total: 24, startIndex: 2, offset: 0,
-  counts: sampleSessionCounts, sessions: sampleSessions.filter(s => s.status === "terbit").map(s => sessionChoice(s, now, "en")), group: sampleViewer("peserta").group,
-  groupsPublished: true, mozaik: true, migrated: true, anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: now.toISOString(), demo: {},
+  mode: "baru" as const, session: null, sessionTitle: null, items: sampleFeedSemua, next: null, total: 24, startIndex: 2, offset: 0,
+  mozaik: true, migrated: true, anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: now.toISOString(), demo: {},
 };
 const view = (lang: "id" | "en", node: React.ReactNode) => render(<LangProvider lang={lang}><ToastProvider>{node}</ToastProvider></LangProvider>);
 
 describe("Momen in English", () => {
-  it("the stack's chips, filter and count say it in English", () => {
+  it("the stack's count, the quick reactions, their pills and the sheet say it in English", () => {
     view("en", <MomenStack {...props} />);
-    expect(screen.getByRole("radiogroup", { name: "Filter Moments" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "My group" })).toBeTruthy();
     expect(screen.getByText("3 of 24 new")).toBeTruthy();
-    expect(screen.getByLabelText("Open the camera")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Quick reactions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "React 🔥" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "❤️ 12 reactions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Photo options" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pick another reaction" }));
+    const sheet = screen.getByRole("dialog", { name: "Pick a reaction" });
+    expect(within(sheet).getAllByRole("heading", { level: 3 }).map(heading => heading.textContent)).toEqual(["Faces", "Hands", "Hearts", "Celebration", "More"]);
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+  });
+
+  it("says one reaction in the singular, and which one is yours", () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions: [{ emoji: "🙏", count: 1, mine: true }] } : photo));
+    view("en", <MomenStack {...props} items={items} />);
+    expect(screen.getByRole("button", { name: "🙏 1 reaction, you reacted" })).toBeTruthy();
   });
 
   it("the same screen in Indonesian is what it was", () => {
     view("id", <MomenStack {...props} />);
-    expect(screen.getByRole("radiogroup", { name: "Saring Momen" })).toBeTruthy();
     expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Reaksi cepat" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "❤️ 12 reaksi" })).toBeTruthy();
   });
 
   it("the report sheet: title, reasons and the validation message", async () => {
