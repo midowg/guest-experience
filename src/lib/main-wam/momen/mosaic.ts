@@ -7,6 +7,8 @@
  *   - labels and sizes for "Tandai fotoku".
  */
 
+import { t, type Lang } from "../i18n";
+
 const FONT: Record<string, string[]> = {
   A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
   B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
@@ -145,10 +147,10 @@ export function cellOrder(columns: number, rows: number, seed: string): number[]
 }
 
 /** "huruf W", "angka 2", or where else the cell is. */
-export function cellLabel(char: string | undefined): string {
-  if (!char || char === ".") return "latar";
-  if (char === "#") return "gambar";
-  return /\d/.test(char) ? `angka ${char}` : `huruf ${char}`;
+export function cellLabel(char: string | undefined, lang: Lang = "id"): string {
+  if (!char || char === ".") return t(lang, "momen.mos.cellBackground");
+  if (char === "#") return t(lang, "momen.mos.cellImage");
+  return t(lang, /\d/.test(char) ? "momen.mos.cellDigit" : "momen.mos.cellLetter", { c: char });
 }
 
 /** Whole percent, rounded down so "100%" means complete. */

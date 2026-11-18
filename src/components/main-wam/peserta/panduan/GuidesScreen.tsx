@@ -1,7 +1,10 @@
+"use client";
+
 import { ClipboardList, FileText, Hotel, Hourglass, Map as MapIcon, Shirt } from "lucide-react";
 import { guideIcon, guideLine } from "@/lib/main-wam/peserta/guides";
 import type { MwGuide } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
+import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { EmptyState, List, ListRow } from "@/components/main-wam/ui";
 import { OfflineBanner } from "../Live";
@@ -13,12 +16,13 @@ const ICONS = { map: MapIcon, hotel: Hotel, shirt: Shirt, "clipboard-list": Clip
  * code per hari, Tata tertib kegiatan), written in Admin WAM; a row opens its page.
  */
 export function GuidesScreen({ migrated, guides, since, forceOffline }: { migrated: boolean; guides: MwGuide[]; since: string; forceOffline?: boolean }) {
+  const t = useT();
   return <ScreenContent>
     <OfflineBanner since={since} force={forceOffline} />
     {!migrated
-      ? <EmptyState size="s" icon={<Hourglass />} title="Menunggu pembaruan sistem">Panduan tampil setelah pembaruan selesai.</EmptyState>
+      ? <EmptyState size="s" icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("peserta.waiting.guides")}</EmptyState>
       : !guides.length
-        ? <EmptyState size="s" icon={<MapIcon />} title="Panduan belum tersedia" />
+        ? <EmptyState size="s" icon={<MapIcon />} title={t("peserta.guides.none")} />
         : <List>
           {guides.map(guide => {
             const Icon = ICONS[guideIcon[guide.kind]];

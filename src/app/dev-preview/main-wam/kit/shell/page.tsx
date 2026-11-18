@@ -74,9 +74,9 @@ function Isi({ layar }: { layar: string }) {
 
 function Momen() {
   return <ScreenContent>
-    <ShellActions><Chip tone="dark" href="#" icon={<Images />}>Galeri</Chip></ShellActions>
-    <EmptyState tone="dark" icon={<Images />} title="Belum ada foto baru">Foto dari sesi yang berlangsung muncul di sini.</EmptyState>
-    <Button variant="ondark" icon={<Camera />}>Ambil foto</Button>
+    <ShellActions><Chip href="#" icon={<Images />}>Galeri</Chip></ShellActions>
+    <EmptyState icon={<Images />} title="Belum ada foto baru">Foto dari sesi yang berlangsung muncul di sini.</EmptyState>
+    <Button icon={<Camera />}>Ambil foto</Button>
   </ScreenContent>;
 }
 

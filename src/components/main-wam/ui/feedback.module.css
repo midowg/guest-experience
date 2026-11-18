@@ -27,8 +27,6 @@ a.banner:active, button.banner:active { background-image: linear-gradient(var(--
 .emptyTitle { font: var(--mw-type-subtitle); color: var(--mw-text-1); text-wrap: balance; }
 .emptyBody { max-width: 296px; font: var(--mw-type-body); color: var(--mw-text-2); text-wrap: balance; }
 .emptyAction { margin-top: var(--mw-space-4); }
-.emptyOndark .emptyTitle { color: var(--mw-media-on); }
-.emptyOndark .emptyBody { color: var(--mw-media-on-2); }
 
 .skel { position: relative; display: block; overflow: hidden; border-radius: var(--mw-radius-8); background: var(--mw-surface-2); flex: none; }
 .skel::after {

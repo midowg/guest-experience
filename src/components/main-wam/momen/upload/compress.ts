@@ -1,4 +1,5 @@
 import { centerCrop, fitSide, halvingSteps, LARGE_RULE, squareCrop, THUMB_RULE, TILE_RULE, type Rect } from "@/lib/main-wam/momen/image";
+import { activeLang, t } from "@/lib/main-wam/i18n";
 import { MAX_LARGE_BYTES } from "@/lib/main-wam/momen/filters";
 import { sourceProblem } from "@/lib/pra-wam/photo";
 
@@ -16,7 +17,7 @@ export class PhotoProblem extends Error {
 export type Picture = { source: CanvasImageSource; width: number; height: number; close: () => void };
 export type Prepared = { besar: Blob; kecil: Blob; ubin: Blob; width: number; height: number };
 
-const unreadable = () => new PhotoProblem("Format foto ini belum bisa dibaca di HP ini. Pilih foto lain.");
+const unreadable = () => new PhotoProblem(t(activeLang(), "srv.momen.unreadableFormat"));
 
 /** A picked or captured file, upright as the camera meant it. */
 export async function decodeFile(file: File): Promise<Picture> {
@@ -38,7 +39,7 @@ export async function decodeFile(file: File): Promise<Picture> {
 /** The frame the live viewfinder shows now (getUserMedia path). */
 export async function grabFrame(video: HTMLVideoElement): Promise<Picture> {
   const width = video.videoWidth, height = video.videoHeight;
-  if (!width || !height) throw new PhotoProblem("Kamera belum siap. Coba jepret lagi.");
+  if (!width || !height) throw new PhotoProblem(t(activeLang(), "srv.momen.cameraNotReady"));
   try {
     const bitmap = await createImageBitmap(video);
     return { source: bitmap, width, height, close: () => bitmap.close() };
@@ -54,7 +55,7 @@ function canvasOf(width: number, height: number): { canvas: HTMLCanvasElement; c
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const context = canvas.getContext("2d");
-  if (!context) throw new PhotoProblem("Browser ini belum dapat memperkecil foto. Coba browser lain.");
+  if (!context) throw new PhotoProblem(t(activeLang(), "srv.momen.cannotShrink"));
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   return { canvas, context };
@@ -80,7 +81,7 @@ function drawScaled(source: CanvasImageSource, from: Rect, to: { width: number; 
 async function jpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/jpeg", quality));
   // A browser that cannot write JPEG answers another type (PNG): never send that.
-  if (!blob || blob.type !== "image/jpeg") throw new PhotoProblem("Browser ini belum dapat menyimpan foto sebagai JPEG. Coba browser lain.");
+  if (!blob || blob.type !== "image/jpeg") throw new PhotoProblem(t(activeLang(), "srv.momen.cannotJpeg"));
   return blob;
 }
 
@@ -101,7 +102,7 @@ export async function prepareMomenPhoto(picture: Picture): Promise<Prepared> {
       }
       if (large && large.blob.size <= LARGE_RULE.bytes) break;
     }
-    if (!large || large.blob.size > MAX_LARGE_BYTES) throw new PhotoProblem("Foto ini terlalu besar untuk dikirim. Coba foto lain.");
+    if (!large || large.blob.size > MAX_LARGE_BYTES) throw new PhotoProblem(t(activeLang(), "srv.momen.tooBig"));
     const full = { x: 0, y: 0, width: large.canvas.width, height: large.canvas.height };
     const thumbCanvas = drawScaled(large.canvas, full, fitSide(full.width, full.height, THUMB_RULE.side));
     canvases.push(thumbCanvas);

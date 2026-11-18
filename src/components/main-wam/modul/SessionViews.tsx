@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { ClipboardList, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
+import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
 import type { AbsenCard } from "@/lib/main-wam/modul/absen";
 import { presentLabel } from "@/lib/main-wam/modul/absen";
 import type { PanitiaContact } from "@/lib/main-wam/modul/contact";
 import { openPill } from "@/lib/main-wam/modul/silent";
+import { number } from "@/lib/main-wam/i18n";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { ContactSheet } from "./ContactSheet";
 import { errorText, modulRequest } from "./request";
@@ -34,21 +36,23 @@ const ICONS = { lock: Lock, trophy: Trophy, survei: ClipboardList } as const;
 
 /** SessionAbsen's look (P04 + P04__status; Beranda's Sekarang card gets only the open state's button). */
 export function AbsenView({ slot }: { slot: AbsenSlot }) {
+  const t = useT();
+  const { lang } = useLang();
   const [contactOpen, setContactOpen] = useState(false);
   switch (slot.kind) {
     case "none": return null;
     case "buka": return <>
       <AbsenQueue />
-      <Button block icon={<QrCode />} href={mainWamPath.scan}>Absen</Button>
+      <Button block icon={<QrCode />} href={mainWamPath.scan}>{t("absen.button")}</Button>
     </>;
-    case "hadir": return <div className={css.pills}><StatusPill status="present">{presentLabel(slot.at)}</StatusPill></div>;
+    case "hadir": return <div className={css.pills}><StatusPill status="present">{presentLabel(slot.at, lang)}</StatusPill></div>;
     case "terlewat": return <>
-      <Banner tone="warning" title="Tidak tercatat hadir" action={{ label: "Hubungi panitia", onClick: () => setContactOpen(true) }} />
+      <Banner tone="warning" title={t("absen.missed")} action={{ label: t("absen.contactTitle"), onClick: () => setContactOpen(true) }} />
       <ContactSheet open={contactOpen} onClose={() => setContactOpen(false)} contact={slot.contact} />
     </>;
     case "bod": {
       const percent = slot.expected ? Math.round((slot.present / slot.expected) * 100) : 0;
-      return <ProgressBar icon={<UserCheck />} label={`Hadir ${slot.present.toLocaleString("id-ID")} dari ${slot.expected.toLocaleString("id-ID")}`}
+      return <ProgressBar icon={<UserCheck />} label={t("absen.presentOf", { present: number(lang, slot.present), expected: number(lang, slot.expected) })}
         value={slot.present} max={Math.max(slot.expected, 1)} valueText={`${percent}%`} />;
     }
   }
@@ -56,17 +60,20 @@ export function AbsenView({ slot }: { slot: AbsenSlot }) {
 
 /** SessionModuleAction's look: the module's one action, and panitia's QR. */
 export function ModuleActionView({ slot }: { slot: ModuleSlot }) {
+  const t = useT();
+  const { lang } = useLang();
+  const known = useKnown();
   const { action, qr } = slot;
   if (!action && !qr) return null;
   return <div className={css.slot}>
     {action?.kind === "silent-buka" && <>
-      <div className={css.pills}><Pill icon={<Lock />}>{openPill({ closesAt: action.closesAt })}</Pill></div>
-      <Button block icon={<Lock />} href={action.href}>Kirim masukan</Button>
+      <div className={css.pills}><Pill icon={<Lock />}>{openPill({ closesAt: action.closesAt }, lang)}</Pill></div>
+      <Button block icon={<Lock />} href={action.href}>{t("silent.send")}</Button>
     </>}
-    {action?.kind === "silent-tutup" && <Button block variant="secondary" href={action.href}>Sudah ditutup</Button>}
+    {action?.kind === "silent-tutup" && <Button block variant="secondary" href={action.href}>{t("silent.closed")}</Button>}
     {action?.kind === "link" && (() => {
       const Icon = ICONS[action.icon];
-      return <Button block variant={action.primary ? "primary" : "secondary"} icon={<Icon />} href={action.href}>{action.label}</Button>;
+      return <Button block variant={action.primary ? "primary" : "secondary"} icon={<Icon />} href={action.href}>{known(action.label)}</Button>;
     })()}
     {qr && <PanitiaQr sessionId={qr.sessionId} />}
   </div>;

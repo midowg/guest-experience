@@ -7,6 +7,8 @@ import { wibDate } from "@/lib/main-wam/rundown";
 import type { MwSession, RundownChange } from "@/lib/main-wam/types";
 import { listGuides, rundownLog, sessionById, shownSessions } from "../read";
 import type { MainWamContext } from "../gate";
+import { t } from "@/lib/main-wam/i18n";
+import { readLang } from "../lang";
 import { contactOf } from "./contacts";
 
 /*
@@ -20,13 +22,13 @@ export type AgendaData = { migrated: boolean; days: AgendaDayTab[]; day: number;
 const log = (sessionId?: string) => rundownLog(sessionId, 500).then(read => read.data).catch(() => [] as RundownChange[]);
 
 export async function loadAgenda({ settings }: MainWamContext, asked: string | string[] | undefined, now: Date): Promise<AgendaData> {
-  const [sessions, changes] = await Promise.all([shownSessions(), log()]);
+  const [sessions, changes, lang] = await Promise.all([shownSessions(), log(), readLang()]);
   const day = shownDay(asked, now, settings.event);
   return {
     migrated: sessions.migrated,
-    days: agendaDays(settings.event, wibDate(now.toISOString())),
+    days: agendaDays(settings.event, wibDate(now.toISOString()), lang),
     day,
-    rows: agendaRows(sessions.data, day, settings.event, now, changes),
+    rows: agendaRows(sessions.data, day, settings.event, now, changes, lang),
     anyPublished: sessions.data.some(session => session.status === "terbit"),
   };
 }
@@ -37,11 +39,12 @@ export type SessionData = { session: MwSession; view: SessionView; contact: Cont
 export async function loadSession(_context: MainWamContext, id: string, now: Date): Promise<SessionData | null> {
   const session = await sessionById(id);
   if (!session || session.status === "draf") return null;
+  const lang = await readLang();
   const [changes, contact, guides] = await Promise.all([
     log(session.id),
-    contactOf(session.contactId, "Panitia").catch(() => null),
+    contactOf(session.contactId, t(lang, "peserta.contact.committee")).catch(() => null),
     listGuides().then(read => read.data).catch(() => []),
   ]);
   const denah = denahFor(session, guides);
-  return { session, view: sessionView(session, now, changes, !!contact), contact, denah: denah ? { slug: denah.slug } : null };
+  return { session, view: sessionView(session, now, changes, !!contact, lang), contact, denah: denah ? { slug: denah.slug } : null };
 }

@@ -1,4 +1,5 @@
 import { mainWamCan } from "@/lib/main-wam/access";
+import type { Lang } from "@/lib/main-wam/i18n";
 import {
   announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
   type HomeCandidate, type HomeData,
@@ -70,23 +71,23 @@ export const previewSurveyForm: SurveyForm = { slug: "survei-wam", status: "buka
  * Beranda at `now` for `viewer`, built by the same functions as the server's loadHome. `surveyDone`:
  * the person already sent the survey (its card is gone).
  */
-export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null, surveyDone = false): HomeData {
+export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null, surveyDone = false, lang: Lang = "id"): HomeData {
   const sessions = previewSessions(now);
   const absenOn = settings.modules.absen && mainWamCan(viewer, "absen");
   const checkedIn = new Map(sampleAttendance.filter(row => row.employeeId === viewer.id && Date.parse(row.checkedInAt) <= now.getTime()).map(row => [row.sessionId, row.checkedInAt]));
-  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn });
+  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, lang });
   const pinned = previewNotifications(now);
   const candidates: HomeCandidate[] = [
     ...announcementCandidates(pinned, now),
     ...(mainWamCan(viewer, "silent-kirim") ? silentCandidates([sampleSilentQuestion], sessions, now) : []),
     ...(mainWamCan(viewer, "voting") ? votingCandidates(sampleAwards, new Set(), now) : []),
-    ...[travelCandidate(sampleTrips, sampleSeats.filter(seat => seat.employeeId === viewer.id), now), surveyCandidate(previewSurvey(settings, sessions, now, surveyDone))].filter((card): card is HomeCandidate => !!card),
+    ...[travelCandidate(sampleTrips, sampleSeats.filter(seat => seat.employeeId === viewer.id), now, lang), surveyCandidate(previewSurvey(settings, sessions, now, surveyDone), lang)].filter((card): card is HomeCandidate => !!card),
   ];
   const forced = force === "tanpa" ? null : force ? candidates.find(card => card.kind === force) ?? null : undefined;
   const picked = forced !== undefined ? forced : pickCard(candidates, settings.modules, now);
   return {
     migrated: true, now: view, session: view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null,
-    card: picked ? homeCardView(picked, now) : null, refreshAt: nextChangeAt(sessions, now), serverNow: now.toISOString(), failed: false,
+    card: picked ? homeCardView(picked, now, lang) : null, refreshAt: nextChangeAt(sessions, now), serverNow: now.toISOString(), failed: false,
   };
 }
 

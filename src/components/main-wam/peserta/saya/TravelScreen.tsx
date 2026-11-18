@@ -7,6 +7,7 @@ import type { Contact } from "@/lib/main-wam/peserta/contact";
 import type { TravelStep } from "@/lib/main-wam/peserta/travel";
 import type { TripDirection, TripKind } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
+import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Avatar, Banner, Button, Card, EmptyState, Segmented } from "@/components/main-wam/ui";
 import { ContactSheet } from "../ContactSheet";
@@ -30,17 +31,18 @@ export type TravelProps = {
  * gathering time on top, and the coordinator to call.
  */
 export function TravelScreen({ initial, labels, steps, coordinators, changed, migrated }: TravelProps) {
+  const t = useT();
   const [direction, setDirection] = useState<TripDirection>(initial);
   const [calling, setCalling] = useState(false);
   const list = steps[direction];
   const coordinator = coordinators[direction] ?? null;
   return <ScreenContent>
     {changed[direction] && <Banner tone="warning" icon={<CalendarClock />} title={changed[direction]} />}
-    <Segmented label="Arah perjalanan" value={direction} onChange={value => setDirection(value as TripDirection)}
+    <Segmented label={t("peserta.travel.direction")} value={direction} onChange={value => setDirection(value as TripDirection)}
       options={[{ value: "berangkat", label: labels.berangkat }, { value: "pulang", label: labels.pulang }]} />
     {!migrated || !list.length
-      ? <Card><EmptyState size="s" icon={<TrainFront />} title="Perjalanan belum diisi">Kamu akan diberi kabar.</EmptyState></Card>
-      : <ol className={css.stepper} aria-label={`Langkah perjalanan ${direction}`}>
+      ? <Card><EmptyState size="s" icon={<TrainFront />} title={t("peserta.travel.empty")}>{t("peserta.group.waiting")}</EmptyState></Card>
+      : <ol className={css.stepper} aria-label={t(direction === "berangkat" ? "peserta.travel.stepsOut" : "peserta.travel.stepsBack")}>
         {list.map(step => {
           const Mark = MARK[step.kind];
           return <li key={step.id} className={css.step}>
@@ -55,7 +57,7 @@ export function TravelScreen({ initial, labels, steps, coordinators, changed, mi
                   <span className={css.stepTitle}>{step.title}</span>
                   {step.line && <span className={css.stepLine}>{step.line}</span>}
                   {step.sub && <span className={css.stepSub}>{step.sub}</span>}
-                  {step.ticket && <Card className={css.ticket} aria-label={`Tiket ${step.ticket.from} ke ${step.ticket.to}`}>
+                  {step.ticket && <Card className={css.ticket} aria-label={t("peserta.travel.ticket", { from: step.ticket.from, to: step.ticket.to })}>
                     <div className={css.ticketRoute}>
                       <div className={css.ticketStop}><span className={css.ticketCity}>{step.ticket.from}</span><span className={css.ticketTime}>{step.ticket.depart}</span></div>
                       <div className={css.ticketMid} aria-hidden><span className={css.ticketTrack}><TrainFront /></span>{step.ticket.duration && <span className={css.ticketDur}>{step.ticket.duration}</span>}</div>
@@ -69,7 +71,7 @@ export function TravelScreen({ initial, labels, steps, coordinators, changed, mi
                     </>}
                     {step.ticket.note && <p className={css.ticketNote}>{step.ticket.note}</p>}
                   </Card>}
-                  {step.mapUrl && <Button variant="text" size="m" icon={<MapIcon />} href={step.mapUrl} external className={css.stepAction}>Buka peta</Button>}
+                  {step.mapUrl && <Button variant="text" size="m" icon={<MapIcon />} href={step.mapUrl} external className={css.stepAction}>{t("peserta.travel.map")}</Button>}
                 </>}
             </div>
           </li>;
@@ -78,10 +80,10 @@ export function TravelScreen({ initial, labels, steps, coordinators, changed, mi
     {coordinator && <Card>
       <div className={css.personRow}>
         <Avatar name={coordinator.name} photo={coordinator.photo} />
-        <span className={css.personText}><span className={css.personName}>{coordinator.name}</span><span className={css.personRole}>Koordinator</span></span>
-        <Button variant="secondary" size="m" icon={<Phone />} onClick={() => setCalling(true)} aria-label={`Hubungi ${coordinator.name}`}>Hubungi</Button>
+        <span className={css.personText}><span className={css.personName}>{coordinator.name}</span><span className={css.personRole}>{t("peserta.travel.coordinator")}</span></span>
+        <Button variant="secondary" size="m" icon={<Phone />} onClick={() => setCalling(true)} aria-label={t("peserta.session.contactName", { name: coordinator.name })}>{t("peserta.session.contact")}</Button>
       </div>
     </Card>}
-    {coordinator && <ContactSheet contact={coordinator} title="Hubungi koordinator" open={calling} onClose={() => setCalling(false)} />}
+    {coordinator && <ContactSheet contact={coordinator} title={t("peserta.travel.contactCoordinator")} open={calling} onClose={() => setCalling(false)} />}
   </ScreenContent>;
 }

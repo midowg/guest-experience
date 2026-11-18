@@ -1,8 +1,11 @@
 import { Camera } from "lucide-react";
+import { Words } from "@/components/main-wam/i18n";
 import { Button, Card, StackPreview } from "@/components/main-wam/ui";
 import { newPhotosText } from "@/lib/main-wam/momen/stack";
 import { mainWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
+import { t } from "@/lib/main-wam/i18n";
 import { newForMe } from "@/lib/server/main-wam/momen/feed";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 
@@ -14,15 +17,16 @@ import { MomenQueueRunner } from "./upload/QueueRunner";
  */
 export async function BerandaMomen({ context, now }: { context: MainWamContext; now: Date }) {
   void now;
+  const lang = await readLang();
   const news = await newForMe(context).catch(() => ({ unseen: 0, total: 0, latest: [], migrated: false }));
-  return <MomenCard photos={news.latest.map(photo => photo.src.kecil)} sub={news.migrated ? newPhotosText(news.unseen, news.total) : "Belum ada foto"} />;
+  return <MomenCard photos={news.latest.map(photo => photo.src.kecil)} sub={news.migrated ? newPhotosText(news.unseen, news.total, lang) : t(lang, "momen.noneYet")} />;
 }
 
 /** The card itself (also for previews): three small photos, "12 foto baru", Lihat; Ambil foto. */
 export function MomenCard({ photos, sub, runner = true }: { photos: (string | null)[]; sub: string; runner?: boolean }) {
   return <Card>
     {runner && <MomenQueueRunner />}
-    <StackPreview photos={photos.map(src => ({ src }))} title="Momen" sub={sub} cta="Lihat" href={mainWamPath.moments()} />
-    <Button variant="secondary" block icon={<Camera />} href={mainWamPath.camera()}>Ambil foto</Button>
+    <StackPreview photos={photos.map(src => ({ src }))} sub={sub} href={mainWamPath.moments()} />
+    <Button variant="secondary" block icon={<Camera />} href={mainWamPath.camera()}><Words k="momen.takePhoto" /></Button>
   </Card>;
 }

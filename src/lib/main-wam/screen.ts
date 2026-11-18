@@ -1,4 +1,5 @@
 import { MAIN_WAM_PATH, mainWamPath } from "@/lib/routes";
+import { t, type Lang } from "./i18n";
 
 /*
  * What Main WAM's frame draws for a screen, from its address alone (SPEC §1.2), so the bars in the
@@ -10,7 +11,8 @@ import { MAIN_WAM_PATH, mainWamPath } from "@/lib/routes";
  *   akar    tab root: top bar (Beranda: greeting and bell), bottom bar.
  *   detail  reading a level deeper: back arrow and title, the bottom bar stays (its tab lit).
  *   tugas   a form, the camera, a result: close (x) or no top bar, no bottom bar.
- * `dark`: Momen's black viewer (M01–M03, U01–U05). `back.href` is the fallback when there is no
+ * `camera`: the camera (U01–U05) only. Its viewfinder is dark in both themes, so the frame paints its
+ * own black and draws no bars; Momen's other screens follow the app's theme like every tab. `back.href` is the fallback when there is no
  * history to go back to (opened from a notification or a QR).
  */
 
@@ -18,7 +20,7 @@ export const MAIN_WAM_TABS = ["beranda", "agenda", "momen", "saya"] as const;
 export type MainWamTab = (typeof MAIN_WAM_TABS)[number];
 export type MainWamLevel = "akar" | "detail" | "tugas";
 /** `title` "" = a bar without a title (revisi 16 Nov "Kepala tanpa judul"); `label` then names the screen for screen readers. */
-export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; label?: string; back?: { href: string; title: string }; dark?: boolean };
+export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; label?: string; back?: { href: string; title: string }; camera?: boolean };
 
 /** The four tabs, in order: label, address and the Lucide icon name (SPEC §0.3). */
 export const mainWamTabs: { key: MainWamTab; label: string; href: string; icon: "house" | "calendar-days" | "images" | "user-round" }[] = [
@@ -32,35 +34,39 @@ const strip = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : pa
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 const rest = (path: string, base: string) => (path.startsWith(`${base}/`) ? path.slice(base.length + 1) : "");
 
-const home = { href: mainWamPath.home, title: "Beranda" };
-const agenda = { href: mainWamPath.agenda(), title: "Agenda" };
-const momen = { href: mainWamPath.moments(), title: "Momen" };
-const saya = { href: mainWamPath.me, title: "Saya" };
 
-/** The frame of a Main WAM address; null outside Main WAM (or for its sign-in page, which has no frame). */
-export function mainWamScreen(pathname: string): MainWamScreen | null {
+/**
+ * The frame of a Main WAM address; null outside Main WAM (or for its sign-in page, which has no frame).
+ * The titles of the participant screens follow `lang`; the panitia and BOD screens stay Indonesian.
+ */
+export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScreen | null {
   const path = strip(pathname);
   if (!under(path, MAIN_WAM_PATH)) return null;
   const sub = rest(path, MAIN_WAM_PATH);
-  if (!sub) return { tab: "beranda", level: "akar", title: "Beranda" };
+  const say = (key: Parameters<typeof t>[1]) => t(lang, key);
+  const home = { href: mainWamPath.home, title: say("screen.home") };
+  const agenda = { href: mainWamPath.agenda(), title: say("screen.agenda") };
+  const momen = { href: mainWamPath.moments(), title: say("screen.moments") };
+  const saya = { href: mainWamPath.me, title: say("screen.me") };
+  if (!sub) return { tab: "beranda", level: "akar", title: say("screen.home") };
   const [first, second, third] = sub.split("/");
   switch (first) {
     case "masuk": return null;
-    case "mulai": return { tab: null, level: "tugas", title: "Notifikasi" };
-    case "notifikasi": return { tab: "beranda", level: "detail", title: "Notifikasi", back: home };
+    case "mulai": return { tab: null, level: "tugas", title: say("screen.notifications") };
+    case "notifikasi": return { tab: "beranda", level: "detail", title: say("screen.notifications"), back: home };
     // P04: the bar has only ‹ (revisi 16 Nov); the session's own title is the screen's headline.
-    case "agenda": return second ? { tab: "agenda", level: "detail", title: "", label: "Detail sesi", back: agenda } : { tab: "agenda", level: "akar", title: "Agenda" };
+    case "agenda": return second ? { tab: "agenda", level: "detail", title: "", label: say("screen.sessionDetail"), back: agenda } : { tab: "agenda", level: "akar", title: say("screen.agenda") };
     case "momen":
-      if (!second) return { tab: "momen", level: "akar", title: "Momen", dark: true };
-      if (second === "kamera") return { tab: "momen", level: "tugas", title: "Kamera", back: momen, dark: true };
-      if (second === "galeri") return { tab: "momen", level: "detail", title: "Galeri", back: momen };
-      if (second === "mozaik") return { tab: "momen", level: "detail", title: "Mozaik WAM 2026", back: momen };
-      return { tab: "momen", level: "detail", title: "Momen", back: momen };
+      if (!second) return { tab: "momen", level: "akar", title: say("screen.moments") };
+      if (second === "kamera") return { tab: "momen", level: "tugas", title: say("screen.camera"), back: momen, camera: true };
+      if (second === "galeri") return { tab: "momen", level: "detail", title: say("screen.gallery"), back: momen };
+      if (second === "mozaik") return { tab: "momen", level: "detail", title: say("screen.mosaic"), back: momen };
+      return { tab: "momen", level: "detail", title: say("screen.moments"), back: momen };
     case "saya": {
-      if (!second) return { tab: "saya", level: "akar", title: "Saya" };
-      const titles: Record<string, string> = { kelompok: "Kelompok & kamar", perjalanan: "Perjalanan", panduan: "Panduan", pengaturan: "Pengaturan" };
-      if (second === "panduan" && third) return { tab: "saya", level: "detail", title: "Panduan", back: { href: mainWamPath.guides, title: "Panduan" } };
-      return { tab: "saya", level: "detail", title: titles[second] ?? "Saya", back: saya };
+      if (!second) return { tab: "saya", level: "akar", title: say("screen.me") };
+      const titles: Record<string, string> = { kelompok: say("screen.groupRoom"), perjalanan: say("screen.travel"), panduan: say("screen.guides"), pengaturan: say("screen.settings"), bantuan: say("screen.help") };
+      if (second === "panduan" && third) return { tab: "saya", level: "detail", title: say("screen.guides"), back: { href: mainWamPath.guides, title: say("screen.guides") } };
+      return { tab: "saya", level: "detail", title: titles[second] ?? say("screen.me"), back: saya };
     }
     case "kelola": {
       if (second === "pengumuman") return { tab: "beranda", level: "tugas", title: "Pengumuman baru", back: home };
@@ -71,13 +77,13 @@ export function mainWamScreen(pathname: string): MainWamScreen | null {
       const titles: Record<string, string> = { kehadiran: "Kehadiran", "silent-meeting": "Rekap Silent Meeting", awarding: "Awarding" };
       return { tab: "beranda", level: "detail", title: titles[second] ?? "Ringkasan", back: home };
     }
-    case "absen": return { tab: "agenda", level: "tugas", title: "Absen", back: agenda };
-    case "silent-meeting": return { tab: "agenda", level: "tugas", title: "Silent Meeting", back: agenda };
+    case "absen": return { tab: "agenda", level: "tugas", title: say("screen.checkIn"), back: agenda };
+    case "silent-meeting": return { tab: "agenda", level: "tugas", title: say("screen.silent"), back: agenda };
     case "awarding": return second
-      ? { tab: "beranda", level: "tugas", title: "Pilih nominasi", back: { href: mainWamPath.awards, title: "Awarding" } }
-      : { tab: "beranda", level: "detail", title: "Awarding", back: home };
+      ? { tab: "beranda", level: "tugas", title: say("screen.pickNominee"), back: { href: mainWamPath.awards, title: say("screen.awarding") } }
+      : { tab: "beranda", level: "detail", title: say("screen.awarding"), back: home };
   }
-  return { tab: null, level: "detail", title: "WAM", back: home };
+  return { tab: null, level: "detail", title: say("screen.fallback"), back: home };
 }
 
 /** Whether the bottom bar shows on this screen (tab roots and details; never tasks). */

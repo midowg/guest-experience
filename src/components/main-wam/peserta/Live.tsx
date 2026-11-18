@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CloudOff, RotateCw } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { untilLabel } from "@/lib/main-wam/peserta/format";
 import { REFRESH_JITTER_MS, refreshDelay } from "@/lib/main-wam/peserta/refresh";
 import { Banner, Button, EmptyState } from "@/components/main-wam/ui";
@@ -26,8 +27,9 @@ export function useOffline(): boolean {
 /** "Offline. Data terakhir 07.38." under the head (P01__status, P03__status). `force` for previews. */
 export function OfflineBanner({ since, force }: { since: string; force?: boolean }) {
   const offline = useOffline();
+  const t = useT();
   if (!offline && !force) return null;
-  return <Banner tone="offline" icon={<CloudOff />}>Offline. Data terakhir {since}.</Banner>;
+  return <Banner tone="offline" icon={<CloudOff />}>{t("peserta.live.offline", { since })}</Banner>;
 }
 
 /**
@@ -35,13 +37,16 @@ export function OfflineBanner({ since, force }: { since: string; force?: boolean
  * 30 seconds from the server's clock moved on by the time passed here (the phone's own clock may be off).
  */
 export function Until({ at, serverNow, initial }: { at: string; serverNow: string; initial: string }) {
+  const { lang } = useLang();
   const [text, setText] = useState(initial);
   useEffect(() => {
     const offset = Date.parse(serverNow) - Date.now();
-    const tick = () => setText(untilLabel(new Date(Date.now() + offset), at) ?? "");
+    const tick = () => setText(untilLabel(new Date(Date.now() + offset), at, lang) ?? "");
+    // The language changed: say it in the new one at once, not after the next tick.
+    tick();
     const timer = window.setInterval(tick, 30_000);
     return () => window.clearInterval(timer);
-  }, [at, serverNow]);
+  }, [at, serverNow, lang]);
   return <>{text}</>;
 }
 
@@ -66,14 +71,16 @@ export function RefreshAt({ at, serverNow }: { at: string | null; serverNow: str
 /** A read that failed: say so, and "Coba lagi" reads again (the screen stays). */
 export function RetryBanner({ children }: { children: string }) {
   const router = useRouter();
-  return <Banner tone="error" action={{ label: "Coba lagi", onClick: () => router.refresh() }}>{children}</Banner>;
+  const t = useT();
+  return <Banner tone="error" action={{ label: t("shell.retry"), onClick: () => router.refresh() }}>{children}</Banner>;
 }
 
 /** error.tsx body for agen A's screens: a friendly line and "Coba lagi". */
 export function ScreenError({ reset }: { reset: () => void }) {
   const router = useRouter();
-  return <EmptyState icon={<CloudOff />} title="Belum dapat dimuat"
-    action={<Button variant="tonal" size="m" icon={<RotateCw />} onClick={() => { router.refresh(); reset(); }}>Coba lagi</Button>}>
-    Periksa sinyal, lalu coba lagi.
+  const t = useT();
+  return <EmptyState icon={<CloudOff />} title={t("peserta.live.errorTitle")}
+    action={<Button variant="tonal" size="m" icon={<RotateCw />} onClick={() => { router.refresh(); reset(); }}>{t("shell.retry")}</Button>}>
+    {t("shell.failedBody")}
   </EmptyState>;
 }

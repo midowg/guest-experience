@@ -9,6 +9,7 @@ import { votableNominees, when } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
 import { mainWamPath } from "@/lib/routes";
 import { requireActionPage } from "@/lib/server/main-wam/gate";
+import { serverT, readLang } from "@/lib/server/main-wam/lang";
 import { awardsShown, myVotes, nomineeViews } from "@/lib/server/main-wam/modul/awards";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export default async function AwardCategoryPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const { viewer } = await requireActionPage("voting", mainWamPath.awardCategory(id));
   const now = new Date();
+  const lang = await readLang();
+  const t = await serverT();
   const [{ categories, migrated }, mine] = await Promise.all([awardsShown(), myVotes(viewer.id)]);
   if (!migrated) return <Waiting />;
   const category = categories.find(item => item.id === id && item.method === "voting");
@@ -27,10 +30,10 @@ export default async function AwardCategoryPage({ params }: { params: Promise<{ 
   if (state !== "buka") {
     return <>
       <ScreenContent>
-        <Result icon={<Lock />} headline title={state === "belum" ? "Voting belum dibuka" : "Voting sudah ditutup"}
-          body={state === "belum" && category.opensAt ? `Dibuka ${when(category.opensAt, now)}.` : category.announceAt ? `Diumumkan ${when(category.announceAt, now)}.` : undefined} />
+        <Result icon={<Lock />} headline title={state === "belum" ? t("awards.votingNotOpen") : t("awards.votingClosed")}
+          body={state === "belum" && category.opensAt ? t("silent.opensAt", { when: when(category.opensAt, now, lang) }) : category.announceAt ? `${t("awards.announced")} ${when(category.announceAt, now, lang)}.` : undefined} />
       </ScreenContent>
-      <ActionBar><Button block href={mainWamPath.awards}>Kembali ke Awarding</Button></ActionBar>
+      <ActionBar><Button block href={mainWamPath.awards}>{t("awards.backToAwarding")}</Button></ActionBar>
     </>;
   }
   const { nominees, owners } = await nomineeViews([category]);

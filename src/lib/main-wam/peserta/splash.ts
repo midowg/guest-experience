@@ -1,3 +1,5 @@
+import { monthName, type Lang } from "../i18n";
+
 /*
  * O01 Splash (prototipe/layar/O01.html): the opening screen before Masuk (mode semua): the event's
  * colour (or Admin WAM's splash image), "WAM 2026", "Werkudara Annual Meeting 2026" and the dates.
@@ -17,16 +19,15 @@ export function splashWait(sinceLoad: number): number {
   return Math.min(Math.max(SPLASH_MIN_MS - since, 0), SPLASH_MAX_MS);
 }
 
-const MONTH = new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" });
-const parts = (date: string) => {
+const parts = (date: string, lang: Lang) => {
   const parsed = new Date(`${date}T12:00:00Z`);
-  return { day: parsed.getUTCDate(), month: MONTH.format(parsed), year: parsed.getUTCFullYear() };
+  return { day: parsed.getUTCDate(), month: monthName(lang, date), year: parsed.getUTCFullYear() };
 };
 
 /** "4–7 Januari 2027"; across months "30 Desember–2 Januari 2027"; across years with both years. "" without valid dates. */
-export function eventDateRange(start: string, end: string): string {
+export function eventDateRange(start: string, end: string, lang: Lang = "id"): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || end < start) return "";
-  const a = parts(start), b = parts(end);
+  const a = parts(start, lang), b = parts(end, lang);
   if (start === end) return `${a.day} ${a.month} ${a.year}`;
   if (a.year !== b.year) return `${a.day} ${a.month} ${a.year}–${b.day} ${b.month} ${b.year}`;
   if (a.month !== b.month) return `${a.day} ${a.month}–${b.day} ${b.month} ${b.year}`;

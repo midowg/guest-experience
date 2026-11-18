@@ -1,8 +1,7 @@
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
-import { ChevronRight, CircleAlert, CircleCheck, CloudOff, Info, LoaderCircle, TriangleAlert } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, CloudOff, Info, TriangleAlert } from "lucide-react";
 import { IconBox } from "./Card";
 import { cx, KitIcon, Pressable, type ActionProps, type IconProp } from "./Pressable";
-import shared from "./shared.module.css";
 import css from "./feedback.module.css";
 
 export type BannerTone = "info" | "offline" | "warning" | "error" | "success";
@@ -46,22 +45,21 @@ export function Banner({ tone = "info", title, children, icon, action, href, onC
 /**
  * EmptyState (DS #40): nothing here yet, no connection, permission refused. An icon in a 64 circle,
  * a title, one or two sentences, and at most one action (primary L only when it is the screen's
- * goal, otherwise tonal M). `size="s"` inside a card; `tone="dark"` on Momen.
+ * goal, otherwise tonal M). `size="s"` inside a card.
  */
-export function EmptyState({ icon, title, children, action, size = "m", tone = "default", headingLevel = 2, className }: {
+export function EmptyState({ icon, title, children, action, size = "m", headingLevel = 2, className }: {
   icon?: IconProp;
   title: ReactNode;
   children?: ReactNode;
   /** A Button. */
   action?: ReactNode;
   size?: "m" | "s";
-  tone?: "default" | "dark";
   headingLevel?: 2 | 3;
   className?: string;
 }) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
-  return <div className={cx(css.empty, size === "s" && css.emptySm, tone === "dark" && css.emptyOndark, className)}>
-    {icon && <IconBox icon={icon} size={64} round tone={tone === "dark" ? "ondark" : "neutral"} />}
+  return <div className={cx(css.empty, size === "s" && css.emptySm, className)}>
+    {icon && <IconBox icon={icon} size={64} round tone="neutral" />}
     <Heading className={css.emptyTitle}>{title}</Heading>
     {children && <p className={css.emptyBody}>{children}</p>}
     {action && <div className={css.emptyAction}>{action}</div>}
@@ -85,14 +83,5 @@ export function Skeleton({ shape = "line", width, height, className, style }: {
   return <span aria-hidden className={cx(css.skel, shape !== "block" && css[shape], className)} style={{ width, height, ...style }} />;
 }
 
-/** A loading region: busy for assistive tech, with its spoken name. */
-export function SkeletonGroup({ label = "Memuat", children, className, style }: { label?: string; children: ReactNode; className?: string; style?: CSSProperties }) {
-  return <div role="status" aria-busy="true" aria-label={label} className={className} style={style}>{children}<span className={shared.srOnly}>{label}</span></div>;
-}
-
-/** Spinner: only for waits over 300 ms that are not a whole section (those get a Skeleton). */
-export function Spinner({ size = 24, label }: { size?: 20 | 24; label?: string }) {
-  return <span role={label ? "status" : undefined} aria-label={label} style={{ display: "inline-flex" }}>
-    <LoaderCircle aria-hidden className={cx(css.spinner, size === 20 && css.spinnerSm, shared.spin)} />
-  </span>;
-}
+/** SkeletonGroup and Spinner speak the current language, so they live in Loading.tsx (a client component). */
+export { SkeletonGroup, Spinner } from "./Loading";

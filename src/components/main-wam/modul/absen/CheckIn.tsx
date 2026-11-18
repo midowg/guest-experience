@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CircleCheck, Clock, CloudOff, Info, Phone, QrCode, TimerOff } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { ActionBar, Button, SkeletonGroup, Spinner } from "@/components/main-wam/ui";
 import { clockWhen, outcomeText, type CheckInOutcome, type OutcomeText } from "@/lib/main-wam/modul/absen";
@@ -19,8 +20,10 @@ const TONES = { success: "success", warning: "warning", error: "error", neutral:
 
 /** A02–A04 and the other answers to a scan, with the one action that helps. */
 export function CheckInResultView({ outcome, contact, now = new Date(), initialContact = false }: { outcome: CheckInOutcome; contact: PanitiaContact | null; now?: Date; initialContact?: boolean }) {
+  const t = useT();
+  const { lang } = useLang();
   const [contactOpen, setContactOpen] = useState(initialContact);
-  const text = outcomeText(outcome, now);
+  const text = outcomeText(outcome, now, lang);
   const Icon = ICONS[text.icon];
   const closed = outcome.kind === "tutup";
   return <div className={css.fill}>
@@ -30,10 +33,10 @@ export function CheckInResultView({ outcome, contact, now = new Date(), initialC
     <ActionBar>
       {closed
         ? <div className={css.stackActions}>
-          <Button block icon={<Phone />} onClick={() => setContactOpen(true)}>Hubungi panitia</Button>
-          <Button block variant="text" href={mainWamPath.home}>Tutup</Button>
+          <Button block icon={<Phone />} onClick={() => setContactOpen(true)}>{t("absen.contactTitle")}</Button>
+          <Button block variant="text" href={mainWamPath.home}>{t("ui.close")}</Button>
         </div>
-        : <Button block href={mainWamPath.home}>Selesai</Button>}
+        : <Button block href={mainWamPath.home}>{t("absen.done")}</Button>}
     </ActionBar>
     <ContactSheet open={contactOpen} onClose={() => setContactOpen(false)} contact={contact} />
   </div>;
@@ -41,12 +44,14 @@ export function CheckInResultView({ outcome, contact, now = new Date(), initialC
 
 /** A02 offline: the scan is kept on the phone and goes out with its time when there is signal. */
 export function OfflineSaved({ title, scannedAt, now }: { title: string; scannedAt: string; now?: Date }) {
+  const t = useT();
+  const { lang } = useLang();
   return <div className={css.fill}>
     <AbsenQueue />
     <ScreenContent>
-      <Result icon={<CloudOff />} tone="warning" title="Absen tersimpan" sub={[title, clockWhen(scannedAt, now ?? new Date())].filter(Boolean).join(" · ")} body="Dikirim otomatis saat ada sinyal." />
+      <Result icon={<CloudOff />} tone="warning" title={t("absen.saved")} sub={[title, clockWhen(scannedAt, now ?? new Date(), lang)].filter(Boolean).join(" · ")} body={t("absen.sentWhenOnline")} />
     </ScreenContent>
-    <ActionBar><Button block href={mainWamPath.home}>Selesai</Button></ActionBar>
+    <ActionBar><Button block href={mainWamPath.home}>{t("absen.done")}</Button></ActionBar>
   </div>;
 }
 
@@ -59,6 +64,7 @@ type State = { kind: "kirim" } | { kind: "hasil"; outcome: CheckInOutcome } | { 
  * (A02 offline, audit T1). Only a refusal of ours shows as a failure.
  */
 export function CheckIn({ token, contact }: { token: string; contact: PanitiaContact | null }) {
+  const t = useT();
   const [state, setState] = useState<State>({ kind: "kirim" });
   const started = useRef(false);
 
@@ -85,14 +91,14 @@ export function CheckIn({ token, contact }: { token: string; contact: PanitiaCon
   if (state.kind === "tersimpan") return <OfflineSaved title="" scannedAt={state.at} />;
   if (state.kind === "gagal") {
     return <div className={css.fill}>
-      <ScreenContent><Result icon={<QrCode />} title="Absen belum terkirim" body={state.message} /></ScreenContent>
-      <ActionBar><Button block onClick={() => void send()}>Coba lagi</Button></ActionBar>
+      <ScreenContent><Result icon={<QrCode />} title={t("absen.notSent")} body={state.message} /></ScreenContent>
+      <ActionBar><Button block onClick={() => void send()}>{t("shell.retry")}</Button></ActionBar>
     </div>;
   }
   return <ScreenContent>
-    <SkeletonGroup label="Mencatat absen" className={css.result}>
+    <SkeletonGroup label={t("absen.recording")} className={css.result}>
       <Spinner />
-      <p className={css.resultBody}>Mencatat absen…</p>
+      <p className={css.resultBody}>{t("absen.recordingDots")}</p>
     </SkeletonGroup>
   </ScreenContent>;
 }

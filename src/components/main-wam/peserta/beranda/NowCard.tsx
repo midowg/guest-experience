@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CalendarCheck, CalendarDays, ChevronRight, Clock, MapPin } from "lucide-react";
 import type { NowView } from "@/lib/main-wam/peserta/home";
 import { mainWamPath } from "@/lib/routes";
+import { useT } from "@/components/main-wam/i18n";
 import { Card, CardHead, StatusPill } from "@/components/main-wam/ui";
 import { Until } from "../Live";
 import css from "../peserta.module.css";
@@ -14,22 +17,23 @@ import css from "../peserta.module.css";
  * sits beside that link, never inside it.
  */
 export function NowCard({ view, absen, serverNow }: { view: NowView; absen?: ReactNode; serverNow: string }) {
+  const t = useT();
   if (view.kind === "kosong") {
     return <Card as="article">
-      <CardHead icon={<CalendarDays />} title="Agenda belum terbit" sub="Kamu akan diberi kabar." />
+      <CardHead icon={<CalendarDays />} title={t("peserta.now.emptyTitle")} sub={t("peserta.now.emptySub")} />
     </Card>;
   }
   if (view.kind === "selesai") {
     const next = view.tomorrow;
-    return <Card as="article" href={mainWamPath.agenda(next?.day ?? undefined)} aria-label={next ? `Hari ini selesai. ${next.when}, ${next.title}. Buka agenda` : "Hari ini selesai. Buka agenda"}>
-      <CardHead icon={<CalendarCheck />} iconTone="success" title="Hari ini selesai" sub={next ? `${next.when} · ${next.title}` : undefined}
+    return <Card as="article" href={mainWamPath.agenda(next?.day ?? undefined)} aria-label={next ? t("peserta.now.doneLabelNext", { when: next.when, title: next.title }) : t("peserta.now.doneLabel")}>
+      <CardHead icon={<CalendarCheck />} iconTone="success" title={t("peserta.now.doneTitle")} sub={next ? `${next.when} · ${next.title}` : undefined}
         end={<ChevronRight aria-hidden className={css.trailIcon} />} />
     </Card>;
   }
   const pill = view.status === "present"
     ? <StatusPill status="present">{view.statusText}</StatusPill>
     : <StatusPill status={view.status} />;
-  const label = [view.title, view.status === "live" ? "sedang berlangsung" : view.status === "present" ? "sudah hadir" : view.status === "done" ? "selesai" : view.when ?? "berikutnya", "detail sesi"].join(", ");
+  const label = [view.title, view.status === "live" ? t("peserta.now.spokenLive") : view.status === "present" ? t("peserta.now.spokenPresent") : view.status === "done" ? t("peserta.now.spokenDone") : view.when ?? t("peserta.now.spokenNext"), t("peserta.now.spokenDetail")].join(", ");
   return <Card as="article">
     <Link href={mainWamPath.session(view.sessionId)} className={css.nowLink} aria-label={label}>
       <span className={css.nowStatus}>

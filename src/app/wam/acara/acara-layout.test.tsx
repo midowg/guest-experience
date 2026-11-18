@@ -1,7 +1,8 @@
 import { isValidElement, type ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultSettings } from "@/lib/main-wam/settings";
-import type { MainWamMode, MainWamViewer } from "@/lib/main-wam/types";
+import type { MainWamMode as AppMode, MainWamViewer } from "@/lib/main-wam/types";
+import type { MainWamMode as Look } from "@/lib/main-wam/appearance";
 
 /*
  * Nothing of Main WAM reaches someone it is not shown to (audit M6): no theme (so no KV or colours)
@@ -11,12 +12,14 @@ import type { MainWamMode, MainWamViewer } from "@/lib/main-wam/types";
  */
 
 let shown = false;
-let mode: MainWamMode = "pra";
+let mode: AppMode = "pra";
+let look: Look = "system";
 let viewer: MainWamViewer | null = null;
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/components/main-wam/theme/font", () => ({ mainWamFontVars: "font-jakarta" }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url: string) => { throw new Error(`REDIRECT ${url}`); } }));
+vi.mock("@/lib/server/main-wam/appearance", () => ({ readMainWamMode: async () => look }));
 vi.mock("@/lib/server/main-wam/gate", () => ({ mainWamShown: async () => shown }));
 vi.mock("@/lib/server/main-wam/theme", () => ({ mainWamThemeInput: async () => ({ primary: "#C2410C", images: { homeHeader: "/api/wam/acara/tema/homeHeader?v=1" } }) }));
 vi.mock("@/lib/server/main-wam/settings", () => ({ readMainWamSettings: async () => ({ ...defaultSettings(), migrated: true, mode }) }));
@@ -36,7 +39,7 @@ const page = <p>Isi</p>;
 const person = (tester: boolean, roles: MainWamViewer["roles"] = []): MainWamViewer => ({ id: "11111111-1111-4111-8111-111111111111", name: "Dimas", fullName: "Dimas Contoh", department: "CoE", photo: null, roles, tester, group: null, room: null });
 const typeOf = (node: unknown) => (isValidElement(node) ? (node as ReactElement).type : null);
 
-beforeEach(() => { shown = false; mode = "pra"; viewer = null; });
+beforeEach(() => { shown = false; mode = "pra"; look = "system"; viewer = null; });
 
 describe("acara/layout: the theme only for whom Main WAM shows", () => {
   it("hidden: the screen as it is, without Main WAM's theme or KV", async () => {
@@ -53,10 +56,29 @@ describe("acara/layout: the theme only for whom Main WAM shows", () => {
   it("theme-color: Main WAM's page colour (light and dark entries) when shown, Pra WAM's otherwise (T-S01)", async () => {
     expect(await generateViewport()).toEqual({});
     shown = true;
+    // Sistem (nothing picked yet): each phone's own scheme.
+    expect(await generateViewport()).toEqual({ themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
+      { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
+    ] });
+    // A pick wins over the phone's scheme.
+    look = "light";
     expect(await generateViewport()).toEqual({ themeColor: [
       { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
       { media: "(prefers-color-scheme: dark)", color: "#F6F7F9" },
     ] });
+    look = "dark";
+    expect(await generateViewport()).toEqual({ themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#0E1116" },
+      { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
+    ] });
+  });
+
+  it("shown: the mode this device picked is drawn from the server (no flash), Sistem by default", async () => {
+    shown = true;
+    expect((await RootLayout({ children: page }) as ReactElement<{ mode: string }>).props.mode).toBe("system");
+    look = "dark";
+    expect((await RootLayout({ children: page }) as ReactElement<{ mode: string }>).props.mode).toBe("dark");
   });
 });
 

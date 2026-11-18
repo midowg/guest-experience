@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleCheck, CircleDot, CloudOff, Lock, Send, X } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellChrome, Stack } from "@/components/main-wam/shell";
 import { ActionBar, Banner, Button, Card, ChipRow, ConfirmDialog, FilterChip, TextField, TopBar, useToast } from "@/components/main-wam/ui";
 import { draftKey, openBanner, readDraft, SILENT_BODY_MAX, type SilentView } from "@/lib/main-wam/modul/silent";
@@ -40,6 +41,8 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
 }) {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
+  const { lang } = useLang();
   const id = useId();
   const online = useOnline() && !preview?.offline;
   const [topic, setTopic] = useState(preview?.topic ?? "");
@@ -113,14 +116,14 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
 
   async function copyText() {
     setDialog(null);
-    try { await navigator.clipboard.writeText(body); toast.show({ text: "Tulisan disalin", tone: "success" }); }
-    catch { toast.show({ text: "Belum bisa menyalin", sub: "Tulisanmu tetap tersimpan di HP ini.", tone: "error" }); }
+    try { await navigator.clipboard.writeText(body); toast.show({ text: t("silent.copied"), tone: "success" }); }
+    catch { toast.show({ text: t("silent.copyFailed"), sub: t("silent.copyFailedSub"), tone: "error" }); }
   }
 
   const top = (icon?: "x") => <>
     <ShellChrome hideTopBar />
     <div className={css.ownTop}>
-      <TopBar variant="back" title={icon ? "" : "Silent Meeting"} onBack={icon ? leave : back} backLabel={icon ? "Tutup" : "Kembali"} backIcon={icon ? <X /> : undefined} />
+      <TopBar variant="back" title={icon ? "" : t("screen.silent")} onBack={icon ? leave : back} backLabel={icon ? t("shell.closeTask") : t("shell.back")} backIcon={icon ? <X /> : undefined} />
     </div>
   </>;
 
@@ -128,12 +131,12 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
     return <div className={css.fill}>
       {top("x")}
       <ScreenContent className={css.grow}>
-        <Result center icon={<CircleCheck />} tone="success" title="Masukan terkirim" body="Tersimpan tanpa nama." />
+        <Result center icon={<CircleCheck />} tone="success" title={t("silent.sent")} body={t("silent.sentBody")} />
       </ScreenContent>
       <ActionBar>
         <div className={css.stackActions}>
-          {remaining > 0 && !closed && <Button block onClick={() => setDone(null)}>Tulis lagi</Button>}
-          <Button block variant={remaining > 0 && !closed ? "text" : "primary"} href={mainWamPath.home}>Selesai</Button>
+          {remaining > 0 && !closed && <Button block onClick={() => setDone(null)}>{t("silent.writeAgain")}</Button>}
+          <Button block variant={remaining > 0 && !closed ? "text" : "primary"} href={mainWamPath.home}>{t("silent.done")}</Button>
         </div>
       </ActionBar>
     </div>;
@@ -143,38 +146,38 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
   const over = Array.from(body).length > SILENT_BODY_MAX;
   const disabled = empty || over || !online || closed || remaining <= 0;
   const note = !online
-    ? <span className={css.offlineNote}><CloudOff aria-hidden />Butuh sinyal. Tulisanmu tetap di sini.</span>
-    : closed ? "Sudah ditutup. Tulisanmu tetap di HP ini."
-      : remaining <= 0 ? "Sudah banyak terkirim. Tunggu beberapa menit untuk mengirim lagi." : undefined;
+    ? <span className={css.offlineNote}><CloudOff aria-hidden />{t("silent.needSignal")}</span>
+    : closed ? t("silent.closedKept")
+      : remaining <= 0 ? t("silent.rateLimited") : undefined;
 
   return <>
     {top()}
     <ScreenContent>
       {closed
-        ? <Banner tone="warning" icon={<Lock />} title="Sudah ditutup" />
-        : <Banner tone="success" icon={<CircleDot />} title={openBanner(view)} />}
+        ? <Banner tone="warning" icon={<Lock />} title={t("silent.closed")} />
+        : <Banner tone="success" icon={<CircleDot />} title={openBanner(view, lang)} />}
       <Stack>
         <Card><p className={css.questionText}>{view.question.question}</p></Card>
         <Card variant="tonal">
-          <p className={css.privacyHead}><Lock aria-hidden />Tanpa nama</p>
-          <p className={css.privacyBody}>Namamu tidak disimpan bersama masukan ini.</p>
+          <p className={css.privacyHead}><Lock aria-hidden />{t("silent.anonymous")}</p>
+          <p className={css.privacyBody}>{t("silent.anonymousBody")}</p>
         </Card>
       </Stack>
       {view.question.topics.length > 0 && <div role="group" aria-labelledby={`${id}-topik`}>
-        <p id={`${id}-topik`} className={css.fieldLabel}>Topik <span>(opsional)</span></p>
+        <p id={`${id}-topik`} className={css.fieldLabel}>{t("silent.topic")} <span>{t("silent.optional")}</span></p>
         <ChipRow>
           {view.question.topics.map(item => <FilterChip key={item} selected={topic === item} onClick={() => setTopic(topic === item ? "" : item)}>{item}</FilterChip>)}
         </ChipRow>
       </div>}
-      <TextField multiline label="Masukanmu" placeholder="Tulis masukanmu" rows={6} value={body} onChange={event => setBody(event.target.value)}
-        help="Tidak bisa diubah setelah terkirim." showCount countMax={SILENT_BODY_MAX} error={over ? "Paling banyak 1.000 karakter." : error ?? undefined} />
+      <TextField multiline label={t("silent.yourInput")} placeholder={t("silent.placeholder")} rows={6} value={body} onChange={event => setBody(event.target.value)}
+        help={t("silent.help")} showCount countMax={SILENT_BODY_MAX} error={over ? t("silent.tooLong") : error ?? undefined} />
     </ScreenContent>
     <ActionBar note={note}>
-      <Button block icon={<Send />} disabled={disabled} loading={sending} loadingLabel="Mengirim…" onClick={() => void send()}>Kirim</Button>
+      <Button block icon={<Send />} disabled={disabled} loading={sending} loadingLabel={t("silent.sending")} onClick={() => void send()}>{t("silent.submit")}</Button>
     </ActionBar>
-    <ConfirmDialog open={dialog === "buang"} tone="danger" title="Buang tulisanmu?" confirmLabel="Buang" cancelLabel="Lanjut"
+    <ConfirmDialog open={dialog === "buang"} tone="danger" title={t("silent.discardTitle")} confirmLabel={t("silent.discard")} cancelLabel={t("silent.keepWriting")}
       onCancel={() => setDialog(null)} onConfirm={() => { saveDraft(questionId, { topic: "", body: "" }); setBody(""); setDialog(null); leave(); }} />
-    <ConfirmDialog open={dialog === "ditutup"} title="Sudah ditutup" body="Masukanmu belum terkirim. Tulisanmu tetap tersimpan di HP ini."
-      confirmLabel="Salin tulisan" cancelLabel="Tutup" onConfirm={() => void copyText()} onCancel={() => setDialog(null)} />
+    <ConfirmDialog open={dialog === "ditutup"} title={t("silent.closed")} body={t("silent.closedDialogBody")}
+      confirmLabel={t("silent.copy")} cancelLabel={t("ui.close")} onConfirm={() => void copyText()} onCancel={() => setDialog(null)} />
   </>;
 }

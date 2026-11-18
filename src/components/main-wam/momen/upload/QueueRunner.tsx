@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { activeLang, t, translateKnown } from "@/lib/main-wam/i18n";
 import { flushedText } from "@/lib/main-wam/momen/stack";
 import { useToast } from "@/components/main-wam/ui";
 import { momenQueue } from "./sender";
@@ -37,13 +38,13 @@ export function MomenQueueRunner() {
       if (event.type === "sent" && event.item.deferred) {
         flushed += 1;
         if (tell) clearTimeout(tell);
-        tell = setTimeout(() => { toastRef.current.show({ text: flushedText(flushed), tone: "success" }); flushed = 0; }, 1200);
+        tell = setTimeout(() => { toastRef.current.show({ text: flushedText(flushed, activeLang()), tone: "success" }); flushed = 0; }, 1200);
       }
       if (event.type === "failed") {
-        toastRef.current.show({ text: "Foto belum terkirim", sub: event.item.error ?? undefined, tone: "error", action: { label: "Coba lagi", onAction: () => { void queue.retry(event.item.clientId); } } });
+        toastRef.current.show({ text: t(activeLang(), "momen.queue.failed"), sub: event.item.error ? translateKnown(activeLang(), event.item.error) : undefined, tone: "error", action: { label: t(activeLang(), "shell.retry"), onAction: () => { void queue.retry(event.item.clientId); } } });
       }
       if (event.type === "masuk") {
-        toastRef.current.show({ text: "Sesi berakhir", sub: "Masuk lagi untuk mengirim foto yang antre.", tone: "error", action: { label: "Masuk", onAction: () => window.location.reload() } });
+        toastRef.current.show({ text: t(activeLang(), "momen.queue.expired"), sub: t(activeLang(), "momen.queue.signInAgain"), tone: "error", action: { label: t(activeLang(), "momen.queue.signIn"), onAction: () => window.location.reload() } });
       }
     });
     const wake = () => { queue.refresh(); void queue.wake(); };

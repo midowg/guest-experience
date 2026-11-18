@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { previewLang } from "@/components/main-wam/dev/lang";
 // The frame (theme) first, so its reset comes before the screen's styles, as the app's layout does.
 import { Frame } from "../Frame";
 import { AgendaScreen } from "@/components/main-wam/peserta/agenda/AgendaScreen";
@@ -19,13 +20,14 @@ export default async function PreviewAgenda({ searchParams }: { searchParams: Pr
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
   const now = previewTime(params);
+  const lang = previewLang(params);
   const event = sampleSettings().event;
-  if (params.status === "memuat") return <Frame path={mainWamPath.agenda()} now={now}><AgendaSkeleton /></Frame>;
+  if (params.status === "memuat") return <Frame path={mainWamPath.agenda()} now={now} lang={lang}><AgendaSkeleton /></Frame>;
   const sessions = previewSessions(now).map(session => params.status === "batal" && session.id === sampleSessionIds.bns ? { ...session, status: "batal" as const } : session);
   const day = shownDay(params.tab, now, event);
   const empty = params.status === "kosong" || params.status === "migrasi";
-  return <Frame path={mainWamPath.agenda()} now={now}>
-    <AgendaScreen migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now))} day={day}
-      rows={empty ? [] : agendaRows(sessions, day, event, now, previewLog(now))} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString())} forceOffline={params.status === "offline"} />
+  return <Frame path={mainWamPath.agenda()} now={now} lang={lang}>
+    <AgendaScreen migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang)} day={day}
+      rows={empty ? [] : agendaRows(sessions, day, event, now, previewLog(now), lang)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
   </Frame>;
 }

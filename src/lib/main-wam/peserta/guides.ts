@@ -1,3 +1,4 @@
+import { mainWamPath } from "@/lib/routes";
 import type { GuideKind, MwGuide, MwSession } from "../types";
 
 /*
@@ -31,6 +32,9 @@ export function denahFor(session: Pick<MwSession, "mapGuideId">, guides: readonl
   const shown = guides.filter(guide => guide.published);
   return (session.mapGuideId ? shown.find(guide => guide.id === session.mapGuideId) : null) ?? shown.find(guide => guide.kind === "denah") ?? null;
 }
+
+/** The Denah link of a session: its guide page. */
+export const denahHrefOf = (denah: { slug: string } | null) => (denah ? mainWamPath.guide(denah.slug) : null);
 
 /** Published guides in order. */
 export const shownGuides = (guides: readonly MwGuide[]) => guides.filter(guide => guide.published).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, "id"));

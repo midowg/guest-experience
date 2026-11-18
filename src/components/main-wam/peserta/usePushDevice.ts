@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deviceLabel, keyBytes, pushSupport } from "@/lib/pra-wam/push";
+import { activeLang, t, type MessageKey } from "@/lib/main-wam/i18n";
 import { PRA_WAM_PATH, praWamApi } from "@/lib/routes";
 import { failText, mwRequest } from "./request";
 
@@ -69,10 +70,10 @@ export function usePushDevice({ preview }: { preview?: PushState } = {}) {
       const subscription = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
       await mwRequest(praWamApi.push, { method: "POST", json: { subscription: subscription.toJSON(), device: deviceLabel(navigator.userAgent) } });
       setState("on");
-      setMessage({ tone: "success", text: "Notifikasi aktif di HP ini." });
+      setMessage({ tone: "success", text: t(activeLang(), "peserta.push.enabled") });
       return true;
     } catch (problem) {
-      setMessage({ tone: "error", text: problem instanceof Error && problem.name !== "MwRequestError" ? "HP ini menolak notifikasi. Coba lagi, atau periksa izin notifikasi WAM." : failText(problem) });
+      setMessage({ tone: "error", text: problem instanceof Error && problem.name !== "MwRequestError" ? t(activeLang(), "peserta.push.refused") : failText(problem) });
       return false;
     } finally { setBusy(false); }
   }, [publicKey]);
@@ -94,7 +95,7 @@ export function usePushDevice({ preview }: { preview?: PushState } = {}) {
     setBusy(true); setMessage(null);
     try {
       await mwRequest(praWamApi.pushTest, { method: "POST" });
-      setMessage({ tone: "success", text: "Terkirim. Notifikasinya muncul dalam beberapa detik." });
+      setMessage({ tone: "success", text: t(activeLang(), "peserta.push.sent") });
     } catch (problem) { setMessage({ tone: "error", text: failText(problem) }); }
     finally { setBusy(false); }
   }, []);
@@ -103,12 +104,12 @@ export function usePushDevice({ preview }: { preview?: PushState } = {}) {
 }
 
 /** Pengaturan's pill for a state: "Aktif", "Mati", "Diblokir", "Pasang dulu", … */
-export const pushWords: Record<PushState, { pill: string; tone: "success" | "neutral" | "warning" }> = {
-  checking: { pill: "Memeriksa", tone: "neutral" },
-  on: { pill: "Aktif", tone: "success" },
-  off: { pill: "Mati", tone: "neutral" },
-  denied: { pill: "Diblokir", tone: "warning" },
-  "ios-install": { pill: "Pasang dulu", tone: "warning" },
-  unsupported: { pill: "Tidak didukung", tone: "neutral" },
-  "not-ready": { pill: "Belum siap", tone: "neutral" },
+export const pushWords: Record<PushState, { pill: MessageKey; tone: "success" | "neutral" | "warning" }> = {
+  checking: { pill: "peserta.push.checking", tone: "neutral" },
+  on: { pill: "peserta.push.on", tone: "success" },
+  off: { pill: "peserta.push.off", tone: "neutral" },
+  denied: { pill: "peserta.push.denied", tone: "warning" },
+  "ios-install": { pill: "peserta.push.iosInstall", tone: "warning" },
+  unsupported: { pill: "peserta.push.unsupported", tone: "neutral" },
+  "not-ready": { pill: "peserta.push.notReady", tone: "neutral" },
 };

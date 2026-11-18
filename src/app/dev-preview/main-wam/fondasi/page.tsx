@@ -24,7 +24,7 @@ export default async function DevMainWamFoundation({ searchParams }: { searchPar
   const tab = TABS[(layar && layar in TABS ? layar : "beranda") as keyof typeof TABS];
   return <DevFrame path={tab.path} peran={peran} waktu={waktu}>
     <ScreenContent>
-      <EmptyState icon={tab.icon} title={tab.title} tone={layar === "momen" ? "dark" : "default"}>Sedang disiapkan.</EmptyState>
+      <EmptyState icon={tab.icon} title={tab.title}>Sedang disiapkan.</EmptyState>
     </ScreenContent>
   </DevFrame>;
 }

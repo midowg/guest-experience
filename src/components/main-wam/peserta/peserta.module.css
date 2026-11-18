@@ -76,6 +76,10 @@
 .version { margin: 0; text-align: center; font: var(--mw-type-caption); color: var(--mw-text-2); }
 .bullets { display: flex; flex-direction: column; gap: var(--mw-space-16); margin: 0; padding: 0; list-style: none; }
 .bullets > li { display: flex; align-items: center; gap: var(--mw-space-12); font: var(--mw-type-body); color: var(--mw-text-1); }
+.faq { display: flex; flex-direction: column; gap: var(--mw-space-16); margin: 0; }
+.faqItem { display: flex; flex-direction: column; gap: var(--mw-space-4); margin: 0; }
+.faqQuestion { margin: 0; font: var(--mw-type-body-strong); color: var(--mw-text-1); }
+.faqAnswer { margin: 0; font: var(--mw-type-body); color: var(--mw-text-2); }
 .sheetStack { display: flex; flex-direction: column; gap: var(--mw-space-16); }
 .sheetPerson { display: flex; align-items: center; gap: var(--mw-space-12); }
 .fileInput { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

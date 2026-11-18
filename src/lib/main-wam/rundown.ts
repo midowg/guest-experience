@@ -1,4 +1,5 @@
 import { wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
+import { clock, shortDate, t, type Lang } from "./i18n";
 import type { MainWamEventInfo, MwSession } from "./types";
 
 /*
@@ -53,9 +54,9 @@ export function eventDay(date: string, event: Pick<MainWamEventInfo, "startDate"
 }
 
 /** "Hari ke-2 dari 4", or "" outside the event. */
-export function eventDayLabel(date: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">): string {
+export function eventDayLabel(date: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">, lang: Lang = "id"): string {
   const found = eventDay(date, event);
-  return found ? `Hari ke-${found.day} dari ${found.of}` : "";
+  return found ? t(lang, "fmt.dayOf", { day: found.day, of: found.of }) : "";
 }
 
 /**
@@ -160,15 +161,15 @@ export function tagChoices<T extends MwSession>(sessions: readonly T[], now: Dat
 }
 
 /** "Hari ini", "Kemarin", "Besok" or "Sen, 4 Jan". */
-export function dayWord(date: string, today: string): string {
-  if (date === today) return "Hari ini";
-  if (date === addDays(today, -1)) return "Kemarin";
-  if (date === addDays(today, 1)) return "Besok";
-  return new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+export function dayWord(date: string, today: string, lang: Lang = "id"): string {
+  if (date === today) return t(lang, "fmt.today");
+  if (date === addDays(today, -1)) return t(lang, "fmt.yesterday");
+  if (date === addDays(today, 1)) return t(lang, "fmt.tomorrow");
+  return lang === "id" ? new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`)) : shortDate(lang, date);
 }
 
 /** "08.00–12.00", or "14.30" for a moment without an end. */
-export function timeRange(session: Timed): string {
-  const start = wibTime(session.startsAt).replace(":", ".");
-  return session.endsAt ? `${start}–${wibTime(session.endsAt).replace(":", ".")}` : start;
+export function timeRange(session: Timed, lang: Lang = "id"): string {
+  const start = clock(lang, wibTime(session.startsAt));
+  return session.endsAt ? `${start}–${clock(lang, wibTime(session.endsAt))}` : start;
 }

@@ -1,8 +1,12 @@
+"use client";
+
 import { Lock, MessageSquareDashed } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState } from "@/components/main-wam/ui";
 import { when } from "@/lib/main-wam/modul/awards";
 import type { SilentView } from "@/lib/main-wam/modul/silent";
+import { number } from "@/lib/main-wam/i18n";
 import { mainWamPath } from "@/lib/routes";
 import { Result } from "../Result";
 import css from "../modul.module.css";
@@ -11,18 +15,22 @@ const counted = (count: number) => `${count.toLocaleString("id-ID")} masukan ter
 
 /** T03 Silent Meeting ditutup: how many came in (only from 5 feedbacks of 5 people), and where they go. */
 export function SilentClosed({ count }: { count: number | null }) {
+  const t = useT();
+  const { lang } = useLang();
   return <div className={css.fill}>
     <ScreenContent className={css.grow}>
-      <Result center headline icon={<Lock />} title="Sudah ditutup" body={count !== null ? <>{counted(count)}<br />Rekap dikirim ke BOD.</> : "Rekap dikirim ke BOD."} />
+      <Result center headline icon={<Lock />} title={t("silent.closed")} body={count !== null ? <>{t("silent.collected", { n: number(lang, count) })}<br />{t("silent.recapToBod")}</> : t("silent.recapToBod")} />
     </ScreenContent>
   </div>;
 }
 
 /** T03__status Belum dibuka: when it opens (its session's start, or when panitia opens it). */
 export function SilentNotYet({ view, now }: { view: SilentView; now: Date }) {
+  const t = useT();
+  const { lang } = useLang();
   return <div className={css.fill}>
     <ScreenContent className={css.grow}>
-      <Result center headline icon={<Lock />} title="Belum dibuka" sub={`Dibuka ${when(view.session.startsAt, now)}.`} />
+      <Result center headline icon={<Lock />} title={t("silent.notYet")} sub={t("silent.opensAt", { when: when(view.session.startsAt, now, lang) })} />
     </ScreenContent>
   </div>;
 }
@@ -41,7 +49,8 @@ export function SilentForBod({ view, count }: { view: SilentView; count: number 
 
 /** No Silent Meeting prepared (or not for this session). */
 export function SilentNone() {
+  const t = useT();
   return <ScreenContent>
-    <EmptyState icon={<MessageSquareDashed />} title="Belum ada Silent Meeting">Silent Meeting tampil di sini saat sesinya dibuka.</EmptyState>
+    <EmptyState icon={<MessageSquareDashed />} title={t("silent.noneTitle")}>{t("silent.noneBody")}</EmptyState>
   </ScreenContent>;
 }

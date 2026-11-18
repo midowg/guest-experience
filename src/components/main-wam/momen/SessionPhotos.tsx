@@ -3,6 +3,7 @@ import { ListRow } from "@/components/main-wam/ui";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
+import { serverT } from "@/lib/server/main-wam/lang";
 import { sessionPhotoCount } from "@/lib/server/main-wam/momen/feed";
 
 /**
@@ -13,5 +14,6 @@ import { sessionPhotoCount } from "@/lib/server/main-wam/momen/feed";
 export async function SessionPhotos({ session, context }: { session: MwSession; context: MainWamContext }) {
   const count = await sessionPhotoCount(context, session.id).catch(() => 0);
   if (count <= 0) return null;
-  return <ListRow icon={<Images />} title="Foto sesi ini" value={count} href={mainWamPath.moments({ sesi: session.id })} aria-label={`Foto sesi ini, ${count} foto`} />;
+  const t = await serverT();
+  return <ListRow icon={<Images />} title={t("momen.sessionPhotos")} value={count} href={mainWamPath.moments({ sesi: session.id })} aria-label={t("momen.sessionPhotosLabel", { n: count })} />;
 }

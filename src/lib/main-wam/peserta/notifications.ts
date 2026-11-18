@@ -1,4 +1,5 @@
 import { MAIN_WAM_PATH } from "@/lib/routes";
+import { t, type Lang } from "../i18n";
 import { wibDate } from "../rundown";
 import type { MwNotification, NoteKind } from "../types";
 import { dateLabel, hhmm } from "./format";
@@ -64,15 +65,15 @@ export function noteTarget(link: string | null): string | null {
 }
 
 /** Newest first, split into today and before (WIB). */
-export function groupNotifications(items: readonly MwNotification[], now: Date): { today: NotificationRow[]; earlier: NotificationRow[] } {
+export function groupNotifications(items: readonly MwNotification[], now: Date, lang: Lang = "id"): { today: NotificationRow[]; earlier: NotificationRow[] } {
   const today = wibDate(now.toISOString());
   const rows = [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).map(item => {
     const sameDay = wibDate(item.createdAt) === today;
-    const time = sameDay ? hhmm(item.createdAt) : dateLabel(wibDate(item.createdAt));
+    const time = sameDay ? hhmm(item.createdAt, lang) : dateLabel(wibDate(item.createdAt), lang);
     return {
       row: {
         id: item.id, kind: item.kind, title: item.title, body: item.body, line: noteLine(item), time, unread: !item.readAt, href: noteTarget(item.link),
-        meta: `${item.fromPraWam ? "Pra WAM" : KIND_WORDS[item.kind]} · ${sameDay ? time : `${time} · ${hhmm(item.createdAt)}`}`,
+        meta: `${item.fromPraWam ? t(lang, "peserta.notes.fromPra") : t(lang, `peserta.notes.kind.${item.kind}`)} · ${sameDay ? time : `${time} · ${hhmm(item.createdAt, lang)}`}`,
       } satisfies NotificationRow,
       sameDay,
     };

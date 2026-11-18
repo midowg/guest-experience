@@ -1,3 +1,4 @@
+import { activeLang, t } from "@/lib/main-wam/i18n";
 import type { PhotoStart } from "@/lib/main-wam/momen/filters";
 import { afterFailure, nextDue, nextWake, outcomeOf, queueSummary, resetBackoff, type QueueItem } from "@/lib/main-wam/momen/queue";
 import type { UploadDone, UploadStart } from "@/lib/main-wam/momen/types";
@@ -25,7 +26,7 @@ export async function momenFetch<T>(url: string, init: RequestInit & { json?: un
     const body = await response.json().catch(() => null) as { ok?: boolean; data?: T; message?: string } | null;
     return { status: response.status, data: response.ok && body?.ok ? (body.data ?? null) : null, message: body?.message ?? "" };
   } catch {
-    return { status: 0, data: null, message: "Tidak ada sinyal." };
+    return { status: 0, data: null, message: t(activeLang(), "srv.momen.noSignal") };
   }
 }
 
@@ -201,7 +202,7 @@ export class MomenQueue {
         if (item.photoId !== id) { item = { ...item, photoId: id }; await this.save(item); }
         const statuses = await Promise.all([put(uploads.besar, item.besar), put(uploads.kecil, item.kecil), put(uploads.ubin, item.ubin)]);
         const bad = statuses.find(status => status < 200 || status >= 300);
-        if (bad !== undefined) return this.failed(item, bad, "storage", bad === 0 ? "Tidak ada sinyal." : "Penyimpanan menolak unggahan.");
+        if (bad !== undefined) return this.failed(item, bad, "storage", bad === 0 ? t(activeLang(), "srv.momen.noSignal") : t(activeLang(), "srv.momen.storageRefused"));
         const confirm = await momenFetch<UploadDone>(mainWamApi.photoConfirm, { method: "POST", json: { ...agreed, token } });
         if (!confirm.data) return this.failed(item, confirm.status, "server", confirm.message);
         done = { id: confirm.data.id };
@@ -221,7 +222,7 @@ export class MomenQueue {
   private async failed(item: QueueItem, status: number, step: "server" | "storage", message: string): Promise<boolean> {
     if (this.cancelled.has(item.clientId)) return true;
     const outcome = outcomeOf(status, step);
-    const next = afterFailure({ ...item, deferred: true }, outcome, message || "Belum terkirim.", this.now(), Math.random, status === 0);
+    const next = afterFailure({ ...item, deferred: true }, outcome, message || t(activeLang(), "srv.momen.notSentYet"), this.now(), Math.random, status === 0);
     await this.save(next);
     if (outcome === "gagal") this.emit({ type: "failed", item: next });
     if (outcome === "masuk") this.emit({ type: "masuk", item: next });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CloudOff, Globe, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, Users, X } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, TagChip, TagChipRow, useToast } from "@/components/main-wam/ui";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
@@ -70,6 +71,8 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
 }) {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
+  const { lang } = useLang();
   const queue = useMomenQueue();
   // The server's clock minus this phone's: the session tag and the time sent follow the server.
   const clockOffset = useRef(0);
@@ -211,13 +214,13 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
           deferred: navigator.onLine === false,
         });
       } catch (error) {
-        problem = error instanceof PhotoProblem ? error.message : "Foto ini belum bisa dibaca. Coba lagi.";
+        problem = error instanceof PhotoProblem ? error.message : t("momen.cam.unreadable");
       }
     }
     setBusy(false);
     if (!ready.length) {
       if (fromGallery) setSheet("galeri");
-      else toast.show({ text: problem ?? "Foto belum bisa dibaca.", tone: "error" });
+      else toast.show({ text: problem ?? t("momen.cam.unreadableShort"), tone: "error" });
       return;
     }
     if (thumb) { setLast(previous => { if (previous) URL.revokeObjectURL(previous); return thumb; }); }
@@ -225,12 +228,12 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
     const ids = ready.map(item => item.clientId);
     const cancel = () => {
       ids.forEach(id => { void momenQueue().cancel(id); });
-      toast.show({ text: ready.length > 1 ? `${ready.length} foto dibatalkan` : "Foto dibatalkan", tone: "info", duration: 3000 });
+      toast.show({ text: ready.length > 1 ? t("momen.cam.cancelledMany", { n: ready.length }) : t("momen.cam.cancelledOne"), tone: "info", duration: 3000 });
     };
     // eslint-disable-next-line @next/next/no-img-element -- the photo just made on this phone (object URL)
     const picture = thumb ? <img src={thumb} alt="" /> : undefined;
-    if (ready[0].deferred) toast.show({ text: "Akan terkirim saat online", thumb: picture, action: { label: "Batalkan", onAction: cancel } });
-    else toast.show({ text: sentText(ready.length, audience, group), thumb: picture, timer: true, duration: 5000, action: { label: "Batalkan", onAction: cancel } });
+    if (ready[0].deferred) toast.show({ text: t("momen.cam.sendsOnline"), thumb: picture, action: { label: t("momen.cam.undo"), onAction: cancel } });
+    else toast.show({ text: sentText(ready.length, audience, group, lang), thumb: picture, timer: true, duration: 5000, action: { label: t("momen.cam.undo"), onAction: cancel } });
     if (problem) toast.show({ text: problem, tone: "error" });
   }
 
@@ -247,7 +250,7 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   function onPicked(event: ChangeEvent<HTMLInputElement>) {
     const files = [...(event.target.files ?? [])];
     event.target.value = "";
-    if (files.length > GALLERY_PICK_MAX) toast.show({ text: `Paling banyak ${GALLERY_PICK_MAX} foto sekali kirim. ${GALLERY_PICK_MAX} foto pertama dikirim.`, tone: "info" });
+    if (files.length > GALLERY_PICK_MAX) toast.show({ text: t("momen.cam.pickMax", { max: GALLERY_PICK_MAX }), tone: "info" });
     void send(files.slice(0, GALLERY_PICK_MAX).map(file => () => decodeFile(file)), true);
   }
   async function flip() {
@@ -262,8 +265,8 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
 
   /* Words on the chips and in the sheets. */
   const tagSession = sessions.find(session => session.id === tag) ?? null;
-  const tagSheet = useMemo(() => tagGroups(sessions, now), [sessions, now]);
-  const shutterLabel = audience === "kelompok" && group ? `Ambil foto, langsung terkirim ke Kelompok ${group.number}` : "Ambil foto, langsung terkirim ke semua peserta";
+  const tagSheet = useMemo(() => tagGroups(sessions, now, lang), [sessions, now, lang]);
+  const shutterLabel = audience === "kelompok" && group ? t("momen.cam.shutterGroup", { n: group.number }) : t("momen.cam.shutterAll");
   const waiting = demo?.pill ?? queue.summary.waiting;
   const offline = demo?.offline ?? queue.summary.offline;
   const showPill = waiting > 0 && (offline || queue.items.some(item => item.attempts > 0));
@@ -274,89 +277,90 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   return <div className={css.screen} data-momen-camera="">
     <ShellChrome hideTopBar hideNav />
     {!demo && <MomenQueueRunner />}
-    <div className={css.bar}><IconButton variant="ondark" icon={X} label="Tutup kamera" onClick={close} /></div>
+    <div className={css.bar}><IconButton variant="ondark" icon={X} label={t("momen.cam.close")} onClick={close} /></div>
 
     <div className={css.stage}><div className={css.stageInner}>
       <div className={css.view}>
-        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} playsInline muted autoPlay aria-label={facing === "user" ? "Jendela bidik kamera depan" : "Jendela bidik kamera belakang"} />}
-        {(live === "menyala" && demo) && <span role="img" aria-label="Jendela bidik kamera belakang"><PhotoFill tone={5} className={css.fill} /></span>}
+        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
+        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")}><PhotoFill tone={5} className={css.fill} /></span>}
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
-          ? <img className={css.still} src={last} alt="Foto terakhir yang terkirim" />
-          : <div className={css.off}><IconBox icon={Camera} size={64} round tone="ondark" /><p className={css.offBody}>Tombol jepret membuka kamera HP.</p></div>)}
-        {live === "memuat" && <div className={css.off} role="status" aria-label="Menyiapkan kamera" />}
+          ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
+          : <div className={css.off}><IconBox icon={Camera} size={64} round tone="ondark" /><p className={css.offBody}>{t("momen.cam.phoneCamera")}</p></div>)}
+        {live === "memuat" && <div className={css.off} role="status" aria-label={t("momen.cam.preparing")} />}
         {live === "ditolak" && <div className={css.off} role="status">
           <IconBox icon={CameraOff} size={64} round tone="ondark" />
-          <h1 className={css.offTitle}>Kamera belum diizinkan</h1>
-          <p className={css.offBody}>Atau pilih foto dari galeri.</p>
-          <Button icon={Camera} className={css.offAction} onClick={askAgain}>Izinkan</Button>
+          <h1 className={css.offTitle}>{t("momen.cam.notAllowed")}</h1>
+          <p className={css.offBody}>{t("momen.cam.orGallery")}</p>
+          <Button icon={Camera} className={css.offAction} onClick={askAgain}>{t("momen.cam.allow")}</Button>
         </div>}
         {live === "menunggu" && <div className={css.off} role="status">
           <IconBox icon={Hourglass} size={64} round tone="ondark" />
-          <h1 className={css.offTitle}>Menunggu pembaruan sistem</h1>
-          <p className={css.offBody}>Foto bisa dikirim setelah sistem diperbarui.</p>
+          <h1 className={css.offTitle}>{t("peserta.waiting.title")}</h1>
+          <p className={css.offBody}>{t("momen.cam.waitingBody")}</p>
         </div>}
-        {showPill && <Pill tone="onmedia" icon={<CloudOff />} className={css.status}>{queuedPill(waiting, offline)}</Pill>}
+        {showPill && <Pill tone="onmedia" icon={<CloudOff />} className={css.status}>{queuedPill(waiting, offline, lang)}</Pill>}
       </div>
     </div></div>
 
     <div className={css.dock}>
       <TagChipRow>
-        <TagChip label="Untuk:" value={audience === "kelompok" ? "Kelompokku" : "Semua"} onClick={() => setSheet("untuk")} expanded={sheet === "untuk"} />
+        <TagChip label={t("momen.cam.forLabel")} value={audience === "kelompok" ? t("momen.myGroup") : t("momen.all")} onClick={() => setSheet("untuk")} expanded={sheet === "untuk"} />
         {tagSession
-          ? <TagChip label="Sesi:" value={tagSession.title} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"}
-            onClear={() => { setTag(null); setTouched(true); }} clearLabel="Hapus tag sesi, jadikan Umum" />
-          : <TagChip label="Sesi:" value="Umum" onClick={() => setSheet("sesi")} expanded={sheet === "sesi"} />}
+          ? <TagChip label={t("momen.cam.sessionLabel")} value={tagSession.title} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"}
+            onClear={() => { setTag(null); setTouched(true); }} clearLabel={t("momen.cam.clearTag")} />
+          : <TagChip label={t("momen.cam.sessionLabel")} value={t("momen.general")} onClick={() => setSheet("sesi")} expanded={sheet === "sesi"} />}
       </TagChipRow>
       <div className={css.controls}>
-        <button type="button" className={css.gallery} aria-label="Pilih dari galeri" onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
+        <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
           {last
             // eslint-disable-next-line @next/next/no-img-element -- the photo just sent (object URL)
             ? <img className={css.galleryImg} src={last} alt="" />
             : <PhotoFill tone={1} className={css.fill} />}
         </button>
         <button type="button" className={css.shutter} aria-label={shutterLabel} aria-busy={busy || undefined} disabled={!canShoot} onClick={shutter} />
-        <IconButton variant="ondark" icon={SwitchCamera} label="Balik kamera" pressed={facing === "user"} disabled={!canShoot} onClick={flip} />
+        <IconButton variant="ondark" icon={SwitchCamera} label={t("momen.cam.flip")} pressed={facing === "user"} disabled={!canShoot} onClick={flip} />
       </div>
       <input ref={shutterInput} className={css.hidden} type="file" accept="image/*" capture={facing} onChange={onShot} tabIndex={-1} aria-hidden />
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
-    <Sheet open={sheet === "untuk"} onClose={() => setSheet(null)} title="Untuk" history={live !== "menyala"}>
-      <RadioCards label="Foto untuk" value={audience} onChange={value => {
+    <Sheet open={sheet === "untuk"} onClose={() => setSheet(null)} title={t("momen.cam.forTitle")} history={live !== "menyala"}>
+      <RadioCards label={t("momen.cam.forPhotos")} value={audience} onChange={value => {
         const next = value as PhotoAudience;
         setAudience(next); store("local", AUDIENCE_KEY, next); setSheet(null);
       }} options={[
-        { value: "semua", title: "Semua peserta", sub: mozaik ? "Ikut menyusun Mozaik" : undefined, icon: Globe },
-        ...(group ? [{ value: "kelompok", title: "Kelompokku", sub: `${groupLabel(group)} · ${group.size} orang`, icon: Users }] : []),
+        { value: "semua", title: t("momen.cam.allParticipants"), sub: mozaik ? t("momen.cam.joinsMosaic") : undefined, icon: Globe },
+        ...(group ? [{ value: "kelompok", title: t("momen.myGroup"), sub: t("momen.cam.groupSub", { group: groupLabel(group, lang), size: group.size }), icon: Users }] : []),
       ]} />
-      {!group && <p className={css.note}>{groupsPublished ? "Kamu belum masuk kelompok." : "Kelompok belum diterbitkan panitia."}</p>}
+      {!group && <p className={css.note}>{groupsPublished ? t("momen.cam.noGroup") : t("momen.stack.groupsNotPublished") + "."}</p>}
     </Sheet>
-    <Sheet open={sheet === "sesi"} onClose={() => setSheet(null)} title="Tag sesi" history={live !== "menyala"}>
-      <PickList label="Tag sesi" value={tag ?? UMUM} onChange={value => { setTag(value === UMUM ? null : value); setTouched(true); setSheet(null); }}
-        groups={[{ rows: [{ value: UMUM, title: "Umum", sub: "Tanpa sesi" }] }, ...tagSheet.map(day => ({ head: day.head, rows: day.rows.map(row => ({ value: row.id, title: row.title, sub: choiceSub(row) })) }))]} />
+    <Sheet open={sheet === "sesi"} onClose={() => setSheet(null)} title={t("momen.cam.tagTitle")} history={live !== "menyala"}>
+      <PickList label={t("momen.cam.tagTitle")} value={tag ?? UMUM} onChange={value => { setTag(value === UMUM ? null : value); setTouched(true); setSheet(null); }}
+        groups={[{ rows: [{ value: UMUM, title: t("momen.general"), sub: t("momen.noSession") }] }, ...tagSheet.map(day => ({ head: day.head, rows: day.rows.map(row => ({ value: row.id, title: row.title, sub: choiceSub(row, lang) })) }))]} />
     </Sheet>
-    <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title="Galeri" history={live !== "menyala"}>
-      <EmptyState size="s" icon={ImageIcon} title="Akses foto belum diizinkan" headingLevel={3}
-        action={<Button icon={Settings} onClick={() => setSheet("cara")}>Buka pengaturan</Button>} />
+    <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
+      <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
+        action={<Button icon={Settings} onClick={() => setSheet("cara")}>{t("momen.cam.openSettings")}</Button>} />
     </Sheet>
-    <Sheet open={sheet === "cara"} onClose={() => setSheet(null)} title="Izinkan kamera" history={live !== "menyala"}
-      footer={<Button block variant="secondary" icon={Camera} onClick={() => { setSheet(null); setLive("hp"); }}>Pakai kamera HP</Button>}>
+    <Sheet open={sheet === "cara"} onClose={() => setSheet(null)} title={t("momen.cam.allowTitle")} history={live !== "menyala"}
+      footer={<Button block variant="secondary" icon={Camera} onClick={() => { setSheet(null); setLive("hp"); }}>{t("momen.cam.useCamera")}</Button>}>
       <ol className={css.steps}>
-        <li>iPhone: Pengaturan → Safari → Kamera → Izinkan. App di layar utama: buka lagi dari ikonnya.</li>
-        <li>Android: ketuk ikon di kiri alamat situs → Izin → Kamera → Izinkan.</li>
+        <li>{t("momen.cam.stepIphone")}</li>
+        <li>{t("momen.cam.stepAndroid")}</li>
       </ol>
-      <p className={css.note}>Foto dari kamera HP dan galeri tetap bisa dikirim tanpa izin ini.</p>
+      <p className={css.note}>{t("momen.cam.stillWorks")}</p>
     </Sheet>
   </div>;
 }
 
 /** O04: why the camera, before the browser asks (web.dev permissions best practices). */
 export function CameraPermission({ absen, onAllow, onLater }: { absen: boolean; onAllow: () => void; onLater: () => void }) {
+  const t = useT();
   return <div className={css.izin}>
     <ShellChrome hideTopBar hideNav />
     <div className={css.izinBody}>
-      <h1 className={css.izinTitle}>Izinkan kamera</h1>
+      <h1 className={css.izinTitle}>{t("momen.cam.allowTitle")}</h1>
       <div className={css.ill} aria-hidden>
         {absen && <div className={css.scan}>
           <span className={`${css.corner} ${css.tl}`} /><span className={`${css.corner} ${css.tr}`} />
@@ -366,15 +370,15 @@ export function CameraPermission({ absen, onAllow, onLater }: { absen: boolean; 
         <span className={css.thumb}><PhotoFill tone={3} className={css.fill} /></span>
       </div>
       <ul className={css.bullets}>
-        <li><IconBox icon={Camera} tone="primary" />Foto untuk Momen</li>
-        {absen && <li><IconBox icon={QrCode} tone="primary" />Scan QR absen</li>}
-        <li><IconBox icon={Lock} tone="primary" />Menyala hanya saat kamu buka</li>
+        <li><IconBox icon={Camera} tone="primary" />{t("momen.cam.permPhotos")}</li>
+        {absen && <li><IconBox icon={QrCode} tone="primary" />{t("momen.cam.permScan")}</li>}
+        <li><IconBox icon={Lock} tone="primary" />{t("momen.cam.permOnlyOpen")}</li>
       </ul>
     </div>
     <div className={css.izinBar}>
       <ActionBar>
-        <Button block onClick={onAllow}>Izinkan</Button>
-        <Button block variant="text" onClick={onLater}>Nanti</Button>
+        <Button block onClick={onAllow}>{t("momen.cam.allow")}</Button>
+        <Button block variant="text" onClick={onLater}>{t("momen.cam.later")}</Button>
       </ActionBar>
     </div>
   </div>;

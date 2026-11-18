@@ -236,7 +236,7 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 
 | Area | Kunci → alamat (layar) |
 | --- | --- |
-| A | `home` / (P01/P02, B01, K01) · `login(next)` /masuk (O02) · `onboarding` /mulai (O03) · `notifications` /notifikasi (N01) · `agenda(hari?)` /agenda (P03) · `session(id)` /agenda/{id} (P04) · `me` /saya (P05/P05B) · `groupRoom` /saya/kelompok (L01) · `travel(arah?)` /saya/perjalanan (L03) · `guides` /saya/panduan, `guide(slug)` (L04) · `settings` /saya/pengaturan (S02) |
+| A | `home` / (P01/P02, B01, K01) · `login(next)` /masuk (O02) · `onboarding` /mulai (O03) · `notifications` /notifikasi (N01) · `agenda(hari?)` /agenda (P03) · `session(id)` /agenda/{id} (P04) · `me` /saya (P05/P05B) · `groupRoom` /saya/kelompok (L01) · `travel(arah?)` /saya/perjalanan (L03) · `guides` /saya/panduan, `guide(slug)` (L04) · `settings` /saya/pengaturan (S02) · `help` /saya/bantuan (halaman, bukan sheet) |
 | B | `moments({lihat, sesi, foto})` /momen (M01–M03) · `camera({sesi, untuk})` /momen/kamera (U01–U05, O04) · `gallery({lihat, sesi})` /momen/galeri (M05) · `mosaic(tandai)` /momen/mozaik (M06) |
 | C | `rundownLive(hari?)` /kelola/rundown (K02, K03 sheet) · `attendanceManual(sesi?)` /kelola/absen (K05) · `announce` /kelola/pengumuman (K06) · `moderation(lihat?)` /kelola/moderasi (K08) · `attendanceSummary(hari?)` /ringkasan/kehadiran (B02) |
 | D | `scan` /absen (A01, A05) · `checkIn(token)` /absen/{token} (A02–A04; isi QR cetak) · `silentMeeting(sesi?)` /silent-meeting (T01–T03) · `awards` /awarding (V01) · `awardCategory(id)` /awarding/{id} (V02) · `silentRecap` /ringkasan/silent-meeting (B05) · `awardApproval` /ringkasan/awarding (B06) |
@@ -443,8 +443,9 @@ milik D), tanpa mengimpor kode area lain.
 - **Cache pengaturan dan daftar orang lintas permintaan** (tag + `revalidateTag`, atau TTL 60 detik) belum
   dipakai. Gate kini 6 kueri per permintaan (S5); `mainWamPeople()` (nama dan foto semua orang) masih dibaca
   per permintaan di layar yang memakainya.
-- **`theme-color` Momen dan kamera**: halaman bertema terang memakai `#F6F7F9`; layar gelap (Momen, kamera)
-  boleh memperbarui meta ke hitam saat dibuka (milik B, belum dikerjakan).
+- **`theme-color`**: mengikuti pilihan Tampilan perangkat (Terang `#F6F7F9`, Gelap `#0E1116`, Sistem: keduanya
+  menurut skema HP), dibaca server di `acara/layout.tsx`. Momen tidak lagi gelap sendiri; kamera (gelap di kedua
+  mode) belum mengubah meta saat dibuka.
 - **`acara/error.tsx` untuk Masuk** (T-S02): Masuk belum punya batas galat sendiri; galatnya jatuh ke halaman
   galat situs.
 - **Pengumuman bernada peringatan dari K06**: `NoteInput.tone` sudah ada; K06 (C) belum memberi pilihan,
@@ -467,3 +468,58 @@ milik D), tanpa mengimpor kode area lain.
   - Tanpa aturan ini Momen tetap berjalan, hanya unggahan yatim tidak pernah terhapus (audit L4).
 - **Uji SQL lama yang gagal** (bukan Main WAM, juga gagal tanpa migrasi Main WAM): `pra-wam-appraisal`,
   `pw-tv`, `pw-tv-playlist`, `pw-tv-welcome`, `rsvp-needs`, `wam-cards`, `wam-questionnaire`.
+
+---
+
+## 11. Bahasa: Indonesia / English (agen i18n, 18 Nov 2026)
+
+Peserta bisa memilih **Indonesia** (bawaan) atau **English** di Saya → Pengaturan → "Bahasa / Language", per
+perangkat. Mengganti langsung mengubah label (konteks klien) lalu `router.refresh()` supaya yang ditulis
+server (tanggal, kartu Sekarang) ikut. Tanpa muat ulang penuh.
+
+**Keputusan:** bahasa disimpan di **cookie `mw_lang`** (`id`|`en`, setahun, `SameSite=Lax`, ditulis browser),
+bukan di alamat. Alasan: satu alamat per layar (QR absen, tautan notifikasi, PWA terpasang) tidak berubah
+dan tidak perlu Proxy atau pengalihan; dokumen Next 16 untuk i18n lewat sub-path memaksa semua alamat
+berawalan bahasa. Tanpa dependensi baru (kamus objek biasa, ±0 KB library).
+
+| Lapisan | Lokasi | Isi |
+| --- | --- | --- |
+| Kamus | `src/lib/main-wam/i18n/{id,en}.ts` (+ `id/`, `en/` per area: `common`, `peserta`, `momen`, `modul`) | `id` = sumber dan tipe kunci (`MessageKey`); `en` = `Record<MessageKey, string>`, jadi kunci yang kurang gagal di `tsc`. Kunci `area.nama`; 737 kunci |
+| Fungsi | `i18n/translate.ts`, `format.ts`, `types.ts`, `active.ts` | `t(lang, key, vars)`; `{n}` = nilai; jamak `{n, plural, one {# foto} other {# foto}}` (`#` = angka); `clock/shortDate/monthName/number` per bahasa, jam selalu WIB (ID `08.00`, `Sel, 5 Jan`; EN `08:00`, `Tue, 5 Jan`); `translateKnown(lang, teks)` |
+| Server | `src/lib/server/main-wam/lang.ts` | `readLang()` (cookie, `id` bila hilang/aneh/di luar permintaan), `serverT()`. Loader peserta membacanya sendiri |
+| Klien | `src/components/main-wam/i18n/` | `LangProvider` (dipasang di `acara/layout.tsx`, membungkus `<div lang display:contents>` sehingga atribut `lang` mengikuti), `useLang()`, `useT()`, `useKnown()`, `<Words k="…"/>`, `LanguageSetting` |
+
+**Aturan menulis teks baru (wajib):**
+1. Tidak ada teks tetap di komponen peserta: tambahkan kunci ke `id/<area>.ts` **dan** `en/<area>.ts` (tes
+   `i18n.test.ts` gagal bila kunci, variabel `{…}`, atau jamak tidak sama, bila ada teks kosong, atau teks EN
+   masih sama dengan ID). Teks Indonesia tidak boleh berubah saat dipindah: tes lama membacanya.
+2. Komponen klien: `const t = useT()`. Komponen server yang tidak bisa pakai hook: jadikan "use client"
+   (ingat ekspor non-komponen dari berkas client menjadi referensi klien bagi importir server; pindahkan
+   helper ke lib) atau `<Words k="…"/>`. Fungsi non-hook di klien: `t(activeLang(), key)`.
+3. Fungsi lib murni yang menghasilkan teks menerima parameter akhir `lang: Lang = "id"` (default id, tes
+   lama tidak berubah); loader/halaman server memanggil `readLang()` dan meneruskannya.
+4. Teks yang ditulis server/library bersama dalam Indonesia dan tampil di layar peserta: taruh teks
+   **persisnya** sebagai kunci (`srv.*`) lalu tampilkan lewat `useKnown()` / `failText` (`translateKnown`).
+5. Istilah baku EN: Home, Agenda, Moments, Me; Group; Check in; Mosaic; Silent Meeting; Awarding.
+6. Pratinjau: `?lang=en` lewat `previewLang(params)` (`components/main-wam/dev/lang.ts`), `Frame`/`DevFrame` menerima `lang`.
+
+**Tetap Indonesia (belum diterjemahkan, sengaja atau belum sempat):**
+- Seluruh layar **panitia, BOD, dan Admin WAM** (Rundown live, Absen manual, Pengumuman, Moderasi, Ringkasan,
+  Kehadiran, rekap Silent Meeting, persetujuan Awarding, QR cetak); judul bilahnya juga Indonesia.
+- **Isi dari admin/pengguna**: judul dan tempat sesi, urutan tampil, dress code, "yang perlu dibawa", isi Panduan,
+  pengumuman, nama kelompok/kamar/lantai, judul kategori dan nominasi, pertanyaan Silent Meeting, alasan
+  penyembunyian foto. Label tetap, bulan/hari, dan pesan sistem diterjemahkan.
+- **Notifikasi yang ditulis server saat dikirim** (judul dan isi tersimpan Indonesia, mis. "Jadwal berubah",
+  "Fotomu disembunyikan sementara"): hanya label jenis dan waktunya yang ikut bahasa.
+- `metadata.title` halaman (judul tab browser), pesan validasi zod yang tidak masuk daftar `srv.*`,
+  `sourceProblem` (foto profil) dan teks Pra WAM yang dipakai bersama.
+- **Tampilan** (Terang/Gelap/Sistem dan catatannya, milik agen tema) dan **Bantuan** (halaman baru) belum
+  dihubungkan ke kamus saat tugas ini selesai; tinggal memakai `useT()` dengan kunci baru.
+- Langkah panduan pasang WAM (`lib/pra-wam/install.ts`, dipakai Pra WAM) tetap Indonesia di sumbernya; Main
+  WAM menerjemahkannya lewat `translateKnown` (kunci `install.*`, dites harus persis sama dengan sumbernya).
+
+**Berkas bersama yang diubah agen i18n (aturan emas 1), semuanya kompatibel mundur (parameter `lang` opsional):**
+`src/lib/main-wam/{screen,greeting,rundown}.ts` (`mainWamScreen(path, lang)`, `homeGreeting(…, lang)`,
+`eventDayLabel/dayWord/timeRange(…, lang)`), `src/lib/main-wam/peserta/*`, `acara/layout.tsx`,
+`acara/(app)/layout.tsx`, `acara/not-found.tsx`. Tes: `i18n/i18n.test.ts`, `i18n/i18n.dom.test.tsx`,
+`peserta/peserta.i18n.test.ts`, `server/main-wam/lang.test.ts`, `modul/modul.i18n.dom.test.tsx`, `momen/momen.i18n.dom.test.tsx`.

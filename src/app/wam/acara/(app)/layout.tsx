@@ -7,6 +7,7 @@ import { mainWamGate, mainWamRole } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { moduleOn } from "@/lib/main-wam/modules";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { readMainWamSettings } from "@/lib/server/main-wam/settings";
 import { mainWamViewer } from "@/lib/server/main-wam/viewer";
 
@@ -28,8 +29,8 @@ export default async function MainWamAppLayout({ children }: { children: ReactNo
   const gate = mainWamGate(settings.mode, viewer);
   if (gate.kind === "tutup") notFound();
   if (gate.kind === "login" || !viewer) return gate.kind === "login" && gate.page === "main" ? children : <SignInFirst />;
-  const unread = await unreadCount(viewer.id).catch(() => 0);
-  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer))} unread={unread}>
+  const [unread, lang] = await Promise.all([unreadCount(viewer.id).catch(() => 0), readLang()]);
+  return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread}>
     {children}
     {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
     {moduleOn(settings.modules, "absen") && <AbsenQueue />}

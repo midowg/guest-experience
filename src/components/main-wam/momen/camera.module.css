@@ -16,17 +16,17 @@
 .view {
   --w: min(calc(100cqw + var(--mw-space-32)), calc(100cqh * 0.8));
   position: relative; width: var(--w); aspect-ratio: 4 / 5; margin-left: calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
-  background: var(--mw-inverse-surface);
+  background: var(--mw-camera-2);
 }
 .video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .mirror { transform: scaleX(-1); }
 .fill { position: absolute; inset: 0; }
 .off {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
-  padding: var(--mw-space-24); text-align: center; background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface);
+  padding: var(--mw-space-24); text-align: center; background: var(--mw-camera-2); color: var(--mw-media-on);
 }
 .offTitle { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); }
-.offBody { margin: 0; font: var(--mw-type-body); color: var(--mw-inverse-on-surface-2); text-wrap: balance; }
+.offBody { margin: 0; font: var(--mw-type-body); color: var(--mw-media-on-2); text-wrap: balance; }
 .offAction { margin-top: var(--mw-space-8); }
 .status { position: absolute; top: var(--mw-space-12); left: 50%; z-index: 2; transform: translateX(-50%); white-space: nowrap; }
 
@@ -34,7 +34,7 @@
 .controls { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; justify-items: center; }
 .gallery {
   position: relative; display: block; width: var(--mw-touch); height: var(--mw-touch); padding: 0; border: 0; border-radius: var(--mw-radius-12);
-  box-shadow: 0 0 0 2px var(--mw-media-on); overflow: hidden; cursor: pointer; background: var(--mw-inverse-surface);
+  box-shadow: 0 0 0 2px var(--mw-media-on); overflow: hidden; cursor: pointer; background: var(--mw-camera-2);
 }
 .gallery:focus-visible, .shutter:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 4px; }
 .galleryImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -50,13 +50,13 @@
 .shutter:disabled::before { background: color-mix(in srgb, var(--mw-media-on) 20%, transparent); }
 .hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
-/* O04: the pre-permission, light, before the dark camera. */
+/* O04: the pre-permission, in the app's theme, before the camera (dark in both themes: a viewfinder). */
 .izin { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--mw-bg); color: var(--mw-text-1); }
 .izinBody { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--mw-space-24); width: 100%; max-width: var(--mw-column); margin: 0 auto;
   padding: calc(var(--mw-safe-top) + var(--mw-space-16)) var(--mw-space-16) var(--mw-space-24); }
 .izinTitle { margin: var(--mw-space-16) 0 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); }
 .ill { display: flex; align-items: center; justify-content: center; gap: var(--mw-space-24); padding: var(--mw-space-24); border-radius: var(--mw-radius-16); background: var(--mw-camera); color: var(--mw-media-on); }
-.scan { position: relative; flex: none; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; color: var(--mw-inverse-on-surface-2); }
+.scan { position: relative; flex: none; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; color: var(--mw-media-on-2); }
 .scan > svg { width: 96px; height: 96px; }
 .corner { position: absolute; width: 40px; height: 40px; border: 4px solid var(--mw-media-on); }
 .tl { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--mw-radius-24); }

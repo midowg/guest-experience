@@ -1,4 +1,5 @@
 import { pickHomeCard, type HomeCardCandidate } from "../home-card";
+import { t, type Lang } from "../i18n";
 import { noteTone } from "../notify";
 import { silentClosesAt, silentState, votingState } from "../module-state";
 import { checkInWindow, dayWord, eventDay, hasEnded, isLive, isRunning, nowCard, sessionEnd, timeRange, wibDate, type NowCard } from "../rundown";
@@ -46,10 +47,12 @@ export type NowInput = {
   absenOn: boolean;
   /** The person's check-ins: session id → when. */
   checkedIn: ReadonlyMap<string, string>;
+  /** The words' language (default Indonesian). */
+  lang?: Lang;
 };
 
 /** The Sekarang card (nowCard of the fondasi, in the card's words). */
-export function nowView({ sessions, now, event, absenOn, checkedIn }: NowInput): NowView {
+export function nowView({ sessions, now, event, absenOn, checkedIn, lang = "id" }: NowInput): NowView {
   const attended = absenOn ? checkedIn : new Map<string, string>();
   const card: NowCard = mealGivesWay(nowCard(sessions, now, { absenOn, checkedIn: new Set(attended.keys()) }), sessions, now);
   if (card.kind === "kosong") return { kind: "kosong" };
@@ -57,24 +60,24 @@ export function nowView({ sessions, now, event, absenOn, checkedIn }: NowInput):
     const next = card.tomorrow;
     if (!next) return { kind: "selesai", tomorrow: null };
     const today = wibDate(now.toISOString()), date = wibDate(next.startsAt);
-    const word = dayWord(date, today);
-    return { kind: "selesai", tomorrow: { title: next.title, when: word === "Besok" ? `Besok ${hhmm(next.startsAt)}` : `${word} · ${hhmm(next.startsAt)}`, day: eventDay(date, event)?.day ?? null } };
+    const word = dayWord(date, today, lang);
+    return { kind: "selesai", tomorrow: { title: next.title, when: word === t(lang, "fmt.tomorrow") ? t(lang, "fmt.tomorrowAt", { time: hhmm(next.startsAt, lang) }) : `${word} · ${hhmm(next.startsAt, lang)}`, day: eventDay(date, event)?.day ?? null } };
   }
   const session = card.session;
   const at = attended.get(session.id) ?? null;
   const running = isRunning(session, now);
-  const base = { kind: "sesi" as const, sessionId: session.id, title: session.title, time: timeRange(session), place: placeLine(session) };
+  const base = { kind: "sesi" as const, sessionId: session.id, title: session.title, time: timeRange(session, lang), place: placeLine(session, lang) };
   if (card.kind === "absen") {
     // Ended, but absen stays open 30 minutes more: say until when.
-    if (hasEnded(session, now)) return { ...base, status: "done", statusText: null, when: `Absen sampai ${hhmm(checkInWindow(session).closes)}`, whenAt: null, absen: true };
-    return { ...base, status: running ? "live" : "next", statusText: null, when: running ? null : untilLabel(now, session.startsAt), whenAt: running ? null : session.startsAt, absen: true };
+    if (hasEnded(session, now)) return { ...base, status: "done", statusText: null, when: t(lang, "peserta.home.absenUntil", { time: hhmm(checkInWindow(session).closes, lang) }), whenAt: null, absen: true };
+    return { ...base, status: running ? "live" : "next", statusText: null, when: running ? null : untilLabel(now, session.startsAt, lang), whenAt: running ? null : session.startsAt, absen: true };
   }
   if (card.kind === "berlangsung") {
-    return { ...base, status: "live", statusText: null, when: at ? `Hadir ${hhmm(at)}` : null, whenAt: null, absen: false };
+    return { ...base, status: "live", statusText: null, when: at ? t(lang, "peserta.home.present", { time: hhmm(at, lang) }) : null, whenAt: null, absen: false };
   }
   return at
-    ? { ...base, status: "present", statusText: `Hadir ${hhmm(at)}`, when: untilLabel(now, session.startsAt), whenAt: session.startsAt, absen: false }
-    : { ...base, status: "next", statusText: null, when: untilLabel(now, session.startsAt), whenAt: session.startsAt, absen: false };
+    ? { ...base, status: "present", statusText: t(lang, "peserta.home.present", { time: hhmm(at, lang) }), when: untilLabel(now, session.startsAt, lang), whenAt: session.startsAt, absen: false }
+    : { ...base, status: "next", statusText: null, when: untilLabel(now, session.startsAt, lang), whenAt: session.startsAt, absen: false };
 }
 
 /** How soon a real session must start to take the card from a meal that is on (P01__status: 07.10 Pemaparan, not Sarapan). */
@@ -95,8 +98,8 @@ export function mealGivesWay<T extends MwSession>(card: NowCard<T>, sessions: re
 }
 
 /** A session's place as lists show it: "Kumpul lobby 19.15 · opsional" for an optional one. */
-export const placeLine = (session: Pick<MwSession, "place" | "optional">) =>
-  [session.place.trim(), session.optional ? "opsional" : ""].filter(Boolean).join(" · ");
+export const placeLine = (session: Pick<MwSession, "place" | "optional">, lang: Lang = "id") =>
+  [session.place.trim(), session.optional ? t(lang, "peserta.home.optional") : ""].filter(Boolean).join(" · ");
 
 /* ── The contextual card ──────────────────────────────────────────────────────────────────────── */
 
@@ -135,9 +138,9 @@ const TICKET_KINDS = ["kereta", "bus"] as const;
 /** The travel card shows from this long before the day's first step. */
 export const TRAVEL_CARD_HOURS = 3;
 /** "Kereta ke Malang": the step's name and where it goes ("Yogyakarta → Malang"). */
-export function tripTitle(trip: Pick<MwTrip, "title" | "place">): string {
+export function tripTitle(trip: Pick<MwTrip, "title" | "place">, lang: Lang = "id"): string {
   const to = trip.place.split("→")[1]?.trim();
-  return to ? `${trip.title} ke ${to}` : trip.title;
+  return to ? t(lang, "peserta.home.tripTo", { title: trip.title, to }) : trip.title;
 }
 
 /**
@@ -145,7 +148,7 @@ export function tripTitle(trip: Pick<MwTrip, "title" | "place">): string {
  * first step, the train (else the bus) not yet arrived, with the person's seat. The gathering is already the Sekarang card, so it is not
  * repeated here.
  */
-export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTripSeat[], now: Date): HomeCandidate | null {
+export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTripSeat[], now: Date, lang: Lang = "id"): HomeCandidate | null {
   const today = wibDate(now.toISOString());
   const seatOf = new Map(seats.map(seat => [seat.tripId, seat]));
   for (const direction of ["berangkat", "pulang"] as const) {
@@ -160,7 +163,7 @@ export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTrip
       const trip = legs.find(leg => leg.kind === kind);
       if (!trip) continue;
       const seat = seatOf.get(trip.id);
-      return { kind: "berangkat", direction, tripId: trip.id, title: tripTitle(trip), startsAt: trip.startsAt, seat: seat?.seat || seat?.vehicle || trip.detail };
+      return { kind: "berangkat", direction, tripId: trip.id, title: tripTitle(trip, lang), startsAt: trip.startsAt, seat: seat?.seat || seat?.vehicle || trip.detail };
     }
   }
   return null;
@@ -171,8 +174,8 @@ export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTrip
  * survey.ts, audit R7: from its session's start until the questionnaire closes or the event ends,
  * gone once they sent it).
  */
-export function surveyCandidate(open: SurveyOpen | null): HomeCandidate | null {
-  return open ? { kind: "survei", formSlug: open.formSlug, title: "Survei evaluasi", until: open.until, minutes: open.minutes } : null;
+export function surveyCandidate(open: SurveyOpen | null, lang: Lang = "id"): HomeCandidate | null {
+  return open ? { kind: "survei", formSlug: open.formSlug, title: t(lang, "peserta.home.surveyName"), until: open.until, minutes: open.minutes } : null;
 }
 
 /** The one card (pickHomeCard of the fondasi: order, and no card of a module that is off). */
@@ -184,30 +187,30 @@ export type HomeCardView =
   | { kind: "silent" | "voting" | "berangkat" | "survei"; title: string; sub: string; action: string; target: { silentSession?: string; survey?: string; direction?: "berangkat" | "pulang" } };
 
 /** "sampai 15.00", or with the day when it closes on another day. */
-function untilWords(now: Date, iso: string | null | undefined): string | null {
+function untilWords(now: Date, iso: string | null | undefined, lang: Lang): string | null {
   if (!iso || Number.isNaN(Date.parse(iso))) return null;
-  return wibDate(iso) === wibDate(now.toISOString()) ? `sampai ${hhmm(iso)}` : `sampai ${dayWord(wibDate(iso), wibDate(now.toISOString()))} ${hhmm(iso)}`;
+  return t(lang, "peserta.home.until", { when: wibDate(iso) === wibDate(now.toISOString()) ? hhmm(iso, lang) : `${dayWord(wibDate(iso), wibDate(now.toISOString()), lang)} ${hhmm(iso, lang)}` });
 }
 const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** What the chosen card says (P01__status): title, one line, and its button. */
-export function homeCardView(card: HomeCandidate, now: Date): HomeCardView {
+export function homeCardView(card: HomeCandidate, now: Date, lang: Lang = "id"): HomeCardView {
   switch (card.kind) {
     case "pengumuman": return { kind: "pengumuman", id: card.id, title: card.title, body: card.body, tone: card.tone ?? "info" };
     case "silent": {
-      const until = untilWords(now, card.until);
-      return { kind: "silent", title: "Silent Meeting dibuka", sub: until ? `Tanpa nama · ${until}` : "Tanpa nama", action: "Kirim masukan", target: { silentSession: card.sessionId } };
+      const until = untilWords(now, card.until, lang);
+      return { kind: "silent", title: t(lang, "peserta.home.silentTitle"), sub: until ? t(lang, "peserta.home.silentSub", { until }) : t(lang, "peserta.home.silentSubBare"), action: t(lang, "peserta.home.silentAction"), target: { silentSession: card.sessionId } };
     }
     case "voting": {
-      const until = untilWords(now, card.until);
-      return { kind: "voting", title: "Voting Awarding dibuka", sub: until ? capital(until) : "Pilih nominasimu", action: "Pilih nominasi", target: {} };
+      const until = untilWords(now, card.until, lang);
+      return { kind: "voting", title: t(lang, "peserta.home.votingTitle"), sub: until ? capital(until) : t(lang, "peserta.home.votingSub"), action: t(lang, "peserta.home.votingAction"), target: {} };
     }
     case "berangkat":
-      return { kind: "berangkat", title: card.startsAt ? `${card.title} · ${hhmm(card.startsAt)}` : card.title, sub: card.seat, action: "Lihat tiket", target: { direction: card.direction } };
+      return { kind: "berangkat", title: card.startsAt ? `${card.title} · ${hhmm(card.startsAt, lang)}` : card.title, sub: card.seat, action: t(lang, "peserta.home.travelAction"), target: { direction: card.direction } };
     case "survei": {
-      const until = untilWords(now, card.until);
-      const sub = [card.minutes ? `${card.minutes} menit` : "", until ?? ""].filter(Boolean).join(" · ");
-      return { kind: "survei", title: `${card.title} dibuka`, sub: capital(sub), action: "Isi survei", target: { survey: card.formSlug } };
+      const until = untilWords(now, card.until, lang);
+      const sub = [card.minutes ? t(lang, "peserta.home.minutes", { n: card.minutes }) : "", until ?? ""].filter(Boolean).join(" · ");
+      return { kind: "survei", title: t(lang, "peserta.home.titleOpened", { title: card.title }), sub: capital(sub), action: t(lang, "peserta.home.surveyAction"), target: { survey: card.formSlug } };
     }
   }
 }

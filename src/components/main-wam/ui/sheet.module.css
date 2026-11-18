@@ -6,6 +6,7 @@
   border-radius: var(--mw-radius-24) var(--mw-radius-24) 0 0; background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-3);
   overflow: hidden; font: var(--mw-type-body);
 }
+/* ::backdrop does not inherit the root's custom properties in every browser, hence the literal fallback (a listed exception of colors.test.ts). */
 .sheet::backdrop { background: var(--mw-overlay-scrim, rgb(17 24 39 / 0.5)); }
 .inner { position: relative; display: flex; flex-direction: column; max-height: inherit; padding-top: 12px; transition: transform var(--mw-motion-base); }
 .handle { position: absolute; top: 0; left: 0; right: 0; height: 24px; display: flex; justify-content: center; padding-top: 8px; touch-action: none; cursor: grab; }

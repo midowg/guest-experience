@@ -11,13 +11,14 @@ describe("Main WAM's frame, from the address alone", () => {
     ]);
   });
 
-  it("draws the tab roots with the bottom bar, the bell on Beranda only, Momen dark", () => {
+  it("draws the tab roots with the bottom bar, the bell on Beranda only", () => {
     for (const [path, tab] of [[mainWamPath.home, "beranda"], [mainWamPath.agenda(), "agenda"], [mainWamPath.moments(), "momen"], [mainWamPath.me, "saya"]] as const) {
       expect(at(path)).toMatchObject({ tab, level: "akar" });
       expect(showsBottomBar(at(path))).toBe(true);
       expect(showsBell(at(path))).toBe(tab === "beranda");
     }
-    expect(at(mainWamPath.moments())?.dark).toBe(true);
+    // Momen follows the app's theme like every tab; only the camera is dark.
+    expect(at(mainWamPath.moments())?.camera).toBeUndefined();
     expect(at(`${mainWamPath.home}/`)).toMatchObject({ tab: "beranda", level: "akar" });
   });
 
@@ -33,6 +34,7 @@ describe("Main WAM's frame, from the address alone", () => {
       [mainWamPath.guides, "saya", "Panduan", mainWamPath.me],
       [mainWamPath.guide("denah-venue"), "saya", "Panduan", mainWamPath.guides],
       [mainWamPath.settings, "saya", "Pengaturan", mainWamPath.me],
+      [mainWamPath.help, "saya", "Bantuan", mainWamPath.me],
       [mainWamPath.rundownLive(2), "beranda", "Rundown live", mainWamPath.home],
       [mainWamPath.attendanceManual("s1"), "beranda", "Absen sesi", mainWamPath.home],
       [mainWamPath.moderation("disembunyikan"), "beranda", "Moderasi Momen", mainWamPath.home],
@@ -60,7 +62,8 @@ describe("Main WAM's frame, from the address alone", () => {
       expect(at(path)?.level, path).toBe("tugas");
       expect(showsBottomBar(at(path)), path).toBe(false);
     }
-    expect(at(mainWamPath.camera())?.dark).toBe(true);
+    expect(at(mainWamPath.camera())?.camera).toBe(true);
+    expect(at(mainWamPath.scan)?.camera).toBeUndefined();
   });
 
   it("draws no frame outside Main WAM, or on its sign-in page", () => {

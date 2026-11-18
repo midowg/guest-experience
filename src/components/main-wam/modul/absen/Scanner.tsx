@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { CameraOff, Flashlight, QrCode, RefreshCw, X } from "lucide-react";
+import { useT, useLang } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Banner, Button, IconButton, ToastPreview } from "@/components/main-wam/ui";
 import { tokenFromScan } from "@/lib/main-wam/modul/absen";
@@ -33,6 +34,9 @@ type Phase = "kamera" | "ditolak" | "tanpa-kamera" | "tersimpan";
  */
 export function Scanner({ current, contact, preview }: { current: ScanContext; contact: PanitiaContact | null; preview?: Phase | "bukan-wam" | "offline" }) {
   const router = useRouter();
+  const t = useT();
+  const { lang } = useLang();
+  void lang;
   const video = useRef<HTMLVideoElement>(null);
   const track = useRef<MediaStreamTrack | null>(null);
   const online = useOnline() && preview !== "offline";
@@ -126,13 +130,13 @@ export function Scanner({ current, contact, preview }: { current: ScanContext; c
     const denied = phase === "ditolak";
     return <>
       <ScreenContent>
-        <Result icon={denied ? <CameraOff /> : <QrCode />} headline title={denied ? "Kamera belum diizinkan" : "Pakai kamera HP"}
-          body={denied ? "Izinkan kamera di pengaturan HP untuk scan QR." : "Buka aplikasi Kamera, arahkan ke QR, lalu buka tautannya."} />
+        <Result icon={denied ? <CameraOff /> : <QrCode />} headline title={denied ? t("absen.deniedTitle") : t("absen.noCameraTitle")}
+          body={denied ? t("absen.deniedBody") : t("absen.noCameraBody")} />
       </ScreenContent>
       <ActionBar>
         <div className={css.stackActions}>
-          {denied && <Button block icon={<RefreshCw />} onClick={() => { setPhase("kamera"); setAttempt(value => value + 1); }}>Coba lagi</Button>}
-          <Button block variant={denied ? "text" : "primary"} onClick={() => setContactOpen(true)}>Hubungi panitia</Button>
+          {denied && <Button block icon={<RefreshCw />} onClick={() => { setPhase("kamera"); setAttempt(value => value + 1); }}>{t("shell.retry")}</Button>}
+          <Button block variant={denied ? "text" : "primary"} onClick={() => setContactOpen(true)}>{t("absen.contactTitle")}</Button>
         </div>
       </ActionBar>
       {sheet}
@@ -142,30 +146,30 @@ export function Scanner({ current, contact, preview }: { current: ScanContext; c
   return <>
     <ShellChrome hideTopBar hideNav />
     <AbsenQueue />
-    <section className={css.scan} aria-label="Scan QR absen">
+    <section className={css.scan} aria-label={t("absen.scanRegion")}>
       {!preview && <video ref={video} className={css.scanVideo} muted playsInline aria-hidden />}
       <div className={css.scanShade} aria-hidden />
       <div className={css.scanBar}>
-        <IconButton icon={<X />} label="Tutup" variant="ondark" onClick={close} />
-        <h1 className={css.scanTitle}>Absen</h1>
+        <IconButton icon={<X />} label={t("ui.close")} variant="ondark" onClick={close} />
+        <h1 className={css.scanTitle}>{t("absen.title")}</h1>
         {torch !== null
-          ? <IconButton icon={<Flashlight />} label={torch ? "Matikan senter" : "Nyalakan senter"} variant="ondark" pressed={torch} onClick={() => void toggleTorch()} />
+          ? <IconButton icon={<Flashlight />} label={torch ? t("absen.torchOff") : t("absen.torchOn")} variant="ondark" pressed={torch} onClick={() => void toggleTorch()} />
           : <span />}
       </div>
-      {!online && <Banner tone="offline" className={css.scanBanner}>Offline · absen disimpan dan dikirim nanti</Banner>}
+      {!online && <Banner tone="offline" className={css.scanBanner}>{t("absen.offlineBanner")}</Banner>}
       <div className={css.scanBody}>
         <div className={`${css.frame} ${found ? css.frameOk : ""}`} aria-hidden>
           <span className={css.corner} /><span className={css.corner} /><span className={css.corner} /><span className={css.corner} />
           {!found && <span className={css.scanLine} />}
         </div>
-        <p className={css.scanHint}>Arahkan ke QR di pintu ruang.</p>
+        <p className={css.scanHint}>{t("absen.hint")}</p>
       </div>
       <div className={css.scanFoot}>
-        <div role="alert" className={css.scanToast}>{refused && <ToastPreview tone="error" text="QR ini bukan QR absen WAM." />}</div>
-        <button type="button" className={css.scanLink} onClick={() => setContactOpen(true)}>QR tidak terbaca?</button>
+        <div role="alert" className={css.scanToast}>{refused && <ToastPreview tone="error" text={t("absen.notWamQr")} />}</div>
+        <button type="button" className={css.scanLink} onClick={() => setContactOpen(true)}>{t("absen.unreadable")}</button>
         {current && <div className={css.scanCard}>
           <p className={css.scanCardTitle}>{current.title}</p>
-          <p className={css.scanCardSub}>{[current.place, `sampai ${current.until}`].filter(Boolean).join(" · ")}</p>
+          <p className={css.scanCardSub}>{[current.place, t("absen.until", { time: current.until })].filter(Boolean).join(" · ")}</p>
         </div>}
       </div>
     </section>

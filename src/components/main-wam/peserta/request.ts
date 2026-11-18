@@ -1,3 +1,4 @@
+import { activeLang, t, translateKnown } from "@/lib/main-wam/i18n";
 import { mainWamPath, praWamApi } from "@/lib/routes";
 
 /*
@@ -25,16 +26,16 @@ export async function mwRequest<T>(url: string, init: RequestInit & { json?: unk
     });
   } catch {
     const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-    throw new MwRequestError(offline ? "Tidak ada internet. Periksa sinyal, lalu coba lagi." : "Tidak dapat terhubung. Periksa sinyal, lalu coba lagi.", 0, undefined, true);
+    throw new MwRequestError(t(activeLang(), offline ? "err.offline" : "err.noConnection"), 0, undefined, true);
   }
   let result: { ok?: boolean; data?: T; message?: string; fieldErrors?: Record<string, string[]> };
-  try { result = await response.json(); } catch { throw new MwRequestError("Server belum dapat menjawab. Coba lagi sebentar.", response.status); }
+  try { result = await response.json(); } catch { throw new MwRequestError(t(activeLang(), "err.serverSilent"), response.status); }
   if (response.status === 401 && !SIGNING_IN.includes(url) && typeof window !== "undefined") {
     window.location.assign(mainWamPath.login(`${window.location.pathname}${window.location.search}`));
   }
-  if (!response.ok || !result.ok) throw new MwRequestError(result.message || "Belum berhasil. Coba lagi.", response.status, result.fieldErrors);
+  if (!response.ok || !result.ok) throw new MwRequestError(translateKnown(activeLang(), result.message || t(activeLang(), "err.notDone")), response.status, result.fieldErrors);
   return { data: result.data as T, message: result.message ?? "" };
 }
 
 /** The words of any failure. */
-export const failText = (error: unknown) => (error instanceof MwRequestError ? error.message : "Terjadi kesalahan. Coba lagi.");
+export const failText = (error: unknown) => (error instanceof MwRequestError ? error.message : t(activeLang(), "err.generic"));

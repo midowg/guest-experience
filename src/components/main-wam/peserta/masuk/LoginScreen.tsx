@@ -7,6 +7,7 @@ import { afterSignIn, ONBOARDED_KEY } from "@/lib/main-wam/peserta/onboarding";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { praWamApi } from "@/lib/routes";
 import { Banner, Button, Sheet, TextField, ToastProvider, useToast } from "@/components/main-wam/ui";
+import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { useOffline } from "../Live";
 import { MwRequestError, failText, mwRequest } from "../request";
 import css from "../peserta.module.css";
@@ -33,14 +34,17 @@ function Login({ next, eventName, preview }: { next: string; eventName: string; 
   const router = useRouter();
   const toast = useToast();
   const offline = useOffline();
+  const t = useT();
+  const known = useKnown();
+  const { lang } = useLang();
   const [email, setEmail] = useState(preview?.email ?? "");
   const [password, setPassword] = useState(preview ? "contohpassword" : "");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(!!preview?.busy);
-  const [wrong, setWrong] = useState<string | null>(preview?.error === "salah" ? "Email atau password salah. Periksa lalu coba lagi." : null);
+  const [wrong, setWrong] = useState<string | null>(preview?.error === "salah" ? t("peserta.login.wrong") : null);
   const [problem, setProblem] = useState<{ tone: "error" | "offline"; text: string } | null>(
-    preview?.error === "offline" ? { tone: "offline", text: "Tidak ada internet. Periksa sinyal, lalu coba lagi." }
-      : preview?.error === "terkunci" ? { tone: "error", text: "Terlalu banyak percobaan. Coba lagi pukul 05.00." } : null);
+    preview?.error === "offline" ? { tone: "offline", text: t("err.offline") }
+      : preview?.error === "terkunci" ? { tone: "error", text: t("peserta.login.locked", { time: lang === "en" ? "05:00" : "05.00" }) } : null);
   const [lockedUntil, setLockedUntil] = useState<number | null>(preview?.error === "terkunci" ? Number.MAX_SAFE_INTEGER : null);
   const [forgot, setForgot] = useState(!!preview?.forgot);
 
@@ -54,7 +58,7 @@ function Login({ next, eventName, preview }: { next: string; eventName: string; 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy || lockedUntil || preview) return;
-    if (!email.trim() || !password) { setWrong(!email.trim() ? null : "Isi password."); return; }
+    if (!email.trim() || !password) { setWrong(!email.trim() ? null : t("peserta.login.enterPassword")); return; }
     setBusy(true); setWrong(null); setProblem(null);
     try {
       const { data } = await mwRequest<{ askNewPassword: boolean }>(praWamApi.login, { method: "POST", json: { email: email.trim(), password } });
@@ -63,42 +67,44 @@ function Login({ next, eventName, preview }: { next: string; eventName: string; 
       router.replace(target);
     } catch (error) {
       setBusy(false);
-      if (error instanceof MwRequestError && error.offline) { setProblem({ tone: "offline", text: "Tidak ada internet. Periksa sinyal, lalu coba lagi." }); return; }
-      if (error instanceof MwRequestError && error.status === 401) { setWrong(error.message); return; }
+      if (error instanceof MwRequestError && error.offline) { setProblem({ tone: "offline", text: t("err.offline") }); return; }
+      if (error instanceof MwRequestError && error.status === 401) { setWrong(known(error.message)); return; }
       if (error instanceof MwRequestError && error.status === 429) {
         const until = Date.now() + LOCK_MINUTES * 60_000;
         setLockedUntil(until);
-        setProblem({ tone: "error", text: `Terlalu banyak percobaan. Coba lagi pukul ${hhmm(new Date(until).toISOString())}.` });
+        setProblem({ tone: "error", text: t("peserta.login.locked", { time: hhmm(new Date(until).toISOString(), lang) }) });
         return;
       }
-      if (error instanceof MwRequestError && error.fieldErrors) { setWrong(Object.values(error.fieldErrors)[0]?.[0] ?? error.message); return; }
+      if (error instanceof MwRequestError && error.fieldErrors) { setWrong(known(Object.values(error.fieldErrors)[0]?.[0] ?? error.message)); return; }
       setProblem({ tone: "error", text: failText(error) });
     }
   }
 
-  const shownProblem = problem ?? (offline ? { tone: "offline" as const, text: "Tidak ada internet. Periksa sinyal, lalu coba lagi." } : null);
-  const eye = <button type="button" className={css.eye} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? "Sembunyikan password" : "Tampilkan password"}>
+  const shownProblem = problem ?? (offline ? { tone: "offline" as const, text: t("err.offline") } : null);
+  const eye = <button type="button" className={css.eye} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? t("peserta.login.hide") : t("peserta.login.show")}>
     {show ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
   </button>;
   return <main className={css.login}>
     <p className={css.wordmark}>{eventName}</p>
-    <h1 className={css.pageTitle}>Masuk</h1>
+    <h1 className={css.pageTitle}>{t("peserta.login.title")}</h1>
     {shownProblem && <Banner tone={shownProblem.tone} icon={shownProblem.tone === "offline" ? <CloudOff /> : undefined}>{shownProblem.text}</Banner>}
     <form className={css.form} onSubmit={submit} noValidate>
-      <TextField label="Email atau nama panggilan" type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+      <TextField label={t("peserta.login.identity")} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
         value={email} onChange={event => setEmail(event.target.value)} required />
-      <TextField label="Password" type={show ? "text" : "password"} autoComplete="current-password" value={password}
+      <TextField label={t("peserta.login.password")} type={show ? "text" : "password"} autoComplete="current-password" value={password}
         onChange={event => setPassword(event.target.value)} error={wrong ?? undefined} suffix={eye} required />
-      <Button variant="text" size="m" className={css.forgot} onClick={() => setForgot(true)} aria-haspopup="dialog">Lupa password?</Button>
-      <Button type="submit" block loading={busy} loadingLabel="Memeriksa…" disabled={!!lockedUntil}>Masuk</Button>
+      <Button variant="text" size="m" className={css.forgot} onClick={() => setForgot(true)} aria-haspopup="dialog">{t("peserta.login.forgot")}</Button>
+      <Button type="submit" block loading={busy} loadingLabel={t("peserta.login.checking")} disabled={!!lockedUntil}>{t("peserta.login.title")}</Button>
     </form>
-    <p className={css.loginNote}>Belum bisa masuk? Hubungi panitia.</p>
-    <ForgotSheet open={forgot} onClose={() => setForgot(false)} email={email} onSent={() => { setForgot(false); toast.show({ text: "Permintaan terkirim ke panitia.", tone: "success" }); }} />
+    <p className={css.loginNote}>{t("peserta.login.help")}</p>
+    <ForgotSheet open={forgot} onClose={() => setForgot(false)} email={email} onSent={() => { setForgot(false); toast.show({ text: t("peserta.login.requestSent"), tone: "success" }); }} />
   </main>;
 }
 
 /** "Minta reset password" (O02__status#lupa): the admin resets it to the first password and tells the person. */
 function ForgotSheet({ open, onClose, email, onSent }: { open: boolean; onClose: () => void; email: string; onSent: () => void }) {
+  const t = useT();
+  const known = useKnown();
   const [value, setValue] = useState(email);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,25 +113,25 @@ function ForgotSheet({ open, onClose, email, onSent }: { open: boolean; onClose:
 
   async function send(event: FormEvent) {
     event.preventDefault();
-    if (!value.trim()) { setError("Isi email kantor atau nama panggilan."); return; }
+    if (!value.trim()) { setError(t("peserta.login.enterIdentity")); return; }
     setBusy(true); setError(null); setNote(null);
     try {
       const { data, message } = await mwRequest<{ sent: boolean }>(praWamApi.forgot, { method: "POST", json: { email: value.trim() } });
       setBusy(false);
-      if (data?.sent) onSent(); else setNote(message);
+      if (data?.sent) onSent(); else setNote(known(message));
     } catch (problem) {
       setBusy(false);
-      setError(problem instanceof MwRequestError && problem.fieldErrors ? Object.values(problem.fieldErrors)[0]?.[0] ?? problem.message : failText(problem));
+      setError(problem instanceof MwRequestError && problem.fieldErrors ? known(Object.values(problem.fieldErrors)[0]?.[0] ?? problem.message) : failText(problem));
     }
   }
 
-  return <Sheet open={open} onClose={onClose} title="Minta reset password" locked={busy}>
+  return <Sheet open={open} onClose={onClose} title={t("peserta.login.resetTitle")} locked={busy}>
     <form className={css.form} onSubmit={send} noValidate>
-      <p className={css.textMuted}>Panitia mengatur ulang password-mu lalu memberi kabar.</p>
-      <TextField label="Email atau nama panggilan" type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
+      <p className={css.textMuted}>{t("peserta.login.resetNote")}</p>
+      <TextField label={t("peserta.login.identity")} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
         value={value} onChange={event => setValue(event.target.value)} error={error ?? undefined} />
       {note && <Banner tone="info">{note}</Banner>}
-      <Button type="submit" block loading={busy} loadingLabel="Mengirim…">Kirim permintaan</Button>
+      <Button type="submit" block loading={busy} loadingLabel={t("peserta.login.sending")}>{t("peserta.login.send")}</Button>
     </form>
   </Sheet>;
 }

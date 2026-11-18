@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { ActionBar, Avatar, Banner, Button, PhotoFill, useToast } from "@/components/main-wam/ui";
 import { when, type NomineeView } from "@/lib/main-wam/modul/awards";
@@ -24,6 +25,8 @@ export function NomineePicker({ category, nominees, current, now, preview }: {
 }) {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
+  const { lang } = useLang();
   const id = useId();
   const [choice, setChoice] = useState<string | null>(preview?.choice ?? current);
   const [sending, setSending] = useState(false);
@@ -34,7 +37,7 @@ export function NomineePicker({ category, nominees, current, now, preview }: {
     setSending(true); setError(null);
     try {
       await modulRequest(mainWamApi.vote(category.id), { method: "PUT", json: { nomineeId: choice } });
-      toast.show({ text: "Pilihanmu terkirim.", tone: "success" });
+      toast.show({ text: t("awards.sent"), tone: "success" });
       router.push(mainWamPath.awards);
       router.refresh();
     } catch (problem) {
@@ -48,18 +51,18 @@ export function NomineePicker({ category, nominees, current, now, preview }: {
       <div>
         <h2 className={css.cardTitle}>{category.title}</h2>
         {category.description && <p className={css.lead}>{category.description}</p>}
-        <p className={css.secret}><Lock aria-hidden />{`Rahasia. Bisa diubah sampai ${when(category.closesAt, now)}.`}</p>
+        <p className={css.secret}><Lock aria-hidden />{t("awards.secret", { when: when(category.closesAt, now, lang) })}</p>
       </div>
       {error && <Banner tone="error">{error}</Banner>}
       <fieldset className={css.choices} aria-describedby={`${id}-hint`}>
-        <legend className="sr-only" id={`${id}-hint`}>{`Pilih satu nominasi ${category.title}`}</legend>
+        <legend className="sr-only" id={`${id}-hint`}>{t("awards.legend", { title: category.title })}</legend>
         {nominees.map(nominee => <label key={nominee.id} className={css.choice}>
           <input type="radio" name={`${id}-pilih`} value={nominee.id} checked={choice === nominee.id} onChange={() => setChoice(nominee.id)} className={css.choiceInput} />
           {nominee.kind === "foto"
-            ? <span className={css.choicePhoto}><PhotoFill photo={nominee.image ? { src: nominee.image, alt: `Foto ${nominee.name}` } : null} className={css.fillBox} /></span>
+            ? <span className={css.choicePhoto}><PhotoFill photo={nominee.image ? { src: nominee.image, alt: t("awards.photo", { name: nominee.name }) } : null} className={css.fillBox} /></span>
             : nominee.kind === "orang" ? <Avatar name={nominee.name} photo={nominee.photo} size={40} /> : null}
           <span className={css.choiceText}>
-            <span className={css.choiceName}>{nominee.kind === "foto" ? `Foto ${nominee.name}` : nominee.name}</span>
+            <span className={css.choiceName}>{nominee.kind === "foto" ? t("awards.photo", { name: nominee.name }) : nominee.name}</span>
             {nominee.department && <span className={css.choiceMeta}>{nominee.department}</span>}
             {nominee.reason && <span className={css.choiceMeta}>{nominee.reason}</span>}
           </span>
@@ -67,8 +70,8 @@ export function NomineePicker({ category, nominees, current, now, preview }: {
         </label>)}
       </fieldset>
     </ScreenContent>
-    <ActionBar note={!choice ? "Pilih satu dulu." : undefined}>
-      <Button block disabled={!choice || choice === current} loading={sending} loadingLabel="Mengirim…" onClick={() => void send()}>Kirim</Button>
+    <ActionBar note={!choice ? t("awards.pickOne") : undefined}>
+      <Button block disabled={!choice || choice === current} loading={sending} loadingLabel={t("awards.sending")} onClick={() => void send()}>{t("awards.submit")}</Button>
     </ActionBar>
   </>;
 }

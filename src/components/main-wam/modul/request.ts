@@ -6,6 +6,11 @@
  * proxy's error), so a screen can keep the person's text or scan and say so.
  */
 
+import { activeLang, t, translateKnown } from "@/lib/main-wam/i18n";
+
+/** The words of a failure in the language on screen (the server writes Indonesian; known texts are translated). */
+const say = (text: string) => translateKnown(activeLang(), text);
+
 export class ModulError extends Error {
   constructor(message: string, public status = 0, public offline = false, public answered = false) {
     super(message);
@@ -21,7 +26,7 @@ export async function modulRequest<T>(url: string, init: { method?: string; json
       ...(init.json !== undefined ? { body: JSON.stringify(init.json), headers: { "Content-Type": "application/json" } } : {}),
     });
   } catch {
-    throw new ModulError("Tidak ada sinyal. Coba lagi saat tersambung.", 0, true);
+    throw new ModulError(t(activeLang(), "srv.noSignal"), 0, true);
   }
   let result: { ok?: unknown; data?: T; message?: unknown } = {};
   try { result = await response.json(); } catch { /* not JSON */ }
@@ -29,9 +34,9 @@ export async function modulRequest<T>(url: string, init: { method?: string; json
   const answered = !!result && typeof result === "object" && typeof result.ok === "boolean";
   const message = answered && typeof result.message === "string" ? result.message : "";
   if (response.status === 401 && init.reloadOnSignOut !== false && typeof window !== "undefined") window.location.reload();
-  if (!response.ok || result.ok !== true) throw new ModulError(message || "Belum berhasil. Coba lagi sebentar.", response.status, false, answered);
+  if (!response.ok || result.ok !== true) throw new ModulError(say(message) || t(activeLang(), "srv.notDoneSoon"), response.status, false, answered);
   return { data: result.data as T, message };
 }
 
 /** The words to show for any failure. */
-export const errorText = (error: unknown) => (error instanceof ModulError ? error.message : "Belum berhasil. Coba lagi sebentar.");
+export const errorText = (error: unknown) => (error instanceof ModulError ? error.message : t(activeLang(), "srv.notDoneSoon"));

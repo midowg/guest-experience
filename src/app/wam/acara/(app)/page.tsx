@@ -6,6 +6,7 @@ import { BerandaPanitia } from "@/components/main-wam/panitia/BerandaPanitia";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { loadHome } from "@/lib/server/main-wam/peserta/home";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function HomePage() {
   const context = await requireMainWamPage(mainWamPath.home);
   const now = new Date();
   const data = await loadHome(context, now);
-  return <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(now.toISOString())} slots={{
+  return <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(now.toISOString(), await readLang())} slots={{
     absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} /> : null,
     panitia: <BerandaPanitia context={context} now={now} />,
     bod: <BerandaBod context={context} now={now} />,

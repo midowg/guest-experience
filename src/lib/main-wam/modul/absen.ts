@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAIN_WAM_PATH } from "@/lib/routes";
+import { clock, t, type Lang } from "../i18n";
 import { checkInState, checkInWindow, dayWord, wibDate, wibTime } from "../rundown";
 import type { MwSession } from "../types";
 
@@ -75,24 +76,26 @@ export function windowOutcome(session: MwSession, at: Date): CheckInOutcome | nu
 }
 
 /** "07.52" today, "Sel, 5 Jan · 12.30" another day. */
-export function clockWhen(iso: string, now: Date): string {
-  const time = wibTime(iso).replace(":", ".");
+export function clockWhen(iso: string, now: Date, lang: Lang = "id"): string {
+  const time = clock(lang, wibTime(iso));
   const date = wibDate(iso);
-  return date === wibDate(now.toISOString()) ? time : `${dayWord(date, wibDate(now.toISOString()))} · ${time}`;
+  return date === wibDate(now.toISOString()) ? time : `${dayWord(date, wibDate(now.toISOString()), lang)} · ${time}`;
 }
 
 export type OutcomeText = { tone: "success" | "warning" | "error" | "neutral"; icon: "check" | "clock" | "timer-off" | "info" | "qr"; title: string; sub: string; body: string };
 
 /** The words of A02–A04 and the other outcomes (SPEC revisi: one sentence, no pill). */
-export function outcomeText(outcome: CheckInOutcome, now: Date): OutcomeText {
+export function outcomeText(outcome: CheckInOutcome, now: Date, lang: Lang = "id"): OutcomeText {
+  const say = (key: Parameters<typeof t>[1], vars?: Parameters<typeof t>[2]) => t(lang, key, vars);
+  const when = (iso: string) => clockWhen(iso, now, lang);
   switch (outcome.kind) {
-    case "tercatat": return { tone: "success", icon: "check", title: "Absen tercatat", sub: `${outcome.session.title} · ${clockWhen(outcome.checkedInAt, now)}`, body: "" };
-    case "sudah": return { tone: "success", icon: "check", title: "Sudah tercatat", sub: `${outcome.session.title} · ${clockWhen(outcome.checkedInAt, now)}`, body: "" };
-    case "belum": return { tone: "warning", icon: "clock", title: "Absen belum dibuka", sub: outcome.session.title, body: `Dibuka ${clockWhen(outcome.opens, now)}. Scan lagi nanti.` };
-    case "tutup": return { tone: "error", icon: "timer-off", title: "Absen sudah ditutup", sub: outcome.session.title, body: `Ditutup ${clockWhen(outcome.closes, now)}. Kalau kamu hadir, minta panitia mencatat.` };
-    case "tanpa-absen": return { tone: "neutral", icon: "info", title: "Sesi ini tanpa absen", sub: outcome.session.title, body: "Tidak perlu scan." };
-    case "bod": return { tone: "neutral", icon: "info", title: "Tidak perlu absen", sub: "", body: "BOD tidak absen." };
-    case "tidak-dikenal": return { tone: "neutral", icon: "qr", title: "QR tidak dikenali", sub: "", body: "Minta QR yang baru ke panitia." };
+    case "tercatat": return { tone: "success", icon: "check", title: say("absen.recorded"), sub: `${outcome.session.title} · ${when(outcome.checkedInAt)}`, body: "" };
+    case "sudah": return { tone: "success", icon: "check", title: say("absen.already"), sub: `${outcome.session.title} · ${when(outcome.checkedInAt)}`, body: "" };
+    case "belum": return { tone: "warning", icon: "clock", title: say("absen.notOpen"), sub: outcome.session.title, body: say("absen.opensLater", { when: when(outcome.opens) }) };
+    case "tutup": return { tone: "error", icon: "timer-off", title: say("absen.closed"), sub: outcome.session.title, body: say("absen.closedAt", { when: when(outcome.closes) }) };
+    case "tanpa-absen": return { tone: "neutral", icon: "info", title: say("absen.noAttendance"), sub: outcome.session.title, body: say("absen.noScan") };
+    case "bod": return { tone: "neutral", icon: "info", title: say("absen.notNeeded"), sub: "", body: say("absen.bodNoCheckIn") };
+    case "tidak-dikenal": return { tone: "neutral", icon: "qr", title: say("absen.unknownQr"), sub: "", body: say("absen.askNewQr") };
   }
 }
 
@@ -146,4 +149,4 @@ export function absenCard(session: Pick<MwSession, "status" | "usesAttendance" |
 }
 
 /** "Hadir 07.52". */
-export const presentLabel = (at: string) => `Hadir ${wibTime(at).replace(":", ".")}`;
+export const presentLabel = (at: string, lang: Lang = "id") => t(lang, "absen.present", { time: clock(lang, wibTime(at)) });

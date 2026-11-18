@@ -1,6 +1,8 @@
 import { Mosaic } from "@/components/main-wam/momen/Mosaic";
 import { mainWamPath } from "@/lib/routes";
+import { t } from "@/lib/main-wam/i18n";
 import { requireModulePage } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { mosaicManifest } from "@/lib/server/main-wam/momen/mosaic";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +16,5 @@ export default async function MozaikPage({ searchParams }: { searchParams: Promi
   const mark = (Array.isArray(search.tandai) ? search.tandai[0] : search.tandai) === "1";
   const context = await requireModulePage("mozaik", mainWamPath.mosaic(mark));
   const manifest = await mosaicManifest(context);
-  return <Mosaic initial={manifest} mark={mark} title={`Mozaik ${context.settings.event.name}`} />;
+  return <Mosaic initial={manifest} mark={mark} title={t(await readLang(), "momen.mos.title", { name: context.settings.event.name })} />;
 }

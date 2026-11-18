@@ -9,6 +9,7 @@ import type { NoteKind } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
 import { Banner, EmptyState, IconBox, List, Sheet, type IconBoxTone } from "@/components/main-wam/ui";
+import { useT } from "@/components/main-wam/i18n";
 import { mwRequest } from "../request";
 import { usePushDevice, type PushState } from "../usePushDevice";
 import css from "../peserta.module.css";
@@ -37,6 +38,7 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
   preview?: { push?: PushState; open?: string };
 }) {
   const router = useRouter();
+  const t = useT();
   const push = usePushDevice({ preview: preview ? preview.push ?? "on" : undefined });
   const hash = useSyncExternalStore(subscribeHash, readHash, () => (preview?.open ? noteHash(preview.open) : ""));
   const all = [...today, ...earlier];
@@ -68,7 +70,7 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
       {rows.map(row => {
         const Icon = ICON[row.kind];
         const inner = <>
-          {row.unread && <span className={css.notifDot} role="img" aria-label="Belum dibaca" />}
+          {row.unread && <span className={css.notifDot} role="img" aria-label={t("peserta.notes.unread")} />}
           <IconBox icon={<Icon />} tone={TONE[row.kind]} smallIcon />
           <span className={css.notifText}><span className={css.notifTitle}>{row.line}</span><span className={css.notifTime}>{row.time}</span></span>
         </>;
@@ -81,12 +83,12 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
   </ScreenSection>;
 
   return <ScreenContent>
-    {pushOff && <Banner tone="warning" icon={<BellOff />} title="Notifikasi di HP mati" action={{ label: "Aktifkan", onClick: () => router.push(mainWamPath.settings) }} />}
+    {pushOff && <Banner tone="warning" icon={<BellOff />} title={t("peserta.notes.pushOff")} action={{ label: t("peserta.notes.turnOn"), onClick: () => router.push(mainWamPath.settings) }} />}
     {!migrated && !all.length
-      ? <EmptyState size="s" icon={<Hourglass />} title="Menunggu pembaruan sistem">Notifikasi acara tampil setelah pembaruan selesai.</EmptyState>
+      ? <EmptyState size="s" icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("peserta.waiting.notes")}</EmptyState>
       : !all.length
-        ? <EmptyState size="s" icon={<Bell />} title="Belum ada notifikasi" />
-        : <>{group("Hari ini", today)}{group("Sebelumnya", earlier)}</>}
+        ? <EmptyState size="s" icon={<Bell />} title={t("peserta.notes.none")} />
+        : <>{group(t("fmt.today"), today)}{group(t("peserta.notes.earlier"), earlier)}</>}
     <Sheet open={!!opened} onClose={close} history={false} title={opened?.title ?? ""}>
       {opened && <div className={css.sheetStack}>
         <p className={css.sheetMeta}>{opened.meta}</p>

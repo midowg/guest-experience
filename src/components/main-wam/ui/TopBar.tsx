@@ -8,8 +8,6 @@ import css from "./topbar.module.css";
 type Common = {
   /** Up to two IconButtons (or a Chip) at the end. */
   actions?: ReactNode;
-  /** Dark Momen and camera screens. */
-  tone?: "default" | "dark";
   /** Sticks to the top while the screen scrolls. */
   sticky?: boolean;
   /** Content scrolled under it: surface background and a bottom line. */
@@ -33,8 +31,8 @@ export function TopBar(props: Common & (
       label?: string }
   | { variant: "home"; kicker: ReactNode; name: ReactNode; day?: ReactNode }
 )) {
-  const { actions, tone = "default", sticky, scrolled, className } = props;
-  const base = cx(css.bar, sticky && css.sticky, scrolled && css.scrolled, tone === "dark" && css.dark, className);
+  const { actions, sticky, scrolled, className } = props;
+  const base = cx(css.bar, sticky && css.sticky, scrolled && css.scrolled, className);
   if (props.variant === "back") {
     return <header className={cx(base, css.back)}>
       <div className={css.start}>

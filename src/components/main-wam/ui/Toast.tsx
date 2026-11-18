@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
+import { useT } from "@/components/main-wam/i18n";
 import { cx } from "./Pressable";
 import css from "./toast.module.css";
 
@@ -38,6 +39,7 @@ const MAX_SHOWN = 3;
  * reached; the remaining time then continues. Read out politely; errors interrupt.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const [toasts, setToasts] = useState<Shown[]>([]);
   const next = useRef(1);
   const dismiss = useCallback((id: number) => setToasts(list => list.filter(toast => toast.id !== id)), []);
@@ -50,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return <ToastContext.Provider value={api}>
     {children}
     {/* Always present, so a toast added to it is announced. */}
-    <div className={css.viewport} role="region" aria-label="Pemberitahuan">
+    <div className={css.viewport} role="region" aria-label={t("ui.notices")}>
       <div role="status" aria-live="polite">{toasts.filter(toast => toast.tone !== "error").map(toast => <ToastItem key={toast.id} toast={toast} onDone={dismiss} />)}</div>
       <div role="alert">{toasts.filter(toast => toast.tone === "error").map(toast => <ToastItem key={toast.id} toast={toast} onDone={dismiss} />)}</div>
     </div>

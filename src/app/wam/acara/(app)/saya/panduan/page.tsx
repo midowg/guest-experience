@@ -2,6 +2,7 @@ import { GuidesScreen } from "@/components/main-wam/peserta/panduan/GuidesScreen
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { loadGuides } from "@/lib/server/main-wam/peserta/saya";
 
 export const dynamic = "force-dynamic";
@@ -11,5 +12,5 @@ export const metadata = { title: "Panduan · WAM", robots: { index: false } };
 export default async function GuidesPage() {
   await requireMainWamPage(mainWamPath.guides);
   const data = await loadGuides();
-  return <GuidesScreen {...data} since={hhmm(new Date().toISOString())} />;
+  return <GuidesScreen {...data} since={hhmm(new Date().toISOString(), await readLang())} />;
 }

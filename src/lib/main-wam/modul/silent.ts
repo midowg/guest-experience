@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { clock as clockOf, t, type Lang } from "../i18n";
 import { silentClosesAt, silentRecapReady, silentState, type SilentResult, type SilentState } from "../module-state";
 import { sessionEnd, timeRange, wibDate, wibTime } from "../rundown";
 import type { MwSession, MwSilentQuestion } from "../types";
@@ -56,7 +57,6 @@ export function controlRefusal(state: SilentState, action: SilentAction): { stat
 }
 
 /** "15.00". */
-const clock = (iso: string) => wibTime(iso).replace(":", ".");
 
 /** One question with its session and state, as the screens and APIs pass it around. */
 export type SilentView = {
@@ -96,9 +96,9 @@ export function pickSilent(questions: readonly MwSilentQuestion[], sessions: rea
 }
 
 /** T01's banner: "Dibuka · sampai 15.00". */
-export const openBanner = (view: Pick<SilentView, "closesAt">) => (view.closesAt ? `Dibuka · sampai ${clock(view.closesAt)}` : "Dibuka");
+export const openBanner = (view: Pick<SilentView, "closesAt">, lang: Lang = "id") => (view.closesAt ? t(lang, "silent.opened", { time: clockOf(lang, wibTime(view.closesAt)) }) : t(lang, "silent.openedNoEnd"));
 /** P04's pill: "Tanpa nama · sampai 15.00". */
-export const openPill = (view: Pick<SilentView, "closesAt">) => (view.closesAt ? `Tanpa nama · sampai ${clock(view.closesAt)}` : "Tanpa nama");
+export const openPill = (view: Pick<SilentView, "closesAt">, lang: Lang = "id") => (view.closesAt ? t(lang, "silent.pill", { time: clockOf(lang, wibTime(view.closesAt)) }) : t(lang, "silent.pillNoEnd"));
 /** When it opens (T03__status "Dibuka Sel, 5 Jan · 13.00."): the session's start. */
 export const opensAt = (view: Pick<SilentView, "session">) => view.session.startsAt;
 /** When it closes: when panitia closed it, else its session's end. */

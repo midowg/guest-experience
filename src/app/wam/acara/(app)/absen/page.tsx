@@ -6,6 +6,7 @@ import { Result } from "@/components/main-wam/modul/Result";
 import { mainWamCan } from "@/lib/main-wam/access";
 import { mainWamPath } from "@/lib/routes";
 import { requireModulePage } from "@/lib/server/main-wam/gate";
+import { serverT } from "@/lib/server/main-wam/lang";
 import { openForMe } from "@/lib/server/main-wam/modul/absen";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
 
@@ -16,9 +17,10 @@ export const metadata = { title: "Absen · WAM", robots: { index: false } };
 export default async function ScanPage() {
   const { viewer, settings } = await requireModulePage("absen", mainWamPath.scan);
   if (!mainWamCan(viewer, "absen")) {
+    const t = await serverT();
     return <>
-      <ScreenContent><Result icon={<Info />} title="Tidak perlu absen" body="BOD tidak absen." /></ScreenContent>
-      <ActionBar><Button block href={mainWamPath.home}>Selesai</Button></ActionBar>
+      <ScreenContent><Result icon={<Info />} title={t("absen.notNeeded")} body={t("absen.bodNoCheckIn")} /></ScreenContent>
+      <ActionBar><Button block href={mainWamPath.home}>{t("absen.done")}</Button></ActionBar>
     </>;
   }
   const open = await openForMe(viewer.id, new Date()).catch(() => null);

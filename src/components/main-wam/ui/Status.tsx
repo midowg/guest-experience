@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CalendarClock, Check, CircleCheck, CircleX, EyeOff, Lock, User } from "lucide-react";
+import { Words } from "@/components/main-wam/i18n";
 import { cx, KitIcon, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
 import css from "./status.module.css";
@@ -63,7 +64,7 @@ export type SessionStatus = keyof typeof STATUS_PILLS;
 export function StatusPill({ status, children, className }: { status: SessionStatus; children?: ReactNode; className?: string }) {
   const preset = STATUS_PILLS[status];
   return <Pill tone={preset.tone} icon={"icon" in preset ? preset.icon : undefined} dot={"dot" in preset ? preset.dot : undefined}
-    pulse={"pulse" in preset ? preset.pulse : undefined} className={className}>{children ?? preset.label}</Pill>;
+    pulse={"pulse" in preset ? preset.pulse : undefined} className={className}>{children ?? <Words k={`pill.${status}`} />}</Pill>;
 }
 
 /** Up to two initials from a call name: "Rani" → "R", "Sari Rahma" → "SR". */

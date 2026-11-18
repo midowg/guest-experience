@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { useToast } from "@/components/main-wam/ui";
 import { outcomeText } from "@/lib/main-wam/modul/absen";
 import { flushQueue, loadQueue, retryDelay, type FlushResult } from "./queue";
@@ -18,6 +19,9 @@ const told = new WeakSet<FlushResult>();
  */
 export function AbsenQueue({ onSent }: { onSent?: (titles: string[]) => void }) {
   const toast = useToast();
+  const t = useT();
+  const known = useKnown();
+  const { lang } = useLang();
   const sent = useRef(onSent);
   useEffect(() => { sent.current = onSent; });
   useEffect(() => {
@@ -39,17 +43,17 @@ export function AbsenQueue({ onSent }: { onSent?: (titles: string[]) => void }) 
       const now = new Date();
       const recorded = result.sent.filter(item => item.outcome.kind === "tercatat" || item.outcome.kind === "sudah");
       const refused = [
-        ...result.sent.filter(item => !recorded.includes(item)).map(item => outcomeText(item.outcome, now).title),
-        ...result.dropped.map(item => item.message),
+        ...result.sent.filter(item => !recorded.includes(item)).map(item => outcomeText(item.outcome, now, lang).title),
+        ...result.dropped.map(item => known(item.message)),
       ];
       if (recorded.length) {
-        toast.show({ text: recorded.length === 1 ? "Absen tercatat" : `${recorded.length} absen tercatat`, sub: recorded.map(item => "session" in item.outcome ? item.outcome.session.title : "").filter(Boolean).join(", "), tone: "success" });
+        toast.show({ text: recorded.length === 1 ? t("absen.toastOne") : t("absen.toastMany", { n: recorded.length }), sub: recorded.map(item => "session" in item.outcome ? item.outcome.session.title : "").filter(Boolean).join(", "), tone: "success" });
       }
-      if (refused.length) toast.show({ text: "Absen belum tercatat", sub: refused[0], tone: "error" });
+      if (refused.length) toast.show({ text: t("absen.toastRefused"), sub: refused[0], tone: "error" });
       if (result.login) {
-        toast.show({ text: "Absen belum terkirim", sub: "Masuk lagi untuk mengirimnya.", tone: "error", action: { label: "Masuk", onAction: () => window.location.reload() } });
+        toast.show({ text: t("absen.toastLoginTitle"), sub: t("absen.toastLoginSub"), tone: "error", action: { label: t("absen.toastLoginAction"), onAction: () => window.location.reload() } });
       } else if (result.kept && attempt === 1) {
-        toast.show({ text: "Belum terkirim, dicoba lagi", sub: "Absen tetap tersimpan di HP ini.", tone: "info" });
+        toast.show({ text: t("absen.toastRetryTitle"), sub: t("absen.toastRetrySub"), tone: "info" });
       }
       if (result.sent.length || result.dropped.length) sent.current?.([...result.sent, ...result.dropped].map(item => item.scan.title));
     };
@@ -59,6 +63,6 @@ export function AbsenQueue({ onSent }: { onSent?: (titles: string[]) => void }) 
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
     return () => { alive = false; window.clearTimeout(timer); window.removeEventListener("online", onOnline); document.removeEventListener("visibilitychange", onVisible); };
-  }, [toast]);
+  }, [toast, t, known, lang]);
   return null;
 }

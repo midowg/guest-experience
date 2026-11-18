@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { votingState, type VotingState } from "../module-state";
+import { clock as clockOf, t, type Lang } from "../i18n";
 import { dayWord, wibDate, wibTime } from "../rundown";
 import type { MwAwardApproval, MwAwardCategory, MwAwardNominee } from "../types";
 
@@ -23,13 +24,13 @@ export const approveSchema = z.object({ nomineeId: z.uuid("Pilih pemenangnya.") 
 export const shownCategories = (categories: readonly MwAwardCategory[]) =>
   categories.filter(category => category.published && category.method !== "otomatis").sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, "id"));
 
-export const methodLabel = (category: Pick<MwAwardCategory, "method">) => (category.method === "voting" ? "Voting karyawan" : category.method === "juri" ? "Juri BOD" : "Otomatis");
+export const methodLabel = (category: Pick<MwAwardCategory, "method">, lang: Lang = "id") => t(lang, category.method === "voting" ? "awards.method.voting" : category.method === "juri" ? "awards.method.juri" : "awards.method.auto");
 
-const clock = (iso: string) => wibTime(iso).replace(":", ".");
 /** "15.00" today, "Rab, 6 Jan · 15.00" another day. */
-export function when(iso: string, now: Date): string {
+export function when(iso: string, now: Date, lang: Lang = "id"): string {
   const today = wibDate(now.toISOString());
-  return wibDate(iso) === today ? clock(iso) : `${dayWord(wibDate(iso), today)} · ${clock(iso)}`;
+  const time = clockOf(lang, wibTime(iso));
+  return wibDate(iso) === today ? time : `${dayWord(wibDate(iso), today, lang)} · ${time}`;
 }
 
 /** Announced: approved and its announcement time has come (or it has no time: approved is enough). */

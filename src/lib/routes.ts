@@ -490,6 +490,8 @@ export const mainWamPath = {
   guide: (slug: string) => `${MAIN_WAM_PATH}/saya/panduan/${enc(slug)}`,
   /** S02 Pengaturan: Notifikasi (izin di HP ini), Ganti password, versi. */
   settings: `${MAIN_WAM_PATH}/saya/pengaturan`,
+  /** Bantuan: how to use the app, common questions and the panitia contact. A page of its own, not a sheet. */
+  help: `${MAIN_WAM_PATH}/saya/bantuan`,
 
   /* B · momen */
   /** M01–M03 Momen, the stack: Semua or Kelompokku, one session, opening at one photo. */

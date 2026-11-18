@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Heart, Lock } from "lucide-react";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { Avatar, PhotoFill } from "@/components/main-wam/ui";
 import { photoAlt, photoMeta, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
@@ -54,6 +55,8 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
   describe: (index: number) => string;
   children?: ReactNode;
 }) {
+  const t = useT();
+  const { lang } = useLang();
   const front = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; t: number; dx: number; captured: boolean; width: number; id: number } | null>(null);
   const frame = useRef(0);
@@ -152,8 +155,8 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
   const swipe = { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd };
   const swallow = (event: ReactMouseEvent) => { if (swallowClick.current) { event.preventDefault(); event.stopPropagation(); } };
   const taps = <>
-    <button type="button" className={`${css.tap} ${css.tapPrev}`} aria-label="Foto sebelumnya" disabled={index === 0} onClick={() => go(-1, "tap")} />
-    {index < items.length && <button type="button" className={`${css.tap} ${css.tapNext}`} aria-label="Foto berikutnya" onClick={() => go(1, "tap")} />}
+    <button type="button" className={`${css.tap} ${css.tapPrev}`} aria-label={t("momen.stack.prev")} disabled={index === 0} onClick={() => go(-1, "tap")} />
+    {index < items.length && <button type="button" className={`${css.tap} ${css.tapNext}`} aria-label={t("momen.stack.next")} onClick={() => go(1, "tap")} />}
   </>;
   const showPanel = !!panel || atEnd;
   return <div className={css.deck} role="region" aria-roledescription="carousel" aria-label={label} tabIndex={0} onKeyDown={onKeyDown}>
@@ -162,7 +165,7 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
         const place = places[offset];
         const isFront = offset === 0;
         if (isFront && showPanel) return null;
-        const alt = photoAlt(photo, now);
+        const alt = photoAlt(photo, now, lang);
         return <div key={photo.id} ref={isFront ? front : undefined} className={css.card} data-place={place}
           role={isFront ? "group" : undefined} aria-roledescription={isFront ? "slide" : undefined} aria-label={isFront ? `${describe(index)}. ${alt}` : undefined}
           aria-hidden={isFront ? undefined : true}
@@ -175,8 +178,8 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
           <div className={css.info} aria-hidden>
             <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>
-              <span className={css.name}>{photo.mine ? "Kamu" : photo.owner.name}</span>
-              <span className={css.meta}>{photoMeta(photo, now)}</span>
+              <span className={css.name}>{photo.mine ? t("momen.you") : photo.owner.name}</span>
+              <span className={css.meta}>{photoMeta(photo, now, lang)}</span>
             </span>
             {photo.audience === "kelompok" && <Lock className={css.lock} aria-hidden />}
           </div>

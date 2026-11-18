@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
+import { previewLang } from "@/components/main-wam/dev/lang";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
 import { SectionHeader } from "@/components/main-wam/ui";
 import { CheckInResultView, OfflineSaved } from "@/components/main-wam/modul/absen/CheckIn";
@@ -104,9 +105,10 @@ const SCREENS: Record<string, { path: string; peran?: string; render: () => Reac
  * T01-buang|T01-ditutup|T02|T03|T03-kurang|T03-belum|T03-bod|V01|V01-diumumkan|V01-kosong|V02|B05|
  * B05-kurang|B05-buka|B06|B06-buka|B06-setujui|B06-disetujui|P04|tunggu.
  */
-export default async function DevMainWamModul({ searchParams }: { searchParams: Promise<{ layar?: string }> }) {
+export default async function DevMainWamModul({ searchParams }: { searchParams: Promise<{ layar?: string; lang?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { layar } = await searchParams;
+  const params = await searchParams;
+  const { layar } = params;
   const screen = SCREENS[layar ?? "A01"] ?? SCREENS.A01;
-  return <DevFrame path={screen.path} peran={screen.peran}>{screen.render()}</DevFrame>;
+  return <DevFrame path={screen.path} peran={screen.peran} lang={previewLang(params)}>{screen.render()}</DevFrame>;
 }

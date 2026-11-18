@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { Bell, X } from "lucide-react";
 import { mainWamScreen, showsBell, showsBottomBar, type MainWamScreen } from "@/lib/main-wam/screen";
 import { mainWamPath } from "@/lib/routes";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { IconButton } from "../ui/Button";
 import { cx } from "../ui/Pressable";
 import { ToastProvider } from "../ui/Toast";
@@ -31,9 +32,9 @@ export type ShellGreeting = {
  * draws comes from the address alone (mainWamScreen, src/lib/main-wam/screen.ts), never from the page:
  * - top bar: Beranda's greeting with the bell (the only bell), a tab's large title (a compact bar
  *   takes over once it scrolls away), or ‹ + title on a detail screen and ✕ + title on a task
- *   screen. The camera (task + dark) has its own. A screen adds buttons with <ShellActions> and can
+ *   screen. The camera has its own. A screen adds buttons with <ShellActions> and can
  *   turn a bar off with <ShellChrome>.
- * - bottom bar on tab roots and details, never on tasks; dark on Momen.
+ * - bottom bar on tab roots and details, never on tasks.
  * - toasts (ToastProvider) above the bottom bar.
  * Safe areas (notch, home bar) are padded; on a wide screen the app is a phone-wide column.
  * Wrap it in <MainWamTheme>. `screen` forces a frame (previews only).
@@ -51,8 +52,10 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const screen = forced !== undefined ? forced : mainWamScreen(pathname ?? "");
-  const dark = !!screen?.dark;
+  const { lang } = useLang();
+  const t = useT();
+  const screen = forced !== undefined ? forced : mainWamScreen(pathname ?? "", lang);
+  const camera = !!screen?.camera;
   const nav = showsBottomBar(screen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -102,39 +105,38 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
     router.back();
   }
 
-  const tone = dark ? "dark" : "default";
   const actions = <span ref={setSlot} className={css.actions} />;
   let top: ReactNode = null;
-  if (screen && !(screen.level === "tugas" && dark)) {
+  if (screen && !camera) {
     if (screen.level === "akar" && screen.tab === "beranda" && greeting) {
       const bell = showsBell(screen)
-        ? <IconButton icon={<Bell />} label={unread > 0 ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
+        ? <IconButton icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
         : null;
-      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} tone={tone} actions={<>{actions}{bell}</>} /></div>;
+      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} actions={<>{actions}{bell}</>} /></div>;
     } else if (screen.level === "akar") {
       top = <>
-        <div ref={largeRef} className={css.top}><TopBar title={screen.title} tone={tone} actions={actions} /></div>
+        <div ref={largeRef} className={css.top}><TopBar title={screen.title} actions={actions} /></div>
         <div className={css.compact} data-shown={(large && compact) || undefined} aria-hidden><div className={css.compactTitle}>{screen.title}</div></div>
       </>;
     } else {
       const task = screen.level === "tugas";
       top = <div className={cx(css.top, css.topSticky)} data-scrolled={scrolled || undefined}>
-        <TopBar variant="back" title={screen.title} label={screen.label} tone={tone} actions={actions}
+        <TopBar variant="back" title={screen.title} label={screen.label} actions={actions}
           backHref={screen.back?.href ?? mainWamPath.home} onBack={goBack}
-          backLabel={task ? "Tutup" : "Kembali"} backIcon={task ? <X /> : undefined} />
+          backLabel={task ? t("shell.closeTask") : t("shell.back")} backIcon={task ? <X /> : undefined} />
       </div>;
     }
   }
 
-  return <div className={css.app} data-mw-tone={dark ? "dark" : undefined} data-mw-nav={nav ? "" : undefined}
+  return <div className={css.app} data-mw-camera={camera ? "" : undefined} data-mw-nav={nav ? "" : undefined}
     style={nav ? { ["--mw-toast-bottom" as string]: "calc(var(--mw-nav-h) + var(--mw-space-16))" } : undefined}>
     <ToastProvider>
       <ActionsSlotContext.Provider value={slot}>
         <div className={css.column}>
-          <a className={css.skip} href="#isi">Lewati ke isi</a>
+          <a className={css.skip} href="#isi">{t("shell.skip")}</a>
           {top}
           <main id="isi" tabIndex={-1} className={css.main}>{children}</main>
-          {nav && <BottomNav current={screen?.tab ?? null} tone={tone} badges={badges} />}
+          {nav && <BottomNav current={screen?.tab ?? null} badges={badges} />}
         </div>
       </ActionsSlotContext.Provider>
     </ToastProvider>

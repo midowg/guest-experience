@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { previewLang } from "@/components/main-wam/dev/lang";
+import { LangProvider } from "@/components/main-wam/i18n";
 import { MainWamTheme } from "@/components/main-wam/theme";
 import { LoginScreen } from "@/components/main-wam/peserta/masuk/LoginScreen";
 import { Splash } from "@/components/main-wam/peserta/masuk/Splash";
@@ -13,11 +15,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function PreviewLogin({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { status, kv } = await searchParams;
+  const params = await searchParams;
+  const { status, kv } = params;
+  const lang = previewLang(params);
   const image = kv === "1" ? "https://picsum.photos/seed/main-wam-kv/780/1688" : null;
   const error = status === "salah" || status === "terkunci" || status === "offline" ? status : undefined;
-  return <MainWamTheme mode="light" theme={image ? { images: { splash: image } } : null}>
-    {status === "splash" && <Splash title="WAM 2026" subtitle={splashSubtitle("WAM 2026")} dates={eventDateRange("2027-01-04", "2027-01-07")} image={!!image} hold />}
+  return <MainWamTheme mode="light" theme={image ? { images: { splash: image } } : null}><LangProvider lang={lang}>
+    {status === "splash" && <Splash title="WAM 2026" subtitle={splashSubtitle("WAM 2026")} dates={eventDateRange("2027-01-04", "2027-01-07", lang)} image={!!image} hold />}
     <LoginScreen next={mainWamPath.home} eventName="WAM 2026" preview={{ email: "rani@example.com", error, busy: status === "memuat", forgot: status === "lupa" }} />
-  </MainWamTheme>;
+  </LangProvider></MainWamTheme>;
 }

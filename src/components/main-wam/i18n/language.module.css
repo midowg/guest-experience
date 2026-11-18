@@ -1,0 +1,4 @@
+/* Bahasa / Language row (Pengaturan): a small label over the two-choice control, then a note. */
+.card { display: flex; flex-direction: column; gap: var(--mw-space-12); }
+.label { font: var(--mw-type-label-lg); color: var(--mw-text-1); }
+.note { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }

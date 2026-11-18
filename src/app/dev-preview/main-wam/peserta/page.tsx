@@ -9,7 +9,7 @@ const LINKS: [string, string][] = [
   ["P01 voting", "beranda?hari=3&jam=10:00"], ["P01 survei", "beranda?hari=4&jam=08:10"], ["P01 memuat", "beranda?status=memuat"], ["P01 offline", "beranda?status=offline"],
   ["P03 Agenda", "agenda?waktu=pagi"], ["P03 jam berubah + batal", "agenda?hari=2&jam=10:30&status=batal"], ["P03 belum terbit", "agenda?status=kosong"],
   ["P04 Detail sesi", "sesi?waktu=pemaparan"], ["P04 Info lainnya", "sesi?info=1"], ["P04 jam berubah", "sesi?sesi=silent&waktu=silent"], ["P04 dibatalkan", "sesi?status=batal&waktu=pagi"],
-  ["P05 Saya", "saya"], ["P05B Saya BOD", "saya?peran=bod"], ["P05 foto profil", "saya?buka=foto"], ["P05 Bantuan", "saya?buka=bantuan"], ["P05 Keluar", "saya?buka=keluar"],
+  ["P05 Saya", "saya"], ["P05B Saya BOD", "saya?peran=bod"], ["P05 foto profil", "saya?buka=foto"], ["P05 Bantuan", "saya/bantuan"], ["P05 Keluar", "saya?buka=keluar"],
   ["L01 Kelompok & kamar", "kelompok"], ["L01 kamar 5 orang", "kelompok?kamar=5"], ["L01 belum terbit", "kelompok?status=kamar-belum"],
   ["L03 Perjalanan", "perjalanan"], ["L03 pulang", "perjalanan?arah=pulang"], ["L03 kosong", "perjalanan?status=kosong"],
   ["L04 Panduan", "panduan"], ["L04 isi hotel", "panduan?isi=hotel"], ["L04 offline", "panduan?status=offline"],

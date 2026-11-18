@@ -45,7 +45,6 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 export function KitGallery() {
   const toast = useToast();
   const [segment, setSegment] = useState<"semua" | "kelompok">("semua");
-  const [darkSegment, setDarkSegment] = useState<"semua" | "kelompok">("semua");
   const [audience, setAudience] = useState<"kelompok" | "semua">("kelompok");
   const [filters, setFilters] = useState<string[]>(["semua"]);
   const [notify, setNotify] = useState(true);
@@ -115,7 +114,7 @@ export function KitGallery() {
       <Group label="Lebar penuh, dengan ikon · coba memuat">
         <Button block icon={ScanLine} loading={loading} loadingLabel="Membuka kamera…" onClick={() => { setLoading(true); window.setTimeout(() => setLoading(false), 2000); }}>Absen</Button>
       </Group>
-      <Group label="Di atas gelap · ondark">
+      <Group label="Di atas gelap (kamera, pemindai) · ondark">
         <div className={css.dark}><div className={css.row}><Button variant="ondark" icon={Images}>Galeri</Button><Button variant="ondark" size="m">Ganti</Button></div></div>
       </Group>
       <Group label="IconButton · standard, tonal, filled, ditekan (suka), nonaktif, lencana">
@@ -160,19 +159,6 @@ export function KitGallery() {
         <div className={css.row}>
           <FilterChip menu name="Sesi" expanded={picker} active={session !== "Semua sesi"} onClick={() => setPicker(true)}>{session}</FilterChip>
           <FilterChip menu name="Sesi" active>Team building</FilterChip>
-        </div>
-      </Group>
-      <Group label="Momen gelap · Segmented + FilterChip menu (nilai panjang berelipsis)">
-        <div className={css.dark}>
-          <div className={css.row} style={{ flexWrap: "nowrap" }}>
-            <Segmented label="Tampilkan foto" tone="dark" value={darkSegment} onChange={setDarkSegment} options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }]} className={css.grow} />
-            <FilterChip menu tone="dark" name="Sesi" className={css.chip42}>Semua sesi</FilterChip>
-          </div>
-          <div className={css.row} style={{ flexWrap: "nowrap" }}>
-            <Segmented label="Tampilkan foto" tone="dark" value="semua" onChange={() => {}} options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }]} className={css.grow} />
-            <FilterChip menu tone="dark" name="Sesi" active className={css.chip42}>Pemaparan departemen</FilterChip>
-          </div>
-          <Text variant="caption-strong" color="media-2" as="p">Pemaparan departemen · 24 foto</Text>
         </div>
       </Group>
       <Group label="TagChip di kamera · menu ▾ dan hapus ✕">
@@ -327,10 +313,9 @@ export function KitGallery() {
           <ToastPreview text="Foto belum terkirim" sub="Dikirim lagi saat tersambung" tone="error" actionLabel="Coba lagi" />
         </div>
       </Group>
-      <Group label="EmptyState · M, S, gelap">
+      <Group label="EmptyState · M, S">
         <Card><EmptyState icon={ImagePlus} title="Belum ada foto" action={<Button variant="tonal" size="m" icon={Camera}>Ambil foto</Button>}>Jadilah yang pertama membagikan momen hari ini.</EmptyState></Card>
         <Card><EmptyState size="s" icon={WifiOff} title="Tidak ada koneksi" headingLevel={3}>Sambungkan internet lalu coba lagi.</EmptyState></Card>
-        <div className={css.dark}><EmptyState tone="dark" icon={Images} title="Sudah semua" headingLevel={3}>Foto baru muncul di sini.</EmptyState></div>
       </Group>
       <Group label="Skeleton · garis, judul, lingkaran, kotak, kartu · Spinner">
         <SkeletonGroup label="Memuat contoh">
@@ -368,12 +353,9 @@ export function KitGallery() {
       <Group label="TopBar · Beranda (sapaan, lonceng)">
         <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi · Sel, 5 Jan" name="Rani" day="Hari ke-2 dari 4" actions={<IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} href="#bilah" />} /></div>
       </Group>
-      <Group label="TopBar · gelap (Momen)">
-        <div className={css.barDemoDark}><TopBar title="Momen" tone="dark" actions={<Chip tone="dark" href="#bilah" icon={Images}>Galeri</Chip>} /></div>
-      </Group>
-      <Group label="BottomNav · terang (Beranda aktif, lencana) dan gelap (Momen aktif)">
+      <Group label="BottomNav (Beranda aktif, lencana; Momen aktif)">
         <BottomNav current="beranda" badges={{ momen: 3, saya: "dot" }} className={css.navStatic} />
-        <BottomNav current="momen" tone="dark" className={css.navStatic} />
+        <BottomNav current="momen" className={css.navStatic} />
       </Group>
       <Group label="ActionBar · catatan + tombol">
         <div className={css.bleed}><ActionBar note="Absen dibuka 30 menit sebelum sesi."><Button block>Absen</Button><Button variant="text" block>Masukkan kode</Button></ActionBar></div>

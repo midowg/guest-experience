@@ -3,6 +3,7 @@ import { ScreenContent } from "@/components/main-wam/shell";
 import { Button, EmptyState } from "@/components/main-wam/ui";
 import { praWamPath } from "@/lib/routes";
 import { mainWamShown } from "@/lib/server/main-wam/gate";
+import { serverT } from "@/lib/server/main-wam/lang";
 import NotFound from "@/app/not-found";
 
 /**
@@ -13,9 +14,10 @@ import NotFound from "@/app/not-found";
  */
 export default async function MainWamNotFound() {
   if (!(await mainWamShown())) return <NotFound />;
+  const t = await serverT();
   return <ScreenContent>
-    <EmptyState icon={<SearchX />} title="Halaman tidak ditemukan" action={<Button href={praWamPath.home} variant="secondary">Kembali ke WAM</Button>}>
-      Periksa lagi tautannya, atau buka WAM dari ikon di HP.
+    <EmptyState icon={<SearchX />} title={t("shell.notFoundTitle")} action={<Button href={praWamPath.home} variant="secondary">{t("shell.notFoundBack")}</Button>}>
+      {t("shell.notFoundBody")}
     </EmptyState>
   </ScreenContent>;
 }

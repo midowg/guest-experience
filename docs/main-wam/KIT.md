@@ -44,7 +44,11 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
 12. **Aksesibilitas**: target sentuh ≥ 44 (sudah di kit), kontras ≥ 4,5 (dicek otomatis di galeri, terang
     dan gelap), fokus terlihat, `prefers-reduced-motion` dihormati, setiap gestur geser punya tombol
     (sheet: ✕; tumpukan Momen: ketuk sisi foto / tombol).
-13. **Cincin fokus**: tema memberi `:focus-visible` 2 px `--mw-focus` (offset 2) ke semua kontrol. Jangan
+13. **Tanpa warna literal.** Warna hanya lewat token `--mw-*` (ukuran, bayangan, font juga). `components/main-wam/colors.test.ts`
+    menggagalkan hex, `rgb()`/`hsl()`, nama warna, dan `color-mix()` dengan `white`/`black` di `src/components/main-wam` dan
+    `src/app/wam/acara`; pengecualian hanya yang tercatat di daftarnya (kanvas Mozaik, perata JPEG, latar `::backdrop`).
+    Butuh warna baru: tambah token terang **dan** gelap di `theme.module.css` (blok Gelap dan blok Sistem harus sama), kontras ≥ 4,5.
+14. **Cincin fokus**: tema memberi `:focus-visible` 2 px `--mw-focus` (offset 2) ke semua kontrol. Jangan
     menambah cincin kedua. Isian: kotaknya yang bercincin (inset 2), kontrol di dalamnya tidak. Tujuan
     fokus lewat skrip yang bukan kontrol (judul sheet, `<main>`) diberi `tabIndex={-1}` dan tanpa cincin
     (aturan tema untuk `h1`–`h6`/`main[tabindex="-1"]`). Fokus lewat skrip setelah ketukan pakai
@@ -65,7 +69,9 @@ Nama token = nama prototipe dengan awalan `--mw-`:
 | `--text-X` + `--ls-X` | `--mw-type-X` + `--mw-ls-X` | `font: var(--mw-type-body-small)` |
 | `--space-N`, `--radius-N`, `--elev-N` | `--mw-space-N`, `--mw-radius-N`, `--mw-elev-N` | `gap: var(--mw-space-12)` |
 | `--motion-*`, `--ease-*` | `--mw-motion-*`, `--mw-ease-*` | `transition: background-color var(--mw-motion-press)` |
-| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-ink`, `--mw-ondark-fill` | teks/isian di atas layar gelap Momen dan kamera |
+| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, hati) dan di atas kamera: putih tetap di kedua mode |
+| (baru) | `--mw-camera`, `--mw-camera-2`, `--mw-ondark-fill*`, `--mw-ondark-line` | permukaan kamera dan pemindai QR (gelap di kedua mode, jendela bidik) dan isian di atasnya |
+| (baru) | `--mw-photo-bg`, `--mw-ph-1…6`, `--mw-ph-glow`, `--mw-ph-shade` | latar foto yang belum termuat dan placeholder netral (punya nilai gelap sendiri) |
 | (baru) | `--mw-safe-top/bottom/left/right`, `--mw-nav-h`, `--mw-touch`, `--mw-column` | area aman iPhone, bilah bawah 64, sentuh 44, kolom 480 |
 
 CSS module fitur cukup memakai `var(--mw-…)`; tidak perlu impor apa pun.
@@ -90,10 +96,17 @@ gelap).
 Font judul baru: muat lewat `next/font` di `theme/font.ts`, tambah kuncinya ke `DISPLAY_FONTS`, dan
 petakan di `DISPLAY_FONT_VARS` (`MainWamTheme.tsx`). Tanpa itu, kunci ditolak.
 
-**Mode gelap**: token disiapkan (`mode="dark"` / `"system"`, DESIGN_SYSTEM §1.6) dan lolos cek kontras,
-tetapi layar belum dirancang untuknya. Aplikasi memakai `mode="light"`. Layar Momen bukan "mode gelap":
-shell memberi `data-mw-tone="dark"` (latar `--mw-viewer`) dan komponen memakai varian `tone="dark"` /
-`variant="ondark"`.
+**Mode terang/gelap/Sistem**: aplikasi mengikuti pilihan perangkat di Saya → Pengaturan → Tampilan
+(Terang, Gelap, Sistem; bawaan Sistem = ikut HP). Disimpan per perangkat di cookie `mw_mode`
+(`src/lib/main-wam/appearance.ts`, Path `/wam`, setahun); `acara/layout.tsx` membacanya di server
+(`readMainWamMode`) dan memberi `mode` ke `MainWamTheme`, jadi tidak ada kedip. Mengganti pilihan
+(`MainWamModeSetting`/`applyMainWamMode`) menulis cookie, mengubah `data-mw-mode` di akar dan kedua tag
+`theme-color` seketika, lalu `router.refresh()`. **Semua layar mengikuti tema**, termasuk Momen: tidak ada
+permukaan gelap tersendiri. Dua pengecualian yang disengaja, keduanya jendela bidik: **kamera Momen** dan
+**pemindai QR Absen** gelap di kedua mode (`--mw-camera`, varian `ondark`); kerangka tidak menggambar bilah
+untuk kamera (`screen.camera`, `data-mw-camera`). Layar pra-izin kamera (O04) mengikuti tema. Sheet dan
+konfirmasi mengikuti tema. Blok `[data-mw-mode="dark"]` dan blok Sistem di `theme.module.css` harus sama
+(dijaga `colors.test.ts`). Pratinjau: `?mode=dark` pada galeri kit, atau ubah `data-mw-mode` di akar.
 
 **Font**: Plus Jakarta Sans lewat `next/font/google` (`theme/font.ts`), variable font satu berkas,
 di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender `MainWamTheme` perlu
@@ -110,9 +123,9 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | `akar` lain | judul besar (h1); bilah ringkas muncul setelah judul tergulir | ya |
 | `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
-| `tugas` + gelap (kamera) | tidak ada (kamera punya bilahnya) | tidak |
+| `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya, gelap di kedua mode) | tidak |
 
-Momen (`dark`) membuat latar, bilah atas, dan bilah bawah gelap. ‹/✕ kembali ke layar sebelumnya bila
+Momen mengikuti tema seperti tab lain (tidak ada bilah atau latar gelap tersendiri). ‹/✕ kembali ke layar sebelumnya bila
 ada riwayat di aplikasi, kalau tidak ke `back.href` (dibuka dari notifikasi atau QR). Toast
 (`ToastProvider`) ada di shell, di atas bilah bawah. Area aman iPhone (atas, bawah, kiri, kanan) sudah
 diberi padding. Di layar ≥ 600 px aplikasi tetap satu kolom selebar ponsel (480) di tengah, dan sheet tetap
@@ -201,19 +214,19 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `Chip` | `icon`, `tone` `default`/`dark`, `href` | informasi ("Kelompok 4", "Aula Utama"), bukan kontrol |
-| `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active`; `tone="dark"` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
+| `Chip` | `icon`, `href` | informasi ("Kelompok 4", "Aula Utama"), bukan kontrol |
+| `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
 | `ChipRow` | `scroll` (geser ke tepi layar) atau bungkus; `label` | deretan chip |
 | `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera gelap ("Sesi: Team building ✕") |
-| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`**, `tone` | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
+| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`** | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
 | `Switch` | `checked`, `onChange`, `label` (atau `labelledBy`) | nyala/mati langsung berlaku |
 | `SwitchRow` | `title`, `sub`, `checked`, `onChange`, `inList` | sakelar berteks ("Kabari peserta"); seluruh baris bisa diketuk |
 
 ```tsx
 "use client";
-<Segmented label="Tampilkan foto" tone="dark" value={view} onChange={setView}
+<Segmented label="Tampilkan foto" value={view} onChange={setView}
   options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }]} />
-<FilterChip menu tone="dark" name="Sesi" expanded={picking} active={sesi !== null} onClick={() => setPicking(true)}>
+<FilterChip menu name="Sesi" expanded={picking} active={sesi !== null} onClick={() => setPicking(true)}>
   {sesi?.title ?? "Semua sesi"}
 </FilterChip>
 ```
@@ -242,7 +255,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
 | `Banner` | `tone` `info` · `offline` (ikon `cloud-off`) · `warning` · `error` · `success`; `title`; isi; `icon`; `action {label, onClick}`; `href` (seluruh banner tautan, ›). Pengumuman tersemat: `tone={note.tone}` dari `pinnedForMe` | info di atas isi layar, mendorong isi (tidak menutupi): offline, pengumuman penting, jam berubah, gagal + "Coba lagi" |
-| `EmptyState` | `icon`, `title`, isi, `action` (Button), `size` `m`/`s` (di kartu), `tone` `dark`, `headingLevel` | kosong, tanpa koneksi, izin ditolak |
+| `EmptyState` | `icon`, `title`, isi, `action` (Button), `size` `m`/`s` (di kartu), `headingLevel` | kosong, tanpa koneksi, izin ditolak |
 | `Skeleton` + `SkeletonGroup` | `shape` `line` · `title` · `circle` · `box` · `photo` · `card` · `block`; `width`, `height`; grup memberi `aria-busy` + label | `loading.tsx` per bagian (bentuknya mengikuti layar) |
 | `Spinner` | `size` 20/24, `label` | tunggu > 300 ms yang bukan satu bagian |
 | `Sheet` | `open`, `onClose`, `title`, `subtitle`, `footer`, `history` (bawaan true), `locked`, `initialFocus`, `flush` | detail atau form pendek di atas layar |
@@ -250,7 +263,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | `ConfirmDialog` | `open`, `onCancel`, `onConfirm`, `title` (pertanyaan), `body` (akibat), `confirmLabel` (hasil), `tone` `primary`/`danger` (+ ikon), `busy` + `busyLabel` | konfirmasi aksi berisiko |
 | `useToast()` | `show({ text, sub, tone, action {label, onAction}, duration, timer, thumb, onTimeout })` → id; `dismiss(id)` | konfirmasi singkat. 4 dtk, 6 dtk dengan aksi. Galat yang perlu tindakan = Banner |
 | `ToastPreview` | tampilan statis toast | galeri |
-| `TopBar` | `variant` `large` · `back` · `home`, `tone`, `actions`, `sticky`, `scrolled`; `back`: `label` (nama layar untuk pembaca layar bila `title` kosong; tanpa keduanya tidak ada h1 kosong) | dipakai shell; layar biasanya tidak memakainya langsung |
+| `TopBar` | `variant` `large` · `back` · `home`, `actions`, `sticky`, `scrolled`; `back`: `label` (nama layar untuk pembaca layar bila `title` kosong; tanpa keduanya tidak ada h1 kosong) | dipakai shell; layar biasanya tidak memakainya langsung |
 | `ActionBar` | `note`, `row` | aksi utama layar tugas, lengket di bawah, dengan area aman |
 
 Perilaku Sheet dan ConfirmDialog (`ui/useModal.ts`): `<dialog>` native + `showModal()` (halaman di
@@ -260,7 +273,7 @@ dalam (radio roving yang `tabindex=-1` bukan perhentian, jadi Tab dari radio ter
 sheet yang dirender bersyarat (`{open && <Sheet open …/>}`) lalu dilepas juga mengembalikan fokus ke
 pembukanya bila fokus masih di dalamnya (T-K01); Esc, ✕, ketuk area redup, dan **tombol Back HP** menutup. Halaman di bawah tidak ikut tergulir.
 `locked`/`busy`: tetap terbuka (Back mengembalikan entrinya). Sheet ditarik ke bawah lewat pegangan juga
-menutup (HP); ✕ adalah alternatif tombolnya. Sheet selalu terang, juga di atas layar Momen.
+menutup (HP); ✕ adalah alternatif tombolnya. Sheet mengikuti tema (terang atau gelap), juga di atas Momen.
 
 Riwayat: setiap modal yang terbuka memegang satu entri (`{ mwSheet: key }`), lewat satu antrean bersama
 untuk semua Sheet dan ConfirmDialog. Popstate hanya menutup modal yang entrinya ditinggalkan (Back
@@ -302,6 +315,7 @@ Sheet pilih sesi (contoh di galeri):
 
 ## 5. Tes
 
+- `colors.test.ts`: tanpa warna literal, blok Gelap = blok Sistem, kontras teks di kedua mode.
 - Aksesibilitas dan tata letak sempit (fase 4): `ui/a11y.dom.test.tsx` (axe `label-content-name-mismatch`,
   Tab melewati radio roving, fokus kembali saat sheet dilepas, aturan CSS 320 px/zoom/desktop);
   `shell/failed.dom.test.tsx` (`(app)/error.tsx`, `SignInFirst`).
@@ -321,3 +335,23 @@ UI kit): NowCard (susun dari Card + StatusPill + Button), CheckboxRow, RadioRow/
 ListRow + `aria-current`, lihat contoh sheet pilih sesi), PhotoTile/galeri, StackViewer + kartu tumpukan, CameraScreen + ShutterButton,
 QRScannerOverlay, Mozaik, Ticket, Stepper, KeyValue, NotificationRow, EmissionCard, LeaderboardRow,
 AwardCard, RundownRow, tanda "diubah oleh".
+
+---
+
+## 7. Bahasa (Indonesia / English)
+
+Aturan lengkap dan keputusan: `KONTRAK.md` §11. Ringkasnya untuk yang membuat layar:
+
+- **Jangan menulis teks Indonesia langsung di komponen peserta.** Tambah kunci di `src/lib/main-wam/i18n/id/<area>.ts`
+  dan `en/<area>.ts`, lalu `const t = useT()` (`@/components/main-wam/i18n`): `t("peserta.group.more", { n: 3 })`.
+  Jamak: `{n, plural, one {# photo} other {# photos}}`. Tes kamus gagal bila kunci/variabel tidak sama.
+- **Komponen kit sudah berbahasa**: `StatusPill` (label dari kunci `pill.*`), `Sheet` (✕ = `ui.close`), `ConfirmDialog` (Batal),
+  `Toast` (wilayah "Pemberitahuan"), `SkeletonGroup`/`Spinner` (label yang ditulis Indonesia dikenali kamus lewat
+  `translateKnown`, jadi `loading.tsx` tidak perlu diubah), `DayTabs`, `SessionRow`, `StackPreview`, `BottomNav`, bilah shell. Teks yang
+  kamu berikan lewat props (label, title) kamu terjemahkan sendiri sebelum memberikannya.
+- Komponen server tanpa hook memakai `<Words k="ui.see" />` untuk teks biasa; untuk atribut (aria-label) jadikan komponen klien.
+- Tanggal dan jam: `shortDate(lang, "2027-01-05")`, `clock(lang, "08:00")`, atau helper peserta (`hhmm(iso, lang)`, `dayOf`, `untilLabel`)
+  dan rundown (`timeRange(session, lang)`, `dayWord(date, today, lang)`). Jam tetap WIB.
+- **Pengaturan → Bahasa / Language**: `<LanguageSetting />` (`@/components/main-wam/i18n`), `Segmented` Indonesia | English di dalam `Card`.
+- Cek tata letak: teks EN biasanya lebih pendek; yang lebih panjang ("Gathering time changed · was 05:45", "Departure · Mon, 4 Jan")
+  sudah dicek di 390 px (Beranda, Agenda, Momen, Saya, Pengaturan, Perjalanan, Masuk, Kelompok & kamar). Label tab bawah tetap satu kata.

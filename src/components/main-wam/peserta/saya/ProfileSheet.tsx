@@ -8,6 +8,7 @@ import { uploadProfilePhoto } from "@/components/pra-wam/photoUpload";
 import { acceptPhotos, sourceProblem } from "@/lib/pra-wam/photo";
 import { praWamApi } from "@/lib/routes";
 import { Avatar, ConfirmDialog, List, ListRow, Sheet } from "@/components/main-wam/ui";
+import { useT } from "@/components/main-wam/i18n";
 import { failText, mwRequest } from "../request";
 import css from "../peserta.module.css";
 
@@ -20,6 +21,7 @@ type Step = { kind: "idle" } | { kind: "busy"; text: string } | { kind: "done"; 
  */
 export function ProfileSheet({ open, onClose, name, fullName, line, photo }: { open: boolean; onClose: () => void; name: string; fullName: string; line: string; photo: string | null }) {
   const router = useRouter();
+  const t = useT();
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [shown, setShown] = useState<{ base: string | null; url: string | null } | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -34,13 +36,13 @@ export function ProfileSheet({ open, onClose, name, fullName, line, photo }: { o
     if (!file) return;
     const problem = sourceProblem(file);
     if (problem) { setStep({ kind: "error", text: problem }); return; }
-    setStep({ kind: "busy", text: "Memperkecil foto…" });
+    setStep({ kind: "busy", text: t("peserta.profile.shrinking") });
     try {
       const { blob, mime } = await shrink(file);
       setShown({ base: photo, url: URL.createObjectURL(blob) });
-      setStep({ kind: "busy", text: "Mengunggah foto…" });
-      await uploadProfilePhoto(blob, mime, share => setStep({ kind: "busy", text: share < 1 ? `Mengunggah foto… ${Math.round(share * 100)}%` : "Menyimpan foto…" }));
-      setStep({ kind: "done", text: "Foto profil diganti." });
+      setStep({ kind: "busy", text: t("peserta.profile.uploading") });
+      await uploadProfilePhoto(blob, mime, share => setStep({ kind: "busy", text: share < 1 ? t("peserta.profile.uploadingPct", { pct: Math.round(share * 100) }) : t("peserta.profile.saving") }));
+      setStep({ kind: "done", text: t("peserta.profile.changed") });
       router.refresh();
     } catch (error) {
       setShown(null);
@@ -49,12 +51,12 @@ export function ProfileSheet({ open, onClose, name, fullName, line, photo }: { o
   }
 
   async function remove() {
-    setStep({ kind: "busy", text: "Menghapus foto…" });
+    setStep({ kind: "busy", text: t("peserta.profile.deleting") });
     try {
       await mwRequest(praWamApi.photo, { method: "DELETE" });
       setShown({ base: photo, url: null });
       setConfirming(false);
-      setStep({ kind: "done", text: "Foto profil dihapus." });
+      setStep({ kind: "done", text: t("peserta.profile.deleted") });
       router.refresh();
     } catch (error) {
       setConfirming(false);
@@ -66,16 +68,16 @@ export function ProfileSheet({ open, onClose, name, fullName, line, photo }: { o
   function pick(input: HTMLInputElement | null) { setStep({ kind: "idle" }); input?.click(); }
 
   return <>
-    <Sheet open={open} onClose={onClose} title="Foto profil" locked={busy}>
+    <Sheet open={open} onClose={onClose} title={t("peserta.profile.title")} locked={busy}>
       <div className={css.sheetStack}>
         <div className={css.sheetPerson}>
           <Avatar name={name} photo={current} size={64} />
           <span className={css.personText}><span className={css.personName}>{fullName}</span><span className={css.personRole}>{line}</span></span>
         </div>
         <List plain bleed>
-          <ListRow icon={<Camera />} title="Ambil foto" chevron={false} onClick={() => pick(camera.current)} disabled={busy} />
-          <ListRow icon={<ImageIcon />} title="Pilih dari galeri" chevron={false} onClick={() => pick(gallery.current)} disabled={busy} />
-          {current && <ListRow icon={<Trash2 />} title={<span className={css.danger}>Hapus foto</span>} chevron={false} onClick={() => setConfirming(true)} disabled={busy} />}
+          <ListRow icon={<Camera />} title={t("peserta.profile.take")} chevron={false} onClick={() => pick(camera.current)} disabled={busy} />
+          <ListRow icon={<ImageIcon />} title={t("peserta.profile.pick")} chevron={false} onClick={() => pick(gallery.current)} disabled={busy} />
+          {current && <ListRow icon={<Trash2 />} title={<span className={css.danger}>{t("peserta.profile.delete")}</span>} chevron={false} onClick={() => setConfirming(true)} disabled={busy} />}
         </List>
         <p className={`${css.status} ${step.kind === "error" ? css.statusError : ""}`} role={step.kind === "error" ? "alert" : "status"} aria-live="polite">
           {step.kind === "idle" ? "" : step.text}
@@ -85,6 +87,6 @@ export function ProfileSheet({ open, onClose, name, fullName, line, photo }: { o
       </div>
     </Sheet>
     <ConfirmDialog open={confirming} onCancel={() => setConfirming(false)} onConfirm={remove} tone="danger" icon={<Trash2 />}
-      title="Hapus foto profil?" body="Inisial namamu tampil sebagai gantinya." confirmLabel="Hapus foto" busy={busy} busyLabel="Menghapus…" />
+      title={t("peserta.profile.deleteTitle")} body={t("peserta.profile.deleteBody")} confirmLabel={t("peserta.profile.delete")} busy={busy} busyLabel={t("peserta.profile.deletingShort")} />
   </>;
 }

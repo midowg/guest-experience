@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
+import { previewLang } from "@/components/main-wam/dev/lang";
+import { t, type Lang } from "@/lib/main-wam/i18n";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CameraScreen, type CameraDemo } from "@/components/main-wam/momen/CameraScreen";
 import { Gallery, type GalleryProps } from "@/components/main-wam/momen/Gallery";
@@ -11,6 +13,7 @@ import { ScreenContent } from "@/components/main-wam/shell";
 import { List, ListRow } from "@/components/main-wam/ui";
 import { Images } from "lucide-react";
 import { sessionChoice } from "@/lib/main-wam/momen/sessions";
+import { flushedText, newPhotosText, sentText } from "@/lib/main-wam/momen/stack";
 import { SAMPLE_TOTAL, sampleFeedKelompok, sampleFeedSemua, sampleGalleryKelompok, sampleGalleryMine, sampleMosaic, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
 import { sampleSessionIds, sampleSessions, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
@@ -34,7 +37,7 @@ const LAYAR = [
 
 const pemaparanNow = sampleTime("pemaparan");
 const sessions = sampleSessions.filter(session => session.status === "terbit");
-const choices = (now: Date) => sessions.map(session => sessionChoice(session, now));
+const choices = (now: Date, lang: Lang = "id") => sessions.map(session => sessionChoice(session, now, lang));
 
 function stack(over: Partial<MomenStackProps> & { demo?: StackDemo } = {}): MomenStackProps {
   return {
@@ -50,12 +53,14 @@ function gallery(over: Partial<GalleryProps> = {}): GalleryProps {
   };
 }
 
-export default async function DevMomen({ searchParams }: { searchParams: Promise<{ layar?: string }> }) {
+export default async function DevMomen({ searchParams }: { searchParams: Promise<{ layar?: string; lang?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { layar: asked } = await searchParams;
+  const params = await searchParams;
+  const { layar: asked } = params;
+  const lang = previewLang(params);
   const layar = (LAYAR as readonly string[]).includes(asked ?? "") ? asked! : "M01";
   const viewer = sampleViewer("peserta");
-  const at = (path: string, children: ReactNode, waktu = "pemaparan") => <DevFrame path={path} waktu={waktu}>{children}</DevFrame>;
+  const at = (path: string, children: ReactNode, waktu = "pemaparan") => <DevFrame path={path} waktu={waktu} lang={lang}>{children}</DevFrame>;
 
   /* M01–M04: the stack. */
   const momen = mainWamPath.moments();
@@ -98,11 +103,11 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
   /* M06: Mozaik. */
   const mozaik = mainWamPath.mosaic();
   switch (layar) {
-    case "M06": return at(mozaik, <Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo />);
-    case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic()} mark title="Mozaik WAM 2026" demo />);
-    case "M06-tandai-kosong": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 0)} mark title="Mozaik WAM 2026" demo />);
+    case "M06": return at(mozaik, <Mosaic initial={sampleMosaic()} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic()} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06-tandai-kosong": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 0)} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
     case "M06-memuat": return at(mozaik, <MosaicSkeleton />);
-    case "M06-lengkap": return at(mozaik, <Mosaic initial={sampleMosaic(1)} mark={false} title="Mozaik WAM 2026" demo />);
+    case "M06-lengkap": return at(mozaik, <Mosaic initial={sampleMosaic(1)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
   }
 
   /* U01–U05, O04: the camera at Team building (15.20). */
@@ -116,12 +121,12 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "U01-umum": return at(kamera, camera({ phase: "kamera", live: "contoh" }, { now: new Date("2027-01-05T14:45:00+07:00") }), "teamBuilding");
     case "U01-pilih-sesi": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "sesi" }), "teamBuilding");
     case "U01-untuk": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "untuk" }), "teamBuilding");
-    case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="Terkirim ke semua peserta" action="Batalkan" timer thumb /></>, "teamBuilding");
-    case "U02-kelompok": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" }, { initialAudience: "kelompok" })}<DemoToast text="Terkirim ke Kelompok 4" action="Batalkan" timer thumb /></>, "teamBuilding");
-    case "U02-dibatalkan": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="Foto dibatalkan" tone="info" /></>, "teamBuilding");
-    case "U03": return at(kamera, <>{camera({ phase: "kamera", live: "contoh", pill: 2, offline: true })}<DemoToast text="Akan terkirim saat online" action="Batalkan" thumb /></>, "teamBuilding");
-    case "U03-online": return at(momen, <><MomenStack {...stack({ demo: {} })} /><DemoToast text="2 foto terkirim" tone="success" /></>);
-    case "U04": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="3 foto terkirim ke semua" action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={sentText(1, "semua", null, lang)} action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02-kelompok": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" }, { initialAudience: "kelompok" })}<DemoToast text={sentText(1, "kelompok", viewer.group, lang)} action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02-dibatalkan": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={t(lang, "momen.cam.cancelledOne")} tone="info" /></>, "teamBuilding");
+    case "U03": return at(kamera, <>{camera({ phase: "kamera", live: "contoh", pill: 2, offline: true })}<DemoToast text={t(lang, "momen.cam.sendsOnline")} action="Batalkan" thumb /></>, "teamBuilding");
+    case "U03-online": return at(momen, <><MomenStack {...stack({ demo: {} })} /><DemoToast text={flushedText(2, lang)} tone="success" /></>);
+    case "U04": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={sentText(3, "semua", null, lang)} action="Batalkan" timer thumb /></>, "teamBuilding");
     case "U04-ditolak": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "galeri" }), "teamBuilding");
     case "U05": return at(kamera, camera({ phase: "kamera", live: "ditolak" }), "teamBuilding");
     case "U-hp": return at(kamera, camera({ phase: "kamera", live: "hp" }), "teamBuilding");
@@ -129,8 +134,8 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
   }
 
   /* The slots on other areas' screens. */
-  if (layar === "P01-kartu") return at(mainWamPath.home, <ScreenContent><MomenCard photos={[null, null, null]} sub="12 foto baru" runner={false} /></ScreenContent>);
+  if (layar === "P01-kartu") return at(mainWamPath.home, <ScreenContent><MomenCard photos={[null, null, null]} sub={newPhotosText(12, 12, lang)} runner={false} /></ScreenContent>);
   return at(mainWamPath.session(sampleSessionIds.pemaparan), <ScreenContent><List>
-    <ListRow icon={<Images />} title="Foto sesi ini" value={24} href={mainWamPath.moments({ sesi: sampleSessionIds.pemaparan })} />
+    <ListRow icon={<Images />} title={t(lang, "momen.sessionPhotos")} value={24} href={mainWamPath.moments({ sesi: sampleSessionIds.pemaparan })} />
   </List></ScreenContent>);
 }

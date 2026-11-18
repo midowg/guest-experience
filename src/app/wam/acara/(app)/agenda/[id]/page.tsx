@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { denahHrefOf, SessionScreen } from "@/components/main-wam/peserta/agenda/SessionScreen";
+import { SessionScreen } from "@/components/main-wam/peserta/agenda/SessionScreen";
+import { denahHrefOf } from "@/lib/main-wam/peserta/guides";
 import { SessionAbsen, SessionModuleAction } from "@/components/main-wam/modul/SessionModule";
 import { SessionPhotos } from "@/components/main-wam/momen/SessionPhotos";
 import { mainWamPath } from "@/lib/routes";

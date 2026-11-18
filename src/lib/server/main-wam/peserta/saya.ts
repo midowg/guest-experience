@@ -13,6 +13,8 @@ import { myMainWamNotifications } from "../notes";
 import { mainWamPeople } from "../people";
 import { activityGroups, guideBySlug, listGroups, listGuides, listTrips, rundownLog, seatsOf, shownSessions } from "../read";
 import type { MainWamContext } from "../gate";
+import { t } from "@/lib/main-wam/i18n";
+import { readLang } from "../lang";
 import { contactOf, contactsOf } from "./contacts";
 
 /*
@@ -23,9 +25,10 @@ import { contactOf, contactsOf } from "./contacts";
 
 /** Saya: Akses MCP for a BOD with access (Pra WAM's Pengaturan holds McpCard), and the Bantuan contact. */
 export async function loadMe({ viewer, settings }: MainWamContext): Promise<{ mcp: boolean; help: Contact | null }> {
+  const lang = await readLang();
   const [access, help] = await Promise.all([
     mayUseMcp(viewer) ? mcpAccessOf(viewer.id).catch(() => null) : Promise.resolve(null),
-    contactOf(settings.contacts.umum, "Panitia").catch(() => null),
+    contactOf(settings.contacts.umum, t(lang, "peserta.contact.committee")).catch(() => null),
   ]);
   return { mcp: !!access?.granted, help };
 }
@@ -40,19 +43,20 @@ export type GroupRoomData = {
 
 /** L01: the room is the viewer's own (HR's pairing, read by the fondasi); here the kelompok and the kelompok kegiatan. */
 export async function loadGroupRoom({ viewer, settings }: MainWamContext): Promise<GroupRoomData> {
+  const lang = await readLang();
   const published = settings.groupsPublished;
   const [groups, people, mine, sessions, roomHelp] = await Promise.all([
     published && viewer.group ? listGroups().then(read => read.data).catch(() => []) : Promise.resolve([]),
     published && viewer.group ? mainWamPeople().catch(() => new Map<string, MwPerson>()) : Promise.resolve(new Map<string, MwPerson>()),
     activityGroups({ employeeId: viewer.id }).then(read => read.data).catch(() => []),
     shownSessions().then(read => read.data).catch(() => []),
-    contactOf(settings.contacts.kamar, "Panitia kamar").catch(() => null),
+    contactOf(settings.contacts.kamar, t(lang, "peserta.contact.roomCommittee")).catch(() => null),
   ]);
   const group = viewer.group ? groups.find(item => item.id === viewer.group!.id) ?? null : null;
   return {
-    group: group ? { title: `Kelompok ${group.number} · ${group.name}`, size: group.members.length, members: memberRows(group, people, viewer.id) } : null,
+    group: group ? { title: t(lang, "peserta.group.title", { number: group.number, name: group.name }), size: group.members.length, members: memberRows(group, people, viewer.id, lang) } : null,
     groupsPublished: published,
-    activities: activityRows(mine, sessions),
+    activities: activityRows(mine, sessions, lang),
     roomHelp,
   };
 }
@@ -68,6 +72,7 @@ export type TravelData = {
 
 /** L03: both directions (the segmented switches without a request), the person's seats, the coordinators. */
 export async function loadTravel({ viewer, settings }: MainWamContext): Promise<TravelData> {
+  const lang = await readLang();
   const [trips, seats, sessions, log] = await Promise.all([
     listTrips(), seatsOf(viewer.id).then(read => read.data).catch(() => []),
     shownSessions().then(read => read.data).catch(() => []),
@@ -75,22 +80,22 @@ export async function loadTravel({ viewer, settings }: MainWamContext): Promise<
   ]);
   const ids = { berangkat: coordinatorOf(trips.data, "berangkat"), pulang: coordinatorOf(trips.data, "pulang") };
   const contacts = await contactsOf([
-    { id: ids.berangkat ?? settings.contacts.perjalanan, role: "Koordinator" },
-    { id: ids.pulang ?? settings.contacts.perjalanan, role: "Koordinator" },
+    { id: ids.berangkat ?? settings.contacts.perjalanan, role: t(lang, "peserta.travel.roleCoordinator") },
+    { id: ids.pulang ?? settings.contacts.perjalanan, role: t(lang, "peserta.travel.roleCoordinator") },
   ]).catch(() => new Map<string, Contact>());
   const room = viewer.room?.name ?? null;
   const changed: Partial<Record<TripDirection, string>> = {};
   for (const direction of ["berangkat", "pulang"] as const) {
     const gather = trips.data.find(trip => trip.direction === direction && trip.kind === "kumpul" && trip.sessionId);
     const session = gather ? sessions.find(item => item.id === gather.sessionId) : null;
-    const change = session ? timeChange(session, log) : null;
-    if (change && change.from.start !== session!.startsAt) changed[direction] = `Jam kumpul berubah · tadinya ${hhmm(change.from.start)}`;
+    const change = session ? timeChange(session, log, lang) : null;
+    if (change && change.from.start !== session!.startsAt) changed[direction] = t(lang, "peserta.travel.gatherChanged", { time: hhmm(change.from.start, lang) });
   }
   const coordinator = (direction: TripDirection) => contacts.get((ids[direction] ?? settings.contacts.perjalanan) ?? "");
   return {
     migrated: trips.migrated,
     trips: trips.data,
-    steps: { berangkat: travelSteps(trips.data, seats, "berangkat", room), pulang: travelSteps(trips.data, seats, "pulang", room) },
+    steps: { berangkat: travelSteps(trips.data, seats, "berangkat", room, lang), pulang: travelSteps(trips.data, seats, "pulang", room, lang) },
     coordinators: Object.fromEntries((["berangkat", "pulang"] as const).flatMap(direction => { const found = coordinator(direction); return found ? [[direction, found]] : []; })),
     changed,
   };
@@ -107,6 +112,6 @@ export const loadGuide = (slug: string) => guideBySlug(slug);
 
 /** N01: the person's notes, grouped, and whether the migration has run. */
 export async function loadNotifications({ viewer }: MainWamContext, now: Date): Promise<{ migrated: boolean; today: NotificationRow[]; earlier: NotificationRow[]; unread: number }> {
-  const read = await myMainWamNotifications(viewer.id);
-  return { migrated: read.migrated, unread: read.unread, ...groupNotifications(read.items, now) };
+  const [read, lang] = await Promise.all([myMainWamNotifications(viewer.id), readLang()]);
+  return { migrated: read.migrated, unread: read.unread, ...groupNotifications(read.items, now, lang) };
 }

@@ -10,6 +10,10 @@ import { HomeCard } from "./beranda/HomeCard";
 import { InfoLainnya } from "./agenda/InfoLainnya";
 import { LoginScreen } from "./masuk/LoginScreen";
 import { NotificationsScreen } from "./notifikasi/NotificationsScreen";
+import { HelpScreen } from "./saya/HelpScreen";
+import { MainWamModeSetting } from "@/components/main-wam/theme/MainWamModeSetting";
+import { LangProvider } from "@/components/main-wam/i18n";
+import { setActiveLang } from "@/lib/main-wam/i18n";
 import { SayaScreen } from "./saya/SayaScreen";
 
 /* Agen A's main components as people use them: what shows, what a tap does, what is sent. */
@@ -25,7 +29,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
 beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); Object.values(router).forEach(fn => fn.mockClear()); localStorage.clear(); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); setActiveLang("id"); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 const answer = (status: number, body: unknown) => vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
 const NOW = "2027-01-05T07:40:00+07:00";
@@ -118,7 +122,7 @@ describe("Notifikasi", () => {
 });
 
 describe("Saya", () => {
-  const props = { name: "Rani", fullName: "Rani Contoh", line: "CoE · Kelompok 4 · Arjuno", photo: null, room: { title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" }, mcp: false, help: null };
+  const props = { name: "Rani", fullName: "Rani Contoh", line: "CoE · Kelompok 4 · Arjuno", photo: null, room: { title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" }, mcp: false };
 
   it("the profile card opens Foto profil; the room opens Kelompok & kamar; Akses MCP only with access", () => {
     const { unmount } = render(<SayaScreen {...props} />);
@@ -129,6 +133,12 @@ describe("Saya", () => {
     unmount();
     render(<SayaScreen {...props} mcp />);
     expect(screen.getByRole("link", { name: /Akses MCP/ }).getAttribute("href")).toBe(`${praWamPath.settings}#mcp`);
+  });
+
+  it("Bantuan is a page of its own (a link, not a sheet)", () => {
+    render(<SayaScreen {...props} />);
+    expect(screen.getByRole("link", { name: "Bantuan" }).getAttribute("href")).toBe(mainWamPath.help);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("Keluar asks first, then signs out and leaves", async () => {
@@ -143,6 +153,37 @@ describe("Saya", () => {
     fireEvent.click(dialog.querySelector("button")!);
     await waitFor(() => expect(assign).toHaveBeenCalledWith(mainWamPath.login()));
     expect(fetch).toHaveBeenCalledWith(praWamApi.logout, expect.objectContaining({ method: "POST" }));
+  });
+});
+
+describe("Bantuan", () => {
+  it("has the how-to, the common questions and the panitia contact", () => {
+    const help = { id: "p1", name: "Dimas", role: "Panitia", photo: null, tel: "tel:0800", whatsapp: "https://wa.me/62800" };
+    render(<HelpScreen help={help} />);
+    for (const name of ["Cara pakai", "Pertanyaan umum", "Masih butuh bantuan?"]) expect(screen.getByRole("heading", { name })).toBeTruthy();
+    for (const text of ["Bagaimana cara absen?", "Bagaimana cara mengirim foto?", "Notifikasi tidak muncul", "Cara memasang WAM ke layar utama"]) expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Buka Pengaturan/ }).getAttribute("href")).toBe(mainWamPath.settings);
+    fireEvent.click(screen.getByRole("button", { name: "Hubungi Dimas" }));
+    expect(screen.getByRole("dialog", { name: "Hubungi panitia" })).toBeTruthy();
+  });
+
+  it("speaks English when the language is English", () => {
+    const help = { id: "p1", name: "Dimas", role: "Panitia", photo: null, tel: "tel:0800", whatsapp: "https://wa.me/62800" };
+    render(<LangProvider lang="en"><HelpScreen help={help} /></LangProvider>);
+    for (const name of ["How to use", "Common questions", "Still need help?"]) expect(screen.getByRole("heading", { name })).toBeTruthy();
+    expect(screen.getByText("How do I check in?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Contact Dimas" }));
+    expect(screen.getByRole("dialog", { name: "Contact the committee" })).toBeTruthy();
+  });
+
+  it("Tampilan / Appearance options follow the language", () => {
+    render(<LangProvider lang="en"><MainWamModeSetting initial="system" /></LangProvider>);
+    for (const name of ["Light", "Dark", "System"]) expect(screen.getByRole("radio", { name })).toBeTruthy();
+  });
+
+  it("without a contact, no contact block", () => {
+    render(<HelpScreen help={null} />);
+    expect(screen.queryByRole("heading", { name: "Masih butuh bantuan?" })).toBeNull();
   });
 });
 

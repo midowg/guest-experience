@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useSyncExternalStore, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import { X } from "lucide-react";
+import { useT } from "@/components/main-wam/i18n";
 import { cx } from "./Pressable";
 import { useModal } from "./useModal";
 import css from "./sheet.module.css";
@@ -11,12 +12,12 @@ import css from "./sheet.module.css";
  * bottom on a phone (pull the handle down to close; the ✕ is the button alternative, WCAG 2.5.1),
  * a panel from the right from 1024 px. Focus moves to its title and stays inside; Esc, the ✕, a tap
  * on the dimmed page and the phone's Back button close it, and focus goes back to the opener
- * (useModal). Sheets are always light, also over the dark Momen screens.
+ * (useModal). Sheets follow the app's theme (light or dark) like every surface.
  *
  * Control it with `open`/`onClose`. For a sheet with its own address (a link can open it, as
  * Pengaturan#notifikasi in Pra WAM), use useHashSheet and pass `history={false}`.
  */
-export function Sheet({ open, onClose, title, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel = "Tutup", flush, className }: {
+export function Sheet({ open, onClose, title, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel, flush, className }: {
   open: boolean;
   onClose: () => void;
   /** Heading and spoken name. */
@@ -37,6 +38,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, histor
   flush?: boolean;
   className?: string;
 }) {
+  const t = useT();
   const { dialogRef, titleRef, onKeyDown, onCancel, onBackdropClick } = useModal({ open, onClose, history, locked, initialFocus });
   const id = useId();
   const inner = useRef<HTMLDivElement>(null);
@@ -84,7 +86,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, histor
           <h2 ref={titleRef} id={`${id}-title`} tabIndex={-1} className={css.title}>{title}</h2>
           {subtitle && <p id={`${id}-sub`} className={css.subtitle}>{subtitle}</p>}
         </div>
-        <button type="button" className={css.close} onClick={onClose} disabled={locked} aria-label={closeLabel}><X aria-hidden /></button>
+        <button type="button" className={css.close} onClick={onClose} disabled={locked} aria-label={closeLabel ?? t("ui.close")}><X aria-hidden /></button>
       </header>
       <div className={cx(css.body, flush && css.bodyFlush)}>{children}</div>
       {footer && <footer className={css.foot}>{footer}</footer>}

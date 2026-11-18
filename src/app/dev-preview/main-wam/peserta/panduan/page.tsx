@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { previewLang } from "@/components/main-wam/dev/lang";
 // The frame (theme) first, so its reset comes before the screen's styles, as the app's layout does.
 import { Frame } from "../Frame";
 import { GuideScreen } from "@/components/main-wam/peserta/panduan/GuideScreen";
@@ -16,16 +17,17 @@ export const dynamic = "force-dynamic";
 export default async function PreviewGuides({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
+  const lang = previewLang(params);
   const now = previewTime({ waktu: "pemaparan" });
   const one = params.isi ? sampleGuides.find(guide => guide.slug === params.isi) : null;
   if (one) {
     const event = sampleSettings().event;
-    return <Frame path={mainWamPath.guide(one.slug)} now={now}>
+    return <Frame path={mainWamPath.guide(one.slug)} now={now} lang={lang}>
       <GuideScreen guide={{ ...one, file: one.kind === "denah" ? null : one.file }} hotel={one.kind === "hotel" ? { name: event.hotel, address: event.address } : null} />
     </Frame>;
   }
-  if (params.status === "memuat") return <Frame path={mainWamPath.guides} now={now}><ListSkeleton label="Memuat panduan" groups={[4]} /></Frame>;
-  return <Frame path={mainWamPath.guides} now={now}>
-    <GuidesScreen migrated guides={params.status === "kosong" ? [] : shownGuides(sampleGuides)} since={hhmm(new Date(now.getTime() - 120_000).toISOString())} forceOffline={params.status === "offline"} />
+  if (params.status === "memuat") return <Frame path={mainWamPath.guides} now={now} lang={lang}><ListSkeleton label="Memuat panduan" groups={[4]} /></Frame>;
+  return <Frame path={mainWamPath.guides} now={now} lang={lang}>
+    <GuidesScreen migrated guides={params.status === "kosong" ? [] : shownGuides(sampleGuides)} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
   </Frame>;
 }

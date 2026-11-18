@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { previewLang } from "@/components/main-wam/dev/lang";
 // The frame (theme) first, so its reset comes before the screen's styles, as the app's layout does.
 import { Frame } from "../Frame";
 import { SettingsScreen } from "@/components/main-wam/peserta/saya/SettingsScreen";
@@ -13,9 +14,10 @@ const STATES: PushState[] = ["on", "off", "denied", "ios-install", "unsupported"
 export default async function PreviewSettings({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
+  const lang = previewLang(params);
   const push = STATES.find(state => state === params.hp) ?? "on";
   const open = params.buka === "notifikasi" || params.buka === "password" ? params.buka : undefined;
-  return <Frame path={mainWamPath.settings} now={previewTime({ waktu: "pemaparan" })}>
+  return <Frame path={mainWamPath.settings} now={previewTime({ waktu: "pemaparan" })} lang={lang}>
     <SettingsScreen version="1.0" preview={{ push, open }} />
   </Frame>;
 }

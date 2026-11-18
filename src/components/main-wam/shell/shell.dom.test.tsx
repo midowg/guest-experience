@@ -62,23 +62,25 @@ describe("MainWamShell", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Agenda" })).toBeTruthy();
   });
 
-  it("goes dark on Momen, both bars included", () => {
+  it("Momen follows the theme like every tab: no dark surface, both bars drawn", () => {
     nav.pathname = mainWamPath.moments();
     const { container } = render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
-    expect(container.querySelector("[data-mw-tone='dark']")).not.toBeNull();
+    expect(container.querySelector('[data-mw-camera]')).toBeNull();
+    expect(container.querySelector('[data-mw-tone]')).toBeNull();
     expect(screen.getByRole("link", { name: "Momen" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("drops the bottom bar on a task screen (✕ Tutup), and both bars on the camera", () => {
+  it("drops the bottom bar on a task screen (✕ Tutup), and both bars on the camera (its own dark surface)", () => {
     nav.pathname = mainWamPath.silentMeeting();
     const { unmount } = render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.queryByRole("navigation", { name: "Navigasi utama" })).toBeNull();
     expect(screen.getByRole("link", { name: "Tutup" })).toBeTruthy();
     unmount();
     nav.pathname = mainWamPath.camera();
-    render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
+    const camera = render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.queryByRole("navigation", { name: "Navigasi utama" })).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(camera.container.querySelector("[data-mw-camera]")).not.toBeNull();
   });
 
   it("puts a screen's actions in its top bar and lets a screen hide a bar", () => {

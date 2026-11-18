@@ -1,4 +1,4 @@
-/* SegmentedControl (.wam-segmented, --dark). Tokens only. */
+/* SegmentedControl (.wam-segmented). Tokens only. */
 /*
  * 320 px and zoom: each segment takes the width of its words (a short "Semua" gives room to
  * "Kelompokku"), and a label that still does not fit wraps onto a second line, the track growing
@@ -15,13 +15,8 @@
 .item::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .item > svg { flex: none; width: 16px; height: 16px; }
 .itemLabel { min-width: 0; text-align: center; overflow-wrap: anywhere; text-wrap: balance; line-height: 16px; }
-.item[aria-checked="true"] { background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-1); }
+.item[aria-checked="true"] { background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-1), 0 0 0 1px var(--mw-outline-2); }
 .item:disabled { color: var(--mw-disabled-fg); cursor: default; }
 .item:focus-visible { outline-offset: 0; }
-
-.dark { background: var(--mw-ondark-fill); }
-.dark .item { color: var(--mw-media-on-2); }
-.dark .item[aria-checked="true"] { background: var(--mw-media-on); color: var(--mw-media-ink); box-shadow: none; }
-.dark .item:focus-visible { outline-color: var(--mw-media-on); }
 
 @media (prefers-reduced-motion: reduce) { .item { transition: none; } }

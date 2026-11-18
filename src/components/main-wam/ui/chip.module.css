@@ -1,11 +1,10 @@
-/* Chip (.wam-chip), FilterChip (.wam-chip--filter, --menu, --ondark), TagChip (.wam-tagchip). Tokens only. */
+/* Chip (.wam-chip), FilterChip (.wam-chip--filter, --menu), TagChip (.wam-tagchip). Tokens only. */
 .chip {
   position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); max-width: 100%;
   height: 32px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-8);
   background: var(--mw-surface-2); color: var(--mw-text-2); font: var(--mw-type-label); white-space: nowrap;
 }
 .chip > svg { flex: none; width: 16px; height: 16px; }
-.chipOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
 /* An info chip that is a link: 44 touch area around the 32 chip. */
 .chipLink { flex: none; display: inline-flex; align-items: center; min-height: var(--mw-touch); -webkit-tap-highlight-color: transparent; }
 
@@ -27,10 +26,6 @@
 .menu { padding-right: var(--mw-space-8); }
 .menu > svg:last-child { margin-left: 2px; }
 .value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.filterOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); box-shadow: none; }
-.filterOndark[aria-pressed="true"], .filterOndark.selected { background: var(--mw-media-on); color: var(--mw-media-ink); }
-.filterOndark:not([aria-pressed="true"]):not(.selected):active { background: var(--mw-ondark-fill-pressed); }
-@media (hover: hover) { .filterOndark:not(:disabled):not([aria-pressed="true"]):not(.selected):hover { background-image: none; background-color: var(--mw-ondark-fill-pressed); } }
 
 /* Rows of chips: hscroll goes to the screen edge and scrolls; wrap wraps. */
 .scroll { display: flex; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--mw-space-16)); padding: var(--mw-space-4) var(--mw-space-16); }

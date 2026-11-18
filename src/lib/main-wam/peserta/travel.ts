@@ -1,5 +1,6 @@
 import { wibDate } from "../rundown";
 import type { MainWamEventInfo, MwTrip, MwTripSeat, TripDirection, TripKind } from "../types";
+import { t, type Lang } from "../i18n";
 import { dateLabel, durationLabel, hhmm } from "./format";
 
 /*
@@ -15,10 +16,10 @@ export function travelDirection(asked: string | string[] | undefined, now: Date,
 }
 
 /** "Berangkat · Sen, 4 Jan": the segment's words, with the day of its first step. */
-export function directionLabel(direction: TripDirection, trips: readonly MwTrip[]): string {
+export function directionLabel(direction: TripDirection, trips: readonly MwTrip[], lang: Lang = "id"): string {
   const first = trips.filter(trip => trip.direction === direction && trip.startsAt).sort((a, b) => a.sort - b.sort)[0];
-  const word = direction === "berangkat" ? "Berangkat" : "Pulang";
-  return first?.startsAt ? `${word} · ${dateLabel(wibDate(first.startsAt))}` : word;
+  const word = t(lang, direction === "berangkat" ? "peserta.travel.out" : "peserta.travel.back");
+  return first?.startsAt ? `${word} · ${dateLabel(wibDate(first.startsAt), lang)}` : word;
 }
 
 export type Ticket = {
@@ -43,7 +44,7 @@ export type TravelStep = {
 };
 
 /** "KA (contoh) · Ekonomi" → train and class; "Gerbong 3 · Kursi 12A" → coach and seat. */
-export function ticketOf(trip: MwTrip, seat: MwTripSeat | undefined): Ticket | null {
+export function ticketOf(trip: MwTrip, seat: MwTripSeat | undefined, lang: Lang = "id"): Ticket | null {
   if (trip.kind !== "kereta" || !trip.startsAt) return null;
   const [from = "", to = ""] = trip.place.split("→").map(part => part.trim());
   const [train = "", klass = ""] = trip.detail.split("·").map(part => part.trim());
@@ -51,28 +52,28 @@ export function ticketOf(trip: MwTrip, seat: MwTripSeat | undefined): Ticket | n
   const coach = /gerbong\s*([\w-]+)/i.exec(seatText)?.[1] ?? "";
   const chair = /kursi\s*([\w-]+)/i.exec(seatText)?.[1] ?? "";
   const cols = [
-    { label: "Kereta", value: train }, { label: "Kelas", value: klass },
-    ...(coach || chair ? [{ label: "Gerbong", value: coach }, { label: "Kursi", value: chair }] : seatText ? [{ label: "Kursi", value: seatText }] : []),
+    { label: t(lang, "peserta.travel.train"), value: train }, { label: t(lang, "peserta.travel.class"), value: klass },
+    ...(coach || chair ? [{ label: t(lang, "peserta.travel.coach"), value: coach }, { label: t(lang, "peserta.travel.seat"), value: chair }] : seatText ? [{ label: t(lang, "peserta.travel.seat"), value: seatText }] : []),
   ].filter(col => col.value);
   return {
-    from, to, depart: hhmm(trip.startsAt), arrive: trip.endsAt ? hhmm(trip.endsAt) : "",
-    duration: trip.endsAt ? durationLabel(trip.startsAt, trip.endsAt) : "", cols, note: trip.note.trim(),
+    from, to, depart: hhmm(trip.startsAt, lang), arrive: trip.endsAt ? hhmm(trip.endsAt, lang) : "",
+    duration: trip.endsAt ? durationLabel(trip.startsAt, trip.endsAt, lang) : "", cols, note: trip.note.trim(),
   };
 }
 
 /** The steps of one direction, in order, with the person's seats. */
-export function travelSteps(trips: readonly MwTrip[], seats: readonly MwTripSeat[], direction: TripDirection, roomName: string | null): TravelStep[] {
+export function travelSteps(trips: readonly MwTrip[], seats: readonly MwTripSeat[], direction: TripDirection, roomName: string | null, lang: Lang = "id"): TravelStep[] {
   const seatOf = new Map(seats.map(seat => [seat.tripId, seat]));
   return trips.filter(trip => trip.direction === direction)
     .sort((a, b) => a.sort - b.sort || Date.parse(a.startsAt ?? "") - Date.parse(b.startsAt ?? ""))
     .map(trip => {
       const seat = seatOf.get(trip.id);
-      const time = trip.startsAt ? hhmm(trip.startsAt) : "";
-      const route = trip.place.replace(/\s*→\s*/g, " ke ");
+      const time = trip.startsAt ? hhmm(trip.startsAt, lang) : "";
+      const route = lang === "id" ? trip.place.replace(/\s*→\s*/g, " ke ") : trip.place.replace(/\s*→\s*/g, " to ");
       if (trip.kind === "tiba") {
-        return { id: trip.id, kind: trip.kind, title: trip.title, line: "", sub: [trip.detail.trim() || (time ? `Check-in ${time}` : ""), roomName ? `Kamar ${roomName}` : ""].filter(Boolean).join(" · "), ticket: null, mapUrl: trip.mapUrl, toRoom: !!roomName };
+        return { id: trip.id, kind: trip.kind, title: trip.title, line: "", sub: [trip.detail.trim() || (time ? t(lang, "peserta.travel.checkIn", { time }) : ""), roomName ? t(lang, "peserta.travel.roomName", { name: roomName }) : ""].filter(Boolean).join(" · "), ticket: null, mapUrl: trip.mapUrl, toRoom: !!roomName };
       }
-      const ticket = ticketOf(trip, seat);
+      const ticket = ticketOf(trip, seat, lang);
       const vehicle = [seat?.vehicle.trim(), seat && !ticket ? seat.seat.trim() : ""].filter(Boolean).join(" · ");
       const line = ticket ? "" : [vehicle, route].filter(Boolean).join(" · ");
       return { id: trip.id, kind: trip.kind, title: trip.title, line, sub: ticket ? "" : time, ticket, mapUrl: trip.mapUrl, toRoom: false };

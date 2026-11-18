@@ -1,6 +1,9 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Hourglass } from "lucide-react";
 import type { HomeData } from "@/lib/main-wam/peserta/home";
+import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Card, CardHead } from "@/components/main-wam/ui";
 import { OfflineBanner, RefreshAt, RetryBanner } from "../Live";
@@ -23,11 +26,12 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
   live?: boolean;
   forceOffline?: boolean;
 }) {
+  const t = useT();
   return <ScreenContent>
     <OfflineBanner since={since} force={forceOffline} />
-    {data.failed && <RetryBanner>Agenda belum dapat dimuat.</RetryBanner>}
+    {data.failed && <RetryBanner>{t("peserta.live.agendaFailed")}</RetryBanner>}
     {!data.migrated
-      ? <Card as="article"><CardHead icon={<Hourglass />} title="Menunggu pembaruan sistem" sub="Isi acara tampil setelah pembaruan selesai." /></Card>
+      ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
       : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} />}
     {slots.panitia}
     {slots.bod}

@@ -5,6 +5,7 @@ import { eventDateRange, splashSubtitle } from "@/lib/main-wam/peserta/splash";
 import { themeInputOf } from "@/lib/main-wam/theme-image";
 import { safePraWamNext } from "@/lib/pra-wam/next-path";
 import { mainWamPath, praWamPath } from "@/lib/routes";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { readMainWamSettings } from "@/lib/server/main-wam/settings";
 import { currentMember } from "@/lib/server/pra-wam/session";
 
@@ -25,8 +26,9 @@ export default async function MainWamLoginPage({ searchParams }: { searchParams:
   const settings = await readMainWamSettings();
   if (settings.mode !== "semua") redirect(praWamPath.login(next));
   const { event } = settings;
+  const lang = await readLang();
   return <>
-    <Splash title={event.name} subtitle={splashSubtitle(event.name)} dates={eventDateRange(event.startDate, event.endDate)} image={!!themeInputOf(settings.theme).images?.splash} />
+    <Splash title={event.name} subtitle={splashSubtitle(event.name)} dates={eventDateRange(event.startDate, event.endDate, lang)} image={!!themeInputOf(settings.theme).images?.splash} />
     <LoginScreen next={next} eventName={event.name} />
   </>;
 }

@@ -3,6 +3,7 @@
 import { useId, type InputHTMLAttributes, type MouseEventHandler, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { ChevronDown, CircleAlert } from "lucide-react";
 import Link from "next/link";
+import { useT, Words } from "@/components/main-wam/i18n";
 import { cx, KitIcon, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
 import css from "./form.module.css";
@@ -74,7 +75,7 @@ export function TextField(props: InputProps | AreaProps) {
         {help && <p id={helpId} className={css.help}>{help}</p>}
       </div>
       {showCount && max !== undefined && <span className={cx(css.count, over && css.countOver)} aria-live="polite">
-        {count(length)}/{count(max)}<span className={shared.srOnly}> karakter</span>
+        {count(length)}/{count(max)}<span className={shared.srOnly}><Words k="ui.charactersSr" /></span>
       </span>}
     </div>}
   </div>;
@@ -127,17 +128,18 @@ export type DayTab = { key: string; day: string; date: string; today?: boolean; 
  * address, aria-current) or buttons (`onSelect`, aria-pressed). Today has a dot and is said
  * ("…, hari ini"); the chosen day is the inverse surface.
  */
-export function DayTabs({ days, current, onSelect, label = "Hari acara", className }: {
+export function DayTabs({ days, current, onSelect, label, className }: {
   days: DayTab[];
   current: string;
   onSelect?: (key: string) => void;
   label?: string;
   className?: string;
 }) {
-  return <nav aria-label={label} className={cx(css.tabs, className)}>
+  const t = useT();
+  return <nav aria-label={label ?? t("ui.eventDays")} className={cx(css.tabs, className)}>
     {days.map(day => {
       const chosen = day.key === current;
-      const body = <><span className={css.tabDay}>{day.day}</span><span className={css.tabDate}>{day.date}</span>{day.today && <span className={shared.srOnly}>, hari ini</span>}</>;
+      const body = <><span className={css.tabDay}>{day.day}</span><span className={css.tabDate}>{day.date}</span>{day.today && <span className={shared.srOnly}><Words k="ui.todaySr" /></span>}</>;
       const tabClass = cx(css.tab, day.today && css.today);
       return day.href
         ? <Link key={day.key} href={day.href} className={tabClass} aria-current={chosen ? "page" : undefined}>{body}</Link>

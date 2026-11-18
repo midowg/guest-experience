@@ -2,6 +2,7 @@ import { GroupRoomScreen } from "@/components/main-wam/peserta/saya/GroupRoomScr
 import { roomSub, stayTime } from "@/lib/main-wam/peserta/saya";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { loadGroupRoom } from "@/lib/server/main-wam/peserta/saya";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,9 @@ export default async function GroupRoomPage() {
   const context = await requireMainWamPage(mainWamPath.groupRoom);
   const { viewer, settings } = context;
   const data = await loadGroupRoom(context);
+  const lang = await readLang();
   return <GroupRoomScreen
-    room={viewer.room ? { name: viewer.room.name, sub: roomSub(viewer.room), note: viewer.room.note, people: viewer.room.people } : null}
-    stay={{ checkIn: stayTime(settings.event.checkInAt), checkOut: stayTime(settings.event.checkOutAt) }}
+    room={viewer.room ? { name: viewer.room.name, sub: roomSub(viewer.room, lang), note: viewer.room.note, people: viewer.room.people } : null}
+    stay={{ checkIn: stayTime(settings.event.checkInAt, lang), checkOut: stayTime(settings.event.checkOutAt, lang) }}
     {...data} />;
 }

@@ -9,16 +9,15 @@ export type SegmentedOption<T extends string> = { value: T; label: string; icon?
 /**
  * SegmentedControl (DS #7): two to four choices of one view ("Semua | Kelompokku"). A radio group
  * (WAI-ARIA APG): one stop in the Tab order (the chosen one), arrow keys move and choose, Home/End
- * go to the ends, and it wraps around. `tone="dark"` on Momen and the camera. For tabs that switch
+ * go to the ends, and it wraps around. For tabs that switch
  * whole panels, keep this and render the panel under it (no tabpanel wiring needed for a filter).
  */
-export function Segmented<T extends string>({ options, value, onChange, label, tone = "default", className }: {
+export function Segmented<T extends string>({ options, value, onChange, label, className }: {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
   /** Spoken name of the group ("Tampilkan foto"). */
   label: string;
-  tone?: "default" | "dark";
   className?: string;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -47,7 +46,7 @@ export function Segmented<T extends string>({ options, value, onChange, label, t
     move(index, step);
   }
 
-  return <div role="radiogroup" aria-label={label} className={cx(css.track, tone === "dark" && css.dark, className)}>
+  return <div role="radiogroup" aria-label={label} className={cx(css.track, className)}>
     {options.map((option, index) => <button key={option.value} ref={element => { refs.current[index] = element; }} type="button" role="radio"
       aria-checked={option.value === value} tabIndex={index === tabStop ? 0 : -1} disabled={option.disabled}
       className={css.item} onClick={() => { if (option.value !== value) onChange(option.value); }} onKeyDown={event => onKeyDown(event, index)}>

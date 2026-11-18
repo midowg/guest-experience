@@ -1,20 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { LangProvider } from "@/components/main-wam/i18n";
 import { MainWamTheme, mainWamThemeColor } from "@/components/main-wam/theme";
+import { readMainWamMode } from "@/lib/server/main-wam/appearance";
 import { mainWamShown } from "@/lib/server/main-wam/gate";
+import { readLang } from "@/lib/server/main-wam/lang";
 import { mainWamThemeInput } from "@/lib/server/main-wam/theme";
 
 export const metadata: Metadata = { title: "WAM", robots: { index: false } };
 
-/** Main WAM's mode (light: its designed look). */
-const MODE = "light";
-
 /**
  * The phone's status bar in Main WAM's own page colour (audit T-S01), light and dark entries in the
- * mode it is drawn in. For someone Main WAM is not shown to, nothing here: Pra WAM's stays.
+ * mode this device picked (Saya → Pengaturan → Tampilan; Sistem until it picks). For someone Main WAM is not shown to, nothing here: Pra WAM's stays.
  */
 export async function generateViewport(): Promise<Viewport> {
-  return (await mainWamShown()) ? { themeColor: mainWamThemeColor(MODE) } : {};
+  return (await mainWamShown()) ? { themeColor: mainWamThemeColor(await readMainWamMode()) } : {};
 }
 
 /*
@@ -29,5 +29,6 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function MainWamRootLayout({ children }: { children: ReactNode }) {
   if (!(await mainWamShown())) return children;
   const theme = await mainWamThemeInput().catch(() => null);
-  return <MainWamTheme theme={theme} mode={MODE}>{children}</MainWamTheme>;
+  const lang = await readLang();
+  return <MainWamTheme theme={theme} mode={await readMainWamMode()}><LangProvider lang={lang}>{children}</LangProvider></MainWamTheme>;
 }

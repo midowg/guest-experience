@@ -1,5 +1,6 @@
 import { agendaDay, eventDates, hasEnded, isRunning, sessionsOfDay, timeRange, wibDate } from "../rundown";
 import type { MainWamEventInfo, MwSession, RundownChange } from "../types";
+import { t, type Lang } from "../i18n";
 import { dateLabel, hhmm } from "./format";
 import { placeLine } from "./home";
 
@@ -12,8 +13,8 @@ import { placeLine } from "./home";
 export type AgendaDayTab = { key: string; day: string; date: string; today: boolean; number: number };
 
 /** The four day tabs: "Hari 2" · "Sel, 5 Jan", today marked. */
-export function agendaDays(event: Pick<MainWamEventInfo, "startDate" | "endDate">, today: string): AgendaDayTab[] {
-  return eventDates(event).map((date, index) => ({ key: String(index + 1), number: index + 1, day: `Hari ${index + 1}`, date: dateLabel(date), today: date === today }));
+export function agendaDays(event: Pick<MainWamEventInfo, "startDate" | "endDate">, today: string, lang: Lang = "id"): AgendaDayTab[] {
+  return eventDates(event).map((date, index) => ({ key: String(index + 1), number: index + 1, day: t(lang, "fmt.dayN", { n: index + 1 }), date: dateLabel(date, lang), today: date === today }));
 }
 
 /** The day Agenda shows: the asked one (?hari=), else today during the event (fondasi's agendaDay). */
@@ -33,7 +34,7 @@ export type TimeChange = {
  * The time change of a session, comparing its hours now with before its first logged change. Null
  * when it never moved, or moved back.
  */
-export function timeChange(session: Pick<MwSession, "id" | "startsAt" | "endsAt">, log: readonly RundownChange[]): TimeChange | null {
+export function timeChange(session: Pick<MwSession, "id" | "startsAt" | "endsAt">, log: readonly RundownChange[], lang: Lang = "id"): TimeChange | null {
   const entries = log.filter(entry => entry.sessionId === session.id).sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt));
   let start: string | null | undefined, end: string | null | undefined;
   for (const entry of entries) for (const change of entry.changes) {
@@ -46,9 +47,10 @@ export function timeChange(session: Pick<MwSession, "id" | "startsAt" | "endsAt"
   if (!startMoved && !endMoved) return null;
   const from = { start: startMoved ? start! : session.startsAt, end: endMoved ? end ?? null : session.endsAt };
   let text: string;
-  if (startMoved && endMoved) text = `Jadi ${timeRange(session)}, tadinya ${timeRange({ startsAt: from.start, endsAt: from.end })}`;
-  else if (startMoved) text = `Mulai ${hhmm(session.startsAt)}, tadinya ${hhmm(from.start)}`;
-  else text = session.endsAt && from.end ? `Selesai ${hhmm(session.endsAt)}, tadinya ${hhmm(from.end)}` : `Jadi ${timeRange(session)}, tadinya ${timeRange({ startsAt: from.start, endsAt: from.end })}`;
+  const both = () => t(lang, "peserta.change.both", { range: timeRange(session, lang), from: timeRange({ startsAt: from.start, endsAt: from.end }, lang) });
+  if (startMoved && endMoved) text = both();
+  else if (startMoved) text = t(lang, "peserta.change.start", { to: hhmm(session.startsAt, lang), from: hhmm(from.start, lang) });
+  else text = session.endsAt && from.end ? t(lang, "peserta.change.end", { to: hhmm(session.endsAt, lang), from: hhmm(from.end, lang) }) : both();
   return { from, text };
 }
 
@@ -67,14 +69,14 @@ export type AgendaRow = {
 };
 
 /** One day of the agenda, in order: the running one lit, past ones dimmed, cancelled struck through. */
-export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[]): AgendaRow[] {
+export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id"): AgendaRow[] {
   const shown = sessions.filter(session => session.status !== "draf");
   return sessionsOfDay(shown, day, event).map(session => ({
     id: session.id,
-    start: hhmm(session.startsAt),
-    end: session.endsAt ? hhmm(session.endsAt) : "",
+    start: hhmm(session.startsAt, lang),
+    end: session.endsAt ? hhmm(session.endsAt, lang) : "",
     title: session.title,
-    place: placeLine(session),
+    place: placeLine(session, lang),
     status: session.status === "batal" ? "cancelled" : isRunning(session, now) ? "live" : hasEnded(session, now) ? "done" : "upcoming",
     changed: session.status !== "batal" && movedInRundown(session, log),
   }));

@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
+import type { MainWamMode } from "@/lib/main-wam/appearance";
 import { mainWamFontVars } from "./font";
 import css from "./theme.module.css";
 import { PAGE_COLORS, resolveTheme, themeVars, type DisplayFont, type MainWamThemeInput, type ResolvedTheme } from "./tokens";
 
-export type MainWamMode = "light" | "dark" | "system";
+export type { MainWamMode };
 
 /** A display face other than the default is written as a slot; the default needs nothing. */
 const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sans": null };
@@ -17,7 +18,7 @@ const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sa
 const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.light};color-scheme:light}`
   + `html body:has([data-main-wam][data-mw-mode=dark]){background:${PAGE_COLORS.dark};color-scheme:dark}`
   + `@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:${PAGE_COLORS.dark};color-scheme:dark}}`
-  + `html body:has([data-mw-tone=dark]){background:${PAGE_COLORS.media}}`;
+  + `html body:has([data-main-wam] [data-mw-camera]){background:${PAGE_COLORS.camera}}`;
 
 /**
  * Main WAM's theme root: every token (theme.module.css) and the font live under it, and the admin's
@@ -28,7 +29,7 @@ const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.ligh
 export function MainWamTheme({ theme, mode = "light", children, className }: {
   /** From the theme reader (agen fondasi), or an already resolved theme. Missing = neutral. */
   theme?: MainWamThemeInput | ResolvedTheme | null;
-  /** Light is the designed mode; dark tokens are prepared (DESIGN_SYSTEM §1.6). */
+  /** Terang, Gelap or Sistem (the phone's own); the app reads the person's pick from a cookie (lib/main-wam/appearance.ts). */
   mode?: MainWamMode;
   children: ReactNode;
   className?: string;

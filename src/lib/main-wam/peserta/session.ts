@@ -1,3 +1,4 @@
+import { t, type Lang } from "../i18n";
 import { hasEnded, isRunning, timeRange } from "../rundown";
 import type { LineupItem, MwSession, RundownChange } from "../types";
 import { dayOf, hhmm } from "./format";
@@ -27,24 +28,24 @@ export type SessionView = {
   infoSub: string;
 };
 
-export function sessionView(session: MwSession, now: Date, log: readonly RundownChange[], hasContact: boolean): SessionView {
+export function sessionView(session: MwSession, now: Date, log: readonly RundownChange[], hasContact: boolean, lang: Lang = "id"): SessionView {
   const cancelled = session.status === "batal";
   const moved = !cancelled && movedInRundown(session, log);
-  const exact = moved ? timeChange(session, log) : null;
+  const exact = moved ? timeChange(session, log, lang) : null;
   const lineup = session.lineup.filter(item => item.label.trim());
   const meal = session.meal.trim();
-  const parts = [lineup.length ? "Urutan" : "", meal ? "konsumsi" : "", hasContact ? "panitia" : ""].filter(Boolean);
+  const parts = [lineup.length ? t(lang, "peserta.session.infoOrder") : "", meal ? t(lang, "peserta.session.infoMeal") : "", hasContact ? t(lang, "peserta.session.infoCommittee") : ""].filter(Boolean);
   const infoSub = parts.join(", ");
   return {
     id: session.id,
     title: session.title,
     status: cancelled ? "cancelled" : isRunning(session, now) ? "live" : hasEnded(session, now) ? "done" : "upcoming",
-    when: `${dayOf(session.startsAt)} · ${timeRange(session)}`,
+    when: `${dayOf(session.startsAt, lang)} · ${timeRange(session, lang)}`,
     place: session.place.trim(),
     dresscode: session.dresscode.trim(),
     bring: session.bring.trim(),
     description: session.description.trim(),
-    change: !moved ? null : exact ? exact.text : session.changedAt ? `Jadwal diubah ${hhmm(session.changedAt)}` : null,
+    change: !moved ? null : exact ? exact.text : session.changedAt ? t(lang, "peserta.session.changedAt", { time: hhmm(session.changedAt, lang) }) : null,
     lineup,
     meal,
     infoSub: infoSub ? infoSub.charAt(0).toUpperCase() + infoSub.slice(1) : "",

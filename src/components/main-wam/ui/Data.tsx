@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { ChevronRight, CircleCheck, MapPin } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import { IconBox } from "./Card";
+import { Words } from "@/components/main-wam/i18n";
+import { CheckedMark } from "./CheckedMark";
 import { Badge, StatusPill } from "./Status";
 import { cx, KitIcon, Pressable, type ActionProps, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
@@ -70,7 +72,7 @@ export function SessionRow({ start, end, title, place, status = "upcoming", chec
     className={cx(css.session, status === "live" && css.live, status === "done" && css.done, cancelled && css.cancelled, className)}>
     <span className={css.time}>
       <span className={css.start}>{start}</span>
-      {end && <span className={css.end}><span className={shared.srOnly}>sampai </span>{end}</span>}
+      {end && <span className={css.end}><span className={shared.srOnly}><Words k="ui.untilSr" /></span>{end}</span>}
     </span>
     <span className={css.rail} aria-hidden />
     <span className={css.sessionBody}>
@@ -81,7 +83,7 @@ export function SessionRow({ start, end, title, place, status = "upcoming", chec
       {extra}
     </span>
     {(checkedIn || ((href || onClick) && !cancelled)) && <span className={css.trail}>
-      {checkedIn ? <CircleCheck className={css.ok} role="img" aria-label="Sudah absen" /> : <ChevronRight aria-hidden />}
+      {checkedIn ? <CheckedMark className={css.ok} /> : <ChevronRight aria-hidden />}
     </span>}
   </Pressable>;
 }
@@ -128,13 +130,13 @@ export function PhotoFill({ photo, tone = 1, className }: { photo?: PreviewPhoto
  * StackPreview (§10.5): Momen on Beranda: three small tilted photos, "Momen", how many are new,
  * and a tonal "Lihat". The whole row is one link (no second control inside).
  */
-export function StackPreview({ photos, title = "Momen", sub, cta = "Lihat", href, onClick, className }: Pick<ActionProps, "href" | "onClick"> & {
+export function StackPreview({ photos, title = <Words k="ui.moments" />, sub, cta = <Words k="ui.see" />, href, onClick, className }: Pick<ActionProps, "href" | "onClick"> & {
   /** Up to three; placeholders fill the rest. Decorative (alt ignored): the words say it. */
   photos: PreviewPhoto[];
   title?: ReactNode;
   /** "12 foto baru". */
   sub?: ReactNode;
-  cta?: string;
+  cta?: ReactNode;
   className?: string;
 }) {
   const three = [0, 1, 2].map(index => photos[index] ?? null);

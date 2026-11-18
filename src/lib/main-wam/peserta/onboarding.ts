@@ -1,5 +1,6 @@
 import { safePraWamNext } from "@/lib/pra-wam/next-path";
 import { mainWamPath, praWamPath } from "@/lib/routes";
+import { t, type Lang } from "../i18n";
 import type { ModuleSwitches } from "../types";
 
 /*
@@ -28,9 +29,9 @@ export type OnboardingReason = "jadwal" | "absen" | "kumpul";
  * reasons name only modules that are on. "Absen dibuka" only with Absen QR; the example note is
  * the prototype's Silent Meeting one only while Silent Meeting is on, else a plain session.
  */
-export function onboardingNews(modules: Pick<ModuleSwitches, "absen" | "silent">): { example: { title: string; body: string }; reasons: OnboardingReason[] } {
+export function onboardingNews(modules: Pick<ModuleSwitches, "absen" | "silent">, lang: Lang = "id"): { example: { title: string; body: string }; reasons: OnboardingReason[] } {
   return {
-    example: { title: "Jadwal berubah", body: modules.silent ? "Silent Meeting mundur ke 13.30." : "Team building mundur ke 15.30." },
+    example: { title: t(lang, "peserta.onboard.exampleTitle"), body: t(lang, modules.silent ? "peserta.onboard.exampleSilent" : "peserta.onboard.exampleTeam") },
     reasons: modules.absen ? ["jadwal", "absen", "kumpul"] : ["jadwal", "kumpul"],
   };
 }

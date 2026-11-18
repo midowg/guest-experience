@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 // Theme first: its reset must load before the kit's component CSS (same order as the real layout).
+import { LangProvider } from "@/components/main-wam/i18n";
 import { MainWamTheme } from "@/components/main-wam/theme";
 import { MainWamShell } from "@/components/main-wam/shell";
 import { mainWamRole } from "@/lib/main-wam/access";
+import type { Lang } from "@/lib/main-wam/i18n";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { sampleSettings, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamScreen } from "@/lib/main-wam/screen";
@@ -19,7 +21,7 @@ import type { MainWamThemeInput } from "@/lib/main-wam/types";
  *     return <DevFrame path={mainWamPath.agenda()} peran={peran} waktu={waktu}><AgendaScreen … /></DevFrame>;
  *   }
  */
-export function DevFrame({ path, peran, waktu, unread = 3, theme, children }: {
+export function DevFrame({ path, peran, waktu, unread = 3, theme, lang = "id", children }: {
   /** The address the screen stands for (its frame: tab, level, title). */
   path: string;
   /** peserta (default) | panitia | bod | admin. */
@@ -27,14 +29,18 @@ export function DevFrame({ path, peran, waktu, unread = 3, theme, children }: {
   /** A key of sampleTimes (default pagi: Sel, 5 Jan 07.40). */
   waktu?: string | null;
   unread?: number;
+  /** ?lang=en (previewLang): the frame and the greeting in that language; the screen needs the same `lang` for what it computes. */
+  lang?: Lang;
   theme?: MainWamThemeInput | null;
   children: ReactNode;
 }) {
   const viewer = sampleViewer(peran);
-  const screen = mainWamScreen(path.split(/[?#]/)[0]);
+  const screen = mainWamScreen(path.split(/[?#]/)[0], lang);
   return <MainWamTheme theme={theme} mode="light">
-    <MainWamShell screen={screen} unread={unread} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer))}>
-      {children}
-    </MainWamShell>
+    <LangProvider lang={lang}>
+      <MainWamShell screen={screen} unread={unread} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer), lang)}>
+        {children}
+      </MainWamShell>
+    </LangProvider>
   </MainWamTheme>;
 }

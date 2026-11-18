@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Minus, Plus } from "lucide-react";
+import { useT } from "@/components/main-wam/i18n";
 import { IconButton } from "@/components/main-wam/ui";
 import { cellBounds, gridGeometry } from "@/lib/main-wam/momen/mosaic";
 import type { MosaicManifest } from "@/lib/main-wam/momen/types";
@@ -35,12 +36,13 @@ function rgba(color: string, alpha: number): string {
 
 function readColors(element: HTMLElement): Colors {
   const style = getComputedStyle(element);
-  const token = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
-  const accent = token("--mw-accent", "#1E3A5F");
+  // The tokens are always set under the theme root; "transparent" only keeps a bare test element from throwing.
+  const token = (name: string) => style.getPropertyValue(name).trim() || "transparent";
+  const accent = token("--mw-accent");
   return {
-    outline: token("--mw-outline-2", "#E5E7EB"), accent, accentSoft: rgba(accent, 0.12), accentLine: rgba(accent, 0.55), primary: token("--mw-primary", "#2F6FEB"),
+    outline: token("--mw-outline-2"), accent, accentSoft: rgba(accent, 0.12), accentLine: rgba(accent, 0.55), primary: token("--mw-primary"),
     // The placeholder tokens are gradients: a cell takes their first colour.
-    ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`, "#E5E7EB"))?.[0] ?? "#E5E7EB"),
+    ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
   };
 }
 
@@ -54,6 +56,7 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   focus: number | null;
   label: string;
 }) {
+  const t = useT();
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const images = useRef(new Map<string, HTMLImageElement>());
@@ -193,7 +196,7 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   const tags = mark ? mine.map((cell, index) => { const { x, y } = cellAt(cell); return { cell, n: index + 1, x: x + geometry.cell / 2, y }; }) : [];
   return <div className={css.wrap}>
     {/* Zoomed in, the canvas scrolls: focusable, so the arrow keys move it too (audit T-M04, WCAG 2.1.1). */}
-    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label="Kanvas mozaik" tabIndex={zoom > 1 ? 0 : undefined}
+    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label={t("momen.mos.canvas")} tabIndex={zoom > 1 ? 0 : undefined}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
       <div className={css.inner} style={{ width: width || "100%", height: height || "100%" }}>
         <canvas ref={canvas} className={css.canvas} role="img" aria-label={label} />
@@ -201,8 +204,8 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
       </div>
     </div>
     <div className={css.zoom}>
-      <IconButton icon={Plus} label="Perbesar" className={css.zoomBtn} disabled={zoom >= 3} onClick={() => onZoom(Math.min(3, zoom + 1))} />
-      <IconButton icon={Minus} label="Perkecil" className={css.zoomBtn} disabled={zoom <= 1} onClick={() => onZoom(Math.max(1, zoom - 1))} />
+      <IconButton icon={Plus} label={t("momen.mos.zoomIn")} className={css.zoomBtn} disabled={zoom >= 3} onClick={() => onZoom(Math.min(3, zoom + 1))} />
+      <IconButton icon={Minus} label={t("momen.mos.zoomOut")} className={css.zoomBtn} disabled={zoom <= 1} onClick={() => onZoom(Math.max(1, zoom - 1))} />
     </div>
   </div>;
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Check, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Heart, Hourglass, Images, LayoutGrid, MoveHorizontal, Users } from "lucide-react";
+import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ShellActions, ShellChrome } from "@/components/main-wam/shell";
 import { Banner, Button, Chip, FilterChip, IconBox, IconButton, Pressable, Segmented, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
@@ -62,7 +63,11 @@ function readFlag(key: string): boolean {
  * ahead; seen photos are told to the server in small batches.
  */
 export function MomenStack(props: MomenStackProps) {
-  const { mode, view, session, sessionTitle, group, mozaik, migrated } = props;
+  const { mode, view, session, group, mozaik, migrated } = props;
+  const t = useT();
+  const known = useKnown();
+  const { lang } = useLang();
+  const sessionTitle = session === UMUM ? t("momen.general") : props.sessionTitle;
   const router = useRouter();
   const toast = useToast();
   const now = useMemo(() => new Date(props.nowIso), [props.nowIso]);
@@ -130,7 +135,7 @@ export function MomenStack(props: MomenStackProps) {
 
   function move(to: number, how: "swipe" | "tap" | "key") {
     setIndex(to);
-    if (how !== "swipe") setSpoken(to >= items.length ? "Kamu sudah lihat semua" : stackCountSpoken(mode, props.offset + to, props.total));
+    if (how !== "swipe") setSpoken(to >= items.length ? t("momen.stack.seenAll") : stackCountSpoken(mode, props.offset + to, props.total, lang));
     if (!hintSeen) { setHintSeen(true); try { window.localStorage.setItem(HINT_KEY, "1"); } catch { /* not kept */ } }
   }
 
@@ -148,7 +153,7 @@ export function MomenStack(props: MomenStackProps) {
       setHearts(map => ({ ...map, [photo.id]: data }));
     } catch (error) {
       setHearts(map => ({ ...map, [photo.id]: before }));
-      toast.show({ text: errorText(error), tone: "error" });
+      toast.show({ text: known(errorText(error)), tone: "error" });
     }
   }
 
@@ -157,14 +162,14 @@ export function MomenStack(props: MomenStackProps) {
     await praWamRequest(mainWamApi.photoReport(current.id), { method: "POST", json: input });
     setHiddenForMe(set => new Set(set).add(current.id));
     setSheet(null);
-    toast.show({ text: "Laporan terkirim. Terima kasih.", tone: "success" });
+    toast.show({ text: t("momen.reportSent"), tone: "success" });
   }
 
   async function showAgain(photo: FeedPhoto) {
     try {
       await praWamRequest(mainWamApi.photoReport(photo.id), { method: "DELETE" });
       setHiddenForMe(set => { const copy = new Set(set); copy.delete(photo.id); return copy; });
-    } catch (error) { toast.show({ text: errorText(error), tone: "error" }); }
+    } catch (error) { toast.show({ text: known(errorText(error)), tone: "error" }); }
   }
 
   async function removeMine() {
@@ -174,11 +179,11 @@ export function MomenStack(props: MomenStackProps) {
       await praWamRequest(mainWamApi.photo(current.id), { method: "DELETE" });
       setItems(list => list.filter(item => item.id !== current.id));
       setSheet(null);
-      toast.show({ text: "Foto dihapus", tone: "success" });
+      toast.show({ text: t("momen.photoDeleted"), tone: "success" });
     } catch (error) {
       // 409: the photo stays (nominated for Awarding); trying again would not change it.
       if (refusedForGood(error)) setSheet(null);
-      toast.show({ text: errorText(error), tone: "error" });
+      toast.show({ text: known(errorText(error)), tone: "error" });
     } finally { setDeleting(false); }
   }
 
@@ -191,36 +196,36 @@ export function MomenStack(props: MomenStackProps) {
     panel = <Spinner label="Memuat foto" />;
   } else if (!migrated) {
     noCard = true;
-    panel = <><IconBox icon={Hourglass} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Menunggu pembaruan sistem</h2><p className={css.panelBody}>Momen bisa dipakai setelah sistem diperbarui.</p></>;
+    panel = <><IconBox icon={Hourglass} size={64} round /><h2 className={css.panelTitle}>{t("peserta.waiting.title")}</h2><p className={css.panelBody}>{t("momen.stack.waitingBody")}</p></>;
   } else if (view === "kelompok" && !group) {
     noCard = true;
-    panel = <><IconBox icon={Users} size={64} round tone="ondark" /><h2 className={css.panelTitle}>{props.groupsPublished ? "Kamu belum masuk kelompok" : "Kelompok belum diterbitkan panitia"}</h2></>;
+    panel = <><IconBox icon={Users} size={64} round /><h2 className={css.panelTitle}>{props.groupsPublished ? t("momen.stack.notInGroup") : t("momen.stack.groupsNotPublished")}</h2></>;
   } else if (props.own && current?.id === props.own.id && props.own.status !== "tampil") {
-    panel = <><IconBox icon={EyeOff} size={64} round tone="ondark" />
-      <h2 className={css.panelTitle}>{props.own.status === "disembunyikan" ? "Fotomu disembunyikan panitia" : "Fotomu disembunyikan sementara"}</h2>
-      <p className={css.panelBody}>{props.own.status === "disembunyikan" ? props.own.reason || "Ada rekan yang tidak setuju fotonya dibagikan." : "Panitia sedang meninjau laporan."}</p></>;
+    panel = <><IconBox icon={EyeOff} size={64} round />
+      <h2 className={css.panelTitle}>{props.own.status === "disembunyikan" ? t("momen.stack.ownHidden") : t("momen.stack.ownHiddenTemp")}</h2>
+      <p className={css.panelBody}>{props.own.status === "disembunyikan" ? props.own.reason || t("momen.stack.ownHiddenReason") : t("momen.stack.reviewing")}</p></>;
   } else if (current && hiddenForMe.has(current.id)) {
-    panel = <><IconBox icon={EyeOff} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Foto disembunyikan untukmu</h2>
-      <Button variant="ondark" size="m" onClick={() => showAgain(current)}>Tampilkan lagi</Button></>;
+    panel = <><IconBox icon={EyeOff} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.hiddenForYou")}</h2>
+      <Button variant="tonal" size="m" onClick={() => showAgain(current)}>{t("momen.stack.showAgain")}</Button></>;
   } else if (!items.length && !(mode === "baru" && props.anyPhotos)) {
     noCard = true;
     panel = view === "kelompok"
-      ? <><IconBox icon={Images} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Kelompokmu belum punya foto</h2></>
-      : <><IconBox icon={Images} size={64} round tone="ondark" /><h2 className={css.panelTitle}>{session ? "Belum ada foto di sesi ini" : "Belum ada foto"}</h2>
+      ? <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.groupEmpty")}</h2></>
+      : <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{session ? t("momen.stack.sessionEmpty") : t("momen.noneYet")}</h2>
         {session
-          ? <Button variant="ondark" size="m" onClick={() => filterTo(view, null)}>Semua sesi</Button>
-          : <p className={css.panelBody}>Jadi yang pertama memotret {props.eventName}.</p>}</>;
+          ? <Button variant="tonal" size="m" onClick={() => filterTo(view, null)}>{t("momen.allSessions")}</Button>
+          : <p className={css.panelBody}>{t("momen.stack.beFirst", { event: props.eventName })}</p>}</>;
   } else if (!current && next) {
     panel = loadError
-      ? <><IconBox icon={CloudOff} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Foto belum dapat dimuat</h2><Button variant="ondark" size="m" onClick={() => { setLoadError(false); void loadMore(); }}>Coba lagi</Button></>
+      ? <><IconBox icon={CloudOff} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.loadFailed")}</h2><Button variant="tonal" size="m" onClick={() => { setLoadError(false); void loadMore(); }}>{t("shell.retry")}</Button></>
       : <Spinner label="Memuat foto" />;
   } else if (!current) {
     noCard = true;
-    panel = <><IconBox icon={CircleCheck} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Kamu sudah lihat semua</h2>
-      <p className={css.panelBody}>{mozaik ? "Foto tetap tersimpan di Galeri dan Mozaik." : "Foto tetap tersimpan di Galeri."}</p>
+    panel = <><IconBox icon={CircleCheck} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.seenAll")}</h2>
+      <p className={css.panelBody}>{mozaik ? t("momen.stack.keptBoth") : t("momen.stack.keptGallery")}</p>
       <div className={css.panelActions}>
-        <Button block icon={Grid3x3} href={galeriHref}>Buka Galeri</Button>
-        {mozaik && <Button block variant="ondark" icon={LayoutGrid} href={mainWamPath.mosaic()}>Lihat Mozaik</Button>}
+        <Button block icon={Grid3x3} href={galeriHref}>{t("momen.stack.openGallery")}</Button>
+        {mozaik && <Button block variant="secondary" icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.stack.seeMosaic")}</Button>}
       </div></>;
   }
 
@@ -228,15 +233,15 @@ export function MomenStack(props: MomenStackProps) {
   const position = props.offset + index;
   let hint: ReactNode = null;
   if (migrated && !(view === "kelompok" && !group)) {
-    if (mode === "sesi" && props.total > 0) hint = <span className={css.count}>{stackCount("sesi", 0, props.total, sessionTitle ?? undefined)}</span>;
+    if (mode === "sesi" && props.total > 0) hint = <span className={css.count}>{stackCount("sesi", 0, props.total, sessionTitle ?? undefined, lang)}</span>;
     else if (mode === "baru" && current && !panel) hint = <>
-      <span className={css.count} aria-label={stackCountSpoken("baru", index, props.total)}>{stackCount("baru", index, props.total)}</span>
-      {!hintSeen && <><span aria-hidden>·</span><MoveHorizontal aria-hidden />Geser untuk foto berikutnya</>}
+      <span className={css.count} aria-label={stackCountSpoken("baru", index, props.total, lang)}>{stackCount("baru", index, props.total, undefined, lang)}</span>
+      {!hintSeen && <><span aria-hidden>·</span><MoveHorizontal aria-hidden />{t("momen.stack.swipeHint")}</>}
     </>;
-    else if (mode === "baru" && !current && !next && items.length > 0) hint = <span className={css.count}><Check aria-hidden />{items.length} dari {items.length}</span>;
+    else if (mode === "baru" && !current && !next && items.length > 0) hint = <span className={css.count}><Check aria-hidden />{t("momen.stack.countOf", { a: items.length, b: items.length })}</span>;
   }
 
-  const sessionLabel = session === UMUM ? "Umum" : sessionTitle ?? "Semua sesi";
+  const sessionLabel = session === UMUM ? t("momen.general") : sessionTitle ?? t("momen.allSessions");
   // Suka and Pilihan foto for a photo on show; one's own hidden photo keeps Pilihan foto (Hapus foto).
   const ownHidden = !!props.own && current?.id === props.own.id;
   const photoActions = !!current && !noCard && !panel;
@@ -246,34 +251,34 @@ export function MomenStack(props: MomenStackProps) {
     {mode === "galeri" ? <>
       <ShellChrome hideTopBar />
       <div className={css.ownBar}>
-        <TopBar variant="back" tone="dark" title={`Galeri · ${view === "kelompok" ? "Kelompokku" : "Semua"}`} backHref={galeriHref}
+        <TopBar variant="back" title={view === "kelompok" ? t("momen.stack.galleryTitleGroup") : t("momen.stack.galleryTitleAll")} backHref={galeriHref}
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }}
-          actions={items.length ? <span className={css.ownCount}>{stackCount("galeri", Math.min(position, props.total - 1), props.total)}</span> : null} />
+          actions={items.length ? <span className={css.ownCount}>{stackCount("galeri", Math.min(position, props.total - 1), props.total, undefined, lang)}</span> : null} />
       </div>
     </> : <ShellActions>
-      <Chip tone="dark" icon={Grid3x3} href={galeriHref}>Galeri</Chip>
-      {mozaik && <Chip tone="dark" icon={LayoutGrid} href={mainWamPath.mosaic()}>Mozaik</Chip>}
+      <Chip icon={Grid3x3} href={galeriHref}>{t("momen.gallery")}</Chip>
+      {mozaik && <Chip icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.mosaic")}</Chip>}
     </ShellActions>}
 
     <div className={`${css.view} ${mode === "galeri" ? css.viewGaleri : ""}`}>
       {mode !== "galeri" && <div className={css.filter}>
-        <Segmented label="Saring Momen" tone="dark" value={view} onChange={value => filterTo(value, session)}
-          options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }]} />
-        <FilterChip menu tone="dark" name="Saring sesi" className={css.filterChip} active={session !== null} expanded={sheet === "sesi"} disabled={!props.counts} onClick={() => setSheet("sesi")}>{sessionLabel}</FilterChip>
+        <Segmented label={t("momen.stack.filterLabel")} value={view} onChange={value => filterTo(value, session)}
+          options={[{ value: "semua", label: t("momen.all") }, { value: "kelompok", label: t("momen.myGroup") }]} />
+        <FilterChip menu name={t("momen.filterSessionTitle")} className={css.filterChip} active={session !== null} expanded={sheet === "sesi"} disabled={!props.counts} onClick={() => setSheet("sesi")}>{sessionLabel}</FilterChip>
       </div>}
-      {!online && <Banner tone="offline" className={css.banner}>Offline. Menampilkan foto yang sudah dimuat.</Banner>}
+      {!online && <Banner tone="offline" className={css.banner}>{t("momen.stack.offline")}</Banner>}
 
       <StackDeck items={noCard ? [] : items} index={noCard ? 0 : index} onIndex={move} onLike={photo => toggleHeart(photo, true)} now={now} panel={panel}
-        label="Momen" describe={at => stackCountSpoken(mode, props.offset + at, props.total)} />
+        label={t("ui.moments")} describe={at => stackCountSpoken(mode, props.offset + at, props.total, lang)} />
 
       <p className={css.hint}>{hint}</p>
       <p className={css.sr} aria-live="polite">{spoken}</p>
 
       <div className={css.actions}>
         {photoActions && shownHearts ? <button type="button" className={css.react} aria-pressed={shownHearts.hearted} onClick={() => toggleHeart(current!)}
-          aria-label={`${shownHearts.hearted ? "Batal suka" : "Suka foto"}, ${shownHearts.hearts} suka`}><Heart aria-hidden />{shownHearts.hearts}</button> : <span />}
-        <Pressable href={mainWamPath.camera()} className={css.camera} aria-label="Buka kamera"><Camera aria-hidden /></Pressable>
-        {optionsAction ? <IconButton variant="ondark" icon={Ellipsis} label="Pilihan foto" onClick={() => setSheet("pilihan")} /> : <span />}
+          aria-label={t(shownHearts.hearted ? "momen.stack.unlike" : "momen.stack.like", { n: shownHearts.hearts })}><Heart aria-hidden />{shownHearts.hearts}</button> : <span />}
+        <Pressable href={mainWamPath.camera()} className={css.camera} aria-label={t("momen.stack.openCamera")}><Camera aria-hidden /></Pressable>
+        {optionsAction ? <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} /> : <span />}
       </div>
     </div>
 

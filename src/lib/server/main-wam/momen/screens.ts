@@ -5,6 +5,7 @@ import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/m
 import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { MwSession, PhotoAudience, PhotoStatus, ViewerGroup } from "@/lib/main-wam/types";
 import type { MainWamContext } from "../gate";
+import { readLang } from "../lang";
 import { allSessions } from "../read";
 import { feedPhotos, listFeed, photoRecord, sessionCounts } from "./feed";
 
@@ -49,12 +50,13 @@ export type StackScreen = {
 
 export async function stackScreen(context: MainWamContext, search: Search, now = new Date()): Promise<StackScreen> {
   const { viewer, settings } = context;
+  const lang = await readLang();
   const view = parseView(search.lihat, false) as "semua" | "kelompok";
   const session = parseSession(search.sesi);
   const foto = parsePhotoId(search.foto);
   const [sessions, counts] = await Promise.all([publishedSessions(), sessionCounts(context, view)]);
   const base = {
-    view, session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now)), group: viewer.group,
+    view, session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)), group: viewer.group,
     groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, nowIso: now.toISOString(),
   };
 
@@ -97,13 +99,14 @@ export type GalleryScreen = {
 
 export async function galleryScreen(context: MainWamContext, search: Search, now = new Date()): Promise<GalleryScreen> {
   const { viewer, settings } = context;
+  const lang = await readLang();
   const view = parseView(search.lihat);
   const session = parseSession(search.sesi);
   const [sessions, counts, page] = await Promise.all([
     publishedSessions(), sessionCounts(context, view), listFeed(context, { view, session, mode: "semua", limit: GALLERY_PAGE }),
   ]);
   return {
-    view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now)),
+    view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
     group: viewer.group, groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, migrated: settings.migrated && page.migrated, nowIso: now.toISOString(),
   };
 }

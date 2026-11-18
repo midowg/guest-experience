@@ -2,6 +2,7 @@
 
 import { useId, useRef, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
+import { useT } from "@/components/main-wam/i18n";
 import { Button } from "./Button";
 import { IconBox } from "./Card";
 import { cx, type IconProp } from "./Pressable";
@@ -15,7 +16,7 @@ import css from "./sheet.module.css";
  * text button under it. Focus starts on Batal (the safe choice); Esc, Back and the scrim cancel.
  * The icon shows only for destructive actions (`tone="danger"`, PANDUAN §10.2).
  */
-export function ConfirmDialog({ open, onCancel, onConfirm, title, body, confirmLabel, cancelLabel = "Batal", tone = "primary", icon, busy, busyLabel, history = true, className }: {
+export function ConfirmDialog({ open, onCancel, onConfirm, title, body, confirmLabel, cancelLabel, tone = "primary", icon, busy, busyLabel, history = true, className }: {
   open: boolean;
   /** Batal, Esc, Back, the scrim. */
   onCancel: () => void;
@@ -36,6 +37,7 @@ export function ConfirmDialog({ open, onCancel, onConfirm, title, body, confirmL
   history?: boolean;
   className?: string;
 }) {
+  const t = useT();
   const cancelRef = useRef<HTMLElement>(null);
   const { dialogRef, titleRef, onKeyDown, onCancel: onDialogCancel, onBackdropClick } = useModal({ open, onClose: onCancel, history, locked: busy, initialFocus: cancelRef });
   const id = useId();
@@ -47,7 +49,7 @@ export function ConfirmDialog({ open, onCancel, onConfirm, title, body, confirmL
       {body && <p id={`${id}-body`} className={css.dialogBody}>{body}</p>}
       <div className={css.dialogActions}>
         <Button variant={tone === "danger" ? "danger" : "primary"} block loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>{confirmLabel}</Button>
-        <Button ref={cancelRef} variant="text" block onClick={onCancel} disabled={busy}>{cancelLabel}</Button>
+        <Button ref={cancelRef} variant="text" block onClick={onCancel} disabled={busy}>{cancelLabel ?? t("ui.cancel")}</Button>
       </div>
     </div>}
   </dialog>;
