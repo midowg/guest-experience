@@ -30,12 +30,16 @@ it("lists every voucher with what it did, and corrects one with a reason the emp
   }));
   render(<RerollVouchers initial={data} />);
   expect(screen.getByText(/Legendary: 2 kartu dari batas 3/)).toBeTruthy();
-  const rows = screen.getAllByRole("row").slice(1);
-  // Used: what changed, and both corrections; unused: only cancel.
+  const rows = screen.getAllByRole("listitem");
+  // Used: the card before and after, what changed, and both corrections behind the three dots; unused: only cancel.
+  expect(within(rows[1]).getByText("Ki Hajar Dewantara (Rare)")).toBeTruthy();
+  expect(within(rows[1]).getByText("Susi Susanti (Legendary)")).toBeTruthy();
   expect(within(rows[1]).getByText(/Ki Hajar Dewantara \(Rare\) → Susi Susanti \(Legendary\)/)).toBeTruthy();
+  fireEvent.click(within(rows[1]).getByLabelText("Aksi untuk voucher Bayu", { selector: "summary" }));
   expect(within(rows[1]).getByRole("button", { name: "Kembalikan poin" })).toBeTruthy();
   expect(within(rows[1]).getByRole("button", { name: "Kembalikan kartu" })).toBeTruthy();
   expect(within(rows[0]).queryByRole("button", { name: "Kembalikan kartu" })).toBeNull();
+  fireEvent.click(within(rows[0]).getByLabelText("Aksi untuk voucher Dewi", { selector: "summary" }));
   fireEvent.click(within(rows[0]).getByRole("button", { name: "Batalkan voucher" }));
   const editor = screen.getByRole("region", { name: "Batalkan voucher" });
   expect(editor.textContent).toContain("5.000 poin kembali ke saldonya");
@@ -45,7 +49,7 @@ it("lists every voucher with what it did, and corrects one with a reason the emp
   fireEvent.click(confirm);
   expect(await screen.findByText("Voucher dibatalkan. Poinnya kembali ke saldo karyawan.")).toBeTruthy();
   expect(calls).toEqual([{ url: vouchersApi(base.id), body: { action: "revoke", reason: "Salah sistem" } }]);
-  expect(within(screen.getAllByRole("row")[1]).getByText("Dibatalkan")).toBeTruthy();
+  expect(within(screen.getAllByRole("listitem")[0]).getByText("Dibatalkan")).toBeTruthy();
 });
 
 it("gives a voucher by hand, without points", async () => {

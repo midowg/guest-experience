@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, Ban, Coins, MoreVertical, Ticket, Undo2 } from "lucide-react";
 import { ConsoleButton, Pill } from "@/components/console";
 import type { ConsoleTone } from "@/components/console/types";
 import { Notice } from "@/components/ui";
@@ -9,6 +10,7 @@ import { vouchersApi } from "@/lib/routes";
 import { MIGRATION_WELLBEING_VOUCHERS, claimHolds, type TicketStatus, type VoucherAction } from "@/lib/wellbeing/rules";
 import type { WbVoucher, WbVoucherPerson, WbVouchersAdmin } from "@/lib/wellbeing/types";
 import css from "./admin-table.module.css";
+import list from "./reroll-vouchers.module.css";
 
 /*
  * Super admin → Voucher re-roll (18 Nov 2026, uji coba): every re-roll voucher from WLM's Hadiah, with
@@ -147,23 +149,69 @@ export function RerollVouchers({ initial }: { initial: WbVouchersAdmin }) {
 
     {shown.length === 0
       ? <p className={css.muted}>{vouchers.length ? "Tidak ada voucher di saringan ini." : "Belum ada voucher. Voucher muncul di sini saat karyawan mengklaim voucher re-roll di Hadiah WLM, atau saat Anda memberikannya."}</p>
-      : <div className={css.wrap}><table className={css.table}>
-        <thead><tr><th>Karyawan</th><th>Voucher</th><th>Asal</th><th>Status</th><th><span className="sr-only">Tindakan</span></th></tr></thead>
-        <tbody>{shown.map(voucher => <tr key={voucher.id}>
-          <td data-label="Karyawan"><div><span className={css.strong}>{voucher.employeeName || "(tanpa nama)"}</span>{voucher.department && <div className={css.muted}>{voucher.department}</div>}</div></td>
-          <td data-label="Voucher"><Pill tone={voucher.legendary ? "brass" : "purple"}>{voucher.legendary ? "Legendary" : "Re-roll"}</Pill></td>
-          <td data-label="Asal"><div>
-            {voucher.claim ? <>Hadiah: {voucher.claim.title}<div className={css.muted}>{points(voucher.claim.cost)} poin · {when(voucher.createdAt)}{claimHolds(voucher.claim.status) ? "" : " · poin sudah dikembalikan"}</div></>
-              : <>Diberi {voucher.givenBy ?? "super admin"}<div className={css.muted}>{when(voucher.createdAt)}{voucher.note ? ` · ${voucher.note}` : ""}</div></>}
-          </div></td>
-          <td data-label="Status"><div>
-            <Pill tone={statusTone[voucher.status]}>{statusLabel[voucher.status]}</Pill>
-            {voucher.usedAt && voucher.before && voucher.after && <div className={css.muted}>{when(voucher.usedAt)}: {voucher.before.figure} ({voucher.before.tier}) → {voucher.after.figure} ({voucher.after.tier})</div>}
-            {voucher.restoredAt && <div className={css.muted}>Kartu dikembalikan {when(voucher.restoredAt)}</div>}
-            {voucher.revokedAt && <div className={css.muted}>{when(voucher.revokedAt)}{voucher.revokeReason ? `: ${voucher.revokeReason}` : ""}</div>}
-          </div></td>
-          <td className={css.actions}>{voucherActions(voucher).map(action => <ConsoleButton key={action} onClick={() => start(voucher, action)} disabled={busy}>{actionLabel[action]}</ConsoleButton>)}</td>
-        </tr>)}</tbody>
-      </table></div>}
+      : <ul className={list.list}>{shown.map(voucher => <VoucherRow key={voucher.id} voucher={voucher} busy={busy} onAction={action => start(voucher, action)} />)}</ul>}
   </>;
+}
+
+const actionIcon: Record<VoucherAction, typeof Ban> = { revoke: Ban, refund: Coins, restore: Undo2 };
+
+/** A small card: the figure on its persona's colour, framed in its rarity's colour. */
+function MiniCard({ card, faded }: { card: NonNullable<WbVoucher["before"]>; faded?: boolean }) {
+  const [light, deep] = card.colors ?? ["#3A6FBF", "#1B2C66"];
+  return <figure className={`${list.card} ${faded ? list.faded : ""}`} style={{ background: `linear-gradient(160deg, ${light}, ${deep})`, borderColor: card.tierColor ?? "#fff" }}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- figure pictures shipped with the app; next/image cannot help in this list */}
+    {card.image ? <img src={card.image} alt="" loading="lazy" /> : <span aria-hidden>?</span>}
+    <figcaption className="sr-only">{card.figure} ({card.tier})</figcaption>
+  </figure>;
+}
+
+/**
+ * One voucher (18 Nov 2026, the owner's request): the card before and after it was used, who has it,
+ * where it came from, and its corrections behind a three-dot menu.
+ */
+function VoucherRow({ voucher, busy, onAction }: { voucher: WbVoucher; busy: boolean; onAction: (action: VoucherAction) => void }) {
+  const menu = useRef<HTMLDetailsElement>(null);
+  const actions = voucherActions(voucher);
+  // Close the menu on a click elsewhere or Escape.
+  useEffect(() => {
+    const close = (event: Event) => {
+      const details = menu.current;
+      if (!details?.open) return;
+      if (event instanceof KeyboardEvent ? event.key === "Escape" : !(event.target instanceof Node && details.contains(event.target))) details.open = false;
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", close); };
+  }, []);
+  return <li className={`${list.row} ${voucher.status === "revoked" ? list.revoked : ""}`}>
+    <div className={list.cards}>
+      {voucher.before && voucher.after
+        ? <><MiniCard card={voucher.before} faded /><ArrowRight className={list.arrow} size={18} aria-hidden /><MiniCard card={voucher.after} /></>
+        : <span className={`${list.ticket} ${voucher.legendary ? list.ticketGold : ""}`} aria-hidden><Ticket size={26} /></span>}
+    </div>
+    <div className={list.text}>
+      <span className={css.strong}>{voucher.employeeName || "(tanpa nama)"}</span>
+      {voucher.department && <span className={css.muted}>{voucher.department}</span>}
+      <span className={list.pills}>
+        <Pill tone={voucher.legendary ? "brass" : "purple"}>{voucher.legendary ? "Legendary" : "Re-roll"}</Pill>
+        <Pill tone={statusTone[voucher.status]}>{statusLabel[voucher.status]}</Pill>
+      </span>
+      {voucher.usedAt && voucher.before && voucher.after && <span className={list.line}>{when(voucher.usedAt)}: {voucher.before.figure} ({voucher.before.tier}) → {voucher.after.figure} ({voucher.after.tier})</span>}
+      <span className={css.muted}>{voucher.claim
+        ? <>Hadiah: {voucher.claim.title} · {points(voucher.claim.cost)} poin · {when(voucher.createdAt)}{claimHolds(voucher.claim.status) ? "" : " · poin sudah dikembalikan"}</>
+        : <>Diberi {voucher.givenBy ?? "super admin"} · {when(voucher.createdAt)}{voucher.note ? ` · ${voucher.note}` : ""}</>}</span>
+      {voucher.restoredAt && <span className={css.muted}>Kartu dikembalikan {when(voucher.restoredAt)}</span>}
+      {voucher.revokedAt && <span className={css.muted}>Dibatalkan {when(voucher.revokedAt)}{voucher.revokeReason ? `: ${voucher.revokeReason}` : ""}</span>}
+    </div>
+    {actions.length > 0 ? <details ref={menu} className={list.menu}>
+      <summary aria-label={`Aksi untuk voucher ${voucher.employeeName}`}><MoreVertical size={18} aria-hidden /></summary>
+      <div className={list.menuList} role="group" aria-label={`Aksi untuk voucher ${voucher.employeeName}`}>
+        {actions.map(action => {
+          const Icon = actionIcon[action];
+          return <button key={action} type="button" disabled={busy} className={action === "revoke" ? list.danger : ""}
+            onClick={() => { if (menu.current) menu.current.open = false; onAction(action); }}><Icon size={16} aria-hidden /> {actionLabel[action]}</button>;
+        })}
+      </div>
+    </details> : <span className={list.menuSpace} aria-hidden />}
+  </li>;
 }

@@ -1,3 +1,4 @@
+import { colorsOf } from "@/lib/pra-wam/figures";
 import "server-only";
 import { praWamPath } from "@/lib/routes";
 import type { WbVoucher, WbVoucherCard, WbVouchersAdmin } from "@/lib/wellbeing/types";
@@ -99,7 +100,14 @@ const TICKET_COLUMNS = "id,employee_id,legendary,claim_id,status,note,given_by_n
 
 const cardOf = (catalog: Catalog | null, figureKey: string | undefined, tierKey: string | undefined): WbVoucherCard | null => {
   if (!figureKey || !tierKey) return null;
-  return { figure: catalog?.figures.find(figure => figure.key === figureKey)?.name ?? figureKey, tier: catalog?.tiers.find(tier => tier.key === tierKey)?.name ?? tierKey };
+  const figure = catalog?.figures?.find(item => item.key === figureKey);
+  const tier = catalog?.tiers?.find(item => item.key === tierKey);
+  const persona = catalog?.characters?.find(item => item.id === figure?.personaId);
+  return {
+    figure: figure?.name ?? figureKey, tier: tier?.name ?? tierKey,
+    image: tierKey === "legendary" && figure?.legendImage ? figure.legendImage : figure?.image ?? null,
+    tierColor: tier?.color, colors: colorsOf(persona?.key ?? ""),
+  };
 };
 
 /** A ticket row into what super admin sees. `figureNow`: the person's card's figure now (to tell whether it may go back). */

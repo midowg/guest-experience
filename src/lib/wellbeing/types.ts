@@ -138,7 +138,9 @@ export type WbRewardCodes = { codes: WbRewardCode[] };
  * Super admin → Voucher re-roll (18 Nov 2026): every ticket, newest first, with where it came from and
  * what it did to the card, and the Legendary quota.
  */
-export type WbVoucherCard = { figure: string; tier: string };
+export type WbVoucherCard = { figure: string; tier: string;
+  /** For the list's small card (18 Nov 2026): the figure's picture (its RPG form when Legendary), the rarity's and the persona's colours. */
+  image?: string | null; tierColor?: string; colors?: [string, string] };
 export type WbVoucher = {
   id: string; employeeId: string; employeeName: string; department: string; legendary: boolean; status: TicketStatus; note: string; createdAt: string;
   /** From Hadiah (the claim, its title, price and status), or given by hand (givenBy). */
