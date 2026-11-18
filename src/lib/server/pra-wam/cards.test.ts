@@ -41,7 +41,8 @@ function query(table: string) {
     return { data: single ? found[0] ?? null : found, error: null };
   };
   const builder = {
-    select: () => builder, order: () => builder, limit: () => builder, in: () => builder,
+    select: () => builder, order: () => builder, limit: () => builder,
+    in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return builder; },
     neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
     // "roll->reroll->>at" reads inside a JSON column, as PostgREST does.
     eq: (key: string, value: unknown) => { filters.push(row => key.split(/->>?/).reduce<unknown>((at, part) => (at as Row | undefined)?.[part], row) === value); return builder; },
@@ -298,6 +299,16 @@ describe("kartu tokoh dunia", () => {
         db.wb_reroll_tickets = [ticket("t9", "p9", true)];
         expect((await ensureCard(form(), "p1", outdoorsy))?.tier.key).toBe("common");
         db.wb_reroll_tickets = [];
+        expect((await ensureCard(form(), "p2", outdoorsy))?.tier.key).toBe("legendary");
+      });
+
+      it("holds a Legendary place for a Legendary voucher claim still waiting for the admin (18 Nov 2026)", async () => {
+        db.cq_tiers = [tier("common", 0, 0), tier("legendary", 10_000, 4, 1)];
+        db.wb_reroll_tickets = [];
+        db.wb_rewards = [{ id: "rl", kind: "reroll_legendary" }, { id: "rr", kind: "reroll" }];
+        db.wb_reward_claims = [{ id: "c1", reward_id: "rr", employee_id: "p8", status: "requested" }, { id: "c2", reward_id: "rl", employee_id: "p9", status: "approved" }];
+        expect((await ensureCard(form(), "p1", outdoorsy))?.tier.key).toBe("common");
+        db.wb_reward_claims[1].status = "cancelled";
         expect((await ensureCard(form(), "p2", outdoorsy))?.tier.key).toBe("legendary");
       });
 

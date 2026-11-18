@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoAllowed, categoryOf, codeLines, isLinkCode, rewardEnded, rewardInputSchema, rewardShape } from "@/lib/wellbeing/rules";
+import { autoAllowed, categoryOf, codeLines, isAppVoucher, isLinkCode, rewardEnded, rewardInputSchema, rewardShape, voucherTypeOf } from "@/lib/wellbeing/rules";
 import { claimRefusal, toAdminClaim, toClaim, toReward } from "./rewards-rules";
 
 /* Jenis hadiah dan voucher kode (18 Nov 2026, migration 202611180004): the pure pieces, without a database. */
@@ -7,7 +7,12 @@ import { claimRefusal, toAdminClaim, toClaim, toReward } from "./rewards-rules";
 const base = { title: "Voucher kopi", cost: 5000, stock: null, perPerson: 1, active: true };
 
 describe("reward kinds and code vouchers", () => {
-  it("files every kind under Barang, Uang, Voucher or Lainnya (a re-roll is a voucher)", () => {
+  it("files every kind under Barang, Uang, Voucher or Lainnya (a re-roll is an app voucher)", () => {
+    expect(voucherTypeOf("voucher")).toBe("kode");
+    expect(voucherTypeOf("reroll")).toBe("aplikasi");
+    expect(voucherTypeOf("barang")).toBeNull();
+    expect(isAppVoucher("reroll_legendary")).toBe(true);
+    expect(isAppVoucher("voucher")).toBe(false);
     expect(categoryOf("barang")).toBe("barang");
     expect(categoryOf("uang")).toBe("uang");
     expect(categoryOf("lainnya")).toBe("lainnya");
@@ -22,7 +27,7 @@ describe("reward kinds and code vouchers", () => {
     expect(rewardInputSchema.parse({ ...base, kind: "uang" })).toMatchObject({ kind: "uang", delivery: "admin", codeMode: null, addCodes: [] });
   });
 
-  it("hands over at once only what needs nobody: a code that is ready, or a re-roll", () => {
+  it("hands over at once only what needs nobody: a code that is ready, or an app voucher", () => {
     expect(autoAllowed("voucher", "pool")).toBe(true);
     expect(autoAllowed("voucher", "shared")).toBe(true);
     expect(autoAllowed("voucher", "manual")).toBe(false);
@@ -34,12 +39,15 @@ describe("reward kinds and code vouchers", () => {
     expect(rewardInputSchema.safeParse({ ...base, kind: "uang", delivery: "approved" }).success).toBe(true);
   });
 
-  it("stores only what a kind uses: no stock for unique codes, no voucher fields on a prize, a re-roll always at once", () => {
+  it("stores only what a kind uses: no stock for unique codes, no voucher fields on a prize; a re-roll's delivery as chosen", () => {
     const input = { delivery: "admin" as const, codeMode: "pool" as const, sharedCode: "X", validUntil: "2026-12-31", howTo: "Di kasir", stock: 5 };
     expect(rewardShape({ ...input, kind: "voucher" })).toEqual({ delivery: "admin", codeMode: "pool", sharedCode: null, validUntil: "2026-12-31", howTo: "Di kasir", stock: null });
     expect(rewardShape({ ...input, kind: "voucher", codeMode: "shared" })).toMatchObject({ codeMode: "shared", sharedCode: "X", stock: 5 });
     expect(rewardShape({ ...input, kind: "barang" })).toEqual({ delivery: "admin", codeMode: null, sharedCode: null, validUntil: null, howTo: "", stock: 5 });
-    expect(rewardShape({ ...input, kind: "reroll" }).delivery).toBe("auto");
+    expect(rewardShape({ ...input, kind: "reroll" }).delivery).toBe("admin");
+    expect(rewardShape({ ...input, kind: "reroll", delivery: "auto" }).delivery).toBe("auto");
+    expect(rewardShape({ ...input, kind: "barang", delivery: "auto" }).delivery).toBe("admin");
+    expect(rewardInputSchema.safeParse({ ...base, kind: "reroll", delivery: "admin" }).success).toBe(true);
   });
 
   it("reads pasted codes one per line, a web address as a link, and a voucher's last day in WIB", () => {

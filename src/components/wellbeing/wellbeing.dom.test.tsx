@@ -322,7 +322,7 @@ describe("WellbeingApp", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
     const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
     fireEvent.click(within(grid).getByRole("button", { name: "Voucher re-roll tokoh, 5.000 poin, Bisa diklaim" }));
-    expect(await within(dialog()).findByText(/Langsung aktif, tanpa menunggu admin/)).toBeTruthy();
+    expect(await within(dialog()).findByText(/voucher langsung aktif/)).toBeTruthy();
     expect(within(dialog()).queryByLabelText(/Catatan untuk admin/)).toBeNull();
     fireEvent.click(within(dialog()).getByRole("button", { name: "Klaim voucher · 5.000 poin" }));
     // Asked once more: the points go at once and it cannot be cancelled.
@@ -339,6 +339,22 @@ describe("WellbeingApp", () => {
     expect(within(mine).getByText("Belum dipakai")).toBeTruthy();
     expect(within(mine).getByRole("link", { name: "Pakai di kartu tokoh" }).getAttribute("href")).toBe("/wam/kuesioner");
     expect(within(mine).queryByRole("button", { name: "Batalkan" })).toBeNull();
+  });
+
+  it("asks for a re-roll voucher through the admin like any reward: no ticket until handed over, Batalkan while it waits (18 Nov 2026)", async () => {
+    app(mockApi({ latency: [0, 0], rerollDelivery: "admin" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: "Voucher re-roll tokoh, 5.000 poin, Bisa diklaim" }));
+    expect(await within(dialog()).findByText(/Voucher aktif setelah diserahkan/)).toBeTruthy();
+    // It can still be cancelled, so it is not asked once more.
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Klaim voucher · 5.000 poin" }));
+    expect(await within(dialog()).findByText("Permintaan terkirim", {}, { timeout: 3000 })).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Lihat klaim saya" }));
+    const mine = within(within(dialog()).getByRole("list", { name: "Klaim saya" })).getAllByRole("listitem")[0];
+    expect(within(mine).getByText("Diajukan")).toBeTruthy();
+    expect(within(mine).getByRole("button", { name: "Batalkan" })).toBeTruthy();
+    expect(within(mine).queryByRole("link", { name: "Pakai di kartu tokoh" })).toBeNull();
   });
 
   it("claims a code voucher received at once: the code to copy, its last day and how to use it, kept in Klaim saya (18 Nov 2026)", async () => {

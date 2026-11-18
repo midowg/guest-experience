@@ -148,7 +148,7 @@ export async function requestReward(member: Member, input: ClaimRequestInput): P
   if (found.error) failRewards(found.error);
   const reward = found.data as unknown as Row | null;
   let row: Row;
-  // A re-roll voucher (18 Nov 2026): handed over at once with its ticket, no admin.
+  // A re-roll voucher (18 Nov 2026): through wb_claim_reroll (the card and the Legendary place); its ticket once handed over.
   if (reward && isReroll(kindOf(reward))) {
     try { row = await claimVoucherRow(member.id, input.rewardId); }
     catch (error) { if (error instanceof ServiceError) throw error; refuse(error as { code?: string; message: string }); }
@@ -161,7 +161,7 @@ export async function requestReward(member: Member, input: ClaimRequestInput): P
     row = (Array.isArray(data) ? data[0] : data) as Row;
   }
   const photo = reward ? (await firstPhotos([reward])).get(input.rewardId) ?? null : null;
-  const voucher = reward && isReroll(kindOf(reward)) ? { legendary: kindOf(reward) === "reroll_legendary", status: "open" as const } : null;
+  const voucher = reward && isReroll(kindOf(reward)) && row.status === "delivered" ? { legendary: kindOf(reward) === "reroll_legendary", status: "open" as const } : null;
   return { claim: toClaim(row, photo, voucher, reward ? claimRewardOf(reward) : null), saldo: await mySaldo(member.id) };
 }
 
@@ -359,7 +359,8 @@ export async function deleteReward(id: string): Promise<void> {
  * POST /api/admin/wellbeing/rewards/claims/<id>: approve a request, mark it handed over, or reject it
  * with a reason (the points go back, and a held code goes back). Only from the statuses that allow it,
  * so two admins never decide the same claim twice (409 when it changed in between). Handing over a
- * voucher whose code the admin types in needs that code.
+ * voucher whose code the admin types in needs that code; handing over a Legendary re-roll voucher needs a
+ * Legendary place (its ticket comes then, by the database).
  */
 export async function decideClaim(id: string, input: ClaimDecisionInput, actor: Actor): Promise<WbAdminClaim> {
   const [vouchers, types] = await Promise.all([vouchersReady(), rewardTypesReady()]);
@@ -368,7 +369,7 @@ export async function decideClaim(id: string, input: ClaimDecisionInput, actor: 
   if (input.action === "deliver") Object.assign(changes, { delivered_by_name: name, delivered_at: at });
   else Object.assign(changes, { decided_by_name: name, decided_at: at, ...(input.action === "reject" ? { reason: input.reason } : {}) });
   if (input.action === "deliver" && types) {
-    const claim = await db().from("wb_reward_claims").select("reward_id,code").eq("id", id).maybeSingle();
+    const claim = await db().from("wb_reward_claims").select("reward_id,code,employee_id").eq("id", id).maybeSingle();
     if (claim.error) failRewards(claim.error);
     if (!claim.data) throw new ServiceError(404, "Klaim tidak ditemukan.");
     const reward = await db().from("wb_rewards").select("kind,code_mode").eq("id", (claim.data as Row).reward_id as string).maybeSingle();
@@ -376,6 +377,9 @@ export async function decideClaim(id: string, input: ClaimDecisionInput, actor: 
     const typed = (reward.data as Row | null)?.kind === "voucher" && (reward.data as Row | null)?.code_mode === "manual" && !(claim.data as Row).code;
     if (typed && !input.code) throw refused("code", "Isi kode atau link voucher untuk karyawan.");
     if (typed) changes.code = input.code;
+    if ((reward.data as Row | null)?.kind === "reroll_legendary" && (await voucherContext((claim.data as Row).employee_id as string)).legendFull) {
+      throw new ServiceError(409, "Tempat Legendary sudah penuh. Tolak klaim ini supaya poinnya kembali, atau naikkan batas Legendary di Admin WAM.");
+    }
   }
   const { data, error } = await db().from("wb_reward_claims").update(changes).eq("id", id).in("status", claimActionFrom[input.action]).select(adminClaimColumns(types));
   if (error) failRewards(error);

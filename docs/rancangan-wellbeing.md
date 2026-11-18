@@ -245,8 +245,9 @@ Hadiah bisa berupa voucher untuk re-roll kartu tokoh di kuesioner WAM. Keputusan
   - **Barang**: alur biasa (diajukan, disetujui, diserahkan).
   - **Voucher re-roll tokoh**: tokoh dan rarity diundi ulang, sama seperti re-roll dari Admin WAM.
   - **Voucher re-roll Legendary**: tokoh diundi ulang, rarity pasti Legendary.
-- **Tanpa persetujuan admin.** Klaim voucher langsung berstatus Diserahkan (oleh "Otomatis") dan poinnya langsung
-  terpotong dari saldo. Karyawan ditanya sekali lagi sebelum klaim, karena voucher tidak bisa dibatalkan sendiri.
+- **Tanpa persetujuan admin** (bawaan; sejak "Jenis hadiah dan voucher kode" penyerahannya bisa diubah seperti hadiah
+  lain). Klaim voucher langsung berstatus Diserahkan (oleh "Otomatis") dan poinnya langsung terpotong dari saldo.
+  Karyawan ditanya sekali lagi sebelum klaim, karena voucher tidak bisa dibatalkan sendiri.
 - **Syarat klaim**, dicek dalam satu transaksi oleh fungsi `wb_claim_reroll`:
   - stok, batas per orang, dan saldo seperti hadiah barang;
   - kartu tokohnya sudah keluar (bukan kartu uji);
@@ -277,8 +278,9 @@ umumnya (kode atau link, fleksibel).
 
 - **Jenis hadiah** di editor (Admin WLM → Hadiah → Katalog): **Barang**, **Uang** (tunai atau transfer, mis. saldo
   e-wallet), **Voucher**, **Lainnya** (kelas, pengalaman, fasilitas kantor). Di bawah Voucher, **Isi voucher**:
-  **Kode atau link**, **Re-roll tokoh WAM**, atau **Re-roll Legendary WAM** (dua yang terakhir = voucher re-roll di
-  atas, tidak berubah).
+  - **Kode atau link**: voucher dari luar (lihat di bawah).
+  - **Fitur aplikasi**: efek yang bekerja di aplikasi, dipilih di **Efek**: **Re-roll tokoh WAM** atau **Re-roll
+    Legendary WAM** (voucher re-roll di atas). Efek lain bisa ditambah nanti sebagai pilihan baru di sini.
 - **Kode atau link**, dipilih per voucher:
   - **Daftar kode unik**: admin menempel kode atau link, satu per baris (bisa dari spreadsheet; yang sama dilewati).
     Tiap klaim mendapat satu kode yang berbeda; sisa stok = kode yang belum diberikan. Daftar kode tampil di editor
@@ -289,13 +291,18 @@ umumnya (kode atau link, fleksibel).
     tampil sebagai kode dengan **Salin kode**.
   - **Berlaku sampai** (opsional, WIB): setelah tanggal itu voucher tidak tampil dan tidak bisa diklaim.
     **Cara pakai** (opsional) tampil di detail dan bersama kode.
-- **Penyerahan**, dipilih per hadiah:
+- **Penyerahan**, satu pengaturan yang sama untuk semua jenis (termasuk fitur aplikasi), dipilih per hadiah:
   - **Admin menyetujui dulu** (seperti sebelumnya): Diajukan, lalu Setujui, lalu Tandai diserahkan. Karyawan bisa
     Batalkan selama Diajukan.
   - **Langsung disetujui, admin menyerahkan**: klaim langsung Disetujui (poin ditahan). Admin tinggal menandai
     diserahkan.
-  - **Otomatis, langsung diterima**: hanya untuk voucher dengan daftar kode unik atau satu kode untuk semua. Klaim
-    langsung Diserahkan, kode tampil saat itu juga, poin terpotong. Re-roll selalu otomatis.
+  - **Otomatis, langsung diterima**: hanya untuk yang tidak perlu diserahkan tangan: voucher fitur aplikasi, dan
+    voucher dengan daftar kode unik atau satu kode untuk semua. Klaim langsung Diserahkan, kode tampil atau voucher
+    langsung aktif, poin terpotong. Voucher fitur aplikasi baru mulai dari Otomatis; voucher re-roll yang sudah ada
+    tetap Otomatis.
+  - Voucher fitur aplikasi lewat admin: tiketnya baru dibuat saat admin menandai diserahkan, jadi baru bisa dipakai
+    di kartu tokoh setelah itu. Klaim re-roll Legendary yang masih menunggu admin ikut menahan satu tempat Legendary
+    (seperti voucher yang belum dipakai); kalau saat diserahkan tempatnya ternyata penuh, admin diminta menolak klaim.
   - Klaim yang tidak bisa dibatalkan (langsung disetujui atau otomatis) ditanya sekali lagi sebelum dikirim.
 - **Kode baru tampil setelah diserahkan.** Selama klaim belum diserahkan, kodenya tidak dikirim ke aplikasi. Klaim yang
   ditolak atau dibatalkan sebelum diserahkan mengembalikan kodenya ke daftar.
@@ -305,7 +312,8 @@ umumnya (kode atau link, fleksibel).
   menampilkan kode yang diberikan. Angka di menu Hadiah sekarang = Diajukan + Disetujui (yang masih perlu ditindak).
 - **Data:** migrasi `202611180004_wellbeing_reward_types.sql` (setelah 202611180003): kolom `wb_rewards.delivery`,
   `code_mode`, `shared_code`, `valid_until`, `how_to`; `wb_reward_claims.code`; tabel `wb_reward_codes`; pemicu yang
-  mengembalikan kode; `wb_request_reward` menangani semua jenis kecuali re-roll. Uji di
+  mengembalikan kode dan yang membuat tiket re-roll saat diserahkan; `wb_request_reward` menangani semua jenis kecuali
+  re-roll; `wb_claim_reroll` mengikuti penyerahan. Uji di
   `tests/backend/wellbeing-reward-types-check.sql`. Sebelum migrasi dijalankan, Hadiah jalan seperti sebelumnya dan
   pilihan Uang, Voucher kode, dan Lainnya di editor nonaktif.
 

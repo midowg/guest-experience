@@ -35,6 +35,8 @@ export type MockOptions = {
   noCard?: boolean;
   /** Voucher re-roll (18 Nov 2026): every Legendary place is taken, so the Legendary voucher cannot be claimed. */
   legendFull?: boolean;
+  /** Jenis hadiah (18 Nov 2026): how the re-roll voucher is handed over (automatic unless said). */
+  rerollDelivery?: Delivery;
   /** Strava (18 Nov 2026): not set up by the office yet, not connected (the default), connected, or refused by Strava. */
   strava?: "off" | "none" | "ok" | "reconnect";
 };
@@ -291,7 +293,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     { id: "00000000-0000-4000-8000-0000000000b3", title: "Kelas yoga satu bulan", description: "Empat kali kelas yoga di studio mitra kantor.", photos: photos(1, "Kelas yoga", 11), cost: 15000, stock: null, taken: 3, perPerson: 2 },
     { id: "00000000-0000-4000-8000-0000000000b4", title: "Jam olahraga Garmin", description: "Jam pintar untuk lari dan bersepeda, lengkap dengan GPS.", photos: photos(2, "Garmin", 17), cost: 300000, stock: 1, taken: 0, perPerson: 1 },
     // Voucher re-roll (18 Nov 2026): claimed at once, used on the tokoh card.
-    { id: "00000000-0000-4000-8000-0000000000b5", title: "Voucher re-roll tokoh", description: "Undi ulang tokoh kartu WAM-mu sekali. Rarity juga diundi ulang.", photos: [] as string[], cost: 5000, stock: null, taken: 6, perPerson: 3, kind: "reroll" as RewardKind, delivery: "auto" as Delivery },
+    { id: "00000000-0000-4000-8000-0000000000b5", title: "Voucher re-roll tokoh", description: "Undi ulang tokoh kartu WAM-mu sekali. Rarity juga diundi ulang.", photos: [] as string[], cost: 5000, stock: null, taken: 6, perPerson: 3, kind: "reroll" as RewardKind, delivery: options.rerollDelivery ?? "auto" as Delivery },
     { id: "00000000-0000-4000-8000-0000000000b6", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM-mu, rarity pasti Legendary.", photos: [] as string[], cost: 25000, stock: 3, taken: 1, perPerson: 1, kind: "reroll_legendary" as RewardKind, delivery: "auto" as Delivery },
     // Jenis hadiah dan voucher kode (18 Nov 2026): a code voucher received at once, a link voucher, money approved at once.
     { id: "00000000-0000-4000-8000-0000000000b7", title: "Voucher kopi Rp50.000", description: "Kopi atau teh di kedai mitra kantor.", photos: [] as string[], cost: 5000, stock: 8 as number | null, taken: 3, perPerson: 2,
@@ -430,11 +432,11 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       if (view.state === "legend_full") throw new WellbeingApiError("Tempat Legendary sudah penuh, jadi voucher ini belum bisa diklaim. Poinmu tidak terpotong.", 409, { code: ["legend_full"] });
       const now = new Date().toISOString(), reroll = item.kind === "reroll" || item.kind === "reroll_legendary";
       // A re-roll is handed over at once with its ticket; otherwise the delivery says (a code voucher takes the next code).
-      const status = reroll || item.delivery === "auto" ? "delivered" as const : item.delivery === "approved" ? "approved" as const : "requested" as const;
+      const status = item.delivery === "auto" ? "delivered" as const : item.delivery === "approved" ? "approved" as const : "requested" as const;
       const code = item.kind === "voucher" ? item.codes.length > 1 ? item.codes.shift()! : item.codes[0] ?? null : null;
       const claim: WbClaim = { id: `00000000-0000-4000-8000-${String(Date.now()).slice(-12).padStart(12, "0")}`, rewardId, title: item.title, photo: item.photos[0] ?? null, cost: item.cost,
-        status, note: item.delivery === "auto" ? "" : note.trim().slice(0, 300), reason: null, createdAt: now, decidedAt: status === "requested" ? null : now, deliveredAt: status === "delivered" ? now : null,
-        voucher: reroll ? { legendary: item.kind === "reroll_legendary", status: "open" } : null,
+        status, note: item.delivery === "auto" || reroll ? "" : note.trim().slice(0, 300), reason: null, createdAt: now, decidedAt: status === "requested" ? null : now, deliveredAt: status === "delivered" ? now : null,
+        voucher: reroll && status === "delivered" ? { legendary: item.kind === "reroll_legendary", status: "open" } : null,
         kind: item.kind, code: status === "delivered" ? code : null, validUntil: item.validUntil, howTo: item.howTo };
       claims.push(claim);
       return { claim, saldo: saldo() };

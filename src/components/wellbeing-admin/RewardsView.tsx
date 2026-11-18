@@ -11,9 +11,10 @@ import { useToast } from "@/components/app-shell/Toast";
 import { compressImage } from "@/lib/compress-image";
 import { wellbeingAdminApi } from "@/lib/routes";
 import {
-  CODE_MODES, DELIVERIES, MAX_REWARD_PHOTOS, MIGRATION_WELLBEING_REWARD_TYPES, MIGRATION_WELLBEING_REWARDS, MIGRATION_WELLBEING_VOUCHERS, PHOTO_MIMES, REWARD_CATEGORIES, VOUCHER_KINDS,
-  autoAllowed, categoryOf, claimStatusLabels, codeLines, codeModeLabels, deliveryLabels, isReroll, needsRewardTypes, rewardCategoryLabels, rewardEnded, voucherKindLabels, wibToday,
-  type ClaimAction, type ClaimStatus, type CodeMode, type Delivery, type PhotoMime, type RewardCategory, type RewardInput, type RewardKind, type VoucherKind,
+  APP_EFFECTS, CODE_MODES, DELIVERIES, MAX_REWARD_PHOTOS, MIGRATION_WELLBEING_REWARD_TYPES, MIGRATION_WELLBEING_REWARDS, MIGRATION_WELLBEING_VOUCHERS, PHOTO_MIMES, REWARD_CATEGORIES, VOUCHER_TYPES,
+  appEffectLabels, autoAllowed, categoryOf, claimStatusLabels, codeLines, codeModeLabels, deliveryLabels, isAppVoucher, isReroll, needsRewardTypes, rewardCategoryLabels, rewardEnded,
+  voucherTypeLabels, voucherTypeOf, wibToday,
+  type AppEffect, type ClaimAction, type ClaimStatus, type CodeMode, type Delivery, type PhotoMime, type RewardCategory, type RewardInput, type RewardKind, type VoucherType,
 } from "@/lib/wellbeing/rules";
 import type { WbAdminClaim, WbAdminReward, WbRewardUpload, WbRewardsAdmin } from "@/lib/wellbeing/types";
 import { points, send, wb } from "./api";
@@ -27,9 +28,9 @@ import css from "./wellbeing-admin.module.css";
  * description, price, stock, a limit per person, Aktif), a draft until switched on.
  *
  * Jenis hadiah dan voucher kode (18 Nov 2026): Jenis is Barang, Uang, Voucher or Lainnya; a voucher holds
- * a code or a link (unique codes, one code for everyone, or typed in when handing over) or re-rolls the
- * tokoh card. Penyerahan, per reward: the admin approves first, approved at once, or at once (a voucher
- * whose code is ready).
+ * a code or a link (unique codes, one code for everyone, or typed in when handing over) or is an app
+ * voucher (Fitur aplikasi) with an effect (re-roll the tokoh card, re-roll Legendary). Penyerahan, the same
+ * for every kind: the admin approves first, approved at once, or at once (only what needs nobody).
  */
 
 type Tab = "permintaan" | "katalog";
@@ -245,12 +246,17 @@ const draftOf = (reward: WbAdminReward | "new" | null): Draft => !reward || rewa
 const categoryHelp: Record<RewardCategory, string> = {
   barang: "Barang yang diserahkan admin, mis. tumbler atau jam olahraga.",
   uang: "Uang tunai atau transfer, mis. saldo e-wallet. Tulis cara penyerahannya di Keterangan.",
-  voucher: "Kode atau link (mis. voucher belanja), atau re-roll kartu tokoh WAM.",
+  voucher: "Kode atau link (mis. voucher belanja), atau fitur aplikasi (mis. re-roll kartu tokoh WAM).",
   lainnya: "Hadiah lain, mis. kelas, pengalaman, atau fasilitas kantor.",
 };
-const rerollHelp: Record<"reroll" | "reroll_legendary", string> = {
-  reroll: "Langsung aktif saat diklaim, poin langsung terpotong, tanpa persetujuan admin. Karyawan memakainya di kartu tokoh WAM: tokoh dan rarity diundi ulang.",
-  reroll_legendary: "Langsung aktif saat diklaim, tanpa persetujuan admin. Tokoh diundi ulang dan rarity pasti Legendary. Tidak bisa diklaim kalau tempat Legendary sudah penuh (poin tidak terpotong).",
+const voucherTypeHelp: Record<VoucherType, string> = {
+  kode: "Kode atau link dari luar, mis. voucher belanja atau diskon.",
+  aplikasi: "Efek yang bekerja di aplikasi, tanpa barang yang diserahkan.",
+};
+/** What each effect does, under Efek (more effects can come). */
+const effectHelp: Record<AppEffect, string> = {
+  reroll: "Karyawan memakainya di kartu tokoh WAM kapan saja: tokoh dan rarity diundi ulang. Butuh kartu tokoh yang sudah keluar.",
+  reroll_legendary: "Tokoh diundi ulang dan rarity pasti Legendary. Tidak bisa diklaim kalau tempat Legendary sudah penuh (poin tidak terpotong); klaim yang menunggu admin ikut menahan satu tempat.",
 };
 const codeModeHelp: Record<CodeMode, string> = {
   pool: "Tiap klaim mendapat satu kode atau link yang berbeda. Sisa stok = kode yang belum diberikan.",
@@ -260,7 +266,7 @@ const codeModeHelp: Record<CodeMode, string> = {
 const deliveryHelp: Record<Delivery, string> = {
   admin: "Klaim masuk Permintaan sebagai Diajukan. Admin menyetujui, lalu menandai diserahkan. Karyawan bisa membatalkan selama Diajukan.",
   approved: "Klaim langsung Disetujui (poin ditahan, karyawan tidak bisa membatalkan). Admin tinggal menandai diserahkan.",
-  auto: "Langsung diterima saat diklaim: kode atau link tampil di aplikasi karyawan dan poin terpotong. Tanpa admin.",
+  auto: "Langsung diterima saat diklaim: kode atau link tampil, atau voucher fitur aplikasi langsung aktif. Poin terpotong, tanpa admin.",
 };
 const digits = (value: string, max: number) => value.replace(/\D/g, "").slice(0, max);
 
@@ -297,7 +303,13 @@ function RewardPanel({ reward, vouchersReady, typesReady, onClose }: { reward: W
     const kind: RewardKind = next !== "voucher" ? next : categoryOf(current.kind) === "voucher" ? current.kind : firstVoucher ?? "voucher";
     return { ...current, kind, delivery: !isReroll(kind) && current.delivery === "auto" && !autoAllowed(kind, current.codeMode) ? "admin" : current.delivery };
   });
-  const pickVoucher = (kind: VoucherKind) => setDraft(current => ({ ...current, kind, delivery: kind === "voucher" && current.delivery === "auto" && !autoAllowed(kind, current.codeMode) ? "admin" : current.delivery }));
+  const firstEffect = APP_EFFECTS.find(kindReady);
+  /** Isi voucher: a code keeps its delivery when it fits; an app voucher starts automatic (as the re-roll vouchers were), the admin may change it. */
+  const pickVoucherType = (type: VoucherType) => setDraft(current => {
+    if (type === "kode") return { ...current, kind: "voucher", delivery: current.delivery === "auto" && !autoAllowed("voucher", current.codeMode) ? "admin" : current.delivery };
+    if (isAppVoucher(current.kind)) return current;
+    return { ...current, kind: firstEffect ?? "reroll", delivery: current.delivery === "admin" ? "auto" : current.delivery };
+  });
   const pickCodeMode = (codeMode: CodeMode) => setDraft(current => ({ ...current, codeMode, delivery: current.delivery === "auto" && !autoAllowed(current.kind, codeMode) ? "admin" : current.delivery }));
 
   async function addPhotos(files: FileList | null) {
@@ -327,7 +339,7 @@ function RewardPanel({ reward, vouchersReady, typesReady, onClose }: { reward: W
     const input: RewardInput = {
       title: draft.title.trim(), description: draft.description.trim(), cost: Number(draft.cost), stock: draft.stock === "" ? null : Number(draft.stock), perPerson: Number(draft.perPerson), active: draft.active,
       photos: draft.photos.map(photo => photo.upload ? { key: photo.key, upload: photo.upload } : { key: photo.key }), kind: draft.kind,
-      delivery: isReroll(draft.kind) ? "auto" : draft.delivery, codeMode: codeVoucher ? draft.codeMode : null, sharedCode: draft.sharedCode.trim(),
+      delivery: draft.delivery, codeMode: codeVoucher ? draft.codeMode : null, sharedCode: draft.sharedCode.trim(),
       validUntil: codeVoucher && draft.validUntil ? draft.validUntil : null, howTo: codeVoucher ? draft.howTo.trim() : "",
       addCodes: pool ? codeLines(draft.newCodes) : [], removeCodes: pool ? draft.removeCodes : [],
     };
@@ -382,9 +394,17 @@ function RewardPanel({ reward, vouchersReady, typesReady, onClose }: { reward: W
       {category === "voucher" && <div className={css.field}>
         <span id="reward-voucher-label">Isi voucher</span>
         <div className={css.statusTabs} role="group" aria-labelledby="reward-voucher-label">
-          {VOUCHER_KINDS.map(item => <button key={item} type="button" className={css.statusTab} aria-pressed={draft.kind === item} onClick={() => pickVoucher(item)} disabled={!kindReady(item)}>{voucherKindLabels[item]}</button>)}
+          {VOUCHER_TYPES.map(item => <button key={item} type="button" className={css.statusTab} aria-pressed={voucherTypeOf(draft.kind) === item} onClick={() => pickVoucherType(item)}
+            disabled={item === "kode" ? !kindReady("voucher") : !firstEffect}>{voucherTypeLabels[item]}</button>)}
         </div>
-        {isReroll(draft.kind) && <small className={css.help}>{rerollHelp[draft.kind as "reroll" | "reroll_legendary"]}</small>}
+        <small className={css.help}>{voucherTypeHelp[voucherTypeOf(draft.kind) ?? "kode"]}</small>
+      </div>}
+      {isAppVoucher(draft.kind) && <div className={css.field}>
+        <span id="reward-effect-label">Efek</span>
+        <div className={css.statusTabs} role="group" aria-labelledby="reward-effect-label">
+          {APP_EFFECTS.map(effect => <button key={effect} type="button" className={css.statusTab} aria-pressed={draft.kind === effect} onClick={() => set("kind", effect)} disabled={!kindReady(effect)}>{appEffectLabels[effect]}</button>)}
+        </div>
+        <small className={css.help}>{effectHelp[draft.kind]}</small>
       </div>}
       {codeVoucher && <>
         <fieldset className={css.choices}>
@@ -412,16 +432,17 @@ function RewardPanel({ reward, vouchersReady, typesReady, onClose }: { reward: W
         <label className={css.field}><span>Cara pakai <span className={css.help}>(tampil bersama kode)</span></span>
           <textarea className={css.input} rows={3} value={draft.howTo} maxLength={1000} onChange={event => set("howTo", event.target.value)} placeholder="mis. Tunjukkan kode di kasir, atau masukkan saat checkout" /></label>
       </>}
-      {!isReroll(draft.kind) && <fieldset className={css.choices}>
+      <fieldset className={css.choices} disabled={!typesReady} aria-describedby={typesReady ? undefined : "reward-delivery-wait"}>
         <legend>Penyerahan</legend>
         {DELIVERIES.map(mode => {
           const allowed = mode !== "auto" || autoAllowed(draft.kind, codeVoucher ? draft.codeMode : null);
-          return <label key={mode} className={cx(css.choice, css.choiceCompact)} data-on={draft.delivery === mode} data-off={!allowed || undefined}>
+          return <label key={mode} className={cx(css.choice, css.choiceCompact)} data-on={draft.delivery === mode} data-off={!allowed || !typesReady || undefined}>
             <input type="radio" name="reward-delivery" checked={draft.delivery === mode} disabled={!allowed} onChange={() => set("delivery", mode)} />
-            <span><strong>{deliveryLabels[mode]}</strong><small>{allowed ? deliveryHelp[mode] : "Hanya untuk voucher dengan daftar kode unik atau satu kode untuk semua."}</small></span>
+            <span><strong>{deliveryLabels[mode]}</strong><small>{allowed ? deliveryHelp[mode] : "Hanya untuk voucher fitur aplikasi, atau voucher dengan daftar kode unik atau satu kode untuk semua."}</small></span>
           </label>;
         })}
-      </fieldset>}
+        {!typesReady && <small className={css.help} id="reward-delivery-wait">Pilihan penyerahan aktif setelah migrasi {MIGRATION_WELLBEING_REWARD_TYPES}. Sampai itu, voucher fitur aplikasi otomatis dan yang lain lewat admin.</small>}
+      </fieldset>
       <div className={css.field}>
         <span>Foto ({draft.photos.length}/{MAX_REWARD_PHOTOS})</span>
         <ul className={css.photoGrid} aria-label="Foto hadiah">

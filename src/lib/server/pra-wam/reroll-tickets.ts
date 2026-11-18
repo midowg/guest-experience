@@ -33,19 +33,32 @@ export async function openTickets(employeeId: string): Promise<OpenTicket[]> {
 }
 
 /**
- * The Legendary places held by unused Legendary tickets of other people who are not Legendary yet:
- * added to the cards counted against the Legendary cap, so a draw never takes a place a voucher holds.
+ * The Legendary places held by unused Legendary tickets, and by Legendary voucher claims still waiting for
+ * the admin (18 Nov 2026, migration 202611180004), of other people who are not Legendary yet: added to the
+ * cards counted against the Legendary cap, so a draw never takes a place a voucher holds.
  */
 export async function legendReserved(formId: string, legendKey: string | null, exceptEmployee: string | null): Promise<number> {
   if (!legendKey) return 0;
   const { data, error } = await db().from("wb_reroll_tickets").select("employee_id").eq("legendary", true).eq("status", "open");
   if (error) { if (ticketsMissing(error)) return 0; databaseError(error); }
-  const holders = new Set(((data ?? []) as { employee_id: string }[]).map(row => row.employee_id).filter(id => id !== exceptEmployee));
+  const holders = new Set(((data ?? []) as { employee_id: string }[]).map(row => row.employee_id));
+  for (const id of await waitingLegendClaims()) holders.add(id);
+  if (exceptEmployee) holders.delete(exceptEmployee);
   if (!holders.size) return 0;
   const { data: legends, error: legendsError } = await db().from("cq_person_cards").select("employee_id").eq("form_id", formId).eq("trial", false).eq("tier_key", legendKey).in("employee_id", [...holders]);
   if (legendsError) databaseError(legendsError);
   for (const row of (legends ?? []) as { employee_id: string }[]) holders.delete(row.employee_id);
   return holders.size;
+}
+
+/** Who has a Legendary voucher claim still waiting for the admin (none before the rewards' kind is there). */
+async function waitingLegendClaims(): Promise<string[]> {
+  const rewards = await db().from("wb_rewards").select("id").eq("kind", "reroll_legendary");
+  const ids = ((rewards.data ?? []) as { id: string }[]).map(row => row.id);
+  if (rewards.error || !ids.length) return [];
+  const { data, error } = await db().from("wb_reward_claims").select("employee_id").in("reward_id", ids).in("status", ["requested", "approved"]);
+  if (error) databaseError(error);
+  return ((data ?? []) as { employee_id: string }[]).map(row => row.employee_id);
 }
 
 /** Takes my ticket for a re-roll now: only while it is still mine and unused, so two taps use it once. */

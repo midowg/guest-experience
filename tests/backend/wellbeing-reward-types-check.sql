@@ -1,12 +1,16 @@
 -- Execute ONLY against the disposable PostgreSQL migration-check container.
 -- Migration 202611180004: Jenis hadiah dan voucher kode. Uang and Lainnya work like a prize; a code voucher
 -- gives one unique code (pool), the code for everyone (shared) or none until the admin types it (manual);
--- delivery decides the first status; a rejected or cancelled claim gives its pool code back.
+-- delivery decides the first status (re-roll vouchers too: the ticket comes when handed over); a rejected or
+-- cancelled claim gives its pool code back; a Legendary claim still waiting holds a Legendary place.
 begin;
+-- Supabase gives service_role every public table by default; this container does not (cards are read by wb_claim_reroll).
+grant select, insert, update on public.cq_forms, public.cq_cards, public.cq_figures, public.cq_tiers, public.cq_person_cards to service_role;
 set local role service_role;
 do $$
 declare
   dewi uuid; bima uuid; sari uuid; pool uuid; shared uuid; manual uuid; money uuid; ended uuid; code_a uuid;
+  f uuid; garda uuid; fig uuid; reroll uuid; legend uuid;
   first public.wb_reward_claims; second public.wb_reward_claims; third public.wb_reward_claims; claim public.wb_reward_claims;
 begin
   insert into public.employees (full_name) values ('Dewi Uji Voucher') returning id into dewi;
@@ -25,8 +29,6 @@ begin
   begin insert into public.wb_rewards (title, cost, active, kind, delivery) values ('Barang otomatis', 10, true, 'barang', 'auto'); raise exception 'UNEXPECTED: a prize handed over at once';
   exception when check_violation then null; end;
   begin insert into public.wb_rewards (title, cost, active, kind, code_mode, delivery) values ('Manual otomatis', 10, true, 'voucher', 'manual', 'auto'); raise exception 'UNEXPECTED: a typed-in code handed over at once';
-  exception when check_violation then null; end;
-  begin insert into public.wb_rewards (title, cost, active, kind, delivery) values ('Re-roll lewat admin', 10, true, 'reroll', 'admin'); raise exception 'UNEXPECTED: a re-roll voucher through the admin';
   exception when check_violation then null; end;
 
   insert into public.wb_rewards (title, cost, per_person, active, kind, code_mode, delivery, how_to) values ('Voucher Kopi', 100, 5, true, 'voucher', 'pool', 'auto', 'Tunjukkan di kasir') returning id into pool;
@@ -83,6 +85,37 @@ begin
   insert into public.wb_rewards (title, cost, active, kind, delivery) values ('Re-roll', 10, true, 'reroll', 'auto') returning id into ended;
   begin perform public.wb_request_reward(dewi, ended, ''); raise exception 'UNEXPECTED: a re-roll voucher through wb_request_reward';
   exception when raise_exception then if sqlerrm <> 'reward_unavailable' then raise; end if; end;
+
+  -- A re-roll voucher through the admin: it waits, and its ticket comes once handed over (only once).
+  select id into f from public.cq_forms where slug = 'kuesioner';
+  select id into garda from public.cq_cards where form_id = f and key = 'garda';
+  select id into fig from public.cq_figures where form_id = f order by number limit 1;
+  insert into public.cq_person_cards (form_id, employee_id, card_id, tier_key, background, accent, stickers, serial, combo, dna, figure_id, figure_slot)
+    values (f, dewi, garda, 'common', 1, 1, '{}', 901, 'x|9|1|', 'e1b2c3d4e5', fig, 1);
+  insert into public.cq_person_cards (form_id, employee_id, card_id, tier_key, background, accent, stickers, serial, combo, dna, figure_id, figure_slot)
+    values (f, bima, garda, 'common', 1, 1, '{}', 902, 'x|9|2|', 'f1b2c3d4e5', (select id from public.cq_figures where form_id = f and id <> fig order by number limit 1), 1);
+  insert into public.wb_rewards (title, cost, active, kind, delivery, per_person) values ('Re-roll lewat admin', 10, true, 'reroll', 'admin', 3) returning id into reroll;
+  claim := public.wb_claim_reroll(dewi, reroll, f, null);
+  if claim.status <> 'requested' or exists (select 1 from public.wb_reroll_tickets where claim_id = claim.id) then raise exception 're-roll through the admin did not wait: %', row_to_json(claim); end if;
+  update public.wb_reward_claims set status = 'approved' where id = claim.id;
+  update public.wb_reward_claims set status = 'delivered' where id = claim.id;
+  if (select count(*) from public.wb_reroll_tickets where claim_id = claim.id and not legendary and status = 'open') <> 1 then raise exception 'no ticket once handed over'; end if;
+  -- Approved at once: no ticket until handed over.
+  update public.wb_rewards set delivery = 'approved' where id = reroll;
+  claim := public.wb_claim_reroll(dewi, reroll, f, null);
+  if claim.status <> 'approved' or claim.decided_by_name <> 'Otomatis' or exists (select 1 from public.wb_reroll_tickets where claim_id = claim.id) then raise exception 're-roll approved at once wrong: %', row_to_json(claim); end if;
+
+  -- One Legendary place: a Legendary claim still waiting holds it; cancelled, the place is free again.
+  update public.cq_tiers set max_cards = 1 where form_id = f and key = 'legendary';
+  insert into public.wb_rewards (title, cost, active, kind, delivery) values ('Re-roll Legendary', 10, true, 'reroll_legendary', 'admin') returning id into legend;
+  claim := public.wb_claim_reroll(dewi, legend, f, 'legendary');
+  begin perform public.wb_claim_reroll(bima, legend, f, 'legendary'); raise exception 'UNEXPECTED: a Legendary place taken twice';
+  exception when raise_exception then if sqlerrm <> 'reward_legend_full' then raise; end if; end;
+  update public.wb_reward_claims set status = 'cancelled' where id = claim.id;
+  -- Handed over at once (as before): the ticket at once.
+  update public.wb_rewards set delivery = 'auto' where id = legend;
+  claim := public.wb_claim_reroll(bima, legend, f, 'legendary');
+  if claim.status <> 'delivered' or (select count(*) from public.wb_reroll_tickets where claim_id = claim.id and legendary) <> 1 then raise exception 'Legendary claimed at once wrong: %', row_to_json(claim); end if;
 end $$;
 rollback;
 \echo 'WELLBEING REWARD TYPES CHECKS PASSED'

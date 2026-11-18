@@ -287,9 +287,10 @@ export const MAX_REWARD_PHOTOS = 6;
 export const MIGRATION_WELLBEING_VOUCHERS = "202611180003_wellbeing_reroll_voucher.sql";
 /*
  * Jenis hadiah dan voucher kode (18 Nov 2026, migration 202611180004): a reward is Barang, Uang, Voucher
- * or Lainnya. A voucher holds a code or a link, or re-rolls the tokoh card (the two re-roll kinds).
- * Delivery, per reward: the admin approves first, approved at once, or handed over at once (a voucher
- * whose code is ready; a re-roll always).
+ * or Lainnya. A voucher holds a code or a link, or is an app voucher (Fitur aplikasi) whose effect is a
+ * re-roll of the tokoh card (the two re-roll kinds; more effects can come). Delivery, one setting for
+ * every kind: the admin approves first, approved at once, or handed over at once (only what needs
+ * nobody: a voucher whose code is ready, or an app voucher).
  */
 export const MIGRATION_WELLBEING_REWARD_TYPES = "202611180004_wellbeing_reward_types.sql";
 export const REWARD_KINDS = ["barang", "uang", "voucher", "lainnya", "reroll", "reroll_legendary"] as const;
@@ -298,15 +299,23 @@ export type RewardKind = (typeof REWARD_KINDS)[number];
 export const REWARD_CATEGORIES = ["barang", "uang", "voucher", "lainnya"] as const;
 export type RewardCategory = (typeof REWARD_CATEGORIES)[number];
 export const rewardCategoryLabels: Record<RewardCategory, string> = { barang: "Barang", uang: "Uang", voucher: "Voucher", lainnya: "Lainnya" };
-export const VOUCHER_KINDS = ["voucher", "reroll", "reroll_legendary"] as const;
-export type VoucherKind = (typeof VOUCHER_KINDS)[number];
-export const voucherKindLabels: Record<VoucherKind, string> = { voucher: "Kode atau link", reroll: "Re-roll tokoh WAM", reroll_legendary: "Re-roll Legendary WAM" };
+/** What a voucher holds: a code or a link, or an effect in the app. */
+export const VOUCHER_TYPES = ["kode", "aplikasi"] as const;
+export type VoucherType = (typeof VOUCHER_TYPES)[number];
+export const voucherTypeLabels: Record<VoucherType, string> = { kode: "Kode atau link", aplikasi: "Fitur aplikasi" };
+/** An app voucher's effect (each is a kind; a new effect is a new kind and its handler). */
+export const APP_EFFECTS = ["reroll", "reroll_legendary"] as const;
+export type AppEffect = (typeof APP_EFFECTS)[number];
+export const appEffectLabels: Record<AppEffect, string> = { reroll: "Re-roll tokoh WAM", reroll_legendary: "Re-roll Legendary WAM" };
 export const rewardKindLabels: Record<RewardKind, string> = {
   barang: "Barang", uang: "Uang", voucher: "Voucher", lainnya: "Lainnya", reroll: "Voucher re-roll tokoh", reroll_legendary: "Voucher re-roll Legendary",
 };
 /** A re-roll voucher (re-rolls the WAM tokoh card; claimed through wb_claim_reroll, used on the card page). */
 export const isReroll = (kind: RewardKind) => kind === "reroll" || kind === "reroll_legendary";
-export const categoryOf = (kind: RewardKind): RewardCategory => isReroll(kind) ? "voucher" : kind as RewardCategory;
+/** An app voucher: its effect works in the app, nothing to hand over by hand. */
+export const isAppVoucher = (kind: RewardKind): kind is AppEffect => (APP_EFFECTS as readonly string[]).includes(kind);
+export const voucherTypeOf = (kind: RewardKind): VoucherType | null => kind === "voucher" ? "kode" : isAppVoucher(kind) ? "aplikasi" : null;
+export const categoryOf = (kind: RewardKind): RewardCategory => isAppVoucher(kind) ? "voucher" : kind as RewardCategory;
 /** The kinds the migration 202611180004 brings (before it, a reward is a prize or a re-roll voucher). */
 export const needsRewardTypes = (kind: RewardKind) => kind === "uang" || kind === "voucher" || kind === "lainnya";
 
@@ -318,8 +327,8 @@ export const deliveryLabels: Record<Delivery, string> = { admin: "Admin menyetuj
 export const CODE_MODES = ["pool", "shared", "manual"] as const;
 export type CodeMode = (typeof CODE_MODES)[number];
 export const codeModeLabels: Record<CodeMode, string> = { pool: "Daftar kode unik", shared: "Satu kode untuk semua", manual: "Diisi admin saat menyerahkan" };
-/** Handed over at once needs nobody: a re-roll, or a code voucher whose code is ready (pool or shared). */
-export const autoAllowed = (kind: RewardKind, codeMode: CodeMode | null) => isReroll(kind) || (kind === "voucher" && (codeMode === "pool" || codeMode === "shared"));
+/** Handed over at once needs nobody: an app voucher, or a code voucher whose code is ready (pool or shared). */
+export const autoAllowed = (kind: RewardKind, codeMode: CodeMode | null) => isAppVoucher(kind) || (kind === "voucher" && (codeMode === "pool" || codeMode === "shared"));
 /** A code that is a web address opens as a link (only http and https). */
 export const isLinkCode = (code: string) => /^https?:\/\/\S+$/i.test(code.trim());
 /** Codes typed or pasted one per line: trimmed, blank lines and repeats left out. */
@@ -400,15 +409,15 @@ export const rewardInputSchema = z.object({
 export type RewardInput = z.infer<typeof rewardInputSchema>;
 
 /**
- * What a reward stores for its kind: a re-roll is always handed over at once; only a code voucher keeps a
- * code mode, the shared code, its last day and how to use it; only the pool keeps codes (and has no stock:
- * what is left is the codes not given yet).
+ * What a reward stores for its kind: handed over at once only where that needs nobody (else the admin
+ * approves first); only a code voucher keeps a code mode, the shared code, its last day and how to use it;
+ * only the pool keeps codes (and has no stock: what is left is the codes not given yet).
  */
 export function rewardShape(input: Pick<RewardInput, "kind" | "delivery" | "codeMode" | "sharedCode" | "validUntil" | "howTo" | "stock">) {
   const voucher = input.kind === "voucher";
   const codeMode = voucher ? input.codeMode : null;
   return {
-    delivery: isReroll(input.kind) ? "auto" as const : input.delivery === "auto" && !autoAllowed(input.kind, codeMode) ? "admin" as const : input.delivery,
+    delivery: input.delivery === "auto" && !autoAllowed(input.kind, codeMode) ? "admin" as const : input.delivery,
     codeMode, sharedCode: codeMode === "shared" ? input.sharedCode : null,
     validUntil: voucher ? input.validUntil : null, howTo: voucher ? input.howTo : "",
     stock: codeMode === "pool" ? null : input.stock,

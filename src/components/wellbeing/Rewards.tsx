@@ -6,7 +6,7 @@ import { Panel } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
 import { useToast } from "@/components/app-shell/Toast";
 import type { WbClaim, WbReward, WbRewards, WbSaldo } from "@/lib/wellbeing/app-types";
-import { claimHolds, claimStatusLabels, isLinkCode, isReroll, rewardEnded, rewardState, wibToday, type ClaimStatus, type RewardKind } from "@/lib/wellbeing/rules";
+import { claimHolds, claimStatusLabels, isAppVoucher, isLinkCode, isReroll, rewardEnded, rewardState, wibToday, type ClaimStatus, type RewardKind } from "@/lib/wellbeing/rules";
 import { errorText, WellbeingApiError } from "./api";
 import { keys, useWellbeing } from "./context";
 import { formatDate, num } from "./format";
@@ -19,9 +19,9 @@ import css from "./wellbeing.module.css";
  * rewards, a reward's detail (photos, description, stock) with Ajukan klaim, and Klaim saya (status,
  * the admin's reason, Batalkan while it waits). Opened from Beranda's saldo card and from Profil.
  *
- * Voucher re-roll (18 Nov 2026): a reward may re-roll the WAM tokoh card. Claimed at once (asked once
- * more first, as the points go and it cannot be cancelled), then "Buka kartu tokoh" opens the card,
- * where the voucher is used. Klaim saya says whether each voucher is used.
+ * Voucher re-roll (18 Nov 2026): a reward may re-roll the WAM tokoh card (an app voucher). Once handed
+ * over (at once, or by the admin, as its delivery says), "Buka kartu tokoh" opens the card, where the
+ * voucher is used. Klaim saya says whether each voucher is used.
  *
  * Jenis hadiah dan voucher kode (18 Nov 2026): a reward may be money, a code voucher or something else,
  * and goes on as its delivery says (waits for the admin, approved at once, or received at once). A
@@ -35,10 +35,10 @@ const TABS = [["hadiah", "Hadiah"], ["klaim", "Klaim saya"]] as const;
 
 const statusTone: Record<ClaimStatus, string> = { requested: css.pillWarn, approved: css.pillInfo, delivered: css.pillOk, rejected: css.pillErr, cancelled: "" };
 const shortBy = (reward: WbReward, saldo: WbSaldo) => Math.max(0, reward.cost - saldo.available);
-/** A claim that cannot be cancelled (a re-roll, or a delivery that does not wait for the admin) is asked once more. */
-const asksFirst = (reward: WbReward) => isReroll(reward.kind) || reward.delivery !== "admin";
-/** No note when nobody reads it: a re-roll, or a claim received at once. */
-const takesNote = (reward: WbReward) => !isReroll(reward.kind) && reward.delivery !== "auto";
+/** A claim that cannot be cancelled (its delivery does not wait for the admin) is asked once more. */
+const asksFirst = (reward: WbReward) => reward.delivery !== "admin";
+/** No note when nobody reads it: an app voucher, or a claim received at once. */
+const takesNote = (reward: WbReward) => !isAppVoucher(reward.kind) && reward.delivery !== "auto";
 const dayText = (date: string) => formatDate(date, { day: "numeric", month: "long", year: "numeric" });
 
 export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; onClose: () => void }) {
@@ -248,9 +248,8 @@ function RewardDetail({ reward, saldo, note, onNote, problem }: { reward: WbRewa
       {reward.state === "limit" && <span className={cx(css.pill, css.pillInfo)}>Sudah kamu klaim</span>}
       {(reward.state === "no_card" || reward.state === "legend_full") && <span className={cx(css.pill, css.pillWarn)}>{stateTextOf(reward, saldo)}</span>}
     </div>
-    <DeliveryNote reward={reward} />
-    {isReroll(reward.kind) && <p className={cx(css.note, css.noteInfo)}><Dices size={20} aria-hidden="true" /><span>
-      <b>Langsung aktif, tanpa menunggu admin.</b> Poin terpotong saat klaim. Pakai di kartu tokoh WAM-mu kapan saja: tokoh diundi ulang{reward.kind === "reroll_legendary" ? <> dan rarity <b>pasti Legendary</b></> : " dan rarity juga diundi ulang, jadi bisa naik atau turun"}. Hasilnya wajib diterima.</span></p>}
+    {/* How the claim goes on, and for a re-roll what it does, in one note. */}
+    <DeliveryNote reward={reward} effect={isReroll(reward.kind) ? <>Pakai di kartu tokoh WAM-mu kapan saja: tokoh diundi ulang{reward.kind === "reroll_legendary" ? <> dan rarity <b>pasti Legendary</b></> : " dan rarity juga diundi ulang, jadi bisa naik atau turun"}. Hasilnya wajib diterima.</> : null} />
     {reward.state === "no_card" && <p className={cx(css.note, css.noteWarn)}><CircleX size={20} aria-hidden="true" /><span>Kartu tokohmu belum keluar. Selesaikan kuesioner WAM dulu, lalu klaim voucher ini.</span></p>}
     {reward.state === "legend_full" && <p className={cx(css.note, css.noteWarn)}><CircleX size={20} aria-hidden="true" /><span>Semua tempat Legendary sudah terisi, jadi voucher ini belum bisa diklaim.</span></p>}
     {reward.state === "short" && <div className={css.rewardShort}>
@@ -277,17 +276,18 @@ const notePlaceholder: Record<RewardKind, string> = {
   barang: "mis. ukuran atau warna", uang: "mis. e-wallet tujuan", voucher: "mis. nomor tujuan", lainnya: "mis. jadwal yang kamu mau", reroll: "", reroll_legendary: "",
 };
 
-/** How the claim goes on, before it is made (a re-roll says it in its own note). */
-function DeliveryNote({ reward }: { reward: WbReward }) {
-  if (isReroll(reward.kind)) return null;
-  const code = reward.kind === "voucher";
+/** How the claim goes on, before it is made: the same three ways for every kind. */
+function DeliveryNote({ reward, effect }: { reward: WbReward; effect: React.ReactNode }) {
+  const code = reward.kind === "voucher", app = isAppVoucher(reward.kind);
   const text = reward.delivery === "auto"
-    ? <><b>Langsung diterima, tanpa menunggu admin.</b> Poin terpotong saat klaim{code ? " dan kode atau link langsung tampil" : ""}.</>
+    ? <><b>Langsung diterima, tanpa menunggu admin.</b> Poin terpotong saat klaim{code ? " dan kode atau link langsung tampil" : app ? " dan voucher langsung aktif" : ""}.</>
     : reward.delivery === "approved"
-      ? <><b>Langsung disetujui.</b> Poin ditahan saat klaim, lalu admin menyerahkan {code ? "kode atau linknya di Klaim saya" : "hadiahnya"}.</>
-      : code ? <>Admin menyetujui klaimmu, lalu kode atau linknya tampil di <b>Klaim saya</b>.</> : null;
-  if (!text) return null;
-  return <p className={cx(css.note, css.noteInfo)}>{code ? <Ticket size={20} aria-hidden="true" /> : <PackageCheck size={20} aria-hidden="true" />}<span>{text}</span></p>;
+      ? <><b>Langsung disetujui.</b> Poin ditahan saat klaim, lalu admin menyerahkan {code ? "kode atau linknya di Klaim saya" : app ? "vouchernya; voucher aktif setelah diserahkan" : "hadiahnya"}.</>
+      : code ? <>Admin menyetujui klaimmu, lalu kode atau linknya tampil di <b>Klaim saya</b>.</>
+      : app ? <>Admin menyetujui klaimmu dulu. Voucher aktif setelah diserahkan.</> : null;
+  if (!text && !effect) return null;
+  return <p className={cx(css.note, css.noteInfo)}>{code ? <Ticket size={20} aria-hidden="true" /> : app ? <Dices size={20} aria-hidden="true" /> : <PackageCheck size={20} aria-hidden="true" />}
+    <span>{text}{text && effect ? " " : null}{effect}</span></p>;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
@@ -295,7 +295,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 function ClaimBar({ reward, saldo, busy, onClaim }: { reward: WbReward; saldo: WbSaldo; busy: boolean; onClaim: () => void }) {
-  const voucher = isReroll(reward.kind) || reward.kind === "voucher";
+  const voucher = isAppVoucher(reward.kind) || reward.kind === "voucher";
   const label = voucher ? "Klaim voucher" : reward.delivery === "admin" ? "Ajukan klaim" : "Klaim hadiah";
   if (reward.state === "available") return <button type="button" className={cx(css.btn, css.btnPrimary, css.block)} onClick={onClaim} aria-busy={busy} disabled={busy}>
     {isReroll(reward.kind) ? <Dices size={20} aria-hidden="true" /> : voucher ? <Ticket size={20} aria-hidden="true" /> : <Gift size={20} aria-hidden="true" />}{busy ? "Mengirim…" : `${label} · ${num(reward.cost)} poin`}</button>;

@@ -234,7 +234,7 @@ describe("Admin Wellbeing", () => {
     expect((await within(edit).findByRole("alert")).textContent).toMatch(/Matikan Aktif/);
   });
 
-  it("makes a reward a re-roll voucher, said to need no admin (voucher re-roll, 18 Nov 2026)", async () => {
+  it("makes a reward an app voucher that re-rolls the tokoh card, with the same Penyerahan as the rest (18 Nov 2026)", async () => {
     open("hadiah");
     fireEvent.click(await screen.findByRole("button", { name: /^Katalog/ }, { timeout: 3000 }));
     const catalog = await screen.findByRole("list", { name: "Katalog hadiah" });
@@ -243,9 +243,13 @@ describe("Admin Wellbeing", () => {
     const panel = await screen.findByRole("dialog");
     fireEvent.change(within(panel).getByLabelText("Nama hadiah"), { target: { value: "Voucher re-roll tokoh" } });
     fireEvent.click(within(within(panel).getByRole("group", { name: "Jenis hadiah" })).getByRole("button", { name: "Voucher" }));
-    fireEvent.click(within(within(panel).getByRole("group", { name: "Isi voucher" })).getByRole("button", { name: "Re-roll tokoh WAM" }));
-    expect(within(panel).queryByRole("group", { name: "Penyerahan" })).toBeNull();
-    expect(within(panel).getByText(/tanpa persetujuan admin/)).toBeTruthy();
+    fireEvent.click(within(within(panel).getByRole("group", { name: "Isi voucher" })).getByRole("button", { name: "Fitur aplikasi" }));
+    fireEvent.click(within(within(panel).getByRole("group", { name: "Efek" })).getByRole("button", { name: "Re-roll tokoh WAM" }));
+    expect(within(panel).getByText(/tokoh dan rarity diundi ulang/)).toBeTruthy();
+    // The same Penyerahan as every reward: an app voucher starts automatic, and may go through the admin.
+    expect((within(panel).getByRole("radio", { name: /Otomatis/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(panel).getByRole("radio", { name: /Admin menyetujui dulu/ }));
+    expect((within(panel).getByRole("radio", { name: /Admin menyetujui dulu/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.change(within(panel).getByLabelText("Harga (poin)"), { target: { value: "5000" } });
     fireEvent.click(within(panel).getByRole("button", { name: "Simpan" }));
     expect(await screen.findByText("Hadiah disimpan sebagai draf (belum tampil).")).toBeTruthy();
