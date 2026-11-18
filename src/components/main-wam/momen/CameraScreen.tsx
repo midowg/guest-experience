@@ -195,6 +195,8 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
     if (!ok) setSheet("cara");
   }
 
+  const tagSession = sessions.find(session => session.id === tag) ?? null;
+
   /* Taking and sending. */
   async function send(pictures: (() => Promise<Picture>)[], fromGallery: boolean) {
     if (!pictures.length) return;
@@ -232,8 +234,17 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
     };
     // eslint-disable-next-line @next/next/no-img-element -- the photo just made on this phone (object URL)
     const picture = thumb ? <img src={thumb} alt="" /> : undefined;
+    // "Lihat": the stack opened at the photo just sent (the first of a batch), in the view it went to; Fotoku if the server has not got it in a moment.
+    const see = async () => {
+      const id = await momenQueue().sentId(ids[0], 3000);
+      stop();
+      router.push(id ? mainWamPath.moments({ lihat: audience === "kelompok" ? "kelompok" : undefined, foto: id }) : mainWamPath.gallery({ lihat: "saya" }));
+    };
     if (ready[0].deferred) toast.show({ text: t("momen.cam.sendsOnline"), thumb: picture, action: { label: t("momen.cam.undo"), onAction: cancel } });
-    else toast.show({ text: sentText(ready.length, audience, group, lang), thumb: picture, timer: true, duration: 5000, action: { label: t("momen.cam.undo"), onAction: cancel } });
+    else toast.show({
+      text: sentText(ready.length, audience, group, lang), sub: t("momen.cam.sentSession", { title: tagSession?.title ?? t("momen.general") }), thumb: picture, timer: true, duration: 5000,
+      action: { label: t("momen.cam.undo"), onAction: cancel }, secondary: { label: t("ui.see"), onAction: () => { void see(); } },
+    });
     if (problem) toast.show({ text: problem, tone: "error" });
   }
 
@@ -264,7 +275,6 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   }
 
   /* Words on the chips and in the sheets. */
-  const tagSession = sessions.find(session => session.id === tag) ?? null;
   const tagSheet = useMemo(() => tagGroups(sessions, now, lang), [sessions, now, lang]);
   const shutterLabel = audience === "kelompok" && group ? t("momen.cam.shutterGroup", { n: group.number }) : t("momen.cam.shutterAll");
   const waiting = demo?.pill ?? queue.summary.waiting;
@@ -277,7 +287,7 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
   return <div className={css.screen} data-momen-camera="">
     <ShellChrome hideTopBar hideNav />
     {!demo && <MomenQueueRunner />}
-    <div className={css.bar}><IconButton variant="ondark" icon={X} label={t("momen.cam.close")} onClick={close} /></div>
+    <div className={css.bar}><IconButton variant="tonal" icon={X} label={t("momen.cam.close")} onClick={close} /></div>
 
     <div className={css.stage}><div className={css.stageInner}>
       <div className={css.view}>
@@ -286,16 +296,16 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
           ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
-          : <div className={css.off}><IconBox icon={Camera} size={64} round tone="ondark" /><p className={css.offBody}>{t("momen.cam.phoneCamera")}</p></div>)}
+          : <div className={css.off}><IconBox icon={Camera} size={64} round /><p className={css.offBody}>{t("momen.cam.phoneCamera")}</p></div>)}
         {live === "memuat" && <div className={css.off} role="status" aria-label={t("momen.cam.preparing")} />}
         {live === "ditolak" && <div className={css.off} role="status">
-          <IconBox icon={CameraOff} size={64} round tone="ondark" />
+          <IconBox icon={CameraOff} size={64} round />
           <h1 className={css.offTitle}>{t("momen.cam.notAllowed")}</h1>
           <p className={css.offBody}>{t("momen.cam.orGallery")}</p>
           <Button icon={Camera} className={css.offAction} onClick={askAgain}>{t("momen.cam.allow")}</Button>
         </div>}
         {live === "menunggu" && <div className={css.off} role="status">
-          <IconBox icon={Hourglass} size={64} round tone="ondark" />
+          <IconBox icon={Hourglass} size={64} round />
           <h1 className={css.offTitle}>{t("peserta.waiting.title")}</h1>
           <p className={css.offBody}>{t("momen.cam.waitingBody")}</p>
         </div>}
@@ -319,7 +329,7 @@ export function CameraScreen({ sessions, nowIso, group, groupsPublished, mozaik,
             : <PhotoFill tone={1} className={css.fill} />}
         </button>
         <button type="button" className={css.shutter} aria-label={shutterLabel} aria-busy={busy || undefined} disabled={!canShoot} onClick={shutter} />
-        <IconButton variant="ondark" icon={SwitchCamera} label={t("momen.cam.flip")} pressed={facing === "user"} disabled={!canShoot} onClick={flip} />
+        <IconButton variant="tonal" icon={SwitchCamera} label={t("momen.cam.flip")} pressed={facing === "user"} disabled={!canShoot} onClick={flip} />
       </div>
       <input ref={shutterInput} className={css.hidden} type="file" accept="image/*" capture={facing} onChange={onShot} tabIndex={-1} aria-hidden />
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />

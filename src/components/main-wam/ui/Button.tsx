@@ -5,11 +5,11 @@ import { cx, KitIcon, Pressable, type ActionProps, type IconProp } from "./Press
 import shared from "./shared.module.css";
 import css from "./button.module.css";
 
-export type ButtonVariant = "primary" | "secondary" | "tonal" | "text" | "danger" | "danger-outline" | "danger-text" | "ondark";
+export type ButtonVariant = "primary" | "secondary" | "tonal" | "text" | "danger" | "danger-outline" | "danger-text";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: css.primary, secondary: css.secondary, tonal: css.tonal, text: css.text,
-  danger: css.danger, "danger-outline": css.dangerOutline, "danger-text": css.dangerText, ondark: css.ondark,
+  danger: css.danger, "danger-outline": css.dangerOutline, "danger-text": css.dangerText,
 };
 
 export type ButtonProps = ActionProps & AriaAttributes & {
@@ -49,10 +49,10 @@ export function Button({ variant = "primary", size = "l", block, icon, loading, 
   </Pressable>;
 }
 
-export type IconButtonVariant = "standard" | "tonal" | "filled" | "onmedia" | "ondark";
+export type IconButtonVariant = "standard" | "tonal" | "filled" | "onmedia";
 
 const ICON_VARIANT: Record<IconButtonVariant, string> = {
-  standard: css.iconStandard, tonal: css.iconTonal, filled: css.iconFilled, onmedia: css.iconOnmedia, ondark: css.iconOndark,
+  standard: css.iconStandard, tonal: css.iconTonal, filled: css.iconFilled, onmedia: css.iconOnmedia,
 };
 
 /**

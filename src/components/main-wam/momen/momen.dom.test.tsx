@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { sampleFeedKelompok, sampleFeedSemua, sampleMosaic, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
@@ -75,6 +77,27 @@ describe("the stack", () => {
     await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoHeart(sampleFeedSemua[2].id), { method: "PUT" }));
   });
 
+  it("lists the person's own photo too: a Fotomu pill, the likes it got without a button, and 'Sudah kamu lihat' after the new ones", () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, hearts: 7 } : photo));
+    render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={2} /></ToastProvider>);
+    expect(screen.getByText("Fotomu")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Suka foto/ })).toBeNull();
+    expect(screen.getByRole("img", { name: "7 suka di fotomu" })).toBeTruthy();
+    expect(screen.getByText("Sudah kamu lihat")).toBeTruthy();
+    expect(screen.queryByText(/dari 2 baru/)).toBeNull();
+    cleanup();
+    render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={1} /></ToastProvider>);
+    expect(screen.getByText("2 dari 2 baru")).toBeTruthy();
+    expect(screen.queryByText("Fotomu")).toBeNull();
+  });
+
+  it("with no photo at all invites the first one, with a camera button", () => {
+    render(<ToastProvider><MomenStack {...props} items={[]} total={0} anyPhotos={false} startIndex={0} /></ToastProvider>);
+    expect(screen.getByText("Belum ada foto")).toBeTruthy();
+    expect(screen.getByText("Jadilah yang pertama memotret WAM 2026.")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam/acara/momen/kamera");
+  });
+
   it("filters by Kelompokku and by session through the address", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(screen.getByRole("radio", { name: "Kelompokku" }));
@@ -91,6 +114,28 @@ describe("the stack", () => {
     render(<ToastProvider><MomenStack {...props} items={sampleFeedKelompok} startIndex={5} total={5} /></ToastProvider>);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam/acara/momen/galeri");
+  });
+});
+
+describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the cards and the actions)", () => {
+  const css = readFileSync(join(process.cwd(), "src/components/main-wam/momen/momen.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  it("the deck is a flex item that takes what is left (no fixed reserve), up to a 9:16 card, and the actions follow it", () => {
+    expect(css).not.toMatch(/--mw-reserve|100dvh/);
+    expect(css).toMatch(/\.deck \{[^}]*flex: 1 1 0;[^}]*max-height: var\(--mw-deck-max\)/);
+    expect(css).toMatch(/--mw-deck-max: calc\([^;]*\* 1\.78/);
+    expect(css).toMatch(/\.stage \{[^}]*justify-content: center/);
+    expect(css).not.toMatch(/\.actions \{[^}]*margin-top: auto/);
+    expect(css).toMatch(/\.pile \{[^}]*height: min\(calc\(100cqh/);
+  });
+  it("the stack draws its cards, the line and the actions inside one stage", () => {
+    const { container } = render(<ToastProvider><MomenStack {...{
+      mode: "baru" as const, view: "semua" as const, session: null, sessionTitle: null, items: sampleFeedSemua, next: null, total: 24, startIndex: 2, offset: 0,
+      counts: sampleSessionCounts, sessions: [], group: sampleViewer("peserta").group, groupsPublished: true, mozaik: true, migrated: true, anyPhotos: true, own: null,
+      eventName: "WAM 2026", nowIso: now.toISOString(), demo: {},
+    }} /></ToastProvider>);
+    const stage = container.querySelector('[class*="stage"]')!;
+    expect(stage.querySelector('[role="region"]')).toBeTruthy();
+    expect(stage.querySelector('[class*="actions"]')).toBeTruthy();
   });
 });
 

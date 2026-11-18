@@ -5,7 +5,8 @@
 --   2. mw_photos_for: what one person may see (status, the 5 seconds of Batalkan, kelompok photos only
 --      for their kelompok, photos they reported hidden for them). Every reader below goes through it.
 --   3. mw_photo_feed: the stack and the gallery, keyset paging on (visible_at, id), never OFFSET,
---      with hearts, "mine", "seen" and the total in one query (no N+1).
+--      with hearts, "mine", "seen" and the total in one query (no N+1). The stack ("baru") lists every
+--      photo of the view, the person's own included: not yet seen ones first, then the seen and own ones.
 --   4. mw_photo_session_counts: the "Saring sesi" sheet (photos per session, Umum).
 --   5. mw_photo_report: Laporkan foto, one report per person; the third reporter hides the photo for
 --      everyone (status ditinjau) until panitia decide (K08, area C).
@@ -16,7 +17,7 @@
 -- kept; the R2 bucket needs a lifecycle rule on tmp/ (KONTRAK §10).
 -- Server only (service role): functions are not callable with the public keys.
 -- ROLLBACK (by hand): drop function mw_mosaic_version(integer), mw_mosaic_place(integer[], integer), mw_photo_report(uuid, uuid, text, text, integer),
---   mw_photo_session_counts(uuid, uuid, text), mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer),
+--   mw_photo_session_counts(uuid, uuid, text), mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, boolean, text, integer),
 --   mw_photos_for(uuid, uuid, text); drop index mw_photos_owner_feed, mw_photo_reports_reporter; alter table mw_photos drop column tile_key.
 begin;
 
@@ -55,14 +56,19 @@ $$;
 
 /*
  * One page of a view, newest first. p_session: one session; p_umum: only photos without a session
- * (both empty: every session). p_unseen: the stack's "baru" (not the person's own, not seen yet).
+ * (both empty: every session). p_unseen: the stack's "baru", only with direction 'older': every photo
+ * of the view, the person's own included, in two runs, each newest first: first the ones the person has
+ * not seen (never their own), then the seen ones and their own. The cursor then also says which run it
+ * is in (p_cursor_rest: false = the unseen run, true = the seen and own run), so a photo that is seen
+ * while the stack is open cannot move the cursor. total = how many are left in the cursor's run (all
+ * unseen ones on a first page: "N foto baru"). Without p_unseen the list is plain newest first.
  * Cursor (p_cursor_at, p_cursor_id) with p_direction: 'older' (after it in the list), 'older_incl'
  * (from it: a stack opened at one photo of the gallery), 'newer' (before it, nearest first: going
  * back from that photo). total = how many match on that side of the cursor (all of them without one).
  */
 create function public.mw_photo_feed(
   p_viewer uuid, p_group uuid, p_view text, p_session uuid, p_umum boolean, p_unseen boolean,
-  p_cursor_at timestamptz, p_cursor_id uuid, p_direction text, p_limit integer
+  p_cursor_at timestamptz, p_cursor_id uuid, p_cursor_rest boolean, p_direction text, p_limit integer
 )
 returns table (
   id uuid, owner_id uuid, audience text, group_id uuid, session_id uuid, width integer, height integer,
@@ -77,7 +83,28 @@ declare
 begin
   if p_view not in ('semua', 'kelompok', 'saya') then raise exception 'MW_FEED_VIEW'; end if;
   if p_direction not in ('older', 'older_incl', 'newer') then raise exception 'MW_FEED_DIRECTION'; end if;
-  if p_direction = 'newer' then
+  if coalesce(p_unseen, false) and p_direction <> 'older' then raise exception 'MW_FEED_DIRECTION'; end if;
+  if coalesce(p_unseen, false) then
+    return query
+      with base as (
+        select p.*, (p.owner_id = p_viewer or exists (select 1 from public.mw_photo_seen s where s.employee_id = p_viewer and s.photo_id = p.id)) as is_seen
+        from public.mw_photos_for(p_viewer, p_group, p_view) p
+        where p_session is null and not coalesce(p_umum, false) or coalesce(p_umum, false) and p.session_id is null or p.session_id = p_session
+      ), after as (
+        select b.* from base b
+        where p_cursor_at is null
+          or b.is_seen > coalesce(p_cursor_rest, false)
+          or b.is_seen = coalesce(p_cursor_rest, false) and (b.visible_at, b.id) < (p_cursor_at, p_cursor_id)
+      )
+      select a.id, a.owner_id, a.audience, a.group_id, a.session_id, a.width, a.height, a.taken_at, a.visible_at, a.status, a.file_key, a.thumb_key,
+        (select count(*)::integer from public.mw_photo_hearts h where h.photo_id = a.id),
+        exists (select 1 from public.mw_photo_hearts h where h.photo_id = a.id and h.employee_id = p_viewer),
+        a.is_seen,
+        (select count(*) from after x where x.is_seen = coalesce(p_cursor_rest, false))
+      from after a
+      order by a.is_seen, a.visible_at desc, a.id desc
+      limit v_limit;
+  elsif p_direction = 'newer' then
     return query
       select p.id, p.owner_id, p.audience, p.group_id, p.session_id, p.width, p.height, p.taken_at, p.visible_at, p.status, p.file_key, p.thumb_key,
         (select count(*)::integer from public.mw_photo_hearts h where h.photo_id = p.id),
@@ -86,7 +113,6 @@ begin
         count(*) over ()
       from public.mw_photos_for(p_viewer, p_group, p_view) p
       where (p_session is null and not coalesce(p_umum, false) or coalesce(p_umum, false) and p.session_id is null or p.session_id = p_session)
-        and (not coalesce(p_unseen, false) or p.owner_id <> p_viewer and not exists (select 1 from public.mw_photo_seen s where s.employee_id = p_viewer and s.photo_id = p.id))
         and p_cursor_at is not null and (p.visible_at, p.id) > (p_cursor_at, p_cursor_id)
       order by p.visible_at, p.id
       limit v_limit;
@@ -99,7 +125,6 @@ begin
         count(*) over ()
       from public.mw_photos_for(p_viewer, p_group, p_view) p
       where (p_session is null and not coalesce(p_umum, false) or coalesce(p_umum, false) and p.session_id is null or p.session_id = p_session)
-        and (not coalesce(p_unseen, false) or p.owner_id <> p_viewer and not exists (select 1 from public.mw_photo_seen s where s.employee_id = p_viewer and s.photo_id = p.id))
         and (p_cursor_at is null
           or p_direction = 'older' and (p.visible_at, p.id) < (p_cursor_at, p_cursor_id)
           or p_direction = 'older_incl' and (p.visible_at, p.id) <= (p_cursor_at, p_cursor_id))
@@ -207,13 +232,13 @@ as $$
 $$;
 
 revoke all on function public.mw_photos_for(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer) from public, anon, authenticated;
+revoke all on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, boolean, text, integer) from public, anon, authenticated;
 revoke all on function public.mw_photo_session_counts(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.mw_photo_report(uuid, uuid, text, text, integer) from public, anon, authenticated;
 revoke all on function public.mw_mosaic_place(integer[], integer) from public, anon, authenticated;
 revoke all on function public.mw_mosaic_version(integer) from public, anon, authenticated;
 grant execute on function public.mw_photos_for(uuid, uuid, text) to service_role;
-grant execute on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer) to service_role;
+grant execute on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, boolean, text, integer) to service_role;
 grant execute on function public.mw_photo_session_counts(uuid, uuid, text) to service_role;
 grant execute on function public.mw_photo_report(uuid, uuid, text, text, integer) to service_role;
 grant execute on function public.mw_mosaic_place(integer[], integer) to service_role;

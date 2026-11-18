@@ -214,7 +214,8 @@ export function MomenStack(props: MomenStackProps) {
       : <><IconBox icon={Images} size={64} round /><h2 className={css.panelTitle}>{session ? t("momen.stack.sessionEmpty") : t("momen.noneYet")}</h2>
         {session
           ? <Button variant="tonal" size="m" onClick={() => filterTo(view, null)}>{t("momen.allSessions")}</Button>
-          : <p className={css.panelBody}>{t("momen.stack.beFirst", { event: props.eventName })}</p>}</>;
+          : <><p className={css.panelBody}>{t("momen.stack.beFirst", { event: props.eventName })}</p>
+            <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button></>}</>;
   } else if (!current && next) {
     panel = loadError
       ? <><IconBox icon={CloudOff} size={64} round /><h2 className={css.panelTitle}>{t("momen.stack.loadFailed")}</h2><Button variant="tonal" size="m" onClick={() => { setLoadError(false); void loadMore(); }}>{t("shell.retry")}</Button></>
@@ -235,7 +236,10 @@ export function MomenStack(props: MomenStackProps) {
   if (migrated && !(view === "kelompok" && !group)) {
     if (mode === "sesi" && props.total > 0) hint = <span className={css.count}>{stackCount("sesi", 0, props.total, sessionTitle ?? undefined, lang)}</span>;
     else if (mode === "baru" && current && !panel) hint = <>
-      <span className={css.count} aria-label={stackCountSpoken("baru", index, props.total, lang)}>{stackCount("baru", index, props.total, undefined, lang)}</span>
+      {/* The first `total` cards are the new ones; after them come the ones seen before and the person's own. */}
+      {index < props.total
+        ? <span className={css.count} aria-label={stackCountSpoken("baru", index, props.total, lang)}>{stackCount("baru", index, props.total, undefined, lang)}</span>
+        : <span className={css.count}>{t("momen.stack.earlier")}</span>}
       {!hintSeen && <><span aria-hidden>·</span><MoveHorizontal aria-hidden />{t("momen.stack.swipeHint")}</>}
     </>;
     else if (mode === "baru" && !current && !next && items.length > 0) hint = <span className={css.count}><Check aria-hidden />{t("momen.stack.countOf", { a: items.length, b: items.length })}</span>;
@@ -260,7 +264,7 @@ export function MomenStack(props: MomenStackProps) {
       {mozaik && <Chip icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.mosaic")}</Chip>}
     </ShellActions>}
 
-    <div className={`${css.view} ${mode === "galeri" ? css.viewGaleri : ""}`}>
+    <div className={css.view}>
       {mode !== "galeri" && <div className={css.filter}>
         <Segmented label={t("momen.stack.filterLabel")} value={view} onChange={value => filterTo(value, session)}
           options={[{ value: "semua", label: t("momen.all") }, { value: "kelompok", label: t("momen.myGroup") }]} />
@@ -268,6 +272,7 @@ export function MomenStack(props: MomenStackProps) {
       </div>}
       {!online && <Banner tone="offline" className={css.banner}>{t("momen.stack.offline")}</Banner>}
 
+      <div className={css.stage}>
       <StackDeck items={noCard ? [] : items} index={noCard ? 0 : index} onIndex={move} onLike={photo => toggleHeart(photo, true)} now={now} panel={panel}
         label={t("ui.moments")} describe={at => stackCountSpoken(mode, props.offset + at, props.total, lang)} />
 
@@ -275,10 +280,13 @@ export function MomenStack(props: MomenStackProps) {
       <p className={css.sr} aria-live="polite">{spoken}</p>
 
       <div className={css.actions}>
-        {photoActions && shownHearts ? <button type="button" className={css.react} aria-pressed={shownHearts.hearted} onClick={() => toggleHeart(current!)}
+        {photoActions && shownHearts && current!.mine
+          ? <span className={css.react} data-static role="img" aria-label={t("momen.stack.likesOnYours", { n: shownHearts.hearts })}><Heart aria-hidden />{shownHearts.hearts}</span>
+          : photoActions && shownHearts ? <button type="button" className={css.react} aria-pressed={shownHearts.hearted} onClick={() => toggleHeart(current!)}
           aria-label={t(shownHearts.hearted ? "momen.stack.unlike" : "momen.stack.like", { n: shownHearts.hearts })}><Heart aria-hidden />{shownHearts.hearts}</button> : <span />}
         <Pressable href={mainWamPath.camera()} className={css.camera} aria-label={t("momen.stack.openCamera")}><Camera aria-hidden /></Pressable>
         {optionsAction ? <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} /> : <span />}
+      </div>
       </div>
     </div>
 

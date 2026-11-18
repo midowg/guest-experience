@@ -17,8 +17,7 @@ const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sa
  */
 const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.light};color-scheme:light}`
   + `html body:has([data-main-wam][data-mw-mode=dark]){background:${PAGE_COLORS.dark};color-scheme:dark}`
-  + `@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:${PAGE_COLORS.dark};color-scheme:dark}}`
-  + `html body:has([data-main-wam] [data-mw-camera]){background:${PAGE_COLORS.camera}}`;
+  + `@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:${PAGE_COLORS.dark};color-scheme:dark}}`;
 
 /**
  * Main WAM's theme root: every token (theme.module.css) and the font live under it, and the admin's

@@ -11,8 +11,8 @@ import { t, type Lang } from "./i18n";
  *   akar    tab root: top bar (Beranda: greeting and bell), bottom bar.
  *   detail  reading a level deeper: back arrow and title, the bottom bar stays (its tab lit).
  *   tugas   a form, the camera, a result: close (x) or no top bar, no bottom bar.
- * `camera`: the camera (U01–U05) only. Its viewfinder is dark in both themes, so the frame paints its
- * own black and draws no bars; Momen's other screens follow the app's theme like every tab. `back.href` is the fallback when there is no
+ * `camera`: the camera (U01–U05) only. It draws its own bar and controls, so the frame draws no bars; it follows
+ * the app's theme like every screen (only the live picture is natural). `back.href` is the fallback when there is no
  * history to go back to (opened from a notification or a QR).
  */
 

@@ -42,7 +42,6 @@
 .boxEmisi { background: var(--mw-emisi-container); color: var(--mw-on-emisi-container); }
 .boxWellbeing { background: var(--mw-wellbeing-container); color: var(--mw-on-wellbeing-container); }
 .boxAwarding { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
-.boxOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
 
 /* SectionHeader: title (+ sub) and a text link, 44 tall. */
 .section { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: var(--mw-touch); }

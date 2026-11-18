@@ -73,30 +73,47 @@ begin
   raise notice 'PASS: who sees which photo';
 
   -- The feed: newest first, total, keyset paging both ways.
-  select count(*) into n from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, 'older', 2);
+  select count(*) into n from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, null, 'older', 2);
   if n <> 2 then raise exception 'page size 2, got %', n; end if;
-  if (select max(f.total) from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, 'older', 2) f) <> 4 then raise exception 'total of Semua should be 4'; end if;
-  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '20 minutes 5 seconds', p_new, 'older', 10) f;
+  if (select max(f.total) from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, null, 'older', 2) f) <> 4 then raise exception 'total of Semua should be 4'; end if;
+  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '20 minutes 5 seconds', p_new, null, 'older', 10) f;
   if ids is distinct from array[p_mid, p_old] then raise exception 'older than p_new: %', ids; end if;
-  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '20 minutes 5 seconds', p_new, 'older_incl', 10) f;
+  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '20 minutes 5 seconds', p_new, null, 'older_incl', 10) f;
   if ids is distinct from array[p_new, p_mid, p_old] then raise exception 'from p_new: %', ids; end if;
-  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '10 minutes 5 seconds', p_mid, 'newer', 10) f;
+  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, base + interval '10 minutes 5 seconds', p_mid, null, 'newer', 10) f;
   if ids is distinct from array[p_new, p_rani] then raise exception 'newer than p_mid (nearest first): %', ids; end if;
   -- One session, and Umum.
-  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'kelompok', team, false, false, null, null, 'older', 10) f;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'kelompok', team, false, false, null, null, null, 'older', 10) f;
   if ids is distinct from array[p_k4, p_mid] then raise exception 'Team building in Kelompokku: %', ids; end if;
-  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, true, false, null, null, 'older', 10) f;
+  select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, true, false, null, null, null, 'older', 10) f;
   if ids is distinct from array[p_rani, p_new] then raise exception 'Umum: %', ids; end if;
 
-  -- Hearts, mine, seen; "baru" leaves out one's own photos and those seen.
+  -- Hearts, mine, seen; "baru" is every photo of the view, one's own included: unseen ones first, then seen and own.
   insert into public.mw_photo_hearts (photo_id, employee_id) values (p_mid, rani), (p_mid, dimas);
-  select * into r from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, 'older', 10) f where f.id = p_mid;
+  select * into r from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_mid;
   if r.hearts <> 2 or not r.hearted then raise exception 'hearts of p_mid for Rani: % %', r.hearts, r.hearted; end if;
   insert into public.mw_photo_seen (photo_id, employee_id) values (p_old, rani);
-  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, 'older', 10) f;
-  if ids is distinct from array[p_new, p_mid] then raise exception 'baru for Rani: %', ids; end if;
-  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo counts as seen'; end if;
-  begin perform * from public.mw_photo_feed(rani, g4, 'semua; drop', null, false, false, null, null, 'older', 10); raise exception 'UNEXPECTED: an unknown view';
+  select array_agg(f.id order by f.seen, f.visible_at desc, f.id desc) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
+  if ids is distinct from array[p_new, p_mid, p_rani, p_old] then raise exception 'baru for Rani (unseen first, then own and seen): %', ids; end if;
+  if (select count(*) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f where not f.seen) <> 2 then raise exception 'two unseen for Rani'; end if;
+  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f) <> 2 then raise exception 'foto baru counts only the unseen, never her own'; end if;
+  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo is not new'; end if;
+  -- Paging through the two runs: page 1 ends in the unseen run, page 2 is the own and seen run.
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 2) f;
+  if ids is distinct from array[p_new, p_mid] then raise exception 'baru page 1: %', ids; end if;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '10 minutes 5 seconds', p_mid, false, 'older', 2) f;
+  if ids is distinct from array[p_rani, p_old] then raise exception 'baru page 2 (the run of own and seen): %', ids; end if;
+  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '10 minutes 5 seconds', p_mid, false, 'older', 2) f) <> 0 then raise exception 'no unseen photo is left after page 1 (total counts the cursor''s own run)'; end if;
+  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 1) f) <> 2 then raise exception 'page 1 still counts both unseen photos'; end if;
+  -- A photo seen meanwhile does not move the cursor: seen p_new, ask for what comes after p_new in the unseen run.
+  insert into public.mw_photo_seen (photo_id, employee_id) values (p_new, rani);
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '20 minutes 5 seconds', p_new, false, 'older', 10) f;
+  if ids is distinct from array[p_mid, p_rani, p_new, p_old] then raise exception 'baru after p_new seen meanwhile: %', ids; end if;
+  delete from public.mw_photo_seen where photo_id = p_new and employee_id = rani;
+  begin perform * from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'newer', 10); raise exception 'UNEXPECTED: baru only goes older';
+  exception when raise_exception then if sqlerrm <> 'MW_FEED_DIRECTION' then raise; end if; end;
+  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo counts as seen'; end if;
+  begin perform * from public.mw_photo_feed(rani, g4, 'semua; drop', null, false, false, null, null, null, 'older', 10); raise exception 'UNEXPECTED: an unknown view';
   exception when raise_exception then if sqlerrm <> 'MW_FEED_VIEW' then raise; end if; end;
 
   -- Session counts (null = Umum).
@@ -201,7 +218,7 @@ reset role;
 -- Nothing of it with the public keys.
 set local role anon;
 do $$ begin
-  begin perform * from public.mw_photo_feed(gen_random_uuid(), null, 'semua', null, false, false, null, null, 'older', 10); raise exception 'UNEXPECTED: anon reads the feed';
+  begin perform * from public.mw_photo_feed(gen_random_uuid(), null, 'semua', null, false, false, null, null, null, 'older', 10); raise exception 'UNEXPECTED: anon reads the feed';
   exception when insufficient_privilege then null; end;
   begin perform public.mw_mosaic_place(array[1], 0); raise exception 'UNEXPECTED: anon places mosaic tiles';
   exception when insufficient_privilege then null; end;

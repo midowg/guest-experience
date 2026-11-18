@@ -70,7 +70,7 @@ describe("MainWamShell", () => {
     expect(screen.getByRole("link", { name: "Momen" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("drops the bottom bar on a task screen (✕ Tutup), and both bars on the camera (its own dark surface)", () => {
+  it("drops the bottom bar on a task screen (✕ Tutup), and both bars on the camera (it draws its own, in the theme)", () => {
     nav.pathname = mainWamPath.silentMeeting();
     const { unmount } = render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.queryByRole("navigation", { name: "Navigasi utama" })).toBeNull();
@@ -80,7 +80,7 @@ describe("MainWamShell", () => {
     const camera = render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.queryByRole("navigation", { name: "Navigasi utama" })).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
-    expect(camera.container.querySelector("[data-mw-camera]")).not.toBeNull();
+    expect(camera.container.querySelector("[data-mw-camera]")).toBeNull();
   });
 
   it("puts a screen's actions in its top bar and lets a screen hide a bar", () => {

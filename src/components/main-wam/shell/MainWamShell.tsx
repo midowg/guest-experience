@@ -128,7 +128,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
     }
   }
 
-  return <div className={css.app} data-mw-camera={camera ? "" : undefined} data-mw-nav={nav ? "" : undefined}
+  return <div className={css.app} data-mw-nav={nav ? "" : undefined}
     style={nav ? { ["--mw-toast-bottom" as string]: "calc(var(--mw-nav-h) + var(--mw-space-16))" } : undefined}>
     <ToastProvider>
       <ActionsSlotContext.Provider value={slot}>

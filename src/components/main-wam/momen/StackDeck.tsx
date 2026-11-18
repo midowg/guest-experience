@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Heart, Lock } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
-import { Avatar, PhotoFill } from "@/components/main-wam/ui";
+import { Avatar, Pill, PhotoFill } from "@/components/main-wam/ui";
 import { photoAlt, photoMeta, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
 import { useFreshAddress } from "./useFreshAddress";
@@ -159,7 +159,7 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
     {index < items.length && <button type="button" className={`${css.tap} ${css.tapNext}`} aria-label={t("momen.stack.next")} onClick={() => go(1, "tap")} />}
   </>;
   const showPanel = !!panel || atEnd;
-  return <div className={css.deck} role="region" aria-roledescription="carousel" aria-label={label} tabIndex={0} onKeyDown={onKeyDown}>
+  return <div className={css.deck} data-panel={showPanel || undefined} role="region" aria-roledescription="carousel" aria-label={label} tabIndex={0} onKeyDown={onKeyDown}>
     <div className={css.deckInner}><div className={css.pile}>
       {shown.map((photo, offset) => {
         const place = places[offset];
@@ -175,10 +175,11 @@ export function StackDeck({ items, index, onIndex, onLike, now, panel, label, de
             {taps}
             {burst > 0 && <Heart key={burst} aria-hidden className={css.burst} />}
           </>}
+          {isFront && photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.yourPhoto")}</Pill></span>}
           <div className={css.info} aria-hidden>
             <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>
-              <span className={css.name}>{photo.mine ? t("momen.you") : photo.owner.name}</span>
+              <span className={css.name}>{photo.owner.name}</span>
               <span className={css.meta}>{photoMeta(photo, now, lang)}</span>
             </span>
             {photo.audience === "kelompok" && <Lock className={css.lock} aria-hidden />}

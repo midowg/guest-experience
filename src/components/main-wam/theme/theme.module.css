@@ -74,20 +74,12 @@
   --mw-inverse-error: #F87171;
   --mw-media-scrim: rgb(17 24 39 / 0.6);
   --mw-media-on: #FFFFFF;
-  /* Secondary text and accent text on dark media (photo scrim, camera): the same in both modes. */
+  /* Secondary text and accent text on dark media (photo scrim, the live view): the same in both modes. */
   --mw-media-on-2: #D1D5DB;
   --mw-media-primary: #8AB4F8;
   --mw-overlay-scrim: rgb(17 24 39 / 0.5);
-  --mw-overlay-camera: rgb(0 0 0 / 0.55);
-  /* The camera and the QR scanner are dark in both themes (a viewfinder): their surface and what sits on it. */
-  --mw-camera: #111827;
-  --mw-camera-2: #1F2937;
   /* A photo's own background while it loads (Momen's stack): the page's second surface. */
   --mw-photo-bg: var(--mw-surface-2);
-  /* On the camera and scanner: white at 14 % and the like (wam.css §13 --ondark). */
-  --mw-ondark-fill: color-mix(in srgb, var(--mw-media-on) 14%, transparent);
-  --mw-ondark-fill-pressed: color-mix(in srgb, var(--mw-media-on) 24%, transparent);
-  --mw-ondark-line: color-mix(in srgb, var(--mw-media-on) 12%, transparent);
 
   /* 2. Tipografi: font: var(--mw-type-…) + letter-spacing: var(--mw-ls-…) */
   --mw-font-sans: var(--mw-font-jakarta, "Plus Jakarta Sans"), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

@@ -68,9 +68,10 @@ export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now =
 export type FeedQuery = {
   view: FeedView;
   session: SessionFilter;
-  /** baru: the stack's unseen photos; semua: everything in the view. */
+  /** baru: the stack (every photo, the person's own included: unseen first, then the seen and own ones); semua: everything in the view, newest first. */
   mode: FeedMode;
-  cursor?: { at: string; id: string } | null;
+  /** `rest`: the cursor is in the stack's second run (the seen and own photos). */
+  cursor?: { at: string; id: string; rest?: boolean } | null;
   direction?: "older" | "older_incl" | "newer";
   limit: number;
 };
@@ -83,13 +84,13 @@ export async function listFeed(context: MainWamContext, query: FeedQuery): Promi
   const { data, error } = await db().rpc("mw_photo_feed", {
     p_viewer: context.viewer.id, p_group: group, p_view: query.view,
     p_session: query.session && query.session !== UMUM ? query.session : null, p_umum: query.session === UMUM, p_unseen: query.mode === "baru",
-    p_cursor_at: query.cursor?.at ?? null, p_cursor_id: query.cursor?.id ?? null, p_direction: direction, p_limit: query.limit,
+    p_cursor_at: query.cursor?.at ?? null, p_cursor_id: query.cursor?.id ?? null, p_cursor_rest: query.cursor ? !!query.cursor.rest : null, p_direction: direction, p_limit: query.limit,
   });
   if (error) { if (mwMissing(error)) return { items: [], next: null, total: 0, migrated: false }; databaseError({ message: error.message ?? "", code: error.code }); }
   const rows = (data ?? []) as FeedRow[];
   const items = await feedPhotos(rows, context);
   const last = rows.at(-1);
-  const next = direction !== "newer" && last && rows.length >= query.limit ? encodeCursor(query.mode, last.visible_at, last.id) : null;
+  const next = direction !== "newer" && last && rows.length >= query.limit ? encodeCursor(query.mode, last.visible_at, last.id, last.seen) : null;
   return { items, next, total: Number(rows[0]?.total ?? 0), migrated: true };
 }
 

@@ -25,15 +25,12 @@
 .danger:active { background: var(--mw-error-pressed); }
 .dangerOutline { background: var(--mw-surface); color: var(--mw-on-error-container); box-shadow: inset 0 0 0 1px var(--mw-error); }
 .dangerText { background: transparent; color: var(--mw-on-error-container); padding: 0 var(--mw-space-12); }
-.ondark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
-.ondark:active { background: var(--mw-ondark-fill-pressed); }
 .secondary:active, .tonal:active, .text:active, .dangerOutline:active, .dangerText:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 
 @media (hover: hover) {
   .primary:hover { background: var(--mw-primary-strong); }
   .danger:hover { background: var(--mw-error-pressed); }
   .secondary:hover, .tonal:hover, .text:hover, .dangerOutline:hover, .dangerText:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
-  .ondark:hover { background: var(--mw-ondark-fill-pressed); }
 }
 
 /* Disabled: disabled colours, not opacity (PM 14 Nov). Text buttons stay transparent. */
@@ -54,12 +51,9 @@
 .iconFilled { background: var(--mw-primary); color: var(--mw-on-primary); }
 .iconFilled:active { background: var(--mw-primary-strong); }
 .iconOnmedia { background: var(--mw-media-scrim); color: var(--mw-media-on); }
-.iconOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
 .iconStandard:active, .iconTonal:active { background-image: linear-gradient(var(--mw-icon-press, var(--mw-press)), var(--mw-icon-press, var(--mw-press))); }
-.iconOndark:active { background: var(--mw-ondark-fill-pressed); }
 @media (hover: hover) {
   .iconStandard:hover, .iconTonal:hover { background-image: linear-gradient(var(--mw-icon-press, var(--mw-press)), var(--mw-icon-press, var(--mw-press))); }
-  .iconOndark:hover { background: var(--mw-ondark-fill-pressed); }
 }
 .icon:disabled, .icon[aria-disabled="true"] { color: var(--mw-disabled-fg); cursor: default; background-image: none; }
 .iconFilled:disabled, .iconFilled[aria-disabled="true"] { background: var(--mw-disabled-bg); }

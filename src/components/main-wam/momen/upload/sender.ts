@@ -75,6 +75,19 @@ export class MomenQueue {
 
   subscribe = (listener: Listener): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   onEvent(listener: EventListener): () => void { this.eventListeners.add(listener); return () => { this.eventListeners.delete(listener); }; }
+  /**
+   * The server's id of a photo of this visit once it has it (the upload is confirmed), waiting at most `ms`; null
+   * when it does not come in time (no signal, a slow upload): "Lihat" then opens Fotoku, where the queue shows it.
+   */
+  sentId(clientId: string, ms: number): Promise<string | null> {
+    const known = this.sent.get(clientId);
+    if (known) return Promise.resolve(known);
+    return new Promise(resolve => {
+      const done = (id: string | null) => { clearTimeout(timer); off(); resolve(id); };
+      const off = this.onEvent(event => { if (event.type === "sent" && event.item.clientId === clientId) done(event.photoId); });
+      const timer = setTimeout(() => done(this.sent.get(clientId) ?? null), ms);
+    });
+  }
   /** Online or offline changed: the summary says so. */
   refresh() { this.changed(); }
   private changed() { this.cached = null; this.listeners.forEach(listener => listener()); }

@@ -147,20 +147,21 @@ export function Scanner({ current, contact, preview }: { current: ScanContext; c
     <ShellChrome hideTopBar hideNav />
     <AbsenQueue />
     <section className={css.scan} aria-label={t("absen.scanRegion")}>
-      {!preview && <video ref={video} className={css.scanVideo} muted playsInline aria-hidden />}
-      <div className={css.scanShade} aria-hidden />
       <div className={css.scanBar}>
-        <IconButton icon={<X />} label={t("ui.close")} variant="ondark" onClick={close} />
+        <IconButton icon={<X />} label={t("ui.close")} variant="tonal" onClick={close} />
         <h1 className={css.scanTitle}>{t("absen.title")}</h1>
         {torch !== null
-          ? <IconButton icon={<Flashlight />} label={torch ? t("absen.torchOff") : t("absen.torchOn")} variant="ondark" pressed={torch} onClick={() => void toggleTorch()} />
+          ? <IconButton icon={<Flashlight />} label={torch ? t("absen.torchOff") : t("absen.torchOn")} variant="tonal" pressed={torch} onClick={() => void toggleTorch()} />
           : <span />}
       </div>
       {!online && <Banner tone="offline" className={css.scanBanner}>{t("absen.offlineBanner")}</Banner>}
       <div className={css.scanBody}>
-        <div className={`${css.frame} ${found ? css.frameOk : ""}`} aria-hidden>
-          <span className={css.corner} /><span className={css.corner} /><span className={css.corner} /><span className={css.corner} />
-          {!found && <span className={css.scanLine} />}
+        <div className={css.viewfinder}>
+          {!preview && <video ref={video} className={css.scanVideo} muted playsInline aria-hidden />}
+          <div className={`${css.frame} ${found ? css.frameOk : ""}`} aria-hidden>
+            <span className={css.corner} /><span className={css.corner} /><span className={css.corner} /><span className={css.corner} />
+            {!found && <span className={css.scanLine} />}
+          </div>
         </div>
         <p className={css.scanHint}>{t("absen.hint")}</p>
       </div>

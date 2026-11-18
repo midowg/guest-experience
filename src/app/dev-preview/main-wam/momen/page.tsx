@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  */
 
 const LAYAR = [
-  "M01", "M01-sesi", "M01-pilih-sesi", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia",
+  "M01", "M01-sesi", "M01-pilih-sesi", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu",
   "M02", "M02-kosong", "M02-belum-terbit", "M02-dari-galeri", "M03", "M04",
   "M05", "M05-kelompok", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
   "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
@@ -79,6 +79,7 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M01-disembunyikan-panitia": return at(mainWamPath.moments({ foto: sampleFeedSemua[0].id }), <MomenStack {...stack({
       mode: "galeri", items: [{ ...sampleFeedSemua[0], mine: true, status: "disembunyikan" }], total: 1, startIndex: 0, own: { id: sampleFeedSemua[0].id, status: "disembunyikan", reason: "" }, demo: {},
     })} />);
+    case "M01-fotomu": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, hearts: 7 } : photo)), total: 2, startIndex: 2, demo: {} })} />);
     case "M02": return at(momen, <MomenStack {...stack({ view: "kelompok", items: sampleFeedKelompok, total: 5, startIndex: 1, demo: {} })} />);
     case "M02-kosong": return at(momen, <MomenStack {...stack({ view: "kelompok", items: [], total: 0, anyPhotos: false, demo: {} })} />);
     case "M02-belum-terbit": return at(momen, <MomenStack {...stack({ view: "kelompok", items: [], total: 0, group: null, groupsPublished: false, demo: {} })} />);
@@ -121,8 +122,8 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "U01-umum": return at(kamera, camera({ phase: "kamera", live: "contoh" }, { now: new Date("2027-01-05T14:45:00+07:00") }), "teamBuilding");
     case "U01-pilih-sesi": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "sesi" }), "teamBuilding");
     case "U01-untuk": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "untuk" }), "teamBuilding");
-    case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={sentText(1, "semua", null, lang)} action="Batalkan" timer thumb /></>, "teamBuilding");
-    case "U02-kelompok": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" }, { initialAudience: "kelompok" })}<DemoToast text={sentText(1, "kelompok", viewer.group, lang)} action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={sentText(1, "semua", null, lang)} sub={t(lang, "momen.cam.sentSession", { title: "Team building" })} action={t(lang, "momen.cam.undo")} secondary={t(lang, "ui.see")} timer thumb /></>, "teamBuilding");
+    case "U02-kelompok": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" }, { initialAudience: "kelompok" })}<DemoToast text={sentText(1, "kelompok", viewer.group, lang)} sub={t(lang, "momen.cam.sentSession", { title: t(lang, "momen.general") })} action={t(lang, "momen.cam.undo")} secondary={t(lang, "ui.see")} timer thumb /></>, "teamBuilding");
     case "U02-dibatalkan": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text={t(lang, "momen.cam.cancelledOne")} tone="info" /></>, "teamBuilding");
     case "U03": return at(kamera, <>{camera({ phase: "kamera", live: "contoh", pill: 2, offline: true })}<DemoToast text={t(lang, "momen.cam.sendsOnline")} action="Batalkan" thumb /></>, "teamBuilding");
     case "U03-online": return at(momen, <><MomenStack {...stack({ demo: {} })} /><DemoToast text={flushedText(2, lang)} tone="success" /></>);

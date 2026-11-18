@@ -1,11 +1,13 @@
 /*
  * Kamera (U01–U05) and its pre-permission (O04), prototype .wam-camera, .wam-shutter. Tokens only.
- * The viewfinder is 4:5 like the stack card and as large as the screen allows (a size container),
- * so the chips and the shutter stay in view on short phones.
+ * The whole chrome follows the app's theme (light or dark) through tokens; only the live picture in the
+ * viewfinder is natural. The viewfinder is 4:5 (the photo is cropped to 4:5) and as large as the screen
+ * allows (a size container), centred in the space between the bar and the controls, so the chips and the
+ * shutter stay in view on short phones and nothing floats apart on a tall one.
  */
 .screen {
   flex: 1 1 auto; min-height: 100dvh; display: flex; flex-direction: column; padding: var(--mw-safe-top) var(--mw-space-16) 0;
-  background: var(--mw-camera); color: var(--mw-media-on);
+  background: var(--mw-bg); color: var(--mw-text-1);
 }
 /* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
 :global(:root:has([data-momen-camera])) { --mw-toast-bottom: 176px; }
@@ -15,18 +17,18 @@
 .stageInner { position: absolute; inset: 0; container-type: size; }
 .view {
   --w: min(calc(100cqw + var(--mw-space-32)), calc(100cqh * 0.8));
-  position: relative; width: var(--w); aspect-ratio: 4 / 5; margin-left: calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
-  background: var(--mw-camera-2);
+  position: relative; width: var(--w); aspect-ratio: 4 / 5; margin: calc((100cqh - var(--w) * 1.25) / 2) 0 0 calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
+  background: var(--mw-photo-bg);
 }
 .video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .mirror { transform: scaleX(-1); }
 .fill { position: absolute; inset: 0; }
 .off {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
-  padding: var(--mw-space-24); text-align: center; background: var(--mw-camera-2); color: var(--mw-media-on);
+  padding: var(--mw-space-24); text-align: center; background: var(--mw-surface-2); color: var(--mw-text-1);
 }
 .offTitle { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); }
-.offBody { margin: 0; font: var(--mw-type-body); color: var(--mw-media-on-2); text-wrap: balance; }
+.offBody { margin: 0; font: var(--mw-type-body); color: var(--mw-text-2); text-wrap: balance; }
 .offAction { margin-top: var(--mw-space-8); }
 .status { position: absolute; top: var(--mw-space-12); left: 50%; z-index: 2; transform: translateX(-50%); white-space: nowrap; }
 
@@ -34,31 +36,31 @@
 .controls { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; justify-items: center; }
 .gallery {
   position: relative; display: block; width: var(--mw-touch); height: var(--mw-touch); padding: 0; border: 0; border-radius: var(--mw-radius-12);
-  box-shadow: 0 0 0 2px var(--mw-media-on); overflow: hidden; cursor: pointer; background: var(--mw-camera-2);
+  box-shadow: 0 0 0 2px var(--mw-text-1); overflow: hidden; cursor: pointer; background: var(--mw-surface-2);
 }
-.gallery:focus-visible, .shutter:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 4px; }
+.gallery:focus-visible, .shutter:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 4px; }
 .galleryImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* ShutterButton: ring 76 + fill 60; pressed the fill shrinks; disabled dimmed. */
 .shutter {
   position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; padding: 0; border: 0; border-radius: var(--mw-radius-full);
-  background: none; box-shadow: inset 0 0 0 4px var(--mw-media-on); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: none; box-shadow: inset 0 0 0 4px var(--mw-text-1); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.shutter::before { content: ""; width: 60px; height: 60px; border-radius: var(--mw-radius-full); background: var(--mw-media-on); transition: transform var(--mw-motion-press); }
+.shutter::before { content: ""; width: 60px; height: 60px; border-radius: var(--mw-radius-full); background: var(--mw-text-1); transition: transform var(--mw-motion-press); }
 .shutter:active::before, .shutter[aria-busy="true"]::before { transform: scale(0.86); }
-.shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-media-on) 28%, transparent); cursor: default; }
-.shutter:disabled::before { background: color-mix(in srgb, var(--mw-media-on) 20%, transparent); }
+.shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-text-1) 28%, transparent); cursor: default; }
+.shutter:disabled::before { background: color-mix(in srgb, var(--mw-text-1) 20%, transparent); }
 .hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
-/* O04: the pre-permission, in the app's theme, before the camera (dark in both themes: a viewfinder). */
+/* O04: the pre-permission, in the app's theme, before the camera. */
 .izin { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--mw-bg); color: var(--mw-text-1); }
 .izinBody { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--mw-space-24); width: 100%; max-width: var(--mw-column); margin: 0 auto;
   padding: calc(var(--mw-safe-top) + var(--mw-space-16)) var(--mw-space-16) var(--mw-space-24); }
 .izinTitle { margin: var(--mw-space-16) 0 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); }
-.ill { display: flex; align-items: center; justify-content: center; gap: var(--mw-space-24); padding: var(--mw-space-24); border-radius: var(--mw-radius-16); background: var(--mw-camera); color: var(--mw-media-on); }
-.scan { position: relative; flex: none; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; color: var(--mw-media-on-2); }
+.ill { display: flex; align-items: center; justify-content: center; gap: var(--mw-space-24); padding: var(--mw-space-24); border-radius: var(--mw-radius-16); background: var(--mw-surface-2); color: var(--mw-text-1); }
+.scan { position: relative; flex: none; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; color: var(--mw-text-2); }
 .scan > svg { width: 96px; height: 96px; }
-.corner { position: absolute; width: 40px; height: 40px; border: 4px solid var(--mw-media-on); }
+.corner { position: absolute; width: 40px; height: 40px; border: 4px solid var(--mw-text-1); }
 .tl { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--mw-radius-24); }
 .tr { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: var(--mw-radius-24); }
 .bl { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: var(--mw-radius-24); }

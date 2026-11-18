@@ -25,9 +25,13 @@ describe("Momen filters", () => {
   it("page with a cursor that keeps the database's own time (microseconds)", () => {
     const at = "2027-01-05T03:02:00.123456+00:00";
     const cursor = encodeCursor("baru", at, RANI);
-    expect(decodeCursor(cursor)).toEqual({ mode: "baru", at, id: RANI });
-    expect(decodeCursor(encodeCursor("semua", null, null))).toEqual({ mode: "semua", at: null, id: null });
-    expect(decodeCursor("b~")).toEqual({ mode: "baru", at: null, id: null });
+    expect(decodeCursor(cursor)).toEqual({ mode: "baru", at, id: RANI, rest: false });
+    // The stack's second run (the seen and own photos) has a cursor of its own.
+    expect(decodeCursor(encodeCursor("baru", at, RANI, true))).toEqual({ mode: "baru", at, id: RANI, rest: true });
+    expect(encodeCursor("semua", at, RANI, true)).toBe(`s~${at}~${RANI}`);
+    expect(decodeCursor("r~")).toBeNull();
+    expect(decodeCursor(encodeCursor("semua", null, null))).toEqual({ mode: "semua", at: null, id: null, rest: false });
+    expect(decodeCursor("b~")).toEqual({ mode: "baru", at: null, id: null, rest: false });
     expect(decodeCursor("x~2027~id")).toBeNull();
     expect(decodeCursor(`s~kemarin~${RANI}`)).toBeNull();
     expect(decodeCursor(`s~${at}~bukan`)).toBeNull();

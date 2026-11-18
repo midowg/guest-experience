@@ -211,11 +211,11 @@ export function themeVars(theme: ResolvedTheme): Record<string, string> {
 }
 
 /**
- * The page behind the app in each mode (theme.module.css --mw-bg; the camera, dark in both, is --mw-camera).
+ * The page behind the app in each mode (theme.module.css --mw-bg).
  * Fixed, not a theme slot: the body's colour (MainWamTheme) and the phone's status bar
  * (theme-color, mainWamThemeColor) both read it, so the bar and the page are one surface.
  */
-export const PAGE_COLORS = { light: "#F6F7F9", dark: "#0E1116", camera: "#111827" } as const;
+export const PAGE_COLORS = { light: "#F6F7F9", dark: "#0E1116" } as const;
 
 /**
  * `theme-color` for the phone's status and address bar (Next's Viewport.themeColor), one entry per

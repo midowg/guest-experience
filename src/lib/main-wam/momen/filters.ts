@@ -37,16 +37,17 @@ export function parsePhotoId(raw: string | string[] | undefined | null): string 
 }
 
 /*
- * The cursor of a list: which list (b = "baru", the stack's unseen photos; s = all of a view) and the
- * last photo shown, by its (visible_at, id) exactly as the database wrote it (microseconds kept, so
- * no photo is skipped or repeated). "b~" alone asks for the first page of the unseen photos.
+ * The cursor of a list: which list (b = "baru", the stack: the unseen photos; r = the stack's second run,
+ * the seen and the person's own photos; s = all of a view) and the last photo shown, by its (visible_at,
+ * id) exactly as the database wrote it (microseconds kept, so no photo is skipped or repeated). "b~" alone
+ * asks for the first page of the stack.
  */
 export type FeedMode = "baru" | "semua";
-export type Cursor = { mode: FeedMode; at: string | null; id: string | null };
+export type Cursor = { mode: FeedMode; at: string | null; id: string | null; /** The stack's second run (seen and own photos). */ rest: boolean };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})$/;
 
-export function encodeCursor(mode: FeedMode, at: string | null, id: string | null): string {
-  const tag = mode === "baru" ? "b" : "s";
+export function encodeCursor(mode: FeedMode, at: string | null, id: string | null, rest = false): string {
+  const tag = mode === "baru" ? (rest ? "r" : "b") : "s";
   return at && id ? `${tag}~${at}~${id}` : `${tag}~`;
 }
 
@@ -54,11 +55,12 @@ export function decodeCursor(raw: string | string[] | undefined | null): Cursor 
   const value = one(raw);
   if (!value || value.length > 120) return null;
   const [tag, at, id] = value.split("~");
-  if (tag !== "b" && tag !== "s") return null;
-  const mode: FeedMode = tag === "b" ? "baru" : "semua";
-  if (!at && !id) return { mode, at: null, id: null };
+  if (tag !== "b" && tag !== "r" && tag !== "s") return null;
+  const mode: FeedMode = tag === "s" ? "semua" : "baru";
+  const rest = tag === "r";
+  if (!at && !id) return rest ? null : { mode, at: null, id: null, rest };
   if (!at || !ISO.test(at) || !isUuid(id)) return null;
-  return { mode, at, id: id.toLowerCase() };
+  return { mode, at, id: id.toLowerCase(), rest };
 }
 
 /** The feed's page size: a stack prefetches when 5 cards are left; a gallery fills a few screens. */

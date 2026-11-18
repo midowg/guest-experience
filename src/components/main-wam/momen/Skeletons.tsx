@@ -19,14 +19,16 @@ export function StackSkeleton() {
     </ShellActions>
     <SkeletonGroup label="Memuat momen" style={{ display: "contents" }}>
       <div className={stack.filter}><Skeleton shape="block" height={40} style={{ flex: 1, borderRadius: 999 }} /><Skeleton shape="block" width={128} height={36} style={{ borderRadius: 999 }} /></div>
-      <div className={stack.deck}><div className={stack.deckInner}><div className={stack.pile}><div className={stack.panel} /></div></div></div>
-      <p className={stack.hint} />
-      <div className={stack.actions}><span /><span className={stack.camera} aria-hidden /><span /></div>
+      <div className={stack.stage}>
+        <div className={stack.deck}><div className={stack.deckInner}><div className={stack.pile}><div className={stack.panel} /></div></div></div>
+        <p className={stack.hint} />
+        <div className={stack.actions}><span /><span className={stack.camera} aria-hidden /><span /></div>
+      </div>
     </SkeletonGroup>
   </div>;
 }
 
-/** The camera: dark, the viewfinder and the shutter in place. */
+/** The camera: in the app's theme, the viewfinder and the shutter in place. */
 export function CameraSkeleton() {
   return <div className={camera.screen} data-momen-camera="">
     <SkeletonGroup label="Menyiapkan kamera" style={{ display: "contents" }}>

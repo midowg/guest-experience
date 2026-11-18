@@ -69,8 +69,7 @@ Nama token = nama prototipe dengan awalan `--mw-`:
 | `--text-X` + `--ls-X` | `--mw-type-X` + `--mw-ls-X` | `font: var(--mw-type-body-small)` |
 | `--space-N`, `--radius-N`, `--elev-N` | `--mw-space-N`, `--mw-radius-N`, `--mw-elev-N` | `gap: var(--mw-space-12)` |
 | `--motion-*`, `--ease-*` | `--mw-motion-*`, `--mw-ease-*` | `transition: background-color var(--mw-motion-press)` |
-| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, hati) dan di atas kamera: putih tetap di kedua mode |
-| (baru) | `--mw-camera`, `--mw-camera-2`, `--mw-ondark-fill*`, `--mw-ondark-line` | permukaan kamera dan pemindai QR (gelap di kedua mode, jendela bidik) dan isian di atasnya |
+| (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, hati) dan di atas gambar langsung kamera/pemindai: putih tetap di kedua mode |
 | (baru) | `--mw-photo-bg`, `--mw-ph-1…6`, `--mw-ph-glow`, `--mw-ph-shade` | latar foto yang belum termuat dan placeholder netral (punya nilai gelap sendiri) |
 | (baru) | `--mw-safe-top/bottom/left/right`, `--mw-nav-h`, `--mw-touch`, `--mw-column` | area aman iPhone, bilah bawah 64, sentuh 44, kolom 480 |
 
@@ -102,10 +101,12 @@ petakan di `DISPLAY_FONT_VARS` (`MainWamTheme.tsx`). Tanpa itu, kunci ditolak.
 (`readMainWamMode`) dan memberi `mode` ke `MainWamTheme`, jadi tidak ada kedip. Mengganti pilihan
 (`MainWamModeSetting`/`applyMainWamMode`) menulis cookie, mengubah `data-mw-mode` di akar dan kedua tag
 `theme-color` seketika, lalu `router.refresh()`. **Semua layar mengikuti tema**, termasuk Momen: tidak ada
-permukaan gelap tersendiri. Dua pengecualian yang disengaja, keduanya jendela bidik: **kamera Momen** dan
-**pemindai QR Absen** gelap di kedua mode (`--mw-camera`, varian `ondark`); kerangka tidak menggambar bilah
-untuk kamera (`screen.camera`, `data-mw-camera`). Layar pra-izin kamera (O04) mengikuti tema. Sheet dan
-konfirmasi mengikuti tema. Blok `[data-mw-mode="dark"]` dan blok Sistem di `theme.module.css` harus sama
+permukaan gelap tersendiri, **termasuk kamera Momen dan pemindai QR Absen**: bilah atas, chip Untuk/Sesi, tombol
+jepret, latar di sekitar jendela bidik, placeholder sebelum kamera siap (`--mw-photo-bg`/`--mw-surface-2`), kartu
+dan teks bantuan semuanya lewat token tema. Hanya isi jendela bidik (video langsung) yang alami; tanda di atasnya
+(sudut bingkai QR) memakai `--mw-media-on` + bayangan token. Tidak ada lagi `--mw-camera*`, `--mw-ondark*`,
+`data-mw-camera`, atau varian `ondark` (dijaga `colors.test.ts`). `screen.camera` tinggal berarti "kamera menggambar
+bilahnya sendiri, kerangka tidak menggambar bilah atas dan bawah". Sheet dan konfirmasi mengikuti tema. Blok `[data-mw-mode="dark"]` dan blok Sistem di `theme.module.css` harus sama
 (dijaga `colors.test.ts`). Pratinjau: `?mode=dark` pada galeri kit, atau ubah `data-mw-mode` di akar.
 
 **Font**: Plus Jakarta Sans lewat `next/font/google` (`theme/font.ts`), variable font satu berkas,
@@ -123,7 +124,7 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | `akar` lain | judul besar (h1); bilah ringkas muncul setelah judul tergulir | ya |
 | `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
-| `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya, gelap di kedua mode) | tidak |
+| `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya sendiri, mengikuti tema) | tidak |
 
 Momen mengikuti tema seperti tab lain (tidak ada bilah atau latar gelap tersendiri). ‹/✕ kembali ke layar sebelumnya bila
 ada riwayat di aplikasi, kalau tidak ke `back.href` (dibuka dari notifikasi atau QR). Toast
@@ -167,8 +168,8 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `Button` | `variant`: `primary` · `secondary` · `tonal` · `text` · `danger` · `danger-outline` · `danger-text` · `ondark`; `size` `l` (48) / `m` (40, sentuh 44); `block`; `icon`; `loading` + `loadingLabel`; `disabled`; `type`; `href` | aksi. `loading`: spinner, klik diabaikan, fokus tetap (aria-busy), submit tidak terkirim dua kali. Tinggi minimum 48/40; label yang tidak muat membungkus (tombol meninggi), tidak dipotong |
-| `IconButton` | `icon`, **`label`** (wajib, nama yang dibacakan), `variant` `standard` · `tonal` · `filled` · `onmedia` · `ondark`, `size` 44/56, `pressed` (+ `liked` = hati merah), `badge` (angka atau `"dot"`) | aksi tanpa teks. Sertakan jumlah di `label` ("Notifikasi, 3 belum dibaca") |
+| `Button` | `variant`: `primary` · `secondary` · `tonal` · `text` · `danger` · `danger-outline` · `danger-text`; `size` `l` (48) / `m` (40, sentuh 44); `block`; `icon`; `loading` + `loadingLabel`; `disabled`; `type`; `href` | aksi. `loading`: spinner, klik diabaikan, fokus tetap (aria-busy), submit tidak terkirim dua kali. Tinggi minimum 48/40; label yang tidak muat membungkus (tombol meninggi), tidak dipotong |
+| `IconButton` | `icon`, **`label`** (wajib, nama yang dibacakan), `variant` `standard` · `tonal` · `filled` · `onmedia`, `size` 44/56, `pressed` (+ `liked` = hati merah), `badge` (angka atau `"dot"`) | aksi tanpa teks. Sertakan jumlah di `label` ("Notifikasi, 3 belum dibaca") |
 | `TextLink` | `href`/`onClick`, `chevron` | "Lihat semua", "Semua" |
 
 ```tsx
@@ -217,7 +218,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | `Chip` | `icon`, `href` | informasi ("Kelompok 4", "Aula Utama"), bukan kontrol |
 | `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
 | `ChipRow` | `scroll` (geser ke tepi layar) atau bungkus; `label` | deretan chip |
-| `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera gelap ("Sesi: Team building ✕") |
+| `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera (mengikuti tema; "Sesi: Team building ✕") |
 | `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`** | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
 | `Switch` | `checked`, `onChange`, `label` (atau `labelledBy`) | nyala/mati langsung berlaku |
 | `SwitchRow` | `title`, `sub`, `checked`, `onChange`, `inList` | sakelar berteks ("Kabari peserta"); seluruh baris bisa diketuk |
@@ -261,7 +262,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | `Sheet` | `open`, `onClose`, `title`, `subtitle`, `footer`, `history` (bawaan true), `locked`, `initialFocus`, `flush` | detail atau form pendek di atas layar |
 | `useHashSheet(id)` | `{ open, show, close }` | sheet beralamat `#id` (tautan bisa membukanya); pakai dengan `<Sheet history={false}>` |
 | `ConfirmDialog` | `open`, `onCancel`, `onConfirm`, `title` (pertanyaan), `body` (akibat), `confirmLabel` (hasil), `tone` `primary`/`danger` (+ ikon), `busy` + `busyLabel` | konfirmasi aksi berisiko |
-| `useToast()` | `show({ text, sub, tone, action {label, onAction}, duration, timer, thumb, onTimeout })` → id; `dismiss(id)` | konfirmasi singkat. 4 dtk, 6 dtk dengan aksi. Galat yang perlu tindakan = Banner |
+| `useToast()` | `show({ text, sub, tone, action {label, onAction}, secondary {label, onAction}, duration, timer, thumb, onTimeout })` → id; `dismiss(id)` | konfirmasi singkat. 4 dtk, 6 dtk dengan aksi. `secondary` = aksi kedua di depan `action` ("Lihat" di samping "Batalkan"); dengan dua aksi, keduanya pindah ke baris sendiri di bawah teks. Galat yang perlu tindakan = Banner |
 | `ToastPreview` | tampilan statis toast | galeri |
 | `TopBar` | `variant` `large` · `back` · `home`, `actions`, `sticky`, `scrolled`; `back`: `label` (nama layar untuk pembaca layar bila `title` kosong; tanpa keduanya tidak ada h1 kosong) | dipakai shell; layar biasanya tidak memakainya langsung |
 | `ActionBar` | `note`, `row` | aksi utama layar tugas, lengket di bawah, dengan area aman |
@@ -327,6 +328,18 @@ Sheet pilih sesi (contoh di galeri):
 - Mock `next/link` menjadi `<a>` dan `next/navigation` (`usePathname`, `useRouter`) bila merender shell.
 - Toast dengan `vi.useFakeTimers()`.
 - Cek tampilan: Playwright Python headless 390 × 844 @2x di halaman dev-preview.
+
+### Tata letak layar yang mengisi tinggi (Momen)
+
+Layar yang isinya satu objek utama (tumpukan Momen) tidak memakai angka cadangan tetap. `<main>` sudah setinggi layar;
+isi layar menjadi kolom flex: bilah saringan di atas, lalu satu `stage` (kartu + baris keterangan + baris aksi) yang
+dipusatkan. Kartu adalah item flex (`flex: 1 1 0`, minimal 240, maksimal 9:16 lewat `--mw-deck-max`) dan kontainer ukuran
+(`container-type: size`) tempat tumpukan menghitung lebarnya (`min(lebar, tinggi / 1,25)`) dan tingginya
+(`min(tinggi, lebar × 1,78)`); foto `object-fit: cover`. Di layar tinggi (412×915) kartu meninggi dan baris aksi
+menempel di bawahnya; di layar sangat tinggi kartu berhenti di 9:16 dan ketiganya dipusatkan; di layar pendek
+(320×568, 360×640) kartu menyusut ke 4:5 dan tidak ada yang terpotong. Layar daftar (Beranda, Agenda, Saya, Galeri)
+tetap mengalir dari atas dan menggulir; ruang kosong di bawah isi pendek adalah perilaku daftar, bukan celah antar
+bagian. Viewfinder kamera tetap 4:5 (foto dipotong 4:5) dan dipusatkan antara bilah dan tombol jepret.
 
 ## 6. Yang belum ada di kit
 

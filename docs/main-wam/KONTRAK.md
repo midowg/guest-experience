@@ -197,7 +197,7 @@ sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek S
 | `home-card.ts` | `pickHomeCard` (pengumuman penting > Silent Meeting dibuka > voting dibuka > hari berangkat > survei; modul mati dibuang); kandidat pengumuman membawa `tone` |
 | `module-state.ts` | `silentState` (tutup final), `silentClosesAt` (selalu akhir sesi sampai ditutup), `silentRecapReady` (≥ 5), `SilentResult`, `silentShownCount` (jumlah hanya setelah tutup final, ≥ 5 masukan dan ≥ 5 pembuka), `votingState` |
 | `modules.ts` | `moduleInfo`, `moduleOn`, `activeModules` |
-| `screen.ts` | `mainWamScreen(pathname)` (tab, level akar/detail/tugas, judul, `label` untuk judul kosong, kembali, gelap), `mainWamTabs`, `showsBottomBar`, `showsBell` — dibaca shell UI KIT. P04 tanpa judul (label "Detail sesi"); B06 "Awarding" |
+| `screen.ts` | `mainWamScreen(pathname)` (tab, level akar/detail/tugas, judul, `label` untuk judul kosong, kembali, `camera` = menggambar bilahnya sendiri), `mainWamTabs`, `showsBottomBar`, `showsBell` — dibaca shell UI KIT. P04 tanpa judul (label "Detail sesi"); B06 "Awarding" |
 | `notify.ts` | `notePushTopic`, `noteIcon`, `announcementKind`, `noteTone` (pilihan panitia; selain itu `warning` untuk jadwal atau judul yang menyebut perubahan: berubah, diubah, pindah, mundur, batal, ditunda…) |
 | `greeting.ts` | `homeGreeting(now, name, event, role?)` (panitia: "Hari ke-2 dari 4 · Panitia"), `salam` |
 | `settings.ts` | `defaultSettings`, `settingsFromRow`, `settingsInputSchema`, `settingsPatch`, nama migrasi |
@@ -326,6 +326,15 @@ milik D), tanpa mengimpor kode area lain.
 - **Nama**: rekan = `name` (nama panggilan) dari `mainWamPeople`/`personOf`; admin = `fullName`.
 - **Notifikasi**: selalu `sendMainWamNote`/`trySendMainWamNote` (jangan menulis `pw_announcements` sendiri).
   Kabar tentang satu sesi memakai `tag` `sesi-<id>` supaya menggantikan kabar sebelumnya.
+- **Tumpukan Momen (keputusan PM, 18 Nov)**: tumpukan memuat **semua** foto tampilan itu, **foto sendiri ikut** (pil "Fotomu",
+  jumlah suka yang diterima tanpa tombol hati). Urutan dua lintasan, masing-masing terbaru dulu: foto orang lain yang belum
+  dilihat, lalu yang sudah dilihat dan milik sendiri. `mw_photo_feed(…, p_unseen, p_cursor_at, p_cursor_id, p_cursor_rest, p_direction, …)`:
+  `p_unseen` hanya untuk arah `older`; kursor menyebut lintasannya (`p_cursor_rest` false = belum dilihat, true = sudah/sendiri; di
+  alamat API `b~…` dan `r~…`), jadi foto yang baru dilihat tidak menggeser kursor; `total` = sisa di lintasan kursor (halaman pertama:
+  jumlah foto baru). Foto sendiri tidak dihitung "N foto baru" (kartu Beranda memakai `total` itu). Kartu kosong (belum ada foto
+  sama sekali): "Jadilah yang pertama memotret {acara}" + tombol Ambil foto. Setelah jepret, toast "Terkirim ke {siapa}" +
+  "Sesi: {sesi atau Umum}" + **Batalkan** (5 detik) + **Lihat**, yang membuka tumpukan tepat di foto itu
+  (`moments({ lihat, foto })`, menunggu unggahan sampai 3 detik; bila belum masuk, Fotoku).
 - **Foto Momen**: unggah dua langkah seperti foto MoM (server memberi kunci + presigned PUT dengan tipe dan
   ukuran ditandatangani, browser PUT ke R2, server cek byte awal); `client_id` dari HP untuk antrean offline;
   file disajikan lewat server (`photoFile` → URL sementara), R2 tetap privat.
@@ -444,8 +453,8 @@ milik D), tanpa mengimpor kode area lain.
   dipakai. Gate kini 6 kueri per permintaan (S5); `mainWamPeople()` (nama dan foto semua orang) masih dibaca
   per permintaan di layar yang memakainya.
 - **`theme-color`**: mengikuti pilihan Tampilan perangkat (Terang `#F6F7F9`, Gelap `#0E1116`, Sistem: keduanya
-  menurut skema HP), dibaca server di `acara/layout.tsx`. Momen tidak lagi gelap sendiri; kamera (gelap di kedua
-  mode) belum mengubah meta saat dibuka.
+  menurut skema HP), dibaca server di `acara/layout.tsx`. Momen dan kamera tidak lagi gelap sendiri: seluruh chrome
+  kamera dan pemindai QR mengikuti tema (hanya video langsung yang alami), jadi meta tidak berubah saat kamera dibuka.
 - **`acara/error.tsx` untuk Masuk** (T-S02): Masuk belum punya batas galat sendiri; galatnya jatuh ke halaman
   galat situs.
 - **Pengumuman bernada peringatan dari K06**: `NoteInput.tone` sudah ada; K06 (C) belum memberi pilihan,

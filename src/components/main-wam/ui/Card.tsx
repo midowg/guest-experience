@@ -43,10 +43,10 @@ export function CardHead({ icon, iconTone, title, sub, end, className }: {
   </div>;
 }
 
-export type IconBoxTone = "neutral" | "primary" | "success" | "warning" | "error" | "momen" | "emisi" | "wellbeing" | "awarding" | "ondark";
+export type IconBoxTone = "neutral" | "primary" | "success" | "warning" | "error" | "momen" | "emisi" | "wellbeing" | "awarding";
 const BOX_TONE: Record<IconBoxTone, string | undefined> = {
   neutral: undefined, primary: css.boxPrimary, success: css.boxSuccess, warning: css.boxWarning, error: css.boxError,
-  momen: css.boxMomen, emisi: css.boxEmisi, wellbeing: css.boxWellbeing, awarding: css.boxAwarding, ondark: css.boxOndark,
+  momen: css.boxMomen, emisi: css.boxEmisi, wellbeing: css.boxWellbeing, awarding: css.boxAwarding,
 };
 
 /**

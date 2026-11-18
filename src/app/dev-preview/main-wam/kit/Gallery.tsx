@@ -114,9 +114,6 @@ export function KitGallery() {
       <Group label="Lebar penuh, dengan ikon · coba memuat">
         <Button block icon={ScanLine} loading={loading} loadingLabel="Membuka kamera…" onClick={() => { setLoading(true); window.setTimeout(() => setLoading(false), 2000); }}>Absen</Button>
       </Group>
-      <Group label="Di atas gelap (kamera, pemindai) · ondark">
-        <div className={css.dark}><div className={css.row}><Button variant="ondark" icon={Images}>Galeri</Button><Button variant="ondark" size="m">Ganti</Button></div></div>
-      </Group>
       <Group label="IconButton · standard, tonal, filled, ditekan (suka), nonaktif, lencana">
         <div className={css.row}>
           <IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} />
@@ -127,12 +124,11 @@ export function KitGallery() {
           <IconButton icon={Bell} label="Notifikasi, ada yang baru" badge="dot" />
         </div>
       </Group>
-      <Group label="IconButton di atas foto (onmedia) dan gelap (ondark), 44 dan 56">
+      <Group label="IconButton di atas foto (onmedia), 44 dan 56">
         <div className={css.media}>
           <IconButton icon={X} label="Tutup" variant="onmedia" />
           <IconButton icon={Camera} label="Kamera" variant="onmedia" size={56} />
         </div>
-        <div className={css.dark}><div className={css.row}><IconButton icon={X} label="Tutup" variant="ondark" /><IconButton icon={Images} label="Galeri" variant="ondark" disabled /></div></div>
       </Group>
       <Group label="Tautan teks">
         <div className={css.row}><TextLink href="#tombol">Lihat semua</TextLink><TextLink href="#tombol" chevron>Semua</TextLink></div>
@@ -161,7 +157,7 @@ export function KitGallery() {
           <FilterChip menu name="Sesi" active>Team building</FilterChip>
         </div>
       </Group>
-      <Group label="TagChip di kamera · menu ▾ dan hapus ✕">
+      <Group label="TagChip di kamera (mengikuti tema) · menu ▾ dan hapus ✕">
         <div className={css.camera}>
           <TagChipRow>
             <TagChip label="Untuk:" value={audience === "semua" ? "Semua" : "Kelompokku"} onClick={() => setAudience(value => value === "semua" ? "kelompok" : "semua")} />

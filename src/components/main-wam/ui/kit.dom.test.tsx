@@ -178,6 +178,21 @@ describe("Toast", () => {
     expect(onTimeout).not.toHaveBeenCalled();
   });
 
+  it("two actions (Lihat, Batalkan): each runs once, closes the toast, and neither counts as a time out", () => {
+    vi.useFakeTimers();
+    const see = vi.fn(), undo = vi.fn(), onTimeout = vi.fn();
+    render(<ToastHarness toast={{ text: "Terkirim ke semua peserta", sub: "Sesi: Team building", timer: true, duration: 5000, action: { label: "Batalkan", onAction: undo }, secondary: { label: "Lihat", onAction: see }, onTimeout }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Kirim" }));
+    expect(screen.getByText("Sesi: Team building")).toBeTruthy();
+    expect(screen.getAllByRole("button").map(button => button.textContent)).toEqual(["Kirim", "Lihat", "Batalkan"]);
+    fireEvent.click(screen.getByRole("button", { name: "Lihat" }));
+    expect(see).toHaveBeenCalledTimes(1);
+    expect(undo).not.toHaveBeenCalled();
+    expect(screen.queryByText("Terkirim ke semua peserta")).toBeNull();
+    act(() => { vi.advanceTimersByTime(10000); });
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
   it("commits on time out when nobody pressed the action", () => {
     vi.useFakeTimers();
     const onAction = vi.fn();

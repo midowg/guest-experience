@@ -36,7 +36,7 @@
 .tag {
   position: relative; flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: var(--mw-space-4);
   height: 36px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-full);
-  background: var(--mw-ondark-fill); color: var(--mw-media-on); font: var(--mw-type-label); white-space: nowrap;
+  background: var(--mw-surface-2); color: var(--mw-text-1); font: var(--mw-type-label); white-space: nowrap;
 }
 .tag svg { flex: none; width: 16px; height: 16px; }
 /* The 36 chip answers a touch 44 tall. */
@@ -44,7 +44,7 @@ a.tag::after, button.tag::after { content: ""; position: absolute; left: 0; righ
 a.tag, button.tag { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tagMain { position: relative; min-width: 0; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: 100%; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tagMain::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
-.tagLabel { flex: none; font: var(--mw-type-body-small); color: var(--mw-media-on-2); }
+.tagLabel { flex: none; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .tagValue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tagClearable { padding-right: 0; }
 .tagClear {

@@ -60,6 +60,18 @@ describe("Main WAM: no literal colours outside the tokens", () => {
     expect(found).toEqual([]);
   });
 
+  it("the camera and the QR scanner follow the theme: no surface of their own (no --mw-camera*, --mw-ondark*, data-mw-camera, ondark variants)", () => {
+    const theme = readFileSync(join(here, "theme", "theme.module.css"), "utf8");
+    expect(theme).not.toMatch(/--mw-(camera|ondark|overlay-camera)/);
+    const used: string[] = [];
+    for (const file of all) {
+      const code = strip(readFileSync(file, "utf8"));
+      const hit = /--mw-(?:camera|ondark|overlay-camera)|data-mw-camera|variant="ondark"|tone="ondark"|\.ondark|\.iconOndark/.exec(code);
+      if (hit) used.push(`${relative(here, file)}: ${hit[0]}`);
+    }
+    expect(used).toEqual([]);
+  });
+
   it("every exception still exists and still needs it", () => {
     for (const name of Object.keys(EXCEPTIONS)) {
       const file = all.find(path => relative(here, path).split(sep).join("/") === name);
@@ -82,7 +94,7 @@ describe("Main WAM: no literal colours outside the tokens", () => {
       }
     }
     // Set by the theme root from the admin's slots (kv-*, font) or by a component's own style prop (toast-*, reserve, w, badge-ring …).
-    expect([...new Set(unknown)].filter(entry => !/--mw-(kv-|font-jakarta|toast-)|-(reserve|w|icon-fg|icon-press|badge-ring|vvh)$/.test(entry))).toEqual([]);
+    expect([...new Set(unknown)].filter(entry => !/--mw-(kv-|font-jakarta|toast-)|-(w|icon-fg|icon-press|badge-ring|vvh)$/.test(entry))).toEqual([]);
   });
 });
 
@@ -110,8 +122,8 @@ describe("Main WAM: light and dark tokens", () => {
     expect(system).toEqual(dark);
   });
 
-  it("every colour token the light mode has is either redefined for dark or meant to be the same (media, camera, fixed hues)", () => {
-    const same = /^--mw-(media-|camera|ondark-|overlay-|kv-|chart-|image-|font|display-font|type-|ls-|space-|radius-|ease-|motion-|touch|topbar|nav-h|safe-|column|focus|photo-bg|elev-0)/;
+  it("every colour token the light mode has is either redefined for dark or meant to be the same (media, fixed hues)", () => {
+    const same = /^--mw-(media-|overlay-|kv-|chart-|image-|font|display-font|type-|ls-|space-|radius-|ease-|motion-|touch|topbar|nav-h|safe-|column|focus|photo-bg|elev-0)/;
     const colour = (value: string) => /#|rgb\(|color-mix|linear-gradient/.test(value);
     const missing = Object.entries(light).filter(([name, value]) => colour(value) && !same.test(name) && !(name in dark)).map(([name]) => name);
     expect(missing).toEqual([]);

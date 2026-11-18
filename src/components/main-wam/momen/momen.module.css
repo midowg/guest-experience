@@ -1,14 +1,15 @@
 /*
  * Momen (M01–M03): the stack, in the app's theme like every tab (light or dark; no surface of its own).
  * Prototype .wam-stackview, .wam-stackcard, .wam-react, .wam-camerabtn. Tokens only. Only what sits on a
- * photo (the name pill, the heart) keeps the fixed media colours: they sit on a scrim, not on the page. The card is 4:5 and as large as the space allows (the
- * deck is a size container), so short phones keep the actions in view without scrolling.
+ * photo (the name pill, the heart) keeps the fixed media colours: they sit on a scrim, not on the page. The card takes the height that is left
+ * (the deck is a flex item and a size container), from 4:5 up to 9:16, so the actions sit right under it on any screen.
  */
-/* --mw-reserve: what is not the deck on a phone screen: the large title bar (72), the filters (56), the
-   line under the cards (32), the actions (92) and the tab bar (64); opened from the gallery the bar is
-   56 and there are no filters. The deck takes the rest, so the actions stay in view on a short phone. */
-.view { --mw-reserve: 316px; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--mw-space-16); }
-.viewGaleri { --mw-reserve: 244px; }
+/* The page's column is the height of the screen (the frame's <main> grows to it): the filter on top, then the
+   stage, which holds the cards, the line under them and the actions. The cards take whatever height is left
+   (a flex item, no fixed number), up to a 9:16 card; the line and the actions follow right under them, and
+   on a very tall screen the three are centred together instead of drifting apart. */
+.view { --mw-deck-max: calc((min(100vw, var(--mw-column)) - var(--mw-space-48)) * 1.78 + var(--mw-space-16)); flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--mw-space-16); }
+.stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .filter { display: flex; align-items: center; gap: var(--mw-space-12); min-height: var(--mw-touch); }
 .filter > :first-child { flex: 1 1 auto; min-width: 0; }
 .filterChip { flex: 0 1 auto; min-width: 0; max-width: 40%; }
@@ -18,22 +19,28 @@
 .ownBar { padding-top: var(--mw-safe-top); }
 .ownCount { font: var(--mw-type-label); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--mw-space-8); }
 
-/* As tall as a full-width 4:5 card (+16 for the cards peeking behind), smaller on a short screen; what is
-   left goes above the actions (they stay at the thumb). */
-.deck {
-  position: relative; min-height: 240px; margin-top: var(--mw-space-12); outline: none;
-  flex: 0 0 min(
-    calc((min(100vw, var(--mw-column)) - var(--mw-space-48)) * 1.25 + var(--mw-space-16)),
-    calc(100dvh - var(--mw-reserve) - var(--mw-safe-top) - var(--mw-safe-bottom))
-  );
-}
+/* The deck takes the space between the filter and the line under it (flex 1), at least 240 and at most
+   a 9:16 card (+16 for the cards peeking behind). Short screens scroll instead of squeezing the card. */
+.deck { position: relative; flex: 1 1 0; min-height: 240px; max-height: var(--mw-deck-max); margin-top: var(--mw-space-12); outline: none; }
 /* The size container is absolutely placed: its height is known before its cards are laid out (a flex
    item's is not, in Chromium, and the cards would resolve 100cqh to 0). */
 .deckInner { position: absolute; inset: 0; container-type: size; }
 .deck:focus-visible { outline-offset: 4px; border-radius: var(--mw-radius-24); }
+/* The pile: as wide as the deck (less 16 for the cards behind) and as tall as it, but never taller than 9:16
+   nor, when the room is short, wider than 4:5 allows. The photo fills it (object-fit: cover). */
 .pile {
   --w: min(calc(100cqw - var(--mw-space-16)), calc((100cqh - var(--mw-space-16)) * 0.8));
-  position: relative; width: var(--w); aspect-ratio: 4 / 5; margin-left: calc((100cqw - var(--mw-space-16) - var(--w)) / 2);
+  position: relative; width: var(--w); height: min(calc(100cqh - var(--mw-space-16)), calc(var(--w) * 1.78));
+  margin-left: calc((100cqw - var(--mw-space-16) - var(--w)) / 2);
+}
+
+/* A panel (empty, all seen, hidden, loading) is not a photo: it takes the whole deck, not a 4:5 card, and a short deck drops its icon. */
+.deck[data-panel] .pile { --w: calc(100cqw - var(--mw-space-16)); height: calc(100cqh - var(--mw-space-16)); margin-left: 0; }
+@container (max-height: 300px) {
+  .panel { padding: var(--mw-space-16); gap: var(--mw-space-8); }
+  .panelInner { gap: var(--mw-space-8); }
+  .panelInner > :first-child:not(h2):not(p):not(div) { display: none; }
+  .panelTitle { font: var(--mw-type-subtitle); }
 }
 
 .card {
@@ -54,6 +61,7 @@
   max-width: calc(100% - var(--mw-space-16)); padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-8) var(--mw-space-8);
   border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); pointer-events: none;
 }
+.mineTag { position: absolute; left: var(--mw-space-12); top: var(--mw-space-12); z-index: 3; pointer-events: none; }
 .who { min-width: 0; display: flex; flex-direction: column; }
 .name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -86,7 +94,7 @@
 .count { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count > svg { width: 16px; height: 16px; }
 
-.actions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; margin-top: auto; padding: var(--mw-space-16) 0 var(--mw-space-12); }
+.actions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: var(--mw-space-12) 0 var(--mw-space-12); }
 .actions > :first-child { justify-self: start; }
 .actions > :last-child { justify-self: end; }
 .react {
@@ -116,6 +124,7 @@
 }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
+.react[data-static] { cursor: default; }
 /* The panel takes swipes and side taps like a card; its own buttons stay above the tap areas. */
 .panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
 .panelInner a, .panelInner button { pointer-events: auto; }
