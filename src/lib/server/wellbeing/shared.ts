@@ -1,5 +1,5 @@
 import "server-only";
-import { MIGRATION_WELLBEING, appControlsOf, defaultAppControls, defaultSettings, type AppControls, type DimensionId, type WellbeingSettings } from "@/lib/wellbeing/rules";
+import { MIGRATION_WELLBEING, appControlsOf, backdateOf, defaultAppControls, defaultSettings, type AppControls, type DimensionId, type WellbeingSettings } from "@/lib/wellbeing/rules";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignDownload } from "../r2";
@@ -107,7 +107,7 @@ export async function readSettings(): Promise<{ migrated: boolean; settings: Wel
   const { data, error } = await readSettingsRow("backdate_days,max_kcal,max_steps,program_start");
   if (error) { if (missing(error)) return { migrated: false, settings: defaultSettings, app: defaultAppControls }; databaseError(error); }
   if (!data) return { migrated: true, settings: defaultSettings, app: defaultAppControls };
-  return { migrated: true, app: appControlsOf(data.app), settings: { backdateDays: data.backdate_days as number, maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string } };
+  return { migrated: true, app: appControlsOf(data.app), settings: { backdateDays: backdateOf(data.backdate_days as number, data.app), maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string } };
 }
 
 /**

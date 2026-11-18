@@ -131,6 +131,19 @@ describe("Admin Wellbeing", () => {
     expect(await within(panel).findByText("Isi tanggal mulai dan akhir.")).toBeTruthy();
   });
 
+  it("lets employees log since the programme started, or sets a day limit (Aturan pencatatan, 18 Nov 2026)", async () => {
+    open("pengaturan");
+    const backdate = await screen.findByLabelText("Boleh mundur", {}, { timeout: 3000 }) as HTMLSelectElement;
+    expect(backdate.value).toBe("awal");
+    expect(screen.getByText("Karyawan bisa mencatat untuk tanggal mana pun sejak 22 Mei 2026.")).toBeTruthy();
+    const save = screen.getByRole("button", { name: "Simpan aturan" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    fireEvent.change(backdate, { target: { value: "batas" } });
+    fireEvent.change(screen.getByLabelText("Boleh mundur, jumlah hari"), { target: { value: "14" } });
+    fireEvent.click(save);
+    expect(await screen.findByText("Aturan disimpan.")).toBeTruthy();
+  });
+
   it("saves the employee app's controls: announcement, prize, photo reading, pause", async () => {
     open("pengaturan");
     const show = await screen.findByRole("checkbox", { name: /Tampilkan pengumuman/ }, { timeout: 3000 });

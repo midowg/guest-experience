@@ -13,7 +13,8 @@ import type { ClaimStatus, Delivery, DimensionId, Limit, PointsMode, RewardKind,
 export type WbMe = { id: string; name: string; nickname: string; department: string; position: string; photo?: string | null };
 
 /** Programme rules the screens need (from wb_settings). */
-export type WbRules = { backdateDays: number; maxKcal: number; maxSteps: number; maxPhotos: number };
+/** backdateDays null: any day since programStart (18 Nov 2026). */
+export type WbRules = { backdateDays: number | null; programStart: string; maxKcal: number; maxSteps: number; maxPhotos: number };
 
 /** One of my activities (only ever the signed-in person's own). Photos are ready-to-show URLs (signed, ~1 hour). */
 export type WbMyActivity = {

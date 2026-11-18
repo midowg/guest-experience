@@ -4,7 +4,7 @@ import { activityMeta, catatErrors, dayLabel, firstError, greeting, groupByDay, 
 import { sportIcon } from "./icons";
 import { Bike, Dumbbell, Footprints, Medal, Waves } from "lucide-react";
 
-const rules: WbRules = { backdateDays: 7, maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
+const rules: WbRules = { backdateDays: 7, programStart: "2026-05-22", maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
 const today = "2026-11-17";
 const draft = (change: Partial<CatatDraft> = {}): CatatDraft => ({ kind: "daily", code: "emotional.meditasi", mode: "fixed", fixedPoints: 70, date: today, steps: "", kcal: "", minutes: "", photos: 1, ...change });
 const activity = (change: Partial<WbMyActivity>): WbMyActivity => ({

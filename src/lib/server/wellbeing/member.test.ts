@@ -169,7 +169,11 @@ describe("Catat", () => {
   it("refuses someone else's upload, an old date, a value out of range, a type no longer offered, or a photo used before", async () => {
     const theirs = await photoFor(other);
     expect(await refusal(logActivity(me, logSchema.parse({ code: "emotional.meditasi", date: "2026-11-17", note: "", photos: [theirs] }), now))).toMatchObject({ status: 422, fieldErrors: { photos: [expect.any(String)] } });
+    // Any day since the programme started (18 Nov 2026); before it, refused. A day limit applies only once switched on.
+    expect(await refusal(log(me, { code: "emotional.meditasi", date: "2026-05-21" }))).toMatchObject({ status: 422, fieldErrors: { date: [expect.stringMatching(/saat program mulai/)] } });
+    tables.wb_settings[0].app = { backdateLimited: true };
     expect(await refusal(log(me, { code: "emotional.meditasi", date: "2026-11-09" }))).toMatchObject({ status: 422, fieldErrors: { date: [expect.stringMatching(/7 hari/)] } });
+    tables.wb_settings[0].app = {};
     expect(await refusal(log(me, { code: "emotional.meditasi", date: "2026-11-18" }))).toMatchObject({ status: 422, fieldErrors: { date: [expect.any(String)] } });
     expect(await refusal(log(me, { code: "physical.steps", steps: 50 }))).toMatchObject({ status: 422, fieldErrors: { steps: [expect.any(String)] } });
     expect(await refusal(log(me, { code: "sport.running", kcal: 5000 }))).toMatchObject({ status: 422, fieldErrors: { kcal: [expect.any(String)] } });
@@ -221,7 +225,7 @@ describe("Beranda and Peringkat", () => {
     expect(beranda.dims).toMatchObject({ physical: 300, emotional: 200, social: 0 });
     expect(beranda.recent.map(item => item.date)).toEqual(["2026-11-17", "2026-11-16", "2026-11-15"]);
     expect(beranda.recent[2]).toMatchObject({ status: "rejected", points: 0, pointsClaimed: 999 });
-    expect(beranda.rules).toEqual({ backdateDays: 7, maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 });
+    expect(beranda.rules).toEqual({ backdateDays: null, programStart: "2026-05-22", maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 });
   });
 
   it("answers empty with migrated false before the migration", async () => {

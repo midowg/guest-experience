@@ -90,7 +90,7 @@ export type WbCatalogItem = {
 };
 export type WbCatalog = { migrated: boolean; items: WbCatalogItem[] };
 
-export type WbSettingsView = { migrated: boolean; backdateDays: number; maxKcal: number; maxSteps: number; programStart: string; updatedBy: string | null; updatedAt: string | null;
+export type WbSettingsView = { migrated: boolean; backdateDays: number | null; maxKcal: number; maxSteps: number; programStart: string; updatedBy: string | null; updatedAt: string | null;
   /** Kontrol aplikasi karyawan (17 Nov 2026); appReady false before migration 202611170002 (the defaults show, saving waits). */
   app: AppControls; appReady: boolean };
 /** POST /api/admin/wellbeing/activities/check: the activities whose "diperiksa" changed (the others were already so). */

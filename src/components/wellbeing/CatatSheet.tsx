@@ -5,10 +5,10 @@ import { Check, ChevronRight, CircleAlert, Crown, Dumbbell, ImagePlus, Info, Not
 import { Panel } from "@/components/app-shell/Panel";
 import { load, revalidate, setResource, useResource } from "@/components/app-shell/resource";
 import type { WbAppCatalog, WbBoardRow, WbCatalogDaily, WbHome, WbLogResult, WbRules, WbUploadedPhoto } from "@/lib/wellbeing/app-types";
-import { addDays, dateProblem, DIMENSIONS, dimensionLabels, MIN_STEPS, PHOTO_MIMES, STEPS_PER_POINT, wibToday, type DimensionId } from "@/lib/wellbeing/rules";
+import { dateProblem, DIMENSIONS, dimensionLabels, earliestDate, MIN_STEPS, PHOTO_MIMES, wibToday, type DimensionId } from "@/lib/wellbeing/rules";
 import { errorText, isCancelled, uploadPhoto, WellbeingApiError } from "./api";
 import { keys, reducedMotion, useWellbeing, type CatatPreset } from "./context";
-import { ALREADY_LOGGED, catatErrors, clockLabel, dayLabel, firstError, firstName, formatDate, num, previewPoints, type CatatErrors, type CatatField } from "./format";
+import { ALREADY_LOGGED, catatErrors, clockLabel, dayLabel, firstError, firstName, formatDate, num, type CatatErrors, type CatatField } from "./format";
 import { dimensionIcons, Icon, sportIcon } from "./icons";
 import { StreakFlame } from "./Flame";
 import { readPhotoText, type OcrStage } from "./ocr";
@@ -44,7 +44,7 @@ type Photo = {
   refused: boolean;
 };
 type Problem = { text: string; twin: boolean };
-const DEFAULT_RULES: WbRules = { backdateDays: 7, maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
+const DEFAULT_RULES: WbRules = { backdateDays: null, programStart: "2026-05-22", maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
 const FIELD_IDS: Record<CatatField, string> = { sport: "catat-sport", date: "catat-date", time: "catat-time", steps: "catat-steps", kcal: "catat-kcal", minutes: "catat-minutes", photos: "catat-photos" };
 /** An upload token lasts an hour; older than this, the photo is uploaded again before sending. */
 const UPLOAD_FRESH_MS = 55 * 60_000;
@@ -111,7 +111,6 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
   const typeDim = type?.dimension ?? dim;
   const mode = kind === "sport" ? "kcal" as const : type?.mode ?? "fixed";
   const draft = { kind: kind ?? "daily", code, mode, fixedPoints: type?.points ?? 0, date: form.date, time: form.time, steps: form.steps, kcal: form.kcal, minutes: form.minutes, photos: photos.length, loggedOn: type?.loggedOn };
-  const points = previewPoints(draft, rules);
   const check = (): CatatErrors => {
     const found = catatErrors(draft, rules, today);
     if (!found.photos && photos.some(photo => photo.refused)) found.photos = REPLACE_PHOTO;
@@ -173,7 +172,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
     if (scanRound.current !== round) return;
     setReading(null);
     if (!catalogData?.migrated) { if (mode === "entry") leaveScan("Foto tetap terlampir: pilih jenis kegiatan."); return; }
-    applyReading(readProof(text, { today: catalogData.today, backdateDays: catalogData.rules.backdateDays, sports: catalogData.sports, daily: catalogData.daily }), mode, catalogData);
+    applyReading(readProof(text, { today: catalogData.today, backdateDays: catalogData.rules.backdateDays, programStart: catalogData.rules.programStart, sports: catalogData.sports, daily: catalogData.daily }), mode, catalogData);
   }
 
   function applyReading(found: ProofReading, mode: Reading["mode"], catalogData: WbAppCatalog) {
@@ -350,12 +349,12 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
       </>}
       <button type="button" className={cx(css.opt, css.pressable)} onClick={() => { setKind("daily"); goStep("dim", "fwd"); }}>
         <span className={cx(css.lead, css.leadLg, css.tonePrimary)}><NotebookPen size={26} aria-hidden="true" /></span>
-        <span className={css.rowMain}><b className={css.sub}>Kegiatan harian</b><span>Emosional, sosial, finansial, spiritual, dan langkah. Poin tetap per kegiatan.</span></span>
+        <span className={css.rowMain}><b className={css.sub}>Kegiatan harian</b><span>Emosional, sosial, finansial, spiritual, dan langkah.</span></span>
         <ChevronRight size={20} className={css.chev} aria-hidden="true" />
       </button>
       <button type="button" className={cx(css.opt, css.pressable)} onClick={() => { setKind("sport"); setCode(null); goStep("sport", "fwd"); }}>
         <span className={cx(css.lead, css.leadLg)} data-dim="physical"><Dumbbell size={26} aria-hidden="true" /></span>
-        <span className={css.rowMain}><b className={css.sub}>Olahraga</b><span>Lari, sepeda, renang, badminton, dan lainnya. 1 kkal = 1 poin.</span></span>
+        <span className={css.rowMain}><b className={css.sub}>Olahraga</b><span>Lari, sepeda, renang, badminton, dan lainnya.</span></span>
         <ChevronRight size={20} className={css.chev} aria-hidden="true" />
       </button>
       <p className={css.note}><Info size={20} aria-hidden="true" /><span>Sinkron Strava segera hadir. Sementara ini, olahraga dicatat lewat <b>Olahraga</b>.</span></p>
@@ -398,10 +397,10 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         <label className={css.fieldLabel} htmlFor={FIELD_IDS.sport}>Kegiatan</label>
         <select id={FIELD_IDS.sport} className={cx(css.input, css.select)} value={code ?? ""} data-auto={(!!code && auto("sport")) || undefined} aria-invalid={!!errors.sport} onChange={event => choose(event.target.value)}>
           <option value="" disabled>Pilih kegiatan…</option>
-          <optgroup label="Olahraga (poin = kkal)">{cat.sports.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</optgroup>
+          <optgroup label="Olahraga">{cat.sports.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</optgroup>
           {DIMENSIONS.map(dimension => {
             const list = cat.daily.filter(item => item.dimension === dimension && (!item.blocked || item.limit === "day"));
-            return list.length ? <optgroup key={dimension} label={`Harian · ${dimensionLabels[dimension]}`}>{list.map(item => <option key={item.code} value={item.code}>{item.name}{item.mode === "fixed" ? ` (+${num(item.points)})` : ""}</option>)}</optgroup> : null;
+            return list.length ? <optgroup key={dimension} label={`Harian · ${dimensionLabels[dimension]}`}>{list.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</optgroup> : null;
           })}
         </select>
         <FieldError text={errors.sport} />
@@ -427,7 +426,6 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
           aria-invalid={!!errors.steps} onChange={event => set("steps", digits(event.target.value, String(rules.maxSteps).length))} /><span className={css.suffix}>langkah</span></div>
         <FieldError text={errors.steps} />
       </div>}
-      {mode === "fixed" && type && <p className={css.note}><Info size={20} aria-hidden="true" /><span>{type.name}: <b>+{num(type.points)} poin</b> tetap per kegiatan.</span></p>}
       <NoteField value={form.note} placeholder="Nama acara atau cerita singkat" label="Catatan / nama acara" auto={auto("note")} onChange={value => set("note", value)} />
       <Photos photos={photos} max={rules.maxPhotos} hint={sport?.proofHint || type?.proofHint || "Foto bukti"} error={errors.photos} busy={!!saving} onAdd={pickPhotos} onRemove={removePhoto} />
     </>;
@@ -464,11 +462,12 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
             <span className={css.rowMetaWrap}>{closed ? <b className={css.warnText}>{item.blocked}</b> : item.proofHint}{!closed && item.limit === "month" ? " · 1x per bulan" : ""}</span>
             {!closed && item.loggedOn.includes(today) && <span className={cx(css.caption, css.faint)}>Sudah dicatat hari ini</span>}
           </span>
-          <span className={css.rowTrail}>{item.mode === "steps" ? <span className={cx(css.caption, css.muted)}>{num(STEPS_PER_POINT)} langkah<br />= 1 poin</span> : <b className={css.pts}>+{num(item.points)}</b>}</span>
+          {/* No points while choosing (18 Nov 2026, as the old app): they show once it is saved. */}
+          <ChevronRight size={20} className={css.chev} aria-hidden="true" />
         </button>;
         })}
       </div>
-      {dim === "physical" && <p className={css.note}><Info size={20} aria-hidden="true" /><span>Lari, sepeda, renang, dan lainnya dicatat lewat <b>Olahraga</b>; poinnya dari kalori.
+      {dim === "physical" && <p className={css.note}><Info size={20} aria-hidden="true" /><span>Lari, sepeda, renang, dan lainnya dicatat lewat <b>Olahraga</b>.
         <span className={css.noteActions}><button type="button" className={cx(css.btn, css.btnOutline)} onClick={() => { setKind("sport"); setCode(null); goStep("sport", "fwd"); }}>Catat olahraga</button></span></span></p>}
     </>;
   } else if (step === "detail" && cat) {
@@ -477,7 +476,6 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
       <div className={cx(css.card, css.sum)}>
         <span className={css.lead} data-dim={type.dimension}><Icon of={type.mode === "steps" ? sportIcon("walking") : dimensionIcons[type.dimension]} size={22} /></span>
         <div className={css.rowMain}><b className={css.wrap}>{type.name}</b><span className={css.rowMeta}>{dimensionLabels[type.dimension]}</span></div>
-        {type.mode === "fixed" && <b className={css.pts}>+{num(type.points)}</b>}
       </div>
       {type.blocked && type.limit === "month" && <p className={cx(css.note, css.noteWarn)}><TriangleAlert size={20} aria-hidden="true" /><span>{type.blocked}</span></p>}
       <PhotoBanner reading={reading} fromPhoto={fromPhoto} />
@@ -486,7 +484,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         <label className={css.fieldLabel} htmlFor={FIELD_IDS.steps}>Jumlah langkah</label>
         <div className={css.inputWrap}><input id={FIELD_IDS.steps} className={css.input} inputMode="numeric" autoComplete="off" placeholder="mis. 8000" value={form.steps} data-auto={fromPhoto?.filled.includes("steps") || undefined}
           aria-invalid={!!errors.steps} aria-describedby="catat-steps-help" onChange={event => set("steps", digits(event.target.value, String(rules.maxSteps).length))} /><span className={css.suffix}>langkah</span></div>
-        <span className={css.help} id="catat-steps-help" aria-live="polite">{form.steps ? `= ${num(points)} poin` : `${num(STEPS_PER_POINT)} langkah = 1 poin, minimal ${num(MIN_STEPS)} langkah.`}</span>
+        <span className={css.help} id="catat-steps-help" aria-live="polite">{`Minimal ${num(MIN_STEPS)} langkah.`}</span>
         <FieldError text={errors.steps} />
       </div>}
       <Photos photos={photos} max={rules.maxPhotos} hint={type.proofHint} error={errors.photos} busy={!!saving} onAdd={pickPhotos} onRemove={removePhoto} />
@@ -519,7 +517,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
             onChange={event => set("minutes", digits(event.target.value, 4))} /><span className={css.suffix}>menit</span></div>
         </div>
       </div>
-      <p className={css.help} id="catat-kcal-help" style={{ marginTop: 6 }}>Kalori dari jam tangan atau aplikasi olahraga. 1 kkal = 1 poin, maksimal {num(rules.maxKcal)}.</p>
+      <p className={css.help} id="catat-kcal-help" style={{ marginTop: 6 }}>Kalori dari jam tangan atau aplikasi olahraga, maksimal {num(rules.maxKcal)} kkal.</p>
       <FieldError text={errors.kcal} />
       <FieldError text={errors.minutes} />
       <Photos photos={photos} max={rules.maxPhotos} hint={sport?.proofHint || "Foto layar jam atau aplikasi yang menunjukkan kalori"} error={errors.photos} busy={!!saving} onAdd={pickPhotos} onRemove={removePhoto} />
@@ -557,7 +555,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
             <button type="button" className={cx(css.btn, css.btnPrimary)} aria-busy="true" aria-live="polite"><span className={css.spin} aria-hidden="true" />{saving.label}</button>
             <button type="button" className={cx(css.btn, css.btnOutline)} onClick={() => abort.current?.abort()}>Batalkan</button>
           </div>
-        : <button type="button" className={cx(css.btn, css.btnPrimary, css.block)} onClick={() => void save(false)}>{`Simpan${points ? ` · +${num(points)} poin` : ""}`}</button>}
+        : <button type="button" className={cx(css.btn, css.btnPrimary, css.block)} onClick={() => void save(false)}>Simpan</button>}
     </div>;
   }
 
@@ -590,7 +588,7 @@ function WhenFields({ date, time, today, rules, errors, filled, onChange }: { da
     <div className={css.grid2}>
       <div className={css.field}>
         <label className={css.fieldLabel} htmlFor={FIELD_IDS.date}>Tanggal</label>
-        <input id={FIELD_IDS.date} className={css.input} type="date" value={date} data-auto={filled.includes("date") || undefined} min={addDays(today, -rules.backdateDays)} max={today}
+        <input id={FIELD_IDS.date} className={css.input} type="date" value={date} data-auto={filled.includes("date") || undefined} min={earliestDate(today, rules.backdateDays, rules.programStart)} max={today}
           aria-invalid={!!errors.date} aria-describedby="catat-date-help" onChange={event => onChange("date", event.target.value)} />
       </div>
       <div className={css.field}>
@@ -598,7 +596,8 @@ function WhenFields({ date, time, today, rules, errors, filled, onChange }: { da
         <input id={FIELD_IDS.time} className={css.input} type="time" value={time} data-auto={filled.includes("time") || undefined} aria-invalid={!!errors.time} onChange={event => onChange("time", event.target.value)} />
       </div>
     </div>
-    <span className={css.help} id="catat-date-help" style={{ display: "block", marginTop: 6 }}>{rules.backdateDays === 0 ? "Hanya untuk hari ini." : `Hari ini sampai ${num(rules.backdateDays)} hari ke belakang.`}</span>
+    <span className={css.help} id="catat-date-help" style={{ display: "block", marginTop: 6 }}>{rules.backdateDays === null ? `Sejak program mulai (${formatDate(rules.programStart, { day: "numeric", month: "long", year: "numeric" })}) sampai hari ini.`
+      : rules.backdateDays === 0 ? "Hanya untuk hari ini." : `Hari ini sampai ${num(rules.backdateDays)} hari ke belakang.`}</span>
     <FieldError text={errors.date} />
     <FieldError text={errors.time} />
   </>;

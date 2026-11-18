@@ -16,7 +16,13 @@ versi Journey stabil.
   ditunda** (tidak pernah dipakai). Rewards/koin semula juga ditunda; sejak 18 Nov 2026 dibangun sebagai **Hadiah**
   (lihat bagian Hadiah).
 - Pencatatan **langsung dihitung**; admin memeriksa belakangan (Oke / Ubah poin / Tolak, dengan alasan yang dibaca
-  karyawan). Tanggal depan ditolak; mundur paling lama sesuai aturan (bawaan 7 hari).
+  karyawan). Tanggal depan ditolak.
+- **Tanggal mundur (18 Nov 2026):** bawaannya **sejak program mulai** (22 Mei 2026), karena banyak karyawan sengaja
+  mencatat belakangan. Admin WLM → Pengaturan → Aturan pencatatan → Boleh mundur bisa diganti "Batasi beberapa hari"
+  (0–60 hari). Angka hari tetap di `wb_settings.backdate_days`; tombolnya (`backdateLimited`) disimpan di JSON
+  kontrol aplikasi, jadi tidak perlu migrasi baru (memasang batas hari menunggu migrasi 202611170002).
+- **Poin tidak tampil saat memilih (18 Nov 2026),** seperti aplikasi lama: daftar jenis kegiatan, detail, dan tombol
+  Simpan tanpa angka poin. Poin baru terlihat setelah tersimpan (layar selesai, Riwayat, Beranda).
 - Katalog kegiatan mengikuti katalog yang sedang dipakai di aplikasi lama (nama, dimensi, poin), bisa diubah admin.
 - Absensi acara lewat QR diganti **Tambah poin ke banyak orang** (cara yang sudah dipakai admin).
 

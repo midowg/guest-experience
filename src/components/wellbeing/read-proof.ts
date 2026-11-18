@@ -9,7 +9,7 @@ import { addDays, dateProblem } from "@/lib/wellbeing/rules";
  * before saving.
  */
 
-export type ProofContext = { today: string; backdateDays: number; sports: readonly Pick<WbCatalogSport, "code" | "name">[]; daily: readonly Pick<WbCatalogDaily, "code" | "name" | "mode">[] };
+export type ProofContext = { today: string; backdateDays: number | null; programStart?: string; sports: readonly Pick<WbCatalogSport, "code" | "name">[]; daily: readonly Pick<WbCatalogDaily, "code" | "name" | "mode">[] };
 export type ProofReading = {
   /** What to log: a sport (its code, or null when only the kcal were read), a daily type, or nothing found. */
   kind: "sport" | "daily" | null;
@@ -108,7 +108,7 @@ const pad = (value: number) => String(value).padStart(2, "0");
 
 /** The date on the screen within the backdate window (today, kemarin, "17 Nov", "Nov 17, 2026", "17/11/2026"). */
 function dateIn(text: string, context: ProofContext): string | null {
-  const { today, backdateDays } = context;
+  const { today, backdateDays, programStart } = context;
   const year = Number(today.slice(0, 4)), month = Number(today.slice(5, 7));
   const iso = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
   const guessYear = (m: number) => m > month ? year - 1 : year;
@@ -125,7 +125,7 @@ function dateIn(text: string, context: ProofContext): string | null {
   }
   for (const match of text.matchAll(/\b(hari ini|today)\b/g)) candidates.push({ at: match.index, date: today });
   for (const match of text.matchAll(/\b(kemarin|yesterday)\b/g)) candidates.push({ at: match.index, date: addDays(today, -1) });
-  const valid = candidates.filter(candidate => !dateProblem(candidate.date, today, backdateDays)).sort((a, b) => a.at - b.at);
+  const valid = candidates.filter(candidate => !dateProblem(candidate.date, today, backdateDays, programStart)).sort((a, b) => a.at - b.at);
   return valid[0]?.date ?? null;
 }
 

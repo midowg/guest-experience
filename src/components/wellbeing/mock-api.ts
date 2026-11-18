@@ -1,7 +1,7 @@
 "use client";
 
 import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbClaim, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbReward, WbRewards, WbRules, WbSaldo, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
-import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type Delivery, type DimensionId, type Limit, type RewardKind } from "@/lib/wellbeing/rules";
+import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, earliestDate, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type Delivery, type DimensionId, type Limit, type RewardKind } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 
@@ -53,7 +53,7 @@ export const sampleCard = (): CardView => ({
 
 export const sampleMe: WbMe = { id: "00000000-0000-4000-8000-0000000000aa", name: "Dewi Contoh", nickname: "Dewi", department: "Creative", position: "Graphic Designer" };
 
-const RULES: WbRules = { backdateDays: 7, maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
+const RULES: WbRules = { backdateDays: null, programStart: "2026-05-22", maxKcal: 3000, maxSteps: 60000, maxPhotos: 5 };
 const PROOF = "Foto, screenshot, atau bukti partisipasi";
 type DailyType = Omit<WbCatalogDaily, "blocked" | "loggedOn">;
 const daily = (code: string, dimension: DimensionId, name: string, points: number, proofHint = PROOF, limit: Limit | null = null): DailyType =>
@@ -327,7 +327,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       daily: DAILY.map(item => ({
         ...item,
         blocked: item.limit === "month" && limitReached("month", today, loggedDates(item.code)) ? blockedText : null,
-        loggedOn: [...new Set(loggedDates(item.code).filter(date => date >= addDays(today, -RULES.backdateDays)))].sort(),
+        loggedOn: [...new Set(loggedDates(item.code).filter(date => date >= earliestDate(today, RULES.backdateDays, RULES.programStart)))].sort(),
       })),
     })),
     activities: (filter: WbMyActivityFilter, before?: string) => call(() => {
@@ -361,7 +361,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       const dailyType = DAILY.find(item => item.code === input.code);
       const sportType = SPORTS.find(item => item.code === input.code);
       if (!dailyType && !sportType) throw new WellbeingApiError("Jenis kegiatan tidak dikenal.", 422);
-      const datePro = dateProblem(input.date, today, RULES.backdateDays);
+      const datePro = dateProblem(input.date, today, RULES.backdateDays, RULES.programStart);
       if (datePro) throw new WellbeingApiError(datePro, 422, { date: [datePro] });
       if (input.photos.length < 1) throw new WellbeingApiError("Tambahkan minimal 1 foto bukti.", 422, { photos: ["Tambahkan minimal 1 foto bukti."] });
       if (input.photos.length > RULES.maxPhotos) throw new WellbeingApiError(`Maksimal ${RULES.maxPhotos} foto.`, 422, { photos: [`Maksimal ${RULES.maxPhotos} foto.`] });

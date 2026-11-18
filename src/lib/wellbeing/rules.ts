@@ -23,8 +23,11 @@ export const LIMITS = ["day", "month"] as const;
 export type Limit = (typeof LIMITS)[number];
 
 export type WellbeingSettings = {
-  /** How many days back an activity may be dated (today counts as 0). */
-  backdateDays: number;
+  /**
+   * How many days back an activity may be dated (today counts as 0); null: any day since the
+   * programme started (18 Nov 2026, the owner's choice and the default: many log later on purpose).
+   */
+  backdateDays: number | null;
   /** The most kcal one sport activity may claim. */
   maxKcal: number;
   /** The most steps one day may claim. */
@@ -32,10 +35,18 @@ export type WellbeingSettings = {
   /** The first day of the programme (points before it are history, still counted). */
   programStart: string;
 };
-export const defaultSettings: WellbeingSettings = { backdateDays: 7, maxKcal: 3000, maxSteps: 60000, programStart: "2026-05-22" };
+export const defaultSettings: WellbeingSettings = { backdateDays: null, maxKcal: 3000, maxSteps: 60000, programStart: "2026-05-22" };
+
+/**
+ * The day limit is kept in wb_settings.backdate_days (0 to 60), and whether it applies in the app
+ * controls' JSON (backdateLimited), so "since the programme started" needs no migration: without
+ * backdateLimited the limit is off.
+ */
+export const backdateOf = (column: number, app: unknown): number | null =>
+  (app && typeof app === "object" && (app as { backdateLimited?: unknown }).backdateLimited === true) ? column : null;
 
 export const settingsSchema = z.object({
-  backdateDays: z.number().int().min(0).max(60),
+  backdateDays: z.number().int().min(0).max(60).nullable(),
   maxKcal: z.number().int().min(100).max(20000),
   maxSteps: z.number().int().min(1000).max(200000),
 });
@@ -120,11 +131,18 @@ export function monthRange(date: string): { from: string; to: string } {
 /** The month before the one `date` is in. */
 export const previousMonth = (date: string) => monthRange(shift(`${date.slice(0, 7)}-01`, -1));
 
+/** The earliest day an activity may be dated: N days back, or (no limit) the programme's first day. */
+export const earliestDate = (today: string, backdateDays: number | null, programStart: string) => backdateDays === null ? programStart : shift(today, -backdateDays);
+const longDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
 /** Why an activity date is refused, or null when it may be logged today. */
-export function dateProblem(date: string, today: string, backdateDays: number): string | null {
+export function dateProblem(date: string, today: string, backdateDays: number | null, programStart = defaultSettings.programStart): string | null {
   if (!DAY.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return "Tanggal tidak valid.";
   if (date > today) return "Tanggal tidak boleh setelah hari ini.";
-  if (date < shift(today, -backdateDays)) return backdateDays === 0 ? "Hanya bisa mencatat untuk hari ini." : `Paling lama ${backdateDays} hari ke belakang.`;
+  if (date < earliestDate(today, backdateDays, programStart)) {
+    if (backdateDays === null) return `Paling awal ${longDate(programStart)}, saat program mulai.`;
+    return backdateDays === 0 ? "Hanya bisa mencatat untuk hari ini." : `Paling lama ${backdateDays} hari ke belakang.`;
+  }
   return null;
 }
 

@@ -63,7 +63,7 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
     activity(6, "sport.running", 3, { kcal: 900, minutes: 20, status: "adjusted", points: 250, reason: "Kalori disesuaikan dengan durasi di foto", checked: true, reviewedBy: "Admin HR" }),
     activity(10, "physical.steps", 4, { steps: 25000, status: "rejected", reason: "Foto bukan dari hari itu", checked: true, reviewedBy: "Admin HR" }),
   ];
-  const settings: WbSettingsView = { migrated: true, backdateDays: 7, maxKcal: 3000, maxSteps: 60000, programStart: "2026-05-22", updatedBy: "Admin HR", updatedAt: new Date().toISOString(),
+  const settings: WbSettingsView = { migrated: true, backdateDays: null, maxKcal: 3000, maxSteps: 60000, programStart: "2026-05-22", updatedBy: "Admin HR", updatedAt: new Date().toISOString(),
     app: { ...defaultAppControls, prize: "Juara 1 voucher Decathlon Rp250 rb" } as AppControls, appReady: !options.notReady };
   const catalog: WbCatalogItem[] = types.map(([code, name, dimension, kind, points], index) => ({ code, name, dimension, kind, mode: kind === "sport" ? "kcal" : code === "physical.steps" ? "steps" : "fixed", points, limit: code === "physical.steps" ? "day" : code.startsWith("financial") ? "month" : null, proofHint: "Foto, screenshot, atau bukti partisipasi", active: true, sortOrder: index }));
 

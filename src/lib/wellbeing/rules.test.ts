@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appControlsOf, appControlsSchema, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, defaultSettings, isVideoProof, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
+import { appControlsOf, appControlsSchema, backdateOf, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, defaultSettings, earliestDate, isVideoProof, settingsSchema, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
 
 describe("video proofs (18 Nov 2026)", () => {
   it("knows a video by its name, also in a signed address", () => {
@@ -31,6 +31,23 @@ describe("dates", () => {
     expect(dateProblem("2026-11-15", "2026-11-16", 0)).toMatch(/hari ini/);
     // 17 Nov 2026: a date that does not exist is refused, not passed on to the database.
     expect(dateProblem("2026-02-30", "2026-03-03", 7)).toMatch(/tidak valid/);
+  });
+
+  it("lets any day since the programme started be logged when there is no day limit (18 Nov 2026, the default)", () => {
+    expect(defaultSettings.backdateDays).toBeNull();
+    expect(dateProblem("2026-05-22", "2026-11-18", null, "2026-05-22")).toBeNull();
+    expect(dateProblem("2026-08-01", "2026-11-18", null, "2026-05-22")).toBeNull();
+    expect(dateProblem("2026-05-21", "2026-11-18", null, "2026-05-22")).toBe("Paling awal 22 Mei 2026, saat program mulai.");
+    expect(dateProblem("2026-11-19", "2026-11-18", null, "2026-05-22")).toMatch(/setelah hari ini/);
+    expect(earliestDate("2026-11-18", null, "2026-05-22")).toBe("2026-05-22");
+    expect(earliestDate("2026-11-18", 7, "2026-05-22")).toBe("2026-11-11");
+    // The limit applies only once Aturan pencatatan switches it on (in the app controls' JSON).
+    expect(backdateOf(7, null)).toBeNull();
+    expect(backdateOf(7, { announcement: null })).toBeNull();
+    expect(backdateOf(7, { backdateLimited: true })).toBe(7);
+    expect(backdateOf(0, { backdateLimited: true })).toBe(0);
+    expect(settingsSchema.parse({ backdateDays: null, maxKcal: 3000, maxSteps: 60000 }).backdateDays).toBeNull();
+    expect(settingsSchema.safeParse({ backdateDays: 61, maxKcal: 3000, maxSteps: 60000 }).success).toBe(false);
   });
   it("counts the WIB day, not UTC", () => {
     expect(wibToday(new Date("2026-11-15T18:30:00Z"))).toBe("2026-11-16");

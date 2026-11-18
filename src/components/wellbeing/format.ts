@@ -88,7 +88,7 @@ const whole = (value: string) => /^\d+$/.test(value.trim()) ? Number(value) : Nu
 export function catatErrors(draft: CatatDraft, rules: WbRules, today: string, now = currentWibClock()): CatatErrors {
   const errors: CatatErrors = {};
   if (draft.kind === "sport" && !draft.code) errors.sport = "Pilih jenis olahraga.";
-  const date = dateProblem(draft.date, today, rules.backdateDays) ?? (draft.loggedOn?.includes(draft.date) ? ALREADY_LOGGED : null);
+  const date = dateProblem(draft.date, today, rules.backdateDays, rules.programStart) ?? (draft.loggedOn?.includes(draft.date) ? ALREADY_LOGGED : null);
   if (date) errors.date = date;
   if (draft.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) errors.time = "Jam tidak valid.";
   else if (draft.time && draft.date === today && draft.time > now) errors.time = "Jam itu belum lewat hari ini.";

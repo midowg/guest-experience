@@ -7,7 +7,7 @@ import type {
   WbAppCatalog, WbBoard, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLogResult, WbMe, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRules, WbUploadStart,
 } from "@/lib/wellbeing/app-types";
 import {
-  DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, limitReached, logValues, monthRange, previousMonth, wibToday,
+  DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, earliestDate, limitReached, logValues, monthRange, previousMonth, wibToday,
   type DimensionId, type Limit, type LogInput, type PointsMode, type ReviewStatus, type UploadStartInput, type WellbeingSettings,
 } from "@/lib/wellbeing/rules";
 import { ServiceError } from "../config";
@@ -39,7 +39,7 @@ const storageNotReady = () => new ServiceError(503, "Penyimpanan foto belum siap
 const loginNotReady = () => new ServiceError(503, "Login belum disiapkan. Isi WAM_SESSION_SECRET pada server.");
 
 const toMe = (member: Member): WbMe => ({ id: member.id, name: member.name, nickname: member.nickname, department: member.department, position: member.position, photo: member.photo });
-const rulesOf = (settings: WellbeingSettings): WbRules => ({ backdateDays: settings.backdateDays, maxKcal: settings.maxKcal, maxSteps: settings.maxSteps, maxPhotos: MAX_PHOTOS });
+const rulesOf = (settings: WellbeingSettings): WbRules => ({ backdateDays: settings.backdateDays, programStart: settings.programStart, maxKcal: settings.maxKcal, maxSteps: settings.maxSteps, maxPhotos: MAX_PHOTOS });
 const nullableNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
 /** "HH:MM" now in WIB. */
 const wibClock = (at: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(at);
@@ -149,12 +149,12 @@ const blockedText = (limit: Limit) => (limit === "day" ? "Sudah dicatat hari ini
 
 export async function catalog(member: Member, now = new Date()): Promise<WbAppCatalog> {
   const today = wibToday(now), month = monthRange(today);
-  // This month (limits) and the longest backdate window (one per day), whichever starts earlier.
-  const since = [month.from, addDays(today, -60)].sort()[0];
   const client = db();
-  const [types, settings, logged] = await Promise.all([
+  const settings = await readSettings();
+  // This month (limits) and the backdate window (one per day; since the programme started when there is no limit), whichever starts earlier.
+  const since = [month.from, earliestDate(today, settings.settings.backdateDays, settings.settings.programStart)].sort()[0];
+  const [types, logged] = await Promise.all([
     client.from("wb_activity_types").select(TYPE_COLUMNS).eq("active", true),
-    readSettings(),
     readAll((from, to) => client.from("wb_activities").select("id,type_code,happened_on").eq("employee_id", member.id).neq("status", "rejected")
       .gte("happened_on", since).lte("happened_on", month.to).order("id").range(from, to)),
   ]);
@@ -171,7 +171,7 @@ export async function catalog(member: Member, now = new Date()): Promise<WbAppCa
     return {
       code: row.code as string, dimension: row.dimension_id as DimensionId, name: row.name as string, mode: row.points_mode as WbCatalogDaily["mode"], points: row.points as number,
       limit, proofHint: (row.proof_hint as string) ?? "", blocked: limit === "month" && limitReached(limit, today, datesOf.get(row.code as string) ?? []) ? blockedText(limit) : null,
-      loggedOn: [...new Set((datesOf.get(row.code as string) ?? []).filter(date => date >= addDays(today, -rules.backdateDays)))].sort(),
+      loggedOn: [...new Set((datesOf.get(row.code as string) ?? []).filter(date => date >= earliestDate(today, rules.backdateDays, rules.programStart)))].sort(),
     };
   });
   const sports = rows.filter(row => row.kind === "sport").map((row): WbCatalogSport => ({ code: row.code as string, name: row.name as string, proofHint: (row.proof_hint as string) ?? "" }));
@@ -253,7 +253,7 @@ export async function logActivity(member: Member, input: LogInput, now = new Dat
   const type = typeRead.data as Row | null;
   if (!type || !type.active) throw refused("code", "Kegiatan ini sudah tidak tersedia. Muat ulang daftar kegiatan.");
   const settings = settingsRead.settings;
-  const problem = dateProblem(input.date, today, settings.backdateDays);
+  const problem = dateProblem(input.date, today, settings.backdateDays, settings.programStart);
   if (problem) throw refused("date", problem);
   // A time later today has not happened yet (a few minutes of clock difference are let through).
   if (input.time && input.date === today && input.time > wibClock(new Date(now.getTime() + 5 * 60_000))) throw refused("time", "Jam itu belum lewat hari ini.");

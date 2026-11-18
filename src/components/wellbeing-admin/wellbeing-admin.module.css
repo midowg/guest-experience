@@ -263,7 +263,7 @@ button.proof { padding: 0; border: 0; font: inherit; cursor: pointer; }
 .form { display: grid; gap: 1rem; }
 /* align-content: start: in a row of fields, a shorter one keeps its input at the same height as its neighbours'. */
 .field { display: grid; gap: .375rem; align-content: start; }
-.field > span:first-child { font-size: .8125rem; font-weight: 700; color: var(--cs-muted); }
+.field > span:first-child, .field > label:first-child { font-size: .8125rem; font-weight: 700; color: var(--cs-muted); }
 .fieldRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1rem; }
 .fieldRow3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
 .withUnit { position: relative; display: block; }

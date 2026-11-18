@@ -110,6 +110,23 @@ describe("WellbeingApp", () => {
     expect(await within(dialog()).findByText("Tambahkan minimal 1 foto bukti.")).toBeTruthy();
   });
 
+  it("shows no points while choosing, and dates back to the programme's start (18 Nov 2026)", async () => {
+    app();
+    await screen.findByText("Total poin");
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    fireEvent.click(await within(dialog()).findByText("Kegiatan harian"));
+    fireEvent.click(await within(dialog()).findByText("Emosional"));
+    const row = (await within(dialog()).findByText("Sharing Session")).closest("button")!;
+    // As the old app: the list says what to do, not what it is worth.
+    expect(row.textContent).not.toMatch(/poin|\+\d/);
+    fireEvent.click(row);
+    const date = await within(dialog()).findByLabelText("Tanggal") as HTMLInputElement;
+    expect(date.min).toBe("2026-05-22");
+    expect(within(dialog()).getByText("Sejak program mulai (22 Mei 2026) sampai hari ini.")).toBeTruthy();
+    expect(within(dialog()).queryByText(/poin/)).toBeNull();
+    expect(within(dialog()).getByRole("button", { name: "Simpan" })).toBeTruthy();
+  });
+
   it("asks for the sport when Olahraga is saved without one", async () => {
     app();
     await screen.findByText("Total poin");
@@ -146,7 +163,7 @@ describe("WellbeingApp", () => {
     await openDaily("Emosional", "Sharing Session");
     addPhoto();
     expect(await within(dialog()).findByAltText("Foto bukti 1")).toBeTruthy();
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
 
     expect(await within(dialog()).findByText("+80 poin", {}, { timeout: 3000 })).toBeTruthy();
     fireEvent.click(within(dialog()).getByRole("button", { name: "Selesai" }));
@@ -164,11 +181,11 @@ describe("WellbeingApp", () => {
     await screen.findByText("Total poin");
     await openDaily("Emosional", "Sharing Session");
     addPhoto();
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     expect(await within(dialog()).findByText("Unggahan tidak dikenali. Unggah ulang fotonya.", {}, { timeout: 3000 })).toBeTruthy();
     expect(startUpload).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     expect(await within(dialog()).findByText("+80 poin", {}, { timeout: 3000 })).toBeTruthy();
     expect(startUpload).toHaveBeenCalledTimes(2);
   });
@@ -200,7 +217,7 @@ describe("WellbeingApp", () => {
     fireEvent.click(await within(dialog()).findByRole("button", { name: "Running" }));
     fireEvent.change(within(dialog()).getByLabelText("Kalori"), { target: { value: "300" } });
     addPhoto(photo("jam.png"));
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +300 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     fireEvent.click(await within(dialog()).findByRole("button", { name: "Tetap simpan" }, { timeout: 3000 }));
     expect(await within(dialog()).findByText("+300 poin", {}, { timeout: 3000 })).toBeTruthy();
     expect(log.mock.lastCall?.[0]).toEqual(expect.objectContaining({ code: "sport.running", kcal: 300, force: true }));
@@ -286,7 +303,7 @@ describe("WellbeingApp", () => {
     fireEvent.click(await within(dialog()).findByText("Emosional"));
     fireEvent.click(await within(dialog()).findByText("Sharing Session"));
     addPhoto();
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     const done = await within(dialog()).findByText("hari beruntun · api hari ini menyala", { exact: false }, { timeout: 3000 });
     expect(done.closest("p")?.textContent).toBe(`${streak + 1} hari beruntun · api hari ini menyala`);
     fireEvent.click(within(dialog()).getByRole("button", { name: "Selesai" }));
@@ -421,7 +438,7 @@ describe("WellbeingApp", () => {
     await screen.findByText("Total poin");
     await openDaily("Emosional", "Sharing Session");
     addPhoto();
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     expect(await within(dialog()).findByText(/^Masuk peringkat: #\d+ bulan ini$/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
@@ -446,7 +463,7 @@ describe("WellbeingApp", () => {
     // Corrected by hand: no longer marked as read.
     fireEvent.change(kcal, { target: { value: "400" } });
     expect(kcal.dataset.auto).toBeUndefined();
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +400 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
     expect(await within(dialog()).findByText("+400 poin", {}, { timeout: 3000 })).toBeTruthy();
   });
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { DIMENSIONS, MIGRATION_WELLBEING_APP, appControlsOf, defaultAppControls, defaultSettings, monthRange, previousMonth, rank, wibToday, type AppControls, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
+import { DIMENSIONS, MIGRATION_WELLBEING_APP, appControlsOf, backdateOf, defaultAppControls, defaultSettings, monthRange, previousMonth, rank, wibToday, type AppControls, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
 import type { WbActivity, WbActivityPage, WbBatchResult, WbCatalog, WbCatalogItem, WbChampion, WbOverview, WbPeople, WbPersonDetail, WbPointEntry, WbSettingsView } from "@/lib/wellbeing/types";
 import { currentAdmin } from "../admin-actor";
 import { ServiceError } from "../config";
@@ -274,7 +274,7 @@ export async function wellbeingSettings(): Promise<WbSettingsView> {
   if (error) { if (missing(error)) return { migrated: false, ...defaultSettings, updatedBy: null, updatedAt: null, app: defaultAppControls, appReady: false }; databaseError(error); }
   if (!data) return { migrated: true, ...defaultSettings, updatedBy: null, updatedAt: null, app: defaultAppControls, appReady };
   return {
-    migrated: true, backdateDays: data.backdate_days as number, maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string,
+    migrated: true, backdateDays: backdateOf(data.backdate_days as number, data.app), maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string,
     updatedBy: (data.updated_by_name as string | null) ?? null, updatedAt: (data.updated_at as string | null) ?? null, app: appControlsOf(data.app), appReady,
   };
 }
@@ -284,7 +284,8 @@ export async function saveAppControls(input: AppControls, actor: Actor): Promise
   const current = await wellbeingSettings();
   if (!current.migrated) throw waiting();
   if (!current.appReady) throw new ServiceError(503, `Kontrol aplikasi menunggu migrasi ${MIGRATION_WELLBEING_APP}. Minta pemilik menjalankannya di Supabase SQL Editor; aturan pencatatan tetap bisa diubah.`);
-  const { error } = await db().from("wb_settings").upsert({ id: 1, app: input, updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150) }, { onConflict: "id" });
+  // The day limit's switch lives in the same JSON (Aturan pencatatan, 18 Nov 2026): kept as it is.
+  const { error } = await db().from("wb_settings").upsert({ id: 1, app: { ...input, backdateLimited: current.backdateDays !== null }, updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150) }, { onConflict: "id" });
   if (error) fail(error);
   return wellbeingSettings();
 }
@@ -308,8 +309,20 @@ export async function checkActivities(ids: readonly string[], checked: boolean, 
   return { changed: ((data ?? []) as Row[]).map(row => row.id as string) };
 }
 
-export async function saveWellbeingSettings(input: { backdateDays: number; maxKcal: number; maxSteps: number }, actor: Actor): Promise<WbSettingsView> {
-  const { error } = await db().from("wb_settings").upsert({ id: 1, backdate_days: input.backdateDays, max_kcal: input.maxKcal, max_steps: input.maxSteps, updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150) }, { onConflict: "id" });
+/**
+ * Aturan pencatatan. Boleh mundur (18 Nov 2026): null is "since the programme started" (the
+ * default); a number of days is kept in backdate_days and switched on in the app controls' JSON,
+ * which needs migration 202611170002 (before it, the limit cannot be switched on).
+ */
+export async function saveWellbeingSettings(input: { backdateDays: number | null; maxKcal: number; maxSteps: number }, actor: Actor): Promise<WbSettingsView> {
+  const current = await wellbeingSettings();
+  if (input.backdateDays !== null && current.migrated && !current.appReady) {
+    throw new ServiceError(503, `Batas hari menunggu migrasi ${MIGRATION_WELLBEING_APP}. Sampai migrasi itu dijalankan, karyawan bisa mencatat sejak program mulai.`, { backdateDays: ["Menunggu migrasi."] });
+  }
+  const row: Record<string, unknown> = { id: 1, max_kcal: input.maxKcal, max_steps: input.maxSteps, updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150) };
+  if (input.backdateDays !== null) row.backdate_days = input.backdateDays;
+  if (current.appReady) row.app = { ...current.app, backdateLimited: input.backdateDays !== null };
+  const { error } = await db().from("wb_settings").upsert(row, { onConflict: "id" });
   if (error) fail(error);
   return wellbeingSettings();
 }

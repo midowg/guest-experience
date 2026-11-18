@@ -195,15 +195,24 @@ function RulesCard() {
   </Card>;
 }
 
+/** "22 Mei 2026". */
+const longDay = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+/**
+ * Aturan pencatatan. Boleh mundur (18 Nov 2026): since the programme started (the default; many log
+ * later on purpose), or a number of days back.
+ */
 function RulesForm({ data }: { data: WbSettingsView }) {
   const toast = useToast();
-  const [form, setForm] = useState({ backdateDays: String(data.backdateDays), maxKcal: String(data.maxKcal), maxSteps: String(data.maxSteps) });
+  const [form, setForm] = useState({ backdateDays: String(data.backdateDays ?? 7), maxKcal: String(data.maxKcal), maxSteps: String(data.maxSteps) });
+  const [limited, setLimited] = useState(data.backdateDays !== null);
   const [busy, setBusy] = useState(false);
-  const changed = (Number(form.backdateDays) !== data.backdateDays || Number(form.maxKcal) !== data.maxKcal || Number(form.maxSteps) !== data.maxSteps);
+  const backdate = limited ? Number(form.backdateDays) : null;
+  const changed = (backdate !== data.backdateDays || Number(form.maxKcal) !== data.maxKcal || Number(form.maxSteps) !== data.maxSteps);
   async function save() {
     setBusy(true);
     try {
-      const { data: saved, message } = await send<WbSettingsView>(wellbeingAdminApi.settings, "PUT", { backdateDays: Number(form.backdateDays), maxKcal: Number(form.maxKcal), maxSteps: Number(form.maxSteps) });
+      const { data: saved, message } = await send<WbSettingsView>(wellbeingAdminApi.settings, "PUT", { backdateDays: backdate, maxKcal: Number(form.maxKcal), maxSteps: Number(form.maxSteps) });
       setResource<WbSettingsView>(wb.settings.key, () => saved);
       toast({ message, tone: "ok" });
     } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
@@ -216,7 +225,16 @@ function RulesForm({ data }: { data: WbSettingsView }) {
   </label>;
   return <form className={css.form} onSubmit={event => { event.preventDefault(); void save(); }}>
         <div className={css.fieldRow3}>
-          {field("backdateDays", "Boleh mundur", "hari", "0 = hanya hari ini. Tanggal depan selalu ditolak.")}
+          <div className={css.field}>
+            <label htmlFor="rules-backdate">Boleh mundur</label>
+            <select id="rules-backdate" className={css.select} value={limited ? "batas" : "awal"} onChange={event => setLimited(event.target.value === "batas")} aria-describedby="rules-backdate-help">
+              <option value="awal">Sejak program mulai</option>
+              <option value="batas">Batasi beberapa hari</option>
+            </select>
+            {limited && <span className={css.withUnit}><input className={css.input} inputMode="numeric" aria-label="Boleh mundur, jumlah hari" value={form.backdateDays}
+              onChange={event => setForm(current => ({ ...current, backdateDays: event.target.value.replace(/D/g, "").slice(0, 2) }))} /><small>hari</small></span>}
+            <small className={css.help} id="rules-backdate-help">{limited ? "0 = hanya hari ini, paling banyak 60. Tanggal depan selalu ditolak." : `Karyawan bisa mencatat untuk tanggal mana pun sejak ${longDay(data.programStart)}.`}</small>
+          </div>
           {field("maxKcal", "Kalori maksimal", "kkal", "Per aktivitas olahraga (1 kkal = 1 poin).")}
           {field("maxSteps", "Langkah maksimal", "langkah", "Per hari (10 langkah = 1 poin).")}
         </div>
