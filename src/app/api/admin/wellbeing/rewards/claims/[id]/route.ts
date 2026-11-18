@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 const said = { approve: "Klaim disetujui.", deliver: "Hadiah ditandai sudah diserahkan.", reject: "Klaim ditolak. Poinnya kembali ke saldo karyawan." } as const;
 
-/** POST { action, reason }: approve a claim, mark it handed over, or reject it with a reason. */
+/** POST { action, reason, code }: approve a claim, mark it handed over (a typed-in voucher code with it), or reject it with a reason. */
 export async function POST(request: Request, { params }: Context) {
   return handle(async () => {
     await requireApiAdmin();

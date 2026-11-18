@@ -96,7 +96,8 @@ export function WellbeingAdmin({ person, basePath = WELLBEING_ADMIN }: { person:
   useEffect(() => { document.title = `${labels[section]} · Admin Wellbeing`; }, [section]);
 
   const unchecked = overview.data?.unchecked ?? 0;
-  const requested = rewards.data?.counts.requested ?? 0;
+  // Claims the admin still acts on: asked for, and approved but not handed over yet (also those approved at once, 18 Nov 2026).
+  const requested = (rewards.data?.counts.requested ?? 0) + (rewards.data?.counts.approved ?? 0);
   const nav: ConsoleNavGroup[] = useMemo(() => [
     { label: "Wellbeing", items: [
       { key: "hari-ini", label: "Hari ini", href: pathOf("hari-ini"), icon: <House size={20} /> },

@@ -1,4 +1,4 @@
-import type { AppControls, ClaimStatus, DimensionId, Limit, PointsMode, ReviewStatus, RewardKind, TicketStatus } from "./rules";
+import type { AppControls, ClaimStatus, CodeMode, Delivery, DimensionId, Limit, PointsMode, ReviewStatus, RewardKind, TicketStatus } from "./rules";
 
 /** What the Admin Wellbeing API answers with (shared by the server and the screens). */
 
@@ -115,15 +115,24 @@ export type WbStravaAdmin = {
 export type WbAdminRewardPhoto = { key: string; url: string | null };
 export type WbAdminReward = { id: string; title: string; description: string; photos: WbAdminRewardPhoto[]; cost: number; stock: number | null; perPerson: number;
   active: boolean;
-  /** A prize, or a re-roll voucher (claimed at once). vouchersReady: false until migration 202611180003. */
+  /** Barang, Uang, Voucher, Lainnya, or a re-roll voucher. vouchersReady: false until migration 202611180003; typesReady: until 202611180004. */
   kind: RewardKind;
+  /** How a claim goes on; a code voucher's code mode, the code for everyone, its last day and how to use it. */
+  delivery: Delivery; codeMode: CodeMode | null; sharedCode: string | null; validUntil: string | null; howTo: string;
+  /** A voucher with unique codes: how many there are, and how many are not given yet (null for the rest). */
+  codes: { total: number; free: number } | null;
   /** Claims that hold points (requested, approved, delivered), and of those still waiting for a decision. */
   taken: number; waiting: number; updatedAt: string; updatedBy: string | null };
 export type WbAdminClaim = { id: string; rewardId: string; rewardTitle: string; rewardPhoto: string | null; employeeId: string; employeeName: string; department: string;
-  cost: number; status: ClaimStatus; note: string; reason: string | null; createdAt: string; decidedBy: string | null; decidedAt: string | null; deliveredBy: string | null; deliveredAt: string | null };
+  cost: number; status: ClaimStatus; note: string; reason: string | null; createdAt: string; decidedBy: string | null; decidedAt: string | null; deliveredBy: string | null; deliveredAt: string | null;
+  /** The reward's kind; the code or link the claim holds; needsCode: the admin types the code in when handing it over. */
+  kind: RewardKind; code: string | null; needsCode: boolean };
 export type WbRewardsAdmin = { migrated: boolean; rewards: WbAdminReward[]; claims: WbAdminClaim[]; counts: Record<ClaimStatus, number>;
-  /** Whether rewards may be re-roll vouchers (migration 202611180003 ran). */
-  vouchersReady: boolean };
+  /** Whether rewards may be re-roll vouchers (migration 202611180003 ran), and Uang, Voucher kode and Lainnya (202611180004). */
+  vouchersReady: boolean; typesReady: boolean };
+/** GET /api/admin/wellbeing/rewards/<id>/codes: a voucher's unique codes, oldest first, and who got each. */
+export type WbRewardCode = { id: string; code: string; claimId: string | null; employeeName: string | null; givenAt: string | null; createdAt: string };
+export type WbRewardCodes = { codes: WbRewardCode[] };
 
 /*
  * Super admin → Voucher re-roll (18 Nov 2026): every ticket, newest first, with where it came from and

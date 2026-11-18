@@ -857,3 +857,14 @@ input[type="date"].input { display: block; }
 .doneMarkGold { background: var(--gold-c); color: var(--gold); }
 .claimConfirm { display: grid; gap: 10px; }
 .claimConfirm > p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-2); text-align: center; }
+
+/* ---------- Jenis hadiah dan voucher kode (18 Nov 2026): a code voucher's ticket, money's note, the code to copy ---------- */
+.voucherArt[data-code] { background: var(--primary-c); color: var(--on-primary-c); }
+.voucherArt[data-money] { background: var(--success-c); color: var(--on-success-c); }
+.howToLabel { margin: 16px 0 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.codeCard { display: grid; gap: 12px; margin-top: 16px; padding: 16px; border-radius: 16px; border: 1.5px dashed var(--primary); background: var(--primary-c); text-align: center; }
+.codeCard[data-ended] { border-color: var(--outline); background: var(--surface-2); }
+.codeLabel { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--on-primary-c); }
+.codeCard[data-ended] .codeLabel { color: var(--text-2); }
+.codeValue { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: .04em; color: var(--text); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.codeValue[data-link] { font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.4; }

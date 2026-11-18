@@ -1,7 +1,7 @@
 "use client";
 
 import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbClaim, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbReward, WbRewards, WbRules, WbSaldo, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
-import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type DimensionId, type Limit, type RewardKind } from "@/lib/wellbeing/rules";
+import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type Delivery, type DimensionId, type Limit, type RewardKind } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 
@@ -291,18 +291,30 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     { id: "00000000-0000-4000-8000-0000000000b3", title: "Kelas yoga satu bulan", description: "Empat kali kelas yoga di studio mitra kantor.", photos: photos(1, "Kelas yoga", 11), cost: 15000, stock: null, taken: 3, perPerson: 2 },
     { id: "00000000-0000-4000-8000-0000000000b4", title: "Jam olahraga Garmin", description: "Jam pintar untuk lari dan bersepeda, lengkap dengan GPS.", photos: photos(2, "Garmin", 17), cost: 300000, stock: 1, taken: 0, perPerson: 1 },
     // Voucher re-roll (18 Nov 2026): claimed at once, used on the tokoh card.
-    { id: "00000000-0000-4000-8000-0000000000b5", title: "Voucher re-roll tokoh", description: "Undi ulang tokoh kartu WAM-mu sekali. Rarity juga diundi ulang.", photos: [] as string[], cost: 5000, stock: null, taken: 6, perPerson: 3, kind: "reroll" as RewardKind },
-    { id: "00000000-0000-4000-8000-0000000000b6", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM-mu, rarity pasti Legendary.", photos: [] as string[], cost: 25000, stock: 3, taken: 1, perPerson: 1, kind: "reroll_legendary" as RewardKind },
-  ].map(item => ({ kind: "barang" as RewardKind, ...item }));
+    { id: "00000000-0000-4000-8000-0000000000b5", title: "Voucher re-roll tokoh", description: "Undi ulang tokoh kartu WAM-mu sekali. Rarity juga diundi ulang.", photos: [] as string[], cost: 5000, stock: null, taken: 6, perPerson: 3, kind: "reroll" as RewardKind, delivery: "auto" as Delivery },
+    { id: "00000000-0000-4000-8000-0000000000b6", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM-mu, rarity pasti Legendary.", photos: [] as string[], cost: 25000, stock: 3, taken: 1, perPerson: 1, kind: "reroll_legendary" as RewardKind, delivery: "auto" as Delivery },
+    // Jenis hadiah dan voucher kode (18 Nov 2026): a code voucher received at once, a link voucher, money approved at once.
+    { id: "00000000-0000-4000-8000-0000000000b7", title: "Voucher kopi Rp50.000", description: "Kopi atau teh di kedai mitra kantor.", photos: [] as string[], cost: 5000, stock: 8 as number | null, taken: 3, perPerson: 2,
+      kind: "voucher" as RewardKind, delivery: "auto" as Delivery, validUntil: addDays(today, 40), howTo: "Tunjukkan kode di kasir sebelum membayar.", codes: ["KOPI-3M9Q", "KOPI-8H2K"] },
+    { id: "00000000-0000-4000-8000-0000000000b8", title: "Diskon toko olahraga 20%", description: "Potongan 20% belanja online di toko mitra.", photos: [] as string[], cost: 8000, stock: null, taken: 2, perPerson: 1,
+      kind: "voucher" as RewardKind, delivery: "auto" as Delivery, validUntil: null, howTo: "Buka link, lalu masuk dengan email kantor.", codes: ["https://toko.example/promo/WLM20"] },
+    { id: "00000000-0000-4000-8000-0000000000b9", title: "Saldo e-wallet Rp200.000", description: "Ditransfer ke e-wallet dalam 3 hari kerja.", photos: [] as string[], cost: 25000, stock: 5, taken: 1, perPerson: 1, kind: "uang" as RewardKind, delivery: "approved" as Delivery },
+  ].map(item => ({ kind: "barang" as RewardKind, delivery: "admin" as Delivery, validUntil: null as string | null, howTo: "", codes: [] as string[], ...item }));
   const claims: WbClaim[] = notReady || options.empty ? [] : [{
     id: "00000000-0000-4000-8000-0000000000c1", rewardId: rewardItems[2].id, title: rewardItems[2].title, photo: rewardItems[2].photos[0], cost: 15000, status: "delivered", note: "",
     reason: null, createdAt: `${addDays(today, -20)}T03:00:00.000Z`, decidedAt: `${addDays(today, -19)}T03:00:00.000Z`, deliveredAt: `${addDays(today, -18)}T03:00:00.000Z`, voucher: null,
+    kind: "barang", code: null, validUntil: null, howTo: "",
+  }, {
+    id: "00000000-0000-4000-8000-0000000000c2", rewardId: rewardItems[6].id, title: rewardItems[6].title, photo: null, cost: 5000, status: "delivered", note: "",
+    reason: null, createdAt: `${addDays(today, -3)}T03:00:00.000Z`, decidedAt: `${addDays(today, -3)}T03:00:00.000Z`, deliveredAt: `${addDays(today, -3)}T03:00:00.000Z`, voucher: null,
+    kind: "voucher", code: "KOPI-7QX2", validUntil: rewardItems[6].validUntil, howTo: rewardItems[6].howTo,
   }];
-  const blockedOf = (kind: RewardKind) => kind === "barang" ? null : options.noCard ? "no_card" as const : kind === "reroll_legendary" && options.legendFull ? "legend_full" as const : null;
+  const blockedOf = (kind: RewardKind) => kind !== "reroll" && kind !== "reroll_legendary" ? null : options.noCard ? "no_card" as const : kind === "reroll_legendary" && options.legendFull ? "legend_full" as const : null;
   const saldo = (): WbSaldo => saldoOf(myPoints("all", "all"), claims);
   const rewardView = (item: (typeof rewardItems)[number]): WbReward => {
     const mine = claims.filter(claim => claim.rewardId === item.id && claimHolds(claim.status)).length, taken = item.taken + mine;
-    return { id: item.id, title: item.title, description: item.description, photos: item.photos, cost: item.cost, kind: item.kind, left: item.stock === null ? null : Math.max(0, item.stock - taken), perPerson: item.perPerson, mine,
+    return { id: item.id, title: item.title, description: item.description, photos: item.photos, cost: item.cost, kind: item.kind, delivery: item.delivery, validUntil: item.validUntil, howTo: item.howTo,
+      left: item.stock === null ? null : Math.max(0, item.stock - taken), perPerson: item.perPerson, mine,
       state: rewardState({ cost: item.cost, stock: item.stock, taken, perPerson: item.perPerson, mine, available: saldo().available, blocked: blockedOf(item.kind) }) };
   };
 
@@ -416,11 +428,14 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       if (view.state === "short") throw new WellbeingApiError("Saldo poinmu belum cukup untuk hadiah ini.", 409, { code: ["balance"] });
       if (view.state === "no_card") throw new WellbeingApiError("Kartu tokohmu belum keluar. Selesaikan kuesioner WAM dulu, lalu klaim voucher ini.", 409, { code: ["no_card"] });
       if (view.state === "legend_full") throw new WellbeingApiError("Tempat Legendary sudah penuh, jadi voucher ini belum bisa diklaim. Poinmu tidak terpotong.", 409, { code: ["legend_full"] });
-      const now = new Date().toISOString(), voucher = item.kind !== "barang";
-      // A voucher is handed over at once, with its ticket (no admin).
+      const now = new Date().toISOString(), reroll = item.kind === "reroll" || item.kind === "reroll_legendary";
+      // A re-roll is handed over at once with its ticket; otherwise the delivery says (a code voucher takes the next code).
+      const status = reroll || item.delivery === "auto" ? "delivered" as const : item.delivery === "approved" ? "approved" as const : "requested" as const;
+      const code = item.kind === "voucher" ? item.codes.length > 1 ? item.codes.shift()! : item.codes[0] ?? null : null;
       const claim: WbClaim = { id: `00000000-0000-4000-8000-${String(Date.now()).slice(-12).padStart(12, "0")}`, rewardId, title: item.title, photo: item.photos[0] ?? null, cost: item.cost,
-        status: voucher ? "delivered" : "requested", note: voucher ? "" : note.trim().slice(0, 300), reason: null, createdAt: now, decidedAt: voucher ? now : null, deliveredAt: voucher ? now : null,
-        voucher: voucher ? { legendary: item.kind === "reroll_legendary", status: "open" } : null };
+        status, note: item.delivery === "auto" ? "" : note.trim().slice(0, 300), reason: null, createdAt: now, decidedAt: status === "requested" ? null : now, deliveredAt: status === "delivered" ? now : null,
+        voucher: reroll ? { legendary: item.kind === "reroll_legendary", status: "open" } : null,
+        kind: item.kind, code: status === "delivered" ? code : null, validUntil: item.validUntil, howTo: item.howTo };
       claims.push(claim);
       return { claim, saldo: saldo() };
     }, 0.15),

@@ -1,4 +1,4 @@
-import type { ClaimStatus, DimensionId, Limit, PointsMode, RewardKind, RewardState, ReviewStatus, TicketStatus } from "./rules";
+import type { ClaimStatus, Delivery, DimensionId, Limit, PointsMode, RewardKind, RewardState, ReviewStatus, TicketStatus } from "./rules";
 
 /*
  * Wellbeing for employees (/wellbeing, 17 Nov 2026): what /api/wellbeing/* answers with. Shared by
@@ -116,13 +116,17 @@ export type WbLedger = { migrated: boolean; items: WbLedgerItem[]; total: number
  * minus what my open and handed-over claims hold; the board never changes), the rewards that are on,
  * and my claims, newest first. Photos are ready-to-show addresses (signed, ~1 hour).
  * POST /api/wellbeing/rewards/claims { rewardId, note } asks for one (409 with fieldErrors.code
- * ["balance" | "sold_out" | "limit" | "unavailable"]); POST /api/wellbeing/rewards/claims/<id> cancels mine while it waits.
+ * ["balance" | "sold_out" | "limit" | "unavailable" | "expired" | "no_card" | "legend_full"]); POST /api/wellbeing/rewards/claims/<id> cancels mine while it waits.
  */
 export type WbSaldo = { earned: number; held: number; available: number };
 export type WbReward = { id: string; title: string; description: string; photos: string[]; cost: number;
-  /** A prize, or a voucher that re-rolls the tokoh card (claimed at once, 18 Nov 2026). */
+  /** Barang, Uang, Voucher (a code or a link), Lainnya, or a voucher that re-rolls the tokoh card (claimed at once, 18 Nov 2026). */
   kind: RewardKind;
-  /** null: no limit; otherwise how many are still there. */
+  /** How a claim goes on (migration 202611180004): the admin approves first, approved at once, or handed over at once. */
+  delivery: Delivery;
+  /** A voucher's last day (WIB), and how to use it; null / "" for the rest. */
+  validUntil: string | null; howTo: string;
+  /** null: no limit; otherwise how many are still there (a code voucher with unique codes: the codes not given yet). */
   left: number | null; perPerson: number;
   /** My claims of it that hold points. */
   mine: number; state: RewardState };
@@ -130,7 +134,9 @@ export type WbClaim = { id: string; rewardId: string; title: string; photo: stri
   /** The admin's reason when rejected. */
   reason: string | null; createdAt: string; decidedAt: string | null; deliveredAt: string | null;
   /** A voucher's re-roll ticket: Legendary or not, and whether it is used (null for a prize). */
-  voucher: { legendary: boolean; status: TicketStatus } | null };
+  voucher: { legendary: boolean; status: TicketStatus } | null;
+  /** The reward's kind now; a code voucher's code or link (only once handed over), its last day and how to use it. */
+  kind: RewardKind; code: string | null; validUntil: string | null; howTo: string };
 /** cardUrl: where my tokoh card is (the WAM questionnaire), to use a voucher; null when there is none. */
 export type WbRewards = { migrated: boolean; saldo: WbSaldo; rewards: WbReward[]; claims: WbClaim[]; cardUrl: string | null };
 export type WbClaimResult = { claim: WbClaim; saldo: WbSaldo };

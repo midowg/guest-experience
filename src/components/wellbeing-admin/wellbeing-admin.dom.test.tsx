@@ -148,11 +148,11 @@ describe("Admin Wellbeing", () => {
 
   it("decides claims in Hadiah: approve, hand over, reject only with a reason (18 Nov 2026)", async () => {
     open("hadiah");
-    // The menu's badge counts the claims waiting; Permintaan opens on Diajukan.
+    // The menu's badge counts the claims the admin still acts on (asked for and approved); Permintaan opens on Diajukan.
     const list = await screen.findByRole("list", { name: "Klaim diajukan" }, { timeout: 3000 });
-    expect(screen.getByRole("link", { name: /Hadiah/ }).textContent).toMatch(/2/);
+    expect(screen.getByRole("link", { name: /Hadiah/ }).textContent).toMatch(/4/);
     const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     fireEvent.click(within(rows[0]).getByRole("button", { name: "Setujui" }));
     expect(await screen.findByText("Klaim disetujui.")).toBeTruthy();
     // Rejecting asks for the reason the employee reads.
@@ -165,8 +165,54 @@ describe("Admin Wellbeing", () => {
     expect(await screen.findByText("Klaim ditolak. Poinnya kembali ke saldo karyawan.")).toBeTruthy();
     // The approved one is handed over from Disetujui.
     fireEvent.click(screen.getByRole("button", { name: /^Disetujui/ }));
-    fireEvent.click(within(await screen.findByRole("list", { name: "Klaim disetujui" })).getByRole("button", { name: "Tandai diserahkan" }));
+    fireEvent.click(within(await screen.findByRole("list", { name: "Klaim disetujui" })).getAllByRole("button", { name: "Tandai diserahkan" })[0]);
     expect(await screen.findByText("Hadiah ditandai sudah diserahkan.")).toBeTruthy();
+  });
+
+  it("hands over a voucher whose code the admin types in, only with the code (18 Nov 2026)", async () => {
+    open("hadiah");
+    const list = await screen.findByRole("list", { name: "Klaim diajukan" }, { timeout: 3000 });
+    const row = within(list).getAllByRole("listitem").find(item => within(item).queryByText("Pulsa Rp100.000"))!;
+    expect(within(row).getByText(/diisi saat menandai diserahkan/)).toBeTruthy();
+    fireEvent.click(within(row).getByRole("button", { name: "Tandai diserahkan" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Serahkan" }));
+    expect(within(row).getByRole("alert").textContent).toMatch(/kode atau link/);
+    fireEvent.change(within(row).getByLabelText(/Kode atau link voucher/), { target: { value: "PULSA-1234" } });
+    fireEvent.click(within(row).getByRole("button", { name: "Serahkan" }));
+    expect(await screen.findByText("Hadiah ditandai sudah diserahkan.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Diserahkan/ }));
+    expect(within(await screen.findByRole("list", { name: "Klaim diserahkan" })).getByText("PULSA-1234")).toBeTruthy();
+  });
+
+  it("makes a code voucher from pasted unique codes, received at once; Otomatis only where a code is ready (18 Nov 2026)", async () => {
+    open("hadiah");
+    fireEvent.click(await screen.findByRole("button", { name: /^Katalog/ }, { timeout: 3000 }));
+    const catalog = await screen.findByRole("list", { name: "Katalog hadiah" });
+    expect(within(within(catalog).getByRole("button", { name: "Ubah Voucher kopi Rp50.000" })).getByText(/3 dari 4 kode tersisa/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah hadiah" }));
+    const panel = await screen.findByRole("dialog");
+    fireEvent.change(within(panel).getByLabelText("Nama hadiah"), { target: { value: "Voucher pulsa" } });
+    fireEvent.click(within(within(panel).getByRole("group", { name: "Jenis hadiah" })).getByRole("button", { name: "Voucher" }));
+    expect((within(panel).getByRole("radio", { name: /Daftar kode unik/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.change(within(panel).getByLabelText(/Tambah kode atau link/), { target: { value: "PULSA-A\n  PULSA-B \n\nPULSA-A" } });
+    expect(within(panel).getByText(/2 kode baru/)).toBeTruthy();
+    expect(within(panel).getByText("Mengikuti jumlah kode yang belum diberikan.")).toBeTruthy();
+    // Typed in by the admin: Otomatis cannot be picked.
+    fireEvent.click(within(panel).getByRole("radio", { name: /Diisi admin saat menyerahkan/ }));
+    expect((within(panel).getByRole("radio", { name: /Otomatis/ }) as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(within(panel).getByRole("radio", { name: /Daftar kode unik/ }));
+    fireEvent.click(within(panel).getByRole("radio", { name: /Otomatis/ }));
+    fireEvent.change(within(panel).getByLabelText("Harga (poin)"), { target: { value: "3000" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Simpan" }));
+    expect(await screen.findByText("Hadiah disimpan sebagai draf (belum tampil).")).toBeTruthy();
+    const card = within(screen.getByRole("list", { name: "Katalog hadiah" })).getByRole("button", { name: "Ubah Voucher pulsa" });
+    expect(within(card).getByText(/2 dari 2 kode tersisa/)).toBeTruthy();
+    expect(within(card).getByText("Otomatis")).toBeTruthy();
+    // Opened again: the codes, and who got each.
+    fireEvent.click(within(screen.getByRole("list", { name: "Katalog hadiah" })).getByRole("button", { name: "Ubah Voucher kopi Rp50.000" }));
+    const edit = await screen.findByRole("dialog");
+    expect(await within(edit).findByText("3 kode belum diberikan")).toBeTruthy();
+    expect(within(edit).getByText(/Diberikan ke/)).toBeTruthy();
   });
 
   it("adds a reward as a draft in Katalog, and keeps a claimed one from being deleted (18 Nov 2026)", async () => {
@@ -196,7 +242,9 @@ describe("Admin Wellbeing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tambah hadiah" }));
     const panel = await screen.findByRole("dialog");
     fireEvent.change(within(panel).getByLabelText("Nama hadiah"), { target: { value: "Voucher re-roll tokoh" } });
-    fireEvent.change(within(panel).getByLabelText(/^Jenis hadiah/), { target: { value: "reroll" } });
+    fireEvent.click(within(within(panel).getByRole("group", { name: "Jenis hadiah" })).getByRole("button", { name: "Voucher" }));
+    fireEvent.click(within(within(panel).getByRole("group", { name: "Isi voucher" })).getByRole("button", { name: "Re-roll tokoh WAM" }));
+    expect(within(panel).queryByRole("group", { name: "Penyerahan" })).toBeNull();
     expect(within(panel).getByText(/tanpa persetujuan admin/)).toBeTruthy();
     fireEvent.change(within(panel).getByLabelText("Harga (poin)"), { target: { value: "5000" } });
     fireEvent.click(within(panel).getByRole("button", { name: "Simpan" }));

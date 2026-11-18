@@ -1,7 +1,7 @@
 "use client";
 
-import { defaultAppControls, monthRange, previousMonth, rank, wibToday, type AppControls, type ClaimStatus, type DimensionId, type ReviewInput, type RewardKind } from "@/lib/wellbeing/rules";
-import type { WbActivity, WbAdminClaim, WbAdminReward, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, WbPersonRow, WbRewardsAdmin, WbSettingsView } from "@/lib/wellbeing/types";
+import { addDays, codeLines, defaultAppControls, monthRange, previousMonth, rank, rewardShape, wibToday, type AppControls, type ClaimStatus, type CodeMode, type Delivery, type DimensionId, type ReviewInput, type RewardInput, type RewardKind } from "@/lib/wellbeing/rules";
+import type { WbActivity, WbAdminClaim, WbAdminReward, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, WbPersonRow, WbRewardCode, WbRewardsAdmin, WbSettingsView } from "@/lib/wellbeing/types";
 
 /*
  * Admin Wellbeing on sample data (17 Nov 2026), for /dev-preview/wellbeing-admin only: the page's
@@ -87,35 +87,58 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
   const ok = (data: unknown, message = "OK") => new Response(JSON.stringify({ ok: true, data, message }), { headers: { "Content-Type": "application/json" } });
   const refuse = (status: number, message: string) => new Response(JSON.stringify({ ok: false, message }), { status, headers: { "Content-Type": "application/json" } });
 
-  // Hadiah (18 Nov 2026): three prizes, claims waiting and done.
-  type MockReward = { id: string; title: string; description: string; photos: string[]; cost: number; stock: number | null; perPerson: number; active: boolean; updatedAt: string; updatedBy: string | null; kind: RewardKind };
+  // Hadiah (18 Nov 2026): prizes, money, code vouchers and a re-roll voucher; claims waiting and done.
+  type MockReward = { id: string; title: string; description: string; photos: string[]; cost: number; stock: number | null; perPerson: number; active: boolean; updatedAt: string; updatedBy: string | null;
+    kind: RewardKind; delivery: Delivery; codeMode: CodeMode | null; sharedCode: string | null; validUntil: string | null; howTo: string };
   let uploads = 0;
+  const base = { kind: "barang" as RewardKind, delivery: "admin" as Delivery, codeMode: null as CodeMode | null, sharedCode: null as string | null, validUntil: null as string | null, howTo: "" };
   let rewards: MockReward[] = [
     { id: "30000000-0000-4000-8000-0000000000a1", title: "Voucher Decathlon Rp250.000", description: "Voucher belanja Decathlon, berlaku 6 bulan.", photos: ["wellbeing/hadiah/a1.jpg"], cost: 35000, stock: 4, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
     { id: "30000000-0000-4000-8000-0000000000a2", title: "Tumbler Hydro Flask 32 oz", description: "Botol minum baja tahan karat.", photos: ["wellbeing/hadiah/a2.jpg", "wellbeing/hadiah/a2b.jpg"], cost: 30000, stock: 2, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
     { id: "30000000-0000-4000-8000-0000000000a3", title: "Jam olahraga Garmin", description: "Dibawa dari aplikasi lama, cek dulu sebelum dinyalakan.", photos: [], cost: 300000, stock: 1, perPerson: 1, active: false, updatedAt: `${day(1)}T03:00:00.000Z`, updatedBy: "Pindah data" },
     // Voucher re-roll (18 Nov 2026).
-    { id: "30000000-0000-4000-8000-0000000000a4", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM, rarity pasti Legendary.", photos: [], cost: 25000, stock: 3, perPerson: 1, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida", kind: "reroll_legendary" as RewardKind },
-  ].map(item => ({ kind: "barang" as RewardKind, ...item }));
+    { id: "30000000-0000-4000-8000-0000000000a4", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM, rarity pasti Legendary.", photos: [], cost: 25000, stock: 3, perPerson: 1, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida", kind: "reroll_legendary" as RewardKind, delivery: "auto" as Delivery },
+    // Jenis hadiah dan voucher kode (18 Nov 2026).
+    { id: "30000000-0000-4000-8000-0000000000a5", title: "Voucher kopi Rp50.000", description: "Kopi atau teh di kedai mitra.", photos: [], cost: 5000, stock: null, perPerson: 2, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida",
+      kind: "voucher" as RewardKind, delivery: "auto" as Delivery, codeMode: "pool" as CodeMode, validUntil: addDays(today, 40), howTo: "Tunjukkan kode di kasir sebelum membayar." },
+    { id: "30000000-0000-4000-8000-0000000000a6", title: "Pulsa Rp100.000", description: "Pulsa ke nomor yang kamu tulis di catatan.", photos: [], cost: 12000, stock: 10, perPerson: 1, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida",
+      kind: "voucher" as RewardKind, codeMode: "manual" as CodeMode },
+    { id: "30000000-0000-4000-8000-0000000000a7", title: "Saldo e-wallet Rp200.000", description: "Ditransfer ke e-wallet dalam 3 hari kerja.", photos: [], cost: 25000, stock: 5, perPerson: 1, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida", kind: "uang" as RewardKind, delivery: "approved" as Delivery },
+  ].map(item => ({ ...base, ...item }));
   const rewardPhoto = (key: string) => photo(key.includes("a1") ? "Voucher" : "Tumbler", key.includes("a1") ? "250K" : "32oz");
+  const claimBase = { kind: "barang" as RewardKind, code: null as string | null, needsCode: false };
   const claims: WbAdminClaim[] = [
     { id: "30000000-0000-4000-8000-0000000000c1", rewardId: rewards[0].id, rewardTitle: rewards[0].title, rewardPhoto: null, employeeId: people[1].id, employeeName: people[1].nickname, department: people[1].department, cost: 35000, status: "requested", note: "", reason: null, createdAt: `${day(0)}T02:10:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null },
     { id: "30000000-0000-4000-8000-0000000000c2", rewardId: rewards[1].id, rewardTitle: rewards[1].title, rewardPhoto: null, employeeId: people[0].id, employeeName: people[0].nickname, department: people[0].department, cost: 30000, status: "requested", note: "Warna hitam kalau ada", reason: null, createdAt: `${day(1)}T07:40:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null },
     { id: "30000000-0000-4000-8000-0000000000c3", rewardId: rewards[0].id, rewardTitle: rewards[0].title, rewardPhoto: null, employeeId: people[2].id, employeeName: people[2].nickname, department: people[2].department, cost: 35000, status: "delivered", note: "", reason: null, createdAt: `${day(9)}T04:00:00.000Z`, decidedBy: "Meida", decidedAt: `${day(8)}T04:00:00.000Z`, deliveredBy: "Meida", deliveredAt: `${day(7)}T04:00:00.000Z` },
-  ];
+    { id: "30000000-0000-4000-8000-0000000000c4", rewardId: rewards[5].id, rewardTitle: rewards[5].title, rewardPhoto: null, employeeId: people[3].id, employeeName: people[3].nickname, department: people[3].department, cost: 12000, status: "requested", note: "Nomor saya yang biasa", reason: null, createdAt: `${day(0)}T04:30:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null, kind: "voucher" as RewardKind, needsCode: true },
+    { id: "30000000-0000-4000-8000-0000000000c5", rewardId: rewards[4].id, rewardTitle: rewards[4].title, rewardPhoto: null, employeeId: people[4].id, employeeName: people[4].nickname, department: people[4].department, cost: 5000, status: "delivered", note: "", reason: null, createdAt: `${day(1)}T05:00:00.000Z`, decidedBy: "Otomatis", decidedAt: `${day(1)}T05:00:00.000Z`, deliveredBy: "Otomatis", deliveredAt: `${day(1)}T05:00:00.000Z`, kind: "voucher" as RewardKind, code: "KOPI-7QX2" },
+    { id: "30000000-0000-4000-8000-0000000000c6", rewardId: rewards[6].id, rewardTitle: rewards[6].title, rewardPhoto: null, employeeId: people[5].id, employeeName: people[5].nickname, department: people[5].department, cost: 25000, status: "approved", note: "", reason: null, createdAt: `${day(0)}T06:00:00.000Z`, decidedBy: "Otomatis", decidedAt: `${day(0)}T06:00:00.000Z`, deliveredBy: null, deliveredAt: null, kind: "uang" as RewardKind },
+  ].map(item => ({ ...claimBase, ...item, status: item.status as ClaimStatus }));
+  let codes: (WbRewardCode & { rewardId: string })[] = ["KOPI-7QX2", "KOPI-3M9Q", "KOPI-8H2K", "KOPI-5TZ4"].map((code, index) => ({
+    id: `30000000-0000-4000-8000-0000000000d${index}`, rewardId: rewards[4].id, code, claimId: index === 0 ? "30000000-0000-4000-8000-0000000000c5" : null,
+    employeeName: index === 0 ? people[4].nickname : null, givenAt: index === 0 ? `${day(1)}T05:00:00.000Z` : null, createdAt: `${day(2)}T03:00:00.000Z` }));
   const holds = (status: ClaimStatus) => status === "requested" || status === "approved" || status === "delivered";
-  const rewardOf = (item: MockReward): WbAdminReward => ({ ...item, photos: item.photos.map(key => ({ key, url: rewardPhoto(key) })),
+  const codeCount = (item: MockReward) => item.kind === "voucher" && item.codeMode === "pool"
+    ? { total: codes.filter(code => code.rewardId === item.id).length, free: codes.filter(code => code.rewardId === item.id && !code.claimId).length } : null;
+  const rewardOf = (item: MockReward): WbAdminReward => ({ ...item, photos: item.photos.map(key => ({ key, url: rewardPhoto(key) })), codes: codeCount(item),
     taken: claims.filter(claim => claim.rewardId === item.id && holds(claim.status)).length, waiting: claims.filter(claim => claim.rewardId === item.id && (claim.status === "requested" || claim.status === "approved")).length });
   const rewardsView = (): WbRewardsAdmin => {
     const counts = { requested: 0, approved: 0, delivered: 0, rejected: 0, cancelled: 0 } as Record<ClaimStatus, number>;
     for (const claim of claims) counts[claim.status] += 1;
-    return { migrated: !options.notReady, rewards: rewards.map(rewardOf), claims: claims.map(claim => ({ ...claim, rewardPhoto: rewards.find(item => item.id === claim.rewardId)?.photos[0] ? rewardPhoto(rewards.find(item => item.id === claim.rewardId)!.photos[0]) : null })), counts, vouchersReady: !options.notReady };
+    return { migrated: !options.notReady, rewards: rewards.map(rewardOf), claims: claims.map(claim => ({ ...claim, rewardPhoto: rewards.find(item => item.id === claim.rewardId)?.photos[0] ? rewardPhoto(rewards.find(item => item.id === claim.rewardId)!.photos[0]) : null })), counts, vouchersReady: !options.notReady, typesReady: !options.notReady };
   };
   const saveReward = (item: MockReward | null, body: Record<string, unknown>): MockReward => {
+    const input = body as unknown as RewardInput;
+    const shape = rewardShape({ kind: input.kind ?? "barang", delivery: input.delivery ?? "admin", codeMode: input.codeMode ?? null, sharedCode: input.sharedCode ?? "", validUntil: input.validUntil ?? null, howTo: input.howTo ?? "", stock: input.stock });
     const next: MockReward = { id: item?.id ?? `30000000-0000-4000-8000-${String(Date.now()).slice(-12)}`, title: String(body.title), description: String(body.description ?? ""),
-      photos: ((body.photos as { key: string }[] | undefined) ?? []).map(entry => entry.key), cost: Number(body.cost), stock: body.stock === null ? null : Number(body.stock), perPerson: Number(body.perPerson), active: !!body.active,
-      updatedAt: new Date().toISOString(), updatedBy: "Admin (pratinjau)", kind: (body.kind as RewardKind | undefined) ?? "barang" };
+      photos: ((body.photos as { key: string }[] | undefined) ?? []).map(entry => entry.key), cost: Number(body.cost), perPerson: Number(body.perPerson), active: !!body.active,
+      updatedAt: new Date().toISOString(), updatedBy: "Admin (pratinjau)", kind: input.kind ?? "barang", ...shape };
     rewards = item ? rewards.map(entry => entry.id === item.id ? next : entry) : [next, ...rewards];
+    codes = codes.filter(code => code.rewardId !== next.id || code.claimId || !(input.removeCodes ?? []).includes(code.id));
+    if (shape.codeMode === "pool") for (const code of codeLines((input.addCodes ?? []).join("\n")).filter(code => !codes.some(entry => entry.rewardId === next.id && entry.code === code))) {
+      codes.push({ id: `30000000-0000-4000-8000-${String(Date.now() + codes.length).slice(-12)}`, rewardId: next.id, code, claimId: null, employeeName: null, givenAt: null, createdAt: new Date().toISOString() });
+    }
     return next;
   };
 
@@ -169,6 +192,8 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
     if (path === "/rewards/uploads" && method === "POST") { uploads += 1; const key = `wellbeing/hadiah/30000000-0000-4000-8000-${String(uploads).padStart(12, "0")}.${body.mime === "image/png" ? "png" : body.mime === "image/webp" ? "webp" : "jpg"}`; return ok({ key, uploadUrl: `mock:${key}`, token: `${Math.floor(Date.now() / 1000) + 3600}.${"0".repeat(64)}` }); }
     if (path === "/rewards" && method === "POST") { const item = saveReward(null, body); return ok(rewardOf(item), item.active ? "Hadiah ditambahkan dan tampil di aplikasi karyawan." : "Hadiah disimpan sebagai draf (belum tampil)."); }
     const reward = /^\/rewards\/([0-9a-f-]{36})$/.exec(path);
+    const rewardCodes = /^\/rewards\/([0-9a-f-]{36})\/codes$/.exec(path);
+    if (rewardCodes && method === "GET") return ok({ codes: codes.filter(code => code.rewardId === rewardCodes[1]).map(code => ({ id: code.id, code: code.code, claimId: code.claimId, employeeName: code.employeeName, givenAt: code.givenAt, createdAt: code.createdAt })) });
     if (reward && method === "PATCH") { const item = rewards.find(entry => entry.id === reward[1]); if (!item) return refuse(404, "Hadiah tidak ditemukan."); return ok(rewardOf(saveReward(item, body)), "Hadiah disimpan."); }
     if (reward && method === "DELETE") {
       if (claims.some(claim => claim.rewardId === reward[1])) return refuse(409, "Hadiah ini sudah pernah diklaim. Matikan Aktif saja supaya tidak tampil lagi; riwayat klaimnya tetap ada.");
@@ -182,7 +207,8 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
       const from = action === "approve" ? ["requested"] : ["requested", "approved"];
       if (!from.includes(item.status)) return refuse(409, "Status klaim ini sudah berubah. Muat ulang daftarnya.");
       const at = new Date().toISOString();
-      if (action === "deliver") Object.assign(item, { status: "delivered", deliveredBy: "Admin (pratinjau)", deliveredAt: at });
+      if (action === "deliver" && item.needsCode && !String(body.code ?? "").trim()) return refuse(422, "Isi kode atau link voucher untuk karyawan.");
+      if (action === "deliver") Object.assign(item, { status: "delivered", deliveredBy: "Admin (pratinjau)", deliveredAt: at, ...(item.needsCode ? { code: String(body.code).trim(), needsCode: false } : {}) });
       else Object.assign(item, { status: action === "approve" ? "approved" : "rejected", decidedBy: "Admin (pratinjau)", decidedAt: at, reason: action === "reject" ? String(body.reason ?? "") : null });
       return ok({ ...item }, action === "approve" ? "Klaim disetujui." : action === "deliver" ? "Hadiah ditandai sudah diserahkan." : "Klaim ditolak. Poinnya kembali ke saldo karyawan.");
     }

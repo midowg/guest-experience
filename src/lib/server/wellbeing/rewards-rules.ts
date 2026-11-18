@@ -1,5 +1,5 @@
 import type { WbClaim, WbReward, WbSaldo } from "@/lib/wellbeing/app-types";
-import { claimHolds, rewardState, type ClaimStatus, type PhotoMime, type RewardKind, type TicketStatus } from "@/lib/wellbeing/rules";
+import { claimHolds, rewardState, type ClaimStatus, type CodeMode, type Delivery, type PhotoMime, type RewardKind, type TicketStatus } from "@/lib/wellbeing/rules";
 import type { WbAdminClaim } from "@/lib/wellbeing/types";
 
 /*
@@ -20,7 +20,7 @@ export const isRewardPhotoKey = (key: string, mime: PhotoMime) => KEY.test(key) 
 /** The upload token's subject for reward photos (uploads.ts signs it in place of an employee). */
 export const REWARD_UPLOAD_SUBJECT = "hadiah";
 
-export type ClaimRefusal = { code: "balance" | "sold_out" | "limit" | "unavailable" | "no_card" | "legend_full"; message: string };
+export type ClaimRefusal = { code: "balance" | "sold_out" | "limit" | "unavailable" | "expired" | "no_card" | "legend_full"; message: string };
 /** wb_request_reward's and wb_claim_reroll's refusals (raise exception 'reward_…') in words for the employee; null for any other error. */
 export function claimRefusal(message: string | undefined): ClaimRefusal | null {
   const text = message ?? "";
@@ -29,6 +29,7 @@ export function claimRefusal(message: string | undefined): ClaimRefusal | null {
   if (text.includes("reward_balance")) return { code: "balance", message: "Saldo poinmu belum cukup untuk hadiah ini." };
   if (text.includes("reward_sold_out")) return { code: "sold_out", message: "Hadiah ini sudah habis diklaim." };
   if (text.includes("reward_limit")) return { code: "limit", message: "Kamu sudah mengklaim hadiah ini sebanyak batasnya." };
+  if (text.includes("reward_expired")) return { code: "expired", message: "Masa berlaku voucher ini sudah lewat." };
   if (text.includes("reward_unavailable")) return { code: "unavailable", message: "Hadiah ini sudah tidak tersedia. Muat ulang daftarnya." };
   return null;
 }
@@ -39,33 +40,54 @@ export function saldoFrom(earned: number, claims: readonly { status: ClaimStatus
   return { earned, held, available: earned - held };
 }
 
-/** A reward for the employee app: what is left, how many I hold, and what I can do (a voucher may be blocked: no card, no Legendary place). */
-export function toReward(row: Row, photos: string[], taken: number, mine: number, available: number, blocked: "no_card" | "legend_full" | null = null): WbReward {
-  const stock = row.stock === null || row.stock === undefined ? null : Number(row.stock);
+const kindOf = (row: Row): RewardKind => (row.kind as RewardKind | undefined) ?? "barang";
+const deliveryOf = (row: Row): Delivery => (row.delivery as Delivery | undefined) ?? (kindOf(row) === "reroll" || kindOf(row) === "reroll_legendary" ? "auto" : "admin");
+
+/**
+ * A reward for the employee app: what is left, how many I hold, and what I can do (a voucher may be
+ * blocked: no card, no Legendary place). `free`: a voucher with unique codes, the codes not given yet
+ * (what is left, whatever the stock says).
+ */
+export function toReward(row: Row, photos: string[], taken: number, mine: number, available: number, blocked: "no_card" | "legend_full" | null = null, free: number | null = null): WbReward {
+  const stock = free !== null ? taken + free : row.stock === null || row.stock === undefined ? null : Number(row.stock);
   const cost = Number(row.cost), perPerson = Number(row.per_person);
   return {
-    id: row.id as string, title: row.title as string, description: (row.description as string) ?? "", photos, cost, kind: (row.kind as RewardKind | undefined) ?? "barang",
+    id: row.id as string, title: row.title as string, description: (row.description as string) ?? "", photos, cost, kind: kindOf(row),
+    delivery: deliveryOf(row), validUntil: (row.valid_until as string | null | undefined) ?? null, howTo: (row.how_to as string | undefined) ?? "",
     left: stock === null ? null : Math.max(0, stock - taken), perPerson, mine,
     state: rewardState({ cost, stock, taken, perPerson, mine, available, blocked }),
   };
 }
 
-export function toClaim(row: Row, photo: string | null, voucher: { legendary: boolean; status: TicketStatus } | null = null): WbClaim {
+/** What a claim shows of its reward now: the kind, and a voucher's last day and how to use it. */
+export type ClaimReward = { kind: RewardKind; codeMode: CodeMode | null; validUntil: string | null; howTo: string };
+export const claimRewardOf = (row: Row): ClaimReward => ({
+  kind: kindOf(row), codeMode: (row.code_mode as CodeMode | null | undefined) ?? null, validUntil: (row.valid_until as string | null | undefined) ?? null, howTo: (row.how_to as string | undefined) ?? "",
+});
+
+/** My claim. Its code or link only once handed over (before that the admin may still reject it). */
+export function toClaim(row: Row, photo: string | null, voucher: { legendary: boolean; status: TicketStatus } | null = null, reward: ClaimReward | null = null): WbClaim {
+  const status = row.status as ClaimStatus;
   return {
-    id: row.id as string, rewardId: row.reward_id as string, title: row.reward_title as string, photo, cost: Number(row.cost), status: row.status as ClaimStatus,
+    id: row.id as string, rewardId: row.reward_id as string, title: row.reward_title as string, photo, cost: Number(row.cost), status,
     note: (row.note as string) ?? "", reason: (row.reason as string | null) ?? null, createdAt: row.created_at as string,
     decidedAt: (row.decided_at as string | null) ?? null, deliveredAt: (row.delivered_at as string | null) ?? null, voucher,
+    kind: reward?.kind ?? (voucher ? voucher.legendary ? "reroll_legendary" : "reroll" : "barang"),
+    code: status === "delivered" ? (row.code as string | null | undefined) ?? null : null,
+    validUntil: reward?.validUntil ?? null, howTo: reward?.howTo ?? "",
   };
 }
 
-export function toAdminClaim(row: Row, photo: string | null): WbAdminClaim {
+export function toAdminClaim(row: Row, photo: string | null, reward: ClaimReward | null = null): WbAdminClaim {
   const person = (row.person ?? {}) as Row;
+  const code = (row.code as string | null | undefined) ?? null;
   return {
     id: row.id as string, rewardId: row.reward_id as string, rewardTitle: row.reward_title as string, rewardPhoto: photo,
     employeeId: row.employee_id as string, employeeName: ((person.nickname as string) || (person.full_name as string)) ?? "", department: (person.department as string) ?? "",
     cost: Number(row.cost), status: row.status as ClaimStatus, note: (row.note as string) ?? "", reason: (row.reason as string | null) ?? null, createdAt: row.created_at as string,
     decidedBy: (row.decided_by_name as string | null) ?? null, decidedAt: (row.decided_at as string | null) ?? null,
     deliveredBy: (row.delivered_by_name as string | null) ?? null, deliveredAt: (row.delivered_at as string | null) ?? null,
+    kind: reward?.kind ?? "barang", code, needsCode: reward?.kind === "voucher" && reward.codeMode === "manual" && !code,
   };
 }
 

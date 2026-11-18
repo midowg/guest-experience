@@ -872,7 +872,9 @@ export const wellbeingAdminApi = {
   reward: (id: string) => `${WELLBEING_ADMIN_API}/rewards/${id}`,
   /** POST { mime, size }: where to upload one reward photo. */
   rewardUploads: `${WELLBEING_ADMIN_API}/rewards/uploads`,
-  /** POST { action, reason }: approve, hand over, or reject a claim. */
+  /** GET a voucher's unique codes and who got each (migration 202611180004). */
+  rewardCodes: (id: string) => `${WELLBEING_ADMIN_API}/rewards/${id}/codes`,
+  /** POST { action, reason, code }: approve, hand over (a typed-in voucher code with it), or reject a claim. */
   claim: (id: string) => `${WELLBEING_ADMIN_API}/rewards/claims/${id}`,
 };
 

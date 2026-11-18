@@ -444,6 +444,27 @@ textarea.input { min-height: 5.5rem; padding: .625rem .875rem; resize: vertical;
 .rewardName { font-size: 1rem; line-height: 1.35; min-height: 2.7em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rewardPrice { font-weight: 800; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
 
+/* Jenis hadiah dan voucher kode (18 Nov 2026): the code a claim holds, a voucher's codes, and the choices without an icon. */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .875rem; }
+.claimCode { justify-self: start; display: inline-flex; align-items: center; gap: .375rem; max-width: 100%; margin-top: .25rem; padding: .25rem .625rem; border-radius: 8px; background: var(--cs-primary-soft); color: var(--cs-text); }
+.claimCode > svg { flex: none; color: var(--cs-primary); }
+.claimCode code { font-size: .875rem; overflow-wrap: anywhere; }
+.choiceCompact input { margin-top: 3px; }
+.choice[data-off="true"] { cursor: default; opacity: .6; }
+.stockNote { min-height: 44px; display: flex; align-items: center; padding: 0 .875rem; border-radius: 12px; background: var(--cs-fill); color: var(--cs-muted); font-size: .875rem; }
+.codeBox { display: grid; gap: .5rem; padding: .75rem; border: 1px solid var(--cs-line); border-radius: .875rem; }
+.codeHead { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.codeList { list-style: none; margin: 0; padding: 0; display: grid; max-height: 15rem; overflow-y: auto; border-top: 1px solid var(--cs-line); }
+.codeList > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: .5rem; padding: .5rem 0; border-bottom: 1px solid var(--cs-line); }
+.codeList > li:last-child { border-bottom: 0; }
+.codeList code { font-size: .875rem; overflow-wrap: anywhere; }
+.codeList .help { grid-column: 1; }
+.codeList > li[data-given="true"] code { color: var(--cs-muted); }
+.codeList > li[data-gone="true"] code { text-decoration: line-through; color: var(--cs-subtle); }
+.codeTool { grid-column: 2; grid-row: 1 / span 2; width: 36px; height: 36px; border-radius: 999px; border: 0; display: grid; place-items: center; background: var(--cs-fill); color: var(--cs-muted); cursor: pointer; }
+.codeTool:hover { color: var(--cs-text); }
+.codeTool:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 1px; }
+
 /* The editor's photos. */
 .photoGrid { list-style: none; margin: .25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .5rem; }
 .photoTile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid var(--cs-line); display: grid; place-items: center; color: var(--cs-subtle); box-sizing: border-box; }

@@ -285,10 +285,48 @@ export const MAX_REWARD_PHOTOS = 6;
  * ticket used on the card page. Legendary: the rarity is Legendary, within the Legendary quota.
  */
 export const MIGRATION_WELLBEING_VOUCHERS = "202611180003_wellbeing_reroll_voucher.sql";
-export const REWARD_KINDS = ["barang", "reroll", "reroll_legendary"] as const;
+/*
+ * Jenis hadiah dan voucher kode (18 Nov 2026, migration 202611180004): a reward is Barang, Uang, Voucher
+ * or Lainnya. A voucher holds a code or a link, or re-rolls the tokoh card (the two re-roll kinds).
+ * Delivery, per reward: the admin approves first, approved at once, or handed over at once (a voucher
+ * whose code is ready; a re-roll always).
+ */
+export const MIGRATION_WELLBEING_REWARD_TYPES = "202611180004_wellbeing_reward_types.sql";
+export const REWARD_KINDS = ["barang", "uang", "voucher", "lainnya", "reroll", "reroll_legendary"] as const;
 export type RewardKind = (typeof REWARD_KINDS)[number];
-export const rewardKindLabels: Record<RewardKind, string> = { barang: "Barang", reroll: "Voucher re-roll tokoh", reroll_legendary: "Voucher re-roll Legendary" };
-export const isVoucher = (kind: RewardKind) => kind !== "barang";
+/** What the admin picks first (Jenis), and under Voucher, what it holds. */
+export const REWARD_CATEGORIES = ["barang", "uang", "voucher", "lainnya"] as const;
+export type RewardCategory = (typeof REWARD_CATEGORIES)[number];
+export const rewardCategoryLabels: Record<RewardCategory, string> = { barang: "Barang", uang: "Uang", voucher: "Voucher", lainnya: "Lainnya" };
+export const VOUCHER_KINDS = ["voucher", "reroll", "reroll_legendary"] as const;
+export type VoucherKind = (typeof VOUCHER_KINDS)[number];
+export const voucherKindLabels: Record<VoucherKind, string> = { voucher: "Kode atau link", reroll: "Re-roll tokoh WAM", reroll_legendary: "Re-roll Legendary WAM" };
+export const rewardKindLabels: Record<RewardKind, string> = {
+  barang: "Barang", uang: "Uang", voucher: "Voucher", lainnya: "Lainnya", reroll: "Voucher re-roll tokoh", reroll_legendary: "Voucher re-roll Legendary",
+};
+/** A re-roll voucher (re-rolls the WAM tokoh card; claimed through wb_claim_reroll, used on the card page). */
+export const isReroll = (kind: RewardKind) => kind === "reroll" || kind === "reroll_legendary";
+export const categoryOf = (kind: RewardKind): RewardCategory => isReroll(kind) ? "voucher" : kind as RewardCategory;
+/** The kinds the migration 202611180004 brings (before it, a reward is a prize or a re-roll voucher). */
+export const needsRewardTypes = (kind: RewardKind) => kind === "uang" || kind === "voucher" || kind === "lainnya";
+
+/** admin: the admin approves, then hands over; approved: approved at once, the admin hands over; auto: handed over at once. */
+export const DELIVERIES = ["admin", "approved", "auto"] as const;
+export type Delivery = (typeof DELIVERIES)[number];
+export const deliveryLabels: Record<Delivery, string> = { admin: "Admin menyetujui dulu", approved: "Langsung disetujui, admin menyerahkan", auto: "Otomatis, langsung diterima" };
+/** pool: one unique code or link per claim; shared: one for everyone; manual: the admin types it in when handing it over. */
+export const CODE_MODES = ["pool", "shared", "manual"] as const;
+export type CodeMode = (typeof CODE_MODES)[number];
+export const codeModeLabels: Record<CodeMode, string> = { pool: "Daftar kode unik", shared: "Satu kode untuk semua", manual: "Diisi admin saat menyerahkan" };
+/** Handed over at once needs nobody: a re-roll, or a code voucher whose code is ready (pool or shared). */
+export const autoAllowed = (kind: RewardKind, codeMode: CodeMode | null) => isReroll(kind) || (kind === "voucher" && (codeMode === "pool" || codeMode === "shared"));
+/** A code that is a web address opens as a link (only http and https). */
+export const isLinkCode = (code: string) => /^https?:\/\/\S+$/i.test(code.trim());
+/** Codes typed or pasted one per line: trimmed, blank lines and repeats left out. */
+export const codeLines = (text: string) => [...new Set(text.split(/\r?\n/).map(line => line.trim()).filter(Boolean))];
+/** A voucher past its last day (WIB) cannot be claimed. */
+export const rewardEnded = (validUntil: string | null, today: string) => !!validUntil && validUntil < today;
+export const MAX_REWARD_CODES = 2000;
 /** A voucher ticket: not used yet, used on the card, or cancelled by super admin. */
 export const TICKET_STATUSES = ["open", "used", "revoked"] as const;
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
@@ -341,10 +379,41 @@ export const rewardInputSchema = z.object({
   perPerson: z.number().int().min(1, "Batas per orang minimal 1.").max(100, "Batas per orang paling banyak 100."),
   active: z.boolean(),
   kind: z.enum(REWARD_KINDS).default("barang"),
+  /* Jenis hadiah dan voucher kode (18 Nov 2026, migration 202611180004). */
+  delivery: z.enum(DELIVERIES).default("admin"),
+  codeMode: z.enum(CODE_MODES).nullable().default(null),
+  sharedCode: z.string().trim().max(500, "Kode atau link paling banyak 500 karakter.").default(""),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal berlaku tidak dikenali.").nullable().default(null),
+  howTo: z.string().trim().max(1000, "Cara pakai paling banyak 1.000 karakter.").default(""),
+  /** Pool codes to add (one each) and free ones to take off, saved with the reward. */
+  addCodes: z.array(z.string().trim().min(1).max(500, "Satu kode atau link paling banyak 500 karakter.")).max(MAX_REWARD_CODES, `Paling banyak ${MAX_REWARD_CODES} kode sekali simpan.`).default([]),
+  removeCodes: z.array(z.string().uuid()).max(MAX_REWARD_CODES).default([]),
 }).superRefine((value, ctx) => {
   if (new Set(value.photos.map(photo => photo.key)).size !== value.photos.length) ctx.addIssue({ code: "custom", path: ["photos"], message: "Ada foto yang terpasang dua kali." });
+  if (value.kind === "voucher" && !value.codeMode) ctx.addIssue({ code: "custom", path: ["codeMode"], message: "Pilih asal kode atau link voucher." });
+  if (value.kind === "voucher" && value.codeMode === "shared" && !value.sharedCode) ctx.addIssue({ code: "custom", path: ["sharedCode"], message: "Isi kode atau link untuk semua." });
+  if (value.delivery === "auto" && !autoAllowed(value.kind, value.kind === "voucher" ? value.codeMode : null)) {
+    ctx.addIssue({ code: "custom", path: ["delivery"], message: "Otomatis hanya untuk voucher dengan daftar kode atau satu kode untuk semua." });
+  }
+  if (value.validUntil && Number.isNaN(Date.parse(`${value.validUntil}T00:00:00Z`))) ctx.addIssue({ code: "custom", path: ["validUntil"], message: "Tanggal berlaku tidak dikenali." });
 });
 export type RewardInput = z.infer<typeof rewardInputSchema>;
+
+/**
+ * What a reward stores for its kind: a re-roll is always handed over at once; only a code voucher keeps a
+ * code mode, the shared code, its last day and how to use it; only the pool keeps codes (and has no stock:
+ * what is left is the codes not given yet).
+ */
+export function rewardShape(input: Pick<RewardInput, "kind" | "delivery" | "codeMode" | "sharedCode" | "validUntil" | "howTo" | "stock">) {
+  const voucher = input.kind === "voucher";
+  const codeMode = voucher ? input.codeMode : null;
+  return {
+    delivery: isReroll(input.kind) ? "auto" as const : input.delivery === "auto" && !autoAllowed(input.kind, codeMode) ? "admin" as const : input.delivery,
+    codeMode, sharedCode: codeMode === "shared" ? input.sharedCode : null,
+    validUntil: voucher ? input.validUntil : null, howTo: voucher ? input.howTo : "",
+    stock: codeMode === "pool" ? null : input.stock,
+  };
+}
 
 export const claimRequestSchema = z.object({
   rewardId: z.string().uuid("Hadiah tidak dikenali."),
@@ -355,6 +424,8 @@ export type ClaimRequestInput = z.infer<typeof claimRequestSchema>;
 export const claimDecisionSchema = z.object({
   action: z.enum(CLAIM_ACTIONS),
   reason: z.string().trim().max(300, "Alasan paling banyak 300 karakter.").default(""),
+  /** Handing over a voucher whose code the admin types in (code mode manual). */
+  code: z.string().trim().max(500, "Kode atau link paling banyak 500 karakter.").default(""),
 }).superRefine((value, ctx) => {
   if (value.action === "reject" && value.reason.length < 2) ctx.addIssue({ code: "custom", path: ["reason"], message: "Tulis alasan penolakan (dibaca karyawan)." });
 });

@@ -270,6 +270,45 @@ Hadiah bisa berupa voucher untuk re-roll kartu tokoh di kuesioner WAM. Keputusan
   `wb_reroll_tickets`, fungsi `wb_claim_reroll`; `wb_request_reward` menolak voucher). Sebelum migrasi dijalankan,
   Hadiah tetap jalan seperti biasa dan pilihan voucher di editor nonaktif.
 
+## Jenis hadiah dan voucher kode (18 Nov 2026)
+
+Keputusan pemilik: jenis hadiah dibuat sesuai kebutuhan, dan voucher bekerja seperti aplikasi klaim voucher pada
+umumnya (kode atau link, fleksibel).
+
+- **Jenis hadiah** di editor (Admin WLM → Hadiah → Katalog): **Barang**, **Uang** (tunai atau transfer, mis. saldo
+  e-wallet), **Voucher**, **Lainnya** (kelas, pengalaman, fasilitas kantor). Di bawah Voucher, **Isi voucher**:
+  **Kode atau link**, **Re-roll tokoh WAM**, atau **Re-roll Legendary WAM** (dua yang terakhir = voucher re-roll di
+  atas, tidak berubah).
+- **Kode atau link**, dipilih per voucher:
+  - **Daftar kode unik**: admin menempel kode atau link, satu per baris (bisa dari spreadsheet; yang sama dilewati).
+    Tiap klaim mendapat satu kode yang berbeda; sisa stok = kode yang belum diberikan. Daftar kode tampil di editor
+    dengan siapa yang menerima; kode yang belum diberikan bisa dihapus.
+  - **Satu kode untuk semua**: semua yang klaim mendapat kode atau link yang sama.
+  - **Diisi admin saat menyerahkan**: admin mengetik kode atau link saat menekan Tandai diserahkan.
+  - Isian yang diawali `https://` (atau `http://`) tampil sebagai link: **Buka link** dan **Salin link**. Selain itu
+    tampil sebagai kode dengan **Salin kode**.
+  - **Berlaku sampai** (opsional, WIB): setelah tanggal itu voucher tidak tampil dan tidak bisa diklaim.
+    **Cara pakai** (opsional) tampil di detail dan bersama kode.
+- **Penyerahan**, dipilih per hadiah:
+  - **Admin menyetujui dulu** (seperti sebelumnya): Diajukan, lalu Setujui, lalu Tandai diserahkan. Karyawan bisa
+    Batalkan selama Diajukan.
+  - **Langsung disetujui, admin menyerahkan**: klaim langsung Disetujui (poin ditahan). Admin tinggal menandai
+    diserahkan.
+  - **Otomatis, langsung diterima**: hanya untuk voucher dengan daftar kode unik atau satu kode untuk semua. Klaim
+    langsung Diserahkan, kode tampil saat itu juga, poin terpotong. Re-roll selalu otomatis.
+  - Klaim yang tidak bisa dibatalkan (langsung disetujui atau otomatis) ditanya sekali lagi sebelum dikirim.
+- **Kode baru tampil setelah diserahkan.** Selama klaim belum diserahkan, kodenya tidak dikirim ke aplikasi. Klaim yang
+  ditolak atau dibatalkan sebelum diserahkan mengembalikan kodenya ke daftar.
+- **Aplikasi karyawan.** Setelah klaim otomatis muncul layar **Voucher diterima** dengan kode atau link. Di Klaim saya,
+  voucher berkode berstatus **Siap dipakai** (atau **Berakhir** setelah lewat masa berlaku) dengan tombol **Lihat kode**.
+- **Admin.** Kartu katalog menulis jenis, cara penyerahan, masa berlaku, dan "N dari M kode tersisa". Permintaan
+  menampilkan kode yang diberikan. Angka di menu Hadiah sekarang = Diajukan + Disetujui (yang masih perlu ditindak).
+- **Data:** migrasi `202611180004_wellbeing_reward_types.sql` (setelah 202611180003): kolom `wb_rewards.delivery`,
+  `code_mode`, `shared_code`, `valid_until`, `how_to`; `wb_reward_claims.code`; tabel `wb_reward_codes`; pemicu yang
+  mengembalikan kode; `wb_request_reward` menangani semua jenis kecuali re-roll. Uji di
+  `tests/backend/wellbeing-reward-types-check.sql`. Sebelum migrasi dijalankan, Hadiah jalan seperti sebelumnya dan
+  pilihan Uang, Voucher kode, dan Lainnya di editor nonaktif.
+
 ## Strava
 
 Satu aplikasi Strava API milik kantor (aplikasi yang sama dengan aplikasi lama; kuncinya `STRAVA_CLIENT_ID` dan

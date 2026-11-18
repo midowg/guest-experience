@@ -326,7 +326,7 @@ describe("WellbeingApp", () => {
     expect(within(dialog()).queryByLabelText(/Catatan untuk admin/)).toBeNull();
     fireEvent.click(within(dialog()).getByRole("button", { name: "Klaim voucher · 5.000 poin" }));
     // Asked once more: the points go at once and it cannot be cancelled.
-    expect(within(dialog()).getByText(/langsung terpotong dan voucher tidak bisa dibatalkan/)).toBeTruthy();
+    expect(within(dialog()).getByText(/langsung terpotong dan klaim ini tidak bisa dibatalkan/)).toBeTruthy();
     fireEvent.click(within(dialog()).getByRole("button", { name: "Ya, klaim" }));
     expect(await within(dialog()).findByText("Voucher re-roll aktif", {}, { timeout: 3000 })).toBeTruthy();
     expect(within(dialog()).getByRole("link", { name: "Buka kartu tokoh" }).getAttribute("href")).toBe("/wam/kuesioner");
@@ -339,6 +339,50 @@ describe("WellbeingApp", () => {
     expect(within(mine).getByText("Belum dipakai")).toBeTruthy();
     expect(within(mine).getByRole("link", { name: "Pakai di kartu tokoh" }).getAttribute("href")).toBe("/wam/kuesioner");
     expect(within(mine).queryByRole("button", { name: "Batalkan" })).toBeNull();
+  });
+
+  it("claims a code voucher received at once: the code to copy, its last day and how to use it, kept in Klaim saya (18 Nov 2026)", async () => {
+    app();
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: "Voucher kopi Rp50.000, 5.000 poin, Bisa diklaim" }));
+    expect(await within(dialog()).findByText(/Langsung diterima, tanpa menunggu admin/)).toBeTruthy();
+    expect(within(dialog()).getByText("Berlaku sampai")).toBeTruthy();
+    expect(within(dialog()).getByText("Tunjukkan kode di kasir sebelum membayar.")).toBeTruthy();
+    expect(within(dialog()).queryByLabelText(/Catatan untuk admin/)).toBeNull();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Klaim voucher · 5.000 poin" }));
+    expect(within(dialog()).getByText(/langsung terpotong dan klaim ini tidak bisa dibatalkan/)).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Ya, klaim" }));
+    expect(await within(dialog()).findByRole("heading", { name: "Voucher diterima", level: 2 }, { timeout: 3000 })).toBeTruthy();
+    const code = within(dialog()).getByRole("region", { name: "Kode voucher" });
+    expect(within(code).getByText("KOPI-3M9Q")).toBeTruthy();
+    expect(within(code).getByRole("button", { name: "Salin kode" })).toBeTruthy();
+    // Klaim saya keeps it: Lihat kode opens it again.
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Lihat klaim saya" }));
+    const mine = within(within(dialog()).getByRole("list", { name: "Klaim saya" })).getAllByRole("listitem")[0];
+    expect(within(mine).getByText("Siap dipakai")).toBeTruthy();
+    fireEvent.click(within(mine).getByRole("button", { name: "Lihat kode" }));
+    expect(within(await within(dialog()).findByRole("region", { name: "Kode voucher" })).getByText("KOPI-3M9Q")).toBeTruthy();
+  });
+
+  it("shows a link voucher with Buka link (https only), and money approved at once without cancelling (18 Nov 2026)", async () => {
+    app();
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    let grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: "Diskon toko olahraga 20%, 8.000 poin, Bisa diklaim" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Klaim voucher · 8.000 poin" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Ya, klaim" }));
+    const link = await within(dialog()).findByRole("region", { name: "Link voucher" }, { timeout: 3000 });
+    const open = within(link).getByRole("link", { name: "Buka link" });
+    expect(open.getAttribute("href")).toBe("https://toko.example/promo/WLM20");
+    expect(open.getAttribute("rel")).toBe("noopener noreferrer");
+    // Money approved at once: asked once more (cannot be cancelled), then waits for the admin to hand it over.
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Selesai" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /Buka Hadiah$/ }));
+    grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: /^Saldo e-wallet Rp200\.000, 25\.000 poin/ }));
+    expect(await within(dialog()).findByText(/Langsung disetujui\./)).toBeTruthy();
   });
 
   it("keeps a voucher from being claimed before the tokoh card is out, or when Legendary is full", async () => {
