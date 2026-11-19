@@ -60,19 +60,19 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
         onClick={() => openRewards(waiting ? "klaim" : "hadiah")} />
     </div>
 
-    {/* Unduh rekap saya (19 Nov 2026): my own data as Excel, for my own recap. */}
-    <h2 className={css.groupLabel}>Data saya</h2>
-    <div className={cx(css.card, css.list)}>
-      <NavRow lead={<span className={cx(css.lead, css.toneOk)}><FileSpreadsheet size={22} aria-hidden="true" /></span>} title="Unduh rekap saya"
-        meta="Excel: poin, aktivitas, poin dari admin" onClick={openExport} />
-    </div>
-
     <h2 className={css.groupLabel}>Pengaturan</h2>
     <div className={cx(css.card, css.list)}>
       <NavRow lead={<Avatar name={person.name} photo={me.photo} size="lg" />} title="Foto profil" meta="Foto, atau kartu tokoh WAM-mu" onClick={openPhoto} />
       {STRAVA_OPEN ? <StravaRow /> : <StravaSoon />}
       <NavRow lead={<span className={cx(css.lead, css.tonePrimary)}><themeNow.icon size={22} aria-hidden="true" /></span>} title="Tema"
         trail={<span className={css.rowValue}>{themeNow.label}</span>} onClick={openTheme} ariaLabel={`Tema: ${themeNow.label}. Ubah`} />
+    </div>
+
+    {/* Unduh rekap saya (19 Nov 2026): my own data as Excel, for my own recap; last, just above Keluar (the owner's choice). */}
+    <h2 className={css.groupLabel}>Data saya</h2>
+    <div className={cx(css.card, css.list)}>
+      <NavRow lead={<span className={cx(css.lead, css.toneOk)}><FileSpreadsheet size={22} aria-hidden="true" /></span>} title="Unduh rekap saya"
+        meta="Excel: poin, aktivitas, poin dari admin" onClick={openExport} />
     </div>
 
     <div className={cx(css.card, css.list)} style={{ marginTop: 16 }}>
