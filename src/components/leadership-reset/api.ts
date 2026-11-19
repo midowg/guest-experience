@@ -77,6 +77,3 @@ export const store = {
   set(key: string, value: string) { try { window.localStorage.setItem(key, value); } catch { /* not kept */ } },
   remove(key: string) { try { window.localStorage.removeItem(key); } catch { /* nothing kept */ } },
 };
-
-/** The CMS key this device opened last: /refleksi/kelola goes straight there. */
-export const CMS_KEY = "lr:cms";

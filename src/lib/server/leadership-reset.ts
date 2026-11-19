@@ -82,12 +82,14 @@ export async function readOwnAnswer(key: string): Promise<OwnAnswer | null> {
 
 const notFound = () => new ServiceError(404, "Tautan ini tidak dikenal atau sudah diganti. Minta tautan terbaru ke panitia.");
 
-/** The form row, when `key` opens the CMS. */
-async function cmsRow(key: string | null): Promise<FormRow> {
-  if (!looksLikeKey(key)) throw notFound();
+/**
+ * The form row for the CMS. Decided 19 Nov 2026: the CMS opens for anyone at /refleksi/kelola, no
+ * key and no sign-in (the owner's choice; the answers themselves stay behind the coach's link).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the callers still pass the old key
+async function cmsRow(_key: string | null): Promise<FormRow> {
   const row = await formRow();
   if (!row) throw waiting();
-  if (!sameHash(key, row.admin_key_hash)) throw notFound();
   return row;
 }
 

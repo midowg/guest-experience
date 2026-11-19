@@ -929,9 +929,9 @@ export type LeadershipResetSection = (typeof LEADERSHIP_RESET_SECTIONS)[number];
 export const leadershipResetPath = {
   home: LEADERSHIP_RESET_PATH,
   own: (key: string) => `${LEADERSHIP_RESET_PATH}#jawaban=${key}`,
-  /** /refleksi/kelola: opens the CMS remembered on this device, or asks for its link once. */
+  /** /refleksi/kelola: the CMS, open to anyone with the address (19 Nov 2026). */
   cmsHome: `${LEADERSHIP_RESET_PATH}/kelola`,
-  cmsOther: `${LEADERSHIP_RESET_PATH}/kelola?ganti=1`,
+  cmsSection: (section: LeadershipResetSection) => `${LEADERSHIP_RESET_PATH}/kelola${section === "ringkasan" ? "" : `?bagian=${section}`}`,
   cms: (key: string, section: LeadershipResetSection = "ringkasan") => `${LEADERSHIP_RESET_PATH}/kelola/${key}${section === "ringkasan" ? "" : `?bagian=${section}`}`,
   coach: (key: string) => `${LEADERSHIP_RESET_PATH}/coach/${key}`,
 };

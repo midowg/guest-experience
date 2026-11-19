@@ -52,7 +52,7 @@ export function Cms(props: { cmsKey: string; initial: CmsView; api: CmsApi; href
 }
 
 function CmsApp({ cmsKey, initial, api, hrefOf: givenHref, preview = false }: { cmsKey: string; initial: CmsView; api: CmsApi; hrefOf?: (section: LeadershipResetSection) => string; preview?: boolean }) {
-  const hrefOf = useMemo(() => givenHref ?? ((section: LeadershipResetSection) => leadershipResetPath.cms(cmsKey, section)), [givenHref, cmsKey]);
+  const hrefOf = useMemo(() => givenHref ?? ((section: LeadershipResetSection) => cmsKey ? leadershipResetPath.cms(cmsKey, section) : leadershipResetPath.cmsSection(section)), [givenHref, cmsKey]);
   const params = useSearchParams();
   const section = sectionOf(params.get("bagian"));
   const [view, setView] = useState(initial);
@@ -421,7 +421,7 @@ function Access({ view, api, onView, origin, cmsKey, preview }: { view: CmsView;
       </ConsoleButton>
     </section>
 
-    <section className={css.panel} aria-labelledby="lr-cms">
+    {cmsKey && <section className={css.panel} aria-labelledby="lr-cms">
       <div className={css.panelHead}><h2 id="lr-cms">Tautan CMS ini</h2></div>
       <p className={css.muted}>Siapa pun yang memegang tautan CMS bisa mengubah form, menutupnya, menghapus jawaban, dan membuat tautan Coach baru. Simpan di tempat aman. Kalau tersebar, ganti di sini: tautan lama langsung tidak berlaku.</p>
       {newCms && <div className={css.reveal}>
@@ -434,7 +434,7 @@ function Access({ view, api, onView, origin, cmsKey, preview }: { view: CmsView;
       </div>}
       {!newCms && <ConsoleButton icon={<RefreshCw size={18} aria-hidden="true" />} onClick={() => setConfirm("cms")} disabled={busy || !view.migrated}>Ganti tautan CMS</ConsoleButton>}
       <p className={css.fieldHint}>Tautan CMS sekarang berakhiran …{cmsKey.slice(-6)}.</p>
-    </section>
+    </section>}
 
     <ConsoleTheme theme="admin">
       <Panel open={confirm !== null} onClose={() => !busy && setConfirm(null)} variant="sheet" locked={busy}
