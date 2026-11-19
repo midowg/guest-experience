@@ -1,0 +1,108 @@
+/*
+ * The front page (19 Nov 2026): a fan of 3D app cards over a slow colour mesh. Light or dark follows
+ * the system unless the visitor picks one (data-scheme on <html>). --w-* feed the shared SchemeSwitch.
+ */
+.page {
+  --bg: #f6f7f9; --card: #ffffff; --ink: #111827; --soft: #5b6472; --line: #e3e6ec; --accent: #1f4fd1; --blend: multiply; --mesh: .32; --logo: #1f4fd1;
+  --w-bg: var(--card); --w-line: var(--line); --w-soft: var(--soft); --w-accent: var(--accent);
+  position: relative; isolation: isolate; min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr auto; justify-items: center; gap: clamp(20px, 4vh, 40px);
+  padding: 20px 0 28px; overflow: hidden; background: var(--bg); color: var(--ink); color-scheme: light; transition: background-color .25s, color .25s;
+}
+:global(:root[data-scheme="dark"]) .page { --bg: #0b0e14; --card: #131821; --ink: #f1f3f7; --soft: #9aa3b2; --line: #262d39; --accent: #8ab4f8; --blend: screen; --mesh: .5; --logo: #ffffff; color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-scheme="light"])) .page { --bg: #0b0e14; --card: #131821; --ink: #f1f3f7; --soft: #9aa3b2; --line: #262d39; --accent: #8ab4f8; --blend: screen; --mesh: .5; --logo: #ffffff; color-scheme: dark; }
+}
+:global(html:has(main[data-front])) { background: #f6f7f9; }
+:global(:root[data-scheme="dark"]:has(main[data-front])) { background: #0b0e14; }
+@media (prefers-color-scheme: dark) { :global(:root:not([data-scheme="light"]):has(main[data-front])) { background: #0b0e14; } }
+.page p { margin: 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The colour mesh: four soft blobs drifting on their own clocks, and the pegasus large and faint. */
+.mesh { position: absolute; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.mesh span { position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%; filter: blur(80px); opacity: var(--mesh); mix-blend-mode: var(--blend); animation: float 22s ease-in-out infinite alternate; }
+.mesh span:nth-child(1) { background: #2f6feb; left: -15vmax; top: -20vmax; }
+.mesh span:nth-child(2) { background: #e0457b; right: -20vmax; top: -10vmax; animation-duration: 26s; animation-delay: -6s; }
+.mesh span:nth-child(3) { background: #0d9488; left: 10vmax; bottom: -30vmax; animation-duration: 30s; animation-delay: -12s; }
+.mesh span:nth-child(4) { background: #7c3aed; right: 0; bottom: -25vmax; animation-duration: 24s; animation-delay: -3s; }
+@keyframes float { 0% { translate: 0 0; scale: 1; } 50% { translate: 8vmax 6vmax; scale: 1.15; } 100% { translate: -6vmax 4vmax; scale: .9; } }
+.watermark { position: absolute; z-index: -1; right: -6vmax; bottom: -8vmax; width: 60vmax; height: 68vmax; opacity: .05; background: var(--logo); pointer-events: none;
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat; animation: glide 30s ease-in-out infinite alternate; }
+@keyframes glide { to { translate: -3vmax -2vmax; rotate: -4deg; } }
+
+/* Top: the Werkudara mark and name, and the light/dark switch. */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(100% - 32px, 72rem); animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: .8125rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.logo { width: 34px; height: 40px; background: var(--logo);
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat; }
+
+.head { text-align: center; padding-inline: 16px; animation: rise .8s .1s cubic-bezier(.2,.8,.2,1) both; }
+.kicker { font-size: .75rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+.page .mark { margin: 6px 0 0; font-size: clamp(3.5rem, 11vw, 7.5rem); font-weight: 800; line-height: .9; letter-spacing: -.04em; color: var(--ink); }
+.by { margin-top: 8px !important; font-size: clamp(1rem, 2vw, 1.375rem); font-weight: 600; color: var(--soft); }
+@keyframes rise { from { opacity: 0; translate: 0 18px; } }
+
+/* The fan (wide screens): five cards spread like a hand, tilting toward the mouse. */
+.doors { display: grid; justify-items: center; gap: 16px; width: 100%; align-self: start; }
+.fan { --rx: 0deg; --ry: 0deg; position: relative; display: flex; justify-content: center; width: 100%; height: 320px; perspective: 1400px;
+  transform-style: preserve-3d; transition: transform .4s ease-out; transform: rotateX(var(--rx)) rotateY(var(--ry)); }
+.card { --tone: var(--accent); position: absolute; top: 0; left: 50%; display: flex; flex-direction: column; gap: 6px; width: 220px; height: 300px; margin-left: -110px; padding: 20px;
+  overflow: hidden; border-radius: 24px; color: var(--ink); text-decoration: none;
+  background: color-mix(in srgb, var(--card) 84%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--tone) 35%, var(--line));
+  transform: translateX(calc(var(--n) * 156px)) translateZ(calc(-1 * max(var(--n), -1 * var(--n)) * 60px)) rotateY(calc(var(--n) * -14deg)) rotateZ(calc(var(--n) * 3deg));
+  transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .3s; animation: deal .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc((var(--n) + 2) * 90ms + .2s); }
+.card:hover, .card:focus-visible { transform: translateX(calc(var(--n) * 156px)) translateY(-24px) translateZ(120px); z-index: 5;
+  box-shadow: 0 30px 60px -20px color-mix(in srgb, var(--tone) 60%, transparent); outline: none; }
+.card:focus-visible { border-color: var(--tone); }
+@keyframes deal { from { opacity: 0; transform: translateY(80px) scale(.8); } }
+.glow { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tone) 30%, transparent), transparent 60%); }
+.card:hover .glow, .card:focus-visible .glow { opacity: 1; }
+.icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 8px; border-radius: 16px; color: #fff; background: var(--tone); }
+.what { font-size: .75rem; font-weight: 700; color: var(--tone); }
+.name { font-size: 1.3rem; font-weight: 800; line-height: 1.15; }
+.description { font-size: .8125rem; line-height: 1.5; color: var(--soft); }
+.foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; font-size: .75rem; font-weight: 700; color: var(--tone); }
+.foot > span { display: inline-flex; align-items: center; gap: 4px; }
+.arrow { transition: translate .25s; }
+.card:hover .arrow { translate: 4px 0; }
+.dots, .swipe { display: none; }
+
+.guest { display: grid; gap: 4px; max-width: 40rem; padding-inline: 16px; text-align: center; font-size: .875rem; line-height: 1.55; color: var(--soft); }
+.guest p:last-child { font-size: .75rem; }
+
+/* Medium screens: the same fan, closer together. */
+@media (max-width: 64rem) and (min-width: 48.01rem) {
+  .card { width: 190px; margin-left: -95px; }
+  .card { transform: translateX(calc(var(--n) * 118px)) translateZ(calc(-1 * max(var(--n), -1 * var(--n)) * 60px)) rotateY(calc(var(--n) * -14deg)) rotateZ(calc(var(--n) * 3deg)); }
+  .card:hover, .card:focus-visible { transform: translateX(calc(var(--n) * 118px)) translateY(-24px) translateZ(120px); }
+}
+
+/* A phone: a cover flow. The middle card faces you and glows; the others turn away and fade. */
+@media (max-width: 48rem) {
+  .page { gap: 20px; padding-top: 16px; }
+  .top { width: calc(100% - 32px); }
+  .page .mark { font-size: clamp(3.5rem, 18vw, 5rem); }
+  .fan { --ry: 0deg; --rx: 0deg; justify-content: flex-start; height: auto; padding: 24px calc(50% - 125px) 36px;
+    overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; perspective: 800px; transform: none; transition: none; }
+  .fan::-webkit-scrollbar { display: none; }
+  .card, .card:hover, .card:focus-visible { position: relative; left: auto; flex: 0 0 250px; width: 250px; height: 340px; margin: 0 -18px; padding: 22px; scroll-snap-align: center;
+    transform: rotateY(calc(var(--d, 0) * -42deg)) translateZ(calc(var(--ad, 0) * -90px)) scale(calc(1 - var(--ad, 0) * .08));
+    opacity: calc(1 - var(--ad, 0) * .45); transition: none;
+    box-shadow: 0 30px 60px -24px color-mix(in srgb, var(--tone) calc((1 - min(var(--ad, 0), 1)) * 70%), transparent); }
+  .card:active { scale: .97; }
+  .glow { opacity: calc(1 - var(--ad, 0) * 1.5); }
+  .icon { width: 60px; height: 60px; border-radius: 18px; }
+  .name { font-size: 1.5rem; }
+  .description { font-size: .875rem; }
+  .dots { display: flex; justify-content: center; gap: 8px; }
+  .dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 25%, transparent); cursor: pointer; transition: width .25s, background-color .25s; }
+  .dots button[aria-current] { width: 28px; background: var(--tone); }
+  .swipe { display: block; text-align: center; font-size: .8125rem; color: var(--soft); animation: nudge 2.4s ease-in-out 1.4s 2; }
+  @keyframes nudge { 0%, 100% { translate: 0 0; } 30% { translate: -10px 0; } 60% { translate: 6px 0; } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page { animation: none !important; transition: none !important; }
+}
