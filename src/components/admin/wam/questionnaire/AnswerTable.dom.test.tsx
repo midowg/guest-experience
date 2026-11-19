@@ -42,6 +42,7 @@ it("shows a row per person with every answer, HR and Rahasia included, and filte
   fireEvent.change(screen.getByRole("searchbox", { name: "Cari nama atau departemen" }), { target: { value: "finance" } });
   expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
   expect(screen.getByRole("link", { name: /Unduh Excel/ }).getAttribute("href")).toBe("/api/admin/wam/questionnaire/table");
+  expect(screen.getByRole("link", { name: /Unduh data makanan/ }).getAttribute("href")).toBe("/api/admin/wam/questionnaire/table?isi=makanan");
   expect(screen.getByText(/1 orang yang sudah menjawab tidak tampil/)).toBeTruthy();
 });
 
