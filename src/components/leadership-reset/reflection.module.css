@@ -1,0 +1,93 @@
+/*
+ * Refleksi Leader, the leader's form (19 Nov 2026): one page for directors and senior leaders.
+ * Large type (18px body), strong contrast, big targets (56px fields, 64px button), light only.
+ * Phone: details on top, form below. Desktop (≥ 960px): details on the left (sticky), form right.
+ */
+
+.page {
+  --bg: #F3F4F6; --surface: #FFFFFF; --outline: #D1D5DB; --text: #111827; --text2: #374151; --text3: #4B5563;
+  --primary: #1D4ED8; --primary-soft: #DBEAFE; --error: #B91C1C; --error-bg: #FEE2E2;
+  min-height: 100dvh; background: var(--bg); color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 18px; line-height: 1.6;
+  color-scheme: light;
+}
+.previewBanner { margin: 0; padding: 8px 16px; background: #FEF3C7; color: #92400E; font-size: 14px; font-weight: 600; text-align: center; }
+
+.layout { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+@media (min-width: 960px) {
+  .layout { grid-template-columns: 360px minmax(0, 1fr); gap: 32px; padding: 48px 32px 64px; align-items: start; }
+  .aside { position: sticky; top: 32px; }
+}
+
+.aside { padding: 24px; border-radius: 20px; background: #0F172A; color: #F8FAFC; }
+.kicker { margin: 0; font-size: 15px; font-weight: 600; color: #93C5FD; }
+.title { margin: 4px 0 0; color: #FFFFFF; font-family: inherit; font-size: clamp(30px, 7vw, 38px); font-weight: 800; line-height: 1.15; }
+.tagline { margin: 8px 0 0; font-size: 20px; color: #E2E8F0; }
+.coach { margin: 12px 0 0; font-size: 18px; color: #E2E8F0; }
+.coach strong { color: #FFFFFF; }
+.facts { list-style: none; margin: 20px 0 0; padding: 20px 0 0; border-top: 1px solid #334155; display: grid; gap: 14px; }
+.facts li { display: flex; gap: 12px; align-items: flex-start; font-size: 17px; color: #F1F5F9; }
+.facts svg { flex: none; margin-top: 2px; color: #93C5FD; }
+.facts em { font-style: normal; font-weight: 700; color: #FDE68A; }
+
+.main { min-width: 0; }
+.card { padding: 24px 20px; border-radius: 20px; background: var(--surface); border: 1px solid var(--outline); }
+@media (min-width: 640px) { .card { padding: 32px; } }
+.intro { margin: 0 0 8px; color: var(--text2); }
+.block { margin: 0; padding: 24px 0 0; border: 0; min-width: 0; }
+.block + .block, .intro + .block { margin-top: 8px; border-top: 1px solid #E5E7EB; }
+.sectionTitle { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 12px; padding: 0; color: var(--text); font-family: inherit; font-size: 21px; font-weight: 700; line-height: 1.4; }
+.num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 17px; }
+.optional { font-style: normal; font-weight: 500; color: var(--text3); font-size: 17px; }
+.hint { display: block; margin: -4px 0 12px 46px; color: var(--text3); font-size: 17px; }
+@media (max-width: 480px) { .hint { margin-left: 0; } }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field > span:first-child:not(.sectionTitle) { font-size: 17px; font-weight: 600; color: var(--text2); }
+.field input, .field textarea {
+  width: 100%; min-height: 56px; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--outline);
+  background: #fff; color: var(--text); font: inherit; font-size: 19px;
+}
+.field textarea { min-height: 180px; resize: vertical; line-height: 1.6; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.field[data-error] input, .field[data-error] textarea { border-color: var(--error); }
+.field small, .errorText { color: var(--error); font-size: 16px; font-weight: 600; }
+
+.choices { display: grid; gap: 12px; }
+@media (min-width: 640px) { .choices { grid-template-columns: repeat(3, 1fr); } }
+.choice {
+  position: relative; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 12px 16px;
+  border-radius: 14px; border: 2px solid var(--outline); background: #fff; font-size: 19px; font-weight: 600; cursor: pointer;
+}
+.choice input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.radio { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #9CA3AF; color: transparent; }
+.choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.choice:has(input:checked) .radio { background: var(--primary); border-color: var(--primary); color: #fff; }
+.choice:has(input:focus-visible) { box-shadow: 0 0 0 4px var(--primary-soft); }
+fieldset[data-error] .choice { border-color: var(--error); }
+
+.muted { margin: 0; color: var(--text3); }
+.error { margin: 20px 0 0; padding: 14px 16px; border-radius: 12px; background: var(--error-bg); color: var(--error); font-weight: 600; }
+.submit {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 64px; margin-top: 24px;
+  border: 0; border-radius: 14px; background: var(--primary); color: #fff; font: inherit; font-size: 20px; font-weight: 700; cursor: pointer;
+}
+.submit:hover:not(:disabled) { background: #1E40AF; }
+.submit:disabled { opacity: .6; cursor: wait; }
+.submit:focus-visible, .secondary:focus-visible { outline: 4px solid var(--primary-soft); outline-offset: 2px; }
+.small { margin: 12px 0 0; text-align: center; font-size: 15px; color: var(--text3); }
+
+.doneHead { display: flex; gap: 16px; align-items: flex-start; }
+.doneIcon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: #DCFCE7; color: #15803D; }
+.doneButtons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.secondary {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 20px; border-radius: 12px;
+  border: 2px solid var(--outline); background: #fff; color: var(--text); font: inherit; font-size: 18px; font-weight: 600; cursor: pointer;
+}
+.secondary:hover { border-color: var(--primary); }
+@media (max-width: 480px) { .secondary { flex: 1 1 100%; justify-content: center; } }
+.answers { margin-top: 24px; padding-top: 20px; border-top: 1px solid #E5E7EB; }
+.answers > p { margin: 0 0 8px; }
+.answers h3 { margin: 16px 0 6px; color: var(--text); font-family: inherit; font-size: 18px; font-weight: 700; }
+.answers h3 + p { margin: 0; white-space: pre-wrap; color: var(--text2); }
+.closing { margin-top: 20px !important; font-weight: 700; }

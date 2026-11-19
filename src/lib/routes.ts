@@ -916,3 +916,39 @@ export const wellbeingApi = {
   /** POST: cancel my claim while it waits. */
   claim: (id: string) => `${WELLBEING_API}/rewards/claims/${id}`,
 };
+
+/*
+ * Refleksi Leader (19 Nov 2026): the reflection leaders write before the Leadership Reset training.
+ * No sign-in: the form is open at /leadership-reset; a leader's own answer, the CMS and the coach's
+ * page open by a key each. A leader's key stays after "#", so it never reaches a server or its logs;
+ * the CMS and coach keys sit in their address and go to the APIs in a header, never in a query.
+ */
+export const LEADERSHIP_RESET_PATH = "/refleksi";
+export const LEADERSHIP_RESET_SECTIONS = ["ringkasan", "isi", "coach"] as const;
+export type LeadershipResetSection = (typeof LEADERSHIP_RESET_SECTIONS)[number];
+export const leadershipResetPath = {
+  home: LEADERSHIP_RESET_PATH,
+  own: (key: string) => `${LEADERSHIP_RESET_PATH}#jawaban=${key}`,
+  cms: (key: string, section: LeadershipResetSection = "ringkasan") => `${LEADERSHIP_RESET_PATH}/kelola/${key}${section === "ringkasan" ? "" : `?bagian=${section}`}`,
+  coach: (key: string) => `${LEADERSHIP_RESET_PATH}/coach/${key}`,
+};
+const LEADERSHIP_RESET_API = "/api/leadership-reset";
+/** The header the CMS and coach keys travel in. */
+export const LEADERSHIP_RESET_KEY_HEADER = "x-refleksi-key";
+export const leadershipResetApi = {
+  /** PUT: save my answer (new or changed). POST {key}: read it back. */
+  answer: `${LEADERSHIP_RESET_API}/jawaban`,
+  /** CMS (key header). GET the overview. */
+  cms: `${LEADERSHIP_RESET_API}/kelola`,
+  /** PUT {content, isOpen}. */
+  cmsForm: `${LEADERSHIP_RESET_API}/kelola/form`,
+  /** POST: a new coach link (the old one stops working). */
+  cmsCoach: `${LEADERSHIP_RESET_API}/kelola/coach`,
+  /** POST: a new CMS link (the old one stops working). */
+  cmsKey: `${LEADERSHIP_RESET_API}/kelola/kunci`,
+  /** DELETE: one answer (a test or a double). */
+  cmsResponse: (id: string) => `${LEADERSHIP_RESET_API}/kelola/jawaban/${enc(id)}`,
+  /** Coach (key header). GET every answer. */
+  coach: `${LEADERSHIP_RESET_API}/coach`,
+  coachExcel: `${LEADERSHIP_RESET_API}/coach/excel`,
+};
