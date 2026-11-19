@@ -20,11 +20,12 @@ import css from "./wellbeing-admin.module.css";
  * there), Poin dari admin. Numbers are real numbers in Excel.
  */
 
-export type ExportData = "people" | "activities" | "points";
+export type ExportData = "people" | "activities" | "points" | "person";
 export type ExportPeriod = "month" | "last_month" | "range" | "all";
 export type ExportStatus = "all" | "unchecked" | "adjusted" | "rejected";
 export type ExportKind = "all" | "daily" | "sport" | "strava";
-export type ExportPreset = { data?: ExportData; period?: ExportPeriod; status?: ExportStatus; kind?: ExportKind; ids?: string[] };
+/** `employee` (19 Nov 2026): one employee's data, from their panel in Karyawan (`employeeName` for the panel's title). */
+export type ExportPreset = { data?: ExportData; period?: ExportPeriod; status?: ExportStatus; kind?: ExportKind; ids?: string[]; employee?: string; employeeName?: string };
 
 const REPORTS: { data: ExportData; title: string; text: string; icon: ReactNode }[] = [
   { data: "people", title: "Rekap poin per karyawan", text: "Peringkat, total, dan poin per dimensi tiap karyawan. Untuk hadiah juara dan laporan HR.", icon: <Trophy size={22} aria-hidden="true" /> },
@@ -111,6 +112,9 @@ export function ExportPanel({ open, preset, onClose }: { open: boolean; preset: 
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const ids = preset.ids;
+  // One employee (19 Nov 2026): only the period to choose; the file holds their summary, activities and admin points.
+  const employee = preset.employee;
+  const period = form.period === "range" ? { period: form.period, from: form.from, to: form.to } : { period: form.period };
 
   async function download() {
     setProblem("");
@@ -121,7 +125,8 @@ export function ExportPanel({ open, preset, onClose }: { open: boolean; preset: 
     try {
       const name = await downloadExport(ids
         ? { data: "activities", ids }
-        : { data: form.data, period: form.period, ...(form.period === "range" ? { from: form.from, to: form.to } : {}), ...(form.data === "activities" ? { status: form.status, kind: form.kind } : {}) });
+        : employee ? { data: "person", employee, ...period }
+        : { data: form.data, ...period, ...(form.data === "activities" ? { status: form.status, kind: form.kind } : {}) });
       toast({ message: `${name} diunduh.`, tone: "ok" });
       onClose();
     } catch (error) { setProblem(error instanceof Error ? error.message : "Laporan belum bisa dibuat."); }
@@ -130,11 +135,13 @@ export function ExportPanel({ open, preset, onClose }: { open: boolean; preset: 
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm(current => ({ ...current, [key]: value }));
   return <Panel open={open} onClose={onClose} locked={busy} title="Unduh Excel"
-    subtitle={ids ? `${ids.length} aktivitas yang dipilih di Periksa.` : "Pilih datanya dan periodenya. Berkas .xlsx bisa dibuka di Excel, Google Sheets, atau Numbers."}
+    subtitle={ids ? `${ids.length} aktivitas yang dipilih di Periksa.`
+      : employee ? `Data ${preset.employeeName ?? "karyawan"}: ringkasan poin, semua aktivitasnya, dan poin dari admin.`
+      : "Pilih datanya dan periodenya. Berkas .xlsx bisa dibuka di Excel, Google Sheets, atau Numbers."}
     footer={<><ConsoleButton onClick={onClose} disabled={busy}>Batal</ConsoleButton>
       <ConsoleButton variant="primary" icon={busy ? undefined : <Download size={18} aria-hidden="true" />} onClick={() => void download()} disabled={busy}>{busy ? "Menyiapkan…" : "Unduh Excel"}</ConsoleButton></>}>
     <form className={css.form} onSubmit={event => { event.preventDefault(); void download(); }}>
-      {!ids && <fieldset className={css.choices}>
+      {!ids && !employee && <fieldset className={css.choices}>
         <legend>Data</legend>
         {REPORTS.map(report => <label key={report.data} className={css.choice} data-on={form.data === report.data}>
           <input type="radio" name="export-data" value={report.data} checked={form.data === report.data} onChange={() => set("data", report.data)} />
@@ -150,7 +157,7 @@ export function ExportPanel({ open, preset, onClose }: { open: boolean; preset: 
         <label className={css.field}><span>Dari</span><input className={css.input} type="date" value={form.from} max={form.to || today} onChange={event => set("from", event.target.value)} /></label>
         <label className={css.field}><span>Sampai</span><input className={css.input} type="date" value={form.to} min={form.from || undefined} max={today} onChange={event => set("to", event.target.value)} /></label>
       </div>}
-      {!ids && form.data === "activities" && <div className={css.fieldRow}>
+      {!ids && !employee && form.data === "activities" && <div className={css.fieldRow}>
         <label className={css.field}><span>Status</span>
           <select className={css.select} value={form.status} onChange={event => set("status", event.target.value as ExportStatus)}>
             <option value="all">Semua status</option><option value="unchecked">Belum diperiksa</option><option value="adjusted">Diubah admin</option><option value="rejected">Ditolak</option>
