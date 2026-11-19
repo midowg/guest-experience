@@ -328,6 +328,20 @@ umumnya (kode atau link, fleksibel).
   `tests/backend/wellbeing-reward-types-check.sql`. Sebelum migrasi dijalankan, Hadiah jalan seperti sebelumnya dan
   pilihan Uang, Voucher kode, dan Lainnya di editor nonaktif.
 
+## Unduh rekap saya (19 Nov 2026)
+
+Karyawan bisa mengunduh datanya sendiri untuk rekap pribadi: **Profil → Data saya → Unduh rekap saya**.
+- Pilih periode: Bulan ini, Bulan lalu, Sepanjang program, atau Pilih tanggal (dari–sampai).
+- File Excel (`rekap-wlm-<nama>-<periode>.xlsx`) berisi tiga lembar:
+  - **Ringkasan:** total poin dan poin per dimensi, dihitung sama seperti Beranda dan Peringkat; jumlah aktivitas
+    dihitung dan ditolak; hari aktif.
+  - **Aktivitas:** semua aktivitas dengan jenis, dimensi, sumber, langkah/kalori/durasi/jarak, poin, status, dan alasan
+    admin.
+  - **Poin dari admin:** hanya yang dihitung; yang dibatalkan admin tidak ikut.
+- Hanya data orang itu sendiri. Nama admin pemeriksa dan data karyawan lain tidak ikut.
+- Di HP yang bisa membagikan file, file langsung ke menu bagikan (Simpan ke File, WhatsApp, Drive); selain itu diunduh.
+- `POST /api/wellbeing/export` (`member-export.ts`), dibatasi 20 permintaan per jangka waktu seperti ekspor admin.
+
 ## Splash, loading, dan launcher (19 Nov 2026)
 
 - **Splash WLM** (`app/wlm/loading.tsx`, `WlmSplash`): saat halaman WLM dimuat, tampil nama WLM dengan pita lima warna di

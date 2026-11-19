@@ -22,6 +22,7 @@ import { PhotoSheet } from "./PhotoSheet";
 import { ActivitySheet, SignOutSheet, ThemeSheet } from "./Sheets";
 import { STRAVA_OPEN, STRAVA_RESULTS, StravaSheet } from "./StravaSheet";
 import { RewardsSheet } from "./Rewards";
+import { ExportSheet } from "./ExportSheet";
 import css from "./wellbeing.module.css";
 
 /*
@@ -39,7 +40,7 @@ export function sectionOf(pathname: string, base = WELLBEING_PATH): WellbeingSec
 }
 const pathOf = (section: WellbeingSection, base: string) => section === "beranda" ? base : `${base}/${section}`;
 
-type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "photo" } | { kind: "board" } | { kind: "rewards"; tab: "hadiah" | "klaim" } | { kind: "signout" };
+type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "photo" } | { kind: "board" } | { kind: "rewards"; tab: "hadiah" | "klaim" } | { kind: "export" } | { kind: "signout" };
 
 /** Wait until the closed sheet's history entry is gone, so the next sheet's entry is not taken back with it. */
 const historySettled = () => new Promise<void>(resolve => {
@@ -163,6 +164,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
     setPhoto,
     openBoard: () => void show({ kind: "board" }),
     openRewards: tab => void show({ kind: "rewards", tab: tab ?? "hadiah" }),
+    openExport: () => void show({ kind: "export" }),
     askSignOut: () => void show({ kind: "signout" }),
   }), [api, meNow, go, show, setPhoto]);
 
@@ -230,6 +232,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
       <PhotoSheet open={sheet?.kind === "photo"} onClose={close} />
       <BoardSheet open={sheet?.kind === "board"} period={board.period} dim={board.dim} onClose={close} />
       <RewardsSheet open={sheet?.kind === "rewards"} tab={sheet?.kind === "rewards" ? sheet.tab : "hadiah"} onClose={close} />
+      <ExportSheet open={sheet?.kind === "export"} onClose={close} />
       <SignOutSheet open={sheet?.kind === "signout"} onClose={close} />
   </WellbeingContext.Provider>;
 }

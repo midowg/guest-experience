@@ -788,6 +788,7 @@ input[type="date"].input { display: block; }
 
 /* ---------- hadiah (18 Nov 2026) ---------- */
 .toneGold { background: var(--gold-c); color: var(--on-gold-c); }
+.toneOk { background: var(--success-c); color: var(--on-success-c); }
 /* The saldo on an ink card (the sheet), and as a row-card under the race on Beranda. */
 .saldo { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
   background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: 20px; padding: 16px 18px; }

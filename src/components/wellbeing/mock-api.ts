@@ -451,5 +451,11 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       claim.status = "cancelled";
       return { claim, saldo: saldo() };
     }, 0.15),
+    // Unduh rekap saya (19 Nov 2026): the preview hands over a small stand-in file, not a real workbook.
+    exportMine: input => call(() => {
+      if (input.period === "range" && (!input.from || !input.to)) throw new WellbeingApiError("Isi tanggal mulai dan akhir.", 422, { from: ["Isi tanggal mulai dan akhir."] });
+      const stamp = input.period === "range" ? `${input.from}_${input.to}` : input.period === "all" ? `semua-${today}` : input.period;
+      return { blob: new Blob(["rekap"], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), name: `rekap-wlm-dewi-${stamp}.xlsx` };
+    }, 0.2),
   };
 }

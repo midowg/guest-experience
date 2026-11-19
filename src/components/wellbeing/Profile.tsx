@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, BadgeCheck, CalendarCheck, Camera, Flame, Gift, LogOut, Sigma } from "lucide-react";
+import { Activity, BadgeCheck, CalendarCheck, Camera, FileSpreadsheet, Flame, Gift, LogOut, Sigma } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
 import type { WbHome } from "@/lib/wellbeing/app-types";
 import { keys, useTheme, useWellbeing } from "./context";
@@ -19,7 +19,7 @@ import css from "./wellbeing.module.css";
  * the Riwayat tab only.
  */
 export function Profile({ home }: { home: Resource<WbHome> }) {
-  const { api, me, openTheme, openPhoto, openRewards, askSignOut } = useWellbeing();
+  const { api, me, openTheme, openPhoto, openRewards, openExport, askSignOut } = useWellbeing();
   // Every point that counts, read only for the records here (Riwayat shows the list).
   const ledger = useResource(keys.ledger, () => api.ledger());
   const rewards = useResource(keys.rewards, () => api.rewards()).data;
@@ -58,6 +58,13 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
       <NavRow lead={<span className={cx(css.lead, css.toneGold)}><Gift size={22} aria-hidden="true" /></span>} title="Hadiah & klaim saya"
         meta={rewards?.migrated ? `Saldo ${num(rewards.saldo.available)} poin${waiting ? ` · ${num(waiting)} klaim diproses` : ""}` : "Tukar poin dengan hadiah"}
         onClick={() => openRewards(waiting ? "klaim" : "hadiah")} />
+    </div>
+
+    {/* Unduh rekap saya (19 Nov 2026): my own data as Excel, for my own recap. */}
+    <h2 className={css.groupLabel}>Data saya</h2>
+    <div className={cx(css.card, css.list)}>
+      <NavRow lead={<span className={cx(css.lead, css.toneOk)}><FileSpreadsheet size={22} aria-hidden="true" /></span>} title="Unduh rekap saya"
+        meta="Excel: poin, aktivitas, poin dari admin" onClick={openExport} />
     </div>
 
     <h2 className={css.groupLabel}>Pengaturan</h2>

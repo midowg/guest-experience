@@ -41,12 +41,14 @@ export type WellbeingActions = {
   openBoard: () => void;
   /** Hadiah (18 Nov 2026): the rewards, or my claims. */
   openRewards: (tab?: "hadiah" | "klaim") => void;
+  /** Unduh rekap saya (19 Nov 2026): my own data as Excel. */
+  openExport: () => void;
   askSignOut: () => void;
 };
 const noop = () => {};
 export const WellbeingContext = createContext<WellbeingActions>({
   api: realApi, me: { id: "", name: "", nickname: "", department: "", position: "" },
-  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openPhoto: noop, setPhoto: noop, openBoard: noop, openRewards: noop, askSignOut: noop,
+  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openPhoto: noop, setPhoto: noop, openBoard: noop, openRewards: noop, openExport: noop, askSignOut: noop,
 });
 export const useWellbeing = () => useContext(WellbeingContext);
 

@@ -913,6 +913,8 @@ export const wellbeingApi = {
   stravaSync: `${WELLBEING_API}/strava/sync`,
   /** Strava's webhook (its check and its events). */
   stravaWebhook: `${WELLBEING_API}/strava/webhook`,
+  /** POST { period, from, to }: Unduh rekap saya, my own data as an Excel file (19 Nov 2026). */
+  export: `${WELLBEING_API}/export`,
   /** Hadiah (18 Nov 2026): my saldo, the rewards, my claims. */
   rewards: `${WELLBEING_API}/rewards`,
   /** POST { rewardId, note }: ask for a reward. */

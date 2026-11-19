@@ -607,6 +607,33 @@ describe("WellbeingApp", () => {
     expect(within(dialog()).getByRole("button", { name: "Sambungkan ulang" })).toBeTruthy();
   });
 
+  it("downloads my own recap from Profil: pick the period, Unduh Excel (19 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wlm/profil");
+    const api = mockApi({ latency: [0, 0] });
+    const exportMine = vi.spyOn(api, "exportMine");
+    const created = vi.fn(() => "blob:rekap");
+    Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() });
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    app(api);
+    fireEvent.click((await screen.findByText("Unduh rekap saya")).closest("button")!);
+    expect(await within(dialog()).findByText(/Data WLM milikmu sendiri/)).toBeTruthy();
+    // Dates only for Pilih tanggal; a range needs both, in order.
+    expect(within(dialog()).queryByLabelText("Dari")).toBeNull();
+    fireEvent.click(within(dialog()).getByRole("radio", { name: /Pilih tanggal/ }));
+    fireEvent.change(within(dialog()).getByLabelText("Dari"), { target: { value: "2026-11-20" } });
+    fireEvent.change(within(dialog()).getByLabelText("Sampai"), { target: { value: "2026-11-01" } });
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Unduh Excel" }));
+    expect(within(dialog()).getByRole("alert").textContent).toBe("Tanggal akhir sebelum tanggal mulai.");
+    expect(exportMine).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog()).getByRole("radio", { name: /Bulan lalu/ }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Unduh Excel" }));
+    expect(await screen.findByText(/^Rekap diunduh: rekap-wlm-dewi-last_month.xlsx$/)).toBeTruthy();
+    expect(exportMine).toHaveBeenCalledWith({ period: "last_month" });
+    expect(created).toHaveBeenCalled();
+    expect(clicked).toHaveBeenCalled();
+    clicked.mockRestore();
+  });
+
   it("shows points from an admin under Riwayat › Dari admin", async () => {
     window.history.replaceState(null, "", "/wlm/riwayat");
     app();
