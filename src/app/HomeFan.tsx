@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { ArrowRight, CalendarDays, DoorOpen, HeartPulse, LayoutDashboard, Lock, MonitorPlay } from 'lucide-react';
 import { SchemeSwitch } from './SchemeSwitch';
@@ -7,6 +8,8 @@ import css from './home.module.css';
 
 export type Door = {
   href: string; icon: keyof typeof icons; tone: string; name: string; what: string; key: string; description: string;
+  /** The app's own logo (its launcher icon), shown in place of the drawn icon when it has one. */
+  logo?: string;
 };
 const icons = { wam: CalendarDays, wlm: HeartPulse, booking: DoorOpen, signage: MonitorPlay, admin: LayoutDashboard };
 
@@ -70,11 +73,13 @@ export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
         const Icon = icons[door.icon];
         return <a key={door.href} data-card href={door.href} className={css.card} style={{ '--tone': door.tone, '--n': index - (doors.length - 1) / 2 } as CSSProperties}>
           <span className={css.glow} aria-hidden="true" />
-          <span className={css.icon} aria-hidden="true"><Icon size={28} /></span>
+          {door.logo
+            ? <span className={css.logoTile} aria-hidden="true"><Image src={door.logo} alt="" width={60} height={60} unoptimized /></span>
+            : <span className={css.icon} aria-hidden="true"><Icon size={28} /></span>}
           <span className={css.what}>{door.what}</span>
           <strong className={css.name}>{door.name}</strong>
           <span className={css.description}>{door.description}</span>
-          <span className={css.foot}><span><Lock size={12} aria-hidden="true" /> {door.key}</span><ArrowRight size={18} aria-hidden="true" className={css.arrow} /></span>
+          <span className={css.foot}><span><Lock size={12} aria-hidden="true" /> {door.key}</span><span className={css.open}>Buka <ArrowRight size={16} aria-hidden="true" /></span></span>
         </a>;
       })}</div>
       <div className={css.dots}>{doors.map((door, index) =>

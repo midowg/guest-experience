@@ -5,9 +5,9 @@ const SIGNAGE_PATH = wamAdminPath.tv;
 
 /** The apps behind a sign-in (19 Nov 2026): each opens its own login when nobody is signed in. */
 const doors: Door[] = [
-  { href: PRA_WAM_PATH, icon: 'wam', tone: '#2f6feb', name: 'WAM 2027', what: 'Aplikasi karyawan', key: 'Akun WAM',
+  { href: PRA_WAM_PATH, icon: 'wam', logo: '/wam/icon-192.png', tone: '#2f6feb', name: 'WAM 2027', what: 'Aplikasi karyawan', key: 'Akun WAM',
     description: 'Semua kebutuhan Werkudara Annual Meeting dalam satu aplikasi: agenda, appraisal, absen, dan MoM.' },
-  { href: WELLBEING_PATH, icon: 'wlm', tone: '#e0457b', name: 'WLM', what: 'Wellbeing karyawan', key: 'Akun WAM',
+  { href: WELLBEING_PATH, icon: 'wlm', logo: '/wlm/icon-192.png', tone: '#e0457b', name: 'WLM', what: 'Werkudara Life Mode', key: 'Akun WAM',
     description: 'Catat olahraga dan kebiasaan sehat, kumpulkan poin, dan naik peringkat bersama tim.' },
   { href: BOOKING_PATH, icon: 'booking', tone: '#0d9488', name: 'Booking Kantor', what: 'Ruang meeting', key: 'Akun WAM',
     description: 'Pesan ruang meeting kantor dan lihat jadwalnya, tanpa bentrok.' },

@@ -45,15 +45,15 @@
 
 /* The fan (wide screens): five cards spread like a hand, tilting toward the mouse. */
 .doors { display: grid; justify-items: center; gap: 16px; width: 100%; align-self: start; }
-.fan { --rx: 0deg; --ry: 0deg; position: relative; display: flex; justify-content: center; width: 100%; height: 320px; perspective: 1400px;
+.fan { --rx: 0deg; --ry: 0deg; --step: clamp(150px, 17.5vw, 236px); position: relative; display: flex; justify-content: center; width: 100%; height: 320px; perspective: 1400px;
   transform-style: preserve-3d; transition: transform .4s ease-out; transform: rotateX(var(--rx)) rotateY(var(--ry)); }
 .card { --tone: var(--accent); position: absolute; top: 0; left: 50%; display: flex; flex-direction: column; gap: 6px; width: 220px; height: 300px; margin-left: -110px; padding: 20px;
   overflow: hidden; border-radius: 24px; color: var(--ink); text-decoration: none;
   background: color-mix(in srgb, var(--card) 84%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border: 1px solid color-mix(in srgb, var(--tone) 35%, var(--line));
-  transform: translateX(calc(var(--n) * 156px)) translateZ(calc(-1 * max(var(--n), -1 * var(--n)) * 60px)) rotateY(calc(var(--n) * -14deg)) rotateZ(calc(var(--n) * 3deg));
-  transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .3s; animation: deal .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc((var(--n) + 2) * 90ms + .2s); }
-.card:hover, .card:focus-visible { transform: translateX(calc(var(--n) * 156px)) translateY(-24px) translateZ(120px); z-index: 5;
+  transform: translateX(calc(var(--n) * var(--step))) translateZ(calc(-1 * max(var(--n), -1 * var(--n)) * 40px)) rotateY(calc(var(--n) * -10deg)) rotateZ(calc(var(--n) * 2deg));
+  cursor: pointer; transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .3s; animation: deal .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc((var(--n) + 2) * 90ms + .2s); }
+.card:hover, .card:focus-visible { transform: translateX(calc(var(--n) * var(--step))) translateY(-20px) translateZ(80px); z-index: 5;
   box-shadow: 0 30px 60px -20px color-mix(in srgb, var(--tone) 60%, transparent); outline: none; }
 .card:focus-visible { border-color: var(--tone); }
 @keyframes deal { from { opacity: 0; transform: translateY(80px) scale(.8); } }
@@ -66,19 +66,18 @@
 .description { font-size: .8125rem; line-height: 1.5; color: var(--soft); }
 .foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; font-size: .75rem; font-weight: 700; color: var(--tone); }
 .foot > span { display: inline-flex; align-items: center; gap: 4px; }
-.arrow { transition: translate .25s; }
-.card:hover .arrow { translate: 4px 0; }
+.logoTile { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 8px; overflow: hidden; border-radius: 16px; background: #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 25%, transparent); }
+.logoTile img { width: 100%; height: 100%; object-fit: cover; }
+.open { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px; color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, transparent); transition: background-color .25s, color .25s; }
+.open svg { transition: translate .25s; }
+.card:hover .open, .card:focus-visible .open { background: var(--tone); color: #fff; }
+.card:hover .open svg { translate: 3px 0; }
 .dots, .swipe { display: none; }
 
 .guest { display: grid; gap: 4px; max-width: 40rem; padding-inline: 16px; text-align: center; font-size: .875rem; line-height: 1.55; color: var(--soft); }
 .guest p:last-child { font-size: .75rem; }
-
-/* Medium screens: the same fan, closer together. */
-@media (max-width: 64rem) and (min-width: 48.01rem) {
-  .card { width: 190px; margin-left: -95px; }
-  .card { transform: translateX(calc(var(--n) * 118px)) translateZ(calc(-1 * max(var(--n), -1 * var(--n)) * 60px)) rotateY(calc(var(--n) * -14deg)) rotateZ(calc(var(--n) * 3deg)); }
-  .card:hover, .card:focus-visible { transform: translateX(calc(var(--n) * 118px)) translateY(-24px) translateZ(120px); }
-}
 
 /* A phone: a cover flow. The middle card faces you and glows; the others turn away and fade. */
 @media (max-width: 48rem) {
@@ -95,7 +94,7 @@
     box-shadow: 0 30px 60px -24px color-mix(in srgb, var(--tone) calc((1 - min(var(--ad, 0), 1)) * 70%), transparent); }
   .card:active { scale: .97; }
   .glow { opacity: calc(1 - var(--ad, 0) * 1.5); }
-  .icon { width: 60px; height: 60px; border-radius: 18px; }
+  .icon, .logoTile { width: 60px; height: 60px; border-radius: 18px; }
   .name { font-size: 1.5rem; }
   .description { font-size: .875rem; }
   .dots { display: flex; justify-content: center; gap: 8px; }
