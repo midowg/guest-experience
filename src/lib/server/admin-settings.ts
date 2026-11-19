@@ -3,12 +3,13 @@ import { adminModules, isAdminModule, type AdminModule } from "@/lib/admin-modul
 import type { AdminRole } from "@/lib/admin-token";
 import { defaultTemplates, templateKeys, type TemplateKey } from "@/lib/event-templates";
 import { DEFAULT_HOME_STYLE, HOME_STYLE_MIGRATION, isHomeStyle, type HomeStyle } from "@/lib/home-style";
+import { HOME_MENU_MIGRATION, readHomeMenu, type HomeMenuItem } from "@/lib/home-menu";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
 import { ServiceError } from "./config";
 
 const notMigrated = (error: { code?: string; message?: string }) =>
-  error.code === "42P01" || error.code === "PGRST205" || error.code === "42703" || error.code === "PGRST204" || /admin_settings|enabled_templates|home_style/.test(error.message ?? "");
+  error.code === "42P01" || error.code === "PGRST205" || error.code === "42703" || error.code === "PGRST204" || /admin_settings|enabled_templates|home_style|home_menu/.test(error.message ?? "");
 const isTemplate = (value: string): value is TemplateKey => (templateKeys as readonly string[]).includes(value);
 
 /** Modules the super admin switched off. Before 202610200006 nothing is switched off. */
@@ -80,4 +81,24 @@ export async function setHomeStyle(style: HomeStyle): Promise<HomeStyle> {
   }
   const saved = (data as { home_style?: unknown } | null)?.home_style;
   return isHomeStyle(saved) ? saved : style;
+}
+
+/** The front page's app menu. Never throws: before migration 202611260002 or on any error, the default menu. */
+export async function getHomeMenu(): Promise<{ menu: HomeMenuItem[]; migrated: boolean }> {
+  try {
+    const { data, error } = await createPrivilegedClient().from("admin_settings").select("home_menu").maybeSingle();
+    if (error) return { menu: readHomeMenu(null), migrated: !notMigrated(error) };
+    return { menu: readHomeMenu((data as { home_menu?: unknown } | null)?.home_menu ?? null), migrated: true };
+  } catch {
+    return { menu: readHomeMenu(null), migrated: false };
+  }
+}
+
+export async function setHomeMenu(menu: HomeMenuItem[]): Promise<HomeMenuItem[]> {
+  const { data, error } = await createPrivilegedClient().from("admin_settings").update({ home_menu: menu, updated_at: new Date().toISOString() }).eq("id", true).select("home_menu").maybeSingle();
+  if (error) {
+    if (notMigrated(error)) throw new ServiceError(503, `Menu halaman utama menunggu migrasi ${HOME_MENU_MIGRATION}.`);
+    databaseError(error);
+  }
+  return readHomeMenu((data as { home_menu?: unknown } | null)?.home_menu ?? menu);
 }

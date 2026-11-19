@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getHomeStyle } from '@/lib/server/admin-settings';
+import { getHomeMenu, getHomeStyle } from '@/lib/server/admin-settings';
 import { EmptyHome } from './EmptyHome';
 
 export const metadata: Metadata = {
@@ -16,6 +16,6 @@ export const revalidate = 60;
  * features and reveals no event; guests come in through the link they were given.
  */
 export default async function Home() {
-  const { style } = await getHomeStyle();
-  return <EmptyHome style={style} />;
+  const [{ style }, { menu }] = await Promise.all([getHomeStyle(), getHomeMenu()]);
+  return <EmptyHome style={style} menu={menu} />;
 }

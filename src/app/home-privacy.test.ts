@@ -21,8 +21,9 @@ describe("the front page names no guest page", () => {
     expect(/eventPath|invitationPath|welcomePath/.test(publicPages[file as keyof typeof publicPages])).toBe(false);
   });
 
+  // The addresses are fixed in EmptyHome.tsx; the menu the super admin edits only names and orders these apps.
   it("the front page only opens apps that ask for a sign-in", () => {
-    const hrefs = [...publicPages["EmptyHome.tsx"].matchAll(/href: (\w+)/g)].map(match => match[1]);
+    const hrefs = [...publicPages["EmptyHome.tsx"].matchAll(/href: ([A-Z_]+)\b/g)].map(match => match[1]);
     expect(hrefs).toEqual(["PRA_WAM_PATH", "WELLBEING_PATH", "BOOKING_PATH", "SIGNAGE_PATH", "ADMIN_HOME"]);
   });
 
