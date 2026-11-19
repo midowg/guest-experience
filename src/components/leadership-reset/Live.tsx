@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { CmsView, CoachView as CoachData, LrContent } from "@/lib/leadership-reset/form";
-import { cmsApi, coachApi, formApi } from "./api";
+import { cmsApi, CMS_KEY, coachApi, formApi, store } from "./api";
+
 import { Cms } from "./Cms";
 import { CoachView } from "./CoachView";
 import { ReflectionForm } from "./ReflectionForm";
@@ -13,6 +14,8 @@ export function LiveReflectionForm(props: { content: LrContent; isOpen: boolean;
 }
 export function LiveCms({ cmsKey, initial }: { cmsKey: string; initial: CmsView }) {
   const api = useMemo(() => cmsApi(cmsKey), [cmsKey]);
+  // Next time /refleksi/kelola opens this CMS straight away on this device.
+  useEffect(() => { store.set(CMS_KEY, cmsKey); }, [cmsKey]);
   return <Cms cmsKey={cmsKey} initial={initial} api={api} />;
 }
 export function LiveCoach({ coachKey, initial }: { coachKey: string; initial: CoachData }) {
