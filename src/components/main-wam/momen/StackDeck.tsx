@@ -45,7 +45,7 @@ function CardPhoto({ photo, large, alt }: { photo: FeedPhoto; large: boolean; al
   </>;
 }
 
-export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions, reactionsOf, now, panel, label, describe, children }: {
+export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions, reactionsOf, now, panel, label, describe, seenTag, children }: {
   items: FeedPhoto[];
   index: number;
   onIndex: (next: number, how: "swipe" | "tap" | "key") => void;
@@ -64,6 +64,8 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
   label: string;
   /** "3 dari 24": spoken with each card. */
   describe: (index: number) => string;
+  /** Opened from the gallery (or a toast): a photo seen before carries "Sudah dilihat" (it is not in the regular stack any more). */
+  seenTag?: boolean;
   children?: ReactNode;
 }) {
   const t = useT();
@@ -189,6 +191,7 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
             {burst > 0 && <span key={burst} aria-hidden className={css.burst}>{HEART}</span>}
           </>}
           {isFront && photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.yourPhoto")}</Pill></span>}
+          {isFront && seenTag && photo.seen && !photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.seenTag")}</Pill></span>}
           {isFront && onOptions && <IconButton className={css.options} variant="onmedia" icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => onOptions(photo)} />}
           {isFront && <ReactionPills reactions={reactionsOf ? reactionsOf(photo) : photo.reactions} mine={photo.mine} onOpen={onReactors ? () => onReactors(photo) : undefined} />}
           <div className={css.info} aria-hidden>

@@ -247,11 +247,11 @@ describe("the stack", () => {
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   });
 
-  it("on one's own photo: the pills open the list too, but no quick row, no heart button, the Fotomu pill, 'Sudah kamu lihat' after the new ones", async () => {
-    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: sampleReactions(7) } : photo));
-    render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={2} /></ToastProvider>);
+  it("on one's own photo (it shows once, unseen, in the stack): the pills open the list too, but no quick row, no heart button, the Fotomu pill", async () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, reactions: sampleReactions(7) } : photo));
+    render(<ToastProvider><MomenStack {...props} items={items} total={24} startIndex={2} /></ToastProvider>);
     expect(screen.getByText("Fotomu")).toBeTruthy();
-    const button = within(screen.getByRole("group", { name: /^Foto ke-[0-9] dari 2 foto baru/ })).getByRole("button", { name: "7 reaksi pada fotomu. Ketuk untuk melihat siapa saja" });
+    const button = within(screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ })).getByRole("button", { name: "7 reaksi pada fotomu. Ketuk untuk melihat siapa saja" });
     expect(pillList()).toEqual(["❤️4", "😂1", "🔥1", "👏1"]);
     expect(screen.queryByRole("group", { name: "Reaksi cepat" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Reaksi / })).toBeNull();
@@ -259,17 +259,16 @@ describe("the stack", () => {
     fireEvent.click(button);
     expect(await screen.findByRole("dialog", { name: /^Reaksi/ })).toBeTruthy();
     expect(request.mock.calls.filter(call => (call[1] as { method?: string } | undefined)?.method)).toHaveLength(0);
-    expect(screen.getByText("Sudah kamu lihat")).toBeTruthy();
-    expect(screen.queryByText(/dari 2 baru/)).toBeNull();
+    expect(screen.queryByText("Sudah kamu lihat")).toBeNull();
     cleanup();
-    render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={1} /></ToastProvider>);
-    expect(screen.getByText("2 dari 2 baru")).toBeTruthy();
+    render(<ToastProvider><MomenStack {...props} items={items} total={24} startIndex={1} /></ToastProvider>);
+    expect(screen.getByText("2 dari 24 baru")).toBeTruthy();
     expect(screen.queryByText("Fotomu")).toBeNull();
   });
 
   it("a photo nobody reacted to has no pills, and one's own keeps the same height of row under it (the card does not jump)", () => {
-    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: [] } : photo));
-    const { container } = render(<ToastProvider><MomenStack {...props} items={items} total={2} startIndex={2} /></ToastProvider>);
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, reactions: [] } : photo));
+    const { container } = render(<ToastProvider><MomenStack {...props} items={items} total={24} startIndex={2} /></ToastProvider>);
     expect(screen.queryByRole("button", { name: /Ketuk untuk melihat siapa saja/ })).toBeNull();
     expect(container.querySelector('[class*="actions"]')).toBeTruthy();
   });
@@ -296,10 +295,36 @@ describe("the stack", () => {
     expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam/acara/momen/kamera");
   });
 
-  it("says there is nothing new when every photo was seen, with a way to the gallery", () => {
+  it("says there is nothing new when every photo was seen: an invitation to the camera, a way to the gallery (and the Mozaik)", () => {
     render(<ToastProvider><MomenStack {...props} items={sampleFeedSemua.slice(0, 5)} startIndex={5} total={5} /></ToastProvider>);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
+    expect(screen.getByText("Foto baru dari rekan muncul di sini. Yang sudah kamu lihat tetap ada di Galeri.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam/acara/momen/galeri");
+    expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam/acara/momen/kamera")).toBe(true);
+    expect(screen.getByRole("link", { name: "Lihat Mozaik" })).toBeTruthy();
+  });
+
+  it("a photo the server still sends as seen is not in the stack (an older database), and the start follows the photos left", () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 1 ? { ...photo, seen: true } : photo));
+    render(<ToastProvider><MomenStack {...props} items={items} total={23} startIndex={2} /></ToastProvider>);
+    // Photo 2 left, so what was third is second now: "2 dari 23 baru".
+    expect(screen.getByText("2 dari 23 baru")).toBeTruthy();
+    expect(screen.queryByText("Sudah dilihat")).toBeNull();
+  });
+
+  it("opened from the gallery or a toast it may show a photo seen before, marked \"Sudah dilihat\", without putting it in the regular stack", () => {
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, seen: true } : photo));
+    render(<ToastProvider><MomenStack {...props} mode="galeri" items={items} total={24} startIndex={2} /></ToastProvider>);
+    expect(screen.getByText("Sudah dilihat")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
+    expect(screen.queryByText("Sudah dilihat")).toBeNull();
+  });
+
+  it("has no message or comment anywhere (postponed): no field, no button, no word", () => {
+    const { container } = render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
+    expect(container.querySelector("textarea, input[type=text], input:not([type])")).toBeNull();
+    expect(screen.queryByRole("button", { name: /komentar|pesan|balas|kirim/i })).toBeNull();
+    expect(container.textContent).not.toMatch(/komentar|pesan|balas/i);
   });
 });
 

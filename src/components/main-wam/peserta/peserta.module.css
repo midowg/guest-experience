@@ -241,11 +241,11 @@
 /* Agenda while it loads (T-P04): the real bar's four tabs, rows as tall as SessionRow (72). */
 .skeletonTabs { display: flex; gap: var(--mw-space-8); }
 .skeletonTabs > * { flex: 1 1 0; min-width: 0; border-radius: var(--mw-radius-12); }
-.skeletonSessions { display: flex; flex-direction: column; }
-.skeletonSession { display: flex; align-items: flex-start; gap: var(--mw-space-12); min-height: 72px; padding: var(--mw-space-12) var(--mw-space-16); }
-.skeletonTime { flex: none; width: 52px; display: flex; flex-direction: column; gap: var(--mw-space-4); padding-top: 2px; }
-.skeletonDot { flex: none; width: 16px; display: flex; justify-content: center; padding-top: var(--mw-space-4); }
-.skeletonBody { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-8); padding-top: 2px; }
+.skeletonSessions { display: flex; flex-direction: column; gap: var(--mw-space-12); }
+.skeletonSession { display: flex; align-items: stretch; gap: var(--mw-space-8); min-height: 70px; }
+.skeletonTime { flex: none; width: 52px; display: flex; flex-direction: column; gap: var(--mw-space-4); padding-top: var(--mw-space-12); }
+.skeletonDot { flex: none; width: 28px; display: flex; justify-content: center; align-items: flex-start; padding-top: var(--mw-space-8); }
+.skeletonBody { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-8); padding: var(--mw-space-12) var(--mw-space-16); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); }
 .skeletonListRow { display: flex; align-items: center; gap: var(--mw-space-16); min-height: 64px; padding: var(--mw-space-12) var(--mw-space-16); }
 .skeletonListRow > span { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--mw-space-8); }
 

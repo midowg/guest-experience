@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
  */
 
 const LAYAR = [
-  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-sheet-reaksi", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong",
+  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-sheet-reaksi", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong", "M01-belum-dilihat", "M01-sebagian", "M01-semua-dilihat",
   "M02-dari-galeri", "M03", "M04",
   "M05", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
   "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
@@ -91,12 +91,16 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M01-disembunyikan-panitia": return at(mainWamPath.moments({ foto: sampleFeedSemua[0].id }), <MomenStack {...stack({
       mode: "galeri", items: [{ ...sampleFeedSemua[0], mine: true, status: "disembunyikan" }], total: 1, startIndex: 0, own: { id: sampleFeedSemua[0].id, status: "disembunyikan", reason: "" }, demo: {},
     })} />);
-    case "M01-fotomu": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: sampleReactions(12) } : photo)), total: 2, startIndex: 2, demo: {} })} />);
-    case "M01-fotomu-kosong": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true, seen: true, reactions: [] } : photo)), total: 2, startIndex: 2, demo: {} })} />);
+    /* The stack of photos not seen yet (Instants): all unseen, some seen already (the stack has only the rest), all seen, and one's own photo shown once, first. */
+    case "M01-belum-dilihat": return at(momen, <MomenStack {...stack({ startIndex: 0, demo: {} })} />);
+    case "M01-sebagian": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.slice(0, 9), total: 9, startIndex: 0, demo: {} })} />);
+    case "M01-semua-dilihat": return at(momen, <MomenStack {...stack({ items: [], total: 0, startIndex: 0, demo: {} })} />);
+    case "M01-fotomu": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 0 ? { ...photo, mine: true, reactions: sampleReactions(12) } : photo)), total: 24, startIndex: 0, demo: {} })} />);
+    case "M01-fotomu-kosong": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 0 ? { ...photo, mine: true, reactions: [] } : photo)), total: 24, startIndex: 0, demo: {} })} />);
     case "M02-dari-galeri": return at(mainWamPath.moments({ foto: sampleGalleryAll[3].id }), <MomenStack {...stack({
       mode: "galeri", items: sampleGalleryAll, total: 21, startIndex: 3, demo: {},
     })} />, "pemaparan");
-    case "M03": return at(momen, <MomenStack {...stack({ startIndex: 24, demo: {} })} />);
+    case "M03": return at(momen, <MomenStack {...stack({ items: [], total: 0, startIndex: 0, demo: {} })} />);
     case "M04": return at(momen, <MomenStack {...stack({ demo: { sheet: "lapor" } })} />);
   }
 

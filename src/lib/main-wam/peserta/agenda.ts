@@ -66,12 +66,25 @@ export type AgendaRow = {
   status: "upcoming" | "live" | "done" | "cancelled";
   /** "Jam berubah" (a pill). */
   changed: boolean;
+  /** What the entry is: its icon on the timeline; a meal or a break is drawn as a light row. */
+  kind: AgendaKind;
+  /** The first session still to come, on the day that is today (the "Berikutnya" mark). */
+  next: boolean;
 };
+
+export type AgendaKind = "sesi" | "makan" | "perjalanan" | "jeda";
+
+const BREAK = /(rehat|istirahat|jeda|break|coffee|tenongan)/i;
+
+/** A rest ("Rehat", "Coffee break") is a break whatever its kind; otherwise the session's own kind. */
+export const agendaKind = (session: Pick<MwSession, "kind" | "title">): AgendaKind =>
+  session.kind === "makan" ? "makan" : session.kind === "perjalanan" ? "perjalanan" : BREAK.test(session.title) ? "jeda" : "sesi";
 
 /** One day of the agenda, in order: the running one lit, past ones dimmed, cancelled struck through. */
 export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id"): AgendaRow[] {
   const shown = sessions.filter(session => session.status !== "draf");
-  return sessionsOfDay(shown, day, event).map(session => ({
+  const isToday = eventDates(event)[day - 1] === wibDate(now.toISOString());
+  const rows: AgendaRow[] = sessionsOfDay(shown, day, event).map(session => ({
     id: session.id,
     start: hhmm(session.startsAt, lang),
     end: session.endsAt ? hhmm(session.endsAt, lang) : "",
@@ -79,7 +92,12 @@ export function agendaRows(sessions: readonly MwSession[], day: number, event: P
     place: placeLine(session, lang),
     status: session.status === "batal" ? "cancelled" : isRunning(session, now) ? "live" : hasEnded(session, now) ? "done" : "upcoming",
     changed: session.status !== "batal" && movedInRundown(session, log),
+    kind: agendaKind(session),
+    next: false,
   }));
+  const next = isToday ? rows.find(row => row.status === "upcoming") : undefined;
+  if (next) next.next = true;
+  return rows;
 }
 
 /**

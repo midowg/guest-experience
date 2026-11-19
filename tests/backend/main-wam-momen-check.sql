@@ -90,41 +90,56 @@ begin
   select array_agg(f.id) into ids from public.mw_photo_feed(dimas, g2, 'semua', null, true, false, null, null, null, 'older', 10) f;
   if ids is distinct from array[p_rani, p_new] then raise exception 'Umum: %', ids; end if;
 
-  -- Reactions, mine, seen; "baru" is every photo of the view, one's own included: unseen ones first, then seen and own.
+  -- Reactions, mine, seen; "baru" is the unseen photos of the view, one's own first.
   perform public.mw_photo_react(p_mid, rani, g4, heart);
   perform public.mw_photo_react(p_mid, dimas, g2, heart);
   select * into r from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_mid;
   if r.reactions is distinct from jsonb_build_array(jsonb_build_object('emoji', heart, 'count', 2, 'mine', true)) then raise exception 'reactions of p_mid for Rani: %', r.reactions; end if;
   select * into r from public.mw_photo_feed(dimas, g2, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_new;
   if r.reactions is distinct from '[]'::jsonb then raise exception 'a photo nobody reacted to: %', r.reactions; end if;
+  -- "Baru" (the stack) holds only what the viewer has not seen: her own unseen photo first, then the others newest first; a seen photo is gone from it.
   insert into public.mw_photo_seen (photo_id, employee_id) values (p_old, rani);
-  select array_agg(f.id order by f.seen, f.visible_at desc, f.id desc) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
-  if ids is distinct from array[p_new, p_mid, p_rani, p_old] then raise exception 'baru for Rani (unseen first, then own and seen): %', ids; end if;
-  if (select count(*) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f where not f.seen) <> 2 then raise exception 'two unseen for Rani'; end if;
-  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f) <> 2 then raise exception 'foto baru counts only the unseen, never her own'; end if;
-  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo is not new'; end if;
-  -- Paging through the two runs: page 1 ends in the unseen run, page 2 is the own and seen run.
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
+  if ids is distinct from array[p_rani, p_new, p_mid] then raise exception 'baru for Rani (own unseen first, no seen photo): %', ids; end if;
+  if exists (select 1 from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f where f.seen) then raise exception 'a photo of the stack is never seen'; end if;
+  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f) <> 3 then raise exception 'the stack counts its three unseen photos'; end if;
+  -- Paging: the own run, then the others; the cursor says whether the last photo was her own (p_cursor_rest).
   select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 2) f;
-  if ids is distinct from array[p_new, p_mid] then raise exception 'baru page 1: %', ids; end if;
-  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '10 minutes 5 seconds', p_mid, false, 'older', 2) f;
-  if ids is distinct from array[p_rani, p_old] then raise exception 'baru page 2 (the run of own and seen): %', ids; end if;
-  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '10 minutes 5 seconds', p_mid, false, 'older', 2) f) <> 0 then raise exception 'no unseen photo is left after page 1 (total counts the cursor''s own run)'; end if;
-  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 1) f) <> 2 then raise exception 'page 1 still counts both unseen photos'; end if;
-  -- A photo seen meanwhile does not move the cursor: seen p_new, ask for what comes after p_new in the unseen run.
+  if ids is distinct from array[p_rani, p_new] then raise exception 'baru page 1: %', ids; end if;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '50 minutes 5 seconds', p_rani, true, 'older', 2) f;
+  if ids is distinct from array[p_new, p_mid] then raise exception 'baru page 2 (after the own run): %', ids; end if;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '20 minutes 5 seconds', p_new, false, 'older', 2) f;
+  if ids is distinct from array[p_mid] then raise exception 'baru page 3 (the others, after p_new): %', ids; end if;
+  if (select max(f.total) from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '20 minutes 5 seconds', p_new, false, 'older', 2) f) <> 1 then raise exception 'total counts what is left after the cursor'; end if;
+  -- Seen meanwhile: p_new leaves the stack.
   insert into public.mw_photo_seen (photo_id, employee_id) values (p_new, rani);
-  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, base + interval '20 minutes 5 seconds', p_new, false, 'older', 10) f;
-  if ids is distinct from array[p_mid, p_rani, p_new, p_old] then raise exception 'baru after p_new seen meanwhile: %', ids; end if;
-  delete from public.mw_photo_seen where photo_id = p_new and employee_id = rani;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
+  if ids is distinct from array[p_rani, p_mid] then raise exception 'baru after p_new was seen: %', ids; end if;
+  -- Her own photo seen (swiped or closed) leaves too, and with everything seen the stack is empty ("Kamu sudah lihat semua").
+  insert into public.mw_photo_seen (photo_id, employee_id) values (p_rani, rani), (p_mid, rani);
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
+  if ids is not null then raise exception 'baru when everything was seen: %', ids; end if;
+  delete from public.mw_photo_seen where photo_id = p_mid and employee_id = rani;
+  select array_agg(f.id) into ids from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'older', 10) f;
+  if ids is distinct from array[p_mid] then raise exception 'baru with one unseen: %', ids; end if;
+  -- Beranda's count: the others' unseen photos only, never her own.
+  delete from public.mw_photo_seen where photo_id in (p_rani, p_new) and employee_id = rani;
+  if public.mw_photo_unseen_count(rani, g4) <> 2 then raise exception 'foto baru for Rani is p_new and p_mid, never p_rani: %', public.mw_photo_unseen_count(rani, g4); end if;
+  if public.mw_photo_unseen_count(dimas, g2) <> 3 then raise exception 'foto baru for Dimas: %', public.mw_photo_unseen_count(dimas, g2); end if;
+  -- Back to the state the rest of the check expects: only p_old seen by Rani.
+  delete from public.mw_photo_seen where photo_id in (p_mid, p_new, p_rani) and employee_id = rani;
   begin perform * from public.mw_photo_feed(rani, g4, 'semua', null, false, true, null, null, null, 'newer', 10); raise exception 'UNEXPECTED: baru only goes older';
   exception when raise_exception then if sqlerrm <> 'MW_FEED_DIRECTION' then raise; end if; end;
-  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo counts as seen'; end if;
+  -- seen = a seen row, own photos included (the sender marks hers by swiping it away like any other).
+  if (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_rani) then raise exception 'one''s own photo is unseen until marked'; end if;
+  if not (select f.seen from public.mw_photo_feed(rani, g4, 'semua', null, false, false, null, null, null, 'older', 10) f where f.id = p_old) then raise exception 'p_old was seen'; end if;
   begin perform * from public.mw_photo_feed(rani, g4, 'semua; drop', null, false, false, null, null, null, 'older', 10); raise exception 'UNEXPECTED: an unknown view';
   exception when raise_exception then if sqlerrm <> 'MW_FEED_VIEW' then raise; end if; end;
 
   -- Session counts (null = Umum).
   if (select photos from public.mw_photo_session_counts(rani, g4, 'kelompok') where session_id = team) <> 2 then raise exception 'Team building should count 2 in Kelompokku'; end if;
   if (select photos from public.mw_photo_session_counts(dimas, g2, 'semua') where session_id is null) <> 2 then raise exception 'Umum should count 2 in Semua'; end if;
-  raise notice 'PASS: the feed pages, counts, reactions and seen';
+  raise notice 'PASS: the feed pages, counts, reactions and the stack of unseen photos';
 
   -- Reactions: one per person (a new emoji replaces the old), counted by emoji, the most given first, taken back with null.
   reacts := public.mw_photo_react(p_mid, bima, g4, laugh);

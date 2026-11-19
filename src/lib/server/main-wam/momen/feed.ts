@@ -58,9 +58,9 @@ export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now =
 export type FeedQuery = {
   view: FeedView;
   session: SessionFilter;
-  /** baru: the stack (every photo, the person's own included: unseen first, then the seen and own ones); semua: everything in the view, newest first. */
+  /** baru: the stack (only the photos the person has not seen yet, their own unseen one first); semua: everything in the view, newest first. */
   mode: FeedMode;
-  /** `rest`: the cursor is in the stack's second run (the seen and own photos). */
+  /** `rest`: the cursor is still in the stack's own run (the person's own unseen photo, which comes first). */
   cursor?: { at: string; id: string; rest?: boolean } | null;
   direction?: "older" | "older_incl" | "newer";
   limit: number;
@@ -81,7 +81,7 @@ export async function listFeed(context: MainWamContext, query: FeedQuery): Promi
   if (!rows.length && !query.cursor) { const demo = await demoFeed(context, query); if (demo) return demo; }
   const items = await feedPhotos(rows, context);
   const last = rows.at(-1);
-  const next = direction !== "newer" && last && rows.length >= query.limit ? encodeCursor(query.mode, last.visible_at, last.id, last.seen) : null;
+  const next = direction !== "newer" && last && rows.length >= query.limit ? encodeCursor(query.mode, last.visible_at, last.id, last.owner_id === context.viewer.id) : null;
   return { items, next, total: Number(rows[0]?.total ?? 0), migrated: true };
 }
 
@@ -220,11 +220,25 @@ export async function unhideReported(viewer: MainWamViewer, id: string): Promise
 
 /* ── For other screens (slots) ────────────────────────────────────────────────────────────────── */
 
-/** Beranda's card: how many photos for everyone are new to the person, and the latest three. */
+/**
+ * How many photos of others the person has not seen ("N foto baru"; never their own). From migration 202611240001; before it the
+ * stack's own total (the old first run) answers, which never counted the person's own photos either.
+ */
+async function othersUnseen(context: MainWamContext, fallback: number): Promise<number> {
+  const { data, error } = await db().rpc("mw_photo_unseen_count", { p_viewer: context.viewer.id, p_group: context.viewer.group?.id ?? null });
+  if (error) return fallback;
+  return Number(data) || 0;
+}
+
+/** Beranda's card: how many photos of others are new to the person, and the latest three. */
 export async function newForMe(context: MainWamContext): Promise<{ unseen: number; total: number; latest: FeedPhoto[]; migrated: boolean }> {
-  const baru = await listFeed(context, { view: "semua", session: null, mode: "baru", limit: 3 });
+  // A few more than three: the person's own unseen photo leads the stack but is not "new" to them.
+  const baru = await listFeed(context, { view: "semua", session: null, mode: "baru", limit: 6 });
   if (!baru.migrated) return { unseen: 0, total: 0, latest: [], migrated: false };
-  if (baru.total > 0) return { unseen: baru.total, total: baru.total, latest: baru.items, migrated: true };
+  const others = baru.items.filter(item => !item.mine && !item.seen);
+  // The count is the whole number; the page only shows the first few (and demo photos have no row to count).
+  const unseen = others.length ? Math.max(others.length, await othersUnseen(context, others.length)) : 0;
+  if (unseen > 0) return { unseen, total: unseen, latest: others.slice(0, 3), migrated: true };
   const all = await listFeed(context, { view: "semua", session: null, mode: "semua", limit: 3 });
   return { unseen: 0, total: all.total, latest: all.items, migrated: true };
 }

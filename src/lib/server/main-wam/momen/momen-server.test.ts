@@ -24,6 +24,7 @@ let insertError: { message: string; code?: string } | null = null;
 let recordError: { message: string; code?: string } | null = null;
 let versionAnswer = "fingerprint-1";
 let feedRows: Record<string, unknown>[] = [];
+let unseenAnswer: { data: unknown; error: { code: string; message: string } | null } = { data: 0, error: null };
 let tileRows: { tile: number; photo_id: string; mw_photos: { owner_id: string; status: string; tile_key: string | null } }[] = [];
 const removed: string[] = [];
 const uploadsRemoved: string[] = [];
@@ -78,6 +79,7 @@ vi.mock("../../supabase/admin", () => ({
       if (name === "mw_photo_react") return Promise.resolve(reactAnswer);
       if (name === "mw_photo_reactors") return Promise.resolve(reactorsAnswer);
       if (name === "mw_photo_feed") return Promise.resolve({ data: feedRows.slice(0, Number(args.p_limit)), error: null });
+      if (name === "mw_photo_unseen_count") return Promise.resolve(unseenAnswer);
       if (name === "mw_mosaic_version") return Promise.resolve({ data: versionAnswer, error: null });
       return Promise.resolve({ data: [], error: null });
     },
@@ -140,7 +142,7 @@ beforeEach(() => {
   reportAnswer = { data: [{ reporters: 1, hidden: false, owner_id: "sari" }], error: null };
   reactorsAnswer = { data: [], error: null };
   reactAnswer = { data: [{ emoji: HEART, count: 2, mine: true }, { emoji: "😂", count: 1, mine: false }], error: null };
-  deleteError = null; insertError = null; recordError = null; versionAnswer = "fingerprint-1"; tileRows = []; feedRows = [];
+  deleteError = null; insertError = null; recordError = null; versionAnswer = "fingerprint-1"; tileRows = []; feedRows = []; unseenAnswer = { data: 0, error: null };
   uploadsRemoved.length = 0; steps.length = 0; copyFails = false; checkFails = false; duringCheck = null;
 });
 
@@ -444,37 +446,52 @@ describe("view addresses per size (audit L5, R3)", () => {
   });
 });
 
-describe("the stack lists the person's own photos too (Momen, tumpukan)", () => {
-  const row = (id: string, owner: string, seen: boolean, at: string) => ({
+describe("the stack holds only photos not seen yet (Momen, tumpukan)", () => {
+  const row = (id: string, owner: string, at: string) => ({
     id, owner_id: owner, audience: "semua", group_id: null, session_id: null, width: 1, height: 1, taken_at: at, visible_at: at, status: "tampil",
-    file_key: `main-wam/momen/${id}.jpg`, thumb_key: null, reactions: [], seen, total: 1,
+    file_key: `main-wam/momen/${id}.jpg`, thumb_key: null, reactions: [], seen: false, total: 1,
   });
   const NEW = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", OWN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const viewer = context().viewer.id;
 
-  it("asks the database for the stack (unseen first, then seen and own) and marks one's own photo mine", async () => {
-    feedRows = [row(NEW, "sari", false, "2027-01-05T03:02:00.123456+00:00"), row(OWN, viewer, true, "2027-01-05T03:01:00+00:00")];
+  it("asks the database for the stack (the unseen photos only, no second run) and marks one's own photo mine", async () => {
+    feedRows = [row(OWN, viewer, "2027-01-05T03:01:00+00:00"), row(NEW, "sari", "2027-01-05T03:02:00.123456+00:00")];
     const page = await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", limit: 20 });
     expect(rpcCalls.find(call => call.name === "mw_photo_feed")?.args).toMatchObject({ p_unseen: true, p_cursor_at: null, p_cursor_rest: null, p_direction: "older" });
-    expect(page.items.map(item => [item.id, item.mine])).toEqual([[NEW, false], [OWN, true]]);
+    expect(page.items.map(item => [item.id, item.mine, item.seen])).toEqual([[OWN, true, false], [NEW, false, false]]);
     expect(page.next).toBeNull();
   });
 
-  it("the next page's cursor says which run the last photo is in, and goes back to the database as it came", async () => {
-    feedRows = Array.from({ length: 2 }, (_, index) => row(index ? OWN : NEW, index ? viewer : "sari", !!index, "2027-01-05T03:02:00.123456+00:00"));
-    const unseen = await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", limit: 1 });
-    expect(unseen.next).toBe(`b~2027-01-05T03:02:00.123456+00:00~${NEW}`);
-    const rest = await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", limit: 2 });
-    expect(rest.next).toBe(`r~2027-01-05T03:02:00.123456+00:00~${OWN}`);
+  it("the next page's cursor says whether the last photo is the person's own (the own run comes first), and goes back to the database as it came", async () => {
+    feedRows = [row(OWN, viewer, "2027-01-05T03:02:00.123456+00:00"), row(NEW, "sari", "2027-01-05T03:02:00.123456+00:00")];
+    const own = await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", limit: 1 });
+    expect(own.next).toBe(`r~2027-01-05T03:02:00.123456+00:00~${OWN}`);
+    feedRows = [row(NEW, "sari", "2027-01-05T03:02:00.123456+00:00"), row(OWN, viewer, "2027-01-05T03:01:00+00:00")];
+    const others = await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", limit: 1 });
+    expect(others.next).toBe(`b~2027-01-05T03:02:00.123456+00:00~${NEW}`);
     await feed.listFeed(context(), { view: "semua", session: null, mode: "baru", cursor: { at: "2027-01-05T03:02:00.123456+00:00", id: OWN, rest: true }, limit: 20 });
     expect(rpcCalls.at(-1)?.args).toMatchObject({ p_cursor_id: OWN, p_cursor_rest: true });
   });
 
-  it("Beranda counts only the others' new photos (the number comes from the unseen run)", async () => {
-    feedRows = [{ ...row(NEW, "sari", false, "2027-01-05T03:02:00+00:00"), total: 1 }, { ...row(OWN, viewer, true, "2027-01-05T03:01:00+00:00"), total: 1 }];
+  it("Beranda counts the others' new photos only (the database's count), and its latest photos are theirs, not the person's own", async () => {
+    feedRows = [row(OWN, viewer, "2027-01-05T03:03:00+00:00"), row(NEW, "sari", "2027-01-05T03:02:00+00:00")];
+    unseenAnswer = { data: 7, error: null };
     const home = await feed.newForMe(context());
-    expect(home.unseen).toBe(1);
-    expect(home.latest.map(item => item.id)).toEqual([NEW, OWN]);
+    expect(rpcCalls.find(call => call.name === "mw_photo_unseen_count")?.args).toMatchObject({ p_viewer: viewer });
+    expect(home.unseen).toBe(7);
+    expect(home.latest.map(item => item.id)).toEqual([NEW]);
+  });
+
+  it("with only the person's own unseen photo there is nothing new on Beranda", async () => {
+    feedRows = [row(OWN, viewer, "2027-01-05T03:03:00+00:00")];
+    unseenAnswer = { data: 0, error: null };
+    expect((await feed.newForMe(context())).unseen).toBe(0);
+  });
+
+  it("before migration 202611240001 Beranda still counts the others' photos from the page itself", async () => {
+    feedRows = [row(OWN, viewer, "2027-01-05T03:03:00+00:00"), row(NEW, "sari", "2027-01-05T03:02:00+00:00")];
+    unseenAnswer = { data: null, error: { code: "42883", message: "function mw_photo_unseen_count does not exist" } };
+    expect((await feed.newForMe(context())).unseen).toBe(1);
   });
 });
 

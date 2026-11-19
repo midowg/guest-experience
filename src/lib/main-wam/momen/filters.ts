@@ -37,13 +37,13 @@ export function parsePhotoId(raw: string | string[] | undefined | null): string 
 }
 
 /*
- * The cursor of a list: which list (b = "baru", the stack: the unseen photos; r = the stack's second run,
- * the seen and the person's own photos; s = all of a view) and the last photo shown, by its (visible_at,
+ * The cursor of a list: which list (b = "baru", the stack: the photos not seen yet; r = the same, with the last
+ * photo being the person's own unseen one, which leads the stack; s = all of a view) and the last photo shown, by its (visible_at,
  * id) exactly as the database wrote it (microseconds kept, so no photo is skipped or repeated). "b~" alone
  * asks for the first page of the stack.
  */
 export type FeedMode = "baru" | "semua";
-export type Cursor = { mode: FeedMode; at: string | null; id: string | null; /** The stack's second run (seen and own photos). */ rest: boolean };
+export type Cursor = { mode: FeedMode; at: string | null; id: string | null; /** The last photo is the person's own unseen one (it leads the stack). */ rest: boolean };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})$/;
 
 export function encodeCursor(mode: FeedMode, at: string | null, id: string | null, rest = false): string {

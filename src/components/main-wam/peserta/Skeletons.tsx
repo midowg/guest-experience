@@ -1,6 +1,7 @@
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Card, List, Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import css from "./peserta.module.css";
+import own from "./agenda/agenda.module.css";
 
 /*
  * The loading.tsx of agen A's screens (one shape per screen, inside the frame: the bars stay), here
@@ -38,10 +39,11 @@ export function AgendaSkeleton() {
           {[0, 1, 2, 3].map(day => <Skeleton key={day} shape="block" height={56} />)}
         </div>
       </div>
+      <div className={own.skHead}><Skeleton width={150} height={22} /><Skeleton width={56} height={16} /></div>
       <div className={css.skeletonSessions}>
         {[70, 55, 80, 60, 65].map((width, index) => <div key={index} className={css.skeletonSession}>
           <span className={css.skeletonTime}><Skeleton width={40} /><Skeleton width={34} height={12} /></span>
-          <span className={css.skeletonDot}><Skeleton shape="circle" width={12} height={12} /></span>
+          <span className={css.skeletonDot}><Skeleton shape="circle" width={28} height={28} /></span>
           <span className={css.skeletonBody}><Skeleton width={`${width}%`} height={18} /><Skeleton width={`${width - 25}%`} /></span>
         </div>)}
       </div>
@@ -53,11 +55,11 @@ export function SessionSkeleton({ label = "Memuat detail sesi" }: { label?: stri
   return <ScreenContent>
     <SkeletonGroup label={label} className={css.skeletonStack}>
       <div className={css.skeletonRows}>
-        <Skeleton width={140} />
+        <Skeleton width={120} height={28} />
         <Skeleton shape="title" width="80%" />
-        <Skeleton width="60%" />
-        <Skeleton width="50%" />
+        <Skeleton shape="block" height={129} />
         <Skeleton shape="block" height={48} />
+        <Skeleton shape="block" height={76} />
       </div>
       <Skeleton shape="block" height={120} />
     </SkeletonGroup>

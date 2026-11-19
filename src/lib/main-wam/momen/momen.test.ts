@@ -27,7 +27,7 @@ describe("Momen filters", () => {
     const at = "2027-01-05T03:02:00.123456+00:00";
     const cursor = encodeCursor("baru", at, RANI);
     expect(decodeCursor(cursor)).toEqual({ mode: "baru", at, id: RANI, rest: false });
-    // The stack's second run (the seen and own photos) has a cursor of its own.
+    // The stack's own run (the person's own unseen photo comes first) has a cursor of its own.
     expect(decodeCursor(encodeCursor("baru", at, RANI, true))).toEqual({ mode: "baru", at, id: RANI, rest: true });
     expect(encodeCursor("semua", at, RANI, true)).toBe(`s~${at}~${RANI}`);
     expect(decodeCursor("r~")).toBeNull();
