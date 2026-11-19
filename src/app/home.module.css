@@ -5,8 +5,8 @@
 .page {
   --bg: #f6f7f9; --card: #ffffff; --ink: #111827; --soft: #5b6472; --line: #e3e6ec; --accent: #1f4fd1; --blend: multiply; --mesh: .32; --logo: #1f4fd1;
   --w-bg: var(--card); --w-line: var(--line); --w-soft: var(--soft); --w-accent: var(--accent);
-  position: relative; isolation: isolate; min-height: 100svh; display: grid; grid-template-rows: auto auto 1fr auto; justify-items: center; gap: clamp(20px, 4vh, 40px);
-  padding: 20px 0 28px; overflow: hidden; background: var(--bg); color: var(--ink); color-scheme: light; transition: background-color .25s, color .25s;
+  position: relative; isolation: isolate; min-height: 100svh; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: clamp(20px, 4vh, 40px);
+  padding: clamp(28px, 6vh, 56px) 0 28px; overflow: hidden; background: var(--bg); color: var(--ink); color-scheme: light; transition: background-color .25s, color .25s;
 }
 :global(:root[data-scheme="dark"]) .page { --bg: #0b0e14; --card: #131821; --ink: #f1f3f7; --soft: #9aa3b2; --line: #262d39; --accent: #8ab4f8; --blend: screen; --mesh: .5; --logo: #ffffff; color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
@@ -30,11 +30,12 @@
   -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat; animation: glide 30s ease-in-out infinite alternate; }
 @keyframes glide { to { translate: -3vmax -2vmax; rotate: -4deg; } }
 
-/* Top: the Werkudara mark and name, and the light/dark switch. */
-.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(100% - 32px, 72rem); animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
-.brand { display: inline-flex; align-items: center; gap: 10px; font-size: .8125rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-.logo { width: 34px; height: 40px; background: var(--logo);
-  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat; }
+/* Top: only the light/dark switch. The Werkudara mark is the crest above the title. */
+.top { position: absolute; z-index: 2; top: 16px; right: 16px; animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.crest { display: block; width: 52px; height: 60px; margin: 0 auto 14px; background: var(--logo);
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
+  animation: crest 1s .15s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes crest { from { opacity: 0; translate: 0 -12px; scale: .85; } }
 
 .head { text-align: center; padding-inline: 16px; animation: rise .8s .1s cubic-bezier(.2,.8,.2,1) both; }
 .kicker { font-size: .75rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
@@ -81,8 +82,9 @@
 
 /* A phone: a cover flow. The middle card faces you and glows; the others turn away and fade. */
 @media (max-width: 48rem) {
-  .page { gap: 20px; padding-top: 16px; }
-  .top { width: calc(100% - 32px); }
+  .page { gap: 20px; padding-top: 28px; }
+  .top { top: 12px; right: 12px; }
+  .crest { width: 44px; height: 51px; margin-bottom: 10px; }
   .page .mark { font-size: clamp(3.5rem, 18vw, 5rem); }
   .fan { --ry: 0deg; --rx: 0deg; justify-content: flex-start; height: auto; padding: 24px calc(50% - 125px) 36px;
     overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; perspective: 800px; transform: none; transition: none; }

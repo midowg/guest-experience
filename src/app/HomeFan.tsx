@@ -55,12 +55,10 @@ export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
   return <main className={css.page} data-front="" onPointerMove={tilt}>
     <div className={css.mesh} aria-hidden="true"><span /><span /><span /><span /></div>
     <span className={css.watermark} aria-hidden="true" />
-    <header className={css.top}>
-      <span className={css.brand}><span className={css.logo} role="img" aria-label="Logo Werkudara" />Werkudara Group</span>
-      <SchemeSwitch />
-    </header>
+    <header className={css.top}><SchemeSwitch /></header>
 
     <div className={css.head}>
+      <span className={css.crest} role="img" aria-label="Werkudara Group" />
       <p className={css.kicker}>Selamat datang</p>
       <h1 className={css.mark}>Journey</h1>
       <p className={css.by}>by Werkudara Group</p>
