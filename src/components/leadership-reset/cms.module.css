@@ -104,3 +104,15 @@
 .facts dd { margin: 0; font-weight: 600; }
 .reveal { display: grid; gap: 10px; padding: 16px; border-radius: 12px; background: var(--cs-ok-bg); color: var(--cs-text); }
 .reveal p { margin: 0; color: var(--cs-ok-fg); }
+
+/* The answers as a table: name and target stay readable, answers wrap; scrolls sideways on a phone. */
+.tableWrap { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+.table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px; }
+.table th { position: sticky; top: 0; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600; color: var(--cs-muted); background: var(--cs-surface-2); border-bottom: 1px solid var(--cs-line); vertical-align: bottom; }
+.table td { padding: 12px; border-bottom: 1px solid var(--cs-line); vertical-align: top; line-height: 1.5; }
+.table tr:hover td { background: var(--cs-hover); }
+.table td strong { display: block; }
+.sub { display: block; font-size: 12px; color: var(--cs-subtle); }
+.answerCol { min-width: 260px; max-width: 420px; white-space: pre-wrap; }
+th.answerCol { white-space: normal; }
+.time { white-space: nowrap; font-size: 13px; color: var(--cs-muted); }

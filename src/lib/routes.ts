@@ -924,7 +924,7 @@ export const wellbeingApi = {
  * the CMS and coach keys sit in their address and go to the APIs in a header, never in a query.
  */
 export const LEADERSHIP_RESET_PATH = "/refleksi";
-export const LEADERSHIP_RESET_SECTIONS = ["ringkasan", "isi", "coach"] as const;
+export const LEADERSHIP_RESET_SECTIONS = ["ringkasan", "isi"] as const;
 export type LeadershipResetSection = (typeof LEADERSHIP_RESET_SECTIONS)[number];
 export const leadershipResetPath = {
   home: LEADERSHIP_RESET_PATH,
@@ -933,7 +933,6 @@ export const leadershipResetPath = {
   cmsHome: `${LEADERSHIP_RESET_PATH}/kelola`,
   cmsSection: (section: LeadershipResetSection) => `${LEADERSHIP_RESET_PATH}/kelola${section === "ringkasan" ? "" : `?bagian=${section}`}`,
   cms: (key: string, section: LeadershipResetSection = "ringkasan") => `${LEADERSHIP_RESET_PATH}/kelola/${key}${section === "ringkasan" ? "" : `?bagian=${section}`}`,
-  coach: (key: string) => `${LEADERSHIP_RESET_PATH}/coach/${key}`,
 };
 const LEADERSHIP_RESET_API = "/api/leadership-reset";
 /** The header the CMS and coach keys travel in. */
@@ -945,13 +944,8 @@ export const leadershipResetApi = {
   cms: `${LEADERSHIP_RESET_API}/kelola`,
   /** PUT {content, isOpen}. */
   cmsForm: `${LEADERSHIP_RESET_API}/kelola/form`,
-  /** POST: a new coach link (the old one stops working). */
-  cmsCoach: `${LEADERSHIP_RESET_API}/kelola/coach`,
-  /** POST: a new CMS link (the old one stops working). */
-  cmsKey: `${LEADERSHIP_RESET_API}/kelola/kunci`,
   /** DELETE: one answer (a test or a double). */
   cmsResponse: (id: string) => `${LEADERSHIP_RESET_API}/kelola/jawaban/${enc(id)}`,
-  /** Coach (key header). GET every answer. */
-  coach: `${LEADERSHIP_RESET_API}/coach`,
-  coachExcel: `${LEADERSHIP_RESET_API}/coach/excel`,
+  /** GET: every answer as Excel. */
+  cmsExcel: `${LEADERSHIP_RESET_API}/kelola/excel`,
 };

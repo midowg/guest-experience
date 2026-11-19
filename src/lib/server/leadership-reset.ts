@@ -1,8 +1,8 @@
 import "server-only";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
-  answersToStore, exportColumns, formState, LR_MIGRATION, looksLikeKey, newKey, normalizeContent, targetLabels, wibInstantLabel,
-  type AnswerInput, type CmsView, type CoachResponse, type CoachView, type FormSave, type LrContent, type OwnAnswer, type StoredAnswer, type TargetStatus,
+  answersToStore, exportColumns, formState, LR_MIGRATION, looksLikeKey, normalizeContent, targetLabels, wibInstantLabel,
+  type AnswerInput, type CmsView, type FormSave, type LrContent, type OwnAnswer, type StoredAnswer, type TargetStatus,
 } from "@/lib/leadership-reset/form";
 import { ServiceError } from "./config";
 import { databaseError } from "./http";
@@ -10,10 +10,9 @@ import { createPrivilegedClient } from "./supabase/admin";
 import { writeXlsx } from "./xlsx-write";
 
 /*
- * Refleksi Leader (migration 202611250001): one form row (its text, open or closed, the CMS and
- * coach keys as sha256) and the answers. No sign-in: every reader proves a key. The CMS never gets
- * what a leader wrote; the coach gets everything. Before the migration the form shows its default
- * text and takes no answers, and the CMS and coach pages say they wait for it.
+ * Refleksi Leader (migration 202611250001): one form row (its text, open or closed) and the answers.
+ * No sign-in: the form is open to leaders, the CMS (/refleksi/kelola) to anyone with its address,
+ * and since 19 Nov 2026 the CMS reads the answers itself (table, Excel, PDF); there is no coach link.
  */
 
 const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /lr_(form|responses)/.test(error.message ?? "");
@@ -24,11 +23,6 @@ function fail(error: { code?: string; message: string }): never {
 }
 
 const hashOf = (key: string) => createHash("sha256").update(key, "utf8").digest("hex");
-function sameHash(key: string, hash: string | null | undefined): boolean {
-  if (!hash) return false;
-  const a = Buffer.from(hashOf(key), "hex"), b = Buffer.from(hash, "hex");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 type FormRow = { content: unknown; is_open: boolean; admin_key_hash: string; coach_key_hash: string | null; coach_key_at: string | null; coach_seen_at: string | null };
 type ResponseRow = { id: string; name: string; team: string; target_status: TargetStatus; answers: StoredAnswer[]; created_at: string; updated_at: string };
@@ -80,7 +74,6 @@ export async function readOwnAnswer(key: string): Promise<OwnAnswer | null> {
   return data ? own(data as ResponseRow) : null;
 }
 
-const notFound = () => new ServiceError(404, "Tautan ini tidak dikenal atau sudah diganti. Minta tautan terbaru ke panitia.");
 
 /**
  * The form row for the CMS. Decided 19 Nov 2026: the CMS opens for anyone at /refleksi/kelola, no
@@ -104,13 +97,12 @@ export async function opensCms(key: string): Promise<boolean | null> {
 
 export async function cmsView(key: string | null): Promise<CmsView> {
   const row = await cmsRow(key);
-  const { data, error } = await createPrivilegedClient().from("lr_responses").select("id,name,team,target_status,created_at,updated_at").order("created_at", { ascending: false }).limit(2000);
+  const { data, error } = await createPrivilegedClient().from("lr_responses").select("id,name,team,target_status,answers,created_at,updated_at").order("created_at", { ascending: false }).limit(2000);
   if (error) fail(error);
   const content = normalizeContent(row.content);
   return {
     migrated: true, content, isOpen: row.is_open, state: formState(row.is_open, content.deadline),
-    coach: { linked: !!row.coach_key_hash, createdAt: row.coach_key_at, seenAt: row.coach_seen_at },
-    responses: (data as Omit<ResponseRow, "answers">[]).map(item => ({ id: item.id, name: item.name, team: item.team, targetStatus: item.target_status, createdAt: item.created_at, updatedAt: item.updated_at })),
+    responses: (data as ResponseRow[]).map(item => ({ id: item.id, name: item.name, team: item.team, targetStatus: item.target_status, answers: item.answers ?? [], createdAt: item.created_at, updatedAt: item.updated_at })),
   };
 }
 
@@ -121,24 +113,6 @@ export async function saveForm(key: string | null, input: FormSave): Promise<Cms
   return cmsView(key);
 }
 
-/** A new coach link (the old one stops working). The key is returned once; only its hash is kept. */
-export async function newCoachKey(key: string | null): Promise<{ coachKey: string; view: CmsView }> {
-  await cmsRow(key);
-  const coachKey = newKey();
-  const { error } = await createPrivilegedClient().from("lr_form").update({ coach_key_hash: hashOf(coachKey), coach_key_at: new Date().toISOString(), coach_seen_at: null }).eq("id", 1);
-  if (error) fail(error);
-  return { coachKey, view: await cmsView(key) };
-}
-
-/** A new CMS link (the old one stops working at once). */
-export async function newCmsKey(key: string | null): Promise<{ cmsKey: string }> {
-  await cmsRow(key);
-  const cmsKey = newKey();
-  const { error } = await createPrivilegedClient().from("lr_form").update({ admin_key_hash: hashOf(cmsKey), updated_at: new Date().toISOString() }).eq("id", 1);
-  if (error) fail(error);
-  return { cmsKey };
-}
-
 export async function deleteResponse(key: string | null, id: string): Promise<CmsView> {
   await cmsRow(key);
   const { error } = await createPrivilegedClient().from("lr_responses").delete().eq("id", id);
@@ -146,41 +120,9 @@ export async function deleteResponse(key: string | null, id: string): Promise<Cm
   return cmsView(key);
 }
 
-/* --- The coach --- */
-
-async function coachRow(key: string | null): Promise<FormRow> {
-  if (!looksLikeKey(key)) throw notFound();
-  const row = await formRow();
-  if (!row) throw waiting();
-  if (!sameHash(key, row.coach_key_hash)) throw notFound();
-  return row;
-}
-
-/** Does `key` open the coach's page? null before the migration. */
-export async function opensCoach(key: string): Promise<boolean | null> {
-  try { await coachRow(key); return true; } catch (error) {
-    if (error instanceof ServiceError && error.status === 404) return false;
-    if (error instanceof ServiceError && error.status === 503) return null;
-    throw error;
-  }
-}
-
-/** Every answer, newest first; the CMS sees when the coach last opened them. */
-export async function coachView(key: string | null): Promise<CoachView> {
-  const row = await coachRow(key);
-  const client = createPrivilegedClient();
-  const [{ data, error }] = await Promise.all([
-    client.from("lr_responses").select("id,name,team,target_status,answers,created_at,updated_at").order("created_at", { ascending: false }).limit(2000),
-    client.from("lr_form").update({ coach_seen_at: new Date().toISOString() }).eq("id", 1),
-  ]);
-  if (error) fail(error);
-  const responses: CoachResponse[] = (data as ResponseRow[]).map(item => ({ id: item.id, name: item.name, team: item.team, targetStatus: item.target_status, answers: item.answers ?? [], createdAt: item.created_at, updatedAt: item.updated_at }));
-  return { content: normalizeContent(row.content), responses };
-}
-
-/** The answers as an Excel file: one row per leader, one column per question. */
-export async function coachExcel(key: string | null): Promise<Buffer> {
-  const { content, responses } = await coachView(key);
+/** Every answer as Excel: one row per leader, one column per question. */
+export async function cmsExcel(): Promise<Buffer> {
+  const { content, responses } = await cmsView(null);
   const columns = exportColumns(content.questions, responses);
   const rows = [
     ["Nama", "Tim / divisi", "Capaian target", "Dikirim", "Diperbarui", ...columns.map(column => column.label)],

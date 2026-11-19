@@ -1,7 +1,7 @@
 "use client";
 
 import { adminRequest } from "@/components/admin/shared/api";
-import type { AnswerInput, CmsView, CoachView, FormSave, OwnAnswer } from "@/lib/leadership-reset/form";
+import type { AnswerInput, CmsView, FormSave, OwnAnswer } from "@/lib/leadership-reset/form";
 import { LEADERSHIP_RESET_KEY_HEADER, leadershipResetApi } from "@/lib/routes";
 
 /*
@@ -17,12 +17,7 @@ export type FormApi = {
 export type CmsApi = {
   view: () => Promise<CmsView>;
   saveForm: (input: FormSave) => Promise<{ view: CmsView; message: string }>;
-  newCoachKey: () => Promise<{ coachKey: string; view: CmsView }>;
-  newCmsKey: () => Promise<{ cmsKey: string }>;
   deleteResponse: (id: string) => Promise<CmsView>;
-};
-export type CoachApi = {
-  view: () => Promise<CoachView>;
   excel: () => Promise<Blob>;
 };
 
@@ -44,18 +39,9 @@ export function cmsApi(key: string): CmsApi {
       const result = await adminRequest<CmsView>(leadershipResetApi.cmsForm, { method: "PUT", headers, body: json(input) });
       return { view: result.data as CmsView, message: result.message };
     },
-    newCoachKey: async () => (await adminRequest<{ coachKey: string; view: CmsView }>(leadershipResetApi.cmsCoach, { method: "POST", headers })).data!,
-    newCmsKey: async () => (await adminRequest<{ cmsKey: string }>(leadershipResetApi.cmsKey, { method: "POST", headers })).data!,
     deleteResponse: async id => (await adminRequest<CmsView>(leadershipResetApi.cmsResponse(id), { method: "DELETE", headers })).data as CmsView,
-  };
-}
-
-export function coachApi(key: string): CoachApi {
-  const headers = { [LEADERSHIP_RESET_KEY_HEADER]: key };
-  return {
-    view: async () => (await adminRequest<CoachView>(leadershipResetApi.coach, { headers })).data as CoachView,
     excel: async () => {
-      const response = await fetch(leadershipResetApi.coachExcel, { headers, cache: "no-store" });
+      const response = await fetch(leadershipResetApi.cmsExcel, { headers, cache: "no-store" });
       if (!response.ok) throw new Error("Excel belum bisa dibuat. Coba lagi.");
       return response.blob();
     },

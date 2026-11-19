@@ -248,18 +248,15 @@ export function newKey(): string {
 
 /* --- What the CMS and the coach see --- */
 
-/** A row in the CMS: who answered and when, never what they wrote. */
-export type CmsResponse = { id: string; name: string; team: string; targetStatus: TargetStatus; createdAt: string; updatedAt: string };
+/** A row in the CMS: who answered, when, and what they wrote (the CMS reads answers since 19 Nov 2026). */
+export type CmsResponse = { id: string; name: string; team: string; targetStatus: TargetStatus; answers: StoredAnswer[]; createdAt: string; updatedAt: string };
 export type CmsView = {
   migrated: boolean;
   content: LrContent;
   isOpen: boolean;
   state: FormState;
-  coach: { linked: boolean; createdAt: string | null; seenAt: string | null };
   responses: CmsResponse[];
 };
-export type CoachResponse = CmsResponse & { answers: StoredAnswer[] };
-export type CoachView = { content: LrContent; responses: CoachResponse[] };
 
 export function countByStatus(rows: readonly { targetStatus: TargetStatus }[]): Record<TargetStatus, number> {
   const counts: Record<TargetStatus, number> = { tercapai: 0, sebagian: 0, belum: 0 };

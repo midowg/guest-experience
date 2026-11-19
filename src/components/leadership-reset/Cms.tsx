@@ -3,29 +3,29 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  ArrowDown, ArrowUp, ClipboardList, Copy, ExternalLink, Eye, KeyRound, LayoutDashboard, Lock, MessageCircle, Plus, RefreshCw, Save, Trash2, Undo2, UserRoundCheck,
+  ArrowDown, ArrowUp, ClipboardList, FileSpreadsheet, FileText, Copy, ExternalLink, Eye, LayoutDashboard, MessageCircle, Plus, RefreshCw, Save, Trash2, Undo2, UserRoundCheck,
 } from "lucide-react";
-import { Avatar, ConsoleButton, ConsoleButtonLink, ConsoleShell, ConsoleTheme, FilterChips, PageHeader, Pill, SearchField, SegmentedControl, StatCard, StatRow, type ConsoleNavGroup, type ConsoleTone } from "@/components/console";
+import { ConsoleButton, ConsoleButtonLink, ConsoleShell, ConsoleTheme, FilterChips, PageHeader, Pill, SearchField, SegmentedControl, StatCard, StatRow, type ConsoleNavGroup, type ConsoleTone } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
 import { errorMessage } from "@/components/admin/shared/api";
 import { Panel } from "@/components/app-shell/Panel";
 import { ToastProvider, useToast } from "@/components/app-shell/Toast";
 import {
-  AUDIENCES, audienceLabels, contentSchema, countByStatus, isoToWibInput, MAX_QUESTIONS, TARGET_STATUSES, targetLabels, wibInputToIso, wibInstantLabel,
+  AUDIENCES, audienceLabels, contentSchema, countByStatus, exportColumns, isoToWibInput, MAX_QUESTIONS, TARGET_STATUSES, targetLabels, wibInputToIso, wibInstantLabel,
   type CmsView, type FormState, type LrContent, type LrQuestion, type TargetStatus,
 } from "@/lib/leadership-reset/form";
 import { LEADERSHIP_RESET_SECTIONS, leadershipResetPath, type LeadershipResetSection } from "@/lib/routes";
-import type { CmsApi } from "./api";
+import { saveBlob, type CmsApi } from "./api";
 import css from "./cms.module.css";
 
 /*
  * Refleksi Leader's small CMS (19 Nov 2026), opened by its secret link, no sign-in. Three places in
  * one client app (the frame stays, only the content changes): Ringkasan (open or closed, the link to
- * share, who has answered), Isi form (text and questions, one Simpan), and Akses (the coach's link,
- * and a new CMS link). It never shows what a leader wrote: that is for the coach only.
+ * share, every answer in a table with Excel and PDF) and Isi form (text and questions, one Simpan).
+ * Since 19 Nov 2026 there is no coach link: the committee reads the answers here.
  */
 
-const labels: Record<LeadershipResetSection, string> = { ringkasan: "Ringkasan", isi: "Isi form", coach: "Akses Coach" };
+const labels: Record<LeadershipResetSection, string> = { ringkasan: "Jawaban", isi: "Isi form" };
 const stateLook: Record<FormState, { tone: ConsoleTone; label: string }> = {
   open: { tone: "ok", label: "Dibuka" }, closed: { tone: "neutral", label: "Ditutup" }, past: { tone: "warn", label: "Lewat tenggat" },
 };
@@ -97,7 +97,6 @@ function CmsApp({ cmsKey, initial, api, hrefOf: givenHref, preview = false }: { 
   const nav: ConsoleNavGroup[] = [{ label: "Refleksi Leader", items: [
     { key: "ringkasan", label: labels.ringkasan, href: hrefOf("ringkasan"), icon: <LayoutDashboard size={20} />, ...(view.responses.length ? { badge: String(view.responses.length), badgeLabel: "jawaban" } : {}) },
     { key: "isi", label: labels.isi, href: hrefOf("isi"), icon: <ClipboardList size={20} /> },
-    { key: "coach", label: labels.coach, href: hrefOf("coach"), icon: <KeyRound size={20} /> },
   ] }];
   const formLink = `${origin}${leadershipResetPath.home}`;
 
@@ -108,7 +107,6 @@ function CmsApp({ cmsKey, initial, api, hrefOf: givenHref, preview = false }: { 
     <div key={section} className={css.view}>
       {section === "ringkasan" && <Overview view={view} formLink={formLink} refreshing={refreshing} onRefresh={() => refresh(false)} api={api} onView={setView} />}
       {section === "isi" && <Editor view={view} api={api} onView={setView} />}
-      {section === "coach" && <Access view={view} api={api} onView={setView} origin={origin} cmsKey={cmsKey} preview={preview} />}
     </div>
   </ConsoleShell>;
 }
@@ -125,7 +123,15 @@ function Overview({ view, formLink, refreshing, onRefresh, api, onView }: { view
   const counts = countByStatus(view.responses);
   const look = stateLook[view.state];
   const q = query.trim().toLowerCase();
-  const rows = view.responses.filter(row => (filter === "semua" || row.targetStatus === filter) && (!q || `${row.name} ${row.team}`.toLowerCase().includes(q)));
+  const rows = view.responses.filter(row => (filter === "semua" || row.targetStatus === filter) && (!q || `${row.name} ${row.team} ${row.answers.map(answer => answer.text).join(" ")}`.toLowerCase().includes(q)));
+  const columns = exportColumns(view.content.questions, view.responses);
+  const [exporting, setExporting] = useState(false);
+  async function excel() {
+    setExporting(true);
+    try { saveBlob(await api.excel(), `refleksi-leader-${new Date().toISOString().slice(0, 10)}.xlsx`); }
+    catch (error) { toast({ message: error instanceof Error ? error.message : "Excel belum bisa dibuat.", tone: "bad" }); }
+    finally { setExporting(false); }
+  }
 
   async function toggleOpen() {
     setToggling(true);
@@ -146,7 +152,7 @@ function Overview({ view, formLink, refreshing, onRefresh, api, onView }: { view
   const copy = async (text: string, done: string) => toast(await copyText(text) ? { message: done, tone: "ok" } : { message: "Belum bisa menyalin. Salin manual dari kotak tautan.", tone: "bad" });
 
   return <>
-    <PageHeader title="Ringkasan" subtitle={`${view.content.title}${view.content.tagline ? ` – ${view.content.tagline}` : ""} · ${view.content.coach}`}
+    <PageHeader title="Jawaban" subtitle={`${view.content.title}${view.content.tagline ? ` – ${view.content.tagline}` : ""} · ${view.content.coach}`}
       actions={<ConsoleButton icon={<RefreshCw size={18} aria-hidden="true" className={refreshing ? css.spin : undefined} />} onClick={onRefresh} disabled={refreshing}>Muat ulang</ConsoleButton>} />
 
     <div className={css.topGrid}>
@@ -182,11 +188,14 @@ function Overview({ view, formLink, refreshing, onRefresh, api, onView }: { view
 
     <section className={css.panel} aria-labelledby="lr-list">
       <div className={css.panelHead}>
-        <h2 id="lr-list">Sudah mengisi <span className={css.count}>{view.responses.length}</span></h2>
+        <h2 id="lr-list">Jawaban masuk <span className={css.count}>{view.responses.length}</span></h2>
+        <div className={css.buttons}>
+          <ConsoleButton icon={<FileSpreadsheet size={18} aria-hidden="true" />} onClick={excel} disabled={!view.responses.length || exporting}>{exporting ? "Menyiapkan…" : "Unduh Excel"}</ConsoleButton>
+          <ConsoleButton icon={<FileText size={18} aria-hidden="true" />} onClick={() => printPdf(view.content, rows)} disabled={!rows.length}>Unduh PDF</ConsoleButton>
+        </div>
       </div>
-      <p className={css.privacyNote}><Lock size={16} aria-hidden="true" /> Isi jawaban tidak tampil di sini. Hanya Coach yang membacanya, lewat tautan Coach.</p>
       {view.responses.length > 0 && <div className={css.toolbar}>
-        <SearchField label="Cari nama atau tim" placeholder="Cari nama atau tim" value={query} onChange={setQuery} />
+        <SearchField label="Cari nama atau tim" placeholder="Cari nama, tim, atau isi jawaban" value={query} onChange={setQuery} />
         <FilterChips label="Capaian target" value={filter} onChange={setFilter} chips={[
           { value: "semua", label: "Semua", count: view.responses.length },
           ...TARGET_STATUSES.map(status => ({ value: status, label: targetLabels[status], count: counts[status] })),
@@ -195,13 +204,20 @@ function Overview({ view, formLink, refreshing, onRefresh, api, onView }: { view
       {view.responses.length === 0
         ? <div className={css.empty}><strong>Belum ada yang mengisi</strong><p>Bagikan tautan form ke para Leader. Nama mereka muncul di sini begitu jawaban terkirim.</p></div>
         : rows.length === 0 ? <div className={css.empty}><strong>Tidak ada yang cocok</strong><p>Ubah pencarian atau filternya.</p></div>
-          : <ul className={css.rows}>{rows.map(row => <li key={row.id} className={css.row}>
-            <Avatar name={row.name} size={40} />
-            <div className={css.rowText}><strong>{row.name}</strong><span>{row.team}</span></div>
-            <Pill tone={statusTone[row.targetStatus]}>{targetLabels[row.targetStatus]}</Pill>
-            <span className={css.rowTime} title={row.updatedAt !== row.createdAt ? `Diubah ${wibInstantLabel(row.updatedAt)}` : undefined}>{wibInstantLabel(row.createdAt)}{row.updatedAt !== row.createdAt ? " · diubah" : ""}</span>
-            <button type="button" className={css.iconButton} onClick={() => setDeleting(row)} aria-label={`Hapus jawaban ${row.name}`}><Trash2 size={18} aria-hidden="true" /></button>
-          </li>)}</ul>}
+          : <div className={css.tableWrap}><table className={css.table}>
+            <thead><tr>
+              <th>Nama</th><th>Capaian</th>
+              {columns.map(column => <th key={column.id} className={css.answerCol}>{column.label}</th>)}
+              <th>Dikirim</th><th><span className="sr-only">Hapus</span></th>
+            </tr></thead>
+            <tbody>{rows.map(row => <tr key={row.id}>
+              <td><strong>{row.name}</strong><span className={css.sub}>{row.team}</span></td>
+              <td><Pill tone={statusTone[row.targetStatus]}>{targetLabels[row.targetStatus]}</Pill></td>
+              {columns.map(column => <td key={column.id} className={css.answerCol}>{row.answers.find(answer => answer.id === column.id)?.text || <span className={css.sub}>—</span>}</td>)}
+              <td className={css.time}>{wibInstantLabel(row.createdAt)}{row.updatedAt !== row.createdAt && <span className={css.sub}>diubah {wibInstantLabel(row.updatedAt)}</span>}</td>
+              <td><button type="button" className={css.iconButton} onClick={() => setDeleting(row)} aria-label={`Hapus jawaban ${row.name}`}><Trash2 size={18} aria-hidden="true" /></button></td>
+            </tr>)}</tbody>
+          </table></div>}
     </section>
 
     <ConsoleTheme theme="admin">
@@ -362,91 +378,24 @@ function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange
   </label>;
 }
 
-/* --- Akses --- */
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 
-function Access({ view, api, onView, origin, cmsKey, preview }: { view: CmsView; api: CmsApi; onView: (view: CmsView) => void; origin: string; cmsKey: string; preview: boolean }) {
-  const toast = useToast();
-  const [coachLink, setCoachLink] = useState<string | null>(null);
-  const [newCms, setNewCms] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<"coach" | "cms" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const copy = async (text: string, done: string) => toast(await copyText(text) ? { message: done, tone: "ok" } : { message: "Belum bisa menyalin. Salin manual dari kotak tautan.", tone: "bad" });
-
-  async function makeCoach() {
-    setBusy(true);
-    try {
-      const result = await api.newCoachKey();
-      onView(result.view);
-      setCoachLink(`${origin}${leadershipResetPath.coach(result.coachKey)}`);
-      setConfirm(null);
-      toast({ message: "Tautan Coach dibuat. Salin dan kirim sekarang: tautan ini hanya tampil sekali.", tone: "ok" });
-    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
-    finally { setBusy(false); }
-  }
-  async function makeCms() {
-    setBusy(true);
-    try {
-      const result = await api.newCmsKey();
-      setNewCms(`${origin}${leadershipResetPath.cms(result.cmsKey)}`);
-      setConfirm(null);
-    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
-    finally { setBusy(false); }
-  }
-  const coachMessage = (link: string) => `Halo ${view.content.coach}, berikut tautan untuk membaca refleksi para Leader sebelum training ${view.content.title}:\n${link}\n\nTautan ini khusus untuk Anda, mohon tidak dibagikan. Di halaman tersebut jawaban bisa dibaca, dicari, dan diunduh sebagai Excel.`;
-
-  return <>
-    <PageHeader title="Akses Coach" subtitle="Siapa yang bisa membaca jawaban, dan siapa yang bisa mengelola form." />
-
-    <section className={css.panel} aria-labelledby="lr-coach">
-      <div className={css.panelHead}>
-        <h2 id="lr-coach">Tautan Coach</h2>
-        <Pill tone={view.coach.linked ? "ok" : "neutral"}>{view.coach.linked ? "Aktif" : "Belum dibuat"}</Pill>
-      </div>
-      <p className={css.muted}>Hanya pemegang tautan ini yang bisa membaca isi jawaban: membaca, mencari, mencetak, dan mengunduh Excel. Kirim ke {view.content.coach} lewat chat pribadi.</p>
-      {view.coach.linked && <dl className={css.facts}>
-        <div><dt>Dibuat</dt><dd>{view.coach.createdAt ? wibInstantLabel(view.coach.createdAt) : "—"}</dd></div>
-        <div><dt>Terakhir dibuka</dt><dd>{view.coach.seenAt ? wibInstantLabel(view.coach.seenAt) : "Belum pernah dibuka"}</dd></div>
-      </dl>}
-      {coachLink && <div className={css.reveal}>
-        <p><strong>Tautan Coach baru.</strong> Hanya tampil sekali ini. Kalau hilang, buat yang baru.</p>
-        <div className={css.linkBox}><input readOnly value={coachLink} aria-label="Tautan Coach" onFocus={event => event.currentTarget.select()} /></div>
-        <div className={css.buttons}>
-          <ConsoleButton variant="primary" icon={<Copy size={18} aria-hidden="true" />} onClick={() => copy(coachLink, "Tautan Coach tersalin.")}>Salin tautan</ConsoleButton>
-          <ConsoleButton icon={<MessageCircle size={18} aria-hidden="true" />} onClick={() => copy(coachMessage(coachLink), "Pesan untuk Coach tersalin.")}>Salin pesan untuk Coach</ConsoleButton>
-          <ConsoleButtonLink href={coachLink} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden="true" />}>Buka</ConsoleButtonLink>
-        </div>
-      </div>}
-      <ConsoleButton variant={view.coach.linked ? "secondary" : "primary"} icon={<KeyRound size={18} aria-hidden="true" />} onClick={() => view.coach.linked ? setConfirm("coach") : makeCoach()} disabled={busy || !view.migrated}>
-        {busy && confirm !== "cms" ? "Membuat…" : view.coach.linked ? "Ganti tautan Coach" : "Buat tautan Coach"}
-      </ConsoleButton>
-    </section>
-
-    {cmsKey && <section className={css.panel} aria-labelledby="lr-cms">
-      <div className={css.panelHead}><h2 id="lr-cms">Tautan CMS ini</h2></div>
-      <p className={css.muted}>Siapa pun yang memegang tautan CMS bisa mengubah form, menutupnya, menghapus jawaban, dan membuat tautan Coach baru. Simpan di tempat aman. Kalau tersebar, ganti di sini: tautan lama langsung tidak berlaku.</p>
-      {newCms && <div className={css.reveal}>
-        <p><strong>Tautan CMS baru.</strong> Tautan yang sedang Anda pakai sudah tidak berlaku. Simpan yang ini sekarang.</p>
-        <div className={css.linkBox}><input readOnly value={newCms} aria-label="Tautan CMS baru" onFocus={event => event.currentTarget.select()} /></div>
-        <div className={css.buttons}>
-          <ConsoleButton variant="primary" icon={<Copy size={18} aria-hidden="true" />} onClick={() => copy(newCms, "Tautan CMS tersalin.")}>Salin tautan</ConsoleButton>
-          {!preview && <ConsoleButtonLink href={newCms} icon={<ExternalLink size={18} aria-hidden="true" />}>Pindah ke tautan baru</ConsoleButtonLink>}
-        </div>
-      </div>}
-      {!newCms && <ConsoleButton icon={<RefreshCw size={18} aria-hidden="true" />} onClick={() => setConfirm("cms")} disabled={busy || !view.migrated}>Ganti tautan CMS</ConsoleButton>}
-      <p className={css.fieldHint}>Tautan CMS sekarang berakhiran …{cmsKey.slice(-6)}.</p>
-    </section>}
-
-    <ConsoleTheme theme="admin">
-      <Panel open={confirm !== null} onClose={() => !busy && setConfirm(null)} variant="sheet" locked={busy}
-        title={confirm === "cms" ? "Ganti tautan CMS?" : "Ganti tautan Coach?"}
-        footer={<div className={css.buttons}>
-          <ConsoleButton onClick={() => setConfirm(null)} disabled={busy}>Batal</ConsoleButton>
-          <ConsoleButton variant="primary" onClick={confirm === "cms" ? makeCms : makeCoach} disabled={busy}>{busy ? "Membuat…" : "Ganti tautan"}</ConsoleButton>
-        </div>}>
-        <p className={css.muted}>{confirm === "cms"
-          ? "Tautan CMS yang sedang dipakai langsung berhenti bekerja, termasuk di perangkat panitia lain. Tautan baru tampil sekali di halaman ini."
-          : `Tautan lama yang dipegang ${view.content.coach} langsung berhenti bekerja. Kirim tautan baru setelah dibuat.`}</p>
-      </Panel>
-    </ConsoleTheme>
-  </>;
+/** Unduh PDF: the answers on A4 landscape in a new window, then the browser's Save as PDF. */
+function printPdf(content: LrContent, rows: CmsView["responses"]) {
+  const columns = exportColumns(content.questions, rows);
+  const head = ["Nama", "Tim", "Capaian", ...columns.map(column => column.label)];
+  const body = [...rows].sort((a, b) => a.name.localeCompare(b.name, "id")).map(row => [row.name, row.team, targetLabels[row.targetStatus], ...columns.map(column => row.answers.find(answer => answer.id === column.id)?.text ?? "")]);
+  const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Refleksi Leader · ${escapeHtml(content.title)}</title><style>
+@page { size: A4 landscape; margin: 12mm; }
+body { font-family: Inter, Arial, sans-serif; color: #111827; font-size: 10.5pt; }
+h1 { font-size: 16pt; margin: 0 0 2mm; } p { margin: 0 0 5mm; color: #4B5563; }
+table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #D1D5DB; padding: 2mm 2.5mm; text-align: left; vertical-align: top; white-space: pre-wrap; }
+th { background: #F3F4F6; font-size: 9.5pt; } tr { break-inside: avoid; }
+</style></head><body><h1>Refleksi Leader · ${escapeHtml(content.title)}${content.tagline ? ` – ${escapeHtml(content.tagline)}` : ""}</h1>
+<p>${escapeHtml(content.coach)} · ${rows.length} jawaban · dicetak ${escapeHtml(wibInstantLabel(new Date().toISOString()))}</p>
+<table><thead><tr>${head.map(cell => `<th>${escapeHtml(cell)}</th>`).join("")}</tr></thead><tbody>${body.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+<script>window.onload = () => { window.print(); };</script></body></html>`;
+  const win = window.open("", "_blank");
+  if (!win) return;
+  win.document.open(); win.document.write(html); win.document.close();
 }
