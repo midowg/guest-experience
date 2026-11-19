@@ -868,3 +868,33 @@ input[type="date"].input { display: block; }
 .codeCard[data-ended] .codeLabel { color: var(--text-2); }
 .codeValue { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: .04em; color: var(--text); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
 .codeValue[data-link] { font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.4; }
+
+/* ---------- Splash (19 Nov 2026): WLM while a page is fetched, the same picture as the launch screen ---------- */
+.splash { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--bg); color: var(--text); overflow: hidden; isolation: isolate; font-family: var(--font); }
+.splashGlow { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.splashGlow i { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; opacity: .14; }
+.splashGlow i:nth-child(1) { background: radial-gradient(closest-side, var(--d-emotional), transparent); top: -55vmax; left: -40vmax; }
+.splashGlow i:nth-child(2) { background: radial-gradient(closest-side, var(--d-physical), transparent); bottom: -58vmax; right: -42vmax; }
+.splash[data-theme="dark"] .splashGlow i { opacity: .2; }
+.splashCenter { display: grid; justify-items: center; gap: 24px; margin-top: -4vh; }
+.splashWord { font-size: clamp(92px, 27vw, 132px); }
+.splashBars { display: flex; gap: 6px; }
+.splashBars i { width: 22px; height: 5px; border-radius: 999px; }
+.splashBars i:nth-child(1) { background: var(--d-physical); }
+.splashBars i:nth-child(2) { background: var(--d-emotional); }
+.splashBars i:nth-child(3) { background: var(--d-social); }
+.splashBars i:nth-child(4) { background: var(--d-financial); }
+.splashBars i:nth-child(5) { background: var(--d-spiritual); }
+.splashFoot { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-b) + 36px); text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--text-3); }
+@media (prefers-reduced-motion: no-preference) {
+  /* The name and its line come in a moment later (a quick page never blinks); the background is already there. */
+  .splashCenter, .splashFoot { animation: splashIn .5s .12s cubic-bezier(.2, .8, .2, 1) both; }
+  .splashGlow i { animation: splashDrift 9s ease-in-out infinite alternate; }
+  .splashGlow i:nth-child(2) { animation-delay: -4s; }
+  /* While it waits: a light sweeps across the name, letter after letter, and the bars rise in turn. */
+  .splashWord .wlmLetter { animation: wlmFlow 2.2s cubic-bezier(.45, 0, .2, 1) infinite; animation-delay: calc(.4s + var(--i) * 110ms); }
+  .splashBars i { animation: splashBar 1.5s ease-in-out infinite; animation-delay: calc(var(--n) * 130ms); }
+}
+@keyframes splashIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+@keyframes splashDrift { to { transform: translate3d(6vmax, 4vmax, 0) scale(1.06); } }
+@keyframes splashBar { 0%, 100% { opacity: .35; transform: scaleX(.75); } 45% { opacity: 1; transform: scaleX(1.2); } }

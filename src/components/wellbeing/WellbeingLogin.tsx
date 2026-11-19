@@ -10,6 +10,7 @@ import { praWamApi, WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
 import { ThemeBoot, useTheme, type ThemeChoice } from "./context";
 import { fontVars } from "./font";
 import { cx } from "./parts";
+import { WLM_FULL_NAME, WLM_NAME, WlmWordmark } from "./Wordmark";
 import css from "./wellbeing.module.css";
 
 /*
@@ -36,17 +37,8 @@ const safeNext = (next: string | null) => next && next.startsWith(WELLBEING_PATH
  * by one, the colours flow across them once and settle, "Werkudara Life Mode" draws in from wide to
  * tight, a line in the five colours grows from the centre, then the card rises.
  */
-export const WLM_NAME = "WLM";
-export const WLM_FULL_NAME = "Werkudara Life Mode";
-
-/** The name in the five dimension colours, one colour band across the three letters. `animated`: the entrance. */
-export function WlmWordmark({ className, animated = false }: { className?: string; animated?: boolean }) {
-  return <span className={cx(css.wlmWord, className)} data-animated={animated || undefined} aria-hidden="true">
-    {[...WLM_NAME].map((letter, index) => <span key={index} className={css.wlmLetterBox}>
-      <span className={css.wlmLetter} style={{ "--i": index } as React.CSSProperties}>{letter}</span>
-    </span>)}
-  </span>;
-}
+// The name and its wordmark live in Wordmark.tsx (the splash draws them too).
+export { WLM_FULL_NAME, WLM_NAME, WlmWordmark } from "./Wordmark";
 
 /** The phone's status bar in the page's colour (it follows the theme, and the system's on Otomatis). */
 function useStatusBar(theme: ThemeChoice) {

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { WLM_DESCRIPTION, WLM_TITLE, wlmMetadata, wlmTitle } from "@/lib/wellbeing/brand";
+import { WLM_DESCRIPTION, WLM_LAUNCH_SCREENS, WLM_TITLE, launchSize, wlmMetadata, wlmTitle } from "@/lib/wellbeing/brand";
+import { GET as manifest } from "@/app/wlm/manifest.webmanifest/route";
+import { AppLoading } from "@/components/ui/AppLoading";
 import { WellbeingLogin } from "./WellbeingLogin";
+import { WlmSplash } from "./WlmSplash";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("./font", () => ({ fontVars: "" }));
@@ -52,7 +55,40 @@ describe("WLM sign-in", () => {
     // A square picture, so the small (square) preview shows all of it.
     expect(meta.openGraph).toMatchObject({ title: WLM_TITLE, description: WLM_DESCRIPTION, images: [{ url: "/wlm/opengraph-image", width: 1080, height: 1080 }] });
     expect(meta.twitter).toMatchObject({ card: "summary" });
-    expect(meta.icons).toMatchObject({ icon: [{ url: "/wlm/icon" }], apple: [{ url: "/wlm/apple-icon" }] });
+    expect(meta.icons).toMatchObject({ icon: [{ url: "/wlm/icon" }, { url: "/wlm/icon-192.png" }], apple: [{ url: "/wlm/apple-icon" }] });
     expect(WLM_DESCRIPTION).toMatch(/akun WAM/);
+  });
+
+  it("installs as its own app: the launcher says WLM, shows its icons and opens /wlm; an iPhone gets a launch screen (19 Nov 2026)", async () => {
+    const meta = wlmMetadata();
+    expect(meta.manifest).toBe("/wlm/manifest.webmanifest");
+    const body = await manifest().json();
+    expect(body).toMatchObject({ id: "/wlm/", short_name: "WLM", start_url: "/wlm", scope: "/wlm/", display: "standalone", background_color: "#F3F4F6" });
+    expect(body.icons.map((icon: { src: string; purpose: string }) => `${icon.src} ${icon.purpose}`)).toEqual(["/wlm/icon-192.png any", "/wlm/icon-512.png any", "/wlm/icon-maskable-512.png maskable"]);
+    // One launch screen per iPhone size, each for exactly its screen.
+    const startup = (meta.appleWebApp as { startupImage: { url: string; media: string }[] }).startupImage;
+    expect(startup).toHaveLength(WLM_LAUNCH_SCREENS.length);
+    expect(startup).toContainEqual({ url: "/wlm/launch/1170x2532", media: "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" });
+    expect(new Set(WLM_LAUNCH_SCREENS.map(launchSize)).size).toBe(WLM_LAUNCH_SCREENS.length);
+  });
+});
+
+describe("loading screens (19 Nov 2026)", () => {
+  it("shows WLM's own splash: the name, the five bars, the full name, in the person's theme", () => {
+    const { container } = render(<WlmSplash />);
+    const splash = screen.getByRole("status");
+    expect(splash.textContent).toContain("Memuat WLM");
+    expect(splash.textContent).toContain("Werkudara Life Mode");
+    expect(container.querySelectorAll("[class*='splashBars'] i")).toHaveLength(5);
+    // The saved Terang / Gelap is set before the first paint.
+    expect(container.querySelector("script")?.innerHTML).toContain("wellbeing-theme");
+  });
+
+  it("gives each app its own loading screen, by name", () => {
+    render(<AppLoading tone="booking" name="Booking Kantor" />);
+    const status = screen.getByRole("status");
+    expect(status.getAttribute("data-tone")).toBe("booking");
+    expect(status.textContent).toContain("Booking Kantor");
+    expect(status.textContent).toContain("Memuat halaman");
   });
 });

@@ -328,6 +328,19 @@ umumnya (kode atau link, fleksibel).
   `tests/backend/wellbeing-reward-types-check.sql`. Sebelum migrasi dijalankan, Hadiah jalan seperti sebelumnya dan
   pilihan Uang, Voucher kode, dan Lainnya di editor nonaktif.
 
+## Splash, loading, dan launcher (19 Nov 2026)
+
+- **Splash WLM** (`app/wlm/loading.tsx`, `WlmSplash`): saat halaman WLM dimuat, tampil nama WLM dengan pita lima warna di
+  tengah, lima garis dimensi di bawahnya, dan "Werkudara Life Mode" di kaki. Latarnya warna WLM sendiri sejak awal (terang
+  atau gelap sesuai Tema), bukan putih Journey. Sambil menunggu, kilau menyapu huruf dan garis naik bergantian, pelan;
+  tanpa gerak bila Kurangi gerakan aktif.
+- **Launcher**: WLM punya manifest sendiri (`/wlm/manifest.webmanifest`): nama WLM, ikon 192/512 dan maskable, dibuka di
+  `/wlm`, layar pembuka Android berlatar terang WLM. iPhone mendapat gambar pembuka per ukuran layar
+  (`/wlm/launch/<lebar>x<tinggi>`, dibuat saat build), gambarnya sama dengan splash.
+- **Ikon** digambar ulang: WLM lebih tegas dengan ruang tepi yang cukup, latar gelap dengan cahaya lembut warna dimensi.
+- **Aplikasi lain** juga punya layar loading sendiri (`AppLoading`), tidak lagi putih dengan cincin biru Journey: WAM
+  (tema dan terang/gelapnya), Main WAM (temanya), Booking Kantor, dan TV kantor.
+
 ## Strava
 
 Satu aplikasi Strava API milik kantor (aplikasi yang sama dengan aplikasi lama; kuncinya `STRAVA_CLIENT_ID` dan

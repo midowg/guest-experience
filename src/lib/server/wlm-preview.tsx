@@ -97,13 +97,49 @@ export async function wlmPreview() {
   );
 }
 
-/** The tab and home-screen icon: WLM in the colour band over the five bars, on the dark background (the phone rounds the home-screen one). */
-export async function wlmIcon(size: number, rounded: boolean) {
+/*
+ * The icon (19 Nov 2026, redrawn): WLM in the colour band, bigger, over the five bars, on the app's dark
+ * background with a soft light in the dimension colours from the corners. `maskable`: Android's launcher
+ * may cut it to a circle or a squircle, so the name sits inside the middle 60 % and the background fills
+ * the edge; `rounded`: the browser tab's own rounded square.
+ */
+const ICON_BG = `linear-gradient(145deg, #18242E 0%, ${INK} 48%, #171230 100%)`;
+export async function wlmIcon(size: number, rounded: boolean, maskable = false) {
+  const scale = maskable ? 0.74 : 1;
+  const word = Math.round(size * 0.42 * scale);
   return new ImageResponse(
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: size * 0.06, background: INK, borderRadius: rounded ? size * 0.22 : 0 }}>
-      <Word size={Math.round(size * 0.5)} />
-      <Line width={Math.max(3, Math.round(size * 0.1))} height={Math.max(2, Math.round(size * 0.045))} gap={Math.max(1, Math.round(size * 0.025))} />
+    <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundImage: ICON_BG, borderRadius: rounded ? size * 0.22 : 0, overflow: "hidden" }}>
+      {/* A soft light in the dimension colours from two corners (straight gradients: satori draws round ones badly). */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: "linear-gradient(135deg, rgba(94, 234, 212, .2) 0%, rgba(94, 234, 212, 0) 38%, rgba(196, 181, 253, 0) 62%, rgba(196, 181, 253, .22) 100%)" }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.max(2, Math.round(size * 0.055 * scale)), marginTop: Math.round(size * 0.02 * scale) }}>
+        <Word size={word} center />
+        <Line width={Math.max(3, Math.round(size * 0.1 * scale))} height={Math.max(2, Math.round(size * 0.042 * scale))} gap={Math.max(1, Math.round(size * 0.024 * scale))} />
+      </div>
     </div>,
     await withFaces({ width: size, height: size }),
+  );
+}
+
+/*
+ * The launch screen (19 Nov 2026): what an iPhone shows while WLM opens from the home screen, the same
+ * picture as the splash (WlmSplash): the name in the band in the middle (a little above it), the five
+ * bars under it, "WERKUDARA LIFE MODE" at the foot, on the light background WLM opens in.
+ */
+const LIGHT = { bg: "#F3F4F6", text3: "#646D7E" };
+const LIGHT_BAND = "linear-gradient(100deg, #0D9488, #2F6FEB 25%, #7C3AED 50%, #DB2777 75%, #EA580C)";
+const LIGHT_DIMENSIONS = ["#0D9488", "#7C3AED", "#EA580C", "#2F6FEB", "#DB2777"];
+export async function wlmLaunch(width: number, height: number, ratio: number) {
+  const word = Math.round(Math.min(132, width / ratio * 0.27) * ratio);
+  return new ImageResponse(
+    <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: LIGHT.bg }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 * ratio, marginTop: -height * 0.08 }}>
+        <div style={{ display: "flex", fontFamily: "Barlow Condensed", fontSize: word, fontWeight: 700, lineHeight: 0.86, letterSpacing: word * 0.02, backgroundImage: LIGHT_BAND, backgroundClip: "text", color: "transparent" }}>WLM</div>
+        <div style={{ display: "flex", gap: 6 * ratio }}>
+          {LIGHT_DIMENSIONS.map(color => <div key={color} style={{ display: "flex", width: 22 * ratio, height: 5 * ratio, borderRadius: 5 * ratio, background: color }} />)}
+        </div>
+      </div>
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 36 * ratio + (height / ratio > 800 ? 34 * ratio : 0), display: "flex", justifyContent: "center", fontFamily: SANS, fontSize: 11 * ratio, fontWeight: 700, letterSpacing: 3 * ratio, color: LIGHT.text3 }}>{TEXT.full}</div>
+    </div>,
+    await withFaces({ width, height }),
   );
 }

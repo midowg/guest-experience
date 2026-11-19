@@ -17,17 +17,40 @@ export const wlmTitle = (page?: string) => page ? `${page} · ${WLM_TITLE}` : WL
 // Square (1080 × 1080): the small preview in WhatsApp is a square crop, so a square card shows whole.
 const SHARE_IMAGE = { url: "/wlm/opengraph-image", width: 1080, height: 1080, alt: "WLM: aplikasi wellbeing Werkudara. Masuk dengan akun WAM." };
 
+/** WLM's own background, light (the default theme) and dark: the launcher's splash, the status bar before the app paints it. */
+export const WLM_BG = { light: "#F3F4F6", dark: "#0A0E15" } as const;
+
+/*
+ * The launch screens (19 Nov 2026): an iPhone opening WLM from the home screen shows a picture of exactly
+ * its screen's size (portrait CSS width, height, pixel ratio), else white. Drawn at build by
+ * app/wlm/launch/[size]/route.tsx, the same picture as the splash.
+ */
+export const WLM_LAUNCH_SCREENS = [
+  [320, 568, 2], [375, 667, 2], [414, 736, 3], [375, 812, 3], [414, 896, 2], [414, 896, 3],
+  [390, 844, 3], [428, 926, 3], [393, 852, 3], [430, 932, 3], [402, 874, 3], [440, 956, 3],
+] as const;
+export const launchSize = ([width, height, ratio]: readonly [number, number, number]) => `${width * ratio}x${height * ratio}`;
+const startupImages = WLM_LAUNCH_SCREENS.map(screen => ({
+  url: `/wlm/launch/${launchSize(screen)}`,
+  media: `(device-width: ${screen[0]}px) and (device-height: ${screen[1]}px) and (-webkit-device-pixel-ratio: ${screen[2]}) and (orientation: portrait)`,
+}));
+
 /** Metadata for a WLM page: its tab title and icon, the share card (title, text, picture), and the home-screen name and icon. */
 export function wlmMetadata(page?: string): Metadata {
   return {
     title: { absolute: wlmTitle(page) },
     description: WLM_DESCRIPTION,
     applicationName: WLM_TITLE,
-    icons: { icon: [{ url: "/wlm/icon", type: "image/png", sizes: "64x64" }], apple: [{ url: "/wlm/apple-icon", type: "image/png", sizes: "180x180" }] },
+    icons: {
+      icon: [{ url: "/wlm/icon", type: "image/png", sizes: "64x64" }, { url: "/wlm/icon-192.png", type: "image/png", sizes: "192x192" }],
+      apple: [{ url: "/wlm/apple-icon", type: "image/png", sizes: "180x180" }],
+    },
+    // Its own installable app (19 Nov 2026): the launcher says WLM, shows WLM's icon and opens /wlm.
+    manifest: "/wlm/manifest.webmanifest",
     openGraph: { title: WLM_TITLE, description: WLM_DESCRIPTION, siteName: WLM_TITLE, type: "website", locale: "id_ID", images: [SHARE_IMAGE] },
     // "summary": the card type for a square picture (summary_large_image wants a wide one).
     twitter: { card: "summary", title: WLM_TITLE, description: WLM_DESCRIPTION, images: [SHARE_IMAGE.url] },
-    appleWebApp: { capable: true, title: WLM_SHORT, statusBarStyle: "black-translucent" },
+    appleWebApp: { capable: true, title: WLM_SHORT, statusBarStyle: "black-translucent", startupImage: startupImages },
     robots: { index: false, follow: false },
   };
 }

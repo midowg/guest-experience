@@ -1,0 +1,28 @@
+/* An app's own loading screen (AppLoading): each app's background, text and accent from its own tokens. */
+.wrap {
+  --al-bg: #F5F7FA; --al-ink: #14171F; --al-accent: #006EC1; --al-font: system-ui, sans-serif;
+  min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: 18px; padding: 24px;
+  background: var(--al-bg); color: var(--al-ink); font-family: var(--al-font);
+}
+/* WAM: inside its .app (pra-wam.module.css), so the look and the light or dark theme follow the person. */
+.wrap[data-tone="wam"] { --al-bg: var(--pw-app); --al-ink: var(--pw-text); --al-accent: var(--pw-primary); --al-font: var(--pw-display); }
+/* Main WAM: its theme (MainWamTheme) when it is shown; WAM's colours otherwise. */
+.wrap[data-tone="main-wam"] { --al-bg: var(--mw-bg, #F6F7F9); --al-ink: var(--mw-text-1, #111827); --al-accent: var(--mw-primary, #2F6FEB); --al-font: var(--mw-display-font, var(--mw-font-sans, system-ui, sans-serif)); }
+/* Booking Kantor: inside its .app (booking.module.css), light or dark as the device is. */
+.wrap[data-tone="booking"] { --al-bg: var(--bk-bg); --al-ink: var(--bk-ink); --al-accent: var(--bk-accent); --al-font: 'Inter', system-ui, sans-serif; }
+/* The office TV: its dark board. */
+.wrap[data-tone="tv"] { --al-bg: #0A0F2E; --al-ink: #F4F6FA; --al-accent: #FFBA00; min-height: 100vh; }
+
+.name { font-size: 28px; font-weight: 800; letter-spacing: .04em; line-height: 1; }
+.wrap[data-tone="tv"] .name { font-size: 48px; }
+.dots { display: flex; gap: 8px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--al-accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .name, .dots { animation: alIn .45s .15s cubic-bezier(.2, .8, .2, 1) both; }
+  .dots i { animation: alDot 1.2s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; }
+  .dots i:nth-child(3) { animation-delay: .3s; }
+}
+@keyframes alIn { from { opacity: 0; transform: translateY(6px); } }
+@keyframes alDot { 0%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-5px); } }
