@@ -1,17 +1,17 @@
 /*
- * The front page's "Lampu" look (26 Nov 2026). Dark by default feel, light when picked: the shade is
- * the page colour with a clear circle where the lamp is. --w-* feed the shared SchemeSwitch.
+ * The front page's "Lampu" look (26 Nov 2026). Dark by default, whatever the device's setting; light
+ * only when the visitor picks it (data-scheme="light"). The shade is the page colour with a clear
+ * circle where the lamp is. --w-* feed the shared SchemeSwitch.
  */
 .page {
-  --x: 50vw; --y: 40vh; --shade: 246, 247, 249; --ink: #111827; --soft: #4b5563; --accent: #1f4fd1; --logo: #1f4fd1; --glass: rgba(255, 255, 255, .72); --glass-line: rgba(17, 24, 39, .1);
-  --w-bg: #fff; --w-line: #e3e6ec; --w-soft: #5b6472; --w-accent: var(--accent);
+  --x: 50vw; --y: 40vh; --shade: 5, 7, 11; --ink: #f4f6fa; --soft: #b6bdc9; --accent: #9cc1ff; --logo: #ffffff; --glass: rgba(20, 24, 33, .6); --glass-line: rgba(255, 255, 255, .16);
+  --w-bg: #131821; --w-line: #262d39; --w-soft: #9aa3b2; --w-accent: var(--accent);
   position: relative; isolation: isolate; min-height: 100svh; display: grid; grid-template-rows: 1fr auto auto; justify-items: center; align-items: center; gap: 28px;
-  padding: 64px 16px 24px; overflow: hidden; background: rgb(var(--shade)); color: var(--ink); color-scheme: light; cursor: default;
+  padding: 64px 16px 24px; overflow: hidden; background: rgb(var(--shade)); color: var(--ink); color-scheme: dark; cursor: default;
 }
-:global(:root[data-scheme="dark"]) .page { --shade: 5, 7, 11; --ink: #f4f6fa; --soft: #b6bdc9; --accent: #9cc1ff; --logo: #ffffff; --glass: rgba(20, 24, 33, .6); --glass-line: rgba(255, 255, 255, .16); --w-bg: #131821; --w-line: #262d39; --w-soft: #9aa3b2; color-scheme: dark; }
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-scheme="light"])) .page { --shade: 5, 7, 11; --ink: #f4f6fa; --soft: #b6bdc9; --accent: #9cc1ff; --logo: #ffffff; --glass: rgba(20, 24, 33, .6); --glass-line: rgba(255, 255, 255, .16); --w-bg: #131821; --w-line: #262d39; --w-soft: #9aa3b2; color-scheme: dark; }
-}
+:global(:root[data-scheme="light"]) .page { --shade: 246, 247, 249; --ink: #111827; --soft: #4b5563; --accent: #1f4fd1; --logo: #1f4fd1; --glass: rgba(255, 255, 255, .72); --glass-line: rgba(17, 24, 39, .1); --w-bg: #fff; --w-line: #e3e6ec; --w-soft: #5b6472; color-scheme: light; }
+:global(html:has(main[data-lamp])) { background: #05070b; }
+:global(:root[data-scheme="light"]:has(main[data-lamp])) { background: #f6f7f9; }
 .page p { margin: 0; }
 
 /* The joglo and the lamp: a clear circle at the cursor, the page colour everywhere else. */

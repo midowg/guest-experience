@@ -13,7 +13,8 @@ const PHOTO = '/panduan-ke-werkudara/assets/garden-960.webp';
  * The front page's second look, "Lampu" (26 Nov 2026): a dark screen where the mouse is a lamp over
  * the joglo in the office garden; the title rises letter by letter; the apps sit in a dock that
  * grows under the mouse and tells what each app is for. With no mouse (a phone) the lamp wanders on
- * its own and the dock shows each app's name. Light or dark; motion stops with "reduce motion".
+ * its own and the dock shows each app's name. Dark unless the visitor picks light; motion stops with
+ * "reduce motion".
  */
 export function HomeLamp({ doors, guest }: { doors: Door[]; guest: string }) {
   const root = useRef<HTMLElement>(null);
@@ -46,10 +47,10 @@ export function HomeLamp({ doors, guest }: { doors: Door[]; guest: string }) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  return <main ref={root} className={css.page} data-front="" onPointerMove={move}>
+  return <main ref={root} className={css.page} data-lamp="" onPointerMove={move}>
     <Image src={PHOTO} alt="" fill priority sizes="100vw" className={css.photo} />
     <div className={css.shade} aria-hidden="true" />
-    <header className={css.top}><SchemeSwitch /></header>
+    <header className={css.top}><SchemeSwitch start="dark" /></header>
 
     <div className={css.head}>
       <span className={css.crest} role="img" aria-label="Werkudara Group" />
