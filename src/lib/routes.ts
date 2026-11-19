@@ -79,7 +79,11 @@ export const superAdminPath = {
   admins: "/admin/super/admin",
   /** Voucher re-roll (18 Nov 2026): every re-roll voucher from WLM's Hadiah, to cancel, refund, restore, or give. */
   vouchers: "/admin/super/voucher",
+  /** Halaman utama (26 Nov 2026): which look the front page (journey.werkudara.group) shows. */
+  home: "/admin/super/beranda",
 };
+/** The front page's look: GET, or PUT { style } (super admin). */
+export const HOME_STYLE_API = "/api/admin/home-style";
 /** Super admin's voucher re-roll: the list (GET), a voucher by hand (POST), or one voucher's correction (POST <id>). */
 export const vouchersApi = (id?: string) => id ? `/api/admin/vouchers/${id}` : "/api/admin/vouchers";
 /** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */

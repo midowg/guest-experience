@@ -1,0 +1,27 @@
+/* Super admin → Halaman utama: two looks side by side, each with a small drawing of itself. */
+.wrap { display: grid; gap: var(--space-4); }
+.status { margin: 0; color: var(--cs-ok-fg); font-weight: 600; }
+.options { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
+.option { display: grid; gap: var(--space-3); padding: var(--space-3); text-align: left; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); color: var(--cs-text); font: inherit; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.option:hover:not(:disabled) { border-color: var(--cs-primary); }
+.option[aria-checked="true"] { border-color: var(--cs-primary); box-shadow: 0 0 0 2px var(--cs-primary); }
+.option:focus-visible { outline: 3px solid var(--cs-primary); outline-offset: 2px; }
+.option:disabled { cursor: default; opacity: .7; }
+.text { display: grid; gap: 4px; padding: 0 var(--space-1) var(--space-1); }
+.name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 1.0625rem; font-weight: 700; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; background: var(--cs-primary); color: #fff; font-size: .75rem; }
+.hint { color: var(--cs-muted); font-size: .875rem; line-height: 1.5; }
+.open { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--cs-primary); }
+
+/* The drawings. */
+.miniKartu, .miniLampu { position: relative; display: grid; justify-items: center; align-content: center; gap: 12px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; }
+.miniKartu { background: radial-gradient(60% 80% at 15% 10%, #2f6feb88, transparent), radial-gradient(60% 80% at 90% 20%, #e0457b77, transparent), radial-gradient(70% 80% at 40% 110%, #0d948877, transparent), #0b0e14; }
+.miniTitle { width: 42%; height: 14px; border-radius: 6px; background: #f1f3f7; }
+.miniFan { position: relative; width: 70%; height: 44%; }
+.miniFan span { position: absolute; left: 50%; top: 0; width: 22%; height: 100%; margin-left: -11%; border-radius: 8px; background: #1a2030; border-top: 3px solid var(--tone);
+  transform: translateX(calc(var(--n) * 105%)) rotate(calc(var(--n) * 4deg)); }
+.miniFan span:nth-child(3) { z-index: 1; translate: 0 -6px; }
+.miniLampu { background: radial-gradient(circle at 62% 40%, #5a4632 0, #2a2118 22%, #07090d 48%); }
+.miniLamp { position: absolute; left: 50%; top: 18%; width: 30%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #c9a77455, transparent 70%); }
+.miniDock { display: flex; gap: 5px; padding: 5px 7px; border-radius: 10px; background: rgba(255, 255, 255, .14); }
+.miniDock span { width: 16px; height: 16px; border-radius: 5px; background: var(--tone); }

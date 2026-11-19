@@ -78,7 +78,7 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/api\/admin\/wam\/questionnaire(\/|$)/, "kuesioner"],
   [/^\/api\/admin\/wam(\/|$)/, "wam"],
   [/^\/api\/admin\/(events|featured|photos|poster-designs|staff)(\/|$)/, "events"],
-  [/^\/api\/admin\/(employees|modules|templates|visibility|grants)(\/|$)/, "super"],
+  [/^\/api\/admin\/(employees|modules|templates|visibility|grants|home-style)(\/|$)/, "super"],
 ];
 export function areaOfPath(path: string | null | undefined): AdminArea | null {
   if (!path) return null;

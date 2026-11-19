@@ -1,5 +1,8 @@
 import { ADMIN_HOME, BOOKING_PATH, PRA_WAM_PATH, WELLBEING_PATH, wamAdminPath } from '@/lib/routes';
-import { HomeFan, type Door } from './HomeFan';
+import type { HomeStyle } from '@/lib/home-style';
+import type { Door } from './home-doors';
+import { HomeFan } from './HomeFan';
+import { HomeLamp } from './HomeLamp';
 
 const SIGNAGE_PATH = wamAdminPath.tv;
 
@@ -17,11 +20,13 @@ const doors: Door[] = [
     description: 'Siapkan undangan, kunjungan tamu, dan handbook acara dengan sentuhan Werkudara.' },
 ];
 
+const guest = 'Tamu kami? Silakan buka tautan yang sudah kami kirimkan, semuanya sudah kami siapkan di sana.';
+
 /**
- * The front page of Werkudara Journey: the apps of the team as a fan of 3D cards over a slow colour
- * mesh (a swipeable cover flow on a phone), light or dark. Each app asks for its own sign-in; guests
- * are sent back to their link. No guest page is named or linked.
+ * The front page of Werkudara Journey: the apps of the team, each behind its own sign-in, in the look
+ * the super admin picked (Kartu 3D or Lampu). Guests are sent back to their link. No guest page is
+ * named or linked.
  */
-export function EmptyHome() {
-  return <HomeFan doors={doors} guest="Tamu kami? Silakan buka tautan yang sudah kami kirimkan, semuanya sudah kami siapkan di sana." />;
+export function EmptyHome({ style = 'kartu' }: { style?: HomeStyle }) {
+  return style === 'lampu' ? <HomeLamp doors={doors} guest={guest} /> : <HomeFan doors={doors} guest={guest} />;
 }

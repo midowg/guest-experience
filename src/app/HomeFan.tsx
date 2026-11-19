@@ -2,16 +2,11 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { ArrowRight, CalendarDays, DoorOpen, HeartPulse, LayoutDashboard, Lock, MonitorPlay } from 'lucide-react';
+import { ArrowRight, Lock } from 'lucide-react';
+import { doorIcons as icons, type Door } from './home-doors';
 import { SchemeSwitch } from './SchemeSwitch';
 import css from './home.module.css';
 
-export type Door = {
-  href: string; icon: keyof typeof icons; tone: string; name: string; what: string; key: string; description: string;
-  /** The app's own logo (its launcher icon), shown in place of the drawn icon when it has one. */
-  logo?: string;
-};
-const icons = { wam: CalendarDays, wlm: HeartPulse, booking: DoorOpen, signage: MonitorPlay, admin: LayoutDashboard };
 
 /**
  * The front page's doors as a fan of 3D cards over a moving colour mesh; on a wide screen the fan
