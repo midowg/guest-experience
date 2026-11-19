@@ -7,7 +7,7 @@ import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaCarousel } from "@/components/pra-wam/AgendaCarousel";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { AGENDA_ITEM, checkInStatus, checkInText, heroCheckInNote, withItem } from "@/lib/pra-wam/agenda";
-import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { wibDate } from "@/lib/pra-wam/appraisal";
 import { checkInNow, checkInWay } from "@/lib/pra-wam/attendance";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
@@ -24,6 +24,8 @@ import { myAgenda } from "@/lib/server/pra-wam/quick-actions";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { redirectToMainWam } from "@/lib/server/main-wam/gate";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
+import { zoneSpan } from "@/lib/pra-wam/zone";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
 import sc from "@/components/pra-wam/self-check-in.module.css";
@@ -66,6 +68,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // "Akun BOD langsung ke Ringkasan" (Penpot "Panduan · BOD").
   if (bodOnly(member)) redirect(praWamPath.dashboard);
   const now = new Date();
+  // 19 Nov 2026: times in the viewer's own zone.
+  const zone = await viewerZone();
   const today = wibDate(now.toISOString());
   const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
     // From a week back: the carousel's earlier cards (yesterday too) are a swipe to the left.
@@ -143,7 +147,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             return <section key={item.key} className={`${base.hero} ${ended && !current ? own.heroPast : ""}`} aria-label={`${label}: ${item.title}`}>
               <div className={base.heroTop}><span>{label} · {item.tag}</span><span>{ended ? dayWord(wibDate(item.startsAt)) : untilLabel(item, now, today) || dayWord(wibDate(item.startsAt))}</span></div>
               <h2><a href={open(item)} {...opens(item)}>{item.title}</a></h2>
-              <span className={base.heroLine}><Clock aria-hidden />{wibDate(item.startsAt) === today ? "" : `${spanLabel(item.startsAt, item.endsAt).split(" · ")[0]} · `}{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</span>
+              <span className={base.heroLine}><Clock aria-hidden />{wibDate(item.startsAt) === today ? "" : `${spanLabel(item.startsAt, item.endsAt).split(" · ")[0]} · `}{zoneSpan(item.startsAt, item.endsAt, zone)}</span>
               <span className={base.heroLine}><MapPin aria-hidden />{item.where}</span>
               {current ? <>
           {/*
@@ -155,14 +159,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               ? <SelfCheckIn variant="hero" sessionId={item.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
               : <div className={sc.hero}>
                 {heroStatus.kind === "hadir"
-                  ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now).title}</p>
+                  ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now, { zone }).title}</p>
                   : heroStatus.kind === "buka"
                     ? <>
-                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString())} Scan QR yang ditempel di ruang.</p>
+                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString(), zone)} Scan QR yang ditempel di ruang.</p>
                       <div className={sc.heroRow}><a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a></div>
                     </>
                     // Not open yet (or closed): one quiet line with how to check in, no button that cannot be pressed.
-                    : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString()).replace(/^Absen dibuka/, "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString())}</span></p>}
+                    : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString(), zone).replace(/^Absen dibuka/, "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString(), zone)}</span></p>}
               </div>
             : item.checkedInAt
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
@@ -183,7 +187,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <span className={own.label}>Permintaan jadwal</span>
               <span className={base.pill}><Clock aria-hidden />{requestStatusLabels[request.status]}</span>
             </div>
-            <a className={own.plain} href={praWamPath.session(request.sessionId)}>{request.sessionTitle}: usul pindah ke {spanLabel(request.toStartsAt, request.toEndsAt)}</a>
+            <a className={own.plain} href={praWamPath.session(request.sessionId)}>{request.sessionTitle}: usul pindah ke {spanLabel(request.toStartsAt, request.toEndsAt, zone)}</a>
             <div className={own.steps} aria-label="Tahap permintaan">
               <span className={`${own.step} ${own.stepOn}`}>Diajukan</span>
               <span className={`${own.step} ${own.stepOn}`}>Diperiksa</span>

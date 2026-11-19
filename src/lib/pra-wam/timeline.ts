@@ -1,5 +1,6 @@
-import { clockLabel, wibDate, wibTime } from "./appraisal";
+import { wibDate } from "./appraisal";
 import type { SessionKind } from "./sessions";
+import { zoneSpan, type ViewerZone } from "./zone";
 
 /*
  * Timeline (9 Nov 2026): Pra WAM's forums and events, as panitia plan them in Kelola acara →
@@ -34,7 +35,7 @@ export function rangeLabel(from: string, to: string): string {
 }
 
 /** The entries that have dates, in order, grouped by the month they start in. */
-export function timelineMonths(items: TimelineItem[], today: string): TimelineMonth[] {
+export function timelineMonths(items: TimelineItem[], today: string, zone: ViewerZone = "WIB"): TimelineMonth[] {
   const entries: TimelineEntry[] = [];
   for (const item of items) {
     const exact = item.published && item.startsAt && item.endsAt;
@@ -44,7 +45,7 @@ export function timelineMonths(items: TimelineItem[], today: string): TimelineMo
     const state: TimelineState = to < today ? "selesai" : from <= today ? "berlangsung" : "akan";
     entries.push({
       ...item, from, to, state, when: rangeLabel(from, to),
-      hours: exact ? `${clockLabel(wibTime(item.startsAt!))}–${clockLabel(wibTime(item.endsAt!))}` : null, color: 0,
+      hours: exact ? zoneSpan(item.startsAt!, item.endsAt!, zone) : null, color: 0,
     });
   }
   entries.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || a.title.localeCompare(b.title, "id"));

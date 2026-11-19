@@ -1,9 +1,10 @@
 import type { MinutesView } from "./minutes";
 import { CHECK_IN_MARGIN_MINUTES, checkInWindow, ownMethodLabels, windowState, type AttendanceMethod } from "./attendance";
-import { clockLabel, dayLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
+import { dayLabel, wibDate, type Person, type Room } from "./appraisal";
 import type { PraWamDocument } from "./documents";
 import type { ScheduleRequest } from "./requests";
 import type { Session } from "./sessions";
+import { instantLabel, zoneSuffix, type ViewerZone } from "./zone";
 
 /*
  * Pure pieces of Agenda and Detail sesi: which day and item are open, and what the check-in block
@@ -41,16 +42,17 @@ const short = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "shor
  * The block's words: a short title and a line that says what to do. With `self` ("Saya hadir" is
  * there, migration 202611050003) the words point to the button as well as the QR.
  */
-export function checkInText(status: CheckInStatus, now: Date, { self = false }: { self?: boolean } = {}): { title: string; body: string } {
+export function checkInText(status: CheckInStatus, now: Date, { self = false, zone = "WIB" }: { self?: boolean; zone?: ViewerZone } = {}): { title: string; body: string } {
+  const at = (iso: string) => instantLabel(iso, zone);
   switch (status.kind) {
     case "hadir": return status.method
-      ? { title: `Hadir ${clockLabel(wibTime(status.at))} · ${ownMethodLabels[status.method]}`, body: "Kehadiranmu sudah tercatat." }
-      : { title: "Hadir", body: `Absen tercatat ${clockLabel(wibTime(status.at))}.` };
+      ? { title: `Hadir ${at(status.at)}${zoneSuffix(zone)} · ${ownMethodLabels[status.method]}`, body: "Kehadiranmu sudah tercatat." }
+      : { title: "Hadir", body: `Absen tercatat ${at(status.at)}${zoneSuffix(zone)}.` };
     case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : "Scan QR yang ditempel di ruang memakai ponselmu." };
     case "belum": {
       const day = wibDate(status.opens) === wibDate(now.toISOString()) ? "" : `${short(status.opens)}, `;
-      if (self) return { title: "Terdaftar · absen belum dibuka", body: `Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai (${day}${clockLabel(wibTime(status.opens))}).` };
-      return { title: "Terdaftar · absen belum dibuka", body: `QR sesi ini berlaku ${day}${clockLabel(wibTime(status.opens))}–${clockLabel(wibTime(status.closes))}.` };
+      if (self) return { title: "Terdaftar · absen belum dibuka", body: `Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai (${day}${at(status.opens)}${zoneSuffix(zone)}).` };
+      return { title: "Terdaftar · absen belum dibuka", body: `QR sesi ini berlaku ${day}${at(status.opens)}–${at(status.closes)}${zoneSuffix(zone)}.` };
     }
     case "tutup": return { title: "Absen sudah ditutup", body: "Kehadiranmu belum tercatat. Hubungi panitia kalau kamu hadir." };
     case "tidak-tersedia": return { title: "Terdaftar", body: "Absen dengan QR belum tersedia untuk sesi ini." };
@@ -58,16 +60,16 @@ export function checkInText(status: CheckInStatus, now: Date, { self = false }: 
 }
 
 /** "pukul 09.00" today, else "Selasa, 10 Nov pukul 09.00". */
-export function atLabel(iso: string, now: string): string {
+export function atLabel(iso: string, now: string, zone: ViewerZone = "WIB"): string {
   const day = wibDate(iso) === wibDate(now) ? "" : `${dayLabel(wibDate(iso))} `;
-  return `${day}pukul ${clockLabel(wibTime(iso))}`;
+  return `${day}pukul ${instantLabel(iso, zone)}${zoneSuffix(zone)}`;
 }
 
 /** The line on Beranda's blue card over its check-in button: when it opens, until when, or closed. */
-export function heroCheckInNote(status: CheckInStatus, now: string): string {
+export function heroCheckInNote(status: CheckInStatus, now: string, zone: ViewerZone = "WIB"): string {
   switch (status.kind) {
-    case "buka": return `Absen dibuka sampai ${clockLabel(wibTime(status.closes))}.`;
-    case "belum": return `Absen dibuka ${atLabel(status.opens, now)}, 30 menit sebelum mulai.`;
+    case "buka": return `Absen dibuka sampai ${instantLabel(status.closes, zone)}${zoneSuffix(zone)}.`;
+    case "belum": return `Absen dibuka ${atLabel(status.opens, now, zone)}, 30 menit sebelum mulai.`;
     case "tutup": return "Absen sudah ditutup. Hubungi panitia kalau kamu hadir.";
     default: return "";
   }

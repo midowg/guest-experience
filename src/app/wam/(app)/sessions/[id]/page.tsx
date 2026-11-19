@@ -3,6 +3,7 @@ import { SessionDetail, WaitingSession } from "@/components/pra-wam/SessionDetai
 import { praWamPath } from "@/lib/routes";
 import { sessionView } from "@/lib/server/pra-wam/agenda";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sesi · WAM", robots: { index: false } };
@@ -28,6 +29,6 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
     </>;
   }
   return <>
-    <SessionDetail view={view} now={new Date()} />
+    <SessionDetail view={view} now={new Date()} zone={await viewerZone()} />
   </>;
 }

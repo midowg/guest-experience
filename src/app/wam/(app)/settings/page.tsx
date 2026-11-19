@@ -1,4 +1,4 @@
-import { Bell, BookOpen, ChevronRight, Download, Info, Lock, LogOut, Palette, Plug } from "lucide-react";
+import { Bell, BookOpen, ChevronRight, Clock, Download, Info, Lock, LogOut, Palette, Plug } from "lucide-react";
 import { InstallGuide, InstallSummary } from "@/components/pra-wam/InstallGuide";
 import { McpCard } from "@/components/pra-wam/McpCard";
 import { PasswordSettings } from "@/components/pra-wam/PasswordForm";
@@ -6,6 +6,8 @@ import { PushSwitch } from "@/components/pra-wam/PushSwitch";
 import { PushSummary, SettingsItem, ThemeSummary } from "@/components/pra-wam/SettingsItem";
 import { SignOutButton } from "@/components/pra-wam/SignOutButton";
 import { ThemeSwitch } from "@/components/pra-wam/ThemeSwitch";
+import { ZoneSwitch } from "@/components/pra-wam/ZoneSwitch";
+import { viewerZoneSetting } from "@/lib/server/pra-wam/zone";
 import { mayUseMcp, toolTitle } from "@/lib/pra-wam/mcp";
 import { praWamPath } from "@/lib/routes";
 import { hodStanding } from "@/lib/server/pra-wam/hod";
@@ -32,10 +34,11 @@ export default async function SettingsPage() {
   const member = await requireMemberPage(praWamPath.settings);
   // Akses MCP: only a BOD sees it here (Admin WAM manages access in the admin console).
   const showMcp = mayUseMcp(member);
-  const [theme, { isHod: hod }, mcp] = await Promise.all([
+  const [theme, { isHod: hod }, mcp, zone] = await Promise.all([
     readWamTheme(),
     hodStanding(member).catch(() => ({ isHod: false })),
     showMcp ? mcpAccessOf(member.id).catch(() => null) : Promise.resolve(null),
+    viewerZoneSetting(),
   ]);
   const mcpCalls = mcp?.granted ? (await myMcpCalls(member.id).catch(() => [])).map(call => ({ title: toolTitle(call.tool), ok: call.ok, createdAt: call.createdAt })) : [];
   return <div className={own.settings}>
@@ -53,6 +56,10 @@ export default async function SettingsPage() {
         </SettingsItem>
         <SettingsItem id="tampilan" icon={<Palette />} title="Tampilan" summary={<ThemeSummary initial={theme} />} sheetSubtitle="Tema WAM di perangkat ini">
           <ThemeSwitch initial={theme} />
+        </SettingsItem>
+        {/* 19 Nov 2026: times follow the viewer's own zone (WIB, WITA, WIT). */}
+        <SettingsItem id="zona-waktu" icon={<Clock />} title="Zona waktu" summary={zone.manual ? zone.zone : `Otomatis · ${zone.zone}`} sheetSubtitle="Jam di WAM mengikuti zona waktumu">
+          <ZoneSwitch zone={zone.zone} manual={zone.manual} />
         </SettingsItem>
       </div>
     </section>

@@ -17,6 +17,7 @@ import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
 import { listUnits } from "@/lib/server/pra-wam/units";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
 import { myCancelledSessions, timelineItems } from "@/lib/server/pra-wam/sessions";
 import { bookingActivities, timelineMonths } from "@/lib/pra-wam/timeline";
 
@@ -38,6 +39,7 @@ const TIME = /^\d{2}:\d{2}$/;
 export default async function BookPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
   const member = await requireMemberPage(praWamPath.bookSheet({ ...query, new: query.new === "1" ? "1" : undefined }));
+  const zone = await viewerZone();
   // No Agenda for Intern and DW (13 Nov 2026): an old link or a typed address goes to Beranda.
   if (!seesAgendaTab(member)) redirect(praWamPath.home);
   const now = new Date();
@@ -70,7 +72,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     myMinutesDue(member, now).catch(() => ({ sessions: [], drafts: [] as string[] })),
   ]);
   const activities = bookingActivities(timelineRows, today);
-  const timeline = timelineMonths(timelineRows, today).flatMap(month => month.entries);
+  const timeline = timelineMonths(timelineRows, today, zone).flatMap(month => month.entries);
   const cancelled: CancelledItem[] = [
     ...cancelledBookings.map(booking => ({ key: booking.id, title: booking.title, startsAt: booking.startsAt, endsAt: booking.endsAt, where: bookingWhere(booking, schedule.rooms) })),
     ...cancelledSessions.filter(session => session.startsAt && session.endsAt)
@@ -93,7 +95,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
       hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline} viewerDepartments={viewerDepartments}
       banner={<>
-        <MinutesDue sessions={minutesDue.sessions} drafts={minutesDue.drafts} />
+        <MinutesDue sessions={minutesDue.sessions} drafts={minutesDue.drafts} zone={zone} />
         {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">{booksRooms(member) ? "Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah." : `${NO_BOOKING_TEXT} Jadwal ruang tetap bisa dilihat di bawah.`}</Notice></div>}
       </>} />
   </>;

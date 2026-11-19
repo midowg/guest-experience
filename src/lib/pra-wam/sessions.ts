@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { clockLabel, dayLabel, wibDate, wibInstant, wibTime, type Person } from "./appraisal";
+import { zoneSpan, type ViewerZone } from "./zone";
+import { dayLabel, wibDate, wibInstant, type Person } from "./appraisal";
 
 /*
  * Pra WAM sessions: the calendar's forums and other meetings, made by panitia. A draft may have
@@ -106,8 +107,8 @@ export const sessionSpan = (input: Pick<SessionInput, "date" | "start" | "end">)
 const shortDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 /** "Rabu, 4 Nov · 10.00–11.00", or the calendar range while the time is open. */
-export function sessionWhen(session: Pick<Session, "startsAt" | "endsAt" | "planFrom" | "planTo">): string {
-  if (session.startsAt && session.endsAt) return `${dayLabel(wibDate(session.startsAt))} · ${clockLabel(wibTime(session.startsAt))}–${clockLabel(wibTime(session.endsAt))}`;
+export function sessionWhen(session: Pick<Session, "startsAt" | "endsAt" | "planFrom" | "planTo">, zone: ViewerZone = "WIB"): string {
+  if (session.startsAt && session.endsAt) return `${dayLabel(wibDate(session.startsAt))} · ${zoneSpan(session.startsAt, session.endsAt, zone)}`;
   if (session.planFrom) return `${session.planTo && session.planTo !== session.planFrom ? `${shortDate(session.planFrom)} – ${shortDate(session.planTo)}` : shortDate(session.planFrom)} · jam belum ditentukan`;
   return "Tanggal belum ditentukan";
 }

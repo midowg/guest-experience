@@ -11,6 +11,7 @@ import { praWamPath } from "@/lib/routes";
 import { agendaItems } from "@/lib/server/pra-wam/agenda";
 import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
 
@@ -37,6 +38,7 @@ const agendaHref = (query: { date?: string; item?: string }) => {
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string }> }) {
   const { date: tanggal, item: asked, session: older } = await searchParams;
   const member = await requireMemberPage(praWamPath.agenda);
+  const zone = await viewerZone();
   if (!bodOnly(member)) {
     const search = new URLSearchParams(Object.entries({ date: tanggal, item: asked ?? older }).filter((entry): entry is [string, string] => !!entry[1])).toString();
     redirect(`${praWamPath.home}${search ? `?${search}` : ""}#agenda`);
@@ -64,7 +66,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             ? "Belum ada sesi di agenda kamu. Sesi muncul di sini setelah panitia menerbitkannya."
             : day === today ? "Tidak ada agenda hari ini." : `Tidak ada agenda ${dayLabel(day)}.`}</p>
           : <section className={`${base.card} ${own.timelineCard}`} aria-label={`Agenda ${dayLabel(day)}`}>
-            <AgendaTimeline items={shown} now={now} href={item => agendaHref({ date: day, item: item.key })} />
+            <AgendaTimeline items={shown} now={now} zone={zone} href={item => agendaHref({ date: day, item: item.key })} />
           </section>}
         {later && <a className={`${base.callout} ${own.calloutLink}`} href={agendaHref({ date: wibDate(later.startsAt) })}><Info aria-hidden />{dayLabel(wibDate(later.startsAt))}: {later.title}</a>}
         {seesAllSessions(member) && <p className={base.hint}>Draf dan sesi semua peserta ada di <a href={praWamPath.sessions}>Jadwal sesi</a>.</p>}

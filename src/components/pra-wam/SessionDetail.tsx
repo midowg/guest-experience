@@ -1,3 +1,4 @@
+import type { ViewerZone } from "@/lib/pra-wam/zone";
 import { CalendarClock, CalendarDays, ClipboardList, MapPin, Pencil, Users } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { checkInStatus, type SessionView } from "@/lib/pra-wam/agenda";
@@ -17,7 +18,7 @@ import { withoutHonorific } from "@/lib/pra-wam/call-name";
 const initials = (name: string) => withoutHonorific(name).split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 const FACES = 5;
 
-type Props = { view: Extract<SessionView, { kind: "sesi" }>; now: Date };
+type Props = { view: Extract<SessionView, { kind: "sesi" }>; now: Date; /** 19 Nov 2026: the viewer's zone; WIB by default. */ zone?: ViewerZone };
 
 /** What the person can do with the session, read the same way by the content and the action bar. */
 function rights({ view: { session, attendance, requests, viewer, storage }, now }: Props) {
@@ -61,7 +62,7 @@ export function SessionDetail(props: Props) {
  * not set yet.
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
-  const { view: { session, documents, storage, requests, rooms, viewer, attendance, minutes }, now, showTitle } = props;
+  const { view: { session, documents, storage, requests, rooms, viewer, attendance, minutes }, now, showTitle, zone = "WIB" } = props;
   const { live, timed, status, canAsk, canUpload, byButton, upload } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
@@ -74,7 +75,7 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
       </div>
       {status && (attendance.selfReady && byButton
         ? <SelfCheckIn sessionId={session.id} status={status} now={now.toISOString()} selfReady />
-        : <CheckInBlock status={status} now={now} />)}
+        : <CheckInBlock status={status} now={now} zone={zone} />)}
     </div>
 
     {session.status === "batal" && <Notice tone="warning">Sesi ini dibatalkan.</Notice>}
@@ -85,7 +86,7 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
 
     <section className={styles.card} aria-label="Rincian">
       <dl className={styles.infoList}>
-        <div className={styles.row}><span className={styles.tile}><CalendarDays aria-hidden /></span><div><dt>Waktu</dt><dd>{sessionWhen(session)}</dd></div></div>
+        <div className={styles.row}><span className={styles.tile}><CalendarDays aria-hidden /></span><div><dt>Waktu</dt><dd>{sessionWhen(session, zone)}</dd></div></div>
         <div className={styles.row}><span className={styles.tile}><MapPin aria-hidden /></span><div><dt>Ruang</dt><dd>{sessionWhere(session)}</dd></div></div>
         <div className={styles.row}><span className={styles.tile}><Users aria-hidden /></span><div>
           <dt>Peserta</dt>

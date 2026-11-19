@@ -404,3 +404,14 @@ it("opens the hours on the first step once Di luar WAM is chosen: longer than 4 
   expect(durations()).not.toContain("300");
 });
 
+
+it("shows the hours in the booker's own zone (WITA), keeping the WIB hour the office goes by", async () => {
+  const { ViewerZoneProvider } = await import("./ViewerZone");
+  render(<ViewerZoneProvider zone="WITA" manual><BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil, besar, sibuk]}
+    people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]} dayBookings={[held]} dayOf="2026-11-05" showPlan={false} /></ViewerZoneProvider>);
+  const start = screen.getByLabelText("Jam mulai (WITA)") as HTMLSelectElement;
+  // The value stays the WIB clock time; what is read is an hour later.
+  const option = Array.from(start.options).find(item => item.value === "13:00")!;
+  expect(option.textContent).toBe("14.00");
+  expect(screen.getByText(/WIB di kantor/)).toBeTruthy();
+});

@@ -1,3 +1,4 @@
+import type { ViewerZone } from "@/lib/pra-wam/zone";
 import { CheckCircle2, Clock, Info, XCircle } from "lucide-react";
 import { checkInText, type CheckInStatus } from "@/lib/pra-wam/agenda";
 import rows from "./peserta.module.css";
@@ -15,8 +16,8 @@ const icon: Record<CheckInStatus["kind"], React.ReactNode> = {
  * not open yet with its hours, or closed.
  * The words carry the meaning, so colour is never the only signal.
  */
-export function CheckInBlock({ status, now, wide, self, id }: { status: CheckInStatus; now: Date; wide?: boolean; self?: boolean; id?: string }) {
-  const text = checkInText(status, now, { self });
+export function CheckInBlock({ status, now, wide, self, id, zone = "WIB" }: { status: CheckInStatus; now: Date; wide?: boolean; self?: boolean; id?: string; zone?: ViewerZone }) {
+  const text = checkInText(status, now, { self, zone });
   return <p id={id} className={`${rows.check} ${tone[status.kind]} ${wide ? rows.checkWide : ""}`}>
     {icon[status.kind]}<span><strong>{text.title}</strong>{wide ? ". " : <br />}{text.body}</span>
   </p>;

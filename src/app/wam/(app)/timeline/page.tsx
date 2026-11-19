@@ -6,6 +6,7 @@ import { timelineMonths } from "@/lib/pra-wam/timeline";
 import { praWamPath } from "@/lib/routes";
 import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
 import { timelineItems } from "@/lib/server/pra-wam/sessions";
 import css from "@/components/pra-wam/timeline.module.css";
 
@@ -23,7 +24,7 @@ export default async function TimelinePage() {
   const member = await requireMemberPage(praWamPath.timeline);
   const today = wibDate(new Date().toISOString());
   const [{ items, migrated }, open] = await Promise.all([timelineItems(member), bookingOpenFor(member).catch(() => false)]);
-  const entries = timelineMonths(items, today).flatMap(month => month.entries);
+  const entries = timelineMonths(items, today, await viewerZone()).flatMap(month => month.entries);
   return <>
     <ScreenHead eyebrow="Pra WAM 2026" title="Timeline" lead="Kegiatan Pra WAM per bulan. Ketuk tanggal untuk melihat ruang dan booking di hari itu." />
     {!migrated ? <Notice tone="warning">Timeline menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>
