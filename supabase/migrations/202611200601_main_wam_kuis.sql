@@ -18,8 +18,11 @@
 -- (src/lib/main-wam/kuis/rules.ts); the database holds one answer per person per question, at most one
 -- game per quiz that is not over, and the scores' bounds. Server only (service role). Needs 202611200001
 -- (Main WAM) and employees.
+-- "Kuis dimulai" goes through Main WAM's notes (mw_notes) with a kind of its own, "kuis", on the existing
+-- push topic "pengumuman" (notePushTopic): no new topic.
 -- ROLLBACK (by hand): drop function mw_quiz_board(uuid, integer, integer), mw_quiz_join(uuid, uuid, text, text, text, text[]);
 --   drop table mw_quiz_answers, mw_quiz_players, mw_quiz_runs, mw_quiz_questions, mw_quiz_hosts, mw_quizzes;
+--   delete from mw_notes where kind = 'kuis'; then put back the kind check of 202611200001 (without 'kuis').
 begin;
 
 create table public.mw_quizzes (
@@ -170,6 +173,11 @@ language sql stable set search_path = public, pg_temp as $$
   where p.run_id = p_run
   group by p.employee_id, p.alias, p.figure_key, p.persona, p.colors, p.mystery_no, p.joined_at
 $$;
+
+-- The note's kind (202611200001 listed the kinds of then).
+alter table public.mw_notes drop constraint if exists mw_notes_kind_check;
+alter table public.mw_notes add constraint mw_notes_kind_check
+  check (kind in ('pengumuman', 'jadwal', 'absen', 'momen', 'kamar', 'silent', 'voting', 'survei', 'lain', 'kuis'));
 
 alter table public.mw_quizzes enable row level security;
 alter table public.mw_quiz_hosts enable row level security;

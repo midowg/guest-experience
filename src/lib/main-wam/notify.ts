@@ -6,8 +6,9 @@ import type { NoteKind, NoteTone } from "./types";
  * the bell) with their own kind and link (mw_notes), and to phones through the existing Web Push
  * (src/lib/server/pra-wam/push.ts, aturan-wam §7a). Main WAM adds no push topic, so Pra WAM's
  * Pengaturan → Notifikasi stays as it is; each kind rides on a topic with the right behaviour:
- *   pengumuman, jadwal       "pengumuman": always to the phone, also in quiet hours (SPEC §1.5:
- *                            at night only panitia's announcements and schedule changes go out)
+ *   pengumuman, jadwal,      "pengumuman": always to the phone, also in quiet hours (SPEC §1.5:
+ *   kuis                     at night only panitia's announcements and schedule changes go out;
+ *                            Kuis live's "Kuis dimulai" is a call to join the game now)
  *   absen, silent, voting,   "forum": to the phone, not in quiet hours 21.00–06.00
  *   survei, kamar, foto hidden
  *   momen (likes), lain      null: the bell only (likes are off on the phone by default)
@@ -16,7 +17,8 @@ import type { NoteKind, NoteTone } from "./types";
 
 export function notePushTopic(kind: NoteKind, opts: { photoHidden?: boolean } = {}): PushTopic | null {
   switch (kind) {
-    case "pengumuman": case "jadwal": return "pengumuman";
+    // Kuis live: "Kuis dimulai" when the MC opens the lobby, a call to join now (also in quiet hours).
+    case "pengumuman": case "jadwal": case "kuis": return "pengumuman";
     case "absen": case "silent": case "voting": case "survei": case "kamar": return "forum";
     case "momen": return opts.photoHidden ? "forum" : null;
     case "lain": return null;
@@ -26,7 +28,7 @@ export function notePushTopic(kind: NoteKind, opts: { photoHidden?: boolean } = 
 /** The Lucide icon N01 draws for a kind (SPEC §0.3). */
 export const noteIcon: Record<NoteKind, string> = {
   pengumuman: "megaphone", jadwal: "calendar-clock", absen: "circle-check", momen: "heart", kamar: "key-round",
-  silent: "lock", voting: "trophy", survei: "clipboard-list", lain: "bell",
+  silent: "lock", voting: "trophy", survei: "clipboard-list", lain: "bell", kuis: "gamepad-2",
 };
 
 /** Words in a title that say something changed: a time, a place, a cancellation. */

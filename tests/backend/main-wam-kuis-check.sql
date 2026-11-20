@@ -81,6 +81,9 @@ begin
   delete from public.mw_quizzes where id = quiz;
   if exists (select 1 from public.mw_quiz_answers where run_id = game) then raise exception 'answers left after the quiz was deleted'; end if;
 
+  -- "Kuis dimulai" is a Main WAM note of its own kind.
+  if position('''kuis''' in (select pg_get_constraintdef(oid) from pg_constraint where conname = 'mw_notes_kind_check')) = 0 then raise exception 'mw_notes does not take the kind kuis'; end if;
+
   raise notice 'PASS: Main WAM kuis: one answer per question, totals are sums, mystery numbers in order';
 end $$;
 reset role;

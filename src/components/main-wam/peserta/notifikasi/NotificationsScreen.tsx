@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { Bell, BellOff, CalendarClock, CircleCheck, ClipboardList, Heart, Hourglass, KeyRound, Lock, Megaphone, Trophy, type LucideIcon } from "lucide-react";
+import { Bell, BellOff, CalendarClock, CircleCheck, ClipboardList, Gamepad2, Heart, Hourglass, KeyRound, Lock, Megaphone, Trophy, type LucideIcon } from "lucide-react";
 import { noteHash, type NotificationRow } from "@/lib/main-wam/peserta/notifications";
 import type { NoteKind } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
@@ -15,7 +15,7 @@ import { usePushDevice, type PushState } from "../usePushDevice";
 import css from "../peserta.module.css";
 
 const ICON: Record<NoteKind, LucideIcon> = {
-  pengumuman: Megaphone, jadwal: CalendarClock, absen: CircleCheck, momen: Heart, kamar: KeyRound, silent: Lock, voting: Trophy, survei: ClipboardList, lain: Bell,
+  pengumuman: Megaphone, jadwal: CalendarClock, absen: CircleCheck, momen: Heart, kamar: KeyRound, silent: Lock, voting: Trophy, survei: ClipboardList, lain: Bell, kuis: Gamepad2,
 };
 const TONE: Partial<Record<NoteKind, IconBoxTone>> = { jadwal: "warning", absen: "success" };
 
