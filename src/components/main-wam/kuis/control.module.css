@@ -1,0 +1,31 @@
+/* The MC's control of Kuis live (on a phone or a laptop; it follows the app's theme). */
+.status { display: flex; flex-direction: column; gap: var(--mw-space-8); }
+.statusRow { display: flex; align-items: flex-start; gap: var(--mw-space-12); }
+.dot { flex: none; width: 12px; height: 12px; margin-top: 6px; border-radius: 50%; background: var(--mw-text-3); }
+.run { background: var(--mw-success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-success) 18%, transparent); }
+.wait { background: var(--mw-warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-warning) 18%, transparent); }
+.pause { background: var(--mw-error); }
+.statusText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.main { font: var(--mw-type-subtitle); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.title { font: var(--mw-type-caption); color: var(--mw-text-3); }
+.buttons { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+.next { flex: 1 1 240px; min-height: 64px; }
+.jeda { flex: 0 1 auto; min-height: 64px; }
+.jedaOn { box-shadow: inset 0 0 0 2px var(--mw-warning); }
+.keys { font: var(--mw-type-caption); color: var(--mw-text-3); }
+.secondary { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+.question { display: flex; flex-direction: column; gap: var(--mw-space-8); }
+.qhead { font: var(--mw-type-label); color: var(--mw-text-2); }
+.qbody { font: var(--mw-type-subtitle); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.options { display: flex; flex-direction: column; gap: 6px; }
+.option { display: flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-body); color: var(--mw-text-1); padding: 4px; border-radius: var(--mw-radius-8); }
+.ok { background: var(--mw-success-container); color: var(--mw-on-success-container); font-weight: 600; }
+.letter { flex: none; width: 28px; height: 28px; border-radius: var(--mw-radius-8); display: grid; place-items: center; font: 800 14px / 1 var(--mw-font-sans); color: var(--mw-on-kuis); }
+.opt0 { background: var(--mw-kuis-a); }
+.opt1 { background: var(--mw-kuis-b); }
+.opt2 { background: var(--mw-kuis-c); }
+.opt3 { background: var(--mw-kuis-d); }
+.ok .letter { background: var(--mw-success); color: var(--mw-on-primary); }
+.hint { font: var(--mw-type-caption); color: var(--mw-text-3); }
+@media (max-width: 599px) { .keys { display: none; } }
