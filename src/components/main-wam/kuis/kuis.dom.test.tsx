@@ -60,12 +60,16 @@ describe("a player's phone", () => {
     expect(screen.queryByText("Benar")).toBeNull();
   });
 
-  it("once the answer has lit: right, the points (counting up), the spread in percent, my pick marked", async () => {
-    phone(SAMPLE_T0 + times.light + 1_000, true);
-    expect(screen.getAllByText("Benar").length).toBeGreaterThan(0);
-    expect(await screen.findByText("+458", {}, { timeout: 3_000 })).toBeTruthy();
-    expect(screen.getByText("Pilihanmu")).toBeTruthy();
-    expect(screen.getAllByText(/%$/)).toHaveLength(4);
+  it("once the answer has lit (with \"kurangi gerak\": no count-up): right, the points, the spread in percent, my pick marked", () => {
+    const motion = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: query.includes("reduce"), media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia;
+    try {
+      phone(SAMPLE_T0 + times.light + 1_000, true);
+      expect(screen.getAllByText("Benar").length).toBeGreaterThan(0);
+      expect(screen.getByText("+458")).toBeTruthy();
+      expect(screen.getByText("Pilihanmu")).toBeTruthy();
+      expect(screen.getAllByText(/%$/)).toHaveLength(4);
+    } finally { window.matchMedia = motion; }
   });
 
   it("in English", () => {
