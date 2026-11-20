@@ -22,7 +22,7 @@ export function HrAdminNav({ current, superAdmin = false, waiting = 0, requests 
   current: HrAdminSectionKey; superAdmin?: boolean; waiting?: number; requests?: number; className?: string; children: ReactNode; personName?: string;
 }) {
   const footerLinks: ConsoleLink[] = [
-    { key: "app", label: "Buka HR Werkudara", href: hrPath.home, icon: <ExternalLink size={20} />, external: true },
+    { key: "app", label: "Buka WG People", href: hrPath.home, icon: <ExternalLink size={20} />, external: true },
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
     { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
   ];

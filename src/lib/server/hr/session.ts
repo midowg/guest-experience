@@ -6,10 +6,10 @@ import { currentMember, type Member } from "../pra-wam/session";
 import type { AdminActorRef } from "./attendance";
 
 /*
- * Who is signed in to HR Werkudara (/hr, 20 Nov 2026). The account is the employee's own (the same
+ * Who is signed in to WG People (/hr, 20 Nov 2026). The account is the employee's own (the same
  * one WAM and Booking Kantor use: one email, one password, one session cookie), but a stranger is
  * sent to HR's own sign-in page. HR's admin is in Journey Admin (/admin/hr), behind the admin
- * sign-in and the "HR Werkudara" grant of Super admin → Akses admin.
+ * sign-in and the "WG People" grant of Super admin → Akses admin.
  */
 
 /** For pages: the signed-in person, or a trip to HR's sign-in that comes back here. */

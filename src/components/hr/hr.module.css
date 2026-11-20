@@ -1,44 +1,46 @@
 /*
- * HR Werkudara (/hr, 20 Nov 2026): its own look, from the default design tokens (brain/aturan/
- * desain-ui.md): Plus Jakarta Sans/Inter, neutral greys, one blue primary, light and dark.
- * `.theme` gives absen.module.css its --hr-* tokens, and recolours the shared sign-in and frame
- * classes of booking.module.css (--bk-*) blue.
+ * HR Werkudara (/hr). Look of 21 Nov 2026, "hangat dan tenang" (the owner asked for modern, warm,
+ * friendly and not overdone): warm paper neutrals and one clay accent, flat surfaces with hairline
+ * borders instead of shadows, modest weights (Airbnb's lesson: warmth from space and soft corners,
+ * not from heavy type), Plus Jakarta Sans. Status keeps its own green, amber and red, always with a
+ * word. Light and dark. `.theme` gives absen.module.css its --hr-* tokens, and recolours the shared
+ * sign-in and frame classes of booking.module.css (--bk-*).
  */
 .theme {
-  --hr-app: #F4F6FB; --hr-surface: #FFFFFF; --hr-surface-soft: #EEF2F8; --hr-line: #E3E8F0;
-  --hr-text: #111827; --hr-muted: #4B5563;
-  --hr-primary: #2F6FEB; --hr-primary-soft: #E3ECFD; --hr-on-primary: #FFFFFF;
-  --hr-success: #15803D; --hr-success-soft: #DCFCE7; --hr-warning-soft: #FEF3C7; --hr-danger: #B91C1C; --hr-danger-soft: #FEE2E2;
-  --hr-r-card: 20px; --hr-grad-surface: none; --hr-primary-hover: #2459C9;
-  /* Soft UI: a light lift, never a heavy shadow. */
-  --hr-shadow-card: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
-  --hr-hero: linear-gradient(165deg, #E6EEFF 0%, #F7F9FF 55%, #FFFFFF 100%);
-  --hr-halo: rgba(47, 111, 235, .16);
-  --hr-warning: #B45309;
+  --hr-app: #F7F3EE; --hr-surface: #FFFFFF; --hr-surface-soft: #F1EBE3; --hr-line: #E7DED3; --hr-line-strong: #8C8279;
+  --hr-text: #211C17; --hr-muted: #6A6159;
+  --hr-primary: #A84B26; --hr-primary-hover: #8F3E1E; --hr-primary-soft: #F6E6DC; --hr-on-primary: #FFFFFF;
+  --hr-ring: #F3DDCF;
+  --hr-success: #2E7049; --hr-success-soft: #E5F1E8;
+  --hr-warning: #94560A; --hr-warning-soft: #FBEFD6;
+  --hr-danger: #B42318; --hr-danger-soft: #FCE8E5; --hr-on-danger: #FFFFFF;
+  --hr-r-card: 16px; --hr-r-panel: 24px; --hr-r-control: 12px;
+  --hr-fast: 160ms; --hr-ease: cubic-bezier(.2, 0, 0, 1);
   background: var(--hr-app); color: var(--hr-text);
   font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   .theme {
-    --hr-app: #0D1117; --hr-surface: #161B24; --hr-surface-soft: #1E2430; --hr-line: #2A3240;
-    --hr-shadow-card: none;
-    --hr-hero: linear-gradient(165deg, #182746 0%, #141B28 60%, #161B24 100%);
-    --hr-halo: rgba(138, 180, 248, .18);
-    --hr-warning: #FCD34D;
-    --hr-text: #F3F4F6; --hr-muted: #C2C8D0;
-    --hr-primary: #8AB4F8; --hr-primary-soft: #1C2A44; --hr-on-primary: #0B1B36;
-    --hr-success: #86EFAC; --hr-success-soft: #12301F; --hr-warning-soft: #3A2E0C; --hr-danger: #FCA5A5; --hr-danger-soft: #3A1717;
-    --hr-primary-hover: #A8C7FA;
+    --hr-app: #161210; --hr-surface: #201B18; --hr-surface-soft: #2A2420; --hr-line: #3A322C; --hr-line-strong: #776C62;
+    --hr-text: #F3EEE8; --hr-muted: #BFB4A9;
+    --hr-primary: #EE9B74; --hr-primary-hover: #F4B394; --hr-primary-soft: #3A2318; --hr-on-primary: #2B1208;
+    --hr-ring: #33221A;
+    --hr-success: #8FD3A8; --hr-success-soft: #17301F;
+    --hr-warning: #F2C46D; --hr-warning-soft: #3A2C10;
+    --hr-danger: #F4A39A; --hr-danger-soft: #3D1A16; --hr-on-danger: #3D1A16;
   }
 }
 /*
- * On the same element as booking.module.css's .app (the sign-in pages and the frame): HR's blue
- * and greys instead of Booking's teal. The doubled class outranks .app, light and dark.
+ * On the same element as booking.module.css's .app (the sign-in pages and the frame): HR's paper
+ * and clay instead of Booking's slate and teal. The doubled class outranks .app, light and dark.
  */
 .bk.bk {
   --bk-bg: var(--hr-app); --bk-surface: var(--hr-surface); --bk-sunk: var(--hr-surface-soft); --bk-ink: var(--hr-text); --bk-soft: var(--hr-muted); --bk-line: var(--hr-line);
   --bk-accent: var(--hr-primary); --bk-accent-hover: var(--hr-primary-hover); --bk-accent-soft: var(--hr-primary-soft); --bk-on-accent: var(--hr-on-primary);
   --bk-mine: var(--hr-primary); --bk-mine-soft: var(--hr-primary-soft);
+  --bk-free: var(--hr-success); --bk-free-soft: var(--hr-success-soft); --bk-busy: var(--hr-danger); --bk-busy-soft: var(--hr-danger-soft);
+  --bk-warn: var(--hr-warning); --bk-warn-soft: var(--hr-warning-soft);
+  --bk-shadow: none; --bk-radius: var(--hr-r-card); --bk-radius-sm: var(--hr-r-control);
   font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 }
 .theme .panelEdge { border: 1px solid var(--hr-line); }
@@ -48,8 +50,28 @@
  */
 .manage { display: grid; gap: 16px; padding: 16px; border-radius: 20px; }
 .manage.manage :is(h1, h2, h3), .manage.manage a { color: var(--cs-text); }
-.narrow { max-width: 30rem; margin-inline: auto; }
+.narrow { max-width: 30rem; margin-inline: auto; width: 100%; }
 /* A page loading inside the frame: soft blocks where its cards will be. */
-.skeleton { border-radius: 16px; background: var(--hr-surface-soft); }
+.skeleton { border-radius: var(--hr-r-card); background: var(--hr-surface-soft); }
+.skeletonHero { border-radius: var(--hr-r-panel); }
 @media (prefers-reduced-motion: no-preference) { .skeleton { animation: pulse 1.2s ease-in-out infinite alternate; } }
 @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
+
+/*
+ * The app frame (21 Nov 2026, Apple HIG): no bar on top; the phone's status bar area keeps the page
+ * colour as content scrolls under it. The bottom menu: icon over label, the current one in clay and
+ * filled, no pill. Phone first; on a wide screen the same column sits in the middle.
+ */
+.shell { min-height: 100dvh; }
+.statusCover { position: fixed; top: 0; left: 0; right: 0; z-index: 15; height: env(safe-area-inset-top); background: var(--hr-app); }
+.main { max-width: 30rem; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom)); }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding-bottom: env(safe-area-inset-bottom); background: color-mix(in srgb, var(--hr-surface) 94%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--hr-line); }
+.tabbarInner { max-width: 30rem; margin: 0 auto; padding: 4px 8px 2px; display: grid; grid-template-columns: repeat(4, 1fr); }
+.shell .tab { min-height: 52px; display: grid; justify-items: center; align-content: center; gap: 2px; border-radius: 12px; color: var(--hr-muted); font-size: 11px; font-weight: 600; letter-spacing: .01em; text-decoration: none; -webkit-tap-highlight-color: transparent; transition: color var(--hr-fast) var(--hr-ease); }
+.shell .tab[aria-current="page"] { color: var(--hr-primary); font-weight: 700; }
+.tab:active svg { transform: scale(.92); }
+.tab svg { transition: transform 120ms var(--hr-ease); }
+@media (prefers-reduced-motion: reduce) { .shell .tab, .tab svg { transition: none; } .tab:active svg { transform: none; } }
+/* Focus never hides under the bottom menu or a detail bar; on a short screen (landscape, big zoom) the bars scroll away. */
+:global(html):has(.shell) { scroll-padding: 60px 0 calc(76px + env(safe-area-inset-bottom)); }
+@media (max-height: 480px) { .tabbar { position: static; } }

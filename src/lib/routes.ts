@@ -787,7 +787,7 @@ export const bookingApi = {
 };
 
 /*
- * HR Werkudara (/hr, 20 Nov 2026): the employees' own HR app, apart from WAM. Absensi first (masuk
+ * WG People (/hr, 20 Nov 2026): the employees' own HR app, apart from WAM. Absensi first (masuk
  * and pulang with the face and the office point); cuti, lembur DW and more to come. It signs in
  * with the same employee account as WAM and Booking Kantor, on its own pages and in its own look.
  * Its admin lives in Journey Admin (/admin/hr), given per person in Super admin → Akses admin.
@@ -797,6 +797,10 @@ const HR_API = "/api/hr";
 export const hrPath = {
   /** Absen: today's masuk and pulang, and the way to clock in; `?daftar=1` opens enrolment. */
   home: HR_PATH,
+  /** The bottom menu's other places (21 Nov 2026); switching between them never reloads. */
+  history: `${HR_PATH}/riwayat`,
+  requests: `${HR_PATH}/pengajuan`,
+  profile: `${HR_PATH}/profil`,
   enroll: `${HR_PATH}?daftar=1`,
   login: (next?: string) => `${HR_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
   forgot: `${HR_PATH}/lupa-password`,
@@ -818,7 +822,7 @@ export const hrApi = {
   requests: `${HR_API}/revisi`,
   request: (id: string) => `${HR_API}/revisi/${id}`,
 };
-/** Admin HR Werkudara in Journey Admin (20 Nov 2026): one page per section (src/components/hr-admin/sections.ts). */
+/** Admin WG People in Journey Admin (20 Nov 2026): one page per section (src/components/hr-admin/sections.ts). */
 export const HR_ADMIN = "/admin/hr";
 const HR_ADMIN_API = "/api/admin/hr";
 export const hrAdminPath = {

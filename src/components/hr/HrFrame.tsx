@@ -1,47 +1,61 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import { LogOut, ScanFace } from "lucide-react";
-import { praWamRequest } from "@/components/pra-wam/api";
-import { hrPath, praWamApi } from "@/lib/routes";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { CalendarDays, CircleUserRound, FileText, House } from "lucide-react";
+import { HR_TABS, hrTabLabels, hrTabPaths, tabOf, type HrTab } from "@/lib/hr/tabs";
+import { hrPath } from "@/lib/routes";
 import css from "@/components/booking/booking.module.css";
 import hr from "./hr.module.css";
 
-/** "Dita Contoh" → "DC", for the round mark beside the name. */
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase() || "?";
+const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: CalendarDays, pengajuan: FileText, profil: CircleUserRound };
 
 /**
- * The frame of HR Werkudara (20 Nov 2026): its name, where to go (icons with words), and who is
- * signed in; on a phone the places sit in a bar at the bottom. The same frame classes as Booking
- * Kantor, in HR's own colour. For employees only: HR's admin is in Journey Admin (/admin/hr). Cuti and
- * lembur join the places later.
- * Registers HR's own service worker (scope /hr/), which makes it installable as its own app.
+ * The frame of WG People (21 Nov 2026), like a phone app (Apple HIG): no bar on top (each tab root
+ * has its own large title; detail screens bring their own bar), the page, and the bottom menu
+ * (Beranda, Riwayat, Pengajuan, Profil). Moving between them only changes the address
+ * (history.pushState, which Next.js keeps in step): nothing reloads or is fetched, the back button
+ * walks back through them, and each keeps its own scroll. Tapping the tab you are on again goes back
+ * to its root ("hr:tab-again"). For employees only: the admin is in Journey Admin (/admin/hr).
+ * Registers WG People's own service worker (scope /hr/), which makes it installable as its own app.
  */
-export function HrFrame({ name, children }: { name: string; children: ReactNode }) {
-  const path = usePathname();
-  const [leaving, setLeaving] = useState(false);
+export function HrFrame({ children }: { children: ReactNode }) {
+  const tab = tabOf(usePathname());
+  const scrolls = useRef<Partial<Record<HrTab, number>>>({});
+
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register(`${hrPath.home}/sw.js`, { scope: `${hrPath.home}/` }).catch(() => undefined);
   }, []);
-  const places = [
-    { href: hrPath.home, label: "Absen", icon: <ScanFace size={20} aria-hidden />, on: path === hrPath.home },
-  ];
-  return <div className={`${css.app} ${hr.bk}`}>
-    <header className={css.top}><div className={css.topInner}>
-      <Link href={hrPath.home} className={css.brand}><span className={css.brandMark}><ScanFace size={20} aria-hidden /></span>HR Werkudara</Link>
-      {/* One place only (until cuti and lembur come): no menu bar for it. */}
-      {places.length > 1 && <nav className={css.nav} aria-label="Menu utama">{places.map(place =>
-        <Link key={place.label} href={place.href} className={css.navLink} aria-current={place.on ? "page" : undefined}>{place.icon}{place.label}</Link>)}</nav>}
-      <div className={css.who}><span className={css.avatar} aria-hidden>{initials(name)}</span><span>{name}</span>
-        <button type="button" className={css.out} disabled={leaving} aria-label="Keluar" onClick={async () => {
-          setLeaving(true);
-          try { await praWamRequest(praWamApi.logout, { method: "POST" }); } catch { /* the cookie may already be gone */ }
-          window.location.assign(hrPath.login());
-        }}><LogOut size={20} aria-hidden /></button>
-      </div>
-    </div></header>
-    <main className={css.page}>{children}</main>
+  // Each place comes back where it was left; the title follows (no page load sets it).
+  useEffect(() => {
+    window.scrollTo(0, scrolls.current[tab] ?? 0);
+    document.title = tab === "beranda" ? "WG People" : `${hrTabLabels[tab]} · WG People`;
+  }, [tab]);
+
+  const go = (event: MouseEvent<HTMLAnchorElement>, to: HrTab) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (to === tab) {
+      window.dispatchEvent(new Event("hr:tab-again"));
+      window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      return;
+    }
+    scrolls.current[tab] = window.scrollY;
+    window.history.pushState({}, "", hrTabPaths[to]);
+  };
+
+  return <div className={`${css.app} ${hr.bk} ${hr.shell}`}>
+    <div className={hr.statusCover} aria-hidden />
+    <main id="wg-main" className={hr.main}>{children}</main>
+    <nav id="wg-nav" className={hr.tabbar} aria-label="Menu utama"><div className={hr.tabbarInner}>
+      {HR_TABS.map(key => {
+        const Icon = tabIcons[key];
+        return <a key={key} href={hrTabPaths[key]} className={hr.tab} aria-current={key === tab ? "page" : undefined} onClick={event => go(event, key)}>
+          <Icon size={24} strokeWidth={key === tab ? 2.4 : 1.8} aria-hidden />{hrTabLabels[key]}
+        </a>;
+      })}
+    </div></nav>
+    {/* Sheets, questions and messages are drawn here, beside the page and the menu, which go inert under them. */}
+    <div id="wg-layer" />
   </div>;
 }

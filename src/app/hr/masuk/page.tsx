@@ -10,7 +10,7 @@ import { currentMember } from "@/lib/server/pra-wam/session";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Masuk" };
 
-/** Masuk: HR Werkudara's own sign-in page (the same employee account). Only an HR page may be the way back. */
+/** Masuk: WG People's own sign-in page (the same employee account). Only an HR page may be the way back. */
 export default async function HrSignIn({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const asked = safePraWamNext((await searchParams).next);
   const next = asked?.startsWith(hrPath.home) ? asked : null;

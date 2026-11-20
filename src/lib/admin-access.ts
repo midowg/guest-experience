@@ -16,7 +16,7 @@ export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 // "wellbeing" (16 Nov 2026, migration 202611160050): Admin Wellbeing at /admin/wlm (was /admin/wellbeing, which redirects).
 // "wam_acara" (20 Nov 2026, migration 202611200603): Admin WAM 2026, the admin of the WAM event itself (Main WAM:
 // rundown, modules, Kuis live, penguji, Panitia WAM) at /admin/wam2026, given apart from Admin Pra WAM ("wam").
-// "hr" (20 Nov 2026, migration 202611200703): Admin HR Werkudara at /admin/hr (absensi, wajah, titik kantor).
+// "hr" (20 Nov 2026, migration 202611200703): Admin WG People at /admin/hr (absensi, wajah, titik kantor).
 export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
 export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
@@ -28,7 +28,7 @@ export const PRA_WAM_ADMIN_LABEL = "Admin Pra WAM";
 export const WAM_EVENT_ADMIN_LABEL = "Admin WAM 2026";
 export const adminAppLabels: Record<AdminApp, string> = {
   acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: PRA_WAM_ADMIN_LABEL, kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
-  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "HR Werkudara",
+  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People",
 };
 export const adminAppHints: Record<AdminApp, string> = {
   acara: "Undangan, kartu, e-guide, dan kunjungan: membuat acara dan membuka acara yang dipilih di bawah.",
@@ -38,7 +38,7 @@ export const adminAppHints: Record<AdminApp, string> = {
   kuesioner: "Kuesioner di Admin Pra WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin Pra WAM; Admin Pra WAM tanpa centang ini tidak bisa membuka kuesioner.",
   tv: "TV kantor: layar, tayangan, dan tampilan.",
   wellbeing: "Program wellbeing kantor: periksa aktivitas, poin karyawan, tambah poin ke banyak orang, katalog kegiatan.",
-  hr: "Admin HR Werkudara: absensi karyawan (yang perlu dicek, absen harian, catat manual), wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",
+  hr: "Admin WG People: absensi karyawan (yang perlu dicek, absen harian, catat manual), wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",
   wam_acara: "Admin aplikasi acara WAM 2026: pengaturan, penguji, rundown, kamar, perjalanan, panduan, info acara, Awarding, Silent Meeting, Kuis live, dan Panitia WAM. Terpisah dari Admin Pra WAM.",
 };
 /** Opens the WAM questionnaire: only with its own grant. */

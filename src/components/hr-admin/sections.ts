@@ -2,8 +2,8 @@ import { CalendarDays, FilePen, Inbox, LayoutDashboard, MapPin, ScanFace, type L
 import { hrAdminPath } from "@/lib/routes";
 
 /*
- * Admin HR Werkudara's sections (20 Nov 2026): the admin of the HR app (/hr) in Journey Admin, given
- * per person in Super admin → Akses admin ("HR Werkudara"). The menu, Ringkasan and the page titles
+ * Admin WG People's sections (20 Nov 2026): the admin of the HR app (/hr) in Journey Admin, given
+ * per person in Super admin → Akses admin ("WG People"). The menu, Ringkasan and the page titles
  * read this list. Cuti and lembur join as new sections later.
  */
 export type HrAdminSectionKey = "ringkasan" | "perlu" | "revisi" | "absen" | "wajah" | "kantor";

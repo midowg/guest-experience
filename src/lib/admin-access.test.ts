@@ -125,7 +125,7 @@ describe("Wellbeing (16 Nov 2026)", () => {
   });
 });
 
-describe("HR Werkudara (20 Nov 2026)", () => {
+describe("WG People (20 Nov 2026)", () => {
   it("opens Admin HR and its API only with its own grant", () => {
     expect(areaOfPath("/admin/hr")).toBe("hr");
     expect(areaOfPath("/admin/hr/perlu-dicek")).toBe("hr");
@@ -140,7 +140,7 @@ describe("HR Werkudara (20 Nov 2026)", () => {
     expect(showsAppCard({ apps: ["hr"] }, "hr")).toBe(true);
     expect(showsAppCard({ apps: ["wam"] }, "hr")).toBe(false);
     expect(showsAppCard(null, "hr")).toBe(true);
-    expect(adminAppLabels.hr).toBe("HR Werkudara");
+    expect(adminAppLabels.hr).toBe("WG People");
     expect(ADMIN_APPS).toContain("hr");
   });
 });

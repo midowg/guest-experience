@@ -26,7 +26,7 @@ export async function praWamRequest<T>(url: string, init: RequestInit & { json?:
   if (response.status === 401 && !signingIn && typeof window !== "undefined") {
     // Booking Kantor (/booking) signs in on its own page with the same account (11 Nov 2026).
     const here = `${window.location.pathname}${window.location.search}`;
-    // HR Werkudara (/hr, 20 Nov 2026) too.
+    // WG People (/hr, 20 Nov 2026) too.
     const path = window.location.pathname;
     window.location.assign(path.startsWith(bookingPath.home) ? bookingPath.login(here) : path.startsWith(hrPath.home) ? hrPath.login(here) : praWamPath.login(here));
   }

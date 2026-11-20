@@ -1,10 +1,10 @@
-// HR Werkudara's service worker (scope /hr/, 20 Nov 2026): makes the app installable, answers with
+// WG People's service worker (scope /hr/, 20 Nov 2026): makes the app installable, answers with
 // a short offline page when there is no signal, and keeps the face check's programs and models
 // (about 25 MB, the same for everyone; each address names its exact version) after the first
 // clock-in, so the next one starts at once and spends no data. Pages are personal: never cached.
 const OFFLINE = `<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HR Werkudara</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F6F7F9;color:#111827;font-family:system-ui,sans-serif;text-align:center;padding:24px">
-<div><h1 style="font-size:22px;color:#2F6FEB">HR Werkudara</h1><p>Tidak ada koneksi internet. Absen butuh internet untuk dicatat; periksa sinyal lalu coba lagi.</p>
+<title>WG People</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F7F3EE;color:#211C17;font-family:system-ui,sans-serif;text-align:center;padding:24px">
+<div><h1 style="font-size:22px;color:#A84B26">WG People</h1><p>Tidak ada koneksi internet. Absen butuh internet untuk dicatat; periksa sinyal lalu coba lagi.</p>
 <button onclick="location.reload()" style="min-height:48px;padding:0 20px;border:0;border-radius:12px;background:#2F6FEB;color:#fff;font-weight:700;font-size:15px">Coba lagi</button></div></body></html>`;
 
 // A new version is a new address; FACE_CACHE changes only to drop the old files.

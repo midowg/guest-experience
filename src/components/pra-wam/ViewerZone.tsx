@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ZONE_COOKIE, ZONE_MANUAL_COOKIE, zoneOfTimeZone, type ViewerZone } from "@/lib/pra-wam/zone";
 
@@ -19,14 +19,22 @@ export function writeZoneCookies(zone: ViewerZone, manual: boolean) {
 }
 export const deviceZone = () => zoneOfTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-export function ViewerZoneProvider({ zone, manual, children }: { zone: ViewerZone; manual: boolean; children: ReactNode }) {
+/**
+ * `soft` (WG People, 21 Nov 2026): an app that keeps its own data and history does not want the whole
+ * screen read again (it would close an open sheet and drop its history). The new zone is used at
+ * once and "wk:zone" tells the app to fetch its data again.
+ */
+export function ViewerZoneProvider({ zone, manual, soft = false, children }: { zone: ViewerZone; manual: boolean; soft?: boolean; children: ReactNode }) {
   const router = useRouter();
+  const [shown, setShown] = useState(zone);
   useEffect(() => {
     if (manual) return;
     const device = deviceZone();
     if (device === zone) return;
     writeZoneCookies(device, false);
-    router.refresh();
-  }, [manual, zone, router]);
-  return <ZoneContext.Provider value={zone}>{children}</ZoneContext.Provider>;
+    if (!soft) { router.refresh(); return; }
+    const timer = window.setTimeout(() => { setShown(device); window.dispatchEvent(new Event("wk:zone")); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [manual, zone, router, soft]);
+  return <ZoneContext.Provider value={soft ? shown : zone}>{children}</ZoneContext.Provider>;
 }

@@ -1,6 +1,6 @@
 # Model absen wajah
 
-Dipakai oleh absensi HR Werkudara (`src/components/hr/faceEngine.ts`), dijalankan di browser
+Dipakai oleh absensi WG People (`src/components/hr/faceEngine.ts`), dijalankan di browser
 dengan `onnxruntime-web` 1.31.1.
 
 | Berkas | Isi | Sumber | Lisensi |

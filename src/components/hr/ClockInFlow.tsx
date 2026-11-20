@@ -1,39 +1,65 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, FilePen, History, LogIn, LogOut, MapPin, RotateCcw, ScanFace, ShieldCheck } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Check, Clock3, MapPin, RotateCcw, ScanFace } from "lucide-react";
 import {
-  clockMethodLabels, CONSENT_VERSION, consentPoints, faceStatusLabels, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels, statusLabels,
+  CONSENT_VERSION, consentPoints, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels,
   type ClockInState, type DailyKind, type DailyRecord, type FaceStatus, type ReasonKind,
 } from "@/lib/hr/attendance";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
-import { matchPercent } from "@/lib/hr/face-match";
-import { instantLabel, zoneSuffix, zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
-import { errorText } from "@/components/pra-wam/api";
-import { loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
-import { FaceCamera, type FaceCapture } from "./FaceCamera";
-import { MyRequests, RevisionForm } from "./RevisionForm";
+import { tabOf, type HrTab } from "@/lib/hr/tabs";
+import { instantLabel, zoneDate, zoneSuffix } from "@/lib/pra-wam/zone";
+import { hrPath, praWamApi } from "@/lib/routes";
+import { errorText, praWamRequest } from "@/components/pra-wam/api";
 import { useViewerZone } from "@/components/pra-wam/ViewerZone";
+import { cancelRequest, loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
+import { FaceCamera, type FaceCapture } from "./FaceCamera";
+import { RevisionSheet } from "./RevisionForm";
+import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, OfficesDetail, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
+import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Sheet } from "./ui";
 import styles from "./absen.module.css";
+import app from "./app.module.css";
 
 type Reason = { kind: ReasonKind; text: string };
+/** One step of the clock-in sheet (or the revision sheet); exported for the layout preview (/dev-preview/absen). */
+export type ClockInStep = Step;
 type Step =
   | { name: "ringkas" }
   | { name: "persetujuan"; then: "daftar" | DailyKind }
   | { name: "lokasi"; kind: DailyKind; consent: string | null }
   | { name: "kamera"; kind: DailyKind; challenge: Challenge; place: Place; reason: Reason | null; consent: string | null }
   | { name: "daftar"; challenge: Challenge; then: DailyKind | null }
-  | { name: "kirim"; text: string }
+  | { name: "kirim"; text: string; since: number }
   | { name: "hasil"; title: string; record: DailyRecord | null; note: string | null; then: DailyKind | null }
   | { name: "gagal"; text: string; retry: Step }
-  | { name: "revisi"; date: string };
+  | { name: "revisi"; date?: string };
+type DetailTarget = { kind: "hari"; date: string } | { kind: "pengajuan"; id: string } | { kind: "wajah" } | { kind: "kantor" };
+/** A screen pushed inside a tab, with a back button; the bottom menu stays. */
+export type ClockInDetail = DetailTarget & { tab: HrTab };
+type Question = { kind: "keluar" } | { kind: "hapus-wajah" } | { kind: "batal-pengajuan"; id: string };
+/**
+ * What WG People keeps in each history entry: whether a sheet or a detail screen is on show
+ * (`hrTop`), the detail screens open in this tab (`hrDetails`), and, on the entry left behind, where
+ * the page was scrolled and which row opened what came next (`hrScroll`, `hrMark`).
+ */
+type Entry = { hrTop?: "detail" | "sheet"; hrDetails?: ClockInDetail[]; hrScroll?: number; hrMark?: string };
 
+const SUMMARY: Step = { name: "ringkas" };
+const SLOW_MS = 20_000;
 const usable = (status: FaceStatus | undefined) => status === "aktif" || status === "menunggu" || status === "siap";
-const dateOf = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-/** "Selamat pagi" by the hour where the person is. */
-function greetingAt(iso: string, zone: ViewerZone): string {
-  const hour = Number(zoneTime(iso, zone).slice(0, 2));
-  return hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+const absenTitle = (kind: DailyKind) => `Absen ${kindLabels[kind].toLowerCase()}`;
+const entry = (): Entry => (window.history.state as Entry | null) ?? {};
+const markOf = (target: DetailTarget) => (target.kind === "hari" ? `hari-${target.date}` : target.kind === "pengajuan" ? `pengajuan-${target.id}` : target.kind);
+const detailKey = (detail: ClockInDetail) => `${detail.tab}-${markOf(detail)}`;
+/** The "please wait" step, with when it started (after SLOW_MS it offers Batal). */
+const sending = (text: string): Step => ({ name: "kirim", text, since: Date.now() });
+/** Server answers end with a full stop; a title does not. */
+const asTitle = (text: string) => text.replace(/\.\s*$/, "");
+function titleOf(step: Step): string {
+  if (step.name === "persetujuan" || step.name === "daftar") return "Daftar wajah";
+  if (step.name === "lokasi" || step.name === "kamera") return absenTitle(step.kind);
+  return "WG People";
 }
 /** The time now, starting from the server's (so the first paint matches) and moving every 15 seconds. */
 function useNow(initial: string): string {
@@ -46,46 +72,132 @@ function useNow(initial: string): string {
   return now;
 }
 
-function StatusChip({ record }: { record: DailyRecord }) {
-  return <span className={`${styles.chip} ${styles[`chip_${record.status}`]}`}>{statusLabels[record.status]}</span>;
-}
-
-/** One slot of today: "Masuk 08.52 · Kantor Contoh", or "Belum". */
-function Slot({ kind, record }: { kind: DailyKind; record: DailyRecord | null }) {
-  const zone = useViewerZone();
-  return <div className={styles.slot} data-done={record ? "ya" : undefined}>
-    <span className={styles.slotLabel}><span className={styles.slotIcon} aria-hidden>{kind === "masuk" ? <LogIn size={16} /> : <LogOut size={16} />}</span>{kindLabels[kind]}</span>
-    {record ? <>
-      <strong className={styles.slotTime}>{instantLabel(record.at, zone)}{zoneSuffix(zone)}</strong>
-      <span className={styles.slotPlace}>{record.officeName && !record.reasonKind ? record.officeName : record.reasonKind ? reasonLabels[record.reasonKind] : record.method === "manual" ? "Dicatat Admin HR" : "Di luar kantor"}</span>
-      {record.status !== "sah" && <StatusChip record={record} />}
-    </> : <strong className={styles.slotEmpty}>Belum</strong>}
-  </div>;
-}
-
 /**
- * Absen harian (20 Nov 2026): today's masuk and pulang, and the way to clock in: the location
- * first (inside an office point, or a reason), then the face with two liveness steps, then the
- * server decides. First time: the consent, then the face is enrolled. Everything happens on this
- * screen without a reload; the server's answer replaces the summary.
+ * WG People (21 Nov 2026): one set of data, fetched once and kept, drawn as the four places of the
+ * bottom menu (screens.tsx). A day, a request, the face data and the office points open as detail
+ * screens with a back button; clocking in, enrolling and asking for a revision open as sheets over the
+ * app. Each puts an entry in the history (what it shows is kept in the entry), so the phone's back
+ * button walks back through them, coming back to the same scroll and the row that opened them; nothing
+ * reloads. Closing a sheet stops what it was doing (a late answer never reopens it). The data is
+ * refreshed quietly when another place is opened, when the app comes back to the front, when the day
+ * turns, and when the device's time zone changes.
+ * Clocking in: the location first (inside an office point, or a reason), then the face (two movements,
+ * or one steady look in Foto cepat), then the server decides.
  */
-export function ClockInFlow({ initial, openEnroll = false, name = "", now: serverNow = new Date().toISOString() }: { initial: ClockInState; openEnroll?: boolean; name?: string; now?: string }) {
+export function ClockInFlow({ initial, openEnroll = false, name = "", fullName = "", now: serverNow = new Date().toISOString(), initialStep, initialDetail, preview = false }: {
+  initial: ClockInState; openEnroll?: boolean; name?: string; fullName?: string; now?: string;
+  initialStep?: ClockInStep; initialDetail?: ClockInDetail;
+  /** The layout preview: no quiet refresh (its API refuses without a session). */
+  preview?: boolean;
+}) {
+  const tab = tabOf(usePathname());
   const zone = useViewerZone();
   const now = useNow(serverNow);
   const [state, setState] = useState(initial);
-  const [step, setStep] = useState<Step>(() => openEnroll && initial.ready && !usable(initial.face?.status) ? { name: "persetujuan", then: "daftar" } : { name: "ringkas" });
+  const [step, setStep] = useState<Step>(() => initialStep ?? (openEnroll && initial.ready && !usable(initial.face?.status) ? { name: "persetujuan", then: "daftar" } : SUMMARY));
+  const [sheetTitle, setSheetTitle] = useState(() => titleOf(step));
+  const [details, setDetails] = useState<ClockInDetail[]>(initialDetail ? [initialDetail] : []);
+  const [question, setQuestion] = useState<Question | null>(null);
+  /** The running clock-in or enrolment; aborted when its sheet closes, so a late answer does not reopen it. */
+  const [flow, setFlow] = useState(() => new AbortController());
   const [agreed, setAgreed] = useState(false);
   const [place, setPlace] = useState<Place | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
   const [reason, setReason] = useState<Reason>({ kind: "event", text: "" });
   const [reasonPicked, setReasonPicked] = useState(false);
-  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; problem: boolean } | null>(null);
+  const [spoken, setSpoken] = useState("");
+  const [leaving, setLeaving] = useState(false);
+  const [askedDay, setAskedDay] = useState<string | null>(null);
 
   const next = nextKind(state.today);
   const verdict = useMemo(() => (place ? locationVerdict(place, state.offices) : null), [place, state.offices]);
-  const refresh = async () => { try { setState(await loadState()); } catch { /* keep what is shown */ } };
+  const refresh = useCallback(async () => { try { setState(await loadState()); } catch { /* keep what is shown */ } }, []);
+  const tell = useCallback((text: string, problem = false) => { setToast({ text, problem }); setSpoken(text); }, []);
+
+  // Fresh data without a reload: when another place is opened, when the app comes back to the front,
+  // when the device's zone changes (ViewerZone, "wk:zone"), and when the day turns while it is open.
+  const shownTab = useRef(tab);
+  useEffect(() => {
+    if (shownTab.current === tab) return;
+    shownTab.current = tab;
+    if (preview) return;
+    const timer = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timer);
+  }, [tab, refresh, preview]);
+  useEffect(() => {
+    if (preview) return;
+    const visible = () => { if (document.visibilityState === "visible") void refresh(); };
+    const zoneChanged = () => void refresh();
+    document.addEventListener("visibilitychange", visible);
+    window.addEventListener("wk:zone", zoneChanged);
+    return () => { document.removeEventListener("visibilitychange", visible); window.removeEventListener("wk:zone", zoneChanged); };
+  }, [refresh, preview]);
+  useEffect(() => {
+    const day = zoneDate(now, zone);
+    if (preview || day === state.today.workDate || day === askedDay) return;
+    const timer = window.setTimeout(() => { setAskedDay(day); void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [now, zone, state.today.workDate, askedDay, refresh, preview]);
+
+  // History: what a page load finds left over is cleared; ?daftar=1 opens its sheet as a real entry.
+  useEffect(() => {
+    const left = entry();
+    if (left.hrTop || left.hrDetails) window.history.replaceState({ ...window.history.state, hrTop: undefined, hrDetails: undefined }, "");
+    if (openEnroll && initial.ready && !usable(initial.face?.status)) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+      window.history.pushState({ ...window.history.state, hrTop: "sheet" }, "");
+    }
+    // Only on the first load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // The back button: the entry on show says what is open. Coming back puts the scroll and focus where they were.
+  useEffect(() => {
+    const back = () => {
+      const shown = entry();
+      setQuestion(null);
+      if (shown.hrTop !== "sheet") { flow.abort(); setFlow(new AbortController()); setStep(SUMMARY); }
+      setDetails(shown.hrDetails ?? []);
+      window.requestAnimationFrame(() => {
+        if (typeof shown.hrScroll === "number") window.scrollTo(0, shown.hrScroll);
+        if (shown.hrMark) document.querySelector<HTMLElement>(`[data-mark="${shown.hrMark}"]`)?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener("popstate", back);
+    return () => window.removeEventListener("popstate", back);
+  }, [flow]);
+  // Tapping the tab you are on again (HrFrame) goes back to its root.
+  useEffect(() => {
+    const again = () => { const open = entry().hrDetails?.length ?? 0; if (open && entry().hrTop === "detail") window.history.go(-open); };
+    window.addEventListener("hr:tab-again", again);
+    return () => window.removeEventListener("hr:tab-again", again);
+  }, []);
+  useEffect(() => {
+    if (!toast || toast.problem) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const sheetOpen = step.name !== "ringkas";
+  const open = (to: Step, title: string) => {
+    if (!sheetOpen) window.history.pushState({ ...window.history.state, hrTop: "sheet" }, "");
+    setSheetTitle(title); setStep(to);
+  };
+  const close = () => {
+    if (entry().hrTop === "sheet") { window.history.back(); return; }
+    flow.abort(); setFlow(new AbortController()); setStep(SUMMARY);
+  };
+  const shownDetails = details.filter(detail => detail.tab === tab);
+  const push = (to: DetailTarget) => {
+    const stack = [...shownDetails, { ...to, tab }];
+    window.history.replaceState({ ...window.history.state, hrScroll: window.scrollY, hrMark: markOf(to) }, "");
+    window.history.pushState({ ...window.history.state, hrTop: "detail", hrDetails: stack, hrScroll: 0, hrMark: undefined }, "");
+    setDetails(stack);
+    window.scrollTo(0, 0);
+  };
+  const pop = () => { if (entry().hrTop === "detail") window.history.back(); else setDetails(shownDetails.slice(0, -1)); };
 
   const read = async () => {
     setReading(true); setPlaceError(null);
@@ -97,224 +209,215 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", now: serve
     return () => window.clearTimeout(timer);
   });
 
-  /** "Absen masuk" / "Absen pulang": consent and enrolment first when needed, else the location. */
+  /** The main button: consent and enrolment first when needed, else the location. */
   const begin = (kind: DailyKind) => {
     setNotice(null); setAgreed(false); setPlace(null); setPlaceError(null); setReasonPicked(false); setReason({ kind: "event", text: "" });
-    if (!usable(state.face?.status)) setStep({ name: "persetujuan", then: "daftar" });
-    else if (state.face?.status === "siap" && !state.face.consented) setStep({ name: "persetujuan", then: kind });
-    else setStep({ name: "lokasi", kind, consent: null });
+    if (!usable(state.face?.status)) open({ name: "persetujuan", then: "daftar" }, "Daftar wajah");
+    else if (state.face?.status === "siap" && !state.face.consented) open({ name: "persetujuan", then: kind }, absenTitle(kind));
+    else open({ name: "lokasi", kind, consent: null }, absenTitle(kind));
   };
+  const enrolFromProfile = () => { setAgreed(false); setNotice(null); open({ name: "persetujuan", then: "daftar" }, "Daftar wajah"); };
 
   const openCamera = async (kind: DailyKind, consent: string | null) => {
     if (!place) return;
+    const { signal } = flow;
     const outside = verdict?.kind === "di_luar";
-    setStep({ name: "kirim", text: "Menyiapkan absen…" });
+    setStep(sending("Menyiapkan absen…"));
     try {
       const answer = await startClockIn(kind);
-      if (answer.kind === "daftar") { setNotice(answer.message); setStep({ name: "persetujuan", then: "daftar" }); return; }
-      if (answer.kind === "sudah") { await refresh(); setStep({ name: "hasil", title: `Absen ${kindLabels[kind].toLowerCase()} hari ini sudah tercatat`, record: answer.record, note: null, then: null }); return; }
+      if (signal.aborted) return;
+      if (answer.kind === "daftar") { setNotice(answer.message); setSheetTitle("Daftar wajah"); setStep({ name: "persetujuan", then: "daftar" }); return; }
+      if (answer.kind === "sudah") { await refresh(); setStep({ name: "hasil", title: `${absenTitle(kind)} hari ini sudah tercatat`, record: answer.record, note: null, then: null }); return; }
       setStep({ name: "kamera", kind, challenge: answer.challenge, place, reason: outside ? reason : null, consent });
     } catch (error) {
-      setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind, consent } });
+      if (!signal.aborted) setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind, consent } });
     }
   };
 
   const captured = async (current: Extract<Step, { name: "kamera" }>, capture: FaceCapture) => {
-    setStep({ name: "kirim", text: "Mengirim absen…" });
+    const { signal } = flow;
+    setStep(sending("Mengirim absen…"));
     try {
       const { data, message } = await submitClockIn(current.challenge, capture, current.place, current.reason, current.consent);
       await refresh();
+      if (signal.aborted) { tell(message); return; }
       const flags = data.record.flags.map(flag => flagLabels[flag]).join(", ");
+      setSpoken(message);
       setStep({ name: "hasil", title: message, record: data.record, note: data.record.status === "perlu_cek" ? `Perlu dicek Admin HR: ${flags}.` : null, then: null });
     } catch (error) {
-      setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind: current.kind, consent: current.consent } });
+      if (signal.aborted) tell(errorText(error), true);
+      else setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind: current.kind, consent: current.consent } });
     }
   };
 
   const enroll = async (then: DailyKind | null) => {
-    setStep({ name: "kirim", text: "Menyiapkan kamera…" });
-    try { setStep({ name: "daftar", challenge: await startEnroll(), then }); }
-    catch (error) { setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } }); }
+    const { signal } = flow;
+    setStep(sending("Menyiapkan kamera…"));
+    try {
+      const challenge = await startEnroll();
+      if (!signal.aborted) setStep({ name: "daftar", challenge, then });
+    } catch (error) { if (!signal.aborted) setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } }); }
   };
 
   const enrolled = async (current: Extract<Step, { name: "daftar" }>, capture: FaceCapture) => {
-    setStep({ name: "kirim", text: "Menyimpan wajahmu…" });
+    const { signal } = flow;
+    setStep(sending("Menyimpan wajahmu…"));
     try {
       const { data, message } = await submitEnroll(current.challenge, capture, CONSENT_VERSION);
       await refresh();
+      if (signal.aborted) { tell(message); return; }
+      setSpoken(message);
       setStep({ name: "hasil", title: message, record: null, note: data.status === "menunggu" ? "Absenmu tetap bisa dicatat; statusnya \"Perlu dicek\" sampai Admin HR menyetujui wajahmu." : null, then: current.then ?? next });
     } catch (error) {
-      setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } });
+      if (signal.aborted) tell(errorText(error), true);
+      else setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } });
     }
   };
 
-  const withdraw = async () => {
-    setConfirmWithdraw(false);
-    try { setNotice(await withdrawFace()); await refresh(); } catch (error) { setNotice(errorText(error)); }
+  /** The small question's answer: sign out, delete the face data, or withdraw a request. */
+  const answer = async (asked: Question) => {
+    setQuestion(null);
+    if (asked.kind === "keluar") {
+      setLeaving(true);
+      try { await praWamRequest(praWamApi.logout, { method: "POST" }); } catch { /* the cookie may already be gone */ }
+      window.location.assign(hrPath.login());
+      return;
+    }
+    try {
+      tell(asked.kind === "hapus-wajah" ? await withdrawFace() : await cancelRequest(asked.id));
+      await refresh();
+    } catch (error) { tell(errorText(error), true); }
   };
 
-  if (!state.ready) return <section className={styles.panel}>
-    <h1 className={styles.title}>Absen harian</h1>
-    <p className={styles.muted}>{state.waiting ?? "Absen harian belum dibuka."}</p>
-  </section>;
+  /** Each step settles in as its own screen. */
+  const screen = (content: ReactNode) => <div key={step.name} className={styles.enter}>{content}</div>;
 
-  if (step.name === "persetujuan") return <section className={styles.panel} aria-labelledby="persetujuan-judul">
-    <span className={styles.iconTile}><ShieldCheck aria-hidden /></span>
-    <h1 id="persetujuan-judul" className={styles.title}>Persetujuan data wajah</h1>
-    {notice && <p className={styles.muted}>{notice}</p>}
-    <ul className={styles.points}>{consentPoints.map(point => <li key={point}>{point}</li>)}</ul>
-    <label className={styles.agree}><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /> Saya sudah membaca dan setuju.</label>
-    <div className={styles.buttons}>
-      <button type="button" className={styles.main} disabled={!agreed} onClick={() => (step.then === "daftar" ? void enroll(next) : setStep({ name: "lokasi", kind: step.then, consent: CONSENT_VERSION }))}>
+  function stepContent(): ReactNode {
+    if (step.name === "persetujuan") return <section className={styles.stack} aria-labelledby="persetujuan-judul">
+      <div className={app.summary}>
+        <h3 id="persetujuan-judul" className={app.summaryTitle}>Persetujuan data wajah</h3>
+        {notice && <p className={app.lead}>{notice}</p>}
+      </div>
+      <ul className={styles.points}>{consentPoints.map(point => <li key={point}><Check size={16} aria-hidden /><span>{point}</span></li>)}</ul>
+      <label className={styles.agree}><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /> Saya sudah membaca dan setuju.</label>
+      <button type="button" className={app.wide} disabled={!agreed} onClick={() => (step.then === "daftar" ? void enroll(next) : setStep({ name: "lokasi", kind: step.then, consent: CONSENT_VERSION }))}>
         {step.then === "daftar" ? "Setuju, daftarkan wajah" : "Setuju, lanjut absen"}
       </button>
-      <button type="button" className={styles.second} onClick={() => setStep({ name: "ringkas" })}>Nanti saja</button>
-    </div>
-    <p className={styles.small}>Tidak setuju? Absenmu tetap bisa dicatat manual oleh Admin HR.</p>
-  </section>;
-
-  if (step.name === "lokasi") {
-    const outside = verdict?.kind === "di_luar";
-    const reasonOk = !outside || (reasonPicked && (reason.kind !== "lainnya" || reason.text.trim().length >= 3));
-    return <section className={styles.panel} aria-labelledby="lokasi-judul">
-      <span className={styles.iconTile}><MapPin aria-hidden /></span>
-      <h1 id="lokasi-judul" className={styles.title}>Absen {kindLabels[step.kind].toLowerCase()} · lokasi</h1>
-      {reading && <p className={styles.muted} role="status">Membaca lokasi…</p>}
-      {placeError && <p className={styles.problem} role="alert">{placeError}</p>}
-      {verdict?.kind === "di_dalam" && <p className={styles.good}>Di dalam area <strong>{verdict.office.name}</strong> · {distanceLabel(verdict.distanceM)} dari titik kantor</p>}
-      {verdict?.kind === "di_luar" && <>
-        <p className={styles.warn}>
-          {verdict.why === "tidak_akurat" ? `Lokasi kurang akurat (±${distanceLabel(place!.accuracyM)}, perlu ±${MAX_ACCURACY_M} m). Nyalakan GPS atau dekati jendela, lalu baca ulang.`
-            : verdict.why === "tanpa_kantor" ? "Titik kantor belum diatur Admin HR."
-              : `Di luar area kantor · ${distanceLabel(verdict.nearest!.distanceM)} dari ${verdict.nearest!.office.name}.`}
-        </p>
-        <fieldset className={styles.reasons}>
-          <legend>Kamu absen dari mana?</legend>
-          {REASON_KINDS.map(kind => <label key={kind} className={reasonPicked && reason.kind === kind ? styles.reasonOn : styles.reason}>
-            <input type="radio" name="alasan" value={kind} checked={reasonPicked && reason.kind === kind} onChange={() => { setReasonPicked(true); setReason(value => ({ ...value, kind })); }} />
-            {reasonLabels[kind]}
-          </label>)}
-        </fieldset>
-        <label className={styles.field}>
-          <span>Keterangan{reason.kind === "lainnya" ? "" : " (boleh kosong)"}</span>
-          <input type="text" maxLength={300} value={reason.text} placeholder="Mis. nama venue atau klien" onChange={event => setReason(value => ({ ...value, text: event.target.value }))} />
-        </label>
-        <p className={styles.small}>Absen di luar area tetap tercatat, dengan status &quot;Perlu dicek&quot; sampai Admin HR menyetujui.</p>
-      </>}
-      <div className={styles.buttons}>
-        <button type="button" className={styles.main} disabled={!place || reading || !reasonOk} onClick={() => void openCamera(step.kind, step.consent)}><ScanFace size={18} aria-hidden /> Lanjut ke kamera</button>
-        <button type="button" className={styles.second} disabled={reading} onClick={() => { setPlace(null); setPlaceError(null); void read(); }}><RotateCcw size={16} aria-hidden /> Baca ulang lokasi</button>
-        <button type="button" className={styles.second} onClick={() => setStep({ name: "ringkas" })}>Batal</button>
-      </div>
+      <p className={styles.small}>Tidak setuju? Tekan Batal. Absenmu tetap bisa dicatat manual oleh Admin HR.</p>
     </section>;
-  }
 
-  if (step.name === "kamera") return <section className={styles.flowCamera} aria-label={`Absen ${kindLabels[step.kind].toLowerCase()} · wajah`}>
-    <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="absen" onDone={capture => void captured(step, capture)} onCancel={() => setStep({ name: "ringkas" })} />
-  </section>;
-
-  if (step.name === "daftar") return <section className={styles.flowCamera} aria-label="Daftar wajah">
-    <p className={styles.muted}>Daftar wajah, sekali saja. Ikuti petunjuk di bawah kamera.</p>
-    <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="daftar" onDone={capture => void enrolled(step, capture)} onCancel={() => setStep({ name: "ringkas" })} />
-  </section>;
-
-  if (step.name === "kirim") return <section className={styles.panel} aria-busy="true">
-    <span className={styles.spinner} aria-hidden />
-    <p className={styles.muted} role="status">{step.text}</p>
-  </section>;
-
-  if (step.name === "gagal") return <section className={styles.panel}>
-    <p className={styles.problem} role="alert">{step.text}</p>
-    <div className={styles.buttons}>
-      <button type="button" className={styles.main} onClick={() => setStep(step.retry)}><RotateCcw size={18} aria-hidden /> Coba lagi</button>
-      <button type="button" className={styles.second} onClick={() => setStep({ name: "ringkas" })}>Kembali</button>
-    </div>
-  </section>;
-
-  if (step.name === "revisi") {
-    const of = (kind: DailyKind) => state.recent.find(record => record.workDate === step.date && record.kind === kind) ?? null;
-    const waitingKinds = state.requests.filter(request => request.status === "menunggu" && request.workDate === step.date).map(request => request.kind);
-    return <RevisionForm date={step.date} records={{ masuk: of("masuk"), pulang: of("pulang") }} zone={zone} waiting={waitingKinds}
-      onCancel={() => setStep({ name: "ringkas" })}
-      onDone={message => { setNotice(message); void refresh(); setStep({ name: "ringkas" }); }} />;
-  }
-
-  if (step.name === "hasil") return <section className={styles.panel} aria-live="polite">
-    <span className={styles.doneTile}><CheckCircle2 aria-hidden /></span>
-    <h1 className={styles.title}>{step.title}</h1>
-    {step.record && <p className={styles.muted}>{instantLabel(step.record.at, zone)}{zoneSuffix(zone)}{step.record.officeName ? ` · ${step.record.officeName}` : ""}</p>}
-    {step.record?.faceScore != null && <p className={styles.match}><ScanFace size={16} aria-hidden /> Kecocokan wajah {matchPercent(step.record.faceScore)}%</p>}
-    {step.note && <p className={styles.warn}>{step.note}</p>}
-    <div className={styles.buttons}>
-      {step.then && <button type="button" className={styles.main} onClick={() => begin(step.then!)}>Lanjut absen {kindLabels[step.then].toLowerCase()}</button>}
-      <button type="button" className={step.then ? styles.second : styles.main} onClick={() => setStep({ name: "ringkas" })}>Selesai</button>
-    </div>
-  </section>;
-
-  // Ringkasan: a greeting with the clock and one big button for what comes next (where the thumb
-  // rests), today's masuk and pulang, the last two weeks, and the face data.
-  const history = [...new Set(state.recent.map(record => record.workDate))].filter(date => date !== state.today.workDate);
-  return <div className={styles.flow}>
-    <section className={styles.hero} aria-labelledby="sapaan">
-      <div className={styles.heroTop}>
-        <p id="sapaan" className={styles.hello}>{greetingAt(now, zone)}{name ? <>,<br /><strong>{name}</strong></> : null}</p>
-        <span className={styles.zoneChip}>{zone}</span>
-      </div>
-      <p className={styles.clock}><time dateTime={now}>{instantLabel(now, zone)}</time></p>
-      <p className={styles.today}>{dateOf(state.today.workDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
-      {next
-        ? <button type="button" className={styles.bigAction} onClick={() => begin(next)}>
-          <ScanFace aria-hidden />
-          <span>Absen {kindLabels[next].toLowerCase()}</span>
-        </button>
-        : <p className={styles.allDone}><CheckCircle2 aria-hidden /> Absen hari ini lengkap</p>}
-      <p className={styles.heroHint}>{next ? <><MapPin size={14} aria-hidden /> {clockMethodLabels[state.method]} · lokasi dicek saat absen</> : "Terima kasih, sampai jumpa besok."}</p>
-      {next === "masuk" && <button type="button" className={styles.textButton} onClick={() => begin("pulang")}>Lupa absen masuk? Absen pulang</button>}
-    </section>
-
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
-    <div className={styles.slots} aria-label="Absen hari ini"><Slot kind="masuk" record={state.today.masuk} /><Slot kind="pulang" record={state.today.pulang} /></div>
-    <button type="button" className={styles.textButton} onClick={() => setStep({ name: "revisi", date: state.today.workDate })}><FilePen size={16} aria-hidden /> Ada yang salah hari ini? Ajukan revisi</button>
-
-    {history.length > 0 && <section className={styles.panel} aria-labelledby="riwayat">
-      <h2 id="riwayat" className={styles.subtitle}><History size={18} aria-hidden /> Riwayat sebulan</h2>
-      <ul className={styles.history}>
-        {history.map(date => {
-          const of = (kind: DailyKind) => state.recent.find(record => record.workDate === date && record.kind === kind);
-          const masuk = of("masuk"), pulang = of("pulang");
-          const waiting = [masuk, pulang].find(record => record && record.status !== "sah");
-          return <li key={date}>
-            <span className={styles.histDay}><strong>{dateOf(date, { weekday: "short" })}</strong><small>{dateOf(date, { day: "numeric", month: "short" })}</small></span>
-            <span className={styles.histTimes}>
-              <span><LogIn size={14} aria-label="Masuk" />{masuk ? instantLabel(masuk.at, zone) : "—"}</span>
-              <span><LogOut size={14} aria-label="Pulang" />{pulang ? instantLabel(pulang.at, zone) : "—"}</span>
+    if (step.name === "lokasi") {
+      const outside = verdict?.kind === "di_luar";
+      const reasonOk = !outside || (reasonPicked && (reason.kind !== "lainnya" || reason.text.trim().length >= 3));
+      const tone = placeError ? "error" : !verdict ? "wait" : verdict.kind === "di_dalam" ? "in" : "out";
+      return <section className={styles.stack} aria-label="Lokasi">
+        {placeError
+          ? <div key="salah" className={styles.place} data-tone="error" role="alert">
+            <span className={styles.placeIcon} aria-hidden><MapPin size={22} /></span>
+            <span className={styles.placeText}><strong>Lokasi belum terbaca</strong><span>{placeError}</span></span>
+          </div>
+          : <div key="lokasi" className={styles.place} data-tone={tone} role="status">
+            <span className={styles.placeIcon} aria-hidden>{tone === "wait" ? <span className={styles.spinner} /> : <MapPin size={22} />}</span>
+            <span className={styles.placeText}>
+              {tone === "wait" && <><strong>Membaca lokasi…</strong><span>Tunggu sebentar. Nyalakan GPS bila belum.</span></>}
+              {verdict?.kind === "di_dalam" && <><strong>Di dalam area {verdict.office.name}</strong><span>{distanceLabel(verdict.distanceM)} dari titik kantor</span></>}
+              {verdict?.kind === "di_luar" && <><strong>{verdict.why === "tidak_akurat" ? "Lokasi kurang akurat" : verdict.why === "tanpa_kantor" ? "Belum ada titik kantor" : "Di luar area kantor"}</strong>
+                <span>{verdict.why === "tidak_akurat" ? `±${distanceLabel(place!.accuracyM)}, perlu ±${MAX_ACCURACY_M} m. Dekati jendela, lalu baca ulang.`
+                  : verdict.why === "tanpa_kantor" ? "Admin HR belum mengatur titik kantor."
+                    : `${distanceLabel(verdict.nearest!.distanceM)} dari ${verdict.nearest!.office.name}`}</span></>}
             </span>
-            {waiting ? <StatusChip record={waiting} /> : <span className={styles.histOk}><CheckCircle2 size={16} aria-label="Sah" /></span>}
-            <button type="button" className={styles.histRevise} aria-label={`Ajukan revisi ${dateOf(date, { weekday: "long", day: "numeric", month: "long" })}`} onClick={() => setStep({ name: "revisi", date })}><FilePen size={16} aria-hidden /></button>
-          </li>;
-        })}
-      </ul>
-    </section>}
+          </div>}
+        {outside && <>
+          <Choices label="Kamu absen dari mana?" name="alasan" value={reasonPicked ? reason.kind : null}
+            onChange={kind => { setReasonPicked(true); setReason(value => ({ ...value, kind })); }}
+            options={REASON_KINDS.map(kind => ({ value: kind, label: reasonLabels[kind] }))} />
+          <label className={styles.field}>
+            <span>Keterangan{reason.kind === "lainnya" ? "" : " (boleh kosong)"}</span>
+            <input type="text" maxLength={300} value={reason.text} placeholder="Mis. nama venue atau klien" onChange={event => setReason(value => ({ ...value, text: event.target.value }))} />
+          </label>
+          <p className={styles.small}>Absen di luar area tetap tercatat, dengan status Perlu dicek sampai Admin HR menyetujui.</p>
+        </>}
+        {placeError
+          ? <button type="button" className={app.wide} onClick={() => { setPlaceError(null); void read(); }}><RotateCcw size={18} aria-hidden /> Baca ulang lokasi</button>
+          : <>
+            <button type="button" className={app.wide} disabled={!place || reading || !reasonOk} onClick={() => void openCamera(step.kind, step.consent)}><ScanFace size={20} aria-hidden /> Lanjut ke kamera</button>
+            <button type="button" className={app.quiet} disabled={reading} onClick={() => { setPlace(null); setPlaceError(null); void read(); }}><RotateCcw size={14} aria-hidden /> Baca ulang lokasi</button>
+          </>}
+      </section>;
+    }
 
-    <MyRequests requests={state.requests} onChanged={message => { setNotice(message); void refresh(); }} />
+    if (step.name === "kamera") return <section className={styles.flowCamera} aria-label={`${absenTitle(step.kind)} · wajah`}>
+      <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="absen" onDone={capture => void captured(step, capture)} />
+    </section>;
 
-    <section id="data-wajah" className={styles.panel} aria-labelledby="wajah">
-      <div className={styles.faceRow}>
-        <span className={styles.iconTile}><ShieldCheck aria-hidden /></span>
-        <span className={styles.faceText}>
-          <h2 id="wajah" className={styles.subtitle}>Data wajah</h2>
-          <span className={styles.muted}>{state.face ? faceStatusLabels[state.face.status] : "Belum terdaftar"}{state.face?.source === "greatday" && state.face.status === "siap" ? " (dari foto GreatDay)" : ""}</span>
-        </span>
-        {!usable(state.face?.status) && <button type="button" className={styles.chipButton} onClick={() => { setAgreed(false); setStep({ name: "persetujuan", then: "daftar" }); }}>Daftar <ChevronRight size={16} aria-hidden /></button>}
-      </div>
-      {state.face?.consented && !confirmWithdraw && <button type="button" className={styles.textButton} onClick={() => setConfirmWithdraw(true)}>Hapus data wajah</button>}
-      {confirmWithdraw && <div className={styles.confirm} role="alertdialog" aria-label="Hapus data wajah">
-        <p>Wajah acuan dan semua selfie absenmu akan dihapus. Absen berikutnya dicatat Admin HR secara manual, sampai kamu daftar wajah lagi.</p>
-        <div className={styles.buttons}>
-          <button type="button" className={styles.danger} onClick={() => void withdraw()}>Ya, hapus</button>
-          <button type="button" className={styles.second} onClick={() => setConfirmWithdraw(false)}>Batal</button>
-        </div>
-      </div>}
-    </section>
-  </div>;
+    if (step.name === "daftar") return <section className={styles.flowCamera} aria-label="Daftar wajah">
+      <p className={styles.small}>Sekali saja. Ikuti petunjuk di bawah kamera.</p>
+      <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="daftar" onDone={capture => void enrolled(step, capture)} />
+    </section>;
+
+    if (step.name === "kirim") return <section className={styles.waiting}>
+      <span className={styles.spinner} aria-hidden />
+      <p className={styles.small}>{step.text}</p>
+      {Date.parse(now) - step.since > SLOW_MS && <p className={styles.small}>Masih menunggu jawaban. Periksa sinyal, atau tekan Batal lalu coba lagi.</p>}
+    </section>;
+
+    if (step.name === "gagal") return <section className={styles.stack}>
+      <div className={styles.place} data-tone="error" role="alert"><span className={styles.placeText}><strong>Belum berhasil</strong><span>{step.text}</span></span></div>
+      <button type="button" className={app.wide} onClick={() => setStep(step.retry)}><RotateCcw size={18} aria-hidden /> Coba lagi</button>
+    </section>;
+
+    if (step.name === "hasil") {
+      const check = step.record && step.record.status !== "sah";
+      return <section className={styles.result}>
+        <span className={styles.resultMark} data-tone={check ? "cek" : undefined} aria-hidden>{check ? <Clock3 size={32} strokeWidth={2.4} /> : <Check size={34} strokeWidth={2.6} />}</span>
+        <h3 className={app.summaryTitle}>{asTitle(step.title)}</h3>
+        {step.record && <p className={app.lead}>{instantLabel(step.record.at, zone)}{zoneSuffix(zone)}{step.record.officeName ? ` · ${step.record.officeName}` : ""}</p>}
+        {step.record?.faceScore != null && <MatchMeter score={step.record.faceScore} />}
+        {step.note && <p className={styles.warn}>{step.note}</p>}
+        {step.then && <button type="button" className={app.wide} onClick={() => begin(step.then!)}>Lanjut {absenTitle(step.then).toLowerCase()}</button>}
+        <button type="button" className={step.then ? app.quiet : app.wide} onClick={close}>Selesai</button>
+      </section>;
+    }
+    return null;
+  }
+
+  function detailScreen(detail: ClockInDetail): ReactNode {
+    if (detail.kind === "hari") return <DayDetail state={state} date={detail.date} zone={zone} onBack={pop}
+      onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} onRequest={id => push({ kind: "pengajuan", id })} />;
+    if (detail.kind === "pengajuan") {
+      const request = state.requests.find(item => item.id === detail.id);
+      return request
+        ? <RequestDetail request={request} zone={zone} onBack={pop} onCancel={() => setQuestion({ kind: "batal-pengajuan", id: request.id })} />
+        : <Detail title="Revisi" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 31 hari.</Empty></Detail>;
+    }
+    if (detail.kind === "wajah") return <FaceDetail state={state} onBack={pop} onEnroll={enrolFromProfile} onWithdraw={() => setQuestion({ kind: "hapus-wajah" })} />;
+    return <OfficesDetail state={state} onBack={pop} />;
+  }
+
+  function root(): ReactNode {
+    if (tab === "riwayat") return <HistoryScreen state={state} zone={zone} onDay={date => push({ kind: "hari", date })} />;
+    if (tab === "pengajuan") return <RequestsScreen state={state} onNew={() => open({ name: "revisi" }, "Ajukan revisi")} onOpen={id => push({ kind: "pengajuan", id })} />;
+    if (tab === "profil") return <ProfileScreen state={state} fullName={fullName || name} zone={zone}
+      onFace={() => push({ kind: "wajah" })} onOffices={() => push({ kind: "kantor" })} onSignOut={() => setQuestion({ kind: "keluar" })} />;
+    return <HomeScreen state={state} now={now} zone={zone} name={name} onClock={begin}
+      onDay={date => push({ kind: "hari", date })} onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} />;
+  }
+
+  const current = shownDetails.at(-1) ?? null;
+  const slow = step.name === "kirim" && Date.parse(now) - step.since > SLOW_MS;
+  return <>
+    {/* The tab root stays under its detail screens, so coming back finds its filter and place as they were. */}
+    <div key={tab} hidden={Boolean(current)}>{root()}</div>
+    {current && <div key={detailKey(current)}>{detailScreen(current)}</div>}
+    {step.name === "revisi"
+      ? <RevisionSheet today={state.today.workDate} initialDate={step.date} recent={state.recent} requests={state.requests} zone={zone}
+        onCancel={close} onDone={message => { tell(message); void refresh(); close(); }} />
+      : sheetOpen && <Sheet title={sheetTitle} step={step.name} lead={(step.name === "kirim" && !slow) || step.name === "hasil" ? null : { kind: "cancel", onClick: close }}>{screen(stepContent())}</Sheet>}
+    {question && <Ask
+      title={question.kind === "keluar" ? "Keluar dari WG People?" : question.kind === "hapus-wajah" ? "Hapus data wajah?" : "Batalkan pengajuan ini?"}
+      message={question.kind === "keluar" ? "Masuk lagi dengan email dan password akun WAM-mu." : question.kind === "hapus-wajah" ? "Wajah acuan dan semua selfie absenmu dihapus. Absen berikutnya dicatat Admin HR secara manual sampai kamu daftar lagi." : "Admin HR tidak akan memeriksanya lagi."}
+      action={question.kind === "keluar" ? (leaving ? "Keluar…" : "Keluar") : question.kind === "hapus-wajah" ? "Hapus" : "Batalkan pengajuan"} danger
+      onAction={() => void answer(question)} onCancel={() => setQuestion(null)} />}
+    <Notices spoken={spoken} toast={toast} onClose={() => setToast(null)} />
+  </>;
 }

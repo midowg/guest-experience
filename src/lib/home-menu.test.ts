@@ -24,7 +24,7 @@ describe("the front page's app menu", () => {
     expect(homeMenuSchema.safeParse(defaultHomeMenu.map(item => ({ ...item, shown: false }))).success).toBe(false);
   });
 
-  it("accepts only the six apps (HR Werkudara since 20 Nov 2026), each once, with a colour", () => {
+  it("accepts only the six apps (WG People since 20 Nov 2026), each once, with a colour", () => {
     expect(homeMenuSchema.safeParse(defaultHomeMenu).success).toBe(true);
     expect(homeMenuSchema.safeParse([...defaultHomeMenu.slice(0, 5), defaultHomeMenu[0]]).success).toBe(false);
     expect(homeMenuSchema.safeParse(defaultHomeMenu.map((item, index) => index ? item : { ...item, tone: "blue" })).success).toBe(false);

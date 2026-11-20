@@ -104,6 +104,8 @@ export function FaceCamera({ steps, purpose, onDone, onCancel }: Props) {
       if (steps.length && !challengeDone(steps, state.signals)) return fail("Gerakannya belum terbaca. Ulangi dan ikuti petunjuknya.");
       let selfie: { blob: Blob; mime: PhotoMime };
       try { selfie = await selfieOf(element, box); } catch { return fail("Foto belum bisa disimpan. Coba lagi."); }
+      // Closed (Batal, the back button) while the photo was being made: nothing is sent.
+      if (stopped) return;
       stopped = true; stopCamera();
       done.current({ embedding: average(state.captures), frameEmbeddings: state.captures, signals: state.signals, steps, selfie });
     };
@@ -194,11 +196,12 @@ export function FaceCamera({ steps, purpose, onDone, onCancel }: Props) {
       </svg>
       {phase === "memuat" && <div className={styles.loading}><span className={styles.spinner} aria-hidden />Menyiapkan kamera dan pengenal wajah…</div>}
     </div>
-    <ol className={styles.steps} aria-label={`Langkah ${Math.min(stepIndex + 1, steps.length)} dari ${steps.length}`}>
+    {steps.length > 0 && <ol className={styles.steps} aria-label={`Langkah ${Math.min(stepIndex + 1, steps.length)} dari ${steps.length}`}>
       {steps.map((step, index) => <li key={step} className={`${styles.step} ${index < stepIndex ? styles.stepDone : index === stepIndex && phase === "langkah" ? styles.stepNow : ""}`} />)}
-    </ol>
+    </ol>}
     <p className={styles.prompt} aria-live="polite">{prompt}</p>
-    <p className={styles.hint}>{phase === "gagal" ? "" : hint}</p>
+    {/* The oval turning green is said in words too. */}
+    <p className={styles.hint} aria-live="polite">{phase === "gagal" || phase === "memuat" || phase === "proses" ? "" : hint ?? (placed ? "Posisi pas. Tahan sebentar." : "")}</p>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <div className={styles.actions}>
       {phase === "gagal" && <button type="button" className={styles.primary} onClick={retry}><RotateCcw size={18} aria-hidden /> Coba lagi</button>}

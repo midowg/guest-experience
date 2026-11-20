@@ -58,8 +58,8 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       open: { label: "Buka WAM 2026", href: mainWamPath.home }, manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
     },
     {
-      // HR Werkudara (20 Nov 2026): the employees' HR app, managed in Admin HR (/admin/hr).
-      key: "hr", name: "HR Werkudara", eyebrow: "Aplikasi HR karyawan",
+      // WG People (20 Nov 2026): the employees' HR app, managed in Admin HR (/admin/hr).
+      key: "hr", name: "WG People", eyebrow: "Aplikasi HR karyawan",
       status: hrWaiting ? `${hrWaiting} absen perlu dicek` : "Absensi wajah dan titik kantor",
       address: HR_PATH,
       description: "Karyawan absen masuk dan pulang dari HP dengan wajah dan titik kantor. Admin HR memeriksa absen yang perlu dicek, wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",

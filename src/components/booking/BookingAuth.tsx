@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Circle, Eye, EyeOff, ScanFace } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Circle, Eye, EyeOff } from "lucide-react";
 import { errorText, PraWamApiError, praWamRequest } from "@/components/pra-wam/api";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { bookingPath, hrPath, praWamApi } from "@/lib/routes";
+import { WgMark } from "@/components/hr/WgMark";
 import css from "./booking.module.css";
 
 /*
@@ -17,13 +18,13 @@ import css from "./booking.module.css";
  */
 
 /*
- * HR Werkudara (/hr, 20 Nov 2026) signs in the same way with its own name, mark and addresses
+ * WG People (/hr, 20 Nov 2026) signs in the same way with its own name, mark and addresses
  * (and its own colour, set by the page around these); `app` picks which.
  */
 export type AuthApp = "booking" | "hr";
 const apps = {
   booking: { name: "Booking Kantor", Mark: CalendarClock, home: bookingPath.home, login: bookingPath.login, forgot: bookingPath.forgot, newPassword: bookingPath.newPassword },
-  hr: { name: "HR Werkudara", Mark: ScanFace, home: hrPath.home, login: hrPath.login, forgot: hrPath.forgot, newPassword: hrPath.newPassword },
+  hr: { name: "WG People", Mark: WgMark, home: hrPath.home, login: hrPath.login, forgot: hrPath.forgot, newPassword: hrPath.newPassword },
 } as const;
 
 /** The card every sign-in page sits on, with the app's mark and name. */

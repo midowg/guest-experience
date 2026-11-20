@@ -74,11 +74,11 @@ export const flagLabels: Record<DailyFlag, string> = {
  */
 export const CONSENT_VERSION = "2026-11-20";
 export const consentPoints = [
-  "Untuk absensi, HR Werkudara memakai wajahmu (foto acuan dan selfie setiap absen) dan lokasi HP-mu saat absen.",
+  "Untuk absensi, WG People memakai wajahmu (foto acuan dan selfie setiap absen) dan lokasi HP-mu saat absen.",
   "Wajahmu dicocokkan di HP-mu sendiri; server hanya menyimpan angka ciri wajah (bukan untuk tujuan lain) dan foto acuan.",
   "Selfie setiap absen disimpan sebagai bukti. Admin HR menghapus selfie yang sudah lebih dari 90 hari. Hanya Admin HR yang bisa melihatnya.",
   "Foto acuan awal diambil dari foto dasar absen GreatDay HR; kamu bisa menggantinya dengan daftar ulang.",
-  "Kamu bisa menarik persetujuan kapan saja di HR Werkudara → Data wajah. Data wajahmu dihapus, dan absenmu dicatat Admin HR secara manual.",
+  "Kamu bisa menarik persetujuan kapan saja di WG People → Profil → Data wajah. Data wajahmu dihapus, dan absenmu dicatat Admin HR secara manual.",
 ] as const;
 
 /** How long a clock-in's challenge may be answered. */
