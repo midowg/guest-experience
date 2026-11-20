@@ -178,7 +178,7 @@ sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek S
 
 ### 4.2 Tipe (`src/lib/main-wam/types.ts`)
 
-`MainWamMode`, `MainWamModule` (`absen voting silent survei mozaik karbon`), `ModuleSwitches`,
+`MainWamMode`, `MainWamModule` (`absen voting silent survei mozaik karbon kuis`), `ModuleSwitches`,
 `ModuleConfig`, `MainWamThemeSettings`, `MainWamThemeInput` (yang diterima `<MainWamTheme>`),
 `THEME_IMAGE_SLOTS` (`splash homeHeader pattern mosaic icon`), `MainWamEventInfo`, `MainWamContacts`,
 `CarbonInputs`, `MainWamSettings`, `MainWamRole`, `MainWamViewer` (`id`, `name` = nama panggilan,
@@ -276,6 +276,7 @@ Setiap agen hanya menulis di foldernya. Placeholder fondasi (bertanda `PLACEHOLD
 | **C panitia + BOD** | K01 (hub tab Panitia), K02, K03, K05, K06, K08, B01 (kartu Ringkasan), B02 | `src/app/wam/acara/(app)/{kelola,kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan/kehadiran}/**`, `src/components/main-wam/panitia/**`, `src/lib/main-wam/panitia/**` (mis. hitung Jejak karbon), `src/lib/server/main-wam/panitia/**`, `src/app/api/wam/acara/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan}/**`, `src/app/dev-preview/main-wam/panitia/**` | `0301–0399` | `main-wam-panitia-check.sql` |
 | **D modul** | A01–A05, T01–T03, V01–V02, B05, B06, aksi modul di P04, admin Awarding + Silent Meeting | `src/app/wam/acara/(app)/{absen,silent-meeting,awarding,ringkasan/silent-meeting,ringkasan/awarding}/**`, `src/components/main-wam/modul/**`, `src/lib/main-wam/modul/**`, `src/lib/server/main-wam/modul/**`, `src/app/api/wam/acara/{absen,silent-meeting,awarding,kelola/qr}/**`, `src/app/admin/wam/main/{awarding,silent-meeting}/**`, `src/components/admin/wam/main-wam/modul/**`, `src/app/api/admin/wam/main/{awarding,silent-meeting}/**`, `src/app/dev-preview/main-wam/modul/**` | `0401–0499` | `main-wam-modul-check.sql` |
 | **E Admin WAM konten** | Admin: Rundown, Kamar (lantai), Perjalanan (+ kursi), Panduan (+ berkas), info acara (hotel, check-in/out, kontak, tagihan hotel) | `src/app/admin/wam/main/{rundown,kamar,perjalanan,panduan,info-acara}/**`, `src/components/admin/wam/main-wam/isi/**`, `src/lib/main-wam/admin/**`, `src/lib/server/main-wam/admin/**`, `src/app/api/admin/wam/main/{sesi,kelompok,kelompok-kegiatan,kamar,perjalanan,panduan,info-acara}/**`, `src/app/dev-preview/main-wam/admin/**` | `0501–0599` | `main-wam-admin-check.sql` |
+| **F Kuis live** (20 Nov 2026) | kuis HP, kendali MC, layar besar, Admin WAM → Kuis live, kartu Beranda (slot `kuis`) | `src/app/wam/acara/(app)/kuis/**`, `src/app/kuis/**`, `src/components/main-wam/kuis/**`, `src/lib/main-wam/kuis/**`, `src/lib/server/main-wam/kuis/**`, `src/app/api/wam/acara/kuis/**`, `src/app/api/kuis/**`, `src/app/admin/wam/main/kuis/**`, `src/components/admin/wam/main-wam/kuis/**`, `src/app/api/admin/wam/main/kuis/**`, `src/app/dev-preview/main-wam/kuis/**` | `0601–0699` | `main-wam-kuis-check.sql` |
 | fondasi | gate, layout, pengaturan, tema KV | lihat §1 | `0001–0099` | `main-wam-check.sql` |
 
 **Slot lintas area** (sudah dibuat, berisi `return null`). Slot `BerandaPanitia` dihapus 18 Nov (keputusan 20): kartu panitia pindah ke hub tab Panitia (`PanitiaHub`).:
@@ -483,6 +484,10 @@ milik D), tanpa mengimpor kode area lain.
   - Cloudflare menghapus objek biasanya dalam 24 jam setelah umurnya lewat, jadi unggahan yatim hidup paling lama
     ±2 hari. Prefiks `tmp/` boleh dipakai fitur lain untuk unggahan sementara.
   - Tanpa aturan ini Momen tetap berjalan, hanya unggahan yatim tidak pernah terhapus (audit L4).
+- **Kuis live: polling yang lebih murah.** Setiap polling HP menjalankan gerbang penuh (6 kueri) ditambah 1–4 kueri
+  kuis; 120 HP × 1 polling per 1,5 detik ≈ 560 kueri per detik saat soal berjalan. Belum diuji beban. Pilihan bila
+  terlalu berat: cache pengaturan dan peran lintas permintaan (TTL beberapa detik), tiket bermain bertanda tangan
+  setelah Ikut, atau Supabase Realtime Broadcast sebagai tanda (rancangan §8).
 - **Uji SQL lama yang gagal** (bukan Main WAM, juga gagal tanpa migrasi Main WAM): `pra-wam-appraisal`,
   `pw-tv`, `pw-tv-playlist`, `pw-tv-welcome`, `rsvp-needs`, `wam-cards`, `wam-questionnaire`.
 
@@ -561,3 +566,34 @@ Tujuan: pemilik bisa melihat SEMUA layar Main WAM di HP dengan data contoh sebel
   - data panitia yang menyebut nama orang (Moderasi, pengumuman terkirim, daftar hadir per sesi) untuk peran semu tanpa hak asli: **contoh saja**, tanpa satu pun query nyata (`sampleOnlyFor`). Angka agregat (Ringkasan BOD, Kehadiran, Perlu perhatian) tetap membaca data agregat nyata dengan cadangan contoh.
 - **Tes:** `demo.test.ts` (bendera, peran efektif, jam contoh), `server/demo-server.test.ts` (pengaturan, peran, cadangan, data nyata tetap nyata), `server/demo-gate.test.ts` (gate, tulis diblokir, tanpa demo = lama), `components/main-wam/demo/demo.dom.test.tsx` (pengalih, banner), `MainWamSettings.dom.test.tsx` (sakelar, kartu "Siapa panitia?").
 - **Dipakai:** nyalakan sakelar, buka Saya → "Mode demo" → pilih peran. **Matikan sebelum acara** (sebelum mode "semua").
+
+## 13. Kuis live (modul `kuis`, 20 Nov 2026)
+
+Kuis pilihan ganda yang dimainkan bersama saat sesi WAM: soal di layar besar dan di HP, peserta menjawab sebagai
+tokohnya. Produk: `docs/rancangan-kuis-wam.md` (§8a = yang dibangun). Agen F; migrasi `202611200601_main_wam_kuis.sql`.
+
+- **Modul** `kuis` di `mw_settings.modules`, bawaannya mati. Modul mati: halaman dan API 404, tanpa kartu, layar besar
+  "tidak ditemukan". Mode demo menyalakannya seperti modul lain, tetapi tanpa kuis contoh (kartu hanya untuk permainan
+  nyata); selama rundown contoh dipakai, Ikut, jawaban, dan aksi MC ditolak seperti semua penyimpanan (§12).
+- **Gerbang:** halaman `requireModulePage("kuis", …)`, API `requireModuleApi("kuis")`. Pemain = semua yang boleh melihat
+  Main WAM (BOD juga). Pengendali = `mw_quiz_hosts` per kuis atau peran Admin WAM; selain itu kendali 404 (§9 #19).
+  Peran panitia saja tidak cukup.
+- **Layar besar** `/kuis/{kunci}` dan `/api/kuis/{kunci}`: publik seperti TV kantor, di luar `/wam` (tanpa sesi, tanpa
+  service worker), kunci acak `kuis_` + 32 byte, hanya sha256 yang disimpan, noindex dan no-referrer, hidup hanya saat
+  modul menyala. Tema Main WAM gelap (`<MainWamTheme mode="dark">`), kanvas 1920 × 1080 yang diskalakan.
+- **Rahasia sampai jam buka:** kunci jawaban, sebaran, dan skor sebuah soal hanya keluar dari server setelah
+  `answerOpen` (jam buka soal + waktu soal + 2 detik, jeda tidak dihitung). Pembangun potret keadaan murni di
+  `src/lib/main-wam/kuis/snapshot.ts` (dites). Nama asli hanya di podium layar besar untuk tempat yang sudah dibuka MC.
+- **Notifikasi** "Kuis dimulai" saat MC membuka lobi: `trySendMainWamNote` jenis `kuis` (baru di `NOTE_KINDS` dan
+  `mw_notes.kind`), topik push `pengumuman` yang sudah ada (`notePushTopic`), tanpa topik baru, dikirim setelah balasan
+  (`after`).
+- **Polling**, bukan Realtime: 1,5 detik selama permainan (lebih jarang saat diam) + satu permintaan tepat saat jawaban
+  dibuka; HP mengirim versi (`?v=`), yang tidak berubah dijawab jamnya saja. Kueri per polling HP: gerbang (6) + 1
+  (tidak berubah; 2 di lobi) sampai 4 (saat jawaban dibuka). Gerbang yang lebih murah untuk polling ini belum ada (§10).
+- **Berkas bersama yang diubah agen F** (aturan emas 1): `types.ts` (`MAIN_WAM_MODULES` + `kuis`, `NOTE_KINDS` + `kuis`),
+  `modules.ts`, `screen.ts` (layar tugas `/kuis/{id}` dan `/kuis/{id}/kendali`), `notify.ts`, `routes.ts` (`mainWamPath.quiz`,
+  `quizControl`, `mainWamApi.quiz*`, `mainWamAdminPath.quizzes/quiz`, `mainWamAdminApi.quiz*`, `kuisScreenPath/Api`),
+  `sections.ts` + `tabs.ts` (tab Kuis live di Modul acara), `theme.module.css` (token `--mw-kuis-a…d`, `--mw-on-kuis`,
+  `--mw-kuis-medal-1…3`, `--mw-kuis-win-container`, `--mw-on-kuis-medal`), Beranda (`BerandaScreen` slot `kuis` di atas
+  Sekarang, dipasang di `(app)/page.tsx`), N01 (ikon dan kata jenis `kuis`), `sample.ts` (modul contoh menyala).
+- **Pratinjau:** `/dev-preview/main-wam/kuis?layar=hp-…|kendali-…|layar-…` (lihat berkasnya), `/dev-preview/main-wam/kuis/admin`.
