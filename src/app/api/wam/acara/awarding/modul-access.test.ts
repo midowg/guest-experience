@@ -110,11 +110,11 @@ describe("agen D's participant APIs", () => {
     expect(await statuses()).toEqual({ absen: 200, qrGet: 404, qrNew: 404, silent: 200, opened: 200, feedback: 200, control: 404, recap: 404, awards: 200, vote: 200, approve: 404 });
   });
 
-  it("let panitia open or close Silent Meeting and handle the session's QR", async () => {
+  it("let Panitia WAM open or close Silent Meeting and handle the session's QR (not Pra WAM's admin role, 20 Nov 2026)", async () => {
     state.viewer = person(["panitia"]);
     expect(await statuses(["control", "qrGet", "qrNew", "recap", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, recap: 404, approve: 404 });
     state.viewer = person(["admin"]);
-    expect(await statuses(["control", "qrGet"])).toEqual({ control: 200, qrGet: 200 });
+    expect(await statuses(["control", "qrGet"])).toEqual({ control: 404, qrGet: 404 });
   });
 
   it("let the BOD read the recap and approve, but not vote, send feedback or count as an opener", async () => {

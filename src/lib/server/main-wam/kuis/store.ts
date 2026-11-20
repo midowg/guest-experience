@@ -6,6 +6,7 @@ import { callName } from "@/lib/pra-wam/call-name";
 import { ServiceError } from "../../config";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing, mwWaiting } from "../errors";
+import { holdsWamAcara } from "../staff";
 
 /*
  * Kuis live's reads and writes (migration 202611200601). Every caller has passed the gate (phones and
@@ -168,9 +169,12 @@ export async function callNames(ids: readonly string[]): Promise<Map<string, str
   return new Map(((data ?? []) as { id: string; full_name: string; nickname: string | null }[]).map(row => [row.id, callName({ fullName: row.full_name, nickname: row.nickname })]));
 }
 
-/** May this person run this quiz: a pengendali chosen for it, or Admin WAM (the role). Panitia alone is not. */
-export async function isQuizHost(quizId: string, viewer: { id: string; roles: readonly string[] }): Promise<boolean> {
-  if (viewer.roles.includes("admin")) return true;
+/**
+ * May this person run this quiz: a pengendali chosen for it, or a holder of Admin WAM 2027 (with their WAM
+ * account; holdsWamAcara). Panitia WAM alone is not, nor Pra WAM's admin role (20 Nov 2026).
+ */
+export async function isQuizHost(quizId: string, viewer: { id: string }): Promise<boolean> {
+  if (await holdsWamAcara(viewer.id)) return true;
   const { data, error } = await db().from("mw_quiz_hosts").select("employee_id").eq("quiz_id", quizId).eq("employee_id", viewer.id).maybeSingle();
   if (error) { if (mwMissing(error)) return false; mwFail(error, KUIS_MIGRATION); }
   return !!data;

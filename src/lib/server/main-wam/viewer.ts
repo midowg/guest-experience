@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { isTester } from "@/lib/main-wam/access";
+import { isTester, mainWamRolesOf } from "@/lib/main-wam/access";
 import { demoViewer } from "@/lib/main-wam/demo";
 import type { MainWamSettings, MainWamViewer, ViewerGroup, ViewerRoom } from "@/lib/main-wam/types";
 import { callName } from "@/lib/pra-wam/call-name";
@@ -10,10 +10,12 @@ import { currentForm } from "../pra-wam/questionnaire";
 import { demoPlaceFor, readDemoRole } from "./demo";
 import { mainWamPeople } from "./people";
 import { readMainWamSettings, testerIds } from "./settings";
+import { wamStaffIds } from "./staff";
 
 /*
  * The signed-in person as Main WAM sees them: who (nama panggilan for colleagues, full name for
- * Profil), roles, whether they test Main WAM, and their kelompok (once published). This is what
+ * Profil), Main WAM's roles (BOD from the account, panitia from Panitia WAM; 20 Nov 2026, never Pra
+ * WAM's committee or admin role), whether they test Main WAM, and their kelompok (once published). This is what
  * the gate reads on every page, API and prefetch, so it stays light (audit S5): the room (HR's
  * pairing) is read only by the screens that show it (viewerRoom). Read once per request. Every part
  * fails soft: a missing migration or a hiccup leaves that part null, never the page.
@@ -83,27 +85,29 @@ async function roomOf(employeeId: string): Promise<ViewerRoom | null> {
 export const viewerRoom = cache(roomOf);
 
 /** Main WAM's view of a WAM member (the session is WAM's: same cookie, same checks); `room` is left null. */
-export async function viewerOf(member: Member, listed: Promise<Set<string>> = testerIds(), settings: Promise<MainWamSettings> = readMainWamSettings()): Promise<MainWamViewer> {
-  const [onList, group, read] = await Promise.all([
+export async function viewerOf(member: Member, listed: Promise<Set<string>> = testerIds(), settings: Promise<MainWamSettings> = readMainWamSettings(), staff: Promise<Set<string>> = wamStaffIds()): Promise<MainWamViewer> {
+  const [onList, onStaff, group, read] = await Promise.all([
     listed.then(ids => ids.has(member.id)).catch(() => false),
+    staff.then(ids => ids.has(member.id)).catch(() => false),
     groupOf(member.id, settings).catch(() => null),
     settings.catch(() => null),
   ]);
+  const roles = mainWamRolesOf(member.roles, onStaff);
   const base: MainWamViewer = {
     id: member.id,
     name: callName({ fullName: member.name, nickname: member.nickname }),
     fullName: member.name,
     department: member.department,
     photo: member.photo,
-    roles: member.roles,
-    tester: isTester(member, onList),
+    roles,
+    tester: isTester({ roles }, onList),
     group, room: null,
   };
   if (!read?.moduleConfig.demo) return base;
   // Mode demo: a penguji may be drawn as another role (the cookie from "Lihat sebagai"); everyone gets a
   // sample group while they have none. Their account's real roles stay in `demo.realRoles`, which the gate and the writers go by.
-  const { roles, demo } = demoViewer({ roles: base.roles, tester: base.tester }, base.tester ? await readDemoRole() : null);
-  const drawn = { ...base, roles, demo };
+  const shown = demoViewer({ roles: base.roles, tester: base.tester }, base.tester ? await readDemoRole() : null);
+  const drawn = { ...base, roles: shown.roles, demo: shown.demo };
   return { ...drawn, group: base.group ?? demoPlaceFor(drawn).group };
 }
 
@@ -113,13 +117,15 @@ export async function viewerOf(member: Member, listed: Promise<Set<string>> = te
  * page (cached), and one read less in a route handler.
  */
 export const mainWamViewer = cache(async (settings?: Promise<MainWamSettings>): Promise<MainWamViewer | null> => {
-  // The penguji list does not depend on who it is: read it alongside the session.
+  // The penguji list and Panitia WAM do not depend on who it is: read them alongside the session.
   const listed = testerIds().catch(() => new Set<string>());
+  const staff = wamStaffIds();
   const member = await currentMember();
-  return member ? viewerOf(member, listed, settings) : null;
+  return member ? viewerOf(member, listed, settings, staff) : null;
 });
 
-/** Whether this member tests Main WAM (panitia, admin, or on the list); light, without kelompok or room. */
+/** Whether this member tests Main WAM (Panitia WAM, or on the list); light, without kelompok or room. */
 export async function testsMainWam(member: Member): Promise<boolean> {
-  return isTester(member, (await testerIds()).has(member.id));
+  const [listed, staff] = await Promise.all([testerIds(), wamStaffIds()]);
+  return isTester({ roles: mainWamRolesOf(member.roles, staff.has(member.id)) }, listed.has(member.id));
 }

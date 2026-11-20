@@ -35,19 +35,15 @@ async function wamEventId(): Promise<string> {
 
 /**
  * Who Main WAM is on for now, among everyone with an active WAM account (people.ts, the one list):
- * everyone in mode semua; else the penguji (listed, panitia, admin). While Main WAM is hidden from
- * Journey (until the super admin shows it): only the penguji an admin listed by name, whatever the mode,
- * never the committee or admins by role (they are Pra WAM's, not the WAM team).
+ * everyone in mode semua once the super admin shows Main WAM in Journey; else (another mode, or still
+ * hidden whatever the mode) the penguji: the listed ones and Panitia WAM (20 Nov 2026, KONTRAK §15:
+ * never Pra WAM's committee or admins by their role).
  */
 export async function mainWamAudience(settings?: MainWamSettings): Promise<string[]> {
   const [{ mode }, people, hidden] = await Promise.all([settings ?? readMainWamSettings(), mainWamEventPeople(), mainWamHidden()]);
-  if (hidden) {
-    const listed = await testerIds();
-    return people.accounts.filter(id => listed.has(id));
-  }
-  if (mode === "semua") return [...people.accounts];
+  if (mode === "semua" && !hidden) return [...people.accounts];
   const listed = await testerIds();
-  return people.accounts.filter(id => listed.has(id) || people.panitia.has(id) || people.admin.has(id));
+  return people.accounts.filter(id => listed.has(id) || people.panitia.has(id));
 }
 
 /** Who an announcement's audience means now, within Main WAM's audience. */

@@ -2,10 +2,11 @@ import "server-only";
 import type { QuizPhase } from "@/lib/main-wam/kuis/types";
 import { createPrivilegedClient } from "../../supabase/admin";
 import type { MainWamContext } from "../gate";
+import { holdsWamAcara } from "../staff";
 
 /*
  * Beranda's cards of Kuis live (rancangan §8a): "Kuis dimulai · Ikut" for everyone while a game is open
- * (from the lobby to the podium), and "Kendalikan kuis" for its pengendali (and Admin WAM) from the
+ * (from the lobby to the podium), and "Kendalikan kuis" for its pengendali (and holders of Admin WAM 2027) from the
  * moment the game is made. Nothing while the module is off, before the migration, or on any failure
  * (Beranda never breaks for a card). At most three queries, only when a game is on.
  */
@@ -19,7 +20,7 @@ export async function quizzesForHome(context: MainWamContext): Promise<HomeQuiz[
     const { data, error } = await db.from("mw_quiz_runs").select("id,quiz_id,phase,mw_quizzes(title)").neq("phase", "selesai").order("created_at", { ascending: false }).limit(10);
     if (error || !data?.length) return [];
     const runs = data as unknown as { id: string; quiz_id: string; phase: QuizPhase; mw_quizzes: { title: string } | { title: string }[] | null }[];
-    const admin = context.viewer.roles.includes("admin");
+    const admin = await holdsWamAcara(context.viewer.id);
     const [hosts, joined] = await Promise.all([
       admin ? null : db.from("mw_quiz_hosts").select("quiz_id").eq("employee_id", context.viewer.id).in("quiz_id", runs.map(run => run.quiz_id)),
       db.from("mw_quiz_players").select("run_id").eq("employee_id", context.viewer.id).in("run_id", runs.map(run => run.id)),

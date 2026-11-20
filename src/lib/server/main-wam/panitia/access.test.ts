@@ -3,7 +3,8 @@ import { defaultSettings } from "@/lib/main-wam/settings";
 import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-wam/types";
 
 /*
- * Who may open area C (tes wajib): the panitia tools (K02–K08) only panitia and Admin WAM, BOD's
+ * Who may open area C (tes wajib): the panitia tools (K02–K08) only Panitia WAM (20 Nov 2026: Main WAM's
+ * "panitia" role, from pw_event_staff; Pra WAM's panitia or admin role is not enough), BOD's
  * Ringkasan and Kehadiran (B01–B02) only BOD; everyone else gets "not found", on the pages and in
  * the APIs. A tool of a module that is off (Absen, Kehadiran) does not exist either. The data
  * readers are stubbed: only the gates are under test.
@@ -28,9 +29,10 @@ vi.mock("./moderation", () => ({ moderationData: async () => ({}), moderatePhoto
 vi.mock("./summary", () => ({ bodSummary: async () => ({ migrated: true, rows: [] }), attendanceDay: async () => ({}), panitiaHome: async () => ({ tiles: [], attention: [], reported: 0, running: [] }) }));
 
 const ID = "00000000-0000-4000-8004-000000000010";
-const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "11111111-1111-4111-8111-111111111111", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.includes("panitia") || roles.includes("admin"), group: null, room: null });
+const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "11111111-1111-4111-8111-111111111111", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.includes("panitia"), group: null, room: null });
 const allOn: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, kuis: true };
 const withModules = (modules: Partial<ModuleSwitches> = {}) => { settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...allOn, ...modules } }; };
+// `admin`: a viewer still carrying Pra WAM's admin role (Main WAM's roles never do, mainWamRolesOf): it opens nothing.
 const PEOPLE = { peserta: person([]), panitia: person(["panitia"]), admin: person(["admin"]), bod: person(["bod"]) };
 
 const url = "http://localhost:3100/api/wam/acara/x";
@@ -67,15 +69,13 @@ describe("area C's APIs", () => {
     for (const [name, call] of [...panitiaCalls, ["GET ringkasan", () => summaryRoute.GET()] as const]) expect((await call()).status, name).toBe(401);
   });
 
-  it("do not exist for peserta and BOD (panitia tools), and work for panitia and Admin WAM", async () => {
-    for (const who of ["peserta", "bod"] as const) {
+  it("do not exist for peserta, BOD and Pra WAM's admin role (panitia tools), and work for Panitia WAM", async () => {
+    for (const who of ["peserta", "bod", "admin"] as const) {
       viewer = PEOPLE[who];
       for (const [name, call] of panitiaCalls) expect((await call()).status, `${who} ${name}`).toBe(404);
     }
-    for (const who of ["panitia", "admin"] as const) {
-      viewer = PEOPLE[who];
-      for (const [name, call] of panitiaCalls) expect((await call()).status, `${who} ${name}`).toBe(200);
-    }
+    viewer = PEOPLE.panitia;
+    for (const [name, call] of panitiaCalls) expect((await call()).status, `panitia ${name}`).toBe(200);
   });
 
   it("Ringkasan exists for BOD only", async () => {
@@ -116,7 +116,7 @@ describe("area C's pages", () => {
     expect(await outcome(pages.rundown())).toMatch(/^REDIRECT .*masuk/);
   });
 
-  it("panitia tools: not found for peserta and BOD, open for panitia and Admin WAM", async () => {
+  it("panitia tools: not found for peserta, BOD and Pra WAM's admin role, open for Panitia WAM", async () => {
     for (const [name, page] of Object.entries(pages)) {
       viewer = PEOPLE.peserta;
       expect(await outcome(page()), `peserta ${name}`).toBe("NOT_FOUND");
@@ -125,7 +125,7 @@ describe("area C's pages", () => {
       viewer = PEOPLE.panitia;
       expect(await outcome(page()), `panitia ${name}`).toBe("OK");
       viewer = PEOPLE.admin;
-      expect(await outcome(page()), `admin ${name}`).toBe("OK");
+      expect(await outcome(page()), `admin ${name}`).toBe("NOT_FOUND");
     }
   });
 

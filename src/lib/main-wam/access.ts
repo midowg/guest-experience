@@ -6,19 +6,32 @@ import type { MainWamMode, MainWamRole, MainWamModule, ModuleSwitches } from "./
  * decides with these on every request (gate.ts), the screens use them only to hide what the server
  * would refuse anyway.
  *
- * Mode acara (Admin WAM → Main WAM → Pengaturan):
+ * Mode acara (Admin WAM 2027 → Pengaturan):
  *   pra    (bawaan) /wam is Pra WAM for everyone. Main WAM opens by its address for penguji only
  *          (to prepare it); for anyone else it does not exist (404).
  *   uji    /wam opens Main WAM for penguji; everyone else keeps Pra WAM and gets 404 on Main WAM.
  *   semua  /wam opens Main WAM for everyone. Pra WAM stays at its addresses (praWamPath.homePra).
- * Penguji: Admin WAM (role admin), panitia, and the people on the list an admin picks (mw_testers).
+ * Penguji: Panitia WAM and the people on the list an admin picks (mw_testers).
+ *
+ * The roles here are Main WAM's own (20 Nov 2026, KONTRAK §15), from mainWamRolesOf: "panitia" means Panitia
+ * WAM (pw_event_staff of the WAM event), never Pra WAM's committee; Pra WAM's "admin" role means nothing
+ * here; BOD stays the account's BOD role.
  */
 
 type WithRoles = { roles: readonly PraWamRole[] };
 const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.roles.includes(role));
 
-/** Panitia and Admin WAM always test; anyone else only when on the list. */
-export const isTester = (who: WithRoles, listed: boolean) => listed || has(who, "panitia", "admin");
+/**
+ * A WAM account's roles as Main WAM sees them: BOD (and any other role but Pra WAM's panitia and admin) as
+ * on the account, plus "panitia" when the person is on Panitia WAM.
+ */
+export function mainWamRolesOf(accountRoles: readonly PraWamRole[], onStaff: boolean): PraWamRole[] {
+  const kept = accountRoles.filter(role => role !== "panitia" && role !== "admin");
+  return onStaff ? [...kept, "panitia"] : kept;
+}
+
+/** Panitia WAM always test; anyone else only when on the list (Main WAM's roles, mainWamRolesOf). */
+export const isTester = (who: WithRoles, listed: boolean) => listed || has(who, "panitia");
 
 /** What a request to Main WAM gets. */
 export type MainWamGate =
@@ -54,9 +67,8 @@ export function mainWamRole(who: WithRoles): MainWamRole {
 }
 
 /**
- * Whether the bottom bar has the fifth tab, Panitia: only for someone who really is panitia (the role
- * on the account), not a BOD, a peserta, or an admin who is not panitia. The hub page itself uses the
- * "kelola" gate (panitia or admin), so an admin can still open it by its address.
+ * Whether the bottom bar has the fifth tab, Panitia: only for Panitia WAM (20 Nov 2026: not Pra WAM's
+ * committee or admins), not a BOD or a peserta. The hub page uses the same "kelola" gate.
  */
 export const showsCommitteeTab = (who: WithRoles) => has(who, "panitia");
 
@@ -70,7 +82,7 @@ export const MAIN_WAM_ACTIONS = [
   "silent-kirim",
   /** Awarding: vote (BOD approve instead). */
   "voting",
-  /** Panitia's 4 tools: Rundown live, Absen manual, Pengumuman, Moderasi. */
+  /** Panitia's 4 tools: Rundown live, Absen manual, Pengumuman, Moderasi (Panitia WAM only). */
   "kelola",
   /** Open or close a Silent Meeting by hand. */
   "silent-kontrol",
@@ -86,7 +98,7 @@ export type MainWamAction = (typeof MAIN_WAM_ACTIONS)[number];
 /** May this person do this in Main WAM? (The server repeats it; modules are checked apart, moduleAllows.) */
 export function mainWamCan(who: WithRoles, action: MainWamAction): boolean {
   const bod = has(who, "bod");
-  const manages = has(who, "panitia", "admin");
+  const manages = has(who, "panitia");
   switch (action) {
     case "absen": case "silent-kirim": case "voting": return !bod;
     case "foto": return true;
