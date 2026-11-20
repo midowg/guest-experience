@@ -116,7 +116,9 @@ let notYetUntil = 0;
 export async function wamAcaraMigrated(): Promise<boolean> {
   if (migratedSeen) return true;
   if (Date.now() < notYetUntil || !isSupabaseConfigured()) return false;
-  const { error } = await createPrivilegedClient().from("pw_event_staff").select("employee_id", { count: "exact", head: true }).limit(1);
+  // A plain read, never a head request: PostgREST answers a missing table's HEAD with an empty 404, which
+  // supabase-js turns into "no error" (21 Nov 2026: production showed the table as there before the migration).
+  const { error } = await createPrivilegedClient().from("pw_event_staff").select("employee_id").limit(1);
   if (!error) { migratedSeen = true; return true; }
   if (missing(error)) { notYetUntil = Date.now() + 60_000; return false; }
   return false;
