@@ -67,10 +67,10 @@
   --mw-kuis-c: #B45309;
   --mw-kuis-d: #BE185D;
   --mw-on-kuis: #FFFFFF;
-  --mw-kuis-gold: #F2B24C;
-  --mw-kuis-gold-container: #FFE29A;
-  --mw-kuis-silver: #D6DEEB;
-  --mw-kuis-bronze: #E7A977;
+  --mw-kuis-medal-1: #F2B24C;
+  --mw-kuis-win-container: #FFE29A;
+  --mw-kuis-medal-2: #D6DEEB;
+  --mw-kuis-medal-3: #E7A977;
   --mw-on-kuis-medal: #2A1A00;
 
   /* 1.5 Acara (slot tema KV), inverse, media */
@@ -241,10 +241,10 @@
   --mw-kuis-c: #FBBF24;
   --mw-kuis-d: #F472B6;
   --mw-on-kuis: #0A1430;
-  --mw-kuis-gold: #FFD36E;
-  --mw-kuis-gold-container: #FFD36E;
-  --mw-kuis-silver: #D6DEEB;
-  --mw-kuis-bronze: #E7A977;
+  --mw-kuis-medal-1: #FFD36E;
+  --mw-kuis-win-container: #FFD36E;
+  --mw-kuis-medal-2: #D6DEEB;
+  --mw-kuis-medal-3: #E7A977;
   --mw-on-kuis-medal: #2A1A00;
   --mw-wellbeing: #8AB4F8;
   --mw-wellbeing-container: #1E3A6E;
@@ -323,10 +323,10 @@
     --mw-kuis-c: #FBBF24;
     --mw-kuis-d: #F472B6;
     --mw-on-kuis: #0A1430;
-    --mw-kuis-gold: #FFD36E;
-    --mw-kuis-gold-container: #FFD36E;
-    --mw-kuis-silver: #D6DEEB;
-    --mw-kuis-bronze: #E7A977;
+    --mw-kuis-medal-1: #FFD36E;
+    --mw-kuis-win-container: #FFD36E;
+    --mw-kuis-medal-2: #D6DEEB;
+    --mw-kuis-medal-3: #E7A977;
     --mw-on-kuis-medal: #2A1A00;
     --mw-wellbeing: #8AB4F8;
     --mw-wellbeing-container: #1E3A6E;

@@ -1,0 +1,43 @@
+/* A tokoh in a circle (Kuis live). Colours: the persona's two (set by the component), or the theme's. */
+.avatar {
+  --kz-size: 48px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--kz-size);
+  height: var(--kz-size);
+  border-radius: 50%;
+  overflow: hidden;
+  user-select: none;
+}
+.persona {
+  background: linear-gradient(140deg, var(--kz-c1), var(--kz-c2));
+  box-shadow: inset 0 0 0 calc(var(--kz-size) * 0.045) color-mix(in srgb, var(--mw-media-on) 22%, transparent);
+}
+.mystery {
+  background: var(--mw-surface-2);
+  color: var(--mw-text-3);
+  box-shadow: inset 0 0 0 calc(var(--kz-size) * 0.045) var(--mw-outline);
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 12%;
+  transform: scale(1.18) translateY(6%);
+}
+.initials {
+  font: 800 calc(var(--kz-size) * 0.36) / 1 var(--mw-font-sans);
+  color: var(--mw-media-on);
+}
+.silhouette {
+  width: 64%;
+  height: 64%;
+  fill: currentColor;
+}
+.breathe { animation: breathe 3.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@media (prefers-reduced-motion: reduce) {
+  .breathe { animation: none; }
+}
