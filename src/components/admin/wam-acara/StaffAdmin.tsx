@@ -54,7 +54,7 @@ export function StaffAdmin({ initial, people }: { initial: WamStaffBoard; people
   };
 
   return <div className="stack">
-    {!board.migrated && <Notice tone="warning">Panitia WAM menunggu migrasi <code>202611200603_admin_wam_acara.sql</code>. Sampai itu Main WAM belum punya panitia; hanya penguji di daftar Pengaturan yang bisa mencobanya.</Notice>}
+    {!board.migrated && <Notice tone="warning">Panitia WAM menunggu migrasi <code>202611200603</code> (admin_wam_acara). Sampai itu Main WAM belum punya panitia; hanya penguji di daftar Pengaturan yang bisa mencobanya.</Notice>}
     {board.migrated && !board.event && <Notice tone="warning">Acara WAM belum ada. Siapkan dulu di Admin Pra WAM → Acara dan modul.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
 
