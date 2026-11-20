@@ -5,7 +5,7 @@ import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill, RowList, StatCard, StatRow, type ConsoleTone, type TimelineRow } from "@/components/console";
 import { WamAdminFrame, waitingResetRequests } from "@/components/admin/wam/WamAdminFrame";
 import { accountSummary } from "@/components/admin/wam/akun/account-view";
-import { wamCrumbs, wamSection, wamSections } from "@/components/admin/wam/sections";
+import { hiddenMainWamSections, wamCrumbs, wamSection, wamSections } from "@/components/admin/wam/sections";
 import styles from "@/components/admin/wam/wam-admin.module.css";
 import { dateRange } from "@/lib/pra-wam/about";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
@@ -13,6 +13,7 @@ import { praWamPath, wamAdminPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { currentAdmin, requireAdminPage } from "@/lib/server/admin-session";
 import { wamSectionsWithout } from "@/lib/admin-access";
+import { mainWamHidden } from "@/lib/server/main-wam-visibility";
 import { defaultPasswordReady, listAccounts } from "@/lib/server/pra-wam/accounts";
 import { dayLine, decimalHours, longDateLabel, questionnaireCounts, scheduleSpan, todaySchedule } from "@/lib/server/pra-wam/admin-overview";
 import { listRooms } from "@/lib/server/pra-wam/appraisal";
@@ -36,7 +37,8 @@ export default async function WamAdminPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   // A personal admin sees only the sections their grant opens (14 Nov 2026: Kuesioner on its own).
   const actor = await currentAdmin();
-  const without: string[] = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
+  // Main WAM hidden from Journey (until the super admin shows it): no Main WAM section here either.
+  const without: string[] = [...(actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : []), ...hiddenMainWamSections(await mainWamHidden())];
   const now = new Date();
   const today = wibDate(now.toISOString());
   const accounts = await listAccounts();

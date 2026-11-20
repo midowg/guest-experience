@@ -44,8 +44,10 @@ async function save(body: unknown): Promise<{ settings: Settings; message: strin
  * the penguji list, the modules on or off, and the theme (colours, display face, a KV image per
  * slot, to be filled once the KV is chosen). Every change is saved on its own.
  */
-export function MainWamSettings({ initial, testers: firstTesters, testersMigrated, people, forms, storage, crumbs = [], title = "Pengaturan" }: {
+export function MainWamSettings({ initial, testers: firstTesters, testersMigrated, people, forms, storage, crumbs = [], title = "Pengaturan", hidden = false }: {
   initial: Settings; testers: Tester[]; testersMigrated: boolean; people: PersonOption[]; forms: FormOption[]; storage: boolean; crumbs?: readonly Crumb[]; title?: string;
+  /** Main WAM hidden from Journey by the super admin (20 Nov 2026): said here, so the WAM team knows what it means. */
+  hidden?: boolean;
 }) {
   const id = useId();
   const [settings, setSettings] = useState(initial);
@@ -65,6 +67,7 @@ export function MainWamSettings({ initial, testers: firstTesters, testersMigrate
     <PageHeader crumbs={crumbs} title={title}
       subtitle="Main WAM adalah aplikasi selama acara WAM, tersembunyi sampai modenya diubah di sini."
       actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Main WAM<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
+    {hidden && <Notice tone="info"><strong>Main WAM tersembunyi dari Journey</strong> sampai super admin menampilkannya (Super admin → Halaman utama). Selama itu menu Main WAM tidak ada di Admin WAM, /wam selalu membuka Pra WAM, dan notifikasi Main WAM hanya ke penguji yang dipilih namanya di bawah. Mode acara tetap berlaku untuk tautan langsung /wam/acara.</Notice>}
     {!settings.migrated && <Notice tone="warning">Pengaturan Main WAM menunggu pembaruan sistem. Sampai saat itu Main WAM tersembunyi untuk semua orang dan pengaturan belum bisa disimpan. Hubungi tim CoE.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     <div className={css.grid}>

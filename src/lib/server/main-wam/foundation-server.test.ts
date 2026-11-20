@@ -22,6 +22,8 @@ let accounts: string[] = [];
 let roles: { employee_id: string; role: string }[] = [];
 let mode = "semua";
 let testers: string[] = [];
+/** Main WAM shown in Journey (admin_settings.main_wam_shown); hidden is the other half of the tests. */
+let shown = true;
 
 function answer(q: Query) {
   switch (q.table) {
@@ -32,6 +34,7 @@ function answer(q: Query) {
     case "pw_roles": return { data: roles };
     case "mw_settings": return { data: [{ mode, modules: {} }] };
     case "mw_testers": return { data: testers.map(employee_id => ({ employee_id })) };
+    case "admin_settings": return { data: [{ main_wam_shown: shown }] };
     default: return { data: [] };
   }
 }
@@ -48,6 +51,7 @@ beforeEach(() => {
   roles = [{ employee_id: id(4), role: "bod" }, { employee_id: id(2), role: "panitia" }, { employee_id: id(3), role: "admin" }];
   mode = "semua";
   testers = [];
+  shown = true;
 });
 
 describe("mainWamAttendees: the event's people (R5)", () => {
@@ -167,6 +171,48 @@ describe("a note's tone is kept", () => {
     };
     await notes.sendMainWamNote({ kind: "pengumuman", title: "Bawa jaket", body: "Dingin.", to: { people: [ME], label: "Rani" }, by: id(2), tone: "warning" });
     expect(inserts).toContainEqual(["mw_notes", expect.objectContaining({ kind: "pengumuman", tone: "warning" })]);
+  });
+});
+
+describe("while Main WAM is hidden from Journey (until the super admin shows it)", () => {
+  it("its notes reach only the penguji listed by name, whatever the mode: not the committee or admins by role", async () => {
+    shown = false;
+    testers = [id(5)];
+    expect(await notes.mainWamAudience()).toEqual([id(5)]);
+    newRequest();
+    mode = "uji";
+    expect(await notes.mainWamAudience()).toEqual([id(5)]);
+    newRequest();
+    shown = true;
+    expect(await notes.mainWamAudience()).toEqual([id(2), id(3), id(5)]);
+  });
+
+  it("a note to everyone (Kuis dimulai) goes to the listed penguji, labelled so, never as a committee announcement (Pra WAM's list, the office TV)", async () => {
+    shown = false;
+    testers = [id(5)];
+    const inserts: [string, unknown][] = [];
+    fake.answer = q => {
+      const insert = callsOf(q, "insert")[0];
+      if (insert) inserts.push([q.table, insert[0]]);
+      if (q.table === "pw_announcements") return { data: [{ id: id(71) }] };
+      return answer(q);
+    };
+    const sent = await notes.sendMainWamNote({ kind: "kuis", title: "Kuis dimulai", body: "Kuis WAM: ketuk untuk ikut.", to: { audience: { type: "semua" } }, link: "/wam/acara/kuis/x", by: null });
+    expect(sent).toBe(1);
+    expect(inserts).toContainEqual(["pw_announcements", expect.objectContaining({ kind: "sesi", audience_label: "Penguji Main WAM" })]);
+    expect(inserts).toContainEqual(["pw_notification_receipts", [{ announcement_id: id(71), employee_id: id(5) }]]);
+  });
+
+  it("shown again: everyone in mode semua, a committee announcement stays one", async () => {
+    const inserts: [string, unknown][] = [];
+    fake.answer = q => {
+      const insert = callsOf(q, "insert")[0];
+      if (insert) inserts.push([q.table, insert[0]]);
+      if (q.table === "pw_announcements") return { data: [{ id: id(72) }] };
+      return answer(q);
+    };
+    expect(await notes.sendMainWamNote({ kind: "pengumuman", title: "Bawa jaket", body: "Dingin.", to: { audience: { type: "semua" } }, by: id(2) })).toBe(5);
+    expect(inserts).toContainEqual(["pw_announcements", expect.objectContaining({ kind: "pengumuman", audience_label: "Semua peserta" })]);
   });
 });
 

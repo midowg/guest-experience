@@ -61,6 +61,16 @@ export const wamSections: readonly WamSection[] = [
 
 export const wamSection = (key: WamSectionKey): WamSection => wamSections.find(section => section.key === key)!;
 
+/** Main WAM's sections (its group), left out of the menu, Ringkasan and search while Main WAM is hidden from Journey. */
+export const MAIN_WAM_GROUP = "Main WAM";
+export const mainWamSectionKeys: readonly WamSectionKey[] = wamSections.filter(section => section.group === MAIN_WAM_GROUP).map(section => section.key);
+/**
+ * The sections an admin does not see because Main WAM is hidden: all of Main WAM's, except on Main WAM's own
+ * pages (reached by their address), where its menu stays so the WAM team can move between them.
+ */
+export const hiddenMainWamSections = (hidden: boolean, current?: WamSectionKey): WamSectionKey[] =>
+  hidden && !(current && mainWamSectionKeys.includes(current)) ? [...mainWamSectionKeys] : [];
+
 /** The section a path belongs to; a deeper path (a future detail page) belongs to its section. */
 export function wamSectionAt(pathname: string): WamSection {
   const path = pathname.replace(/\/+$/, "");

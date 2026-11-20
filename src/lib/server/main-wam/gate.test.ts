@@ -20,6 +20,9 @@ vi.mock("./settings", () => ({ readMainWamSettings: async () => { if (settingsFa
 const viewerRoom = vi.fn(async () => ({ id: "r1", name: "208", kind: "kamar", floor: "2", note: "", people: [] }));
 vi.mock("./viewer", () => ({ mainWamViewer: async () => viewer, testsMainWam: async () => tester, viewerRoom }));
 vi.mock("../pra-wam/session", () => ({ currentMember: async () => member }));
+/** Main WAM shown in Journey by the super admin (the other tests); hidden: /wam never leaves Pra WAM. */
+let shown = true;
+vi.mock("../main-wam-visibility", () => ({ getMainWamVisibility: async () => ({ shown, migrated: true, changedAt: null, changedBy: null }) }));
 
 const gate = await import("./gate");
 
@@ -27,7 +30,7 @@ const person = (roles: MainWamViewer["roles"], isTester: boolean): MainWamViewer
 const withMode = (mode: MainWamMode, modules: Partial<ModuleSwitches> = {}) => { settings = { ...defaultSettings(), migrated: true, mode, modules: { ...defaultSettings().modules, ...modules } }; };
 const status = async (promise: Promise<unknown>) => promise.then(() => 200, (error: { status?: number; message?: string }) => error.status ?? error.message);
 
-beforeEach(() => { withMode("pra"); viewer = null; member = null; tester = false; settingsFail = false; });
+beforeEach(() => { withMode("pra"); viewer = null; member = null; tester = false; settingsFail = false; shown = true; });
 
 describe("a Main WAM page", () => {
   const here = mainWamPath.agenda();
@@ -162,6 +165,25 @@ describe("/wam (Pra WAM's Beranda)", () => {
     member = { id: "m", roles: [] };
     expect(await gate.mainWamHomeTarget({})).toBe(mainWamPath.home);
     await expect(gate.redirectToMainWam({})).rejects.toThrow(`REDIRECT ${mainWamPath.home}`);
+  });
+
+  it("never leaves Pra WAM while Main WAM is hidden from Journey, whatever the mode; Main WAM still opens by its address", async () => {
+    shown = false;
+    for (const mode of ["pra", "uji", "semua"] as const) {
+      withMode(mode);
+      member = { id: "m", roles: ["admin"] }; tester = true;
+      expect(await gate.mainWamHomeTarget({}), mode).toBeNull();
+      member = null;
+      expect(await gate.mainWamHomeTarget({}), mode).toBeNull();
+    }
+    await expect(gate.redirectToMainWam({})).resolves.toBeUndefined();
+    // The gate of Main WAM's own pages is not changed: a penguji opens it by its address (mode uji).
+    withMode("uji");
+    viewer = person([], true);
+    expect(await gate.requireMainWamPage(mainWamPath.home)).toMatchObject({ viewer: { tester: true } });
+    shown = true;
+    member = { id: "m", roles: [] }; tester = true;
+    expect(await gate.mainWamHomeTarget({})).toBe(mainWamPath.home);
   });
 
   it("keeps Pra WAM reachable by its address (?versi=pra), and Pra WAM on any failure", async () => {

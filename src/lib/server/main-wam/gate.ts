@@ -7,6 +7,7 @@ import type { MainWamModule, MainWamSettings, MainWamViewer } from "@/lib/main-w
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import { ServiceError } from "../config";
+import { getMainWamVisibility } from "../main-wam-visibility";
 import { currentMember } from "../pra-wam/session";
 import { demoPlaceFor } from "./demo";
 import { readMainWamSettings } from "./settings";
@@ -115,11 +116,14 @@ export async function requireActionApi(action: MainWamAction): Promise<MainWamCo
 /**
  * Pra WAM's Beranda (/wam) sends the person on to Main WAM when it is on for them: mode semua for
  * everyone (signed in or not), mode uji for a penguji. `versi=pra` (praWamPath.homePra) stays on
- * Pra WAM. Never throws: on any failure Pra WAM shows as before.
+ * Pra WAM. Never while Main WAM is hidden from Journey (until the super admin shows it,
+ * src/lib/main-wam-visibility.ts): then /wam is Pra WAM whatever the mode, and Main WAM opens only by its
+ * own address. Never throws: on any failure Pra WAM shows as before.
  */
 export async function mainWamHomeTarget(search: { versi?: string | string[] }): Promise<string | null> {
   if (search.versi === "pra") return null;
   try {
+    if (!(await getMainWamVisibility()).shown) return null;
     const settings = await readMainWamSettings();
     if (settings.mode === "pra") return null;
     if (settings.mode === "semua") return mainWamPath.home;
