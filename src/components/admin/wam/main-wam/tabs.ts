@@ -16,4 +16,5 @@ export const mainWamContentTabs: readonly PageTab[] = [
 export const mainWamModuleTabs: readonly PageTab[] = [
   { key: "awarding", label: "Awarding", href: mainWamAdminPath.awards },
   { key: "silent-meeting", label: "Silent Meeting", href: mainWamAdminPath.silent },
+  { key: "kuis", label: "Kuis live", href: mainWamAdminPath.quizzes },
 ];

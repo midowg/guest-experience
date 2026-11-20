@@ -14,7 +14,7 @@ describe("Admin WAM sections", () => {
 
   it("leave units and positions to Data karyawan", () => {
     expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv",
-      "mw-pengaturan", "mw-isi", "mw-kamar", "mw-perjalanan", "mw-panduan", "mw-info", "mw-modul", "mw-silent", "tema", "mcp"]);
+      "mw-pengaturan", "mw-isi", "mw-kamar", "mw-perjalanan", "mw-panduan", "mw-info", "mw-modul", "mw-silent", "mw-kuis", "tema", "mcp"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 

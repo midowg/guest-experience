@@ -10,7 +10,9 @@ import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
  */
 export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner"
   // Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): Pengaturan (fondasi), Isi acara and its tabs (agen E), Modul acara and its tab (agen D).
-  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent";
+  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent"
+  // Kuis live (20 Nov 2026, docs/rancangan-kuis-wam.md): a tab of Modul acara.
+  | "mw-kuis";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -50,8 +52,9 @@ export const wamSections: readonly WamSection[] = [
   { key: "mw-perjalanan", label: "Perjalanan", group: "Main WAM", href: mainWamAdminPath.travel, icon: ListChecks, summary: "Kumpul, kereta, shuttle, dan kursi tiap orang.", owner: "mw-isi" },
   { key: "mw-panduan", label: "Panduan", group: "Main WAM", href: mainWamAdminPath.guides, icon: ListChecks, summary: "Denah, hotel dan fasilitas, dress code, tata tertib.", owner: "mw-isi" },
   { key: "mw-info", label: "Info acara", group: "Main WAM", href: mainWamAdminPath.eventInfo, icon: ListChecks, summary: "Hotel, alamat, check-in/out, kontak panitia, tagihan hotel untuk Jejak karbon.", owner: "mw-isi" },
-  { key: "mw-modul", label: "Modul acara", group: "Main WAM", href: mainWamAdminPath.awards, icon: Trophy, summary: "Kategori dan nominasi Awarding, pertanyaan Silent Meeting." },
+  { key: "mw-modul", label: "Modul acara", group: "Main WAM", href: mainWamAdminPath.awards, icon: Trophy, summary: "Kategori dan nominasi Awarding, pertanyaan Silent Meeting, Kuis live." },
   { key: "mw-silent", label: "Silent Meeting", group: "Main WAM", href: mainWamAdminPath.silent, icon: Trophy, summary: "Pertanyaan Silent Meeting per sesi.", owner: "mw-modul" },
+  { key: "mw-kuis", label: "Kuis live", group: "Main WAM", href: mainWamAdminPath.quizzes, icon: Trophy, summary: "Soal, pengendali, tautan layar besar, permainan, dan hasil kuis.", owner: "mw-modul" },
   { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];
