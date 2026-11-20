@@ -1,4 +1,4 @@
-/* Admin WAM 2027 → Kuis live. Console tokens only (--cs-*). */
+/* Admin WAM 2026 → Kuis live. Console tokens only (--cs-*). */
 .stack { display: grid; gap: 16px; }
 .note { margin: 0; color: var(--cs-muted); font-size: 14px; }
 .small { color: var(--cs-muted); font-size: 12px; }

@@ -18,7 +18,7 @@ export type HomeMenuItem = {
 };
 
 export const defaultHomeMenu: HomeMenuItem[] = [
-  { app: "wam", shown: true, name: "WAM 2027", what: "Aplikasi karyawan", account: "Akun WAM", tone: "#2f6feb",
+  { app: "wam", shown: true, name: "WAM 2026", what: "Aplikasi karyawan", account: "Akun WAM", tone: "#2f6feb",
     description: "Semua kebutuhan Werkudara Annual Meeting dalam satu aplikasi: agenda, appraisal, absen, dan MoM." },
   { app: "wlm", shown: true, name: "WLM", what: "Werkudara Life Mode", account: "Akun WAM", tone: "#e0457b",
     description: "Catat olahraga dan kebiasaan sehat, kumpulkan poin, dan naik peringkat bersama tim." },

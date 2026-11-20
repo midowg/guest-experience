@@ -170,7 +170,7 @@ export async function callNames(ids: readonly string[]): Promise<Map<string, str
 }
 
 /**
- * May this person run this quiz: a pengendali chosen for it, or a holder of Admin WAM 2027 (with their WAM
+ * May this person run this quiz: a pengendali chosen for it, or a holder of Admin WAM 2026 (with their WAM
  * account; holdsWamAcara). Panitia WAM alone is not, nor Pra WAM's admin role (20 Nov 2026).
  */
 export async function isQuizHost(quizId: string, viewer: { id: string }): Promise<boolean> {

@@ -85,7 +85,7 @@ export function dateRange(start: string, end: string): string {
 export function defaultAbout(events: EventDates[]): About {
   const pra = events.find(event => event.kind === "pra_wam");
   const wam = events.find(event => event.kind === "wam");
-  const wamName = wam?.name ?? "WAM 2027";
+  const wamName = wam?.name ?? "WAM 2026";
   return {
     title: "Apa itu WAM?",
     summary: "WAM (Werkudara Annual Meeting) adalah rangkaian pertemuan tahunan internal Werkudara Group untuk meninjau kinerja, menyepakati arah perusahaan, dan menyelaraskan rencana kerja serta anggaran.",

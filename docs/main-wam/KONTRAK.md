@@ -27,12 +27,12 @@ sampai admin menyalakannya. Ditulis agen fondasi, 17 Nov 2026.
 | --- | --- | --- |
 | Halaman | `src/app/wam/acara/` | `layout.tsx` (tema dan `theme-color`, hanya bila Main WAM tampil untuk orangnya), `not-found.tsx`, `masuk/` (O02), `(app)/layout.tsx` (gate + kerangka), `(app)/error.tsx` (galat layar di dalam kerangka), `(app)/**` semua layar |
 | API peserta | `src/app/api/wam/acara/**` | per area (§6) |
-| Admin | `src/app/admin/wam-acara/**`, `src/app/api/admin/wam-acara/**` | Admin WAM 2027, pintu sendiri (§15) |
+| Admin | `src/app/admin/wam2026/**`, `src/app/api/admin/wam2026/**` | Admin WAM 2026, pintu sendiri (§15) |
 | Logika murni | `src/lib/main-wam/*.ts` (fondasi), `src/lib/main-wam/<area>/` (agen) | tipe, aturan, data contoh; dites vitest |
 | Server | `src/lib/server/main-wam/*.ts` (fondasi), `src/lib/server/main-wam/<area>/` (agen) | `server-only`, Supabase, R2 |
 | Komponen | `src/components/main-wam/{ui,theme,shell}` (UI KIT), `dev/` (fondasi), `<area>/` (agen) | |
 | Admin komponen | `src/components/admin/wam-acara/` (fondasi: `sections.ts`, `WamAcaraNav`, `WamAcaraFrame`, `WamAcaraHome`, `StaffAdmin`, Pengaturan), `.../wam-acara/<isi|modul|kuis>/` (agen E, D, F) | |
-| Pratinjau | `src/app/dev-preview/main-wam/<area>/` | tanpa login, 404 di produksi |
+| Pratinjau | `src/app/dev-preview/wam2026/<area>/` | tanpa login, 404 di produksi |
 | Migrasi | `supabase/migrations/202611200001–0003_*.sql` + `tests/backend/main-wam-check.sql` | fondasi (0003 milik modul) |
 
 ## 2. Arsitektur rute
@@ -171,7 +171,7 @@ sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek S
 - **Kamar: pakai ulang pembagian kamar HR** (sudah ada, sudah diisi HR, penghuni bebas sampai
   kapasitas). Main WAM hanya menambah lantai/catatan.
 - **Notifikasi dan pengumuman: pakai ulang `pw_announcements` + `pw_notification_receipts`** (satu kotak
-  masuk, status dibaca, Web Push yang ada), dengan event WAM 2027 dan `mw_notes` untuk jenis, tautan,
+  masuk, status dibaca, Web Push yang ada), dengan event WAM 2026 dan `mw_notes` untuk jenis, tautan,
   sematan, audiens. Tidak ada topik push baru (Pengaturan Pra WAM tidak berubah); pemetaan di
   `notePushTopic`: pengumuman dan jadwal → `pengumuman` (selalu, juga jam tenang), absen/silent/voting/
   survei/kamar/foto disembunyikan → `forum` (tidak di jam tenang), reaksi → lonceng saja (belum dikirim).
@@ -258,19 +258,19 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 | C | `rundownSession(id)`, `rundownLog`, `attendance(sesiId)`, `announcements`, `announcement(id)`, `moderation`, `moderatePhoto(id)`, `summary` |
 | D | `checkIn(token)`, `sessionQr(sesiId)`, `silent`, `silentFeedback`, `silentControl(id)`, `silentRecap`, `awards`, `vote(id)`, `approveAward(id)` |
 
-**Admin** `mainWamAdminPath` (`/admin/wam-acara/…`): `settings` (fondasi) · `rundown`, `groups`,
+**Admin** `mainWamAdminPath` (`/admin/wam2026/…`): `settings` (fondasi) · `rundown`, `groups`,
 `activityGroups`, `rooms`, `travel`, `guides` (E) · `awards`, `silent` (D).
-`mainWamAdminApi` (`/api/admin/wam-acara/…`): `settings`, `testers`, `tester(id)`, `themeImageStart`,
+`mainWamAdminApi` (`/api/admin/wam2026/…`): `settings`, `testers`, `tester(id)`, `themeImageStart`,
 `themeImageConfirm`, `themeImage(slot)` (fondasi) · `sessions`, `session(id)`, `groups`, `group(id)`,
 `groupMembers(id)`, `activityGroups`, `activityGroup(id)`, `roomDetail(roomId)`, `trips`, `trip(id)`,
 `tripSeats(id)`, `guides`, `guide(id)`, `guideFileStart`, `guideFileConfirm`, `eventInfo` (E) ·
 `awardCategories`, `awardCategory(id)`, `awardNominees(id)`, `silentQuestions`, `silentQuestion(id)` (D).
-Bagian menu Admin WAM 2027 terdaftar di `src/components/admin/wam-acara/sections.ts` (Ringkasan; Persiapan:
+Bagian menu Admin WAM 2026 terdaftar di `src/components/admin/wam-acara/sections.ts` (Ringkasan; Persiapan:
 Pengaturan, Panitia WAM; Untuk peserta: Isi acara dengan tab Rundown/Kamar/Perjalanan/Panduan/Info acara, Modul acara
 dengan tab Awarding/Silent Meeting/Kuis live); tab halaman: `mainWamContentTabs`, `mainWamModuleTabs`
 (`src/components/admin/wam-acara/tabs.ts`). Ditambah `home` (Ringkasan) dan `committee` (`/panitia`) di
-`mainWamAdminPath`, `committee` dan `committeeMember(id)` di `mainWamAdminApi`. Area admin `/admin/wam-acara` dan
-`/api/admin/wam-acara` = hak `wam_acara` (`areaOfPath`, §15); setiap API admin memanggil `requireApiAdmin()` (dites
+`mainWamAdminPath`, `committee` dan `committeeMember(id)` di `mainWamAdminApi`. Area admin `/admin/wam2026` dan
+`/api/admin/wam2026` = hak `wam_acara` (`areaOfPath`, §15); setiap API admin memanggil `requireApiAdmin()` (dites
 `src/components/admin/wam-acara/sections.test.ts`).
 
 ## 6. Pembagian berkas dan nomor migrasi
@@ -280,12 +280,12 @@ Setiap agen hanya menulis di foldernya. Placeholder fondasi (bertanda `PLACEHOLD
 
 | Agen | Layar | Folder milik | Migrasi | Uji SQL |
 | --- | --- | --- | --- | --- |
-| **A peserta/handbook** | O02, O03, P01/P02 (Beranda + kartu kontekstual), P03, P04, P05/P05B, L01, L03, L04, N01, S02 | `src/app/wam/acara/(app)/{page.tsx,loading.tsx,agenda,saya,notifikasi,mulai}/**`, `src/app/wam/acara/masuk/**`, `src/components/main-wam/peserta/**`, `src/lib/main-wam/peserta/**`, `src/lib/server/main-wam/peserta/**`, `src/app/api/wam/acara/{beranda,agenda,notifikasi,panduan}/**`, `src/app/dev-preview/main-wam/peserta/**` | `202611200101–0199` | `tests/backend/main-wam-peserta-check.sql` |
-| **B Momen + Mozaik** | M01–M06, U01–U05, O04 | `src/app/wam/acara/(app)/momen/**`, `src/components/main-wam/momen/**`, `src/lib/main-wam/momen/**`, `src/lib/server/main-wam/momen/**`, `src/app/api/wam/acara/{momen,mozaik}/**`, `src/app/dev-preview/main-wam/momen/**` | `0201–0299` | `main-wam-momen-check.sql` |
-| **C panitia + BOD** | K01 (hub tab Panitia), K02, K03, K05, K06, K08, B01 (kartu Ringkasan), B02 | `src/app/wam/acara/(app)/{kelola,kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan/kehadiran}/**`, `src/components/main-wam/panitia/**`, `src/lib/main-wam/panitia/**` (mis. hitung Jejak karbon), `src/lib/server/main-wam/panitia/**`, `src/app/api/wam/acara/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan}/**`, `src/app/dev-preview/main-wam/panitia/**` | `0301–0399` | `main-wam-panitia-check.sql` |
-| **D modul** | A01–A05, T01–T03, V01–V02, B05, B06, aksi modul di P04, admin Awarding + Silent Meeting | `src/app/wam/acara/(app)/{absen,silent-meeting,awarding,ringkasan/silent-meeting,ringkasan/awarding}/**`, `src/components/main-wam/modul/**`, `src/lib/main-wam/modul/**`, `src/lib/server/main-wam/modul/**`, `src/app/api/wam/acara/{absen,silent-meeting,awarding,kelola/qr}/**`, `src/app/admin/wam-acara/{awarding,silent-meeting}/**`, `src/components/admin/wam-acara/modul/**`, `src/app/api/admin/wam-acara/{awarding,silent-meeting}/**`, `src/app/dev-preview/main-wam/modul/**` | `0401–0499` | `main-wam-modul-check.sql` |
-| **E Admin WAM konten** | Admin: Rundown, Kamar (lantai), Perjalanan (+ kursi), Panduan (+ berkas), info acara (hotel, check-in/out, kontak, tagihan hotel) | `src/app/admin/wam-acara/{rundown,kamar,perjalanan,panduan,info-acara}/**`, `src/components/admin/wam-acara/isi/**`, `src/lib/main-wam/admin/**`, `src/lib/server/main-wam/admin/**`, `src/app/api/admin/wam-acara/{sesi,kelompok,kelompok-kegiatan,kamar,perjalanan,panduan,info-acara}/**`, `src/app/dev-preview/main-wam/admin/**` | `0501–0599` | `main-wam-admin-check.sql` |
-| **F Kuis live** (20 Nov 2026) | kuis HP, kendali MC, layar besar, Admin WAM → Kuis live, kartu Beranda (slot `kuis`) | `src/app/wam/acara/(app)/kuis/**`, `src/app/kuis/**`, `src/components/main-wam/kuis/**`, `src/lib/main-wam/kuis/**`, `src/lib/server/main-wam/kuis/**`, `src/app/api/wam/acara/kuis/**`, `src/app/api/kuis/**`, `src/app/admin/wam-acara/kuis/**`, `src/components/admin/wam-acara/kuis/**`, `src/app/api/admin/wam-acara/kuis/**`, `src/app/dev-preview/main-wam/kuis/**` | `0601–0699` | `main-wam-kuis-check.sql` |
+| **A peserta/handbook** | O02, O03, P01/P02 (Beranda + kartu kontekstual), P03, P04, P05/P05B, L01, L03, L04, N01, S02 | `src/app/wam/acara/(app)/{page.tsx,loading.tsx,agenda,saya,notifikasi,mulai}/**`, `src/app/wam/acara/masuk/**`, `src/components/main-wam/peserta/**`, `src/lib/main-wam/peserta/**`, `src/lib/server/main-wam/peserta/**`, `src/app/api/wam/acara/{beranda,agenda,notifikasi,panduan}/**`, `src/app/dev-preview/wam2026/peserta/**` | `202611200101–0199` | `tests/backend/main-wam-peserta-check.sql` |
+| **B Momen + Mozaik** | M01–M06, U01–U05, O04 | `src/app/wam/acara/(app)/momen/**`, `src/components/main-wam/momen/**`, `src/lib/main-wam/momen/**`, `src/lib/server/main-wam/momen/**`, `src/app/api/wam/acara/{momen,mozaik}/**`, `src/app/dev-preview/wam2026/momen/**` | `0201–0299` | `main-wam-momen-check.sql` |
+| **C panitia + BOD** | K01 (hub tab Panitia), K02, K03, K05, K06, K08, B01 (kartu Ringkasan), B02 | `src/app/wam/acara/(app)/{kelola,kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan/kehadiran}/**`, `src/components/main-wam/panitia/**`, `src/lib/main-wam/panitia/**` (mis. hitung Jejak karbon), `src/lib/server/main-wam/panitia/**`, `src/app/api/wam/acara/{kelola/rundown,kelola/absen,kelola/pengumuman,kelola/moderasi,ringkasan}/**`, `src/app/dev-preview/wam2026/panitia/**` | `0301–0399` | `main-wam-panitia-check.sql` |
+| **D modul** | A01–A05, T01–T03, V01–V02, B05, B06, aksi modul di P04, admin Awarding + Silent Meeting | `src/app/wam/acara/(app)/{absen,silent-meeting,awarding,ringkasan/silent-meeting,ringkasan/awarding}/**`, `src/components/main-wam/modul/**`, `src/lib/main-wam/modul/**`, `src/lib/server/main-wam/modul/**`, `src/app/api/wam/acara/{absen,silent-meeting,awarding,kelola/qr}/**`, `src/app/admin/wam2026/{awarding,silent-meeting}/**`, `src/components/admin/wam-acara/modul/**`, `src/app/api/admin/wam2026/{awarding,silent-meeting}/**`, `src/app/dev-preview/wam2026/modul/**` | `0401–0499` | `main-wam-modul-check.sql` |
+| **E Admin WAM konten** | Admin: Rundown, Kamar (lantai), Perjalanan (+ kursi), Panduan (+ berkas), info acara (hotel, check-in/out, kontak, tagihan hotel) | `src/app/admin/wam2026/{rundown,kamar,perjalanan,panduan,info-acara}/**`, `src/components/admin/wam-acara/isi/**`, `src/lib/main-wam/admin/**`, `src/lib/server/main-wam/admin/**`, `src/app/api/admin/wam2026/{sesi,kelompok,kelompok-kegiatan,kamar,perjalanan,panduan,info-acara}/**`, `src/app/dev-preview/wam2026/admin/**` | `0501–0599` | `main-wam-admin-check.sql` |
+| **F Kuis live** (20 Nov 2026) | kuis HP, kendali MC, layar besar, Admin WAM → Kuis live, kartu Beranda (slot `kuis`) | `src/app/wam/acara/(app)/kuis/**`, `src/app/kuis/**`, `src/components/main-wam/kuis/**`, `src/lib/main-wam/kuis/**`, `src/lib/server/main-wam/kuis/**`, `src/app/api/wam/acara/kuis/**`, `src/app/api/kuis/**`, `src/app/admin/wam2026/kuis/**`, `src/components/admin/wam-acara/kuis/**`, `src/app/api/admin/wam2026/kuis/**`, `src/app/dev-preview/wam2026/kuis/**` | `0601–0699` | `main-wam-kuis-check.sql` |
 | fondasi | gate, layout, pengaturan, tema KV | lihat §1 | `0001–0099` | `main-wam-check.sql` |
 
 **Slot lintas area** (sudah dibuat, berisi `return null`). Slot `BerandaPanitia` dihapus 18 Nov (keputusan 20): kartu panitia pindah ke hub tab Panitia (`PanitiaHub`).:
@@ -315,8 +315,8 @@ milik D), tanpa mengimpor kode area lain.
   `pagi`, `pemaparan`, `panitia`, `silent`, `teamBuilding`, `bod`).
 - `src/components/main-wam/dev/DevFrame.tsx`: layar dalam kerangka asli untuk pratinjau:
   `<DevFrame path={mainWamPath.agenda()} peran={peran} waktu={waktu}>…</DevFrame>`.
-- Pratinjau fondasi: `/dev-preview/main-wam/fondasi?layar=beranda|agenda|momen|saya&peran=…`,
-  `/dev-preview/main-wam/fondasi/pengaturan?mode=…&migrasi=belum`.
+- Pratinjau fondasi: `/dev-preview/wam2026/fondasi?layar=beranda|agenda|momen|saya&peran=…`,
+  `/dev-preview/wam2026/fondasi/pengaturan?mode=…&migrasi=belum`.
 
 ## 8. Aturan kerja bersama
 
@@ -446,7 +446,7 @@ milik D), tanpa mengimpor kode area lain.
 | 14 | Foto: `client_id` unik per pemilik, `visible_at` = +5 detik, indeks keyset `(visible_at, id)` | antrean offline tanpa foto ganda (RISET §3); Batalkan 5 detik; tanpa OFFSET (use-the-index-luke) |
 | 15 | Gambar KV lewat situs, alamat berversi; publik hanya `splash`/`icon` di mode `semua`; versi lain 404; cache 1 hari (bukan immutable setahun); byte disimpan di memori server | splash tampil sebelum login; R2 tetap privat; KV tidak bocor sebelum peluncuran (audit M6, R9, L6, L3) |
 | 16 | `/wam` → Main WAM dengan pengalihan di Beranda Pra WAM; Pra WAM di `?versi=pra` | Pra WAM tidak dihapus; mode bawaan tidak mengubah apa pun (dites) |
-| 17 | Admin Main WAM di bawah `/admin/wam/main`, hak akses "Admin WAM" (**diganti 20 Nov 2026**: pintu sendiri `/admin/wam-acara` dengan hak `wam_acara`, §15) | tanpa grant/migrasi baru; tab-halaman agar menu tidak membengkak |
+| 17 | Admin Main WAM di bawah `/admin/wam/main`, hak akses "Admin WAM" (**diganti 20 Nov 2026**: pintu sendiri `/admin/wam2026` dengan hak `wam_acara`, §15) | tanpa grant/migrasi baru; tab-halaman agar menu tidak membengkak |
 | 21 | Tab ke-5 "Panitia" untuk panitia; kartu Kelola dan Perlu perhatian pindah dari Beranda ke hub `/wam/acara/kelola`; tab hanya untuk peran panitia (bukan admin tak-panitia) | alat panitia punya rumah sendiri dan Beranda panitia sama dengan peserta; hub tetap digerbang `kelola` seperti layar di bawahnya |
 | 22 | Silent Meeting dikeluarkan dari WAM: modul `silent` mati bawaan, migrasi `202611220001` mematikannya di baris yang sudah ada; kode, tabel, dan tes tidak dihapus; modul mati tanpa jejak; Admin WAM menampilkan banner "Modul mati" | itu bagian Pra WAM, bukan Main WAM (keputusan pemilik, 18 Nov); bisa dinyalakan lagi di Pengaturan |
 | 20 | Tema, KV, kerangka, dan `loading.tsx` Main WAM hanya setelah gate (`mainWamShown`); belum login di `pra`/`uji` → `SignInFirst` | tampilan acara tidak sampai ke orang yang bukan penguji (audit M6, §9 #6) |
@@ -456,7 +456,7 @@ milik D), tanpa mengimpor kode area lain.
 | 24 | Tanpa `alter default privileges` (audit L2 ditolak) | berlaku untuk seluruh proyek Supabase, termasuk migrasi tim lain; revoke per objek di tiap migrasi Main WAM sudah diuji (`main-wam-check.sql`) |
 | 25 | **Momen disederhanakan (pemilik, 18 Nov)**: bilah atas hanya judul + tombol kamera + tombol galeri (tanpa Semua/Kelompokku dan chip sesi di tumpukan); tidak ada lagi audiens "Kelompokku" (foto baru selalu `semua`; UI dan API unggah tidak menawarkannya, `lihat=kelompok` jatuh ke Semua, kolom `audience`/`group_id` dan view SQL `kelompok` dibiarkan untuk foto lama); hati diganti **reaksi** ala WhatsApp/Telegram | lebih sedikit kontrol di layar yang dipakai sambil berjalan; reaksi lebih ekspresif dan tanpa komentar (daftar siapa bereaksi apa: lihat 29) |
 | 26 | Reaksi: baris cepat (❤️ 😂 🔥 👏 😮 🙏 + "+") di bawah foto, sheet "Pilih reaksi" (±60 emoji dalam 5 kelompok), pil (emoji + jumlah) di sudut kiri bawah di dalam foto; satu orang satu reaksi (emoji lain menggantikan, ketuk lagi membatalkan); foto sendiri hanya pil yang tampil; ganda-ketuk foto = ❤️. Server: PUT/DELETE `/api/wam/acara/momen/[id]/reaksi` (emoji dari daftar tetap, 200 per 10 menit per orang), fungsi `mw_photo_react` (hanya foto yang terlihat dan bukan milik sendiri); `mw_photo_feed` mengembalikan `reactions` jsonb `[{emoji, count, mine}]` menggantikan `hearts, hearted`. Migrasi **baru** `202611210001` (yang sudah dijalankan tidak diubah); hati lama dipindah jadi ❤️ (kecuali di foto sendiri). Berkas untuk dijalankan pemilik: `D:\projects\events\2027-01-werkudara-wam\main-wam-update-reactions.sql` | satu orang satu reaksi menjaga hitungan tetap sederhana; daftar tertutup mencegah teks bebas di foto orang |
-| 27 | **Kelompok dihapus dari aplikasi (pemilik, 18 Nov)**: layar "Kelompok & kamar" jadi "Kamar" (`/saya/kamar`; tanpa kelompok dan kelompok kegiatan); kartu profil Saya hanya departemen; sasaran Pengumuman tinggal semua / departemen / panitia; halaman, menu, tab, `sections.ts`, dan rute pengelola "Kelompok" di Admin WAM dihapus. Tabel dan kolom (`mw_groups`, `mw_group_members`, `mw_activity_groups`, `viewer.group`, `groups_published_at`) dibiarkan; API admin `kelompok*` masih ada tapi tanpa layar. | pemilik tidak memakai kelompok di WAM 2027 |
+| 27 | **Kelompok dihapus dari aplikasi (pemilik, 18 Nov)**: layar "Kelompok & kamar" jadi "Kamar" (`/saya/kamar`; tanpa kelompok dan kelompok kegiatan); kartu profil Saya hanya departemen; sasaran Pengumuman tinggal semua / departemen / panitia; halaman, menu, tab, `sections.ts`, dan rute pengelola "Kelompok" di Admin WAM dihapus. Tabel dan kolom (`mw_groups`, `mw_group_members`, `mw_activity_groups`, `viewer.group`, `groups_published_at`) dibiarkan; API admin `kelompok*` masih ada tapi tanpa layar. | pemilik tidak memakai kelompok di WAM 2026 |
 | 28 | **Pengaturan dirapikan, Jejak karbon kembali (pemilik, 18 Nov)**: Pengaturan = grup Aplikasi (Notifikasi, Pasang ke layar utama, Tampilan, Bahasa; tiap baris satu kalimat dan satu sheet), Akun (Ganti password), Bantuan (halaman Bantuan, Hubungi panitia), lalu versi dan Akses MCP (pindah dari Saya). Jejak karbon (E01) kembali sebagai kartu di Beranda (setelah Momen, semua peran), baris di Saya → Info acara dan baris Ringkasan BOD yang bisa diketuk, ke halaman `/jejak-karbon`: total perkiraan, ±kg per orang, sumber (Hotel, Perjalanan, Makan) dengan batang dan persen, "Cara menghitung"; tanpa pohon, penebusan, atau isian. Angka dari `carbonForEvent` (dihitung dari data acara, tanpa form); warna batang token `--mw-chart-emisi-1…3` (≥ 3:1, terang dan gelap). | revisi pemilik |
 | 29 | **Momen: tanpa pilihan sesi dan kelompok, tumpukan miring, reaksi bisa dilihat siapa saja (pemilik, uji di Pixel 9 Pro)**: (a) kamera tanpa chip dan sheet sesi; foto tetap ditandai sesi yang sedang berjalan di balik layar (atau sesi dari alamat `?sesi=`), tanpa UI; (b) kelompok hilang dari Momen: pil pemilik hanya nama panggilan + jam, `ownerGroup` dihapus dari `FeedPhoto`, kunci di foto lama (`audience = kelompok`) tidak lagi digambar (kolom DB dibiarkan); (c) kartu di belakang foto depan miring acak (±2° sampai ±7°, bergeser sedikit, mengecil menurut sudut, deterministik dari id foto: `pileTilt`), foto depan lurus, kartu berikutnya meluruskan diri; reduced motion: tanpa transisi, kemiringan tetap; (d) pil reaksi menumpuk menyamping seperti kelompok avatar (maks. 4 pil lalu "+N", reaksimu selalu ikut), **satu tombol**: mengetuknya membuka sheet "Reaksi · N" (tab Semua + per emoji; baris: avatar, nama panggilan, emoji; reaksimu bertanda "Kamu" dan mengetuknya menghapus); bereaksi hanya lewat baris cepat, sheet emoji, atau ganda-ketuk. Server: `GET /api/wam/acara/momen/[id]/reaksi` → `{ reactors: [{ person, emoji, mine, at }] }` (foto yang tidak boleh dilihat = 404, 120 per 10 menit per orang, `no-store`), fungsi `mw_photo_reactors` di migrasi **baru** `202611230001_main_wam_reactors.sql` (aman diulang; salinan: `D:\projects\events\2027-01-werkudara-wam\main-wam-update-reactors.sql`). Kanvas Mozaik: foto di luar huruf dipudarkan, sel huruf yang belum terisi lebih jelas, supaya "WAM 2026" terbaca pada 52% | membalik keputusan 25 ("tanpa daftar siapa"): pemilik ingin tahu siapa yang bereaksi; satu tombol menjaga foto tetap bersih dan area ketuk ≥ 44 px; kemiringan memberi tahu masih banyak foto di belakang |
 | 30 | **Momen: tumpukan hanya foto yang belum dilihat, seperti Instants di Instagram (pemilik, 19 Nov)**: (a) foto yang sudah menjadi foto depan (digeser atau dibuka) **tidak muncul lagi** di tumpukan Semua, hanya di Galeri; lintasan kedua (sudah dilihat + milik sendiri) dihapus. Foto sendiri **muncul sekali** sebagai foto pertama (pil "Fotomu") dan dianggap dilihat begitu menjadi foto depan, sama seperti foto lain. Tumpukan habis → panel "Kamu sudah lihat semua" (Ambil foto, Buka Galeri, Lihat Mozaik); selama panel tampil, ada polling ringan tiap 20 detik (dan saat aplikasi kembali ke depan / sinyal pulih) ke halaman pertama tumpukan: foto baru muncul sebagai "baru". "Lihat" dari toast Terkirim dan dari Galeri/Mozaik membuka mode galeri di foto itu (semua foto, termasuk yang sudah dilihat, bertanda "Sudah dilihat"); tidak masuk tumpukan reguler. (b) Penandaan dilihat: antrean `lib/main-wam/momen/seen.ts` (id masuk saat foto jadi foto depan, dikirim berkelompok ≤ 100 ke `POST momen/dilihat` tiap 3 detik, saat ke latar, saat sinyal pulih, saat layar ditutup; gagal = tetap antre dan tersimpan di localStorage `mw-momen-dilihat` sehingga tab yang ditutup tidak menghilangkan tandanya; hanya 400/404/422 dianggap final); antrean sisa kunjungan lalu menyaring foto itu dari tumpukan. (c) SQL (migrasi **baru** `202611240001_main_wam_stack_unseen.sql`, salinan: `D:/projects/events/2027-01-werkudara-wam/main-wam-update-stack.sql`, aman diulang): `mw_photo_feed` (argumen dan kolom sama) mode `p_unseen` hanya foto tanpa baris `mw_photo_seen`; foto sendiri yang belum dilihat dulu (`p_cursor_rest` = kursor masih di lintasan foto sendiri; alamat `r~…` = foto terakhir milik sendiri, `b~…` = lainnya), lalu terbaru dulu; `seen` = ada baris seen (foto sendiri tidak lagi otomatis "dilihat"); `total` = sisa tumpukan setelah kursor. Fungsi baru `mw_photo_unseen_count(viewer, group)` = "N foto baru" di Beranda: foto orang lain yang belum dilihat, foto sendiri tidak dihitung (di tumpukan dihitung). Isi ulang: foto lama diisi sebagai sudah dilihat oleh pemiliknya. Urutan: SQL dulu atau bersamaan dengan deploy; bila deploy dulu, aplikasi baru menyaring foto "seen" sendiri (SQL lama masih mengembalikan lintasan kedua) dan Beranda memakai total lama; bila SQL dulu, aplikasi lama hanya menampilkan foto belum dilihat dan foto sendiri tidak ditandai dilihat (tetap di depan) sampai deploy. (d) **Pesan/komentar di bawah foto ditunda**: tidak ada UI, kolom, atau API pesan (tes DOM memastikan tak ada field/tombol/kata komentar atau pesan); reaksi cepat (❤️ 😂 🔥 👏 😮 🙏 + "+") tetap tepat di bawah kartu foto depan dan ikut berpindah saat digeser; pil reaksi tetap menindih kiri bawah foto dengan sheet siapa bereaksi (dicek 320×568 sampai 430×932) | membalik dua-lintasan keputusan PM 18 Nov: yang sudah dilihat tidak perlu muncul lagi; stack pendek terasa selesai dan memancing ambil foto |
@@ -559,7 +559,7 @@ berawalan bahasa. Tanpa dependensi baru (kamus objek biasa, ±0 KB library).
 
 Tujuan: pemilik bisa melihat SEMUA layar Main WAM di HP dengan data contoh sebelum acara, tanpa mengisi CMS dan tanpa mengubah data nyata.
 
-- **Bendera:** Admin WAM 2027 → Pengaturan → "Mode demo (data contoh)". Disimpan di `mw_settings.module_config.demo` (jsonb yang sudah ada; **tanpa migrasi**). Hanya `true` yang menyalakan. Bawaan mati.
+- **Bendera:** Admin WAM 2026 → Pengaturan → "Mode demo (data contoh)". Disimpan di `mw_settings.module_config.demo` (jsonb yang sudah ada; **tanpa migrasi**). Hanya `true` yang menyalakan. Bawaan mati.
 - **Yang berubah saat menyala** (hanya apa yang digambar; yang tersimpan tidak ditulis ulang, Admin membaca `mainWamSettingsState`):
   - semua modul tampil menyala, kecuali Silent Meeting (milik Pra WAM, ikut pilihan tersimpan); kelompok dianggap terbit;
   - banner kecil "Mode demo · data contoh" di atas bilah atas (`MainWamShell demo`);
@@ -585,7 +585,7 @@ tokohnya. Produk: `docs/rancangan-kuis-wam.md` (§8a = yang dibangun). Agen F; m
   "tidak ditemukan". Mode demo menyalakannya seperti modul lain, tetapi tanpa kuis contoh (kartu hanya untuk permainan
   nyata); selama rundown contoh dipakai, Ikut, jawaban, dan aksi MC ditolak seperti semua penyimpanan (§12).
 - **Gerbang:** halaman `requireModulePage("kuis", …)`, API `requireModuleApi("kuis")`. Pemain = semua yang boleh melihat
-  Main WAM (BOD juga). Pengendali = `mw_quiz_hosts` per kuis atau akun WAM pemegang Admin WAM 2027 (`holdsWamAcara`, §15); Panitia WAM saja dan peran admin Pra WAM tidak cukup; selain itu kendali 404 (§9 #19).
+  Main WAM (BOD juga). Pengendali = `mw_quiz_hosts` per kuis atau akun WAM pemegang Admin WAM 2026 (`holdsWamAcara`, §15); Panitia WAM saja dan peran admin Pra WAM tidak cukup; selain itu kendali 404 (§9 #19).
   Peran panitia saja tidak cukup.
 - **Layar besar** `/kuis/{kunci}` dan `/api/kuis/{kunci}`: publik seperti TV kantor, di luar `/wam` (tanpa sesi, tanpa
   service worker), kunci acak `kuis_` + 32 byte, hanya sha256 yang disimpan, noindex dan no-referrer, hidup hanya saat
@@ -605,19 +605,19 @@ tokohnya. Produk: `docs/rancangan-kuis-wam.md` (§8a = yang dibangun). Agen F; m
   `sections.ts` + `tabs.ts` (tab Kuis live di Modul acara), `theme.module.css` (token `--mw-kuis-a…d`, `--mw-on-kuis`,
   `--mw-kuis-medal-1…3`, `--mw-kuis-win-container`, `--mw-on-kuis-medal`), Beranda (`BerandaScreen` slot `kuis` di atas
   Sekarang, dipasang di `(app)/page.tsx`), N01 (ikon dan kata jenis `kuis`), `sample.ts` (modul contoh menyala).
-- **Pratinjau:** `/dev-preview/main-wam/kuis?layar=hp-…|kendali-…|layar-…` (lihat berkasnya), `/dev-preview/main-wam/kuis/admin`.
+- **Pratinjau:** `/dev-preview/wam2026/kuis?layar=hp-…|kendali-…|layar-…` (lihat berkasnya), `/dev-preview/wam2026/kuis/admin`.
 
 ## 14. Main WAM tersembunyi dari Journey (20 Nov 2026)
 
 Keputusan pemilik: panitia dan admin Pra WAM bukan tim WAM, jadi Main WAM (termasuk Kuis live) tidak terlihat di
-Journey sampai **super admin** menekan **Tampilkan Main WAM** di Super admin → Halaman utama (`/admin/super/beranda`).
+Journey sampai **super admin** menekan **Tampilkan WAM 2026** di Super admin → Halaman utama (`/admin/super/beranda`).
 Bawaannya **tersembunyi**. Disimpan di `admin_settings.main_wam_shown` (+ `main_wam_shown_at`, `main_wam_shown_by`;
 migrasi `202611200602_main_wam_visibility.sql`). Sebelum migrasi, tanpa basis data, atau saat kolom tidak terbaca: tersembunyi.
-Hanya super admin yang bisa mengubahnya (`PUT /api/admin/main-wam-tampil`, `requireSuperAdmin`). Siapa dan kapan dicatat
+Hanya super admin yang bisa mengubahnya (`PUT /api/admin/wam2026-tampil`, `requireSuperAdmin`). Siapa dan kapan dicatat
 di baris itu dan di log server.
 
 **Sejak dua pintu admin (20 Nov 2026, §15) tombol ini hanya untuk sisi aplikasi**: ke mana `/wam` pergi dan siapa
-penerima notifikasi Main WAM. Admin WAM 2027 tidak pernah disembunyikan olehnya, dan Admin Pra WAM tidak pernah berisi
+penerima notifikasi Main WAM. Admin WAM 2026 tidak pernah disembunyikan olehnya, dan Admin Pra WAM tidak pernah berisi
 Main WAM (menu, tautan, Ringkasan, pencarian), ditampilkan maupun tidak (`hiddenMainWamSections` dihapus).
 
 Selama tersembunyi:
@@ -628,15 +628,22 @@ Selama tersembunyi:
   `home-privacy.test.ts`).
 - **Notifikasi** (`sendMainWamNote`, termasuk "Kuis dimulai"): hanya ke **penguji** (daftar `mw_testers` dan Panitia WAM,
   §15), bukan ke panitia atau admin Pra WAM karena perannya, apa pun mode acaranya. Kabarnya disimpan sebagai `pw_announcements.kind
-  = 'sesi'` dengan label "Penguji Main WAM", jadi tidak masuk daftar pengumuman terkirim Pra WAM, angka BOD, atau papan
+  = 'sesi'` dengan label "Penguji WAM 2026", jadi tidak masuk daftar pengumuman terkirim Pra WAM, angka BOD, atau papan
   pengumuman TV kantor. Main WAM tidak mengirim apa pun lewat Telegram.
-- Pengaturan dan Ringkasan Admin WAM 2027 menampilkan catatan bahwa Main WAM sedang tersembunyi.
+- Pengaturan dan Ringkasan Admin WAM 2026 menampilkan catatan bahwa Main WAM sedang tersembunyi.
 
 Setelah ditampilkan: semuanya kembali seperti sebelumnya (§2, §3, §4.1). Tes: `src/lib/main-wam-visibility.test.ts`,
-`gate.test.ts`, `foundation-server.test.ts`, `src/app/api/admin/main-wam-tampil/route.test.ts`,
+`gate.test.ts`, `foundation-server.test.ts`, `src/app/api/admin/wam2026-tampil/route.test.ts`,
 `src/app/wam/pra-wam-hides-main-wam.test.ts`, `src/app/home-privacy.test.ts`, `MainWamVisibility.dom.test.tsx`.
 
 ## 15. Dua pintu admin dan Panitia WAM (20 Nov 2026)
+
+**Nama yang terlihat** (keputusan pemilik, 20 Nov 2026): acaranya bernama **WAM 2026** (diadakan 4–7 Jan 2027). Semua
+teks yang dilihat orang memakai "WAM 2026" (aplikasi acara, mode "WAM 2026 (uji)/(semua)", tombol "Buka WAM 2026" dan
+"Tampilkan WAM 2026", label "Penguji WAM 2026") dan pintu adminnya **Admin WAM 2026** di `/admin/wam2026`. "Main WAM"
+hanya nama internal: kode (`mainWam*`, `MainWam*`), folder `src/lib/main-wam` dan `src/components/main-wam`, tabel `mw_*`,
+kolom `admin_settings.main_wam_shown`, dan dokumen ini. Kunci hak `wam_acara` dan berkas migrasi 0603 juga tetap. Alamat
+aplikasi peserta tetap `/wam/acara` (di dalam lingkup PWA `/wam`).
 
 Keputusan pemilik: panitia dan admin Pra WAM bukan tim WAM. Admin dibagi dua pintu dengan hak terpisah, dan panitia
 Main WAM dipisahkan dari panitia Pra WAM. Migrasi `202611200603_admin_wam_acara.sql` (area F).
@@ -646,16 +653,16 @@ Main WAM dipisahkan dari panitia Pra WAM. Migrasi `202611200603_admin_wam_acara.
 | Pintu | Alamat | Hak (`admin_grants.apps`) | Isi |
 | --- | --- | --- | --- |
 | **Admin Pra WAM** (dulu "Admin WAM"; `PRA_WAM_ADMIN_LABEL`) | `/admin/wam/**`, `/api/admin/wam/**` (tidak berubah) | `wam` (+ `kuesioner`, `tv` seperti sebelumnya) | Akun dan peran, Kuesioner, Data karyawan (super admin), Ruang, TV, Telegram, Tema, Akses MCP. **Tidak ada Main WAM sama sekali** (menu, tautan, Ringkasan, pencarian; dites `main-wam-visibility.test.ts`, `pra-wam-hides-main-wam.test.ts`) |
-| **Admin WAM 2027** (`WAM_EVENT_ADMIN_LABEL`, satu konstanta di `src/lib/admin-access.ts`) | `/admin/wam-acara/**`, `/api/admin/wam-acara/**` | `wam_acara` | Ringkasan, Pengaturan (mode, modul, penguji, tema), Panitia WAM, Isi acara (Rundown, Kamar, Perjalanan, Panduan, Info acara), Modul acara (Awarding, Silent Meeting, Kuis live) |
+| **Admin WAM 2026** (`WAM_EVENT_ADMIN_LABEL`, satu konstanta di `src/lib/admin-access.ts`) | `/admin/wam2026/**`, `/api/admin/wam2026/**` | `wam_acara` | Ringkasan, Pengaturan (mode, modul, penguji, tema), Panitia WAM, Isi acara (Rundown, Kamar, Perjalanan, Panduan, Info acara), Modul acara (Awarding, Silent Meeting, Kuis live) |
 
 - Alamat lama `/admin/wam/main` dan `/admin/wam/main/**` dialihkan (`next.config.ts`, tidak permanen) ke alamat baru dan
   diperiksa di sana. API lama `/api/admin/wam/main/**` dihapus.
 - **Siapa membuka apa** (`areaOfPath` + `mayOpenArea`, `requireAdminPage` → `notFound()`, `requireApiAdmin` → 403, pola
-  yang sama untuk semua area): pemegang `wam` saja → 404/403 di semua halaman dan API Admin WAM 2027; pemegang `wam_acara`
+  yang sama untuk semua area): pemegang `wam` saja → 404/403 di semua halaman dan API Admin WAM 2026; pemegang `wam_acara`
   saja → tidak bisa membuka Admin Pra WAM; super admin → keduanya. Tidak ada yang mendapat `wam_acara` otomatis.
 - **Sebelum migrasi 0603** cek `admin_grants.apps` belum mengenal `wam_acara`: menyimpan akses itu dijawab 503 "menunggu
   migrasi", Akses admin menampilkan catatan dan kotaknya terkunci (`wamAcaraMigrated`), jadi hanya super admin yang membuka
-  Admin WAM 2027.
+  Admin WAM 2026.
 - Halaman utama admin: kartu **Main WAM** (`standaloneApps`, kunci `wam_acara`) hanya untuk pemegang `wam_acara` dan super
   admin (`showsAppCard`); kartu WAM (Pra WAM) seperti sebelumnya. Super admin punya tautan ke kedua pintu.
 - Akses MCP tidak berubah: alat MCP (`src/lib/server/pra-wam/mcp-tools.ts`) tidak membaca data Main WAM (`mw_*`) sama sekali.
@@ -665,7 +672,7 @@ Main WAM dipisahkan dari panitia Pra WAM. Migrasi `202611200603_admin_wam_acara.
 - Tabel `pw_event_staff(event_id → pw_events, employee_id → employees, seksi ≤ 40, granted_at, granted_by ≤ 150)`, kunci
   `(event_id, employee_id)`, hapus berantai bila acara atau orangnya dihapus; khusus server (RLS on, revoke
   `public, anon, authenticated`, grant `service_role`). Uji SQL: `tests/backend/admin-wam-acara-check.sql`.
-- Admin WAM 2027 → **Panitia WAM** (`/admin/wam-acara/panitia`, `StaffAdmin`, API `mainWamAdminApi.committee`,
+- Admin WAM 2026 → **Panitia WAM** (`/admin/wam2026/panitia`, `StaffAdmin`, API `mainWamAdminApi.committee`,
   `committeeMember(id)`): tambah (atau ganti seksi), ubah seksi, hapus. Seksi hanya label (saran: Acara, Kamar, Konsumsi,
   Dokumentasi, Transportasi, Perlengkapan; boleh kosong atau diketik bebas); semua seksi berhak sama. BOD ditolak (422),
   orang di luar Data karyawan aktif 404, belum ada acara WAM 409. Orang tanpa akun WAM aktif boleh dicatat, ditandai
@@ -680,7 +687,7 @@ Main WAM dipisahkan dari panitia Pra WAM. Migrasi `202611200603_admin_wam_acara.
 | --- | --- |
 | Panitia (tab Panitia, alat panitia, `mainWamCan` "kelola"/"silent-kontrol", hitungan, pengumuman "Panitia saja") | Panitia WAM acara WAM (`mainWamRolesOf`, `mainWamEventPeople().panitia`) |
 | Penguji (`isTester`, mode `pra`/`uji`) | `mw_testers` + Panitia WAM |
-| Pengendali kuis (`isQuizHost`, kartu "Kendalikan kuis") | `mw_quiz_hosts` per kuis + akun WAM yang memegang hak `wam_acara` (`holdsWamAcara`, padanan hak Admin WAM 2027 di sisi aplikasi; super admin tidak punya akun WAM jadi tidak termasuk). Panitia WAM saja tidak cukup |
+| Pengendali kuis (`isQuizHost`, kartu "Kendalikan kuis") | `mw_quiz_hosts` per kuis + akun WAM yang memegang hak `wam_acara` (`holdsWamAcara`, padanan hak Admin WAM 2026 di sisi aplikasi; super admin tidak punya akun WAM jadi tidak termasuk). Panitia WAM saja tidak cukup |
 | Penerima notifikasi Main WAM (`mainWamAudience`) | mode `semua` dan sudah ditampilkan (§14): semua akun aktif; selain itu penguji (daftar + Panitia WAM) |
 | BOD | tetap dari peran BOD akun |
 
@@ -688,5 +695,5 @@ Pra WAM tidak berubah: panitia dan admin Pra WAM tetap dari `pw_roles` di Pra WA
 Tes: `src/lib/admin-access.test.ts`, `src/components/admin/wam-acara/sections.test.ts` (pintu, halaman, API, pengalihan),
 `AdminGrants.dom.test.tsx`, `src/lib/main-wam/access.test.ts`, `src/lib/server/main-wam/staff.test.ts`,
 `demo-server.test.ts`, `foundation-server.test.ts`, `gate-cost.test.ts`, `kuis/kuis-server.test.ts`, `panitia/access.test.ts`,
-`modul-access.test.ts`. Pratinjau: `/dev-preview/main-wam/admin/ringkasan`, `/dev-preview/main-wam/admin/panitia`
-(`?isi=kosong`, `?migrasi=belum`, `?acara=belum`), dan halaman `/dev-preview/main-wam/admin/*` lain dalam bingkai baru.
+`modul-access.test.ts`. Pratinjau: `/dev-preview/wam2026/admin/ringkasan`, `/dev-preview/wam2026/admin/panitia`
+(`?isi=kosong`, `?migrasi=belum`, `?acara=belum`), dan halaman `/dev-preview/wam2026/admin/*` lain dalam bingkai baru.

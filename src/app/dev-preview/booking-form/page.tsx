@@ -21,7 +21,7 @@ export default async function DevBookingFormPage({ searchParams }: { searchParam
     <div className={base.app} style={{ minHeight: "100vh", padding: 20, maxWidth: 640 }}>
       <BookingForm initial={{ date: DATE, start: "10:00", end: "11:00", roomId: "", title: "", description: "", participants: [] }} dates={[DATE]} now={new Date().toISOString()}
         rooms={rooms} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]} dayOf={DATE} showPlan={false}
-        dayBookings={[booking("cfc", "Meeting ACS", "09:00", "10:30", "Sofyan", 3), booking("cfc", "Meeting RAB WAM 2027", "13:00", "15:30", "Hanung", 4), booking("gmsm", "Appraisal team SM", "14:30", "16:00", "Raja", 1)]} />
+        dayBookings={[booking("cfc", "Meeting ACS", "09:00", "10:30", "Sofyan", 3), booking("cfc", "Meeting RAB WAM 2026", "13:00", "15:30", "Hanung", 4), booking("gmsm", "Appraisal team SM", "14:30", "16:00", "Raja", 1)]} />
     </div>
   </div>;
 }

@@ -2,7 +2,7 @@ import type { PageTab } from "@/components/console";
 import { mainWamAdminPath } from "@/lib/routes";
 
 /*
- * The tabs of Admin WAM 2027's content pages (fondasi), so agen E and D draw the same row:
+ * The tabs of Admin WAM 2026's content pages (fondasi), so agen E and D draw the same row:
  *   <PageTabs tabs={mainWamContentTabs} current="kamar" label="Isi acara" />
  * Every page also sits in the menu under its owner (sections.ts: mw-isi, mw-modul).
  */

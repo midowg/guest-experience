@@ -18,7 +18,7 @@ const when = (session: Session) => `${adminWhen(session.startsAt).split(" · ")[
 const stateWords = { belum: "Belum dibuka", buka: "Dibuka", tutup: "Ditutup" } as const;
 
 /**
- * Admin WAM 2027 → Silent Meeting (agen D): one question per session and its topics. It opens
+ * Admin WAM 2026 → Silent Meeting (agen D): one question per session and its topics. It opens
  * at the session's start and closes at its end; panitia may open it earlier or close it earlier in
  * Rundown live, and once closed it never opens again. Admin sees its state; how many sent only once
  * closed from 5 feedbacks of 5 people (never while open, audit H2), never what they wrote (the BOD
@@ -44,7 +44,7 @@ export function SilentAdmin({ initial, moduleOn = true }: { initial: AdminSilent
   }
 
   return <div className={css.stack}>
-    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Silent Meeting dipakai di Pra WAM; di aplikasi Main WAM tidak tampil di mana pun sampai modulnya dinyalakan di Pengaturan. Pertanyaan di bawah tetap tersimpan.</Notice>}
+    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Silent Meeting dipakai di Pra WAM; di aplikasi WAM 2026 tidak tampil di mana pun sampai modulnya dinyalakan di Pengaturan. Pertanyaan di bawah tetap tersimpan.</Notice>}
     {!data.migrated && <Notice tone="warning">{WAITING_TEXT}</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     <p className={css.note}>Silent Meeting dibuka dan ditutup mengikuti jam sesinya. Panitia bisa membukanya lebih awal atau menutupnya lebih awal dari Rundown live; yang sudah ditutup tidak bisa dibuka lagi. Masukan disimpan tanpa nama dan tanpa jam. Jumlahnya tampil setelah ditutup, bila ada minimal 5 masukan dari 5 orang.</p>

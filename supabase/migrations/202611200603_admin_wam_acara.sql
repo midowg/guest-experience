@@ -1,9 +1,9 @@
 -- LOCAL REVIEW ONLY. Apply to a remote database only with separate authorization.
 -- Two WAM admin doors and the WAM committee per event (20 Nov 2026, keputusan pemilik; docs/main-wam/KONTRAK.md §15):
 -- Pra WAM's committee and admins are not the WAM team.
---   1. Super admin → Akses admin may give "Admin WAM 2027" (app 'wam_acara'): the admin of the WAM event itself
---      (Main WAM, /admin/wam-acara). Admin Pra WAM ('wam', /admin/wam) no longer opens it. Nobody gets it
---      automatically: until the super admin ticks it per person, only the super admin opens Admin WAM 2027.
+--   1. Super admin → Akses admin may give "Admin WAM 2026" (app 'wam_acara'): the admin of the WAM event itself
+--      (Main WAM, /admin/wam2026). Admin Pra WAM ('wam', /admin/wam) no longer opens it. Nobody gets it
+--      automatically: until the super admin ticks it per person, only the super admin opens Admin WAM 2026.
 --   2. pw_event_staff: the committee of one event (docs/rancangan-main-wam.md, "Peran per acara"), with a seksi that
 --      is only a label. Main WAM reads its committee (tab Panitia, panitia's tools, penguji) from here for the WAM
 --      event (pw_events.kind = 'wam'), no longer from the global role in pw_roles. Pra WAM's committee stays in

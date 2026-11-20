@@ -15,7 +15,7 @@ type Filter = "semua" | "tanpa-lantai" | "kosong";
 const day = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 /**
- * Admin WAM 2027 → Kamar (agen E): the rooms and who shares each, read from HR's pairing
+ * Admin WAM 2026 → Kamar (agen E): the rooms and who shares each, read from HR's pairing
  * (Kuesioner → Kamar; any number of people up to the room's capacity), and what Main WAM adds:
  * the floor and a note, saved per room. Hotel, check-in and check-out are on Info acara.
  */

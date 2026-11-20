@@ -11,7 +11,7 @@ export function GET() {
     id: `${PRA_WAM_PATH}/`,
     name: "WAM · Werkudara",
     short_name: "WAM",
-    description: "Satu aplikasi untuk setiap langkah menuju WAM 2027, dari Pra WAM sampai hari H.",
+    description: "Satu aplikasi untuk setiap langkah menuju WAM 2026, dari Pra WAM sampai hari H.",
     lang: "id",
     start_url: `${PRA_WAM_PATH}/`,
     scope: `${PRA_WAM_PATH}/`,

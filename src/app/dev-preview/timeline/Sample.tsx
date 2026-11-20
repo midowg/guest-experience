@@ -13,7 +13,7 @@ const booking = (date: string, roomId: string, title: string, start: string, end
 /** Sample bookings for the layout check, Monday 9 Nov 2026 and the day after. */
 const days: Record<string, Booking[]> = {
   "2026-11-09": [
-    booking("2026-11-09", "cfc", "Meeting ACS", "09:00", "10:30", "Sofyan", 3), booking("2026-11-09", "cfc", "Meeting RAB WAM 2027", "13:00", "15:30", "Hanung", 4),
+    booking("2026-11-09", "cfc", "Meeting ACS", "09:00", "10:30", "Sofyan", 3), booking("2026-11-09", "cfc", "Meeting RAB WAM 2026", "13:00", "15:30", "Hanung", 4),
     booking("2026-11-09", "gmsm", "Appraisal team SM", "14:30", "16:00", "Raja", 1),
   ],
   "2026-11-10": [booking("2026-11-10", "limasan", "Internal Departemen SS", "13:00", "15:00", "Dewi", 12)],

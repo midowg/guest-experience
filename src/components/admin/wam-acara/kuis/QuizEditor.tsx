@@ -22,7 +22,7 @@ const phaseWords: Record<AdminRun["phase"], string> = {
 const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 /**
- * One quiz in Admin WAM 2027 (rancangan §8a): its questions (text, 4 options, the key, the level; played easy to
+ * One quiz in Admin WAM 2026 (rancangan §8a): its questions (text, 4 options, the key, the level; played easy to
  * very hard, the order within a level by the arrows), the pengendali, the big screen's link (shown once),
  * games (a new one ends the one not over), and each game's results with names for the prizes.
  */
@@ -77,7 +77,7 @@ export function QuizEditor({ initial, moduleOn }: { initial: AdminQuiz; moduleOn
 
   const hosted = new Set(data.hosts.map(person => person.id));
   return <div className={css.stack}>
-    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Kuis ini tidak tampil di aplikasi dan layar besarnya tidak aktif sampai modul Kuis live dinyalakan di Main WAM → Pengaturan.</Notice>}
+    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Kuis ini tidak tampil di aplikasi dan layar besarnya tidak aktif sampai modul Kuis live dinyalakan di Pengaturan.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
 
     <Card title="Judul" id="kuis-judul">

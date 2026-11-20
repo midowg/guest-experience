@@ -14,7 +14,7 @@ export type StaffPerson = { id: string; fullName: string; department: string };
 type Message = { tone: "success" | "error"; text: string } | null;
 
 /**
- * Admin WAM 2027 → Panitia WAM (20 Nov 2026, KONTRAK §15): who is on the WAM event's committee, with a
+ * Admin WAM 2026 → Panitia WAM (20 Nov 2026, KONTRAK §15): who is on the WAM event's committee, with a
  * seksi that is only a label. Panitia WAM get the tab Panitia and its tools in Main WAM and always test
  * it; Pra WAM's committee (Admin Pra WAM → Akun dan peran) is apart and is not copied here.
  */
@@ -54,12 +54,12 @@ export function StaffAdmin({ initial, people }: { initial: WamStaffBoard; people
   };
 
   return <div className="stack">
-    {!board.migrated && <Notice tone="warning">Panitia WAM menunggu migrasi <code>202611200603</code> (admin_wam_acara). Sampai itu Main WAM belum punya panitia; hanya penguji di daftar Pengaturan yang bisa mencobanya.</Notice>}
+    {!board.migrated && <Notice tone="warning">Panitia WAM menunggu migrasi <code>202611200603</code> (admin_wam_acara). Sampai itu WAM 2026 belum punya panitia; hanya penguji di daftar Pengaturan yang bisa mencobanya.</Notice>}
     {board.migrated && !board.event && <Notice tone="warning">Acara WAM belum ada. Siapkan dulu di Admin Pra WAM → Acara dan modul.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
 
     <Card title="Tambah panitia" id={`${id}-tambah`}>
-      <p className={css.note}>Panitia WAM mendapat tab Panitia di Main WAM (Rundown live, Absen manual, Pengumuman, Moderasi) dan selalu menjadi penguji. Seksi hanya label; semua seksi punya hak yang sama. BOD tidak bisa menjadi panitia.</p>
+      <p className={css.note}>Panitia WAM mendapat tab Panitia di aplikasi WAM 2026 (Rundown live, Absen manual, Pengumuman, Moderasi) dan selalu menjadi penguji. Seksi hanya label; semua seksi punya hak yang sama. BOD tidak bisa menjadi panitia.</p>
       <div className={css.pick}>
         <div className="field">
           <label htmlFor={`${id}-cari`}>Karyawan</label>
@@ -79,7 +79,7 @@ export function StaffAdmin({ initial, people }: { initial: WamStaffBoard; people
       {board.staff.length > 0 && <ul className={css.summary} aria-label="Jumlah per seksi">
         {bySeksi.map(([label, count]) => <li key={label}><Pill tone="neutral">{label} · {count}</Pill></li>)}
       </ul>}
-      {board.staff.length === 0 ? <p className={css.note}>Belum ada panitia. Main WAM tanpa panitia: tab Panitia tidak muncul untuk siapa pun.</p>
+      {board.staff.length === 0 ? <p className={css.note}>Belum ada panitia. Tanpa panitia, tab Panitia di WAM 2026 tidak muncul untuk siapa pun.</p>
         : <ul className={css.rows} aria-label="Daftar Panitia WAM">
           {board.staff.map(member => {
             const open = editing?.employeeId === member.employeeId;

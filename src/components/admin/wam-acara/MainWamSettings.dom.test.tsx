@@ -14,24 +14,24 @@ const people = [{ id: "11111111-1111-4111-8111-111111111111", fullName: "Rani Co
 const tester = { employeeId: people[1].id, fullName: "Sari Contoh", department: "HRGA", addedBy: "Admin Contoh", addedAt: "2026-11-17T10:00:00Z" };
 const draw = (initial = settings) => render(<MainWamSettings initial={initial} testers={[tester]} testersMigrated people={people} forms={[{ slug: "survei-wam", name: "Survei WAM" }]} storage />);
 
-it("asks before opening Main WAM to everyone, then saves the mode", async () => {
-  request.mockResolvedValue({ message: "Mode acara: Main WAM (semua).", data: { ...settings, mode: "semua" } });
+it("asks before opening WAM 2026 to everyone, then saves the mode", async () => {
+  request.mockResolvedValue({ message: "Mode acara: WAM 2026 (semua).", data: { ...settings, mode: "semua" } });
   draw();
   const card = screen.getByRole("region", { name: "Mode acara" });
   expect((within(card).getByRole("radio", { name: /Pra WAM \(bawaan\)/ }) as HTMLInputElement).checked).toBe(true);
-  fireEvent.click(within(card).getByRole("radio", { name: /Main WAM \(semua\)/ }));
+  fireEvent.click(within(card).getByRole("radio", { name: /WAM 2026 \(semua\)/ }));
   fireEvent.click(within(card).getByRole("button", { name: "Pakai mode ini" }));
   expect(request).not.toHaveBeenCalled();
-  expect(within(card).getByRole("alert").textContent).toMatch(/Semua orang yang membuka WAM akan masuk Main WAM/);
+  expect(within(card).getByRole("alert").textContent).toMatch(/Semua orang yang membuka \/wam akan masuk WAM 2026/);
   fireEvent.click(within(card).getByRole("button", { name: "Ya, buka untuk semua" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][0]).toBe(mainWamAdminApi.settings);
   expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toEqual({ mode: "semua" });
-  expect(await screen.findByText("Mode acara: Main WAM (semua).")).toBeTruthy();
+  expect(await screen.findByText("Mode acara: WAM 2026 (semua).")).toBeTruthy();
 });
 
 it("switches a module on and saves it with the survey's questionnaire", async () => {
-  request.mockResolvedValue({ message: "Pengaturan Main WAM tersimpan.", data: settings });
+  request.mockResolvedValue({ message: "Pengaturan WAM 2026 tersimpan.", data: settings });
   draw();
   const card = screen.getByRole("region", { name: "Modul" });
   fireEvent.click(within(card).getByRole("switch", { name: "Survei" }));
@@ -65,10 +65,10 @@ it("lists penguji, adds one picked by name and removes one", async () => {
 it("waits for the migration: nothing can be saved", () => {
   draw({ ...settings, migrated: false });
   // Plain words, no file name (audit R13, T-A01).
-  expect(screen.getByText(/Pengaturan Main WAM menunggu pembaruan sistem\..*Hubungi tim CoE\./)).toBeTruthy();
+  expect(screen.getByText(/Pengaturan WAM 2026 menunggu pembaruan sistem\..*Hubungi tim CoE\./)).toBeTruthy();
   expect(screen.queryByText(/202611200001|migrasi/)).toBeNull();
   // The radios sit in a disabled fieldset.
-  expect(screen.getByRole("radio", { name: /Main WAM \(uji\)/ }).matches(":disabled")).toBe(true);
+  expect(screen.getByRole("radio", { name: /WAM 2026 \(uji\)/ }).matches(":disabled")).toBe(true);
   expect((screen.getByRole("switch", { name: "Absen QR" }) as HTMLInputElement).disabled).toBe(true);
 });
 
@@ -91,5 +91,5 @@ it("says who is panitia: Panitia WAM, apart from Pra WAM's (20 Nov 2026)", () =>
   draw();
   const card = screen.getByRole("region", { name: "Siapa panitia?" });
   expect(within(card).getByText("Atur di Panitia WAM. Panitia dan admin Pra WAM tidak otomatis menjadi panitia acara WAM. Penguji tambahan dipilih di sini.")).toBeTruthy();
-  expect(within(card).getByRole("link", { name: /Buka Panitia WAM/ }).getAttribute("href")).toBe("/admin/wam-acara/panitia");
+  expect(within(card).getByRole("link", { name: /Buka Panitia WAM/ }).getAttribute("href")).toBe("/admin/wam2026/panitia");
 });

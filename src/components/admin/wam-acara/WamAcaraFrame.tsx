@@ -6,7 +6,7 @@ import { WamAcaraNav } from "./WamAcaraNav";
 import type { WamAcaraSectionKey } from "./sections";
 
 /**
- * Every Admin WAM 2027 page in the console frame (WamAcaraNav). The page checks the session itself
+ * Every Admin WAM 2026 page in the console frame (WamAcaraNav). The page checks the session itself
  * (requireAdminPage: the wam_acara right, or the super admin) and starts with its own PageHeader.
  * The admin skin (admin.module.css .shell) stays on, so the sections' forms keep their look.
  */

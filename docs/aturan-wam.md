@@ -91,9 +91,9 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   isi, progres, rekap, ekspor, Data HR, kamar). Super admin memegang data rahasia (Data karyawan,
   struktur, NIP) di `/admin/super/…` dan tidak ditampilkan dalam presentasi aplikasi.
 - **Dua pintu admin** (20 Nov 2026, KONTRAK §15): **Admin Pra WAM** (`/admin/wam`, hak `wam`; dulu bernama "Admin WAM")
-  dan **Admin WAM 2027** (`/admin/wam-acara`, hak `wam_acara`, diberikan terpisah di Akses admin) untuk acara WAM sendiri
+  dan **Admin WAM 2026** (`/admin/wam2026`, hak `wam_acara`, diberikan terpisah di Akses admin) untuk acara WAM sendiri
   (Main WAM). Admin Pra WAM tidak berisi Main WAM sama sekali. Super admin membuka keduanya.
-- **Panitia WAM** terpisah dari panitia Pra WAM: dicatat per acara di Admin WAM 2027 → Panitia WAM (`pw_event_staff`,
+- **Panitia WAM** terpisah dari panitia Pra WAM: dicatat per acara di Admin WAM 2026 → Panitia WAM (`pw_event_staff`,
   seksi hanya label). Peran Panitia dan Admin WAM di Akun dan peran tetap milik Pra WAM dan tidak berlaku di Main WAM.
 
 ## 6. Book ruang
@@ -358,7 +358,7 @@ Rancangan lengkapnya ada di `docs/rancangan-mom-telegram.md`. Migrasi: `20261112
 - Dashboard hanya angka yang penting dan jalan pintas; detail ada di halaman masing-masing.
 - **Daftar Acara admin Journey (`/admin`), bagian Aplikasi** (10 Nov 2026): di atas Tayang/Draf, satu bagian
   "Aplikasi" untuk aplikasi mandiri di luar acara, masing-masing kartu seperti kartu acara dengan warna dan
-  ikonnya sendiri: **WAM 2027** (fase, permintaan reset password, Kelola WAM / Buka aplikasi), **Booking Kantor**
+  ikonnya sendiri: **WAM 2026** (fase, permintaan reset password, Kelola di Admin Pra WAM / Buka aplikasi), **WAM 2026 (acara)** (mode acara, Kelola di Admin WAM 2026 / Buka WAM 2026; hanya untuk pemegang aksesnya), **Booking Kantor**
   (`/booking`, Kelola booking), **TV Announcement** (`/tv`, Atur TV: alamat tiap TV, jadwal ruang, gambar dan
   durasinya, mode, QR), dan panduan **Your Visit** (`/your-visit`). Menggantikan judul "Your Visit" dan kartu WAM
   di atas daftar (`standaloneApps`).
@@ -429,8 +429,8 @@ Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang s
 
 | Hal | Aturan |
 | --- | --- |
-| Tersembunyi dari Journey | Bawaannya Main WAM (termasuk Kuis live) tidak terlihat di aplikasi: `/wam` tidak pernah mengalihkan ke `/wam/acara`, notifikasinya hanya ke penguji (daftar dan Panitia WAM). Hanya super admin yang menampilkannya (Super admin → Halaman utama → Main WAM). Penguji membuka lewat tautan langsung. Sejak 20 Nov 2026 tombol ini hanya untuk sisi aplikasi: Admin WAM 2027 tidak ikut disembunyikan, dan Admin Pra WAM tidak pernah berisi Main WAM. KONTRAK §14, migrasi `202611200602`. |
-| Mode acara | Admin WAM 2027 → Pengaturan: **Pra WAM** (bawaan; Main WAM hanya untuk penguji lewat alamatnya), **Main WAM (uji)** (penguji membuka Main WAM dari `/wam`, yang lain tetap Pra WAM), **Main WAM (semua)** (`/wam` membuka Main WAM; Pra WAM tetap di `/wam?versi=pra` dan alamat lainnya). Penguji: Panitia WAM dan daftar yang dipilih admin (panitia dan admin Pra WAM tidak otomatis). |
+| Tersembunyi dari Journey | Bawaannya Main WAM (termasuk Kuis live) tidak terlihat di aplikasi: `/wam` tidak pernah mengalihkan ke `/wam/acara`, notifikasinya hanya ke penguji (daftar dan Panitia WAM). Hanya super admin yang menampilkannya (Super admin → Halaman utama → Main WAM). Penguji membuka lewat tautan langsung. Sejak 20 Nov 2026 tombol ini hanya untuk sisi aplikasi: Admin WAM 2026 tidak ikut disembunyikan, dan Admin Pra WAM tidak pernah berisi Main WAM. KONTRAK §14, migrasi `202611200602`. |
+| Mode acara | Admin WAM 2026 → Pengaturan: **Pra WAM** (bawaan; Main WAM hanya untuk penguji lewat alamatnya), **WAM 2026 (uji)** (penguji membuka Main WAM dari `/wam`, yang lain tetap Pra WAM), **WAM 2026 (semua)** (`/wam` membuka Main WAM; Pra WAM tetap di `/wam?versi=pra` dan alamat lainnya). Penguji: Panitia WAM dan daftar yang dipilih admin (panitia dan admin Pra WAM tidak otomatis). |
 | Tersembunyi | Bukan untuk orang itu, atau modulnya mati: halaman 404 dan API 404, tanpa kartu, aksi, atau baris. Setiap halaman dan API memeriksa sendiri (ada tes). |
 | Data | Tabel `mw_*` (migrasi `202611200001–0003`). Rundown di `mw_sessions` (tidak di `pw_sessions`, supaya tidak tampil di Pra WAM). Kamar = pembagian kamar HR. Notifikasi lewat kotak masuk WAM yang sama (`pw_announcements`) dan Web Push yang ada, tanpa topik baru. |
 | Tema | Warna, huruf judul, dan gambar KV per slot dari Pengaturan; bawaannya tema netral DESIGN_SYSTEM. Gambar KV di R2 privat, disajikan lewat situs (hanya splash/ikon publik di mode semua; versi harus cocok). |
@@ -440,7 +440,7 @@ Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang s
 | Momen | Foto terkirim saat dijepret (Batalkan 5 detik), antre offline (IndexedDB, `client_id`), unggah langsung ke R2 (`tmp/` lalu dipindah saat disimpan). Hapus hanya oleh pemiliknya; panitia lewat Moderasi (tercatat, alasan opsional). Foto yang masuk nominasi tidak bisa dihapus. 3 pelapor → disembunyikan untuk ditinjau. |
 | Absen | Per sesi yang ditandai "pakai absen" di Rundown admin (token QR dibuat saat itu). Scan offline dikirim belakangan hanya bila jam scan di dalam jendela dan paling lama 30 menit sebelumnya. Panitia hanya bisa membatalkan absen manual. |
 | Hitungan orang | "Orang acara" = akun WAM aktif kecuali BOD (`mainWamAttendees`), sama di semua layar. |
-| Kuis live | Modul `kuis` (mati bawaan; `docs/rancangan-kuis-wam.md` §8a, KONTRAK §13). Pemain: semua yang melihat Main WAM, tampil sebagai tokohnya. Pengendali dipilih per kuis di Admin WAM 2027, ditambah akun WAM pemegang Admin WAM 2027; Panitia WAM saja tidak cukup. Kunci jawaban, sebaran, dan skor baru keluar dari server saat jawaban dibuka (jam server). Nama asli hanya di podium layar besar dan di Admin WAM 2027. Layar besar publik berkunci `/kuis/{kunci}` (hanya hash kunci disimpan). Migrasi `202611200601`. |
+| Kuis live | Modul `kuis` (mati bawaan; `docs/rancangan-kuis-wam.md` §8a, KONTRAK §13). Pemain: semua yang melihat Main WAM, tampil sebagai tokohnya. Pengendali dipilih per kuis di Admin WAM 2026, ditambah akun WAM pemegang Admin WAM 2026; Panitia WAM saja tidak cukup. Kunci jawaban, sebaran, dan skor baru keluar dari server saat jawaban dibuka (jam server). Nama asli hanya di podium layar besar dan di Admin WAM 2026. Layar besar publik berkunci `/kuis/{kunci}` (hanya hash kunci disimpan). Migrasi `202611200601`. |
 
 ## Dokumen terkait
 

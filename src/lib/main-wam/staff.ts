@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /*
- * Panitia WAM (20 Nov 2026, KONTRAK §15): what Admin WAM 2027 → Panitia WAM sends, and the seksi it
+ * Panitia WAM (20 Nov 2026, KONTRAK §15): what Admin WAM 2026 → Panitia WAM sends, and the seksi it
  * suggests. A seksi is a label only (pw_event_staff.seksi, at most 40 characters): every seksi has the
  * same rights in Main WAM. Empty is fine.
  */

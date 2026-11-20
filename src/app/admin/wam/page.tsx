@@ -36,7 +36,7 @@ export default async function WamAdminPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   // A personal admin sees only the sections their grant opens (14 Nov 2026: Kuesioner on its own).
   const actor = await currentAdmin();
-  // Main WAM is never here (20 Nov 2026): it has its own door, Admin WAM 2027.
+  // Main WAM is never here (20 Nov 2026): it has its own door, Admin WAM 2026.
   const without: string[] = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
   const now = new Date();
   const today = wibDate(now.toISOString());

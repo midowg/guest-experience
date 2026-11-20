@@ -6,7 +6,7 @@ import type { MainWamMode, MainWamRole, MainWamModule, ModuleSwitches } from "./
  * decides with these on every request (gate.ts), the screens use them only to hide what the server
  * would refuse anyway.
  *
- * Mode acara (Admin WAM 2027 → Pengaturan):
+ * Mode acara (Admin WAM 2026 → Pengaturan):
  *   pra    (bawaan) /wam is Pra WAM for everyone. Main WAM opens by its address for penguji only
  *          (to prepare it); for anyone else it does not exist (404).
  *   uji    /wam opens Main WAM for penguji; everyone else keeps Pra WAM and gets 404 on Main WAM.

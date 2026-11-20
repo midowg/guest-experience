@@ -23,9 +23,9 @@ export type PersonOption = { id: string; fullName: string; department: string };
 export type FormOption = { slug: string; name: string };
 
 const modeHints: Record<MainWamMode, string> = {
-  pra: "Semua orang memakai Pra WAM. Main WAM hanya bisa dibuka penguji lewat alamatnya, untuk menyiapkan isinya.",
-  uji: "Penguji langsung masuk Main WAM saat membuka WAM; yang lain tetap di Pra WAM dan tidak melihat Main WAM.",
-  semua: "Semua orang yang membuka WAM masuk Main WAM. Pra WAM tetap bisa dibuka lewat alamatnya.",
+  pra: "Semua orang memakai Pra WAM. WAM 2026 hanya bisa dibuka penguji lewat alamatnya, untuk menyiapkan isinya.",
+  uji: "Penguji yang membuka /wam langsung masuk WAM 2026; yang lain tetap di Pra WAM dan tidak melihat WAM 2026.",
+  semua: "Semua orang yang membuka /wam masuk WAM 2026. Pra WAM tetap bisa dibuka lewat alamatnya.",
 };
 /** Default colours of the neutral theme (DESIGN_SYSTEM.md), shown while nothing is set. */
 const COLOR_FIELDS = [
@@ -40,7 +40,7 @@ async function save(body: unknown): Promise<{ settings: Settings; message: strin
 }
 
 /**
- * Admin WAM 2027 → Pengaturan (fondasi): mode acara (who sees Main WAM, where /wam goes),
+ * Admin WAM 2026 → Pengaturan (fondasi): mode acara (who sees Main WAM, where /wam goes),
  * the penguji list, the modules on or off, and the theme (colours, display face, a KV image per
  * slot, to be filled once the KV is chosen). Every change is saved on its own.
  */
@@ -65,10 +65,10 @@ export function MainWamSettings({ initial, testers: firstTesters, testersMigrate
 
   return <div className="stack">
     <PageHeader crumbs={crumbs} title={title}
-      subtitle="Main WAM adalah aplikasi selama acara WAM, tersembunyi sampai modenya diubah di sini."
-      actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Main WAM<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
-    {hidden && <Notice tone="info"><strong>Main WAM tersembunyi dari Journey</strong> sampai super admin menampilkannya (Super admin → Halaman utama). Selama itu /wam selalu membuka Pra WAM, dan notifikasi Main WAM hanya sampai ke penguji (daftar di bawah dan Panitia WAM). Admin ini tetap terbuka, dan mode acara tetap berlaku untuk tautan langsung /wam/acara.</Notice>}
-    {!settings.migrated && <Notice tone="warning">Pengaturan Main WAM menunggu pembaruan sistem. Sampai saat itu Main WAM tersembunyi untuk semua orang dan pengaturan belum bisa disimpan. Hubungi tim CoE.</Notice>}
+      subtitle="Aplikasi selama acara WAM 2026, tersembunyi sampai modenya diubah di sini."
+      actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka WAM 2026<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
+    {hidden && <Notice tone="info"><strong>WAM 2026 tersembunyi di aplikasi</strong> sampai super admin menampilkannya (Super admin → Halaman utama). Selama itu /wam selalu membuka Pra WAM, dan notifikasi WAM 2026 hanya sampai ke penguji (daftar di bawah dan Panitia WAM). Admin ini tetap terbuka, dan mode acara tetap berlaku untuk tautan langsung /wam/acara.</Notice>}
+    {!settings.migrated && <Notice tone="warning">Pengaturan WAM 2026 menunggu pembaruan sistem. Sampai saat itu WAM 2026 tersembunyi untuk semua orang dan pengaturan belum bisa disimpan. Hubungi tim CoE.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     <div className={css.grid}>
       <ModeCard id={`${id}-mode`} mode={settings.mode} locked={locked} busy={busy === "mode"} onSave={mode => run("mode", apply({ mode }))} />
@@ -95,7 +95,7 @@ function ModeCard({ id, mode, locked, busy, onSave }: { id: string; mode: MainWa
         <small>{modeHints[value]}</small>
       </label>)}
     </fieldset>
-    {confirming && <Notice tone="warning" role="alert">Semua orang yang membuka WAM akan masuk Main WAM, juga notifikasi Main WAM sampai ke semua orang. Lanjutkan?</Notice>}
+    {confirming && <Notice tone="warning" role="alert">Semua orang yang membuka /wam akan masuk WAM 2026, dan notifikasi WAM 2026 sampai ke semua orang. Lanjutkan?</Notice>}
     <div className={css.actions}>
       <ConsoleButton variant="primary" disabled={locked || choice === mode} onClick={submit}>{busy ? "Menyimpan…" : confirming ? "Ya, buka untuk semua" : "Pakai mode ini"}</ConsoleButton>
       {confirming && <ConsoleButton onClick={() => setConfirming(false)}>Batal</ConsoleButton>}
@@ -117,7 +117,7 @@ function TestersCard({ id, initial, migrated, people, onMessage }: { id: string;
     finally { setBusy(false); }
   }
   return <Card title="Penguji" id={id}>
-    <p className={css.note}>Panitia WAM selalu menjadi penguji. Tambahkan orang lain yang ikut mencoba Main WAM; panitia dan admin Pra WAM tidak otomatis ikut.</p>
+    <p className={css.note}>Panitia WAM selalu menjadi penguji. Tambahkan orang lain yang ikut mencoba WAM 2026; panitia dan admin Pra WAM tidak otomatis ikut.</p>
     {testers.length ? <ul className={css.rows} aria-label="Daftar penguji">
       {testers.map(tester => <li key={tester.employeeId} className={css.row}>
         <span className={css.rowText}><span>{tester.fullName}</span><span>{tester.department || "Tanpa departemen"}</span></span>
@@ -189,10 +189,10 @@ function ThemeCard({ id, settings, locked, busy, storage, run, onSaved }: {
   const saveTheme = () => run("tema", async () => {
     const result = await save({ theme: { colors: Object.fromEntries(COLOR_FIELDS.map(field => [field.key, colors[field.key] ? colors[field.key].toUpperCase() : null])), displayFont: font || null } });
     onSaved(result.settings);
-    return "Tema Main WAM tersimpan.";
+    return "Tema WAM 2026 tersimpan.";
   });
   return <Card title="Tema" id={id}>
-    <p className={css.note}>Warna acara, huruf judul, dan gambar KV dibaca semua layar Main WAM. Kosong berarti tema netral. Warna yang kurang terbaca otomatis kembali ke bawaan.</p>
+    <p className={css.note}>Warna acara, huruf judul, dan gambar KV dibaca semua layar WAM 2026. Kosong berarti tema netral. Warna yang kurang terbaca otomatis kembali ke bawaan.</p>
     <div className={css.colors}>
       {COLOR_FIELDS.map(field => {
         const value = colors[field.key];

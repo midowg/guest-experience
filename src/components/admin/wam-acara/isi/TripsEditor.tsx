@@ -23,7 +23,7 @@ const dot = (time: string) => time.replace(":", ".");
 const tripTime = (trip: MwTrip) => trip.startsAt ? `${shortDate(wibDate(trip.startsAt))} · ${trip.endsAt ? timeRange({ startsAt: trip.startsAt, endsAt: trip.endsAt }) : dot(wibTime(trip.startsAt))}` : "Jam belum diisi";
 
 /**
- * Admin WAM 2027 → Perjalanan (agen E): the steps there and back (titik kumpul, kereta,
+ * Admin WAM 2026 → Perjalanan (agen E): the steps there and back (titik kumpul, kereta,
  * shuttle, tiba) with time, place or route, ticket details, coordinator and rundown session; each
  * person's seat or vehicle (typed or pasted); and the km and buses Jejak karbon is computed from.
  */

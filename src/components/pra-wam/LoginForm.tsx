@@ -33,7 +33,7 @@ export function LoginForm({ next }: { next: string | null }) {
       {/* eslint-disable-next-line @next/next/no-img-element -- a small static mark */}
       <img className={styles.loginMark} src={`${PRA_WAM_PATH}/icon-192.png`} alt="Werkudara" />
       <h1>WAM</h1>
-      <p>Satu aplikasi untuk setiap langkah menuju WAM 2027</p>
+      <p>Satu aplikasi untuk setiap langkah menuju WAM 2026</p>
     </div>
     {error && <Notice tone="error">{error}</Notice>}
     <div>

@@ -13,7 +13,7 @@ import { readMainWamSettings } from "./main-wam/settings";
  * event list in one "Aplikasi" section, with the Your Visit guide beside them. Wellbeing joined on
  * 16 Nov 2026; since 17 Nov 2026 its card opens the employee app (/wlm since 18 Nov 2026), which is not yet
  * announced: the old app stays the official one until then. Main WAM joined on 20 Nov 2026 as its own card
- * (key wam_acara): managed in Admin WAM 2027, given apart from Admin Pra WAM (the WAM card).
+ * (key wam_acara): managed in Admin WAM 2026, given apart from Admin Pra WAM (the WAM card).
  */
 export type StandaloneApp = {
   key: "wam" | "wam_acara" | "booking" | "tv" | "wellbeing";
@@ -41,7 +41,7 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
   ]);
   return [
     {
-      key: "wam", name: "WAM 2027", eyebrow: "Aplikasi karyawan",
+      key: "wam", name: "WAM 2026", eyebrow: "Aplikasi karyawan",
       status: phase ? `${phase.kind === "pra_wam" ? "Minggu Pra WAM" : phase.name} · ${short(phase.startDate)}–${short(phase.endDate)}${phase.daysToWam ? ` · WAM ${phase.daysToWam} hari lagi` : ""}` : "Werkudara Annual Meeting, 4–7 Jan 2027",
       address: praWamPath.home,
       description: "Login per karyawan: agenda, appraisal, booking ruang, absen QR, dokumen, dan pengumuman. Panitia mengelola sesi dari dalam aplikasi.",
@@ -49,11 +49,11 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       ...(resets ? { waiting: { label: `${resets} permintaan reset password`, href: wamAdminPath.resetRequests } } : {}),
     },
     {
-      key: "wam_acara", name: "Main WAM", eyebrow: "Aplikasi acara WAM",
+      key: "wam_acara", name: "WAM 2026 (acara)", eyebrow: "Aplikasi selama acara",
       status: mainWam ? `Mode ${mainWamModeLabels[mainWam.mode]}` : "Aplikasi selama acara WAM",
       address: MAIN_WAM_PATH,
       description: "Aplikasi selama acara WAM: rundown, kamar, perjalanan, panduan, Awarding, Silent Meeting, dan Kuis live, dengan Panitia WAM-nya sendiri.",
-      open: { label: "Buka Main WAM", href: mainWamPath.home }, manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
+      open: { label: "Buka WAM 2026", href: mainWamPath.home }, manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
     },
     {
       key: "booking", name: "Booking Kantor", eyebrow: "Booking ruangan",

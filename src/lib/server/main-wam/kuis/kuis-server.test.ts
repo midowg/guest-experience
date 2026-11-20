@@ -36,9 +36,9 @@ const QUIZ = "00000000-0000-4000-a000-0000000000aa";
 const RUN = "00000000-0000-4000-a000-000000000001";
 const ME = "11111111-1111-4111-8111-111111111111";
 const context = (roles: string[] = []) => ({ viewer: { id: ME, name: "Rani", roles }, settings: { modules: { kuis: true } } }) as unknown as MainWamContext;
-/** The apps of ME's admin grant (20 Nov 2026: Admin WAM 2027, wam_acara, runs every quiz). */
+/** The apps of ME's admin grant (20 Nov 2026: Admin WAM 2026, wam_acara, runs every quiz). */
 let grantApps: string[] = [];
-/** ME holding Admin WAM 2027 on their WAM account. */
+/** ME holding Admin WAM 2026 on their WAM account. */
 const asWamAdmin = () => { grantApps = ["wam_acara"]; return context(); };
 
 type RunPatch = Partial<{ phase: string; question_index: number; phase_at: string; pauses: unknown[]; rev: number; podium_revealed: number; boards: number[] }>;
@@ -187,14 +187,14 @@ describe("the MC's control", () => {
     await expect(controlState(context(["panitia"]), QUIZ)).rejects.toMatchObject({ status: 404 });
   });
 
-  it("does not exist for Pra WAM's admin role either (20 Nov 2026), nor for a grant without Admin WAM 2027", async () => {
+  it("does not exist for Pra WAM's admin role either (20 Nov 2026), nor for a grant without Admin WAM 2026", async () => {
     await expect(controlState(context(["admin"]), QUIZ)).rejects.toMatchObject({ status: 404 });
     grantApps = ["wam"];
     newRequest(false);
     await expect(controlState(context(), QUIZ)).rejects.toMatchObject({ status: 404 });
   });
 
-  it("opens for a pengendali of the quiz, and for a holder of Admin WAM 2027 without asking", async () => {
+  it("opens for a pengendali of the quiz, and for a holder of Admin WAM 2026 without asking", async () => {
     const base = answer;
     answer = q => (q.table === "mw_quiz_hosts" ? { data: [{ employee_id: ME }] } : base(q));
     const snap = await controlState(context(), QUIZ, SAMPLE_T0 + times.open + 1_000);

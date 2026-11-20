@@ -6,7 +6,7 @@ import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-
  * Who reaches agen D's APIs (KONTRAK §3), through the real gate: nobody signed in → 401; anyone it
  * is not for → 404, one answer (audit L10, KONTRAK §9 #4): a module that is off, and a role that may
  * not (BOD do not vote, send or open Silent Meeting feedback; participants do not open or close it,
- * read the recap, approve, or open a session's QR). Admin WAM 2027's module APIs need the admin session.
+ * read the recap, approve, or open a session's QR). Admin WAM 2026's module APIs need the admin session.
  * The work itself is mocked.
  */
 
@@ -146,8 +146,8 @@ describe("agen D's participant APIs", () => {
 describe("Admin WAM → Main WAM module APIs", () => {
   async function adminCalls() {
     const [awards, award, nominees, silent, question] = await Promise.all([
-      import("../../../admin/wam-acara/awarding/route"), import("../../../admin/wam-acara/awarding/[id]/route"), import("../../../admin/wam-acara/awarding/[id]/nominasi/route"),
-      import("../../../admin/wam-acara/silent-meeting/route"), import("../../../admin/wam-acara/silent-meeting/[id]/route"),
+      import("../../../admin/wam2026/awarding/route"), import("../../../admin/wam2026/awarding/[id]/route"), import("../../../admin/wam2026/awarding/[id]/nominasi/route"),
+      import("../../../admin/wam2026/silent-meeting/route"), import("../../../admin/wam2026/silent-meeting/[id]/route"),
     ]);
     const category = { title: "Rekan paling suportif", method: "juri", nomineeKind: "orang" };
     const q = { sessionId: ID, question: "Apa yang perlu diubah?" };

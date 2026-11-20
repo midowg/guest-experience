@@ -85,7 +85,7 @@ export const superAdminPath = {
 /** The front page's look: GET, or PUT { style } (super admin). */
 export const HOME_STYLE_API = "/api/admin/home-style";
 /** Main WAM in Journey (20 Nov 2026): GET whether it shows, PUT { shown } (super admin only; hidden by default). */
-export const MAIN_WAM_VISIBILITY_API = "/api/admin/main-wam-tampil";
+export const MAIN_WAM_VISIBILITY_API = "/api/admin/wam2026-tampil";
 /** Super admin's voucher re-roll: the list (GET), a voucher by hand (POST), or one voucher's correction (POST <id>). */
 export const vouchersApi = (id?: string) => id ? `/api/admin/vouchers/${id}` : "/api/admin/vouchers";
 /** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */
@@ -631,11 +631,11 @@ export const mainWamApi = {
 };
 
 /**
- * Admin WAM 2027 (20 Nov 2026, KONTRAK §15): the admin of the WAM event itself, its own door apart from
+ * Admin WAM 2026 (20 Nov 2026, KONTRAK §15): the admin of the WAM event itself, its own door apart from
  * Admin Pra WAM (/admin/wam): Ringkasan, Pengaturan (fondasi), Panitia WAM, Isi acara (E), Modul acara (D, F).
  * Its old address /admin/wam/main/** redirects here (next.config.ts).
  */
-const MAIN_WAM_ADMIN = "/admin/wam-acara";
+const MAIN_WAM_ADMIN = "/admin/wam2026";
 export const mainWamAdminPath = {
   /** Ringkasan: where Main WAM stands, and a way into every part. */
   home: MAIN_WAM_ADMIN,
@@ -659,7 +659,7 @@ export const mainWamAdminPath = {
   /** One quiz: questions, pengendali, the big screen's link, games, results with names. */
   quiz: (id: string) => `${MAIN_WAM_ADMIN}/kuis/${enc(id)}`,
 };
-const MAIN_WAM_ADMIN_API = "/api/admin/wam-acara";
+const MAIN_WAM_ADMIN_API = "/api/admin/wam2026";
 export const mainWamAdminApi = {
   /* fondasi */
   /** GET: Panitia WAM; POST {employeeId, seksi}: add one (or change their seksi). */

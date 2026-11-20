@@ -15,7 +15,7 @@ import css from "./kuis-admin.module.css";
 const phaseWords: Record<string, string> = { siap: "Siap, belum dibuka", lobi: "Lobi terbuka", skor: "Papan skor", podium: "Podium", selesai: "Selesai" };
 
 /**
- * Admin WAM 2027 → Kuis live: the quizzes, and a new one. Each quiz has its questions, pengendali,
+ * Admin WAM 2026 → Kuis live: the quizzes, and a new one. Each quiz has its questions, pengendali,
  * big-screen link, games and results on its own page.
  */
 export function QuizList({ initial, migrated, moduleOn }: { initial: AdminQuizSummary[]; migrated: boolean; moduleOn: boolean }) {
@@ -33,7 +33,7 @@ export function QuizList({ initial, migrated, moduleOn }: { initial: AdminQuizSu
   }
 
   return <div className={css.stack}>
-    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Kuis live tidak tampil di aplikasi (kartu Beranda, permainan, layar besar) sampai modul Kuis live dinyalakan di Main WAM → Pengaturan. Soal dan pengendali tetap bisa disiapkan.</Notice>}
+    {!moduleOn && <Notice tone="warning"><strong>Modul mati.</strong> Kuis live tidak tampil di aplikasi (kartu Beranda, permainan, layar besar) sampai modul Kuis live dinyalakan di Pengaturan. Soal dan pengendali tetap bisa disiapkan.</Notice>}
     {!migrated && <Notice tone="warning">Kuis live menunggu migrasi <code>{KUIS_MIGRATION}</code>. Jalankan di Supabase SQL Editor, lalu muat ulang halaman ini.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     <Card title="Cara memakai" id="kuis-cara">

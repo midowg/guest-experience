@@ -39,6 +39,6 @@ export async function setMainWamShown(shown: boolean, by: string): Promise<MainW
     databaseError(error);
   }
   if (!data) throw new ServiceError(503, "Pengaturan admin belum ada. Jalankan migrasi pengaturan admin terlebih dahulu.");
-  console.info(`admin_settings: Main WAM ${shown ? "ditampilkan" : "disembunyikan"} oleh ${by.slice(0, 150)} pada ${at}`);
+  console.info(`admin_settings: WAM 2026 ${shown ? "ditampilkan" : "disembunyikan"} oleh ${by.slice(0, 150)} pada ${at}`);
   return visibilityFromRow(data as Parameters<typeof visibilityFromRow>[0]);
 }

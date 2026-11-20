@@ -6,7 +6,7 @@ import { holdsWamAcara } from "../staff";
 
 /*
  * Beranda's cards of Kuis live (rancangan §8a): "Kuis dimulai · Ikut" for everyone while a game is open
- * (from the lobby to the podium), and "Kendalikan kuis" for its pengendali (and holders of Admin WAM 2027) from the
+ * (from the lobby to the podium), and "Kendalikan kuis" for its pengendali (and holders of Admin WAM 2026) from the
  * moment the game is made. Nothing while the module is off, before the migration, or on any failure
  * (Beranda never breaks for a card). At most three queries, only when a game is on.
  */

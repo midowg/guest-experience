@@ -125,16 +125,16 @@ describe("Wellbeing (16 Nov 2026)", () => {
   });
 });
 
-describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2027", () => {
+describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2026", () => {
   const grantOf = (apps: AdminApp[]) => ({ employeeId: "e", apps, allEvents: false, eventIds: [] });
-  it("puts Admin WAM 2027 (/admin/wam-acara and its API) in its own area, and the old Main WAM address under Pra WAM's", () => {
-    expect(areaOfPath("/admin/wam-acara")).toBe("wam_acara");
-    expect(areaOfPath("/admin/wam-acara/kuis/k1")).toBe("wam_acara");
-    expect(areaOfPath("/api/admin/wam-acara/panitia")).toBe("wam_acara");
+  it("puts Admin WAM 2026 (/admin/wam2026 and its API) in its own area, and the old Main WAM address under Pra WAM's", () => {
+    expect(areaOfPath("/admin/wam2026")).toBe("wam_acara");
+    expect(areaOfPath("/admin/wam2026/kuis/k1")).toBe("wam_acara");
+    expect(areaOfPath("/api/admin/wam2026/panitia")).toBe("wam_acara");
     expect(areaOfPath("/admin/wam")).toBe("wam");
-    expect(areaOfPath("/api/admin/main-wam-tampil")).toBe("super");
+    expect(areaOfPath("/api/admin/wam2026-tampil")).toBe("super");
   });
-  it("Admin Pra WAM alone does not open Admin WAM 2027, and Admin WAM 2027 alone does not open Admin Pra WAM", () => {
+  it("Admin Pra WAM alone does not open Admin WAM 2026, and Admin WAM 2026 alone does not open Admin Pra WAM", () => {
     expect(mayOpenArea(grantOf(["wam"]), "wam_acara")).toBe(false);
     expect(mayOpenArea(grantOf(["wam_acara"]), "wam")).toBe(false);
     expect(mayOpenArea(grantOf(["wam_acara"]), "wam_acara")).toBe(true);
@@ -146,7 +146,7 @@ describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2027", 
   });
   it("names the two doors", () => {
     expect(adminAppLabels.wam).toBe("Admin Pra WAM");
-    expect(adminAppLabels.wam_acara).toBe("Admin WAM 2027");
+    expect(adminAppLabels.wam_acara).toBe("Admin WAM 2026");
     expect(tidyGrant({ apps: ["wam_acara", "wam"], allEvents: false, eventIds: [] }).apps).toEqual(["wam", "wam_acara"]);
   });
 });

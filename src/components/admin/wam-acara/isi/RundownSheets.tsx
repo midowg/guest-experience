@@ -147,7 +147,7 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
     {seen && changes.length > 0 && <fieldset className={css.group}>
       <legend>Perubahan jadwal</legend>
       <p className={css.note}>{changes.map(change => `${fieldLabels[change.field]}: ${changeValue(change.field, change.from)} jadi ${changeValue(change.field, change.to)}`).join(" · ")}. Tercatat di riwayat dengan nama Anda.</p>
-      <SwitchRow title="Kabari peserta" sub="Notifikasi ke semua peserta Main WAM." checked={notify} onChange={setNotify} />
+      <SwitchRow title="Kabari peserta" sub="Notifikasi ke semua peserta WAM 2026." checked={notify} onChange={setNotify} />
     </fieldset>}
 
     {log.length > 0 && <section className={css.group} aria-labelledby={`${id}-history`}>

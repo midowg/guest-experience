@@ -1,6 +1,6 @@
 /*
  * Main WAM kit: the base components every Main WAM screen is built from. Docs and rules:
- * docs/main-wam/KIT.md; gallery: /dev-preview/main-wam/kit. Tokens: ../theme/theme.module.css.
+ * docs/main-wam/KIT.md; gallery: /dev-preview/wam2026/kit. Tokens: ../theme/theme.module.css.
  */
 export { Pressable, KitIcon, cx, type ActionProps, type IconProp } from "./Pressable";
 export { Button, IconButton, type ButtonProps, type ButtonVariant, type IconButtonVariant } from "./Button";

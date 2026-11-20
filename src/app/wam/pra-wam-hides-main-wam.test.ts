@@ -29,7 +29,7 @@ describe("Pra WAM has no way into Main WAM", () => {
     expect(found).toEqual([]);
   });
 
-  it("in Admin Pra WAM (Main WAM's admin is its own door since 20 Nov 2026, /admin/wam-acara)", () => {
+  it("in Admin Pra WAM (Main WAM's admin is its own door since 20 Nov 2026, /admin/wam2026)", () => {
     const sources = [...files(join(src, "app", "admin", "wam")), ...files(join(src, "components", "admin", "wam"))];
     expect(sources.length).toBeGreaterThan(20);
     const found = sources.filter(file => MAIN_WAM.test(strip(readFileSync(file, "utf8")))).map(file => relative(src, file));

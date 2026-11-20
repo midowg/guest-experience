@@ -36,4 +36,4 @@ export function visibilityFromRow(row: { main_wam_shown?: unknown; main_wam_show
 }
 
 /** The label the bell and the announcements' history carry for a Main WAM note sent while hidden. */
-export const HIDDEN_AUDIENCE_LABEL = "Penguji Main WAM";
+export const HIDDEN_AUDIENCE_LABEL = "Penguji WAM 2026";

@@ -28,7 +28,7 @@ const personLine = (person: GrantPersonView) => [person.nickname && `Panggilan $
 /**
  * Super admin → Akses admin (13 Nov 2026): who may sign in to the admin with their own WAM account,
  * and what each opens. One table of admins; "Tambah admin" or "Ubah" opens the editor above it.
- * `wamAcaraMigrated`: migration 202611200603 has run, so Admin WAM 2027 can be given (until then only
+ * `wamAcaraMigrated`: migration 202611200603 has run, so Admin WAM 2026 can be given (until then only
  * the super admin opens it, and its box waits).
  */
 export function AdminGrants({ initial, people, events, migrated, wamAcaraMigrated = true }: { initial: AdminGrant[]; people: GrantPersonView[]; events: GrantEventView[]; migrated: boolean; wamAcaraMigrated?: boolean }) {

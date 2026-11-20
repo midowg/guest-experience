@@ -2,7 +2,7 @@
 export const idDemo = {
   "demo.banner": "Mode demo · data contoh",
   "demo.title": "Mode demo",
-  "demo.hint": "Data di layar ini contoh. Lihat Main WAM sebagai peran lain; aksi di sini tidak disimpan.",
+  "demo.hint": "Data di layar ini contoh. Lihat WAM 2026 sebagai peran lain; aksi di sini tidak disimpan.",
   "demo.switchLabel": "Lihat sebagai",
   "demo.role.peserta": "Peserta",
   "demo.role.panitia": "Panitia",

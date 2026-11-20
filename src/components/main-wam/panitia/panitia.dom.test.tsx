@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { ToastProvider } from "@/components/main-wam/ui";
 import { mainWamPath } from "@/lib/routes";
 import { sampleSessionIds } from "@/lib/main-wam/sample";
-import { announceSample, attendanceData, bodRows, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays } from "@/app/dev-preview/main-wam/panitia/sample";
+import { announceSample, attendanceData, bodRows, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays } from "@/app/dev-preview/wam2026/panitia/sample";
 import { PanitiaApiContext, PanitiaError, type PanitiaApi } from "./api";
 import { AbsenManual } from "./AbsenManual";
 import { AnnounceForm } from "./AnnounceForm";

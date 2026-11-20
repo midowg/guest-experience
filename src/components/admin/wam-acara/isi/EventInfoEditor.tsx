@@ -22,7 +22,7 @@ const BILLS: { key: Exclude<keyof CarbonInputs, "final">; label: string; unit: s
 ];
 
 /**
- * Admin WAM 2027 → Info acara (agen E): the event's name and town, the hotel with its
+ * Admin WAM 2026 → Info acara (agen E): the event's name and town, the hotel with its
  * address, check-in and check-out, who to call, and the hotel's bills for Jejak karbon (filled
  * after the event; optional). Each card saves on its own.
  */

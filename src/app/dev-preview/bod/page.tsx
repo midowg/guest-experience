@@ -98,7 +98,7 @@ export default async function DevBodPage({ searchParams }: { searchParams: Promi
     : keadaan === "absen" ? { ...sample, attendanceReady: false } : sample;
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     <BodSummary data={data} insights={keadaan === "kosong" ? emptyInsights : insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November"
-      survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2027", participation: { done: 38, active: 57 } }} />
+      survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2026", participation: { done: 38, active: 57 } }} />
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24 }}>
       <AccountStatus state="aktif" /><AccountStatus state="belum-masuk" /><AccountStatus state="tanpa-akun" />
       <ForumStatus title="Review data" mark="hadir" /><ForumStatus title="Meeting budget" mark="tidak-hadir" /><ForumStatus title="HOD Meeting" mark="berlangsung" />

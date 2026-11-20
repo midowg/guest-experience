@@ -3,7 +3,7 @@ import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 import { mainWamAdminPath } from "@/lib/routes";
 
 /*
- * Admin WAM 2027's sections (20 Nov 2026, docs/main-wam/KONTRAK.md §15): the admin of the WAM event
+ * Admin WAM 2026's sections (20 Nov 2026, docs/main-wam/KONTRAK.md §15): the admin of the WAM event
  * itself, its own door apart from Admin Pra WAM (/admin/wam). The menu, Ringkasan and the page titles
  * read this list. A tab-only page (`owner`) sits in the menu under its owner (Isi acara, Modul acara).
  * Its name is WAM_EVENT_ADMIN_LABEL, one constant.
@@ -26,7 +26,7 @@ export type WamAcaraSection = {
 
 export const wamAcaraSections: readonly WamAcaraSection[] = [
   { key: "ringkasan", label: "Ringkasan", group: "Ikhtisar", href: mainWamAdminPath.home, icon: LayoutDashboard, summary: "Mode acara, modul yang aktif, dan jalan ke setiap bagian." },
-  { key: "pengaturan", label: "Pengaturan", group: "Persiapan", href: mainWamAdminPath.settings, icon: SlidersHorizontal, summary: "Mode acara, penguji, modul yang aktif, dan tema Main WAM." },
+  { key: "pengaturan", label: "Pengaturan", group: "Persiapan", href: mainWamAdminPath.settings, icon: SlidersHorizontal, summary: "Mode acara, penguji, modul yang aktif, dan tema WAM 2026." },
   { key: "panitia", label: "Panitia WAM", group: "Persiapan", href: mainWamAdminPath.committee, icon: UsersRound, summary: "Siapa panitia acara WAM, dengan seksinya. Terpisah dari panitia Pra WAM." },
   { key: "isi", label: "Isi acara", group: "Untuk peserta", href: mainWamAdminPath.rundown, icon: ListChecks, summary: "Rundown, kamar, perjalanan, panduan, dan info acara." },
   { key: "kamar", label: "Kamar", group: "Untuk peserta", href: mainWamAdminPath.rooms, icon: ListChecks, summary: "Lantai dan catatan kamar dari pembagian kamar HR.", owner: "isi" },
@@ -62,7 +62,7 @@ export function wamAcaraGroups(): { label: string; sections: WamAcaraSection[] }
 }
 
 /**
- * The breadcrumb of an Admin WAM 2027 page: "Admin WAM 2027 / Untuk peserta / Modul acara / Kuis live",
+ * The breadcrumb of an Admin WAM 2026 page: "Admin WAM 2026 / Untuk peserta / Modul acara / Kuis live",
  * then `extra` steps (one quiz). Every step but the last links back (the group has no page of its own).
  */
 export function wamAcaraCrumbs(key: WamAcaraSectionKey, ...extra: (string | { label: string; href?: string })[]): { label: string; href?: string }[] {

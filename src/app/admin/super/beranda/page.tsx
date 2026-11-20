@@ -24,7 +24,7 @@ export default async function SuperHomeStylePage() {
     <div className={css.page}>
       <Card title="Tampilan" id="home-style"><HomeStyleSettings initial={style} migrated={migrated} /></Card>
       <HomeMenuSettings initial={menu.menu} migrated={menu.migrated} />
-      <Card title="Main WAM" id="main-wam"><MainWamVisibilitySettings initial={mainWam} /></Card>
+      <Card title="WAM 2026" id="wam2026"><MainWamVisibilitySettings initial={mainWam} /></Card>
     </div>
   </SuperAdminFrame>;
 }

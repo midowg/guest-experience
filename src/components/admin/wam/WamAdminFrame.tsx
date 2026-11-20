@@ -22,7 +22,7 @@ export async function WamAdminFrame({ current, children, wide = false }: { curre
   const [waiting, actor] = await Promise.all([waitingResetRequests(), currentAdmin(), purgeIfDue()]);
   // A personal admin's menu holds only what their grant opens (Kuesioner WAM alone: only Kuesioner).
   const without = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
-  // Main WAM is not in Admin Pra WAM at all (20 Nov 2026): no menu, link or search result; Admin WAM 2027 is its own door.
+  // Main WAM is not in Admin Pra WAM at all (20 Nov 2026): no menu, link or search result; Admin WAM 2026 is its own door.
   return <WamNav current={current} badges={waiting && !without.includes("reset") ? { reset: String(waiting) } : undefined} superAdmin={actor?.role === "super"} wide={wide} className={admin.shell}
     personName={actor?.name} without={without}>
     {children}

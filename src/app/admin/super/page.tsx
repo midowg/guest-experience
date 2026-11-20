@@ -48,7 +48,7 @@ export default async function SuperAdminPage() {
         <StatCard label="Templat di Buat acara" value={templates.templates.length} icon={<LayoutTemplate size={18} />} href={superAdminPath.templates} />
         <StatCard label="Modul dimatikan" value={modules.modules.length} icon={<Blocks size={18} />} href={superAdminPath.modules} />
         <StatCard label={PRA_WAM_ADMIN_LABEL} value="Buka" note="Akun dan peran, ruang, kuesioner" icon={<KeyRound size={18} />} href={wamAdminPath.home} />
-        <StatCard label={WAM_EVENT_ADMIN_LABEL} value="Buka" note="Main WAM, Panitia WAM, Kuis live" icon={<CalendarDays size={18} />} href={mainWamAdminPath.home} />
+        <StatCard label={WAM_EVENT_ADMIN_LABEL} value="Buka" note="Pengaturan, Panitia WAM, Kuis live" icon={<CalendarDays size={18} />} href={mainWamAdminPath.home} />
       </StatRow>
     </Card>
   </SuperAdminFrame>;

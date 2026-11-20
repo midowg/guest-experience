@@ -4,8 +4,8 @@ import { callsOf, fake, newRequest, spyWarn, type Query } from "./fake-db.test-h
 
 /*
  * Panitia WAM (20 Nov 2026, KONTRAK §15): the WAM event's committee in pw_event_staff, apart from Pra WAM's
- * roles. Who tests Main WAM (penguji = the list + Panitia WAM), Admin WAM 2027's list and its writes, the
- * pengendali twin of Admin WAM 2027, and the migration check Akses admin reads.
+ * roles. Who tests Main WAM (penguji = the list + Panitia WAM), Admin WAM 2026's list and its writes, the
+ * pengendali twin of Admin WAM 2026, and the migration check Akses admin reads.
  */
 
 vi.mock("server-only", () => ({}));
@@ -92,7 +92,7 @@ describe("who tests Main WAM (mode uji): the listed penguji and Panitia WAM", ()
   });
 });
 
-describe("Admin WAM 2027 → Panitia WAM", () => {
+describe("Admin WAM 2026 → Panitia WAM", () => {
   it("lists by seksi, then name, with who has no active WAM account yet", async () => {
     staff = [{ employee_id: DIMAS, seksi: "Kamar" }, { employee_id: RANI, seksi: "Acara" }];
     accounts = [RANI];
@@ -142,7 +142,7 @@ describe("Admin WAM 2027 → Panitia WAM", () => {
   });
 });
 
-describe("the app-side twin of Admin WAM 2027 (Kuis live's pengendali)", () => {
+describe("the app-side twin of Admin WAM 2026 (Kuis live's pengendali)", () => {
   it("is a WAM account whose grant holds wam_acara; Admin Pra WAM alone, no grant, or a failure is not", async () => {
     grant = ["wam_acara"];
     expect(await staffModule.holdsWamAcara(RANI)).toBe(true);

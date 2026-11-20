@@ -8,7 +8,7 @@ import { wamAdminPath } from "@/lib/routes";
  * this list, so a new section (the "Data personal" pages HR will fill for WAM and Pra WAM, say) is
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu. Main WAM is not here (20 Nov 2026): it has its own door,
- * Admin WAM 2027 (src/components/admin/wam-acara/sections.ts), given apart.
+ * Admin WAM 2026 (src/components/admin/wam-acara/sections.ts), given apart.
  */
 export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner";
 export type WamSection = {

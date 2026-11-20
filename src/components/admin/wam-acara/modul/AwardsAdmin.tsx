@@ -24,7 +24,7 @@ const stamp = adminWhen;
 const methodWords: Record<(typeof ADMIN_METHODS)[number], string> = { voting: "Voting karyawan", juri: "Juri BOD" };
 
 /**
- * Admin WAM 2027 → Awarding (agen D): categories (voted or judged), their window and
+ * Admin WAM 2026 → Awarding (agen D): categories (voted or judged), their window and
  * announcement time, the nominees (people, Momen photos, a kelompok or a department), and, once
  * voting closed, the count per nominee with the BOD's approval (audit M1: no running count, as the
  * BOD). Never who voted for whom.

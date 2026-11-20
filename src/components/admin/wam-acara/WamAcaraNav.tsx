@@ -5,7 +5,7 @@ import { PRA_WAM_ADMIN_LABEL, WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, SUPER_ADMIN_HOME, mainWamPath, wamAdminPath } from "@/lib/routes";
 import { wamAcaraGroups, wamAcaraMenuKey, wamAcaraSection, wamAcaraSections, type WamAcaraSectionKey } from "./sections";
 
-/** Admin WAM 2027's menu from wamAcaraSections. */
+/** Admin WAM 2026's menu from wamAcaraSections. */
 export function wamAcaraNavGroups(): ConsoleNavGroup[] {
   return wamAcaraGroups().map(group => ({
     label: group.label,
@@ -17,7 +17,7 @@ export function wamAcaraNavGroups(): ConsoleNavGroup[] {
 }
 
 /**
- * Every Admin WAM 2027 page in the console frame: its sections, the way into Main WAM, Admin Pra WAM only
+ * Every Admin WAM 2026 page in the console frame: its sections, the way into Main WAM, Admin Pra WAM only
  * for someone who may open it (the super admin, or a grant), the rest of the admin and Keluar. Ctrl K
  * finds the tab-only pages too (Kamar, Kuis live).
  */
@@ -28,7 +28,7 @@ export function WamAcaraNav({ current, superAdmin = false, opensPraWam = false, 
   wide?: boolean; className?: string; children: ReactNode; personName?: string;
 }) {
   const footerLinks: ConsoleLink[] = [
-    { key: "app", label: "Buka Main WAM", href: mainWamPath.home, icon: <ExternalLink size={20} />, external: true },
+    { key: "app", label: "Buka WAM 2026", href: mainWamPath.home, icon: <ExternalLink size={20} />, external: true },
     ...(opensPraWam ? [{ key: "pra-wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> }] : []),
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
     { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },

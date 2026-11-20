@@ -13,7 +13,7 @@ import { mwMissing, mwWaiting, type DbError } from "./errors";
  * pw_event_staff (migration 202611200603), kept apart from Pra WAM's committee (the global role in
  * pw_roles, which Pra WAM keeps). Main WAM reads its panitia (tab Panitia, panitia's tools, penguji,
  * "Panitia saja" announcements) from here only. A seksi is a label: every seksi has the same rights.
- * Admin WAM 2027 → Panitia WAM adds and removes people. Before the migration the list is empty (Main
+ * Admin WAM 2026 → Panitia WAM adds and removes people. Before the migration the list is empty (Main
  * WAM then has no panitia, only its listed penguji) and writers answer "menunggu migrasi".
  */
 
@@ -36,7 +36,7 @@ export const wamStaffIds = cache(async (): Promise<Set<string>> => {
   try { return new Set((await wamStaff()).keys()); } catch { return new Set(); }
 });
 
-/* ── Admin WAM 2027 → Panitia WAM ─────────────────────────────────────────────────────────────────── */
+/* ── Admin WAM 2026 → Panitia WAM ─────────────────────────────────────────────────────────────────── */
 
 export type WamStaffMember = { employeeId: string; fullName: string; department: string; seksi: string; grantedAt: string; grantedBy: string; hasAccount: boolean };
 export type WamStaffBoard = { staff: WamStaffMember[]; migrated: boolean; event: { id: string; name: string } | null };
@@ -112,7 +112,7 @@ export async function removeWamStaff(employeeId: string): Promise<void> {
 // Once there it stays so; "not yet" is asked again after a minute (Akses admin reads it on every visit).
 let migratedSeen = false;
 let notYetUntil = 0;
-/** Has migration 202611200603 run (pw_event_staff is there)? Until then only the super admin opens Admin WAM 2027. */
+/** Has migration 202611200603 run (pw_event_staff is there)? Until then only the super admin opens Admin WAM 2026. */
 export async function wamAcaraMigrated(): Promise<boolean> {
   if (migratedSeen) return true;
   if (Date.now() < notYetUntil || !isSupabaseConfigured()) return false;
@@ -123,7 +123,7 @@ export async function wamAcaraMigrated(): Promise<boolean> {
 }
 
 /*
- * Kuis live's pengendali besides the per-quiz list (20 Nov 2026): whoever holds Admin WAM 2027 (the
+ * Kuis live's pengendali besides the per-quiz list (20 Nov 2026): whoever holds Admin WAM 2026 (the
  * wam_acara right in admin_grants) on their own WAM account, the app-side twin of that admin right. The
  * super admin's password has no WAM account, so it has no twin here. Pra WAM's admin role and Panitia
  * WAM alone are not enough.
@@ -135,5 +135,5 @@ async function holdsWamAcaraUncached(employeeId: string): Promise<boolean> {
     return Array.isArray(data.apps) && (data.apps as string[]).includes("wam_acara");
   } catch { return false; }
 }
-/** Does this WAM account hold Admin WAM 2027? Once per request; false before the migration or on any failure. */
+/** Does this WAM account hold Admin WAM 2026? Once per request; false before the migration or on any failure. */
 export const holdsWamAcara = cache(holdsWamAcaraUncached);

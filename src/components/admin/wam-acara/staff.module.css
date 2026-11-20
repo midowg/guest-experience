@@ -1,4 +1,4 @@
-/* Admin WAM 2027 → Panitia WAM. Console tokens only (--cs-*). */
+/* Admin WAM 2026 → Panitia WAM. Console tokens only (--cs-*). */
 .note { margin: 0; color: var(--cs-muted); font-size: 14px; }
 .pick { display: grid; gap: 8px 12px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: end; }
 .pick :global(.field) { margin: 0; min-width: 0; }

@@ -24,7 +24,7 @@ const statusTone = { draf: "neutral", terbit: "ok", batal: "bad" } as const;
 const dot = (time: string) => time.replace(":", ".");
 
 /**
- * Admin WAM 2027 → Rundown (agen E): the four days as a timeline, one day at a time; Tambah
+ * Admin WAM 2026 → Rundown (agen E): the four days as a timeline, one day at a time; Tambah
  * and Ubah in a sheet (everything Detail sesi shows: tempat + denah, dresscode, yang perlu dibawa,
  * urutan tampil, konsumsi, kontak panitia, absen, wajib, modul, status), Salin to a day, Geser jam
  * for several sessions (each from the version on screen: a session changed in Rundown live since is

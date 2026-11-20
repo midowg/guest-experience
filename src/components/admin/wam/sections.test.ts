@@ -19,7 +19,7 @@ describe("Admin Pra WAM sections", () => {
 
   it("group the menu in the order the sections are listed, leaving tab-only pages out", () => {
     const groups = wamGroups();
-    // 20 Nov 2026: no Main WAM group; Main WAM has its own door (Admin WAM 2027).
+    // 20 Nov 2026: no Main WAM group; Main WAM has its own door (Admin WAM 2026).
     expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Acara dan meeting", "Untuk peserta", "Pengaturan"]);
     expect(groups.flatMap(group => group.sections)).toEqual(wamSections.filter(section => !section.owner));
     expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun"]);

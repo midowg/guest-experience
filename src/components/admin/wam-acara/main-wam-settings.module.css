@@ -1,4 +1,4 @@
-/* Admin WAM 2027 → Pengaturan. Console tokens only (--cs-*). */
+/* Admin WAM 2026 → Pengaturan. Console tokens only (--cs-*). */
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
 .note { margin: 0; color: var(--cs-muted); font-size: 14px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }

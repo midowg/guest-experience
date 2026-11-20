@@ -5,7 +5,7 @@ import { wamNavGroups } from "@/components/admin/wam/WamNav";
 
 /*
  * Main WAM tersembunyi (20 Nov 2026): hidden from the app until the super admin shows it. Since the two doors
- * (KONTRAK §15) the switch is the app's only: Admin Pra WAM never has Main WAM, shown or not, and Admin WAM 2027
+ * (KONTRAK §15) the switch is the app's only: Admin Pra WAM never has Main WAM, shown or not, and Admin WAM 2026
  * is not hidden by it.
  */
 
@@ -23,7 +23,7 @@ describe("whether Main WAM shows", () => {
 describe("Admin Pra WAM has no Main WAM at all", () => {
   it("no section, menu item or search entry for Main WAM (old or new address), whatever the switch", () => {
     const hrefs = [...wamSections.map(section => section.href), ...wamNavGroups().flatMap(group => group.items.map(item => item.href))];
-    expect(hrefs.some(href => href.startsWith("/admin/wam/main") || href.startsWith("/admin/wam-acara"))).toBe(false);
+    expect(hrefs.some(href => href.startsWith("/admin/wam/main") || href.startsWith("/admin/wam2026"))).toBe(false);
     expect(wamNavGroups().map(group => group.label)).not.toContain("Main WAM");
   });
 });

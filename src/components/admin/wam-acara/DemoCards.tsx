@@ -7,7 +7,7 @@ import { mainWamAdminPath } from "@/lib/routes";
 import css from "./main-wam-settings.module.css";
 
 /**
- * Admin WAM 2027 → Pengaturan: Mode demo (every screen with sample data, to try the app in a phone
+ * Admin WAM 2026 → Pengaturan: Mode demo (every screen with sample data, to try the app in a phone
  * before the event) and the note on who is panitia. Mode demo is a flag in the settings row
  * (module_config.demo): it changes only what the app draws, never what is saved (docs/main-wam/KONTRAK.md §12).
  */

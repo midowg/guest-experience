@@ -19,7 +19,7 @@ import { readMainWamSettings, testerIds } from "./settings";
 
 /*
  * Main WAM's notes on WAM's one inbox (docs/main-wam/KONTRAK.md §4): a note is a pw_announcements
- * row (event WAM 2027) with a receipt per person, so the bell, "dibaca", and Pra WAM's own
+ * row (event WAM 2026) with a receipt per person, so the bell, "dibaca", and Pra WAM's own
  * Notifikasi keep working; mw_notes adds its kind, link, pin and audience. Phones get it through
  * the existing Web Push with the topic notePushTopic gives. Only people Main WAM is on for receive
  * a note: everyone in mode semua, the penguji otherwise (so a test never reaches the whole office).
@@ -29,7 +29,7 @@ const db = () => createPrivilegedClient();
 
 async function wamEventId(): Promise<string> {
   const wam = (await listEvents()).events.find(event => event.kind === "wam");
-  if (!wam) throw new ServiceError(503, "Acara WAM 2027 belum disiapkan. Hubungi tim CoE.");
+  if (!wam) throw new ServiceError(503, "Acara WAM 2026 belum disiapkan. Hubungi tim CoE.");
   return wam.id;
 }
 

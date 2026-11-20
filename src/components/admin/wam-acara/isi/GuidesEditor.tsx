@@ -32,7 +32,7 @@ async function uploadGuideFile(guideId: string, file: File, onProgress: (share: 
 }
 
 /**
- * Admin WAM 2027 → Panduan (agen E): Denah, Hotel & fasilitas, Dress code, Tata tertib and
+ * Admin WAM 2026 → Panduan (agen E): Denah, Hotel & fasilitas, Dress code, Tata tertib and
  * more for Saya → Panduan: a title, short text, an image or PDF in private storage, an order, and
  * published or not. The four the handbook expects can be started in one click.
  */
