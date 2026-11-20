@@ -8,9 +8,10 @@ import { requireAdminPage } from "@/lib/server/admin-session";
 import { answerTable } from "@/lib/server/pra-wam/answer-table";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
 import { lastReminder } from "@/lib/server/pra-wam/reminders";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Rekap kuesioner · Admin WAM", robots: { index: false, follow: false } };
+export const metadata = { title: `Rekap kuesioner · ${WAM_ADMIN_LABEL}`, robots: { index: false, follow: false } };
 
 /**
  * Any admin (11 Nov 2026, owner's decision: one page, everything open): the progress counts,

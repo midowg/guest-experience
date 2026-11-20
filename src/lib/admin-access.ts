@@ -33,7 +33,7 @@ export const adminAppHints: Record<AdminApp, string> = {
   friday_sharing: "Halaman donasi Friday Sharing dan laporannya.",
   your_visit: "Panduan kunjungan kantor (Your Visit).",
   wam: "Admin Pra WAM: akun dan peran, ruang, MoM, Telegram, TV, tema, Akses MCP, dan lainnya. Kuesioner diatur sendiri di bawah. Tidak membuka acara WAM 2027.",
-  kuesioner: "Kuesioner di Admin WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin WAM; Admin WAM tanpa centang ini tidak bisa membuka kuesioner.",
+  kuesioner: "Kuesioner di Admin Pra WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin Pra WAM; Admin Pra WAM tanpa centang ini tidak bisa membuka kuesioner.",
   tv: "TV kantor: layar, tayangan, dan tampilan.",
   wellbeing: "Program wellbeing kantor: periksa aktivitas, poin karyawan, tambah poin ke banyak orang, katalog kegiatan.",
   wam_acara: "Admin acara WAM 2027 (Main WAM): pengaturan, penguji, rundown, kamar, perjalanan, panduan, info acara, Awarding, Silent Meeting, Kuis live, dan Panitia WAM. Terpisah dari Admin Pra WAM.",

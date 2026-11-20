@@ -41,6 +41,10 @@ const config: NextConfig = {
       { source: "/wellbeing/:path*", destination: "/wlm/:path*", permanent: false },
       { source: "/admin/wellbeing", destination: "/admin/wlm", permanent: false },
       { source: "/admin/wellbeing/:path*", destination: "/admin/wlm/:path*", permanent: false },
+      // Main WAM's admin left Admin Pra WAM for its own door, Admin WAM 2027 (20 Nov 2026, KONTRAK §15); old links
+      // land there and are checked there (the wam_acara right).
+      { source: "/admin/wam/main", destination: "/admin/wam-acara", permanent: false },
+      { source: "/admin/wam/main/:path*", destination: "/admin/wam-acara/:path*", permanent: false },
     ];
   },
   async headers() {

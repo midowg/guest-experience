@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { ConsoleTheme, PageHeader, PageTabs } from "@/components/console";
-import { QuizEditor } from "@/components/admin/wam/main-wam/kuis/QuizEditor";
-import { QuizList } from "@/components/admin/wam/main-wam/kuis/QuizList";
-import { mainWamModuleTabs } from "@/components/admin/wam/main-wam/tabs";
+import { QuizEditor } from "@/components/admin/wam-acara/kuis/QuizEditor";
+import { QuizList } from "@/components/admin/wam-acara/kuis/QuizList";
+import { mainWamModuleTabs } from "@/components/admin/wam-acara/tabs";
 import { SAMPLE_QUESTIONS } from "@/lib/main-wam/kuis/sample";
 import { samplePeople } from "@/lib/main-wam/sample";
 import type { AdminQuiz } from "@/lib/server/main-wam/kuis/admin";
@@ -22,14 +22,14 @@ const quiz: AdminQuiz = {
   people,
 };
 
-/** Admin WAM → Main WAM → Kuis live with sample data, no sign-in, 404 in production: ?layar=daftar|kuis&modul=mati. */
+/** Admin WAM 2027 → Kuis live with sample data, no sign-in, 404 in production: ?layar=daftar|kuis&modul=mati. */
 export default async function DevKuisAdmin({ searchParams }: { searchParams: Promise<{ layar?: string; modul?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
   const moduleOn = params.modul !== "mati";
   return <ConsoleTheme canvas>
     <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }} className="stack">
-      <PageHeader title={params.layar === "kuis" ? quiz.quiz.title : "Main WAM · Kuis live"} subtitle="Pratinjau dengan data contoh." />
+      <PageHeader title={params.layar === "kuis" ? quiz.quiz.title : "Kuis live"} subtitle="Pratinjau dengan data contoh." />
       <PageTabs tabs={mainWamModuleTabs} current="kuis" label="Modul acara" />
       {params.layar === "kuis" ? <QuizEditor initial={quiz} moduleOn={moduleOn} />
         : <QuizList moduleOn={moduleOn} migrated initial={[{ id: QUIZ_ID, title: "Kuis WAM 2026", questions: 8, hosts: 2, screenHint: "x7Qa", live: { number: 2, phase: "lobi" }, games: 2, createdAt: "2027-01-05T10:00:00Z" }]} />}

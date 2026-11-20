@@ -2,7 +2,7 @@ import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PageHeader, PageTabs } from "@/components/console";
 import { PraWamRooms, type RoomsView } from "@/components/admin/wam/PraWamRooms";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
+import { WAM_ADMIN_LABEL, wamCrumbs, wamSection } from "@/components/admin/wam/sections";
 import { wamAdminPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
@@ -12,7 +12,7 @@ import { leadOptions } from "@/lib/server/pra-wam/leads";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: `${wamSection("ruang").label} · Admin WAM` };
+export const metadata = { title: `${wamSection("ruang").label} · ${WAM_ADMIN_LABEL}` };
 
 /** The two tabs, on the page's own address: ?tab=denah opens the plan. */
 const tabs: { key: RoomsView; label: string; href: string }[] = [

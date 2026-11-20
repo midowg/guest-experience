@@ -1,13 +1,13 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PraWamTelegram } from "@/components/admin/wam/PraWamTelegram";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
+import { WAM_ADMIN_LABEL, wamCrumbs, wamSection } from "@/components/admin/wam/sections";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { telegramStatus } from "@/lib/server/pra-wam/telegram";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: `${wamSection("telegram").label} · Admin WAM` };
+export const metadata = { title: `${wamSection("telegram").label} · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin (12 Nov 2026): the MoM bot, its webhook, and the Telegram group of each department. */
 export default async function WamTelegramPage() {

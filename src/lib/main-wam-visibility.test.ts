@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { HIDDEN_MAIN_WAM, visibilityFromRow } from "./main-wam-visibility";
-import { hiddenMainWamSections, mainWamSectionKeys, wamSections } from "@/components/admin/wam/sections";
+import { wamSections } from "@/components/admin/wam/sections";
 import { wamNavGroups } from "@/components/admin/wam/WamNav";
 
-/* Main WAM tersembunyi (20 Nov 2026): hidden until the super admin shows it; Admin WAM without Main WAM meanwhile. */
+/*
+ * Main WAM tersembunyi (20 Nov 2026): hidden from the app until the super admin shows it. Since the two doors
+ * (KONTRAK §15) the switch is the app's only: Admin Pra WAM never has Main WAM, shown or not, and Admin WAM 2027
+ * is not hidden by it.
+ */
 
 describe("whether Main WAM shows", () => {
   it("is hidden unless the row says exactly true (and before the migration)", () => {
@@ -16,29 +20,10 @@ describe("whether Main WAM shows", () => {
   });
 });
 
-describe("Admin WAM while Main WAM is hidden", () => {
-  const groupLabels = (without: readonly string[]) => wamNavGroups({}, without as never[]).filter(group => group.items.length).map(group => group.label);
-  const items = (without: readonly string[]) => wamNavGroups({}, without as never[]).flatMap(group => group.items.map(item => item.href));
-
-  it("knows Main WAM's sections: Pengaturan, Isi acara and its tabs, Modul acara and its tabs (Kuis live too)", () => {
-    expect(mainWamSectionKeys).toEqual(["mw-pengaturan", "mw-isi", "mw-kamar", "mw-perjalanan", "mw-panduan", "mw-info", "mw-modul", "mw-silent", "mw-kuis"]);
-    expect(wamSections.filter(section => section.href.startsWith("/admin/wam/main")).map(section => section.key)).toEqual(mainWamSectionKeys);
-  });
-
-  it("hidden: no Main WAM entry in the menu (nor its search, which reads the same list)", () => {
-    const without = hiddenMainWamSections(true, "ringkasan");
-    expect(groupLabels(without)).not.toContain("Main WAM");
-    expect(items(without).some(href => href.startsWith("/admin/wam/main"))).toBe(false);
-    expect(hiddenMainWamSections(true)).toEqual([...mainWamSectionKeys]);
-  });
-
-  it("shown: the menu as before", () => {
-    expect(hiddenMainWamSections(false, "ringkasan")).toEqual([]);
-    expect(groupLabels(hiddenMainWamSections(false))).toContain("Main WAM");
-  });
-
-  it("on Main WAM's own pages (opened by their address) its menu stays, so the WAM team can move between them", () => {
-    expect(hiddenMainWamSections(true, "mw-kuis")).toEqual([]);
-    expect(hiddenMainWamSections(true, "mw-pengaturan")).toEqual([]);
+describe("Admin Pra WAM has no Main WAM at all", () => {
+  it("no section, menu item or search entry for Main WAM (old or new address), whatever the switch", () => {
+    const hrefs = [...wamSections.map(section => section.href), ...wamNavGroups().flatMap(group => group.items.map(item => item.href))];
+    expect(hrefs.some(href => href.startsWith("/admin/wam/main") || href.startsWith("/admin/wam-acara"))).toBe(false);
+    expect(wamNavGroups().map(group => group.label)).not.toContain("Main WAM");
   });
 });

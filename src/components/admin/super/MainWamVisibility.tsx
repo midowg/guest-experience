@@ -13,8 +13,10 @@ const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { timeZone: "Asia
 
 /**
  * Super admin → Halaman utama → Main WAM (20 Nov 2026, keputusan pemilik): Main WAM (the app during WAM
- * itself, Kuis live included) stays out of sight in Journey until it is shown here. Only the super admin
- * sees this switch; it is recorded with who and when.
+ * itself, Kuis live included) stays out of sight in the app until it is shown here. Only the super admin
+ * sees this switch; it is recorded with who and when. Since the two doors (20 Nov 2026, KONTRAK §15) it is
+ * the app's only: where /wam goes and who gets Main WAM's notes. Admin WAM 2027 is never hidden by it, and
+ * Admin Pra WAM never has Main WAM.
  */
 export function MainWamVisibilitySettings({ initial }: { initial: MainWamVisibility }) {
   const [state, setState] = useState(initial);
@@ -23,8 +25,8 @@ export function MainWamVisibilitySettings({ initial }: { initial: MainWamVisibil
 
   async function change(shown: boolean) {
     const sure = shown
-      ? window.confirm("Tampilkan Main WAM di Journey? Menu Main WAM muncul di Admin WAM untuk semua admin, /wam membuka Main WAM sesuai mode acaranya, dan notifikasi Main WAM terkirim ke semua yang bisa membukanya.")
-      : window.confirm("Sembunyikan Main WAM lagi? Menu Main WAM hilang dari Admin WAM, /wam tetap Pra WAM, dan notifikasi Main WAM hanya ke penguji yang dipilih namanya. Tim WAM tetap bisa membuka lewat tautan langsung.");
+      ? window.confirm("Tampilkan Main WAM di aplikasi? /wam membuka Main WAM sesuai mode acaranya, dan notifikasi Main WAM terkirim ke semua yang bisa membukanya.")
+      : window.confirm("Sembunyikan Main WAM lagi? /wam tetap Pra WAM, dan notifikasi Main WAM hanya ke penguji dan Panitia WAM. Penguji tetap bisa membuka lewat tautan langsung, dan Admin WAM 2027 tetap terbuka.");
     if (!sure) return;
     setBusy(true); setMessage(null);
     try {
@@ -40,8 +42,8 @@ export function MainWamVisibilitySettings({ initial }: { initial: MainWamVisibil
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     <p className={css.hint}>
       {state.shown
-        ? "Main WAM tampil di Journey: menunya ada di Admin WAM, /wam membukanya sesuai mode acara (Pengaturan Main WAM), dan notifikasinya terkirim seperti biasa."
-        : "Main WAM tersembunyi: tidak ada menu Main WAM di Admin WAM, /wam selalu membuka Pra WAM, dan notifikasi Main WAM (termasuk Kuis dimulai) hanya ke penguji yang dipilih namanya di Pengaturan Main WAM. Tim WAM membuka halamannya lewat tautan langsung, dengan aturan akses yang sama."}
+        ? "Main WAM tampil di aplikasi: /wam membukanya sesuai mode acara (Admin WAM 2027 → Pengaturan), dan notifikasinya terkirim seperti biasa."
+        : "Main WAM tersembunyi di aplikasi: /wam selalu membuka Pra WAM, dan notifikasi Main WAM (termasuk Kuis dimulai) hanya ke penguji dan Panitia WAM. Penguji membuka Main WAM lewat tautan langsung, dengan aturan akses yang sama. Ini hanya untuk sisi aplikasi: Admin WAM 2027 tetap terbuka untuk pemegang aksesnya."}
     </p>
     <div className={css.badgeRow}>
       {state.shown ? <Pill tone="ok">Ditampilkan</Pill> : <Pill tone="warn">Tersembunyi</Pill>}

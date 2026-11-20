@@ -14,7 +14,7 @@ const menuHrefs = () => wamGroups().flatMap(group => group.sections.map(section 
 
 it("lists the menu sections, marks the one you are on, and shows the reset count on Akun dan peran", () => {
   render(<WamNav current="akun" badges={{ reset: "2" }}><p>Isi halaman</p></WamNav>);
-  const menu = screen.getByRole("navigation", { name: "Menu Admin WAM" });
+  const menu = screen.getByRole("navigation", { name: "Menu Admin Pra WAM" });
   const links = within(menu).getAllByRole("link");
   expect(links.map(link => link.getAttribute("href"))).toEqual(menuHrefs());
   // Permintaan reset is a tab of Akun dan peran now, not a menu item.
@@ -30,9 +30,9 @@ it("lists the menu sections, marks the one you are on, and shows the reset count
 
 it("marks Akun dan peran while its reset tab is open", () => {
   render(<WamNav current="reset"><p /></WamNav>);
-  const menu = screen.getByRole("navigation", { name: "Menu Admin WAM" });
+  const menu = screen.getByRole("navigation", { name: "Menu Admin Pra WAM" });
   expect(within(menu).getByRole("link", { name: /Akun dan peran/ }).getAttribute("aria-current")).toBe("page");
-  expect(screen.getByRole("button", { name: "Menu Admin WAM" }).parentElement!.textContent).toContain("Akun dan peran");
+  expect(screen.getByRole("button", { name: "Menu Admin Pra WAM" }).parentElement!.textContent).toContain("Akun dan peran");
 });
 
 it("ends the sidebar with the app (new tab), all events, super admin only for the super admin, and Keluar", () => {
@@ -50,7 +50,7 @@ it("ends the sidebar with the app (new tab), all events, super admin only for th
 
 it("on a phone, the hamburger opens the same menu as a drawer and gives focus back when it closes", () => {
   const { container } = render(<WamNav current="ruang"><p /></WamNav>);
-  const burger = screen.getByRole("button", { name: "Menu Admin WAM" });
+  const burger = screen.getByRole("button", { name: "Menu Admin Pra WAM" });
   expect(burger.parentElement!.textContent).toContain("Ruang dan denah");
   expect(burger.getAttribute("aria-expanded")).toBe("false");
   act(() => { fireEvent.click(burger); });

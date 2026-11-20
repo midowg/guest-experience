@@ -7,9 +7,10 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { purgeIfDue, purgeStatus } from "@/lib/server/pra-wam/purge";
 import { audienceReady, peopleOptions } from "@/lib/server/pra-wam/questionnaire";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Pengaturan kuesioner · Admin WAM" };
+export const metadata = { title: `Pengaturan kuesioner · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin: the questionnaire's name, address, status, who it is for, texts and dates. (Akses Data HR is gone since 11 Nov 2026: every admin sees everything.) */
 export default async function QuestionnaireSettingsPage() {

@@ -630,9 +630,17 @@ export const mainWamApi = {
   quizControl: (quizId: string) => `${MAIN_WAM_API}/kuis/${enc(quizId)}/kendali`,
 };
 
-/** Admin WAM → Main WAM: Pengaturan (fondasi), Isi acara (E), Modul acara (D). */
-const MAIN_WAM_ADMIN = `${WAM_ADMIN}/main`;
+/**
+ * Admin WAM 2027 (20 Nov 2026, KONTRAK §15): the admin of the WAM event itself, its own door apart from
+ * Admin Pra WAM (/admin/wam): Ringkasan, Pengaturan (fondasi), Panitia WAM, Isi acara (E), Modul acara (D, F).
+ * Its old address /admin/wam/main/** redirects here (next.config.ts).
+ */
+const MAIN_WAM_ADMIN = "/admin/wam-acara";
 export const mainWamAdminPath = {
+  /** Ringkasan: where Main WAM stands, and a way into every part. */
+  home: MAIN_WAM_ADMIN,
+  /** The WAM event's committee (pw_event_staff), apart from Pra WAM's. */
+  committee: `${MAIN_WAM_ADMIN}/panitia`,
   /** Mode acara, penguji, modul on/off, tema (fondasi). */
   settings: `${MAIN_WAM_ADMIN}/pengaturan`,
   /* E · isi acara */
@@ -651,9 +659,13 @@ export const mainWamAdminPath = {
   /** One quiz: questions, pengendali, the big screen's link, games, results with names. */
   quiz: (id: string) => `${MAIN_WAM_ADMIN}/kuis/${enc(id)}`,
 };
-const MAIN_WAM_ADMIN_API = "/api/admin/wam/main";
+const MAIN_WAM_ADMIN_API = "/api/admin/wam-acara";
 export const mainWamAdminApi = {
   /* fondasi */
+  /** GET: Panitia WAM; POST {employeeId, seksi}: add one (or change their seksi). */
+  committee: `${MAIN_WAM_ADMIN_API}/panitia`,
+  /** PATCH {seksi}; DELETE: one person of Panitia WAM. */
+  committeeMember: (employeeId: string) => `${MAIN_WAM_ADMIN_API}/panitia/${enc(employeeId)}`,
   /** PUT {mode?, modules?, moduleConfig?, theme?}: Pengaturan. */
   settings: `${MAIN_WAM_ADMIN_API}/pengaturan`,
   /** POST {employeeId}: add a penguji. */

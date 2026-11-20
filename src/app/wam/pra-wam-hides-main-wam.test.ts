@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /*
- * Main WAM tersembunyi (20 Nov 2026): Pra WAM (the app, its components, Admin WAM's Pra WAM pages) has no card
+ * Main WAM tersembunyi (20 Nov 2026): Pra WAM (the app, its components, Admin Pra WAM) has no card
  * or link into Main WAM. The only way from /wam to /wam/acara is Pra WAM Beranda's redirectToMainWam, which
  * never leaves Pra WAM while Main WAM is hidden (gate.test.ts).
  */
@@ -29,9 +29,8 @@ describe("Pra WAM has no way into Main WAM", () => {
     expect(found).toEqual([]);
   });
 
-  it("in Admin WAM's Pra WAM pages (Main WAM's own are under /admin/wam/main)", () => {
-    const sources = [...files(join(src, "app", "admin", "wam")), ...files(join(src, "components", "admin", "wam"))]
-      .filter(file => !/[\\/](main|main-wam)[\\/]/.test(relative(src, file)) && !/sections\.ts$/.test(file));
+  it("in Admin Pra WAM (Main WAM's admin is its own door since 20 Nov 2026, /admin/wam-acara)", () => {
+    const sources = [...files(join(src, "app", "admin", "wam")), ...files(join(src, "components", "admin", "wam"))];
     expect(sources.length).toBeGreaterThan(20);
     const found = sources.filter(file => MAIN_WAM.test(strip(readFileSync(file, "utf8")))).map(file => relative(src, file));
     expect(found).toEqual([]);

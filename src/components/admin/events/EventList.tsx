@@ -20,6 +20,7 @@ import type { StandaloneApp } from "@/lib/server/standalone-apps";
 /** Each standalone app's preview: its own colour and mark (10 Nov 2026). */
 const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: string; color: string; accent: string }> = {
   wam: { Icon: Sparkles, background: "linear-gradient(135deg, #0b1230, #2a1f5c)", color: "#f4f1ff", accent: "#f2c46d" },
+  wam_acara: { Icon: CalendarDays, background: "linear-gradient(135deg, #2a1f5c, #5b2a6e)", color: "#fbf3ff", accent: "#f2c46d" },
   booking: { Icon: DoorOpen, background: "linear-gradient(135deg, #0f3b3a, #146c66)", color: "#effaf8", accent: "#9be7d8" },
   tv: { Icon: Tv, background: "linear-gradient(135deg, #10203d, #1d4f91)", color: "#eef4ff", accent: "#8cc2ff" },
   wellbeing: { Icon: HeartPulse, background: "linear-gradient(135deg, #0d3b35, #0d7c72)", color: "#ecfbf8", accent: "#7fd3c9" },

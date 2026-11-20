@@ -7,9 +7,10 @@ import { accountSummary, roleCounts, summaryLine } from "@/components/admin/wam/
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listAccounts } from "@/lib/server/pra-wam/accounts";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Peran · Akun dan peran · Admin WAM" };
+export const metadata = { title: `Peran · Akun dan peran · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin, tab Peran: what each role does, how many hold it, and which roles go together. */
 export default async function WamRolesPage() {

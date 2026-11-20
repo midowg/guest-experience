@@ -1,5 +1,6 @@
 import { COUNTDOWN_MS, GRACE_MS, SPREAD_MS, gameElapsed, isPaused, levelLabels, levelMs, realAt } from "./rules";
 import type { Pause, QuizLevel, QuizPhase, QuizRun, RunView } from "./types";
+import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 
 /*
  * Kuis live's flow (rancangan §7, prototype revisi 2): the MC holds one button, Lanjut (Space), that
@@ -196,7 +197,7 @@ export function applyAction(run: FlowRun, action: ControlAction, ctx: { now: num
 
 /** The MC's status line: "Soal 3 dari 18 · Sedang · 12 dtk lagi", "Jawaban dibuka · menunggu MC". */
 export function controlStatus(run: FlowRun | null, players: number, answered: number | null, now: number): { main: string; sub: string; tone: "idle" | "run" | "wait" | "pause" } {
-  if (!run) return { main: "Belum ada permainan", sub: "Admin WAM membuat permainan baru di Main WAM → Kuis.", tone: "idle" };
+  if (!run) return { main: "Belum ada permainan", sub: `${WAM_EVENT_ADMIN_LABEL} membuat permainan baru di Kuis live.`, tone: "idle" };
   const count = run.levels.length;
   const label = run.index >= 0 && run.index < count ? `Soal ${run.index + 1} dari ${count} · ${levelLabels[run.levels[run.index]]}` : "";
   let out: { main: string; sub: string; tone: "idle" | "run" | "wait" | "pause" };
@@ -222,7 +223,7 @@ export function controlStatus(run: FlowRun | null, players: number, answered: nu
         : { main: `Membuka juara #${state.opening}`, sub: `${run.podiumRevealed - 1} dari ${winners} juara dibuka`, tone: "run" };
       break;
     }
-    case "selesai": out = { main: "Kuis selesai", sub: "Hasil lengkap dengan nama ada di Admin WAM → Main WAM → Kuis.", tone: "idle" }; break;
+    case "selesai": out = { main: "Kuis selesai", sub: `Hasil lengkap dengan nama ada di ${WAM_EVENT_ADMIN_LABEL} → Kuis live.`, tone: "idle" }; break;
   }
   if (isPaused(run.pauses)) {
     const since = run.pauses.find(pause => pause.to === null)!.from;

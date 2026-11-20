@@ -6,9 +6,10 @@ import { CARDS_MIGRATION } from "@/lib/pra-wam/cards";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { adminCards } from "@/lib/server/pra-wam/cards-admin";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kartu karakter · Admin WAM" };
+export const metadata = { title: `Kartu karakter · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin: the character cards: pictures, characters and their score rules, levels and odds, and the cards drawn. */
 export default async function QuestionnaireCardsPage() {

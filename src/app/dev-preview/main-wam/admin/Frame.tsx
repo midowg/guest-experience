@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import admin from "@/components/admin/admin.module.css";
-import { WamNav } from "@/components/admin/wam/WamNav";
-import type { WamSectionKey } from "@/components/admin/wam/sections";
+import { WamAcaraNav } from "@/components/admin/wam-acara/WamAcaraNav";
+import type { WamAcaraSectionKey } from "@/components/admin/wam-acara/sections";
 
 /**
- * Admin WAM's real console frame (menu, white panel) around a Main WAM isi acara page, for the
- * dev-preview pages of agen E (no sign-in; the pages are 404 in production).
+ * Admin WAM 2027's real console frame (menu, white panel) around one of its pages, for the dev-preview
+ * pages (no sign-in; the pages are 404 in production).
  */
-export function AdminPreviewFrame({ current, children }: { current: WamSectionKey; children: ReactNode }) {
-  return <WamNav current={current} className={admin.shell} personName="Admin Contoh">{children}</WamNav>;
+export function AdminPreviewFrame({ current, children }: { current: WamAcaraSectionKey; children: ReactNode }) {
+  return <WamAcaraNav current={current} className={admin.shell} personName="Admin Contoh" opensPraWam>{children}</WamAcaraNav>;
 }
 
 /** ?migrasi=belum, ?isi=kosong from a dev-preview page's search params. */

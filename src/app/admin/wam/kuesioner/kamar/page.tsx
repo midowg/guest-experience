@@ -7,9 +7,10 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { hrUnlocked } from "@/lib/server/pra-wam/hr-lock";
 import { stayBoard } from "@/lib/server/pra-wam/stay";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kamar · Kuesioner · Admin WAM", robots: { index: false, follow: false } };
+export const metadata = { title: `Kamar · Kuesioner · ${WAM_ADMIN_LABEL}`, robots: { index: false, follow: false } };
 
 /** Any admin (open for every admin since 11 Nov 2026): room pairing from the stay answers. */
 export default async function StayRoomsPage() {

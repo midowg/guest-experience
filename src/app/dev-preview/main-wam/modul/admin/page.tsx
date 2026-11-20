@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { ConsoleTheme, PageHeader, PageTabs } from "@/components/console";
-import { AwardsAdmin } from "@/components/admin/wam/main-wam/modul/AwardsAdmin";
-import { SilentAdmin } from "@/components/admin/wam/main-wam/modul/SilentAdmin";
-import { mainWamModuleTabs } from "@/components/admin/wam/main-wam/tabs";
+import { AwardsAdmin } from "@/components/admin/wam-acara/modul/AwardsAdmin";
+import { SilentAdmin } from "@/components/admin/wam-acara/modul/SilentAdmin";
+import { mainWamModuleTabs } from "@/components/admin/wam-acara/tabs";
 import { sampleApprovals, sampleCounts } from "@/lib/main-wam/modul/sample";
 import { closedTally } from "@/lib/main-wam/modul/awards";
 import { at } from "@/lib/main-wam/modul/sample";
@@ -35,7 +35,7 @@ function silent(open: boolean): AdminSilent {
   };
 }
 
-/** Admin WAM → Main WAM → Awarding / Silent Meeting with sample data, no sign-in, 404 in production: ?tab=awarding|silent-meeting&saat=buka. */
+/** Admin WAM 2027 → Awarding / Silent Meeting with sample data, no sign-in, 404 in production: ?tab=awarding|silent-meeting&saat=buka. */
 export default async function DevModulAdmin({ searchParams }: { searchParams: Promise<{ tab?: string; saat?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader, PageTabs } from "@/components/console";
-import { AwardsAdmin } from "@/components/admin/wam/main-wam/modul/AwardsAdmin";
-import { mainWamModuleTabs } from "@/components/admin/wam/main-wam/tabs";
+import { AwardsAdmin } from "@/components/admin/wam-acara/modul/AwardsAdmin";
+import { mainWamModuleTabs } from "@/components/admin/wam-acara/tabs";
 import { sampleApprovals, sampleCounts } from "@/lib/main-wam/modul/sample";
 import { closedTally } from "@/lib/main-wam/modul/awards";
 import { at } from "@/lib/main-wam/modul/sample";
@@ -28,12 +28,12 @@ function awards(open: boolean): AdminAwards {
   };
 }
 
-/** Admin WAM → Main WAM → Awarding in the real console frame, sample data, no sign-in, 404 in production: ?saat=buka. */
+/** Admin WAM 2027 → Awarding in the real console frame, sample data, no sign-in, 404 in production: ?saat=buka. */
 export default async function DevAdminAwarding({ searchParams }: { searchParams: Promise<{ saat?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const open = (await searchParams).saat === "buka";
-  return <AdminPreviewFrame current="mw-modul">
-    <PageHeader title="Main WAM · Awarding" subtitle="Kategori, jendela voting, nominasi, dan perolehan suara untuk persetujuan BOD." />
+  return <AdminPreviewFrame current="modul">
+    <PageHeader title="Awarding" subtitle="Kategori, jendela voting, nominasi, dan perolehan suara untuk persetujuan BOD." />
     <PageTabs tabs={mainWamModuleTabs} current="awarding" label="Modul acara" />
     <AwardsAdmin initial={awards(open)} now={at("2027-01-06", open ? "10:00" : "16:00").toISOString()} />
   </AdminPreviewFrame>;

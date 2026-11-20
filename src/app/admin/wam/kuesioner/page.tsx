@@ -4,9 +4,10 @@ import { QuestionnaireFrame, questionnaireContent } from "@/components/admin/wam
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
+import { WAM_ADMIN_LABEL } from "@/components/admin/wam/sections";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Isi kuesioner · Admin WAM" };
+export const metadata = { title: `Isi kuesioner · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin: the questionnaire's sections and questions, with a preview. */
 export default async function QuestionnaireContentPage() {
