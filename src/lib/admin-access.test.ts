@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminGrant } from "./admin-access";
+import { adminAppLabels, areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminApp, type AdminGrant } from "./admin-access";
 
 describe("Kuesioner WAM, given on its own (14 Nov 2026)", () => {
   const g = (apps: AdminGrant["apps"]): AdminGrant => ({ employeeId: "e1", apps, allEvents: false, eventIds: [] });
@@ -122,5 +122,31 @@ describe("Wellbeing (16 Nov 2026)", () => {
     expect(showsAppCard({ apps: ["wellbeing"] }, "wellbeing")).toBe(true);
     expect(showsAppCard({ apps: ["wam"] }, "wellbeing")).toBe(false);
     expect(showsAppCard(null, "wellbeing")).toBe(true);
+  });
+});
+
+describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2027", () => {
+  const grantOf = (apps: AdminApp[]) => ({ employeeId: "e", apps, allEvents: false, eventIds: [] });
+  it("puts Admin WAM 2027 (/admin/wam-acara and its API) in its own area, and the old Main WAM address under Pra WAM's", () => {
+    expect(areaOfPath("/admin/wam-acara")).toBe("wam_acara");
+    expect(areaOfPath("/admin/wam-acara/kuis/k1")).toBe("wam_acara");
+    expect(areaOfPath("/api/admin/wam-acara/panitia")).toBe("wam_acara");
+    expect(areaOfPath("/admin/wam")).toBe("wam");
+    expect(areaOfPath("/api/admin/main-wam-tampil")).toBe("super");
+  });
+  it("Admin Pra WAM alone does not open Admin WAM 2027, and Admin WAM 2027 alone does not open Admin Pra WAM", () => {
+    expect(mayOpenArea(grantOf(["wam"]), "wam_acara")).toBe(false);
+    expect(mayOpenArea(grantOf(["wam_acara"]), "wam")).toBe(false);
+    expect(mayOpenArea(grantOf(["wam_acara"]), "wam_acara")).toBe(true);
+    expect(mayOpenArea(grantOf(["wam", "wam_acara"]), "wam_acara")).toBe(true);
+    expect(showsAppCard(grantOf(["wam_acara"]), "wam_acara")).toBe(true);
+    expect(showsAppCard(grantOf(["wam_acara"]), "wam")).toBe(false);
+    expect(showsAppCard(grantOf(["wam"]), "wam_acara")).toBe(false);
+    expect(showsAppCard(null, "wam_acara")).toBe(true);
+  });
+  it("names the two doors", () => {
+    expect(adminAppLabels.wam).toBe("Admin Pra WAM");
+    expect(adminAppLabels.wam_acara).toBe("Admin WAM 2027");
+    expect(tidyGrant({ apps: ["wam_acara", "wam"], allEvents: false, eventIds: [] }).apps).toEqual(["wam", "wam_acara"]);
   });
 });
