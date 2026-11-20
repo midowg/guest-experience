@@ -47,6 +47,11 @@ export function ReviewQueue({ initial }: { initial: WaitingRecord[] }) {
     setPicked(set => { const next = new Set(set); next.delete(record.id); return next; });
     router.refresh();
   };
+  const gone = (record: DailyRecord) => {
+    setItems(list => list.filter(item => item.id !== record.id));
+    setPicked(set => { const next = new Set(set); next.delete(record.id); return next; });
+    router.refresh();
+  };
   const toggle = (id: string) => setPicked(set => { const next = new Set(set); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const allShown = shown.length > 0 && shown.every(item => picked.has(item.id));
 
@@ -97,7 +102,7 @@ export function ReviewQueue({ initial }: { initial: WaitingRecord[] }) {
               <span className={css.muted}>{day(item.workDate)} · {kindLabels[item.kind]} {time(item.at)}</span>
             </div>
             <div className={css.pills}>{item.flags.map(flag => <Pill key={flag} tone={faceFlags.includes(flag) ? "bad" : "warn"}>{flagLabels[flag]}</Pill>)}</div>
-            <RecordReview record={item} employeeId={item.employeeId} name={item.name} hasFace={!!item.face} onChanged={decided} onMessage={setMessage} />
+            <RecordReview record={item} employeeId={item.employeeId} name={item.name} hasFace={!!item.face} onChanged={decided} onDeleted={gone} onMessage={setMessage} />
           </li>)}
         </ul>
       </Card>}

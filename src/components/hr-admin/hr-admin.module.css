@@ -52,3 +52,8 @@ button.slot:hover, button.slot[aria-expanded="true"] { border-color: var(--cs-pr
 .empty svg { color: var(--cs-ok-fg); }
 @media (max-width: 560px) { .slots { grid-template-columns: 1fr; } .photos img, .photoEmpty { width: 112px; height: 112px; } }
 .stepAction { grid-column: 2; justify-self: start; }
+/* "Hapus absen": red, last and apart from the decisions; its question in place, on a soft red. */
+.spacer { flex: 1 1 auto; }
+.danger.danger { color: var(--cs-bad-fg); border-color: color-mix(in srgb, var(--cs-bad-fg) 35%, transparent); }
+.confirm { display: grid; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--cs-bad-bg); color: var(--cs-text); }
+.confirm p { margin: 0; font-size: 14px; }

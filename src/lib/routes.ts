@@ -835,7 +835,7 @@ export const hrAdminApi = {
   day: (date: string) => `${HR_ADMIN_API}/absen?tanggal=${date}`,
   /** GET: the clock-ins that wait. */
   waiting: `${HR_ADMIN_API}/absen/perlu-dicek`,
-  /** PATCH {status, note}: Setujui or Tolak one clock-in. */
+  /** PATCH {status, note}: Setujui or Tolak one clock-in; DELETE: Hapus absen (and its selfie). */
   record: (id: string) => `${HR_ADMIN_API}/absen/${id}`,
   /** GET: a redirect to the clock-in's selfie (five minutes). */
   selfie: (id: string) => `${HR_ADMIN_API}/absen/${id}/selfie`,

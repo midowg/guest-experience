@@ -36,7 +36,7 @@ data pribadi, pemeriksaan) tetap mengikuti `docs/aturan-wam.md` §1–§2.
 | --- | --- |
 | Ringkasan | Angka hari ini (sudah masuk, belum absen, perlu dicek, di luar kantor), langkah persiapan yang dicentang otomatis (titik kantor, proses foto GreatDay, akses admin, bagikan aplikasi), status wajah, dan cuplikan antrean. |
 | Perlu dicek | Semua absen yang menunggu, terbaru dulu: selfie di samping foto acuan, skor, alasan, jarak. Setujui/Tolak satu per satu, atau pilih beberapa lalu **Setujui yang dipilih**. Saring: di luar kantor, soal wajah, lainnya. |
-| Absen harian | Semua orang per hari (‹ › geser hari), cari nama, saring (belum absen, perlu dicek, di luar kantor); ketuk kotak Masuk/Pulang untuk meninjau atau **catat manual**. **Hapus selfie lama** di sini. |
+| Absen harian | Semua orang per hari (‹ › geser hari), cari nama, saring (belum absen, perlu dicek, di luar kantor); ketuk kotak Masuk/Pulang untuk meninjau atau **catat manual**. **Hapus selfie lama** di sini. Setiap absen punya **Hapus absen** (untuk data uji atau salah catat): merah, paling akhir, dengan konfirmasi di tempat; selfie-nya ikut terhapus permanen. |
 | Wajah terdaftar | Foto acuan per orang dengan saringan status (bawaan: Perlu tindakan), **Proses foto impor** dengan bilah progres, Setujui/Tolak wajah daftar sendiri, Minta daftar ulang. |
 | Titik kantor | Tempel koordinat/link Google Maps atau "Pakai lokasi saya", radius, zona; pratinjau peta OpenStreetMap sebelum menyimpan. |
 

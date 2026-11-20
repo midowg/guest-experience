@@ -61,6 +61,12 @@ export function DayAttendance({ initial, today }: { initial: DayView; today: str
     people: value.people.map(person => ({ ...person, masuk: person.masuk?.id === record.id ? record : person.masuk, pulang: person.pulang?.id === record.id ? record : person.pulang })),
   }));
 
+  /** "Hapus absen": the slot is empty again (and can be recorded by hand). */
+  const removed = (record: DailyRecord) => setDay(value => ({
+    ...value,
+    people: value.people.map(person => ({ ...person, masuk: person.masuk?.id === record.id ? null : person.masuk, pulang: person.pulang?.id === record.id ? null : person.pulang })),
+  }));
+
   async function manual(person: DayPerson, kind: DailyKind) {
     setBusy(true); setMessage(null);
     try {
@@ -94,7 +100,7 @@ export function DayAttendance({ initial, today }: { initial: DayView; today: str
 
   const detail = (person: DayPerson, kind: DailyKind) => {
     const record = person[kind];
-    if (record) return <RecordReview record={record} employeeId={person.employeeId} name={person.name} hasFace={!!person.face} onChanged={replace} onMessage={setMessage} />;
+    if (record) return <RecordReview record={record} employeeId={person.employeeId} name={person.name} hasFace={!!person.face} onChanged={replace} onDeleted={removed} onMessage={setMessage} />;
     return <div className={css.review}>
       <p className={css.muted}>Belum ada absen {kindLabels[kind].toLowerCase()} {person.name}. Catat manual bila orangnya hadir (HP rusak, belum setuju data wajah, lupa absen).</p>
       <div className={css.actions}>

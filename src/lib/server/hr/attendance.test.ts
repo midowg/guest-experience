@@ -79,7 +79,7 @@ const other: Member = { ...member, id: OTHER };
 // Jumat 20 Nov 2026, 08.30 WIB.
 const morning = new Date("2026-11-20T01:30:00Z");
 
-const { deleteOldSelfies, readChallenge, startClockIn, startEnroll, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
+const { deleteOldSelfies, deleteRecord, readChallenge, startClockIn, startEnroll, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
 
 /** A made-up face: a fixed direction, and looks of it with a little noise. */
 function vector(seed: number): number[] {
@@ -209,6 +209,22 @@ describe("enrolment", () => {
 
   it("is refused while a face is already in use", async () => {
     await expect(startEnroll(member, morning)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe("Hapus absen", () => {
+  it("deletes one clock-in and its selfie, and leaves the others", async () => {
+    db.pw_daily_attendance = [
+      { id: "a", employee_id: PERSON, kind: "masuk", work_date: "2026-11-20", at: "2026-11-20T01:00:00Z", method: "wajah", status: "perlu_cek", flags: [], selfie_key: "pra-wam/absen-harian/x/a.webp" },
+      { id: "b", employee_id: PERSON, kind: "pulang", work_date: "2026-11-20", at: "2026-11-20T10:00:00Z", method: "wajah", status: "sah", flags: [], selfie_key: "pra-wam/absen-harian/x/b.webp" },
+    ];
+    const gone = await deleteRecord("a");
+    expect(gone).toMatchObject({ id: "a", kind: "masuk" });
+    expect(db.pw_daily_attendance.map(row => row.id)).toEqual(["b"]);
+    expect(removeObjects).toHaveBeenCalledWith(["pra-wam/absen-harian/x/a.webp"]);
+  });
+  it("answers 404 for a clock-in that is not there", async () => {
+    await expect(deleteRecord("tidak-ada")).rejects.toMatchObject({ status: 404 });
   });
 });
 

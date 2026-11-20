@@ -434,6 +434,22 @@ export async function reviewRecord(id: string, review: { status: "sah" | "ditola
   return asRecord(data as RecordRow);
 }
 
+/**
+ * Admin HR → "Hapus absen": a clock-in (test data, a mistake) gone for good, with its selfie. The
+ * row goes first, so a failed file delete leaves at most an orphan file, never a row without its file.
+ */
+export async function deleteRecord(id: string): Promise<DailyRecord> {
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("id", id).maybeSingle();
+  if (error) fail(error);
+  if (!data) throw new ServiceError(404, "Absen tidak ditemukan; mungkin sudah dihapus.");
+  const row = data as RecordRow;
+  const removed = await client.from("pw_daily_attendance").delete().eq("id", id);
+  if (removed.error) fail(removed.error);
+  if (row.selfie_key && isR2Configured()) await removeObjects([row.selfie_key]).catch(() => undefined);
+  return asRecord(row);
+}
+
 /** An admin records a clock-in by hand (no face consent, a broken phone, a forgotten clock-in). */
 export async function recordManual(input: ManualInput, actor: AdminActorRef): Promise<DailyRecord> {
   const client = createPrivilegedClient();
