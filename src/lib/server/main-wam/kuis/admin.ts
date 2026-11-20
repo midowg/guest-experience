@@ -4,6 +4,7 @@ import { levelLabels, rankTallies, secondsText } from "@/lib/main-wam/kuis/rules
 import type { QuizLevel, QuizPhase } from "@/lib/main-wam/kuis/types";
 import { kuisScreenPath } from "@/lib/routes";
 import { ServiceError } from "../../config";
+import { currentAdmin } from "../../admin-session";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { writeXlsx } from "../../xlsx-write";
 import { mwFail, mwMissing } from "../errors";
@@ -19,6 +20,12 @@ import { RUN_COLUMNS, isId, notFound, questionAnswers, runFromRow, tallies, type
  */
 
 const db = () => createPrivilegedClient();
+
+/** Who did it, for the record (mw_quizzes.created_by, mw_quiz_hosts.added_by, mw_quiz_runs.created_by). */
+export async function actorName(): Promise<string> {
+  const actor = await currentAdmin();
+  return actor?.name ?? (actor?.role === "super" ? "Super admin" : "Admin");
+}
 const check = (id: string) => { if (!isId(id)) throw notFound(); };
 
 export type AdminQuizSummary = {
