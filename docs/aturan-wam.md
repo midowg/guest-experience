@@ -424,6 +424,7 @@ Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang s
 
 | Hal | Aturan |
 | --- | --- |
+| Tersembunyi dari Journey | Bawaannya Main WAM (termasuk Kuis live) tidak terlihat: tanpa menu Main WAM di Admin WAM, `/wam` tidak pernah mengalihkan ke `/wam/acara`, notifikasinya hanya ke penguji yang dipilih namanya. Hanya super admin yang menampilkannya (Super admin → Halaman utama → Main WAM). Tim WAM membuka lewat tautan langsung. KONTRAK §14, migrasi `202611200602`. |
 | Mode acara | Admin WAM → Main WAM → Pengaturan: **Pra WAM** (bawaan; Main WAM hanya untuk penguji lewat alamatnya), **Main WAM (uji)** (penguji membuka Main WAM dari `/wam`, yang lain tetap Pra WAM), **Main WAM (semua)** (`/wam` membuka Main WAM; Pra WAM tetap di `/wam?versi=pra` dan alamat lainnya). Penguji: Admin WAM, panitia, dan daftar yang dipilih admin. |
 | Tersembunyi | Bukan untuk orang itu, atau modulnya mati: halaman 404 dan API 404, tanpa kartu, aksi, atau baris. Setiap halaman dan API memeriksa sendiri (ada tes). |
 | Data | Tabel `mw_*` (migrasi `202611200001–0003`). Rundown di `mw_sessions` (tidak di `pw_sessions`, supaya tidak tampil di Pra WAM). Kamar = pembagian kamar HR. Notifikasi lewat kotak masuk WAM yang sama (`pw_announcements`) dan Web Push yang ada, tanpa topik baru. |

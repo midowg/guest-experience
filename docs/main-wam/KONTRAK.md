@@ -67,7 +67,7 @@ Alasan:
 - `acara` ditambahkan ke `reservedSlugs` kuesioner (`/wam/[slug]`), dan `/wam/acara/masuk` tidak boleh
   menjadi `next` sesudah login (`safePraWamNext`).
 
-**`/wam` saat Main WAM menyala.** Beranda Pra WAM (`src/app/wam/(app)/page.tsx`) memanggil
+**`/wam` saat Main WAM menyala** (dan hanya bila super admin sudah menampilkan Main WAM di Journey, §14). Beranda Pra WAM (`src/app/wam/(app)/page.tsx`) memanggil
 `redirectToMainWam()` sebelum apa pun: mode `semua` → semua orang (juga yang belum login) ke `/wam/acara`;
 mode `uji` → penguji yang login ke `/wam/acara`; mode `pra` → tidak berubah. Pra WAM tetap bisa dibuka
 lewat `praWamPath.homePra` (`/wam?versi=pra`) dan semua alamat Pra WAM lainnya. Karena Beranda Pra WAM
@@ -597,3 +597,32 @@ tokohnya. Produk: `docs/rancangan-kuis-wam.md` (§8a = yang dibangun). Agen F; m
   `--mw-kuis-medal-1…3`, `--mw-kuis-win-container`, `--mw-on-kuis-medal`), Beranda (`BerandaScreen` slot `kuis` di atas
   Sekarang, dipasang di `(app)/page.tsx`), N01 (ikon dan kata jenis `kuis`), `sample.ts` (modul contoh menyala).
 - **Pratinjau:** `/dev-preview/main-wam/kuis?layar=hp-…|kendali-…|layar-…` (lihat berkasnya), `/dev-preview/main-wam/kuis/admin`.
+
+## 14. Main WAM tersembunyi dari Journey (20 Nov 2026)
+
+Keputusan pemilik: panitia dan admin Pra WAM bukan tim WAM, jadi Main WAM (termasuk Kuis live) tidak terlihat di
+Journey sampai **super admin** menekan **Tampilkan Main WAM** di Super admin → Halaman utama (`/admin/super/beranda`).
+Bawaannya **tersembunyi**. Disimpan di `admin_settings.main_wam_shown` (+ `main_wam_shown_at`, `main_wam_shown_by`;
+migrasi `202611200602_main_wam_visibility.sql`). Sebelum migrasi, tanpa basis data, atau saat kolom tidak terbaca: tersembunyi.
+Hanya super admin yang bisa mengubahnya (`PUT /api/admin/main-wam-tampil`, `requireSuperAdmin`). Siapa dan kapan dicatat
+di baris itu dan di log server.
+
+Selama tersembunyi:
+- **Admin WAM:** grup Main WAM (Pengaturan, Isi acara dan tabnya, Modul acara dan tabnya termasuk Kuis live) tidak ada di
+  menu samping, Ringkasan ("Semua bagian"), dan pencarian (`hiddenMainWamSections`, `WamAdminFrame`, `/admin/wam`).
+  Di halaman Main WAM sendiri (dibuka lewat alamatnya) menunya tetap ada supaya tim WAM bisa berpindah. Aturan akses tidak
+  berubah: halaman Main WAM tetap terbuka lewat URL bagi admin yang berhak sekarang.
+- **Aplikasi:** `/wam` tidak pernah mengalihkan ke `/wam/acara`, apa pun mode acaranya (`mainWamHomeTarget`). Pra WAM
+  tidak punya kartu atau tautan ke Main WAM (dites). `/wam/acara/**` tetap terbuka lewat tautan langsung menurut mode
+  (pra/uji: penguji; semua: semua orang).
+- **Halaman utama Journey** tidak menyebut Main WAM, Kuis, atau fitur acara WAM, tersembunyi maupun ditampilkan (dites di
+  `home-privacy.test.ts`).
+- **Notifikasi** (`sendMainWamNote`, termasuk "Kuis dimulai"): hanya ke **penguji yang dipilih namanya** (`mw_testers`),
+  bukan ke panitia atau admin karena perannya, apa pun mode acaranya. Kabarnya disimpan sebagai `pw_announcements.kind
+  = 'sesi'` dengan label "Penguji Main WAM", jadi tidak masuk daftar pengumuman terkirim Pra WAM, angka BOD, atau papan
+  pengumuman TV kantor. Main WAM tidak mengirim apa pun lewat Telegram.
+- Pengaturan Main WAM (Admin WAM) menampilkan catatan bahwa Main WAM sedang tersembunyi.
+
+Setelah ditampilkan: semuanya kembali seperti sebelumnya (§2, §3, §4.1). Tes: `src/lib/main-wam-visibility.test.ts`,
+`gate.test.ts`, `foundation-server.test.ts`, `src/app/api/admin/main-wam-tampil/route.test.ts`,
+`src/app/wam/pra-wam-hides-main-wam.test.ts`, `src/app/home-privacy.test.ts`, `MainWamVisibility.dom.test.tsx`.

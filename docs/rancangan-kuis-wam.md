@@ -234,6 +234,7 @@ Migrasi yang sama menambah jenis notifikasi `kuis` di `mw_notes`.
 **Alur dan waktu (semua pada jam server).**
 - Admin membuat permainan (fase Siap). MC menekan **Lanjut: Buka lobi**: kartu Beranda "Kuis dimulai · Ikut" muncul
   dan notifikasi "Kuis dimulai" dikirim (jenis `kuis`, topik push `pengumuman` yang sudah ada; tanpa topik baru).
+  Selama Main WAM tersembunyi dari Journey (KONTRAK §14), notifikasinya hanya ke penguji yang dipilih namanya.
 - "Mulai soal" menjadwalkan soal dibuka **3 detik** kemudian (3-2-1). Jawaban dibuka pada jam buka + waktu soal + 2 detik;
   batang sebaran 1,5 detik, lalu jawaban benar menyala. Jeda menggeser semua jam itu; waktu jeda tidak dihitung.
 - Setiap layar menyamakan jam ke server (contoh dengan perjalanan bolak-balik terpendek, pola TV kantor) dan memutar
