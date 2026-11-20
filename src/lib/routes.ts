@@ -814,6 +814,9 @@ export const hrApi = {
   enroll: `${HR_API}/wajah`,
   /** DELETE: the person withdraws consent; their face data goes. */
   face: `${HR_API}/wajah/saya`,
+  /** POST: ask Admin HR to fix an absen (21 Nov 2026); with an id, DELETE withdraws a waiting request. */
+  requests: `${HR_API}/revisi`,
+  request: (id: string) => `${HR_API}/revisi/${id}`,
 };
 /** Admin HR Werkudara in Journey Admin (20 Nov 2026): one page per section (src/components/hr-admin/sections.ts). */
 export const HR_ADMIN = "/admin/hr";
@@ -829,6 +832,8 @@ export const hrAdminPath = {
   faces: `${HR_ADMIN}/wajah`,
   /** Titik kantor: the office points and their radius. */
   offices: `${HR_ADMIN}/kantor`,
+  /** Revisi: what employees ask to fix, to approve or refuse (21 Nov 2026). */
+  requests: `${HR_ADMIN}/revisi`,
 };
 export const hrAdminApi = {
   /** GET ?tanggal=: everyone's masuk and pulang that day. */
@@ -854,6 +859,11 @@ export const hrAdminApi = {
   /** GET/POST: the office points; PUT/DELETE one. */
   offices: `${HR_ADMIN_API}/kantor`,
   office: (id: string) => `${HR_ADMIN_API}/kantor/${id}`,
+  /** GET: the revision requests; with an id, POST {approve, note} decides one. */
+  requests: `${HR_ADMIN_API}/revisi`,
+  request: (id: string) => `${HR_ADMIN_API}/revisi/${id}`,
+  /** PUT {method}: how everyone clocks in (gerakan or foto). */
+  method: `${HR_ADMIN_API}/metode`,
 };
 
 /*

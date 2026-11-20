@@ -25,6 +25,19 @@ export const DAILY_STATUSES = ["sah", "perlu_cek", "ditolak"] as const;
 export type DailyStatus = (typeof DAILY_STATUSES)[number];
 export const statusLabels: Record<DailyStatus, string> = { sah: "Sah", perlu_cek: "Perlu dicek", ditolak: "Ditolak" };
 
+/**
+ * How people clock in (21 Nov 2026, the pilot): Admin HR picks one for everyone. "gerakan": a selfie
+ * with two random liveness steps; "foto": one selfie compared at once with the reference, like GreatDay.
+ */
+export const CLOCK_METHODS = ["gerakan", "foto"] as const;
+export type ClockMethod = (typeof CLOCK_METHODS)[number];
+export const clockMethodLabels: Record<ClockMethod, string> = { gerakan: "Wajah + gerakan", foto: "Foto cepat" };
+export const clockMethodHints: Record<ClockMethod, string> = {
+  gerakan: "Selfie dengan kedip atau toleh acak. Lebih tahan foto atau video palsu; sekitar 10 detik.",
+  foto: "Satu selfie, langsung dicocokkan dengan foto acuan, seperti GreatDay. Cepat; lebih mudah ditipu foto orang lain.",
+};
+export const asClockMethod = (value: unknown): ClockMethod => (value === "foto" ? "foto" : "gerakan");
+
 export const REASON_KINDS = ["event", "dinas", "wfh", "lainnya"] as const;
 export type ReasonKind = (typeof REASON_KINDS)[number];
 export const reasonLabels: Record<ReasonKind, string> = { event: "Event / venue", dinas: "Dinas luar", wfh: "WFH", lainnya: "Lainnya" };
@@ -217,6 +230,8 @@ export type DailyRecord = {
   id: string; kind: DailyKind; at: string; workDate: string; method: "wajah" | "manual"; status: DailyStatus; flags: DailyFlag[];
   officeName: string | null; distanceM: number | null; accuracyM: number | null; faceScore: number | null;
   reasonKind: ReasonKind | null; reasonText: string | null; hasSelfie: boolean; reviewNote: string | null;
+  /** Which way it was taken (null: before 21 Nov 2026, or by hand). */
+  faceMethod?: ClockMethod | null;
 };
 
 /** What the person's clock-in screen needs. */
@@ -228,7 +243,67 @@ export type ClockInState = {
   today: { workDate: string; masuk: DailyRecord | null; pulang: DailyRecord | null };
   offices: { id: string; name: string; lat: number; lng: number; radiusM: number; zone: ViewerZone }[];
   recent: DailyRecord[];
+  /** How clocking in works now (Admin HR's choice). */
+  method: ClockMethod;
+  /** The person's revision requests, newest first. */
+  requests: AttendanceRequest[];
 };
+
+/*
+ * Revisi (21 Nov 2026): an employee asks Admin HR to fix their absensi; approving applies it.
+ * tambah: a forgotten masuk or pulang; ubah_jam: a wrong time; ubah_alasan: a wrong reason/place;
+ * batal: remove one. Within the last 31 days, one waiting request per masuk/pulang.
+ */
+export const REQUEST_TYPES = ["tambah", "ubah_jam", "ubah_alasan", "batal"] as const;
+export type RequestType = (typeof REQUEST_TYPES)[number];
+export const requestTypeLabels: Record<RequestType, string> = { tambah: "Lupa absen", ubah_jam: "Jam salah", ubah_alasan: "Alasan atau lokasi salah", batal: "Batalkan absen" };
+export const REQUEST_STATUSES = ["menunggu", "disetujui", "ditolak", "dibatalkan"] as const;
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+export const requestStatusLabels: Record<RequestStatus, string> = { menunggu: "Menunggu", disetujui: "Disetujui", ditolak: "Ditolak", dibatalkan: "Dibatalkan" };
+export const REQUEST_DAYS = 31;
+
+export type AttendanceRequest = {
+  id: string; type: RequestType; status: RequestStatus; workDate: string; kind: DailyKind;
+  recordId: string | null; proposedTime: string | null; zone: ViewerZone;
+  reasonKind: ReasonKind | null; reasonText: string | null; note: string;
+  decisionNote: string | null; decidedLabel: string | null; createdAt: string;
+};
+/** Admin HR → Revisi: a request with whose it is and the clock-in it is about. */
+export type AdminRequest = AttendanceRequest & { employeeId: string; name: string; department: string; record: DailyRecord | null };
+
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Jam tidak valid.");
+export const requestSchema = z.object({
+  type: z.enum(REQUEST_TYPES, { message: "Pilih jenis revisi." }),
+  workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak valid."),
+  kind: z.enum(DAILY_KINDS),
+  recordId: z.string().uuid().nullable().default(null),
+  time: time.nullable().default(null),
+  zone: z.enum(VIEWER_ZONES).default("WIB"),
+  reasonKind: z.enum(REASON_KINDS).nullable().default(null),
+  reasonText: z.string().trim().max(300).default(""),
+  note: z.string().trim().min(3, "Tulis alasan revisinya.").max(300, "Alasan paling banyak 300 karakter."),
+}).superRefine((value, context) => {
+  if ((value.type === "tambah" || value.type === "ubah_jam") && !value.time) context.addIssue({ code: "custom", path: ["time"], message: "Isi jam yang benar." });
+  if (value.type !== "tambah" && !value.recordId) context.addIssue({ code: "custom", path: ["recordId"], message: "Pilih absen yang mau direvisi." });
+  if (value.type === "ubah_alasan" && !value.reasonKind) context.addIssue({ code: "custom", path: ["reasonKind"], message: "Pilih alasan yang benar." });
+});
+export type RequestInput = z.infer<typeof requestSchema>;
+export const decisionSchema = z.object({
+  approve: z.boolean(),
+  note: z.string().trim().max(300).default(""),
+}).refine(value => value.approve || value.note.length >= 3, { message: "Tulis alasan penolakan.", path: ["note"] });
+
+/** What a request asks, in one line: "Masuk 08.30 (lupa absen)". */
+export function requestSummary(request: Pick<AttendanceRequest, "type" | "kind" | "proposedTime" | "reasonKind" | "reasonText">): string {
+  const kind = kindLabels[request.kind];
+  const at = request.proposedTime ? request.proposedTime.slice(0, 5).replace(":", ".") : "";
+  switch (request.type) {
+    case "tambah": return `${kind} ${at} (lupa absen)`;
+    case "ubah_jam": return `${kind} jadi ${at}`;
+    case "ubah_alasan": return `${kind}: ${request.reasonKind ? reasonLabels[request.reasonKind] : ""}${request.reasonText ? ` · ${request.reasonText}` : ""}`;
+    case "batal": return `Hapus absen ${kind.toLowerCase()}`;
+  }
+}
 
 /** Admin → Absen harian: one row per person for a day. */
 export type DayPerson = {
@@ -258,6 +333,10 @@ export type HrSummary = {
   diLuar: number;
   /** Every clock-in that waits, any day. */
   waiting: number;
+  /** Revision requests that wait; null before migration 202611270001. */
+  requests: number | null;
+  /** How everyone clocks in now. */
+  method: ClockMethod;
   offices: number;
   faces: Record<FaceStatus | "tanpa", number>;
 };

@@ -57,3 +57,9 @@ button.slot:hover, button.slot[aria-expanded="true"] { border-color: var(--cs-pr
 .danger.danger { color: var(--cs-bad-fg); border-color: color-mix(in srgb, var(--cs-bad-fg) 35%, transparent); }
 .confirm { display: grid; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--cs-bad-bg); color: var(--cs-text); }
 .confirm p { margin: 0; font-size: 14px; }
+/* Metode absen: two choices as cards. */
+.methods { display: grid; gap: 10px; margin: 0 0 12px; padding: 0; border: 0; }
+.method { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 10px; padding: 12px 14px; border: 1px solid var(--cs-line); border-radius: 14px; cursor: pointer; }
+.method[data-on] { border-color: var(--cs-primary); background: var(--cs-primary-soft); }
+.method input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--cs-primary); }
+.method strong { display: block; font-size: 14px; }

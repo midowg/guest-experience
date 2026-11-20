@@ -1,4 +1,4 @@
-import type { ClockInState, DailyKind, DailyRecord, FaceStatus, ReasonKind } from "@/lib/hr/attendance";
+import type { AttendanceRequest, ClockInState, ClockMethod, DailyKind, DailyRecord, FaceStatus, ReasonKind, RequestType } from "@/lib/hr/attendance";
 import type { LivenessStep } from "@/lib/hr/liveness";
 import { hrApi } from "@/lib/routes";
 import { praWamRequest, PraWamApiError } from "@/components/pra-wam/api";
@@ -10,7 +10,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
  * (start → upload the selfie → submit), and the same for enrolment.
  */
 
-export type Challenge = { purpose: DailyKind | "daftar"; nonce: string; steps: LivenessStep[]; token: string; expiresAt: string };
+export type Challenge = { purpose: DailyKind | "daftar"; nonce: string; steps: LivenessStep[]; token: string; expiresAt: string; method?: ClockMethod };
 export type StartAnswer =
   | { kind: "tantangan"; challenge: Challenge; needsConsent: boolean }
   | { kind: "sudah"; record: DailyRecord }
@@ -65,3 +65,8 @@ export function readPlace(): Promise<Place> {
     );
   });
 }
+
+/** Revisi (21 Nov 2026): ask Admin HR to fix one absen; withdraw a waiting one. */
+export const submitRequest = async (input: { type: RequestType; workDate: string; kind: DailyKind; recordId: string | null; time: string | null; zone: string; reasonKind: ReasonKind | null; reasonText: string; note: string }) =>
+  (await praWamRequest<AttendanceRequest>(hrApi.requests, { method: "POST", json: input })).message;
+export const cancelRequest = async (id: string) => (await praWamRequest<null>(hrApi.request(id), { method: "DELETE" })).message;

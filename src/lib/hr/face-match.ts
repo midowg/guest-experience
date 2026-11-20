@@ -72,5 +72,14 @@ export function sameFace(frames: readonly (readonly number[])[], min = FACE_MATC
   return true;
 }
 
+/**
+ * Kecocokan as a percentage for people (21 Nov 2026, like GreatDay's): a smooth curve over the
+ * cosine score, so the cocok threshold (0,363) reads about 76% and a clear match 95% and up. It is
+ * a readable scale, not a probability; the decision stays on `faceVerdict`.
+ */
+export function matchPercent(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(100 / (1 + Math.exp(-(score - 0.3) * 18)))));
+}
+
 /** "0,42" for admin screens. */
 export const scoreLabel = (score: number) => score.toFixed(2).replace(".", ",");

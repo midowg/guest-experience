@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  requestSchema, requestSummary,
   dailyStatus, faceKeyFor, instantOf, isOwnFaceKey, isOwnSelfieKey, manualSchema, nextKind, officeSchema, reasonSchema, reviewSchema, selfieKeyFor, usableFace, workDate,
 } from "./attendance";
 
@@ -70,5 +71,24 @@ describe("forms", () => {
   it("checks a manual record", () => {
     expect(manualSchema.safeParse({ employeeId: person, workDate: "2026-11-20", kind: "masuk", time: "08:30", note: "HP rusak" }).success).toBe(true);
     expect(manualSchema.safeParse({ employeeId: person, workDate: "2026-11-20", kind: "masuk", time: "25:00", note: "HP rusak" }).success).toBe(false);
+  });
+});
+
+describe("revisi", () => {
+  const base = { workDate: "2026-11-20", kind: "masuk", note: "HP mati" };
+  it("asks for a time when adding or moving one, a clock-in for the rest, and a reason always", () => {
+    expect(requestSchema.safeParse({ ...base, type: "tambah", time: "08:15" }).success).toBe(true);
+    expect(requestSchema.safeParse({ ...base, type: "tambah" }).success).toBe(false);
+    expect(requestSchema.safeParse({ ...base, type: "ubah_jam", time: "08:15" }).success).toBe(false);
+    expect(requestSchema.safeParse({ ...base, type: "ubah_jam", time: "08:15", recordId: person }).success).toBe(true);
+    expect(requestSchema.safeParse({ ...base, type: "ubah_alasan", recordId: person }).success).toBe(false);
+    expect(requestSchema.safeParse({ ...base, type: "ubah_alasan", recordId: person, reasonKind: "wfh" }).success).toBe(true);
+    expect(requestSchema.safeParse({ ...base, type: "batal", recordId: person, note: "" }).success).toBe(false);
+  });
+  it("says what is asked in one line", () => {
+    expect(requestSummary({ type: "tambah", kind: "pulang", proposedTime: "17:30", reasonKind: null, reasonText: null })).toBe("Pulang 17.30 (lupa absen)");
+    expect(requestSummary({ type: "ubah_jam", kind: "masuk", proposedTime: "08:15", reasonKind: null, reasonText: null })).toBe("Masuk jadi 08.15");
+    expect(requestSummary({ type: "ubah_alasan", kind: "masuk", proposedTime: null, reasonKind: "event", reasonText: "Venue" })).toBe("Masuk: Event / venue · Venue");
+    expect(requestSummary({ type: "batal", kind: "masuk", proposedTime: null, reasonKind: null, reasonText: null })).toBe("Hapus absen masuk");
   });
 });

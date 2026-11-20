@@ -23,6 +23,10 @@ const state: ClockInState = {
     record({ id: "r3", workDate: "2026-11-19", kind: "pulang", at: "2026-11-19T10:31:00Z" }),
     record({ id: "r4", workDate: "2026-11-18", at: "2026-11-18T01:40:00Z", status: "perlu_cek", flags: ["di_luar_area"], reasonKind: "event", reasonText: "Venue klien", officeName: null, distanceM: 8200 }),
   ],
+  method: "foto",
+  requests: [
+    { id: "q1", type: "tambah", status: "menunggu", workDate: "2026-11-19", kind: "pulang", recordId: null, proposedTime: "17:30", zone: "WIB", reasonKind: null, reasonText: null, note: "HP mati waktu pulang", decisionNote: null, decidedLabel: null, createdAt: "2026-11-20T02:00:00Z" },
+  ],
 };
 /**
  * Layout check for HR Werkudara's employee screen without signing in (20 Nov 2026), with made-up

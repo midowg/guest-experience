@@ -1,7 +1,8 @@
-import { CalendarCheck, CheckCircle2, Inbox, MapPin, ScanFace, UserX } from "lucide-react";
+import { CalendarCheck, CheckCircle2, FilePen, Inbox, MapPin, ScanFace, UserX } from "lucide-react";
 import { Card, CardGrid, ConsoleButtonLink, ListRow, PageHeader, RowList, StatCard, StatRow } from "@/components/console";
 import { flagLabels, kindLabels, type HrSummary, type WaitingRecord } from "@/lib/hr/attendance";
 import { hrAdminPath, hrPath, superAdminPath } from "@/lib/routes";
+import { MethodSetting } from "./MethodSetting";
 import css from "./hr-admin.module.css";
 
 const time = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
@@ -18,7 +19,7 @@ export function HrOverview({ summary, waiting, superAdmin }: { summary: HrSummar
   const { faces } = summary;
   const steps: Step[] = [
     { done: summary.offices > 0, title: "Atur titik kantor", text: summary.offices ? `${summary.offices} titik kantor aktif.` : "Tanpa titik kantor, semua absen dianggap di luar area.", action: { label: summary.offices ? "Lihat titik" : "Atur sekarang", href: hrAdminPath.offices } },
-    { done: faces.impor === 0, title: "Proses foto dari GreatDay", text: faces.impor ? `${faces.impor} foto belum diproses. Sekali proses, karyawan tidak perlu daftar wajah lagi.` : "Semua foto GreatDay sudah diproses.", action: { label: faces.impor ? "Proses foto" : "Lihat wajah", href: hrAdminPath.faces } },
+    { done: faces.impor === 0, title: "Proses foto dari GreatDay", text: faces.impor ? `${faces.impor} foto belum diproses. Setelah diproses, fotonya langsung jadi foto acuan.` : "Semua foto GreatDay sudah diproses.", action: { label: faces.impor ? "Proses foto" : "Lihat wajah", href: hrAdminPath.faces } },
     ...(superAdmin ? [{ done: false, title: "Beri akses Admin HR", text: "Centang \"HR Werkudara\" untuk orang HR di Super admin → Akses admin.", action: { label: "Buka Akses admin", href: superAdminPath.admins } }] : []),
     { done: summary.masuk > 0, title: "Bagikan aplikasi ke karyawan", text: "Karyawan membuka journey.werkudara.group/hr di HP, masuk dengan akun WAM, lalu memasangnya ke layar utama.", action: { label: "Buka aplikasi", href: hrPath.home } },
   ];
@@ -30,7 +31,10 @@ export function HrOverview({ summary, waiting, superAdmin }: { summary: HrSummar
       <StatCard label="Belum absen" value={summary.belum} icon={<UserX size={18} />} href={hrAdminPath.day()} />
       <StatCard label="Perlu dicek" value={summary.waiting} note="semua hari" icon={<Inbox size={18} />} tone={summary.waiting ? "warn" : undefined} href={hrAdminPath.waiting} />
       <StatCard label="Di luar kantor" value={summary.diLuar} note="hari ini" icon={<MapPin size={18} />} href={hrAdminPath.day()} />
+      {summary.requests !== null && <StatCard label="Revisi menunggu" value={summary.requests} icon={<FilePen size={18} />} tone={summary.requests ? "warn" : undefined} href={hrAdminPath.requests} />}
     </StatRow>
+
+    <MethodSetting initial={summary.method} ready={summary.requests !== null} />
 
     <CardGrid>
       <Card title="Siapkan absensi">

@@ -7,7 +7,7 @@ import type { Member } from "../pra-wam/session";
 /* Absen harian against a small in-memory stand-in for Supabase and R2. Made-up people and places. */
 type Row = Record<string, unknown>;
 let db: Record<string, Row[]>;
-const conflictKeys: Record<string, string[]> = { pw_daily_attendance: ["employee_id", "work_date", "kind"], pw_face_profiles: ["employee_id"] };
+const conflictKeys: Record<string, string[]> = { pw_daily_attendance: ["employee_id", "work_date", "kind"], pw_face_profiles: ["employee_id"], pw_hr_settings: ["id"] };
 
 function query(table: string) {
   const filters: ((row: Row) => boolean)[] = [];
@@ -18,7 +18,9 @@ function query(table: string) {
   const rows = () => (db[table] ??= []);
   const run = () => {
     if (mode.kind === "upsert" || mode.kind === "insert") {
-      const row: Row = { id: `${table}-${rows().length + 1}`, ...mode.row };
+      // The database's own defaults for the columns a row leaves out.
+      const defaults: Row = table === "pw_attendance_requests" ? { status: "menunggu", created_at: "2026-11-20T00:00:00Z" } : {};
+      const row: Row = { id: `${table}-${rows().length + 1}`, ...defaults, ...mode.row };
       const keys = conflictKeys[table] ?? ["id"];
       const clash = rows().find(item => keys.every(key => item[key] === row[key]));
       if (clash) {
@@ -40,6 +42,8 @@ function query(table: string) {
   const builder = {
     select: () => builder,
     eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
+    neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
+    single: () => { single = true; return builder; },
     gte: (key: string, value: string) => { filters.push(row => String(row[key]) >= value); return builder; },
     lt: (key: string, value: string) => { filters.push(row => String(row[key]) < value); return builder; },
     in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return builder; },
@@ -79,7 +83,7 @@ const other: Member = { ...member, id: OTHER };
 // Jumat 20 Nov 2026, 08.30 WIB.
 const morning = new Date("2026-11-20T01:30:00Z");
 
-const { deleteOldSelfies, deleteRecord, readChallenge, startClockIn, startEnroll, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
+const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, readChallenge, setImportedFace, startClockIn, startEnroll, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
 
 /** A made-up face: a fixed direction, and looks of it with a little noise. */
 function vector(seed: number): number[] {
@@ -128,6 +132,8 @@ beforeEach(() => {
     pw_face_profiles: [{ employee_id: PERSON, embedding: face, model_version: FACE_MODEL_VERSION, photo_key: null, source: "daftar", status: "aktif", note: null, consent_at: "2026-11-19T00:00:00Z", updated_at: "2026-11-19T00:00:00Z" }],
     pw_daily_attendance: [],
     pw_accounts: [{ employee_id: PERSON, active: true }],
+    pw_hr_settings: [{ id: true, clock_method: "gerakan" }],
+    pw_attendance_requests: [],
   };
 });
 afterEach(() => { vi.unstubAllEnvs(); });
@@ -209,6 +215,67 @@ describe("enrolment", () => {
 
   it("is refused while a face is already in use", async () => {
     await expect(startEnroll(member, morning)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe("Foto cepat (21 Nov 2026)", () => {
+  it("takes one selfie with no liveness steps and records the method", async () => {
+    db.pw_hr_settings = [{ id: true, clock_method: "foto" }];
+    const start = await startClockIn(member, "masuk", morning);
+    if (start.kind !== "tantangan") throw new Error("no challenge");
+    expect(start.challenge).toMatchObject({ method: "foto", steps: [] });
+    const upload = await startUpload(member, { token: start.challenge.token, mime: "image/webp", size: 40_000 }, morning);
+    const frames = [look(face, 1), look(face, 2)];
+    const answer = await submitClockIn(member, {
+      token: start.challenge.token, embedding: normalize(frames[0].map((value, i) => value + frames[1][i])), frameEmbeddings: frames,
+      signals: [{ t: 0, blinkLeft: 0.05, blinkRight: 0.05, smileLeft: 0.05, smileRight: 0.05, yaw: 0 }],
+      location: { lat: -7.8, lng: 110.4, accuracyM: 15 }, selfie: { key: upload.key, mime: "image/webp", size: 40_000, token: upload.token },
+    }, morning);
+    expect(answer.record).toMatchObject({ status: "sah", faceMethod: "foto" });
+    expect(db.pw_daily_attendance[0]).toMatchObject({ face_method: "foto", liveness_steps: [] });
+  });
+  it("tells how close a refused face was", async () => {
+    db.pw_hr_settings = [{ id: true, clock_method: "foto" }];
+    const start = await startClockIn(member, "masuk", morning);
+    if (start.kind !== "tantangan") throw new Error("no challenge");
+    const upload = await startUpload(member, { token: start.challenge.token, mime: "image/webp", size: 40_000 }, morning);
+    const frames = [look(stranger, 1), look(stranger, 2)];
+    await expect(submitClockIn(member, {
+      token: start.challenge.token, embedding: normalize(frames[0].map((value, i) => value + frames[1][i])), frameEmbeddings: frames,
+      signals: [{ t: 0, blinkLeft: 0.05, blinkRight: 0.05, smileLeft: 0.05, smileRight: 0.05, yaw: 0 }],
+      location: { lat: -7.8, lng: 110.4, accuracyM: 15 }, selfie: { key: upload.key, mime: "image/webp", size: 40_000, token: upload.token },
+    }, morning)).rejects.toThrow(/kecocokan \d+%/);
+  });
+  it("puts a processed GreatDay photo in use at once", async () => {
+    db.pw_face_profiles[0] = { ...db.pw_face_profiles[0], source: "greatday", status: "impor", embedding: null, consent_at: null };
+    expect(await setImportedFace(PERSON, { embedding: face })).toBe("aktif");
+    expect(db.pw_face_profiles[0]).toMatchObject({ status: "aktif", embedding: face });
+  });
+});
+
+describe("Revisi (21 Nov 2026)", () => {
+  const actor = { employeeId: null, label: "Super admin" };
+  it("records a forgotten pulang once approved", async () => {
+    const asked = await createRequest(member, { type: "tambah", workDate: "2026-11-19", kind: "pulang", recordId: null, time: "17:30", zone: "WIB", reasonKind: null, reasonText: "", note: "HP mati" }, morning);
+    expect(asked).toMatchObject({ status: "menunggu", type: "tambah", proposedTime: "17:30" });
+    await expect(createRequest(member, { type: "tambah", workDate: "2026-11-19", kind: "pulang", recordId: null, time: "17:40", zone: "WIB", reasonKind: null, reasonText: "", note: "Lagi" }, morning)).rejects.toMatchObject({ status: 409 });
+    const decided = await decideRequest(asked.id, { approve: true, note: "" }, actor, morning);
+    expect(decided.status).toBe("disetujui");
+    expect(db.pw_daily_attendance).toEqual([expect.objectContaining({ kind: "pulang", work_date: "2026-11-19", method: "manual", at: "2026-11-19T10:30:00.000Z", recorded_label: "Super admin (revisi)" })]);
+  });
+  it("moves a time, and refuses a request for someone else's clock-in", async () => {
+    db.pw_daily_attendance = [{ id: "rec-1", employee_id: PERSON, kind: "masuk", work_date: "2026-11-20", at: "2026-11-20T02:30:00Z", method: "wajah", status: "sah", flags: [] }];
+    const asked = await createRequest(member, { type: "ubah_jam", workDate: "2026-11-20", kind: "masuk", recordId: "rec-1", time: "08:15", zone: "WIB", reasonKind: null, reasonText: "", note: "Antre lift" }, morning);
+    await decideRequest(asked.id, { approve: true, note: "" }, actor, morning);
+    expect(db.pw_daily_attendance[0].at).toBe("2026-11-20T01:15:00.000Z");
+    await expect(createRequest(other, { type: "batal", workDate: "2026-11-20", kind: "masuk", recordId: "rec-1", time: null, zone: "WIB", reasonKind: null, reasonText: "", note: "Bukan punyaku" }, morning)).rejects.toMatchObject({ status: 404 });
+  });
+  it("leaves the absensi alone when refused", async () => {
+    db.pw_daily_attendance = [{ id: "rec-2", employee_id: PERSON, kind: "masuk", work_date: "2026-11-20", at: "2026-11-20T02:30:00Z", method: "wajah", status: "sah", flags: [], selfie_key: null }];
+    const asked = await createRequest(member, { type: "batal", workDate: "2026-11-20", kind: "masuk", recordId: "rec-2", time: null, zone: "WIB", reasonKind: null, reasonText: "", note: "Salah tekan" }, morning);
+    const decided = await decideRequest(asked.id, { approve: false, note: "Tetap dicatat" }, actor, morning);
+    expect(decided).toMatchObject({ status: "ditolak", decisionNote: "Tetap dicatat" });
+    expect(db.pw_daily_attendance).toHaveLength(1);
   });
 });
 

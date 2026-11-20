@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, History, LogIn, LogOut, MapPin, RotateCcw, ScanFace, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ChevronRight, FilePen, History, LogIn, LogOut, MapPin, RotateCcw, ScanFace, ShieldCheck } from "lucide-react";
 import {
-  CONSENT_VERSION, consentPoints, faceStatusLabels, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels, statusLabels,
+  clockMethodLabels, CONSENT_VERSION, consentPoints, faceStatusLabels, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels, statusLabels,
   type ClockInState, type DailyKind, type DailyRecord, type FaceStatus, type ReasonKind,
 } from "@/lib/hr/attendance";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
+import { matchPercent } from "@/lib/hr/face-match";
 import { instantLabel, zoneSuffix, zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
 import { errorText } from "@/components/pra-wam/api";
 import { loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
 import { FaceCamera, type FaceCapture } from "./FaceCamera";
+import { MyRequests, RevisionForm } from "./RevisionForm";
 import { useViewerZone } from "@/components/pra-wam/ViewerZone";
 import styles from "./absen.module.css";
 
@@ -23,7 +25,8 @@ type Step =
   | { name: "daftar"; challenge: Challenge; then: DailyKind | null }
   | { name: "kirim"; text: string }
   | { name: "hasil"; title: string; record: DailyRecord | null; note: string | null; then: DailyKind | null }
-  | { name: "gagal"; text: string; retry: Step };
+  | { name: "gagal"; text: string; retry: Step }
+  | { name: "revisi"; date: string };
 
 const usable = (status: FaceStatus | undefined) => status === "aktif" || status === "menunggu" || status === "siap";
 const dateOf = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
@@ -228,10 +231,19 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", now: serve
     </div>
   </section>;
 
+  if (step.name === "revisi") {
+    const of = (kind: DailyKind) => state.recent.find(record => record.workDate === step.date && record.kind === kind) ?? null;
+    const waitingKinds = state.requests.filter(request => request.status === "menunggu" && request.workDate === step.date).map(request => request.kind);
+    return <RevisionForm date={step.date} records={{ masuk: of("masuk"), pulang: of("pulang") }} zone={zone} waiting={waitingKinds}
+      onCancel={() => setStep({ name: "ringkas" })}
+      onDone={message => { setNotice(message); void refresh(); setStep({ name: "ringkas" }); }} />;
+  }
+
   if (step.name === "hasil") return <section className={styles.panel} aria-live="polite">
     <span className={styles.doneTile}><CheckCircle2 aria-hidden /></span>
     <h1 className={styles.title}>{step.title}</h1>
     {step.record && <p className={styles.muted}>{instantLabel(step.record.at, zone)}{zoneSuffix(zone)}{step.record.officeName ? ` · ${step.record.officeName}` : ""}</p>}
+    {step.record?.faceScore != null && <p className={styles.match}><ScanFace size={16} aria-hidden /> Kecocokan wajah {matchPercent(step.record.faceScore)}%</p>}
     {step.note && <p className={styles.warn}>{step.note}</p>}
     <div className={styles.buttons}>
       {step.then && <button type="button" className={styles.main} onClick={() => begin(step.then!)}>Lanjut absen {kindLabels[step.then].toLowerCase()}</button>}
@@ -256,15 +268,16 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", now: serve
           <span>Absen {kindLabels[next].toLowerCase()}</span>
         </button>
         : <p className={styles.allDone}><CheckCircle2 aria-hidden /> Absen hari ini lengkap</p>}
-      <p className={styles.heroHint}>{next ? <><MapPin size={14} aria-hidden /> Lokasi dan wajahmu dicek saat absen</> : "Terima kasih, sampai jumpa besok."}</p>
+      <p className={styles.heroHint}>{next ? <><MapPin size={14} aria-hidden /> {clockMethodLabels[state.method]} · lokasi dicek saat absen</> : "Terima kasih, sampai jumpa besok."}</p>
       {next === "masuk" && <button type="button" className={styles.textButton} onClick={() => begin("pulang")}>Lupa absen masuk? Absen pulang</button>}
     </section>
 
     {notice && <p className={styles.notice} role="status">{notice}</p>}
     <div className={styles.slots} aria-label="Absen hari ini"><Slot kind="masuk" record={state.today.masuk} /><Slot kind="pulang" record={state.today.pulang} /></div>
+    <button type="button" className={styles.textButton} onClick={() => setStep({ name: "revisi", date: state.today.workDate })}><FilePen size={16} aria-hidden /> Ada yang salah hari ini? Ajukan revisi</button>
 
     {history.length > 0 && <section className={styles.panel} aria-labelledby="riwayat">
-      <h2 id="riwayat" className={styles.subtitle}><History size={18} aria-hidden /> Riwayat 14 hari</h2>
+      <h2 id="riwayat" className={styles.subtitle}><History size={18} aria-hidden /> Riwayat sebulan</h2>
       <ul className={styles.history}>
         {history.map(date => {
           const of = (kind: DailyKind) => state.recent.find(record => record.workDate === date && record.kind === kind);
@@ -277,10 +290,13 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", now: serve
               <span><LogOut size={14} aria-label="Pulang" />{pulang ? instantLabel(pulang.at, zone) : "—"}</span>
             </span>
             {waiting ? <StatusChip record={waiting} /> : <span className={styles.histOk}><CheckCircle2 size={16} aria-label="Sah" /></span>}
+            <button type="button" className={styles.histRevise} aria-label={`Ajukan revisi ${dateOf(date, { weekday: "long", day: "numeric", month: "long" })}`} onClick={() => setStep({ name: "revisi", date })}><FilePen size={16} aria-hidden /></button>
           </li>;
         })}
       </ul>
     </section>}
+
+    <MyRequests requests={state.requests} onChanged={message => { setNotice(message); void refresh(); }} />
 
     <section id="data-wajah" className={styles.panel} aria-labelledby="wajah">
       <div className={styles.faceRow}>

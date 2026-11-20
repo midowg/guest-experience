@@ -1,4 +1,4 @@
-import { CalendarDays, Inbox, LayoutDashboard, MapPin, ScanFace, type LucideIcon } from "lucide-react";
+import { CalendarDays, FilePen, Inbox, LayoutDashboard, MapPin, ScanFace, type LucideIcon } from "lucide-react";
 import { hrAdminPath } from "@/lib/routes";
 
 /*
@@ -6,7 +6,7 @@ import { hrAdminPath } from "@/lib/routes";
  * per person in Super admin → Akses admin ("HR Werkudara"). The menu, Ringkasan and the page titles
  * read this list. Cuti and lembur join as new sections later.
  */
-export type HrAdminSectionKey = "ringkasan" | "perlu" | "absen" | "wajah" | "kantor";
+export type HrAdminSectionKey = "ringkasan" | "perlu" | "revisi" | "absen" | "wajah" | "kantor";
 export type HrAdminSection = {
   key: HrAdminSectionKey;
   label: string;
@@ -23,6 +23,7 @@ export const HR_ADMIN_LABEL = "Admin HR";
 export const hrAdminSections: readonly HrAdminSection[] = [
   { key: "ringkasan", label: "Ringkasan", group: "Ikhtisar", href: hrAdminPath.home, icon: LayoutDashboard, summary: "Angka hari ini dan yang masih perlu disiapkan." },
   { key: "perlu", label: "Perlu dicek", group: "Absensi", href: hrAdminPath.waiting, icon: Inbox, summary: "Absen yang menunggu keputusan: setujui atau tolak." },
+  { key: "revisi", label: "Revisi", group: "Absensi", href: hrAdminPath.requests, icon: FilePen, summary: "Perbaikan absen yang diajukan karyawan: setujui (langsung diterapkan) atau tolak." },
   { key: "absen", label: "Absen harian", group: "Absensi", href: hrAdminPath.day(), icon: CalendarDays, summary: "Masuk dan pulang semua orang per hari; catat manual." },
   { key: "wajah", label: "Wajah terdaftar", group: "Pengaturan", href: hrAdminPath.faces, icon: ScanFace, summary: "Wajah acuan, persetujuan, dan Proses foto impor." },
   { key: "kantor", label: "Titik kantor", group: "Pengaturan", href: hrAdminPath.offices, icon: MapPin, summary: "Lokasi kantor dan radiusnya untuk absen." },

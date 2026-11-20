@@ -1,11 +1,12 @@
 import "server-only";
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
-  CHALLENGE_SECONDS, CONSENT_VERSION, DAILY_MIGRATION, dailyStatus, faceKeyFor, instantOf, isOwnFaceKey, isOwnSelfieKey, selfieKeyFor, SELFIE_KEEP_DAYS, usableFace, workDate,
+  asClockMethod, CHALLENGE_SECONDS, CONSENT_VERSION, DAILY_MIGRATION, dailyStatus, faceKeyFor, instantOf, isOwnFaceKey, isOwnSelfieKey, selfieKeyFor, SELFIE_KEEP_DAYS, usableFace, workDate,
   type ClockInState, type DailyFlag, type DailyKind, type DailyRecord, type DailyStatus, type DayView, type EnrollInput, type FaceRow, type FaceSource, type FaceStatus, type HrSummary, type WaitingRecord,
-  type ManualInput, type OfficeInput, type ReasonKind, type SubmitInput, type UploadStart,
+  type ManualInput, type OfficeInput, type ReasonKind, type SubmitInput, type UploadStart, type ClockMethod,
+  type AdminRequest, type AttendanceRequest, type RequestInput, type RequestStatus, type RequestType, REQUEST_DAYS,
 } from "@/lib/hr/attendance";
-import { average, cosine, FACE_MATCH, FACE_MODEL_VERSION, faceVerdict, isEmbedding, sameFace } from "@/lib/hr/face-match";
+import { average, cosine, FACE_MATCH, FACE_MODEL_VERSION, faceVerdict, isEmbedding, matchPercent, sameFace } from "@/lib/hr/face-match";
 import { impossibleJump, locationVerdict, type OfficePoint } from "@/lib/hr/geo";
 import { challengeDone, framesLookReal, pickChallenge, type LivenessStep } from "@/lib/hr/liveness";
 import { photoMagicMatches, type PhotoMime } from "@/lib/pra-wam/photo";
@@ -58,12 +59,13 @@ function secret(): string {
 const sign = (...parts: (string | number)[]) => createHmac("sha256", secret()).update(parts.join("\0")).digest("hex");
 const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
 
-export type Challenge = { purpose: Purpose; nonce: string; steps: LivenessStep[]; token: string; expiresAt: string };
+/** `method` "foto" (21 Nov 2026) has no liveness steps: one selfie, compared at once. */
+export type Challenge = { purpose: Purpose; nonce: string; steps: LivenessStep[]; token: string; expiresAt: string; method: ClockMethod };
 
-function newChallenge(purpose: Purpose, member: Member, now: Date): Challenge {
+function newChallenge(purpose: Purpose, member: Member, now: Date, method: ClockMethod = "gerakan"): Challenge {
   const nonce = randomBytes(18).toString("base64url");
   const expires = Math.floor(now.getTime() / 1000) + CHALLENGE_SECONDS;
-  return { purpose, nonce, steps: pickChallenge(nonce), token: `${expires}.${nonce}.${sign("absen-harian", purpose, member.id, nonce, expires)}`, expiresAt: new Date(expires * 1000).toISOString() };
+  return { purpose, nonce, steps: method === "foto" ? [] : pickChallenge(nonce), method, token: `${expires}.${nonce}.${sign("absen-harian", purpose, member.id, nonce, expires)}`, expiresAt: new Date(expires * 1000).toISOString() };
 }
 
 /** The purpose and nonce a token was made for, by this person, still valid; else a clear error. */
@@ -127,13 +129,38 @@ async function profileOf(employeeId: string): Promise<ProfileRow | null> {
 type RecordRow = {
   id: string; employee_id: string; work_date: string; kind: DailyKind; at: string; method: "wajah" | "manual"; status: DailyStatus; flags: string[] | null;
   office_name: string | null; lat: number | null; lng: number | null; distance_m: number | null; accuracy_m: number | null; face_score: number | null;
-  reason_kind: ReasonKind | null; reason_text: string | null; selfie_key: string | null; review_note: string | null;
+  reason_kind: ReasonKind | null; reason_text: string | null; selfie_key: string | null; review_note: string | null; face_method?: string | null;
 };
-const RECORD_COLUMNS = "id,employee_id,work_date,kind,at,method,status,flags,office_name,lat,lng,distance_m,accuracy_m,face_score,reason_kind,reason_text,selfie_key,review_note";
+const RECORD_BASE = "id,employee_id,work_date,kind,at,method,status,flags,office_name,lat,lng,distance_m,accuracy_m,face_score,reason_kind,reason_text,selfie_key,review_note";
+export const HR_PILOT_MIGRATION = "202611270001_hr_metode_revisi.sql";
+/** Whether migration 202611270001 ran (face_method, pw_hr_settings, requests); asked once a minute. */
+let pilotChecked: { at: number; ready: boolean } | null = null;
+async function pilotReady(): Promise<boolean> {
+  if (pilotChecked && Date.now() - pilotChecked.at < 60_000) return pilotChecked.ready;
+  const { error } = await createPrivilegedClient().from("pw_daily_attendance").select("face_method").limit(1);
+  pilotChecked = { at: Date.now(), ready: !error };
+  return !error;
+}
+/** The record columns, with face_method once the migration ran. */
+const recordColumns = async () => (await pilotReady()) ? `${RECORD_BASE},face_method` : RECORD_BASE;
+const pilotWaiting = () => new ServiceError(503, `Fitur ini menunggu migrasi ${HR_PILOT_MIGRATION}.`);
+
+/** How people clock in now (Admin HR's choice); "gerakan" before the migration. */
+export async function clockMethod(): Promise<ClockMethod> {
+  if (!(await pilotReady())) return "gerakan";
+  const { data } = await createPrivilegedClient().from("pw_hr_settings").select("clock_method").eq("id", true).maybeSingle();
+  return asClockMethod((data as { clock_method?: string } | null)?.clock_method);
+}
+export async function setClockMethod(method: ClockMethod, actor: AdminActorRef): Promise<void> {
+  if (!(await pilotReady())) throw pilotWaiting();
+  const { error } = await createPrivilegedClient().from("pw_hr_settings").upsert({ id: true, clock_method: method, updated_label: actor.label, updated_at: new Date().toISOString() }, { onConflict: "id" });
+  if (error) fail(error);
+}
 const asRecord = (row: RecordRow): DailyRecord => ({
   id: row.id, kind: row.kind, at: row.at, workDate: row.work_date, method: row.method, status: row.status, flags: (row.flags ?? []) as DailyFlag[],
   officeName: row.office_name, distanceM: row.distance_m, accuracyM: row.accuracy_m, faceScore: row.face_score,
   reasonKind: row.reason_kind, reasonText: row.reason_text, hasSelfie: Boolean(row.selfie_key), reviewNote: row.review_note,
+  faceMethod: row.face_method === "foto" || row.face_method === "gerakan" ? row.face_method : null,
 });
 
 const daysBefore = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
@@ -142,17 +169,19 @@ const daysBefore = (date: string, days: number) => new Date(Date.parse(`${date}T
 export async function clockInState(member: Member, now = new Date()): Promise<ClockInState> {
   const zone = await viewerZone();
   const today = zoneDate(now.toISOString(), zone);
-  const empty: ClockInState = { ready: false, waiting: null, face: null, today: { workDate: today, masuk: null, pulang: null }, offices: [], recent: [] };
+  const empty: ClockInState = { ready: false, waiting: null, face: null, today: { workDate: today, masuk: null, pulang: null }, offices: [], recent: [], method: "gerakan", requests: [] };
   if (!praWamSecret()) return { ...empty, waiting: "Login karyawan belum disiapkan." };
   try {
     const client = createPrivilegedClient();
-    const [list, profile, { data, error }] = await Promise.all([
+    const [list, profile, method, requests, { data, error }] = await Promise.all([
       offices(),
       profileOf(member.id),
-      client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("employee_id", member.id).gte("work_date", daysBefore(today, 14)).order("at", { ascending: false }),
+      clockMethod(),
+      myRequests(member).catch(() => []),
+      client.from("pw_daily_attendance").select(await recordColumns()).eq("employee_id", member.id).gte("work_date", daysBefore(today, 31)).order("at", { ascending: false }),
     ]);
     if (error) fail(error);
-    const records = ((data ?? []) as RecordRow[]).map(asRecord);
+    const records = ((data ?? []) as unknown as RecordRow[]).map(asRecord);
     const usable = profile && (profile.status === "impor" || profile.model_version === FACE_MODEL_VERSION) ? profile : profile ? { ...profile, status: "ditolak" as const } : null;
     return {
       ready: isR2Configured(),
@@ -164,7 +193,10 @@ export async function clockInState(member: Member, now = new Date()): Promise<Cl
         pulang: records.find(record => record.workDate === today && record.kind === "pulang") ?? null,
       },
       offices: list.map(({ id, name, lat, lng, radiusM, zone: officeZone }) => ({ id, name, lat, lng, radiusM, zone: officeZone })),
+      // 31 days, so a revision can be asked for any of them.
       recent: records,
+      method,
+      requests,
     };
   } catch (error) {
     if (error instanceof ServiceError && error.status === 503) return { ...empty, waiting: error.message };
@@ -189,10 +221,10 @@ export async function startClockIn(member: Member, kind: DailyKind, now = new Da
   }
   const zone = await viewerZone();
   const today = zoneDate(now.toISOString(), zone);
-  const { data, error } = await createPrivilegedClient().from("pw_daily_attendance").select(RECORD_COLUMNS).eq("employee_id", member.id).eq("work_date", today).eq("kind", kind).maybeSingle();
+  const { data, error } = await createPrivilegedClient().from("pw_daily_attendance").select(await recordColumns()).eq("employee_id", member.id).eq("work_date", today).eq("kind", kind).maybeSingle();
   if (error) fail(error);
-  if (data) return { kind: "sudah", record: asRecord(data as RecordRow) };
-  return { kind: "tantangan", challenge: newChallenge(kind, member, now), needsConsent: profile.status === "siap" };
+  if (data) return { kind: "sudah", record: asRecord(data as unknown as RecordRow) };
+  return { kind: "tantangan", challenge: newChallenge(kind, member, now, await clockMethod()), needsConsent: profile.status === "siap" };
 }
 
 /** Liveness and one-face checks shared by clock-in and enrolment. */
@@ -212,7 +244,9 @@ export async function submitClockIn(member: Member, input: SubmitInput, now = ne
   if (!isR2Configured()) throw storageNotReady();
   let keep = false;
   try {
-    checkLiving(nonce, input.signals, input.frameEmbeddings);
+    const method = await clockMethod();
+    if (method === "gerakan") checkLiving(nonce, input.signals, input.frameEmbeddings);
+    else if (!framesLookReal(input.signals) || !sameFace(input.frameEmbeddings)) throw new ServiceError(422, "Foto wajah belum jelas. Lihat lurus ke kamera, lalu coba lagi.");
     if (cosine(input.embedding, average(input.frameEmbeddings)) < 0.98) throw new ServiceError(422, "Data wajah tidak lengkap. Ulangi dari awal.");
 
     const profile = await profileOf(member.id);
@@ -220,7 +254,7 @@ export async function submitClockIn(member: Member, input: SubmitInput, now = ne
     if (profile.status === "siap" && input.consent !== CONSENT_VERSION) throw new ServiceError(409, "Setujui pemakaian data wajah dulu.");
     const score = cosine(input.embedding, profile.embedding);
     const face = faceVerdict(score);
-    if (face === "tidak_cocok") throw new ServiceError(422, "Wajah belum cocok dengan wajah terdaftar. Cari tempat terang, lihat lurus ke kamera, lalu coba lagi.");
+    if (face === "tidak_cocok") throw new ServiceError(422, `Wajah belum cocok dengan foto acuan (kecocokan ${matchPercent(score)}%, perlu sekitar 76%). Cari tempat terang, lihat lurus ke kamera, lalu coba lagi.`);
 
     const reading = { lat: input.location.lat, lng: input.location.lng, accuracyM: input.location.accuracyM };
     const place = locationVerdict(reading, await offices());
@@ -251,19 +285,20 @@ export async function submitClockIn(member: Member, input: SubmitInput, now = ne
       office_name: place.kind === "di_dalam" ? place.office.name : place.nearest?.office.name ?? null,
       lat: reading.lat, lng: reading.lng, accuracy_m: reading.accuracyM,
       distance_m: place.kind === "di_dalam" ? place.distanceM : place.nearest?.distanceM ?? null,
-      face_score: score, embedding: input.embedding, liveness_steps: pickChallenge(nonce), selfie_key: selfie.key,
+      face_score: score, embedding: input.embedding, liveness_steps: method === "gerakan" ? pickChallenge(nonce) : [], selfie_key: selfie.key,
+      ...((await pilotReady()) ? { face_method: method } : {}),
       reason_kind: place.kind === "di_luar" ? input.reason!.kind : null,
       reason_text: place.kind === "di_luar" ? input.reason!.text || null : null,
       status, flags, nonce,
-    }, { onConflict: "employee_id,work_date,kind", ignoreDuplicates: true }).select(RECORD_COLUMNS);
+    }, { onConflict: "employee_id,work_date,kind", ignoreDuplicates: true }).select(await recordColumns());
     if (error) fail(error);
     if (profile.status === "siap") {
       // The first clock-in with an imported GreatDay face: the person agreed, so it is theirs now.
       await client.from("pw_face_profiles").update({ status: "aktif", consent_at: at, consent_version: CONSENT_VERSION, updated_at: at }).eq("employee_id", member.id).eq("status", "siap");
     }
-    if (data?.length) { keep = true; return { kind: "tercatat", record: asRecord(data[0] as RecordRow) }; }
-    const { data: existing } = await client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("employee_id", member.id).eq("work_date", date).eq("kind", purpose).maybeSingle();
-    return { kind: "sudah", record: asRecord(existing as RecordRow) };
+    if (data?.length) { keep = true; return { kind: "tercatat", record: asRecord(data[0] as unknown as RecordRow) }; }
+    const { data: existing } = await client.from("pw_daily_attendance").select(await recordColumns()).eq("employee_id", member.id).eq("work_date", date).eq("kind", purpose).maybeSingle();
+    return { kind: "sudah", record: asRecord(existing as unknown as RecordRow) };
   } finally {
     if (!keep) await removeObjects([selfie.key]).catch(() => undefined);
   }
@@ -352,12 +387,12 @@ export async function adminDay(date: string): Promise<DayView> {
   const [people, list, records, faces] = await Promise.all([
     clockers(),
     offices(true),
-    client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("work_date", date),
+    client.from("pw_daily_attendance").select(await recordColumns()).eq("work_date", date),
     client.from("pw_face_profiles").select("employee_id,status"),
   ]);
   if (records.error) fail(records.error);
   if (faces.error) fail(faces.error);
-  const rows = (records.data ?? []) as RecordRow[];
+  const rows = (records.data ?? []) as unknown as RecordRow[];
   const face = new Map(((faces.data ?? []) as { employee_id: string; status: FaceStatus }[]).map(row => [row.employee_id, row.status]));
   const find = (id: string, kind: DailyKind) => { const row = rows.find(item => item.employee_id === id && item.kind === kind); return row ? asRecord(row) : null; };
   return {
@@ -372,14 +407,14 @@ export async function waitingRecords(): Promise<WaitingRecord[]> {
   const client = createPrivilegedClient();
   const [people, records, faces] = await Promise.all([
     listPeople(),
-    client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("status", "perlu_cek").order("at", { ascending: false }).limit(300),
+    client.from("pw_daily_attendance").select(await recordColumns()).eq("status", "perlu_cek").order("at", { ascending: false }).limit(300),
     client.from("pw_face_profiles").select("employee_id,status"),
   ]);
   if (records.error) fail(records.error);
   if (faces.error) fail(faces.error);
   const byId = new Map(people.map(person => [person.id, person]));
   const face = new Map(((faces.data ?? []) as { employee_id: string; status: FaceStatus }[]).map(row => [row.employee_id, row.status]));
-  return ((records.data ?? []) as RecordRow[]).map(row => ({
+  return ((records.data ?? []) as unknown as RecordRow[]).map(row => ({
     ...asRecord(row), employeeId: row.employee_id, name: byId.get(row.employee_id)?.fullName ?? "(tidak dikenal)",
     department: byId.get(row.employee_id)?.department ?? "", face: face.get(row.employee_id) ?? null,
   }));
@@ -394,12 +429,14 @@ export async function waitingCount(): Promise<number | null> {
 /** Ringkasan: today's numbers (in WIB, the office's day) and what still needs setting up. */
 export async function hrSummary(date: string): Promise<HrSummary> {
   const client = createPrivilegedClient();
-  const [people, list, today, waiting, faces] = await Promise.all([
+  const [people, list, today, waiting, faces, requests, method] = await Promise.all([
     clockers(),
     offices(true),
     client.from("pw_daily_attendance").select("employee_id,kind,office_id,method").eq("work_date", date),
     client.from("pw_daily_attendance").select("id", { count: "exact", head: true }).eq("status", "perlu_cek"),
     client.from("pw_face_profiles").select("employee_id,status"),
+    requestCount().catch(() => null),
+    clockMethod(),
   ]);
   if (today.error) fail(today.error);
   if (waiting.error) fail(waiting.error);
@@ -420,6 +457,8 @@ export async function hrSummary(date: string): Promise<HrSummary> {
     belum: people.length - masuk.size,
     diLuar: rows.filter(row => row.method === "wajah" && !row.office_id).length,
     waiting: waiting.count ?? 0,
+    requests,
+    method,
     offices: list.filter(office => office.active).length,
     faces: counts,
   };
@@ -428,10 +467,10 @@ export async function hrSummary(date: string): Promise<HrSummary> {
 export async function reviewRecord(id: string, review: { status: "sah" | "ditolak"; note: string }, actor: AdminActorRef, now = new Date()): Promise<DailyRecord> {
   const { data, error } = await createPrivilegedClient().from("pw_daily_attendance")
     .update({ status: review.status, review_note: review.note || null, reviewed_by: actor.employeeId, reviewed_label: actor.label, reviewed_at: now.toISOString() })
-    .eq("id", id).select(RECORD_COLUMNS).maybeSingle();
+    .eq("id", id).select(await recordColumns()).maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Absen tidak ditemukan.");
-  return asRecord(data as RecordRow);
+  return asRecord(data as unknown as RecordRow);
 }
 
 /**
@@ -440,10 +479,10 @@ export async function reviewRecord(id: string, review: { status: "sah" | "ditola
  */
 export async function deleteRecord(id: string): Promise<DailyRecord> {
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await client.from("pw_daily_attendance").select(await recordColumns()).eq("id", id).maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Absen tidak ditemukan; mungkin sudah dihapus.");
-  const row = data as RecordRow;
+  const row = data as unknown as RecordRow;
   const removed = await client.from("pw_daily_attendance").delete().eq("id", id);
   if (removed.error) fail(removed.error);
   if (row.selfie_key && isR2Configured()) await removeObjects([row.selfie_key]).catch(() => undefined);
@@ -456,12 +495,12 @@ export async function recordManual(input: ManualInput, actor: AdminActorRef): Pr
   const { data, error } = await client.from("pw_daily_attendance").insert({
     employee_id: input.employeeId, work_date: input.workDate, kind: input.kind, at: instantOf(input.workDate, input.time, input.zone), method: "manual",
     status: "sah", flags: [], review_note: input.note, recorded_by: actor.employeeId, recorded_label: actor.label,
-  }).select(RECORD_COLUMNS).maybeSingle();
+  }).select(await recordColumns()).maybeSingle();
   if (error) {
     if (error.code === "23505") throw new ServiceError(409, `Absen ${input.kind} orang ini di tanggal itu sudah ada.`);
     fail(error);
   }
-  return asRecord(data as RecordRow);
+  return asRecord(data as unknown as RecordRow);
 }
 
 async function keyOf(id: string): Promise<string> {
@@ -513,10 +552,17 @@ export async function listFaces(): Promise<FaceRow[]> {
 export async function setImportedFace(employeeId: string, result: { embedding: number[] } | { problem: string }, now = new Date()): Promise<FaceStatus> {
   const profile = await profileOf(employeeId);
   if (!profile || profile.source !== "greatday" || !["impor", "siap", "ditolak"].includes(profile.status)) throw new ServiceError(409, "Foto ini bukan foto impor yang menunggu diproses.");
+  // 21 Nov 2026 (the owner's choice for the pilot): a readable GreatDay photo is in use at once
+  // ("aktif"); before migration 202611270001 allows that, it waits for the person's consent ("siap").
   const update = "embedding" in result
-    ? { embedding: result.embedding, model_version: FACE_MODEL_VERSION, status: "siap" as const, note: null }
-    : { embedding: null, model_version: null, status: "ditolak" as const, note: `Foto tidak terbaca: ${result.problem}`.slice(0, 300) };
-  const { error } = await createPrivilegedClient().from("pw_face_profiles").update({ ...update, updated_at: now.toISOString() }).eq("employee_id", employeeId);
+    ? { embedding: result.embedding, model_version: FACE_MODEL_VERSION, status: "aktif" as FaceStatus, note: null }
+    : { embedding: null, model_version: null, status: "ditolak" as FaceStatus, note: `Foto tidak terbaca: ${result.problem}`.slice(0, 300) };
+  const client = createPrivilegedClient();
+  let { error } = await client.from("pw_face_profiles").update({ ...update, updated_at: now.toISOString() }).eq("employee_id", employeeId);
+  if (error?.code === "23514" && update.status === "aktif") {
+    update.status = "siap";
+    ({ error } = await client.from("pw_face_profiles").update({ ...update, updated_at: now.toISOString() }).eq("employee_id", employeeId));
+  }
   if (error) fail(error);
   return update.status;
 }
@@ -600,4 +646,138 @@ export async function deleteOldSelfies(now = new Date()): Promise<number> {
     if (rows.length < 500) break;
   }
   return total;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Revisi (21 Nov 2026): the employee asks, Admin HR decides; approving applies the change.
+
+type RequestRow = {
+  id: string; employee_id: string; type: RequestType; record_id: string | null; work_date: string; kind: DailyKind; proposed_time: string | null; zone: string;
+  reason_kind: ReasonKind | null; reason_text: string | null; note: string; status: RequestStatus; decided_label: string | null; decision_note: string | null; created_at: string;
+};
+const REQUEST_COLUMNS = "id,employee_id,type,record_id,work_date,kind,proposed_time,zone,reason_kind,reason_text,note,status,decided_label,decision_note,created_at";
+const asRequest = (row: RequestRow): AttendanceRequest => ({
+  id: row.id, type: row.type, status: row.status, workDate: row.work_date, kind: row.kind, recordId: row.record_id,
+  proposedTime: row.proposed_time ? row.proposed_time.slice(0, 5) : null, zone: asViewerZone(row.zone),
+  reasonKind: row.reason_kind, reasonText: row.reason_text, note: row.note, decisionNote: row.decision_note, decidedLabel: row.decided_label, createdAt: row.created_at,
+});
+
+/** The person's own requests, newest first; none before the migration. */
+export async function myRequests(member: Member): Promise<AttendanceRequest[]> {
+  if (!(await pilotReady())) return [];
+  const { data, error } = await createPrivilegedClient().from("pw_attendance_requests").select(REQUEST_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).limit(40);
+  if (error) fail(error);
+  return ((data ?? []) as RequestRow[]).map(asRequest);
+}
+
+/** An employee asks for a fix: their own clock-in (or an empty slot), in the last 31 days, one waiting request per slot. */
+export async function createRequest(member: Member, input: RequestInput, now = new Date()): Promise<AttendanceRequest> {
+  if (!(await pilotReady())) throw pilotWaiting();
+  const client = createPrivilegedClient();
+  const today = zoneDate(now.toISOString(), await viewerZone());
+  let workDate = input.workDate, kind = input.kind;
+  if (input.type === "tambah") {
+    if (workDate > today || workDate < daysBefore(today, REQUEST_DAYS)) throw new ServiceError(422, "Revisi hanya untuk 31 hari terakhir, sampai hari ini.");
+    const { data } = await client.from("pw_daily_attendance").select("id").eq("employee_id", member.id).eq("work_date", workDate).eq("kind", kind).maybeSingle();
+    if (data) throw new ServiceError(409, `Absen ${kind} tanggal itu sudah ada. Pilih "Jam salah" untuk mengubah jamnya.`);
+  } else {
+    const { data } = await client.from("pw_daily_attendance").select("id,work_date,kind").eq("id", input.recordId!).eq("employee_id", member.id).maybeSingle();
+    if (!data) throw new ServiceError(404, "Absen itu tidak ditemukan.");
+    ({ work_date: workDate, kind } = data as { work_date: string; kind: DailyKind });
+    if (workDate < daysBefore(today, REQUEST_DAYS)) throw new ServiceError(422, "Revisi hanya untuk 31 hari terakhir.");
+  }
+  const { data: open } = await client.from("pw_attendance_requests").select("id").eq("employee_id", member.id).eq("work_date", workDate).eq("kind", kind).eq("status", "menunggu").limit(1);
+  if (open?.length) throw new ServiceError(409, "Masih ada revisi yang menunggu untuk absen ini. Batalkan dulu bila ingin mengubahnya.");
+  const { data, error } = await client.from("pw_attendance_requests").insert({
+    employee_id: member.id, type: input.type, record_id: input.type === "tambah" ? null : input.recordId, work_date: workDate, kind,
+    proposed_time: input.type === "tambah" || input.type === "ubah_jam" ? input.time : null, zone: input.zone,
+    reason_kind: input.type === "ubah_alasan" ? input.reasonKind : null, reason_text: input.type === "ubah_alasan" ? input.reasonText || null : null,
+    note: input.note,
+  }).select(REQUEST_COLUMNS).single();
+  if (error) fail(error);
+  return asRequest(data as RequestRow);
+}
+
+/** The employee withdraws a request that still waits. */
+export async function cancelRequest(member: Member, id: string): Promise<void> {
+  if (!(await pilotReady())) throw pilotWaiting();
+  const { data, error } = await createPrivilegedClient().from("pw_attendance_requests").update({ status: "dibatalkan" }).eq("id", id).eq("employee_id", member.id).eq("status", "menunggu").select("id");
+  if (error) fail(error);
+  if (!data?.length) throw new ServiceError(409, "Revisi ini sudah diputuskan atau dibatalkan.");
+}
+
+/** How many requests wait, for Admin HR's menu and Ringkasan; null before the migration. */
+export async function requestCount(): Promise<number | null> {
+  if (!(await pilotReady())) return null;
+  const { count, error } = await createPrivilegedClient().from("pw_attendance_requests").select("id", { count: "exact", head: true }).eq("status", "menunggu");
+  return error ? null : count ?? 0;
+}
+
+/** Admin HR → Revisi: the waiting requests first, then the last decided ones, with whose and which clock-in. */
+export async function adminRequests(): Promise<AdminRequest[]> {
+  if (!(await pilotReady())) throw pilotWaiting();
+  const client = createPrivilegedClient();
+  const [people, waitingRows, decidedRows] = await Promise.all([
+    listPeople(),
+    client.from("pw_attendance_requests").select(REQUEST_COLUMNS).eq("status", "menunggu").order("created_at").limit(200),
+    client.from("pw_attendance_requests").select(REQUEST_COLUMNS).neq("status", "menunggu").order("created_at", { ascending: false }).limit(60),
+  ]);
+  if (waitingRows.error) fail(waitingRows.error);
+  if (decidedRows.error) fail(decidedRows.error);
+  const rows = [...(waitingRows.data ?? []), ...(decidedRows.data ?? [])] as RequestRow[];
+  const ids = [...new Set(rows.map(row => row.record_id).filter((id): id is string => !!id))];
+  const records = new Map<string, DailyRecord>();
+  if (ids.length) {
+    const { data, error } = await client.from("pw_daily_attendance").select(await recordColumns()).in("id", ids);
+    if (error) fail(error);
+    for (const row of (data ?? []) as unknown as RecordRow[]) records.set(row.id, asRecord(row));
+  }
+  const byId = new Map(people.map(person => [person.id, person]));
+  return rows.map(row => ({
+    ...asRequest(row), employeeId: row.employee_id, name: byId.get(row.employee_id)?.fullName ?? "(tidak dikenal)",
+    department: byId.get(row.employee_id)?.department ?? "", record: row.record_id ? records.get(row.record_id) ?? null : null,
+  }));
+}
+
+/** Admin HR decides a request; approving applies it to the absensi at once. */
+export async function decideRequest(id: string, decision: { approve: boolean; note: string }, actor: AdminActorRef, now = new Date()): Promise<AttendanceRequest> {
+  if (!(await pilotReady())) throw pilotWaiting();
+  const client = createPrivilegedClient();
+  const { data: found, error: readError } = await client.from("pw_attendance_requests").select(REQUEST_COLUMNS).eq("id", id).maybeSingle();
+  if (readError) fail(readError);
+  const request = found as RequestRow | null;
+  if (!request) throw new ServiceError(404, "Revisi tidak ditemukan.");
+  if (request.status !== "menunggu") throw new ServiceError(409, "Revisi ini sudah diputuskan atau dibatalkan.");
+  if (decision.approve) {
+    const at = now.toISOString();
+    const time = request.proposed_time?.slice(0, 5) ?? "";
+    const zone = asViewerZone(request.zone);
+    if (request.type === "tambah") {
+      const { error } = await client.from("pw_daily_attendance").insert({
+        employee_id: request.employee_id, work_date: request.work_date, kind: request.kind, at: instantOf(request.work_date, time, zone), method: "manual",
+        status: "sah", flags: [], review_note: `Revisi: ${request.note}`.slice(0, 300), recorded_by: actor.employeeId, recorded_label: `${actor.label} (revisi)`.slice(0, 120),
+      });
+      if (error?.code === "23505") throw new ServiceError(409, `Absen ${request.kind} tanggal itu sudah ada sekarang. Tolak revisi ini, atau minta karyawan mengajukan "Jam salah".`);
+      if (error) fail(error);
+    } else {
+      if (!request.record_id) throw new ServiceError(409, "Absen yang direvisi sudah tidak ada. Tolak revisi ini.");
+      if (request.type === "batal") await deleteRecord(request.record_id);
+      else {
+        const patch = request.type === "ubah_jam"
+          ? { at: instantOf(request.work_date, time, zone) }
+          : { reason_kind: request.reason_kind, reason_text: request.reason_text };
+        const { data, error } = await client.from("pw_daily_attendance").update({
+          ...patch, reviewed_by: actor.employeeId, reviewed_label: actor.label, reviewed_at: at,
+          review_note: `Revisi disetujui: ${request.note}`.slice(0, 300),
+        }).eq("id", request.record_id).select("id");
+        if (error) fail(error);
+        if (!data?.length) throw new ServiceError(409, "Absen yang direvisi sudah tidak ada. Tolak revisi ini.");
+      }
+    }
+  }
+  const { data, error } = await client.from("pw_attendance_requests").update({
+    status: decision.approve ? "disetujui" : "ditolak", decided_by: actor.employeeId, decided_label: actor.label, decided_at: now.toISOString(), decision_note: decision.note || null,
+  }).eq("id", id).eq("status", "menunggu").select(REQUEST_COLUMNS).single();
+  if (error) fail(error);
+  return asRequest(data as RequestRow);
 }

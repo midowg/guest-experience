@@ -23,7 +23,7 @@ const { ClockInFlow } = await import("./ClockInFlow");
 const office = { id: "o1", name: "Kantor Contoh", lat: -7.8, lng: 110.4, radiusM: 100, zone: "WIB" as const };
 const base: ClockInState = {
   ready: true, waiting: null, face: { status: "aktif", source: "daftar", consented: true },
-  today: { workDate: "2026-11-20", masuk: null, pulang: null }, offices: [office], recent: [],
+  today: { workDate: "2026-11-20", masuk: null, pulang: null }, offices: [office], recent: [], method: "gerakan", requests: [],
 };
 const record: DailyRecord = {
   id: "r1", kind: "masuk", at: "2026-11-20T01:30:00Z", workDate: "2026-11-20", method: "wajah", status: "sah", flags: [],

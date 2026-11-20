@@ -101,7 +101,7 @@ export function FaceCamera({ steps, purpose, onDone, onCancel }: Props) {
     const finish = async (element: HTMLVideoElement, box: FaceBox) => {
       state.phase = "proses"; setPhase("proses"); setHint(null);
       if (!sameFace(state.captures)) return fail("Wajah di kamera berganti di tengah jalan. Ulangi dengan wajahmu sendiri.");
-      if (!challengeDone(steps, state.signals)) return fail("Gerakannya belum terbaca. Ulangi dan ikuti petunjuknya.");
+      if (steps.length && !challengeDone(steps, state.signals)) return fail("Gerakannya belum terbaca. Ulangi dan ikuti petunjuknya.");
       let selfie: { blob: Blob; mime: PhotoMime };
       try { selfie = await selfieOf(element, box); } catch { return fail("Foto belum bisa disimpan. Coba lagi."); }
       stopped = true; stopCamera();
@@ -150,9 +150,16 @@ export function FaceCamera({ steps, purpose, onDone, onCancel }: Props) {
                 else {
                   state.captures.push(embedding);
                   if (state.phase === "posisi") { state.signals = [look.signal]; state.from = 0; }
-                  if (state.step >= steps.length) return void finish(element, look.box);
-                  state.phase = "langkah"; state.stepStartedAt = now;
-                  setPhase("langkah"); setStepIndex(state.step);
+                  if (state.step < steps.length) {
+                    state.phase = "langkah"; state.stepStartedAt = now;
+                    setPhase("langkah"); setStepIndex(state.step);
+                  } else if (state.captures.length >= (steps.length ? 1 : 2)) {
+                    return void finish(element, look.box);
+                  } else {
+                    // Foto cepat (no steps): a second straight look, to be sure it is one steady face.
+                    state.phase = "kembali"; state.stepStartedAt = now;
+                    setPhase("kembali");
+                  }
                 }
               }
             }
@@ -169,9 +176,9 @@ export function FaceCamera({ steps, purpose, onDone, onCancel }: Props) {
   }, [attempt, steps]);
 
   const prompt = phase === "memuat" ? ""
-    : phase === "posisi" ? "Lihat lurus ke kamera"
+    : phase === "posisi" ? (steps.length ? "Lihat lurus ke kamera" : "Lihat lurus ke kamera, tahan sebentar")
     : phase === "langkah" ? stepPrompt(steps[stepIndex])
-    : phase === "kembali" ? "Bagus. Lihat lurus lagi ke kamera"
+    : phase === "kembali" ? (steps.length ? "Bagus. Lihat lurus lagi ke kamera" : "Tahan sebentar…")
     : phase === "proses" ? "Memeriksa…" : "";
   const retry = () => { setError(null); setHint(null); setStepIndex(0); setPhase("memuat"); setAttempt(value => value + 1); };
 

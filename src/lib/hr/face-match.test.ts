@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { average, cosine, EMBEDDING_SIZE, FACE_MATCH, faceVerdict, isEmbedding, normalize, sameFace, scoreLabel } from "./face-match";
+import { average, cosine, EMBEDDING_SIZE, FACE_MATCH, faceVerdict, isEmbedding, matchPercent, normalize, sameFace, scoreLabel } from "./face-match";
 
 /** A made-up embedding: a direction with some noise. */
 function vector(seed: number, noise = 0, base?: number[]): number[] {
@@ -49,6 +49,13 @@ describe("verdict", () => {
     const other = vector(99);
     expect(sameFace([vector(1, 0.1, one), vector(2, 0.1, one), vector(3, 0.1, one)])).toBe(true);
     expect(sameFace([vector(1, 0.1, one), vector(2, 0.1, one), other])).toBe(false);
+  });
+  it("reads as a percentage: the threshold about 76%, a clear match 95% and up, a stranger low", () => {
+    expect(matchPercent(FACE_MATCH.cocok)).toBe(76);
+    expect(matchPercent(0.5)).toBeGreaterThanOrEqual(95);
+    expect(matchPercent(0.05)).toBeLessThan(5);
+    expect(matchPercent(-1)).toBe(0);
+    expect(matchPercent(1)).toBe(100);
   });
   it("labels scores with a comma", () => {
     expect(scoreLabel(0.4234)).toBe("0,42");

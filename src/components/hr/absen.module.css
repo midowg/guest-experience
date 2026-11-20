@@ -65,7 +65,7 @@
 .danger { border: 0; background: var(--hr-danger); color: #fff; }
 .main:active, .second:active, .danger:active { transform: scale(.98); }
 .main:disabled, .second:disabled { opacity: .5; cursor: default; transform: none; }
-.textButton { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.textButton { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .chipButton { margin-left: auto; min-height: 40px; padding: 0 12px 0 16px; border: 0; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font: inherit; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
 
 /* The greeting card: who, what time it is where they are, and the one big button. */
@@ -105,7 +105,7 @@
 
 /* Riwayat: one row per day. */
 .history { margin: 0; padding: 0; list-style: none; width: 100%; display: grid; }
-.history li { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; min-height: 56px; border-bottom: 1px solid var(--hr-line); }
+.history li { display: grid; grid-template-columns: 64px 1fr auto auto; gap: 8px 10px; align-items: center; min-height: 56px; border-bottom: 1px solid var(--hr-line); }
 .history li:last-child { border-bottom: 0; }
 .histDay { display: grid; line-height: 1.25; }
 .histDay strong { font-size: 14px; }
@@ -130,3 +130,19 @@
 .field input { min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--hr-line); background: var(--hr-app); color: var(--hr-text); font: inherit; font-size: 16px; font-weight: 500; }
 .confirm { display: grid; gap: 10px; width: 100%; padding: 14px; border-radius: 16px; background: var(--hr-danger-soft); }
 .confirm p { margin: 0; font-size: 14px; }
+
+/* Revisi saya (21 Nov 2026). */
+.requests { margin: 0; padding: 0; list-style: none; width: 100%; display: grid; }
+.requests li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hr-line); }
+.requests li:last-child { border-bottom: 0; }
+.requestText { display: grid; gap: 2px; min-width: 0; }
+.requestText strong { font-size: 14px; }
+.requestText small { font-size: 12px; color: var(--hr-muted); overflow-wrap: anywhere; }
+.req_menunggu { background: var(--hr-warning-soft); color: var(--hr-warning); }
+.req_disetujui { background: var(--hr-success-soft); color: var(--hr-success); }
+.req_ditolak { background: var(--hr-danger-soft); color: var(--hr-danger); }
+.req_dibatalkan { background: var(--hr-surface-soft); color: var(--hr-muted); }
+.iconOnly { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--hr-line); border-radius: 12px; background: var(--hr-surface); color: var(--hr-muted); cursor: pointer; }
+.histRevise { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 12px; background: transparent; color: var(--hr-primary); cursor: pointer; }
+.histRevise:hover { background: var(--hr-primary-soft); }
+.match { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font-weight: 700; font-size: 14px; }

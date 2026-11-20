@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Check, ImageOff, ScanFace, Trash2, X } from "lucide-react";
 import { ConsoleButton } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { flagLabels, kindLabels, reasonLabels, type DailyRecord } from "@/lib/hr/attendance";
-import { scoreLabel } from "@/lib/hr/face-match";
+import { clockMethodLabels, flagLabels, kindLabels, reasonLabels, type DailyRecord } from "@/lib/hr/attendance";
+import { matchPercent, scoreLabel } from "@/lib/hr/face-match";
 import { distanceLabel } from "@/lib/hr/geo";
 import { hrAdminApi } from "@/lib/routes";
 import css from "./hr-admin.module.css";
@@ -76,7 +76,8 @@ export function RecordReview({ record, employeeId, name, hasFace, onChanged, onD
       </figure>
     </div>
     <dl className={css.facts}>
-      {record.faceScore !== null && <><dt>Kecocokan wajah</dt><dd>{scoreLabel(record.faceScore)} {record.faceScore >= 0.363 ? "(cocok)" : "(rendah)"}</dd></>}
+      {record.faceScore !== null && <><dt>Kecocokan wajah</dt><dd><strong>{matchPercent(record.faceScore)}%</strong> {record.faceScore >= 0.363 ? "(cocok)" : "(rendah)"} · skor {scoreLabel(record.faceScore)}</dd></>}
+      {record.faceMethod && <><dt>Metode</dt><dd>{clockMethodLabels[record.faceMethod]}</dd></>}
       {record.reasonKind && <><dt>Alasan</dt><dd>{reasonLabels[record.reasonKind]}{record.reasonText ? ` · ${record.reasonText}` : ""}</dd></>}
       {record.distanceM !== null && <><dt>Jarak</dt><dd>{distanceLabel(record.distanceM)}{record.officeName ? ` dari ${record.officeName}` : ""}</dd></>}
       {record.accuracyM !== null && <><dt>Akurasi GPS</dt><dd>±{distanceLabel(record.accuracyM)}</dd></>}

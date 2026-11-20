@@ -7,7 +7,8 @@ import { HrOverview } from "@/components/hr-admin/HrOverview";
 import { OfficePoints } from "@/components/hr-admin/OfficePoints";
 import { ReviewQueue } from "@/components/hr-admin/ReviewQueue";
 import type { HrAdminSectionKey } from "@/components/hr-admin/sections";
-import type { DailyRecord, DayView, FaceRow, HrSummary, WaitingRecord } from "@/lib/hr/attendance";
+import type { AdminRequest, DailyRecord, DayView, FaceRow, HrSummary, WaitingRecord } from "@/lib/hr/attendance";
+import { RequestQueue } from "@/components/hr-admin/RequestQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +37,21 @@ const faces: FaceRow[] = [
   { employeeId: "e4", name: "Contoh Empat", department: "Center of Excellence", status: "menunggu", source: "daftar", note: "Tidak cocok dengan foto GreatDay", consented: true, hasPhoto: true, hasEmbedding: true, updatedAt: "2026-11-20T01:00:00Z" },
   { employeeId: "e5", name: "Contoh Lima", department: "Human Resources & General Affair", status: "impor", source: "greatday", note: null, consented: false, hasPhoto: true, hasEmbedding: false, updatedAt: "2026-11-20T01:00:00Z" },
 ];
-const summary: HrSummary = { date: "2026-11-20", people: 71, masuk: 38, pulang: 5, belum: 33, diLuar: 4, waiting: waiting.length, offices: 0, faces: { aktif: 3, siap: 0, impor: 49, menunggu: 1, ditolak: 0, tanpa: 18 } };
+const summary: HrSummary = { date: "2026-11-20", people: 71, masuk: 38, pulang: 5, belum: 33, diLuar: 4, waiting: waiting.length, requests: 1, method: "gerakan", offices: 0, faces: { aktif: 3, siap: 0, impor: 49, menunggu: 1, ditolak: 0, tanpa: 18 } };
+
+const requests: AdminRequest[] = [
+  { id: "q1", type: "tambah", status: "menunggu", workDate: "2026-11-19", kind: "pulang", recordId: null, proposedTime: "17:30", zone: "WIB", reasonKind: null, reasonText: null, note: "HP mati waktu pulang", decisionNote: null, decidedLabel: null, createdAt: "2026-11-20T02:00:00Z", employeeId: "e3", name: "Contoh Tiga", department: "Finance", record: null },
+  { id: "q2", type: "ubah_jam", status: "menunggu", workDate: "2026-11-20", kind: "masuk", recordId: "r1", proposedTime: "08:15", zone: "WIB", reasonKind: null, reasonText: null, note: "Antre lift, absen terlambat", decisionNote: null, decidedLabel: null, createdAt: "2026-11-20T03:00:00Z", employeeId: "e1", name: "Contoh Satu", department: "Center of Excellence", record: record({}) },
+  { id: "q3", type: "batal", status: "disetujui", workDate: "2026-11-18", kind: "masuk", recordId: null, proposedTime: null, zone: "WIB", reasonKind: null, reasonText: null, note: "Salah tekan", decisionNote: null, decidedLabel: "Super admin", createdAt: "2026-11-19T03:00:00Z", employeeId: "e2", name: "Contoh Dua", department: "Event Production", record: null },
+];
 
 /** Layout check for Admin HR without signing in (20 Nov 2026), with made-up data: ?bagian=ringkasan|perlu|absen|wajah|kantor. Its buttons call the real API, which refuses without a session. */
 export default async function DevHrAdminPage({ searchParams }: { searchParams: Promise<{ bagian?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const { bagian } = await searchParams;
-  const current = (["perlu", "absen", "wajah", "kantor"].includes(bagian ?? "") ? bagian : "ringkasan") as HrAdminSectionKey;
-  return <HrAdminNav current={current} superAdmin waiting={waiting.length} className={admin.shell} personName="Super admin">
+  const current = (["perlu", "revisi", "absen", "wajah", "kantor"].includes(bagian ?? "") ? bagian : "ringkasan") as HrAdminSectionKey;
+  return <HrAdminNav current={current} superAdmin waiting={waiting.length} requests={2} className={admin.shell} personName="Super admin">
+    {current === "revisi" && <RequestQueue initial={requests} />}
     {current === "ringkasan" && <HrOverview summary={summary} waiting={waiting} superAdmin />}
     {current === "perlu" && <ReviewQueue initial={waiting} />}
     {current === "absen" && <DayAttendance initial={day} today="2026-11-20" />}

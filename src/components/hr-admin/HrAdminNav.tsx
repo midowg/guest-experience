@@ -4,20 +4,22 @@ import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGro
 import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, hrPath, SUPER_ADMIN_HOME } from "@/lib/routes";
 import { HR_ADMIN_LABEL, hrAdminGroups, hrAdminSection, type HrAdminSectionKey } from "./sections";
 
-/** Admin HR's menu, with the count that waits beside Perlu dicek. */
-export function hrAdminNavGroups(waiting = 0): ConsoleNavGroup[] {
+/** Admin HR's menu, with the counts that wait beside Perlu dicek and Revisi. */
+export function hrAdminNavGroups(waiting = 0, requests = 0): ConsoleNavGroup[] {
   return hrAdminGroups().map(group => ({
     label: group.label,
     items: group.sections.map(section => {
       const Icon = section.icon;
-      return { key: section.key, label: section.label, href: section.href, icon: <Icon size={20} />, ...(section.key === "perlu" && waiting ? { badge: String(waiting), badgeLabel: "absen menunggu dicek" } : {}) };
+      const badge = section.key === "perlu" && waiting ? { badge: String(waiting), badgeLabel: "absen menunggu dicek" }
+        : section.key === "revisi" && requests ? { badge: String(requests), badgeLabel: "revisi menunggu" } : {};
+      return { key: section.key, label: section.label, href: section.href, icon: <Icon size={20} />, ...badge };
     }),
   }));
 }
 
 /** Every Admin HR page in the console frame: its sections, the way into the app, the rest of the admin and Keluar. */
-export function HrAdminNav({ current, superAdmin = false, waiting = 0, className, children, personName }: {
-  current: HrAdminSectionKey; superAdmin?: boolean; waiting?: number; className?: string; children: ReactNode; personName?: string;
+export function HrAdminNav({ current, superAdmin = false, waiting = 0, requests = 0, className, children, personName }: {
+  current: HrAdminSectionKey; superAdmin?: boolean; waiting?: number; requests?: number; className?: string; children: ReactNode; personName?: string;
 }) {
   const footerLinks: ConsoleLink[] = [
     { key: "app", label: "Buka HR Werkudara", href: hrPath.home, icon: <ExternalLink size={20} />, external: true },
@@ -26,7 +28,7 @@ export function HrAdminNav({ current, superAdmin = false, waiting = 0, className
   ];
   return <ConsoleShell theme="admin" area={HR_ADMIN_LABEL} storageKey="admin-hr" className={className}
     person={{ name: personName ?? (superAdmin ? "Super admin" : "Admin"), sub: "Werkudara" }}
-    groups={hrAdminNavGroups(waiting)} current={current} pageTitle={hrAdminSection(current).label}
+    groups={hrAdminNavGroups(waiting, requests)} current={current} pageTitle={hrAdminSection(current).label}
     footerLinks={footerLinks}
     footer={<ConsoleLogoutButton endpoint={ADMIN_LOGOUT_API} redirectTo={ADMIN_LOGIN} />}>
     {children}
