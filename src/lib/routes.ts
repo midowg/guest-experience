@@ -84,6 +84,8 @@ export const superAdminPath = {
 };
 /** The front page's look: GET, or PUT { style } (super admin). */
 export const HOME_STYLE_API = "/api/admin/home-style";
+/** Main WAM in Journey (20 Nov 2026): GET whether it shows, PUT { shown } (super admin only; hidden by default). */
+export const MAIN_WAM_VISIBILITY_API = "/api/admin/main-wam-tampil";
 /** Super admin's voucher re-roll: the list (GET), a voucher by hand (POST), or one voucher's correction (POST <id>). */
 export const vouchersApi = (id?: string) => id ? `/api/admin/vouchers/${id}` : "/api/admin/vouchers";
 /** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */

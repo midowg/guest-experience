@@ -60,3 +60,5 @@
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .unsaved { color: var(--cs-muted); font-size: .875rem; }
 @media (prefers-reduced-motion: reduce) { .switch input, .switch input::after { transition: none; } }
+/* Main WAM in Journey: its state and when it was last switched. */
+.badgeRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
