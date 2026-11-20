@@ -197,10 +197,10 @@ Prototipe acuan: `D:\projects\events\2027-01-werkudara-wam\aplikasi\prototipe-ku
 Kuis live dibangun sebagai **modul Main WAM** (`docs/main-wam/KONTRAK.md` §13), bukan fitur Pra WAM.
 
 **Modul dan akses.**
-- Modul `kuis` di `mw_settings.modules`, bawaannya **mati**. Dinyalakan di Admin WAM → Main WAM → Pengaturan.
+- Modul `kuis` di `mw_settings.modules`, bawaannya **mati**. Dinyalakan di Admin WAM 2027 → Pengaturan.
   Modul mati: halaman dan API 404, kartu Beranda tidak ada, layar besar "tidak ditemukan".
 - **Pemain:** semua yang boleh melihat Main WAM (mode acara dan penguji seperti biasa), termasuk BOD.
-- **Pengendali:** dipilih per kuis di Admin WAM (`mw_quiz_hosts`), ditambah pemegang peran Admin WAM.
+- **Pengendali:** dipilih per kuis di Admin WAM 2027 (`mw_quiz_hosts`), ditambah akun WAM pemegang hak Admin WAM 2027 (`wam_acara`; sejak 20 Nov 2026, KONTRAK §15, bukan lagi peran admin Pra WAM). Panitia WAM saja tidak cukup.
   Peran panitia saja tidak cukup. Bagi orang lain halaman kendali 404.
 - Gerbang: setiap halaman `requireModulePage("kuis", …)`, setiap API `requireModuleApi("kuis")` (tes `acara-pages`).
 
@@ -225,9 +225,9 @@ Migrasi yang sama menambah jenis notifikasi `kuis` di `mw_notes`.
 - Server `src/lib/server/main-wam/kuis/`: `play.ts` (HP: keadaan, gabung, jawab), `control.ts` (MC), `screen.ts`
   (layar besar), `home.ts` (kartu Beranda), `admin.ts` (Admin WAM), `alias.ts` (tokoh dari kartu kuesioner), `store.ts`.
 - API: `/api/wam/acara/kuis/{kuis}` (GET keadaan `?v=`, POST gabung), `/jawab`, `/kendali` (GET, POST aksi);
-  `/api/kuis/{kunci}` (layar besar, publik); `/api/admin/wam/main/kuis/…`.
+  `/api/kuis/{kunci}` (layar besar, publik); `/api/admin/wam-acara/kuis/…`.
 - Halaman: `/wam/acara/kuis/{kuis}` (main), `/wam/acara/kuis/{kuis}/kendali` (MC), `/kuis/{kunci}` (layar besar),
-  Admin WAM → Main WAM → Modul acara → **Kuis live** (`/admin/wam/main/kuis`).
+  Admin WAM 2027 → Modul acara → **Kuis live** (`/admin/wam-acara/kuis`).
 - Pratinjau tanpa login: `/dev-preview/main-wam/kuis?layar=hp-jalan|kendali-benar|layar-podium-putar|…` dan
   `/dev-preview/main-wam/kuis/admin?layar=daftar|kuis`.
 
