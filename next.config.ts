@@ -7,6 +7,9 @@ const personalHeaders = [
   { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
 ];
 const cameraHere = [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }];
+// HR Werkudara (/hr, 20 Nov 2026): absensi with the face and the office point, and Admin HR's
+// "Pakai lokasi saya" for office points. Camera and location for this site only.
+const faceAndPlace = [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self)" }];
 const sameOriginFrame = [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }];
 
 const config: NextConfig = {
@@ -67,6 +70,11 @@ const config: NextConfig = {
       { source: "/admin/:path*", headers: cameraHere },
       { source: "/wam", headers: cameraHere },
       { source: "/wam/:path*", headers: cameraHere },
+      { source: "/hr", headers: faceAndPlace },
+      { source: "/hr/:path*", headers: faceAndPlace },
+      // Development calibration of the face check and the clock-in layout (404 in production).
+      { source: "/dev-preview/wajah", headers: faceAndPlace },
+      { source: "/dev-preview/absen", headers: faceAndPlace },
       { source: "/admin/hero-preview", headers: sameOriginFrame },
       { source: "/admin/pratinjau-langsung", headers: sameOriginFrame },
       // Development twin of the editor preview (404 in production).

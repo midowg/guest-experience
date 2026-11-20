@@ -1,0 +1,132 @@
+/* HR Werkudara absensi (20 Nov 2026): the face camera, the clock-in flow, and its cards. --hr-* tokens from hr.module.css. */
+
+.camera { display: grid; gap: 14px; justify-items: center; padding: 20px 16px 18px; border-radius: 24px; background: #0e1117; color: #f1f4f8; text-align: center; }
+.viewport { position: relative; width: min(100%, 18rem); aspect-ratio: 3 / 4; border-radius: 20px; background: #161a22; overflow: hidden; }
+/* The person sees themselves as in a mirror; what is read and kept is the camera's own picture. */
+.viewport video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.oval { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ovalShade { fill: rgb(14 17 23 / 0.55); }
+.ovalLine { fill: none; stroke: #9aa3b2; stroke-width: 3; transition: stroke 200ms ease; }
+.ovalLineOk { stroke: #4fd9a2; }
+.loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; color: #9aa3b2; font-size: 13px; }
+.spinner { width: 28px; height: 28px; margin: 0 auto; border-radius: 50%; border: 3px solid #2a303c; border-top-color: #ffc933; }
+@media (prefers-reduced-motion: no-preference) { .spinner { animation: spin 900ms linear infinite; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.prompt { margin: 0; min-height: 1.4em; font-weight: 700; font-size: 18px; }
+.hint { margin: 0; min-height: 1.3em; color: #9aa3b2; font-size: 13px; }
+.steps { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.step { width: 10px; height: 10px; border-radius: 50%; background: #2a303c; transition: background 200ms ease; }
+.stepNow { background: #ffc933; }
+.stepDone { background: #4fd9a2; }
+.error { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3a1420; color: #ff7fa0; font-size: 13px; font-weight: 700; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.primary { min-height: 48px; padding: 0 20px; border: 0; border-radius: 999px; background: #ffc933; color: #2e2510; font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.ghost { min-height: 48px; padding: 0 18px; border: 1px solid #2a303c; border-radius: 999px; background: transparent; color: #f1f4f8; font: inherit; font-weight: 600; cursor: pointer; }
+.primary:disabled, .ghost:disabled { opacity: 0.5; cursor: default; }
+.foot { margin: 0; color: #6f7888; font-size: 12px; }
+
+/* Calibration page (/dev-preview/wajah). */
+.lab { display: grid; gap: 16px; max-width: 720px; }
+.labCard { display: grid; gap: 10px; padding: 16px; border-radius: 16px; background: var(--hr-surface, #161a22); color: var(--hr-text, #f1f4f8); }
+.labCard h2 { margin: 0; font-size: 16px; }
+.labCard p { margin: 0; font-size: 13px; color: var(--hr-muted, #9aa3b2); }
+.labTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.labTable th, .labTable td { padding: 6px 8px; border-bottom: 1px solid var(--hr-line, #2a303c); text-align: left; }
+.labScore { font-variant-numeric: tabular-nums; font-weight: 700; }
+.cocok { color: #4fd9a2; }
+.perlu_cek { color: #ffc933; }
+.tidak_cocok { color: #ff7fa0; }
+
+/* The Absen screen (/hr): soft UI, mobile first (20 Nov 2026). --hr-* tokens from hr.module.css, light and dark. */
+.flow { display: grid; gap: 16px; }
+.flowCamera { display: grid; gap: 12px; }
+.panel { display: grid; gap: 12px; justify-items: start; padding: 20px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); box-shadow: var(--hr-shadow-card); color: var(--hr-text); }
+.panel > .spinner { margin: 8px 0 0; }
+.title { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
+.titleDate { margin-left: 6px; font-size: 14px; font-weight: 500; color: var(--hr-muted); }
+.subtitle { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; font-weight: 700; }
+.muted { margin: 0; color: var(--hr-muted); font-size: 14px; }
+.small { margin: 0; color: var(--hr-muted); font-size: 13px; }
+.good { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--hr-success-soft); color: var(--hr-success); font-size: 14px; font-weight: 600; }
+.warn { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--hr-warning-soft); color: var(--hr-text); font-size: 14px; }
+.problem { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--hr-danger-soft); color: var(--hr-danger); font-size: 14px; font-weight: 600; }
+.notice { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--hr-primary-soft); color: var(--hr-text); font-size: 14px; }
+.iconTile, .doneTile { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--hr-primary-soft); color: var(--hr-primary); }
+.doneTile { background: var(--hr-success-soft); color: var(--hr-success); }
+.iconTile svg, .doneTile svg { width: 22px; height: 22px; }
+.points { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; line-height: 1.55; }
+.agree { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; font-size: 15px; }
+.agree input { width: 22px; height: 22px; accent-color: var(--hr-primary); }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+.main, .second, .danger { min-height: 52px; padding: 0 20px; border-radius: 16px; font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 150ms ease, background-color 150ms ease; }
+.main { flex: 1 1 100%; border: 0; background: var(--hr-primary); color: var(--hr-on-primary); }
+.second { border: 1px solid var(--hr-line); background: var(--hr-surface); color: var(--hr-text); }
+.danger { border: 0; background: var(--hr-danger); color: #fff; }
+.main:active, .second:active, .danger:active { transform: scale(.98); }
+.main:disabled, .second:disabled { opacity: .5; cursor: default; transform: none; }
+.textButton { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.chipButton { margin-left: auto; min-height: 40px; padding: 0 12px 0 16px; border: 0; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font: inherit; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
+
+/* The greeting card: who, what time it is where they are, and the one big button. */
+.hero { display: grid; justify-items: center; gap: 4px; padding: 20px 20px 16px; border-radius: 28px; background: var(--hr-hero); border: 1px solid var(--hr-line); box-shadow: var(--hr-shadow-card); text-align: center; color: var(--hr-text); }
+.heroTop { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; text-align: left; }
+.hello { margin: 0; font-size: 15px; line-height: 1.35; color: var(--hr-muted); }
+.hello strong { font-size: 20px; font-weight: 800; color: var(--hr-text); overflow-wrap: anywhere; }
+.zoneChip { flex: none; padding: 4px 10px; border-radius: 999px; background: var(--hr-surface); border: 1px solid var(--hr-line); font-size: 12px; font-weight: 700; color: var(--hr-muted); }
+.clock { margin: 12px 0 0; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.today { margin: 6px 0 18px; font-size: 14px; color: var(--hr-muted); }
+.bigAction {
+  width: 164px; height: 164px; border-radius: 50%; border: 0; display: grid; place-content: center; justify-items: center; gap: 8px;
+  background: var(--hr-primary); color: var(--hr-on-primary); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 0 0 12px var(--hr-halo), 0 12px 28px rgba(47, 111, 235, .28); transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.bigAction svg { width: 40px; height: 40px; }
+.bigAction:active { transform: scale(.96); box-shadow: 0 0 0 8px var(--hr-halo), 0 6px 16px rgba(47, 111, 235, .24); }
+.bigAction:focus-visible { outline: 3px solid var(--hr-text); outline-offset: 14px; }
+.allDone { margin: 8px 0; display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; background: var(--hr-success-soft); color: var(--hr-success); font-weight: 700; }
+.allDone svg { width: 20px; height: 20px; }
+.heroHint { margin: 18px 0 0; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--hr-muted); }
+@media (prefers-reduced-motion: reduce) { .bigAction, .main, .second, .danger { transition: none; } .bigAction:active { transform: none; } }
+
+/* Today: masuk and pulang side by side. */
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.slot { display: grid; gap: 4px; align-content: start; padding: 14px 16px; border-radius: 20px; background: var(--hr-surface); border: 1px solid var(--hr-line); box-shadow: var(--hr-shadow-card); min-width: 0; }
+.slotLabel { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--hr-muted); }
+.slotIcon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: var(--hr-surface-soft); color: var(--hr-muted); }
+.slot[data-done] .slotIcon { background: var(--hr-success-soft); color: var(--hr-success); }
+.slotTime { margin-top: 4px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.slotEmpty { margin-top: 4px; font-size: 20px; font-weight: 700; color: var(--hr-muted); }
+.slotPlace { font-size: 13px; color: var(--hr-muted); overflow-wrap: anywhere; }
+.chip { justify-self: start; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.chip_sah { background: var(--hr-success-soft); color: var(--hr-success); }
+.chip_perlu_cek { background: var(--hr-warning-soft); color: var(--hr-warning); }
+.chip_ditolak { background: var(--hr-danger-soft); color: var(--hr-danger); }
+
+/* Riwayat: one row per day. */
+.history { margin: 0; padding: 0; list-style: none; width: 100%; display: grid; }
+.history li { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; min-height: 56px; border-bottom: 1px solid var(--hr-line); }
+.history li:last-child { border-bottom: 0; }
+.histDay { display: grid; line-height: 1.25; }
+.histDay strong { font-size: 14px; }
+.histDay small { font-size: 12px; color: var(--hr-muted); }
+.histTimes { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.histTimes span { display: inline-flex; align-items: center; gap: 6px; }
+.histTimes svg { color: var(--hr-muted); }
+.histOk { color: var(--hr-success); display: inline-flex; }
+
+/* Data wajah: one row with its status. */
+.faceRow { display: flex; align-items: center; gap: 12px; width: 100%; }
+.faceText { display: grid; gap: 2px; min-width: 0; }
+
+/* Location step: why outside, and the reason. */
+.reasons { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.reasons legend { width: 100%; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+.reason, .reasonOn { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--hr-line); background: var(--hr-surface); font-size: 14px; font-weight: 600; cursor: pointer; }
+.reasonOn { border-color: var(--hr-primary); background: var(--hr-primary-soft); color: var(--hr-primary); }
+.reason input, .reasonOn input { position: absolute; opacity: 0; pointer-events: none; }
+.reason:focus-within, .reasonOn:focus-within { outline: 2px solid var(--hr-primary); outline-offset: 2px; }
+.field { display: grid; gap: 6px; width: 100%; font-size: 13px; font-weight: 600; color: var(--hr-muted); }
+.field input { min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--hr-line); background: var(--hr-app); color: var(--hr-text); font: inherit; font-size: 16px; font-weight: 500; }
+.confirm { display: grid; gap: 10px; width: 100%; padding: 14px; border-radius: 16px; background: var(--hr-danger-soft); }
+.confirm p { margin: 0; font-size: 14px; }

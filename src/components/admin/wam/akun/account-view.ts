@@ -18,11 +18,11 @@ export function accountStatus(row: AccountRow, resetRequested: ReadonlySet<strin
 }
 
 /** The tone of each role, the same on every card, row and on the Peran tab. */
-export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass", ga: "ok" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
+export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass", ga: "ok", hr: "teal" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
 
 /** The roles on top of peserta (BOD, Panitia, Admin WAM, then HOD and Lead); "Peserta" alone when there are none. */
 export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "lead" | "hasAccount"> & Partial<Pick<AccountRow, "category">>): RoleItem[] {
-  const order: PraWamRole[] = ["bod", "panitia", "admin", "ga"];
+  const order: PraWamRole[] = ["bod", "panitia", "admin", "ga", "hr"];
   // Status kerja first (13 Nov 2026), so interns and daily workers are seen at a glance.
   const status: RoleItem[] = row.category === "intern" ? [{ label: "Intern", tone: "brass" }] : row.category === "dw" ? [{ label: "DW", tone: "neutral" }] : [];
   const items: RoleItem[] = [...status, ...order.filter(role => row.roles.includes(role)).map(role => ({ label: roleLabels[role], tone: roleTones[role] }))];
@@ -109,6 +109,7 @@ export const roleGuide: readonly RoleGuideItem[] = [
   { key: "panitia", label: "Panitia", does: "Kelola acara: sesi, permintaan jadwal, pengumuman; membatalkan booking siapa pun.", combines: ["Admin WAM", "HOD"] },
   { key: "admin", label: "Admin WAM", does: "Seperti Panitia, ditambah pengaturan aplikasi.", combines: ["Panitia", "HOD"] },
   { key: "ga", label: "Admin Booking", does: "Bagian administrasi: mengelola Booking Kantor (melihat dan membatalkan semua booking ruangan). Tidak mengubah apa pun di WAM.", combines: ["Panitia", "Admin WAM", "HOD"] },
+  { key: "hr", label: "Admin HR", does: "Mengelola HR Werkudara (/hr): absensi, wajah terdaftar, titik kantor, dan nanti cuti dan lembur. Tidak mengubah apa pun di WAM.", combines: ["Panitia", "Admin WAM", "Admin Booking", "HOD"] },
   { key: "hod", label: "HOD", does: "Kepala departemen (bisa lebih dari satu), diatur super admin di Data karyawan. HOD bisa booking ruang sebagai HOD. Lead memimpin tim di bawah HOD, juga diatur di sana.", combines: ["Panitia", "Admin WAM"] },
   { key: "bod", label: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: null },
 ];
@@ -121,6 +122,7 @@ export function roleCounts(rows: readonly AccountRow[]): Record<RoleGuideItem["k
     panitia: active.filter(row => row.roles.includes("panitia")).length,
     admin: active.filter(row => row.roles.includes("admin")).length,
     ga: active.filter(row => row.roles.includes("ga")).length,
+    hr: active.filter(row => row.roles.includes("hr")).length,
     hod: active.filter(row => row.leads.length > 0).length,
     bod: active.filter(row => row.roles.includes("bod")).length,
   };

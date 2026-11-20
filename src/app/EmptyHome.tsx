@@ -1,4 +1,4 @@
-import { ADMIN_HOME, BOOKING_PATH, PRA_WAM_PATH, WELLBEING_PATH, wamAdminPath } from '@/lib/routes';
+import { ADMIN_HOME, BOOKING_PATH, HR_PATH, PRA_WAM_PATH, WELLBEING_PATH, wamAdminPath } from '@/lib/routes';
 import type { HomeStyle } from '@/lib/home-style';
 import { defaultHomeMenu, type HomeApp, type HomeMenuItem } from '@/lib/home-menu';
 import type { Door } from './home-doors';
@@ -15,6 +15,7 @@ const appDoors: Record<HomeApp, { href: string; logo?: string }> = {
   wam: { href: PRA_WAM_PATH, logo: '/wam/icon-192.png' },
   wlm: { href: WELLBEING_PATH, logo: '/wlm/icon-192.png' },
   booking: { href: BOOKING_PATH },
+  hr: { href: HR_PATH, logo: '/hr/icon-192.png' },
   signage: { href: SIGNAGE_PATH },
   admin: { href: ADMIN_HOME },
 };

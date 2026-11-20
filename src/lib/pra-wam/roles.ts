@@ -4,9 +4,9 @@
  * every request and by the pages only to show or hide what the server would refuse anyway.
  */
 
-export const praWamRoles = ["panitia", "bod", "admin", "ga"] as const;
+export const praWamRoles = ["panitia", "bod", "admin", "ga", "hr"] as const;
 export type PraWamRole = (typeof praWamRoles)[number];
-export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM", ga: "Admin Booking" };
+export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM", ga: "Admin Booking", hr: "Admin HR" };
 
 type WithRoles = { roles: readonly PraWamRole[] };
 const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.roles.includes(role));
@@ -20,6 +20,11 @@ export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin"
  * and Admin WAM see and cancel every booking in /booking/kelola.
  */
 export const managesFacilities = (who: WithRoles) => has(who, "ga", "admin");
+/**
+ * HR Werkudara (/hr, 20 Nov 2026, migration 202611200702): Admin HR checks absensi, faces and
+ * office points in /hr/kelola, and later cuti and lembur. Apart from WAM: Admin WAM is not Admin HR.
+ */
+export const managesHr = (who: WithRoles) => has(who, "hr");
 /**
  * Books rooms (13 Nov 2026): every karyawan, daily workers (DW) included. Interns are not on the
  * job ladder and need not book; they still take part, help as panitia, and fill the questionnaire.

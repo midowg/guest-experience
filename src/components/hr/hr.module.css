@@ -1,0 +1,55 @@
+/*
+ * HR Werkudara (/hr, 20 Nov 2026): its own look, from the default design tokens (brain/aturan/
+ * desain-ui.md): Plus Jakarta Sans/Inter, neutral greys, one blue primary, light and dark.
+ * `.theme` gives absen.module.css its --hr-* tokens, and recolours the shared sign-in and frame
+ * classes of booking.module.css (--bk-*) blue.
+ */
+.theme {
+  --hr-app: #F4F6FB; --hr-surface: #FFFFFF; --hr-surface-soft: #EEF2F8; --hr-line: #E3E8F0;
+  --hr-text: #111827; --hr-muted: #4B5563;
+  --hr-primary: #2F6FEB; --hr-primary-soft: #E3ECFD; --hr-on-primary: #FFFFFF;
+  --hr-success: #15803D; --hr-success-soft: #DCFCE7; --hr-warning-soft: #FEF3C7; --hr-danger: #B91C1C; --hr-danger-soft: #FEE2E2;
+  --hr-r-card: 20px; --hr-grad-surface: none; --hr-primary-hover: #2459C9;
+  /* Soft UI: a light lift, never a heavy shadow. */
+  --hr-shadow-card: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+  --hr-hero: linear-gradient(165deg, #E6EEFF 0%, #F7F9FF 55%, #FFFFFF 100%);
+  --hr-halo: rgba(47, 111, 235, .16);
+  --hr-warning: #B45309;
+  background: var(--hr-app); color: var(--hr-text);
+  font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .theme {
+    --hr-app: #0D1117; --hr-surface: #161B24; --hr-surface-soft: #1E2430; --hr-line: #2A3240;
+    --hr-shadow-card: none;
+    --hr-hero: linear-gradient(165deg, #182746 0%, #141B28 60%, #161B24 100%);
+    --hr-halo: rgba(138, 180, 248, .18);
+    --hr-warning: #FCD34D;
+    --hr-text: #F3F4F6; --hr-muted: #C2C8D0;
+    --hr-primary: #8AB4F8; --hr-primary-soft: #1C2A44; --hr-on-primary: #0B1B36;
+    --hr-success: #86EFAC; --hr-success-soft: #12301F; --hr-warning-soft: #3A2E0C; --hr-danger: #FCA5A5; --hr-danger-soft: #3A1717;
+    --hr-primary-hover: #A8C7FA;
+  }
+}
+/*
+ * On the same element as booking.module.css's .app (the sign-in pages and the frame): HR's blue
+ * and greys instead of Booking's teal. The doubled class outranks .app, light and dark.
+ */
+.bk.bk {
+  --bk-bg: var(--hr-app); --bk-surface: var(--hr-surface); --bk-sunk: var(--hr-surface-soft); --bk-ink: var(--hr-text); --bk-soft: var(--hr-muted); --bk-line: var(--hr-line);
+  --bk-accent: var(--hr-primary); --bk-accent-hover: var(--hr-primary-hover); --bk-accent-soft: var(--hr-primary-soft); --bk-on-accent: var(--hr-on-primary);
+  --bk-mine: var(--hr-primary); --bk-mine-soft: var(--hr-primary-soft);
+  font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+}
+.theme .panelEdge { border: 1px solid var(--hr-line); }
+/*
+ * Kelola is wider work on a laptop: the admin console's cards (light, like Journey Admin) on their
+ * own canvas inside HR's frame, so in dark mode its headings keep the console's dark text.
+ */
+.manage { display: grid; gap: 16px; padding: 16px; border-radius: 20px; }
+.manage.manage :is(h1, h2, h3), .manage.manage a { color: var(--cs-text); }
+.narrow { max-width: 30rem; margin-inline: auto; }
+/* A page loading inside the frame: soft blocks where its cards will be. */
+.skeleton { border-radius: 16px; background: var(--hr-surface-soft); }
+@media (prefers-reduced-motion: no-preference) { .skeleton { animation: pulse 1.2s ease-in-out infinite alternate; } }
+@keyframes pulse { from { opacity: .55; } to { opacity: 1; } }

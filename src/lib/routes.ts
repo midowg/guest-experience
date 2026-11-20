@@ -787,6 +787,66 @@ export const bookingApi = {
 };
 
 /*
+ * HR Werkudara (/hr, 20 Nov 2026): the employees' own HR app, apart from WAM. Absensi first (masuk
+ * and pulang with the face and the office point); cuti, lembur DW and more to come. It signs in
+ * with the same employee account as WAM and Booking Kantor, on its own pages and in its own look.
+ * Kelola is for Admin HR (role "hr").
+ */
+export const HR_PATH = "/hr";
+const HR_API = "/api/hr";
+export const hrPath = {
+  /** Absen: today's masuk and pulang, and the way to clock in; `?daftar=1` opens enrolment. */
+  home: HR_PATH,
+  enroll: `${HR_PATH}?daftar=1`,
+  login: (next?: string) => `${HR_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  forgot: `${HR_PATH}/lupa-password`,
+  newPassword: (next?: string) => `${HR_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,
+  /** Kelola (Admin HR): the day's clock-ins (`tanggal`), the registered faces, office points, who is Admin HR. */
+  manage: (date?: string) => `${HR_PATH}/kelola${date ? `?tanggal=${date}` : ""}`,
+  manageFaces: `${HR_PATH}/kelola/wajah`,
+  manageOffices: `${HR_PATH}/kelola/kantor`,
+  manageAccess: `${HR_PATH}/kelola/akses`,
+};
+export const hrApi = {
+  /** GET: the person's absensi today, their face status, the office points, the last 14 days. */
+  clockIn: `${HR_API}/absen`,
+  /** POST {kind}: a nonce and its liveness steps; then upload {token, mime, size}; then submit. */
+  clockInStart: `${HR_API}/absen/start`,
+  clockInUpload: `${HR_API}/absen/upload`,
+  clockInSubmit: `${HR_API}/absen/submit`,
+  /** Enrolment: POST start, then the same upload, then POST {consent, token, embeddings, signals, photo}. */
+  enrollStart: `${HR_API}/wajah/start`,
+  enroll: `${HR_API}/wajah`,
+  /** DELETE: the person withdraws consent; their face data goes. */
+  face: `${HR_API}/wajah/saya`,
+  manage: {
+    /** GET ?tanggal=: everyone's masuk and pulang that day. */
+    day: (date: string) => `${HR_API}/kelola/absen?tanggal=${date}`,
+    /** PATCH {status, note}: Setujui or Tolak one clock-in. */
+    record: (id: string) => `${HR_API}/kelola/absen/${id}`,
+    /** GET: a redirect to the clock-in's selfie (five minutes). */
+    selfie: (id: string) => `${HR_API}/kelola/absen/${id}/selfie`,
+    /** POST: this clock-in's selfie becomes the person's reference face. */
+    asReference: (id: string) => `${HR_API}/kelola/absen/${id}/acuan`,
+    /** POST {employeeId, workDate, kind, time, zone, note}: a clock-in recorded by hand. */
+    manual: `${HR_API}/kelola/absen/manual`,
+    /** POST: delete the selfies older than 90 days (Admin HR presses it; no schedule). */
+    oldSelfies: `${HR_API}/kelola/absen/selfie-lama`,
+    /** GET: every reference face. */
+    faces: `${HR_API}/kelola/wajah`,
+    /** POST {action}: setujui, tolak, reset, or proses (an imported photo's embedding or why it is unreadable). */
+    face: (employeeId: string) => `${HR_API}/kelola/wajah/${employeeId}`,
+    /** GET: the reference photo (same origin, for Proses foto impor); `?lihat=1` redirects to storage. */
+    facePhoto: (employeeId: string, view = false) => `${HR_API}/kelola/wajah/${employeeId}/foto${view ? "?lihat=1" : ""}`,
+    /** GET/POST: the office points; PUT/DELETE one. */
+    offices: `${HR_API}/kelola/kantor`,
+    office: (id: string) => `${HR_API}/kelola/kantor/${id}`,
+    /** PUT {on}: gives or takes one person's Admin HR. */
+    access: (employeeId: string) => `${HR_API}/kelola/akses/${employeeId}`,
+  },
+};
+
+/*
  * TV Announcement: an office TV opens /tv/{address} with no sign-in, e.g. /tv/lobi; the address
  * is the TV's short slug, picked by the admin and open on purpose (an older TV's is its long key).
  * Outside /wam and /admin on purpose: no login, no app frame.

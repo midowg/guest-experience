@@ -26,7 +26,7 @@ it("hides, reorders and renames apps, then saves the whole menu", async () => {
   expect(await screen.findByText(/Menu disimpan/)).toBeTruthy();
   const sent = calls[0].body.menu;
   expect(calls[0].url).toBe("/api/admin/home-style");
-  expect(sent.map(item => item.app)).toEqual(["wam", "wlm", "booking", "admin", "signage"]);
+  expect(sent.map(item => item.app)).toEqual(["wam", "wlm", "booking", "hr", "admin", "signage"]);
   expect(sent.find(item => item.app === "signage")!.shown).toBe(false);
   expect(sent[0].name).toBe("WAM");
 });

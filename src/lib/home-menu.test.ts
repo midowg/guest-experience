@@ -7,15 +7,15 @@ describe("the front page's app menu", () => {
   });
 
   it("keeps the saved order and text, and adds apps it lacks at the end", () => {
-    const menu = readHomeMenu([{ ...defaultHomeMenu[4], name: "Admin" }, { ...defaultHomeMenu[0], shown: false }]);
-    expect(menu.map(item => item.app)).toEqual(["admin", "wam", "wlm", "booking", "signage"]);
+    const menu = readHomeMenu([{ ...defaultHomeMenu[5], name: "Admin" }, { ...defaultHomeMenu[0], shown: false }]);
+    expect(menu.map(item => item.app)).toEqual(["admin", "wam", "wlm", "booking", "hr", "signage"]);
     expect(menu[0].name).toBe("Admin");
     expect(menu[1].shown).toBe(false);
   });
 
   it("ignores unknown apps, repeats and broken fields", () => {
     const menu = readHomeMenu([{ app: "tamu", name: "Undangan" }, { app: "wlm", tone: "red", name: "" }, { app: "wlm", name: "Dua kali" }]);
-    expect(menu.map(item => item.app)).toEqual(["wlm", "wam", "booking", "signage", "admin"]);
+    expect(menu.map(item => item.app)).toEqual(["wlm", "wam", "booking", "hr", "signage", "admin"]);
     expect(menu[0]).toEqual(defaultHomeMenu[1]);
   });
 
@@ -24,9 +24,9 @@ describe("the front page's app menu", () => {
     expect(homeMenuSchema.safeParse(defaultHomeMenu.map(item => ({ ...item, shown: false }))).success).toBe(false);
   });
 
-  it("accepts only the five apps, each once, with a colour", () => {
+  it("accepts only the six apps (HR Werkudara since 20 Nov 2026), each once, with a colour", () => {
     expect(homeMenuSchema.safeParse(defaultHomeMenu).success).toBe(true);
-    expect(homeMenuSchema.safeParse([...defaultHomeMenu.slice(0, 4), defaultHomeMenu[0]]).success).toBe(false);
+    expect(homeMenuSchema.safeParse([...defaultHomeMenu.slice(0, 5), defaultHomeMenu[0]]).success).toBe(false);
     expect(homeMenuSchema.safeParse(defaultHomeMenu.map((item, index) => index ? item : { ...item, tone: "blue" })).success).toBe(false);
   });
 });

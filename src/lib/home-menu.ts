@@ -8,7 +8,7 @@ import { z } from "zod";
  * front page shows the default below. Pure, so it is tested without a server.
  */
 export const HOME_MENU_MIGRATION = "202611260002_home_menu.sql";
-export const HOME_APPS = ["wam", "wlm", "booking", "signage", "admin"] as const;
+export const HOME_APPS = ["wam", "wlm", "booking", "hr", "signage", "admin"] as const;
 export type HomeApp = (typeof HOME_APPS)[number];
 
 export type HomeMenuItem = {
@@ -24,6 +24,8 @@ export const defaultHomeMenu: HomeMenuItem[] = [
     description: "Catat olahraga dan kebiasaan sehat, kumpulkan poin, dan naik peringkat bersama tim." },
   { app: "booking", shown: true, name: "Booking Kantor", what: "Ruang meeting", account: "Akun WAM", tone: "#0d9488",
     description: "Pesan ruang meeting kantor dan lihat jadwalnya, tanpa bentrok." },
+  { app: "hr", shown: true, name: "HR Werkudara", what: "Absensi karyawan", account: "Akun WAM", tone: "#16a34a",
+    description: "Absen masuk dan pulang dengan wajah dan titik kantor; nanti juga cuti dan lembur." },
   { app: "signage", shown: true, name: "Signage", what: "TV kantor", account: "Akun tim", tone: "#ea580c",
     description: "Atur tayangan di TV kantor: pengumuman, jadwal ruang, dan foto meeting." },
   { app: "admin", shown: true, name: "Journey Admin", what: "Untuk tim Werkudara", account: "Akun tim", tone: "#7c3aed",
@@ -31,7 +33,7 @@ export const defaultHomeMenu: HomeMenuItem[] = [
 ];
 /** What each app is, for the admin's list (fixed, not editable). */
 export const homeAppLabels: Record<HomeApp, string> = {
-  wam: "Aplikasi WAM (/wam)", wlm: "Aplikasi WLM (/wlm)", booking: "Booking Kantor (/booking)", signage: "Atur TV kantor (Admin WAM → TV)", admin: "Admin Journey (/admin)",
+  wam: "Aplikasi WAM (/wam)", wlm: "Aplikasi WLM (/wlm)", booking: "Booking Kantor (/booking)", hr: "Aplikasi HR (/hr)", signage: "Atur TV kantor (Admin WAM → TV)", admin: "Admin Journey (/admin)",
 };
 
 const text = (label: string, max: number) => z.string().trim().min(1, `Isi ${label}.`).max(max, `${label[0].toUpperCase()}${label.slice(1)} paling banyak ${max} huruf.`);

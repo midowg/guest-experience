@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Circle, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Circle, Eye, EyeOff, ScanFace } from "lucide-react";
 import { errorText, PraWamApiError, praWamRequest } from "@/components/pra-wam/api";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
-import { bookingPath, praWamApi } from "@/lib/routes";
+import { bookingPath, hrPath, praWamApi } from "@/lib/routes";
 import css from "./booking.module.css";
 
 /*
@@ -16,13 +16,24 @@ import css from "./booking.module.css";
  * password as WAM), so nobody gets a second password and the same APIs do the work.
  */
 
+/*
+ * HR Werkudara (/hr, 20 Nov 2026) signs in the same way with its own name, mark and addresses
+ * (and its own colour, set by the page around these); `app` picks which.
+ */
+export type AuthApp = "booking" | "hr";
+const apps = {
+  booking: { name: "Booking Kantor", Mark: CalendarClock, home: bookingPath.home, login: bookingPath.login, forgot: bookingPath.forgot, newPassword: bookingPath.newPassword },
+  hr: { name: "HR Werkudara", Mark: ScanFace, home: hrPath.home, login: hrPath.login, forgot: hrPath.forgot, newPassword: hrPath.newPassword },
+} as const;
+
 /** The card every sign-in page sits on, with the app's mark and name. */
-export function AuthCard({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
+export function AuthCard({ title, lead, app = "booking", children }: { title: string; lead?: string; app?: AuthApp; children: ReactNode }) {
+  const { name, Mark } = apps[app];
   return <div className={css.authPage}>
     <div className={css.authCard}>
       <div className={css.authHead}>
-        <span className={css.authMark}><CalendarClock size={26} aria-hidden /></span>
-        <p className={css.authApp}>Booking Kantor</p>
+        <span className={css.authMark}><Mark size={26} aria-hidden /></span>
+        <p className={css.authApp}>{name}</p>
         <h1>{title}</h1>
         {lead && <p className={css.lead}>{lead}</p>}
       </div>
@@ -47,8 +58,9 @@ function Secret({ id, label, value, onChange, autoComplete, error }: { id: strin
 const Problem = ({ text }: { text: string }) => <p className={css.noteBad} role="alert"><AlertTriangle size={18} aria-hidden />{text}</p>;
 
 /** Masuk: email and password; the first password leads on to "Buat password baru" once. */
-export function BookingLogin({ next }: { next: string | null }) {
+export function BookingLogin({ next, app = "booking" }: { next: string | null; app?: AuthApp }) {
   const router = useRouter();
+  const paths = apps[app];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -59,11 +71,11 @@ export function BookingLogin({ next }: { next: string | null }) {
     setBusy(true); setError(null);
     try {
       const result = await praWamRequest<{ askNewPassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
-      router.refresh(); router.replace(result.data?.askNewPassword ? bookingPath.newPassword(next ?? undefined) : next ?? bookingPath.home);
+      router.refresh(); router.replace(result.data?.askNewPassword ? paths.newPassword(next ?? undefined) : next ?? paths.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
 
-  return <AuthCard title="Masuk" lead="Pakai email kantor dan password akun karyawanmu.">
+  return <AuthCard title="Masuk" lead="Pakai email kantor dan password akun karyawanmu." app={app}>
     <form className={css.authForm} onSubmit={submit} noValidate>
       {error && <Problem text={error} />}
       <div className={css.field}>
@@ -71,14 +83,15 @@ export function BookingLogin({ next }: { next: string | null }) {
         <input id="email" className={css.control} type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={event => setEmail(event.target.value)} required />
       </div>
       <Secret id="password" label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
-      <Link href={bookingPath.forgot} className={css.authLink}>Lupa password?</Link>
+      <Link href={paths.forgot} className={css.authLink}>Lupa password?</Link>
       <button type="submit" className={css.btn} disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</button>
     </form>
   </AuthCard>;
 }
 
 /** Lupa password: a request to reset the account to the first password; the same answer for every email. */
-export function BookingForgot() {
+export function BookingForgot({ app = "booking" }: { app?: AuthApp }) {
+  const paths = apps[app];
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,12 +106,12 @@ export function BookingForgot() {
     finally { setBusy(false); }
   }
 
-  if (done) return <AuthCard title="Permintaan terkirim">
+  if (done) return <AuthCard title="Permintaan terkirim" app={app}>
     <p className={css.noteOk} role="status"><CheckCircle2 size={18} aria-hidden />Bila email ini terdaftar, admin akan mengatur ulang password-mu ke password awal. Setelah itu masuk dengan password awal, lalu buat password baru.</p>
-    <Link href={bookingPath.login()} className={css.btnQuiet}><ArrowLeft size={18} aria-hidden />Kembali ke Masuk</Link>
+    <Link href={paths.login()} className={css.btnQuiet}><ArrowLeft size={18} aria-hidden />Kembali ke Masuk</Link>
   </AuthCard>;
 
-  return <AuthCard title="Lupa password" lead="Kirim permintaan ke admin. Password-mu akan diatur ulang ke password awal.">
+  return <AuthCard title="Lupa password" lead="Kirim permintaan ke admin. Password-mu akan diatur ulang ke password awal." app={app}>
     <form className={css.authForm} onSubmit={submit} noValidate>
       {error && <Problem text={error.text} />}
       <div className={css.field}>
@@ -111,13 +124,13 @@ export function BookingForgot() {
         <textarea id="forgot-note" className={css.control} maxLength={RESET_NOTE_MAX} value={note} onChange={event => setNote(event.target.value)} />
       </div>
       <button type="submit" className={css.btn} disabled={busy || !email}>{busy ? "Mengirim…" : "Kirim permintaan"}</button>
-      <Link href={bookingPath.login()} className={css.authLink}><ArrowLeft size={16} aria-hidden />Kembali ke Masuk</Link>
+      <Link href={paths.login()} className={css.authLink}><ArrowLeft size={16} aria-hidden />Kembali ke Masuk</Link>
     </form>
   </AuthCard>;
 }
 
 /** Right after signing in with the first password: a new one (the rules ticked as they type), or skip. */
-export function BookingNewPassword({ next }: { next: string }) {
+export function BookingNewPassword({ next, app = "booking" }: { next: string; app?: AuthApp }) {
   const router = useRouter();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [busy, setBusy] = useState(false);
@@ -140,7 +153,7 @@ export function BookingNewPassword({ next }: { next: string }) {
     }
   }
 
-  return <AuthCard title="Buat password baru" lead="Kamu masuk dengan password awal. Sebaiknya ganti sekarang.">
+  return <AuthCard title="Buat password baru" lead="Kamu masuk dengan password awal. Sebaiknya ganti sekarang." app={app}>
     <form className={css.authForm} onSubmit={submit} noValidate>
       {error && <Problem text={error} />}
       <Secret id="current" label="Password awal" value={form.current} onChange={set("current")} autoComplete="current-password" error={fields.current} />
