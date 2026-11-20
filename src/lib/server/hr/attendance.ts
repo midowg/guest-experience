@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   CHALLENGE_SECONDS, CONSENT_VERSION, DAILY_MIGRATION, dailyStatus, faceKeyFor, instantOf, isOwnFaceKey, isOwnSelfieKey, selfieKeyFor, SELFIE_KEEP_DAYS, usableFace, workDate,
-  type ClockInState, type DailyFlag, type DailyKind, type DailyRecord, type DailyStatus, type DayView, type EnrollInput, type FaceRow, type FaceSource, type FaceStatus,
+  type ClockInState, type DailyFlag, type DailyKind, type DailyRecord, type DailyStatus, type DayView, type EnrollInput, type FaceRow, type FaceSource, type FaceStatus, type HrSummary, type WaitingRecord,
   type ManualInput, type OfficeInput, type ReasonKind, type SubmitInput, type UploadStart,
 } from "@/lib/hr/attendance";
 import { average, cosine, FACE_MATCH, FACE_MODEL_VERSION, faceVerdict, isEmbedding, sameFace } from "@/lib/hr/face-match";
@@ -364,6 +364,64 @@ export async function adminDay(date: string): Promise<DayView> {
     date,
     people: people.map(person => ({ employeeId: person.id, name: person.fullName, department: person.department, face: face.get(person.id) ?? null, masuk: find(person.id, "masuk"), pulang: find(person.id, "pulang") })),
     offices: list.map(({ id, name, lat, lng, radiusM, zone }) => ({ id, name, lat, lng, radiusM, zone })),
+  };
+}
+
+/** Perlu dicek: every clock-in that waits, newest first, with whose it is (at most 300). */
+export async function waitingRecords(): Promise<WaitingRecord[]> {
+  const client = createPrivilegedClient();
+  const [people, records, faces] = await Promise.all([
+    listPeople(),
+    client.from("pw_daily_attendance").select(RECORD_COLUMNS).eq("status", "perlu_cek").order("at", { ascending: false }).limit(300),
+    client.from("pw_face_profiles").select("employee_id,status"),
+  ]);
+  if (records.error) fail(records.error);
+  if (faces.error) fail(faces.error);
+  const byId = new Map(people.map(person => [person.id, person]));
+  const face = new Map(((faces.data ?? []) as { employee_id: string; status: FaceStatus }[]).map(row => [row.employee_id, row.status]));
+  return ((records.data ?? []) as RecordRow[]).map(row => ({
+    ...asRecord(row), employeeId: row.employee_id, name: byId.get(row.employee_id)?.fullName ?? "(tidak dikenal)",
+    department: byId.get(row.employee_id)?.department ?? "", face: face.get(row.employee_id) ?? null,
+  }));
+}
+
+/** How many clock-ins wait, for the admin home's HR card; null before the migration. */
+export async function waitingCount(): Promise<number | null> {
+  const { count, error } = await createPrivilegedClient().from("pw_daily_attendance").select("id", { count: "exact", head: true }).eq("status", "perlu_cek");
+  return error ? null : count ?? 0;
+}
+
+/** Ringkasan: today's numbers (in WIB, the office's day) and what still needs setting up. */
+export async function hrSummary(date: string): Promise<HrSummary> {
+  const client = createPrivilegedClient();
+  const [people, list, today, waiting, faces] = await Promise.all([
+    clockers(),
+    offices(true),
+    client.from("pw_daily_attendance").select("employee_id,kind,office_id,method").eq("work_date", date),
+    client.from("pw_daily_attendance").select("id", { count: "exact", head: true }).eq("status", "perlu_cek"),
+    client.from("pw_face_profiles").select("employee_id,status"),
+  ]);
+  if (today.error) fail(today.error);
+  if (waiting.error) fail(waiting.error);
+  if (faces.error) fail(faces.error);
+  const rows = (today.data ?? []) as { employee_id: string; kind: DailyKind; office_id: string | null; method: "wajah" | "manual" }[];
+  const clocking = new Set(people.map(person => person.id));
+  const masuk = new Set(rows.filter(row => row.kind === "masuk" && clocking.has(row.employee_id)).map(row => row.employee_id));
+  const faceRows = (faces.data ?? []) as { employee_id: string; status: FaceStatus }[];
+  const counts: HrSummary["faces"] = { aktif: 0, siap: 0, impor: 0, menunggu: 0, ditolak: 0, tanpa: 0 };
+  const withFace = new Set<string>();
+  for (const row of faceRows) { counts[row.status] += 1; withFace.add(row.employee_id); }
+  counts.tanpa = people.filter(person => !withFace.has(person.id)).length;
+  return {
+    date,
+    people: people.length,
+    masuk: masuk.size,
+    pulang: rows.filter(row => row.kind === "pulang" && clocking.has(row.employee_id)).length,
+    belum: people.length - masuk.size,
+    diLuar: rows.filter(row => row.method === "wajah" && !row.office_id).length,
+    waiting: waiting.count ?? 0,
+    offices: list.filter(office => office.active).length,
+    faces: counts,
   };
 }
 

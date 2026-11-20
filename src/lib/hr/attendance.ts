@@ -245,6 +245,23 @@ export type FaceRow = {
   consented: boolean; hasPhoto: boolean; hasEmbedding: boolean; updatedAt: string;
 };
 
+/** Admin HR → Perlu dicek: a clock-in that waits, with whose it is. */
+export type WaitingRecord = DailyRecord & { employeeId: string; name: string; department: string; face: FaceStatus | null };
+
+/** Admin HR → Ringkasan: today's numbers and what still needs setting up. */
+export type HrSummary = {
+  date: string;
+  people: number;
+  masuk: number;
+  pulang: number;
+  belum: number;
+  diLuar: number;
+  /** Every clock-in that waits, any day. */
+  waiting: number;
+  offices: number;
+  faces: Record<FaceStatus | "tanpa", number>;
+};
+
 /** What comes next for the person today: masuk, then pulang, then nothing. */
 export function nextKind(today: ClockInState["today"]): DailyKind | null {
   if (!today.masuk && !today.pulang) return "masuk";

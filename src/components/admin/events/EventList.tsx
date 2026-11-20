@@ -3,7 +3,7 @@
 import { EventPreview } from "./EventPreview";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarCheck, CalendarDays, Copy, DoorOpen, ExternalLink, EyeOff, HeartPulse, Hourglass, Images, KeyRound, LayoutGrid, MoreHorizontal, Pencil, Plus, Settings, Sparkles, Star, StarOff, Globe, Trash2, Tv, X } from "lucide-react";
+import { Archive, CalendarCheck, CalendarDays, Copy, DoorOpen, ExternalLink, EyeOff, HeartPulse, Hourglass, Images, KeyRound, LayoutGrid, MoreHorizontal, Pencil, Plus, ScanFace, Settings, Sparkles, Star, StarOff, Globe, Trash2, Tv, X } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
@@ -24,6 +24,7 @@ const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: stri
   booking: { Icon: DoorOpen, background: "linear-gradient(135deg, #0f3b3a, #146c66)", color: "#effaf8", accent: "#9be7d8" },
   tv: { Icon: Tv, background: "linear-gradient(135deg, #10203d, #1d4f91)", color: "#eef4ff", accent: "#8cc2ff" },
   wellbeing: { Icon: HeartPulse, background: "linear-gradient(135deg, #0d3b35, #0d7c72)", color: "#ecfbf8", accent: "#7fd3c9" },
+  hr: { Icon: ScanFace, background: "linear-gradient(135deg, #12306b, #2f6feb)", color: "#eef4ff", accent: "#a8c7fa" },
 };
 
 const kinds = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { HrFrame } from "@/components/hr/HrFrame";
 import { ViewerZoneProvider } from "@/components/pra-wam/ViewerZone";
-import { managesHr } from "@/lib/pra-wam/roles";
 import { currentMember } from "@/lib/server/pra-wam/session";
 import { viewerZoneSetting } from "@/lib/server/pra-wam/zone";
 
@@ -14,6 +13,6 @@ export default async function HrAppLayout({ children }: { children: ReactNode })
   const [member, zone] = await Promise.all([currentMember(), viewerZoneSetting()]);
   if (!member) return children;
   return <ViewerZoneProvider zone={zone.zone} manual={zone.manual}>
-    <HrFrame name={member.nickname || member.name} canManage={managesHr(member)}>{children}</HrFrame>
+    <HrFrame name={member.nickname || member.name}>{children}</HrFrame>
   </ViewerZoneProvider>;
 }
