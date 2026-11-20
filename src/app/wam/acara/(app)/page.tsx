@@ -3,6 +3,7 @@ import { SessionAbsen } from "@/components/main-wam/modul/SessionModule";
 import { BerandaMomen } from "@/components/main-wam/momen/BerandaMomen";
 import { BerandaCarbon } from "@/components/main-wam/peserta/karbon/BerandaCarbon";
 import { BerandaBod } from "@/components/main-wam/panitia/BerandaBod";
+import { BerandaKuis } from "@/components/main-wam/kuis/BerandaKuis";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
@@ -28,5 +29,6 @@ export default async function HomePage() {
     bod: <BerandaBod context={context} now={now} />,
     momen: <BerandaMomen context={context} now={now} />,
     carbon: <BerandaCarbon context={context} now={now} />,
+    kuis: <BerandaKuis context={context} />,
   }} />;
 }
