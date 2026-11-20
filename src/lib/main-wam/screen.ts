@@ -92,6 +92,10 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
     }
     case "absen": return { tab: "agenda", level: "tugas", title: say("screen.checkIn"), back: agenda };
     case "silent-meeting": return { tab: "agenda", level: "tugas", title: say("screen.silent"), back: agenda };
+    // Kuis live: the game and the MC's control are tasks (no bottom bar: the game takes the screen).
+    case "kuis": return second && third === "kendali"
+      ? { tab: "beranda", level: "tugas", title: "Kendali kuis", back: home }
+      : { tab: "beranda", level: "tugas", title: say("screen.quiz"), back: home };
     case "awarding": return second
       ? { tab: "beranda", level: "tugas", title: say("screen.pickNominee"), back: { href: mainWamPath.awards, title: say("screen.awarding") } }
       : { tab: "beranda", level: "detail", title: say("screen.awarding"), back: home };

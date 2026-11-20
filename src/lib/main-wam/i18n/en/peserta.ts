@@ -179,6 +179,7 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.notes.kind.voting": "Awarding",
   "peserta.notes.kind.survei": "Survey",
   "peserta.notes.kind.lain": "News",
+  "peserta.notes.kind.kuis": "Live quiz",
   "peserta.notes.fromPra": "Pre-WAM",
   "peserta.guides.none": "No guides yet",
   "peserta.guides.openFile": "Open file",

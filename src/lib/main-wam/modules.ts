@@ -18,6 +18,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
   mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
   karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya dan Ringkasan BOD, dan halaman rinciannya; angka dihitung dari data acara." },
+  kuis: { label: "Kuis live", hint: "Kuis pilihan ganda bersama: soal di layar besar dan HP, peserta menjawab sebagai tokohnya. Kartu Beranda saat lobi dibuka; soal dan pengendali di Modul acara → Kuis." },
 };
 
 export const moduleOn = (modules: ModuleSwitches, key: MainWamModule) => modules[key] === true;

@@ -35,7 +35,7 @@ export type NotificationRow = {
 
 const KIND_WORDS: Record<NoteKind, string> = {
   pengumuman: "Pengumuman panitia", jadwal: "Jadwal", absen: "Absen", momen: "Momen", kamar: "Kamar",
-  silent: "Silent Meeting", voting: "Awarding", survei: "Survei", lain: "Kabar",
+  silent: "Silent Meeting", voting: "Awarding", survei: "Survei", lain: "Kabar", kuis: "Kuis live",
 };
 
 /** Titles that only name what kind of news it is (the senders' own words), lower case. */

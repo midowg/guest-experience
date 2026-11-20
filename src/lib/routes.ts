@@ -538,6 +538,11 @@ export const mainWamPath = {
   silentRecap: `${MAIN_WAM_PATH}/ringkasan/silent-meeting`,
   /** B06 Persetujuan awarding (BOD). */
   awardApproval: `${MAIN_WAM_PATH}/ringkasan/awarding`,
+  /* F · kuis (Kuis live, module kuis; docs/rancangan-kuis-wam.md) */
+  /** A player's game: join, answer, see the result (Beranda's card "Kuis dimulai · Ikut"). */
+  quiz: (quizId: string) => `${MAIN_WAM_PATH}/kuis/${enc(quizId)}`,
+  /** The MC's control: Lanjut, Jeda, Batalkan (pengendali of the quiz, or Admin WAM). */
+  quizControl: (quizId: string) => `${MAIN_WAM_PATH}/kuis/${enc(quizId)}/kendali`,
 };
 export const mainWamApi = {
   /* fondasi */
@@ -614,6 +619,13 @@ export const mainWamApi = {
   vote: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/suara`,
   /** POST {nomineeId}: a BOD approves the winner. */
   approveAward: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/setujui`,
+  /* F · kuis */
+  /** GET ?v=: the game as this phone sees it (v = the version it has: unchanged answers "same"); POST {runId}: join. */
+  quiz: (quizId: string, version?: string) => `${MAIN_WAM_API}/kuis/${enc(quizId)}${mwQuery({ v: version })}`,
+  /** POST {runId, index, choice, tapAt}: an answer (one per question). */
+  quizAnswer: (quizId: string) => `${MAIN_WAM_API}/kuis/${enc(quizId)}/jawab`,
+  /** GET: the MC's view; POST {runId, rev, action}: Lanjut, Jeda, Lanjutkan, Batalkan soal, Papan skor sekarang. */
+  quizControl: (quizId: string) => `${MAIN_WAM_API}/kuis/${enc(quizId)}/kendali`,
 };
 
 /** Admin WAM → Main WAM: Pengaturan (fondasi), Isi acara (E), Modul acara (D). */
@@ -631,6 +643,11 @@ export const mainWamAdminPath = {
   /* D · modul acara */
   awards: `${MAIN_WAM_ADMIN}/awarding`,
   silent: `${MAIN_WAM_ADMIN}/silent-meeting`,
+  /* F · kuis */
+  /** The quizzes: make one, its games' results. */
+  quizzes: `${MAIN_WAM_ADMIN}/kuis`,
+  /** One quiz: questions, pengendali, the big screen's link, games, results with names. */
+  quiz: (id: string) => `${MAIN_WAM_ADMIN}/kuis/${enc(id)}`,
 };
 const MAIN_WAM_ADMIN_API = "/api/admin/wam/main";
 export const mainWamAdminApi = {
@@ -672,7 +689,36 @@ export const mainWamAdminApi = {
   awardNominees: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}/nominasi`,
   silentQuestions: `${MAIN_WAM_ADMIN_API}/silent-meeting`,
   silentQuestion: (id: string) => `${MAIN_WAM_ADMIN_API}/silent-meeting/${enc(id)}`,
+  /* F · kuis */
+  /** GET: the quizzes; POST {title}: a new one. */
+  quizzes: `${MAIN_WAM_ADMIN_API}/kuis`,
+  /** GET: one quiz with its questions, pengendali, games; PATCH {title}; DELETE. */
+  quiz: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}`,
+  /** POST {level, body, options, correct}: a question. */
+  quizQuestions: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/soal`,
+  /** PATCH (the same), DELETE: one question. */
+  quizQuestion: (id: string, questionId: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/soal/${enc(questionId)}`,
+  /** POST {direction: naik|turun}: move a question within its level. */
+  quizQuestionMove: (id: string, questionId: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/soal/${enc(questionId)}/pindah`,
+  /** POST {employeeId}: a pengendali. */
+  quizHosts: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/pengendali`,
+  /** DELETE: one pengendali. */
+  quizHost: (id: string, employeeId: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/pengendali/${enc(employeeId)}`,
+  /** POST: a new big-screen link (shown once; the old one stops working). */
+  quizScreen: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/layar`,
+  /** POST: a new game (the one not over ends; its results stay). */
+  quizRuns: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/permainan`,
+  /** GET: a game's results with names (for the prizes); `unduh` = the Excel file. */
+  quizResults: (id: string, runId: string, download = false) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/hasil${mwQuery({ permainan: runId, unduh: download ? "1" : undefined })}`,
 };
+
+/**
+ * Kuis live's big screen (projector/LED): /kuis/{key}, no sign-in, as an office TV opens /tv/{key}. The key
+ * in the address is the secret (kuis_ + 32 random bytes; only its sha256 is kept); it answers only while
+ * the module is on. Its feed: GET /api/kuis/{key}.
+ */
+export const kuisScreenPath = (key: string) => `/kuis/${enc(key)}`;
+export const kuisScreenApi = (key: string) => `/api/kuis/${enc(key)}`;
 
 /*
  * Booking Kantor (10 Nov 2026): the office's own booking app, outside WAM, replacing

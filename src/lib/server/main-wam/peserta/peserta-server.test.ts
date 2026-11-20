@@ -66,7 +66,7 @@ describe("Beranda's loader", () => {
   });
 
   it("modules off: none of their reads, and no trace on the card", async () => {
-    const off = { absen: false, voting: false, silent: false, survei: false, mozaik: false, karbon: false };
+    const off = { absen: false, voting: false, silent: false, survei: false, mozaik: false, karbon: false, kuis: false };
     const data = await loadHome(context(sampleViewers.peserta, { modules: off }), at("2027-01-05", "13:45"));
     expect(read.attendanceOf).not.toHaveBeenCalled();
     expect(read.silentQuestions).not.toHaveBeenCalled();

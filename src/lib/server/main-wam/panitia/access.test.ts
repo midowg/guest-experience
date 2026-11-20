@@ -29,7 +29,7 @@ vi.mock("./summary", () => ({ bodSummary: async () => ({ migrated: true, rows: [
 
 const ID = "00000000-0000-4000-8004-000000000010";
 const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "11111111-1111-4111-8111-111111111111", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.includes("panitia") || roles.includes("admin"), group: null, room: null });
-const allOn: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true };
+const allOn: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, kuis: true };
 const withModules = (modules: Partial<ModuleSwitches> = {}) => { settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...allOn, ...modules } }; };
 const PEOPLE = { peserta: person([]), panitia: person(["panitia"]), admin: person(["admin"]), bod: person(["bod"]) };
 

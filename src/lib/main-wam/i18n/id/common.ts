@@ -70,6 +70,7 @@ export const idCommon = {
   "screen.help": "Bantuan",
   "screen.checkIn": "Absen",
   "screen.silent": "Silent Meeting",
+  "screen.quiz": "Kuis live",
   "screen.awarding": "Awarding",
   "screen.pickNominee": "Pilih nominasi",
   "screen.fallback": "WAM",

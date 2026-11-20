@@ -16,7 +16,8 @@ export type MainWamMode = (typeof MAIN_WAM_MODES)[number];
 export const mainWamModeLabels: Record<MainWamMode, string> = { pra: "Pra WAM", uji: "Main WAM (uji)", semua: "Main WAM (semua)" };
 
 /** The modules an admin switches on; a module that is off leaves no trace in the app. */
-export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon"] as const;
+/** kuis: Kuis live (docs/rancangan-kuis-wam.md), off by default like every module. */
+export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon", "kuis"] as const;
 export type MainWamModule = (typeof MAIN_WAM_MODULES)[number];
 export type ModuleSwitches = Record<MainWamModule, boolean>;
 
@@ -271,7 +272,7 @@ export type MwGuide = {
 /* ── Notifikasi and pengumuman ────────────────────────────────────────────────────────────────── */
 
 /** What a Main WAM note is about (mw_notes.kind): its icon in N01 and its push topic. */
-export const NOTE_KINDS = ["pengumuman", "jadwal", "absen", "momen", "kamar", "silent", "voting", "survei", "lain"] as const;
+export const NOTE_KINDS = ["pengumuman", "jadwal", "absen", "momen", "kamar", "silent", "voting", "survei", "lain", "kuis"] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
 /** How a note reads on Beranda's banner and in N01: plain news, or a change to act on (noteTone, notify.ts). */
 export const NOTE_TONES = ["info", "warning"] as const;
