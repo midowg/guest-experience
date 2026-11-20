@@ -98,7 +98,8 @@ export function usePoll<S extends Snap>(options: {
   const alive = useRef(true);
 
   const take = useCallback((next: S) => {
-    if (next.same && !whole) setSnap(previous => (keep ? keep(previous, next) : previous));
+    // Unchanged: keep it, with the new clock (a new object, so the next ask is scheduled again).
+    if (next.same && !whole) setSnap(previous => (keep ? keep(previous, next) : { ...previous, serverNow: next.serverNow }));
     else setSnap(next);
   }, [keep, whole]);
 
