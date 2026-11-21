@@ -2,11 +2,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { ADMIN_PATH_HEADER } from "@/lib/admin-access";
 import type { ReactNode } from "react";
-import { Crown, Home } from "lucide-react";
-import { currentAdmin } from "@/lib/server/admin-session";
+import { ArrowLeft } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
-import { LogoutButton } from "@/components/admin/shared/AuthControls";
 import styles from "@/components/admin/admin.module.css";
 import { EventHeader } from "./EventHeader";
 import shell from "./shell.module.css";
@@ -24,32 +22,29 @@ async function visitBadges(eventId: string): Promise<{ guests?: string; beo?: st
   };
 }
 
-/** `bare` drops the signed-in links, for the login and setup screens. */
-/** `wide` gives pages with a side preview (the editor) more room than the usual reading width. */
+/**
+ * The admin's page frame. Since 22 Nov 2026 there is no top bar (it took room and added buttons):
+ * Beranda carries the account button (AccountMenu), an event's pages their own "← Beranda" (EventHeader),
+ * and every other admin page a small "← Beranda" here. `bare` (login, setup) keeps the Werkudara mark.
+ * `wide` gives pages with a side preview (the editor) more room than the usual reading width.
+ */
 export async function AdminShell({ children, bare = false, wide = false }: { children: ReactNode; bare?: boolean; wide?: boolean }) {
-  const actor = bare ? null : await currentAdmin();
-  const role = actor?.role ?? null;
-  // Beranda in the header only away from it (21 Nov 2026): on Beranda itself it would lead nowhere.
   let path: string | null = null;
-  try { path = (await headers()).get(ADMIN_PATH_HEADER); } catch { /* outside a request: show it */ }
-  const onHome = !!path && /^\/admin\/?$/.test(path.split(/[?#]/)[0]);
+  try { path = (await headers()).get(ADMIN_PATH_HEADER); } catch { /* outside a request: show the way back */ }
+  const clean = path?.split(/[?#]/)[0] ?? "";
+  const onHome = /^\/admin\/?$/.test(clean);
+  const onEvent = /^\/admin\/acara\//.test(clean);
   return <div className={styles.shell}>
-    <header className={styles.header}>
+    {bare && <header className={styles.header}>
       <div className={`container ${styles.headerInner} ${shell.inner}`}>
         <Link href="/admin" className={styles.brand}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/werkudara_icon.png" alt="" width={36} height={36} className={styles.logo} />
           <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
         </Link>
-        {!bare && <nav className={`${styles.headerNav} ${shell.nav}`} aria-label="Admin">
-          {/* On a phone only the icons show; each link keeps its name for screen readers. */}
-          {role === "super" && <Link href="/admin/super" aria-label="Dashboard super admin" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> <span className={shell.linkText}>Super admin</span></Link>}
-          {actor?.kind === "person" && <span className={`${styles.headerLink} ${shell.linkText}`} title="Masuk dengan akun WAM">{actor.name}</span>}
-          {!onHome && <Link href="/admin" aria-label="Beranda" className={styles.headerLink}><Home size={16} aria-hidden="true" /> <span className={shell.linkText}>Beranda</span></Link>}
-          <LogoutButton />
-        </nav>}
       </div>
-    </header>
+    </header>}
+    {!bare && !!path && !onHome && !onEvent && <div className={`container ${shell.backRow}`}><Link href="/admin" className={shell.back}><ArrowLeft size={16} aria-hidden="true" /> Beranda</Link></div>}
     <main id="main" className={`container ${styles.main}`} style={wide ? { ["--container" as string]: "100rem" } : undefined}>{children}</main>
   </div>;
 }

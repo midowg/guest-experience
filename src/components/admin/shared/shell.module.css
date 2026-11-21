@@ -6,3 +6,8 @@
   .nav a, .nav button { padding: 0 10px; min-width: 40px; justify-content: center; }
   .linkText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* No top bar (22 Nov 2026): a small way back to Beranda above pages that are not Beranda or an event's. */
+.backRow { padding-top: var(--space-4); }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px 0 6px; margin-left: -6px; border-radius: 10px; color: #5b6472; font-size: .875rem; font-weight: 700; text-decoration: none; }
+.back:hover { background: #fff; color: var(--color-text); }

@@ -63,19 +63,19 @@ const blockIcons: Record<string, LucideIcon> = {
 
 
 const WIDE = "(min-width: 72rem)";
-/** Whether the menu is a sidebar (wide screen) or a drawer. Without matchMedia it is a drawer. */
-function useWideScreen() {
-  const [wide, setWide] = useState(false);
+/** "wide" (sidebar), "narrow" (phone and tablet), or null when the browser cannot tell (no matchMedia). */
+function useScreen() {
+  const [screen, setScreen] = useState<"wide" | "narrow" | null>(null);
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
     const query = window.matchMedia(WIDE);
-    const sync = () => setWide(query.matches);
-    // The server cannot know the screen; the first render is the phone layout, then this corrects it.
+    const sync = () => setScreen(query.matches ? "wide" : "narrow");
+    // The server cannot know the screen; the first render is the old layout, then this corrects it.
     sync();
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
   }, []);
-  return wide;
+  return screen;
 }
 
 /**
@@ -129,7 +129,13 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [lang, setLang] = useState<"id" | "en">("id");
   const [highlight, setHighlight] = useState<{ area: PreviewArea; label: string; field?: string } | null>(null);
   // The block menu: a drawer behind ☰ on phone and tablet, a sidebar that ☰ hides on a wide screen.
-  const wide = useWideScreen();
+  const screen = useScreen();
+  const wide = screen === "wide";
+  // The CMS layout (22 Nov 2026, docs/standar-admin.md): a clear side menu whose open item holds its
+  // form, and a big preview. On a phone or tablet the menu is a list and an item opens as a full sheet.
+  // Kartu (a card studio with no page to preview) and E-Guide (a wide chapter editor) keep their own.
+  const cms = !card && !guide && screen !== null;
+  const [sheet, setSheet] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const menuShown = wide ? !sidebarHidden : drawerOpen;
@@ -139,6 +145,32 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen]);
+  useEffect(() => {
+    if (!sheet) return;
+    const onKey = (key: KeyboardEvent) => { if (key.key === "Escape") setSheet(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet]);
+  // CMS layout, wide screen: the preview is always as tall as the room it has on screen, so the whole
+  // phone shows at any scroll and grows to its full size once it sticks (no part left below the fold).
+  const previewPane = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const pane = previewPane.current;
+    if (!cms || !wide || !pane) { if (pane) pane.style.height = ""; return; }
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const stick = parseFloat(getComputedStyle(pane).top) || 0;
+        const top = Math.max(pane.getBoundingClientRect().top, stick);
+        pane.style.height = `${Math.max(420, window.innerHeight - top - 16)}px`;
+      });
+    };
+    fit();
+    window.addEventListener("scroll", fit, { passive: true });
+    window.addEventListener("resize", fit);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", fit); window.removeEventListener("resize", fit); };
+  }, [cms, wide]);
   const [dirtyBlocks, setDirtyBlocks] = useState<Set<string>>(() => new Set());
   const errorSummary = useRef<HTMLDivElement>(null);
   const blockTitle = useRef<HTMLHeadingElement>(null);
@@ -159,6 +191,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   /** Switch the form to another block; the preview follows with the matching part and phase. */
   function openBlock(id: string) {
     setOpen(id); setPhase(phaseOfBlock(id)); setView("form"); setDrawerOpen(false);
+    if (cms && !wide) { setSheet(true); return; }
     requestAnimationFrame(() => {
       const title = blockTitle.current;
       if (!title) return;
@@ -172,6 +205,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   /** Open the block that owns a field, then focus the field once it is visible. */
   function openField(key: string) {
     setOpen(blockOfPath(key, kind)); setView("form");
+    if (cms && !wide) setSheet(true);
     requestAnimationFrame(() => { const field = document.getElementById(key); field?.focus(); field?.scrollIntoView?.({ block: "center" }); });
   }
   // Whatever publishing would still reject marks a card "Perlu dilengkapi".
@@ -338,6 +372,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         : (todo || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
     </button>
     {visit && toggle && <input type="checkbox" role="switch" className={e.menuSwitch} checked={toggle.on} disabled={pending || (!toggle.on && restrictedBlock(item.id))} onChange={change => toggle.set(change.target.checked)} aria-label={`Tampilkan ${item.title} ke tamu`} />}
+    {cms && wide && open === item.id && <div className={e.inlineForm}>{formPane}</div>}
     </li>;
   }
   // "Bagikan tautan" waits until publishing would accept the page (board 12).
@@ -364,56 +399,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     setHighlight(area ? { area, label: label || openTitle, field: id || undefined } : null);
   }
   const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff, posterDesigns, superAdmin };
-  return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
-    {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key, kind))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
-    {message && <Notice tone="success">{message}</Notice>}
-    {/*
-      One bar above the editor holds what is used all the time: ☰ for the block menu, form or
-      preview (phone), and Simpan. It sticks under the header and covers nothing.
-    */}
-    <div ref={toolbar} className={`${e.toolbar} ${n.toolbar}`} role="region" aria-label="Simpan perubahan">
-      {/* The usual ☰: a square icon button, with the open part named beside it as plain text. */}
-      <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} aria-label={wide ? (sidebarHidden ? "Tampilkan menu bagian" : "Sembunyikan menu bagian") : "Buka menu bagian"} title={wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Menu bagian"} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
-        <Menu size={20} aria-hidden="true" />
-      </button>
-      {numbered.length > 0 && <BlockChips current={open} onOpen={openBlock} chips={numbered.map(item => {
-        const status = statuses[item.id];
-        const flagged = status === "todo" || status === "error" || status === "dirty" ? status : undefined;
-        return { id: item.id, title: item.title, short: (visit ? visitChipNames[item.id] : place ? placeChipNames[item.id] : chipNames[item.id]) ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
-      })} />}
-      {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
-      {!card && <div className={e.viewSwitch} role="group" aria-label="Tampilan">
-        <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
-        <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
-      </div>}
-      {visit && <Button type="button" variant="secondary" className={e.shareButton} onClick={shareLink} disabled={publishIssues.length > 0} title={publishIssues.length > 0 ? "Lengkapi dulu bagian bertanda Perlu diisi" : guestLink}><Share2 size={16} aria-hidden="true" /> <span className={e.btnText}>Bagikan tautan</span></Button>}
-      <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
-      <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
-        {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
-      </Button>
-    </div>
-    {/* A card has no invitation to preview: its block shows the card itself. */}
-    <div className={e.layout} data-view={card ? "form" : view} data-device={device} data-card={card || undefined} data-menu={sidebarHidden ? "hidden" : undefined}>
-      {drawerOpen && <button type="button" className={e.menuBackdrop} aria-label="Tutup menu" onClick={() => setDrawerOpen(false)} />}
-      <nav id="editor-menu" className={e.menu} aria-label="Bagian acara" data-open={drawerOpen || undefined}>
-        <div className={e.menuHead}>
-          <strong>Bagian acara</strong>
-          <button type="button" aria-label="Tutup menu" onClick={() => setDrawerOpen(false)}><X size={18} aria-hidden="true" /></button>
-        </div>
-        {editorStages.map(stage => {
-          const items = mainBlocks.filter(item => item.stage === stage.key);
-          return items.length > 0 && <div key={stage.key} className={e.menuGroup}>
-            <p className={e.menuStage}>{stage.label}</p>
-            <ul>{items.map(menuItem)}</ul>
-          </div>;
-        })}
-        {extraBlocks.length > 0 && <details className={e.menuMore}>
-          <summary>Bagian lain ({extraBlocks.length})</summary>
-          <p className="field-hint">Belum dipakai acara ini. Buka untuk menambahkannya.</p>
-          <ul>{extraBlocks.map(menuItem)}</ul>
-        </details>}
-        {dangerZone && <ul className={e.menuDanger}><li><button type="button" onClick={() => openBlock("delete")} aria-current={open === "delete" ? "true" : undefined}><Trash2 size={16} aria-hidden="true" /><span>Hapus acara</span></button></li></ul>}
-      </nav>
+  // The open block's form: beside the menu (old layout), inside the menu (CMS, wide), or in a sheet (CMS, phone).
+  const formPane = <>
       <section className={e.formPane} aria-labelledby="block-title">
         <header className={`${e.formHeader} ${n.header}`}>
           {numberOf.has(open)
@@ -501,7 +488,72 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       </div>}
     </fieldset>}
       </section>
-      {!card && <aside className={e.previewPane} aria-label="Pratinjau undangan">
+  </>;
+  return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
+    {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key, kind))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
+    {message && <Notice tone="success">{message}</Notice>}
+    {/*
+      One bar above the editor holds what is used all the time: ☰ for the block menu, form or
+      preview (phone), and Simpan. It sticks under the header and covers nothing.
+    */}
+    <div ref={toolbar} className={`${e.toolbar} ${n.toolbar}`} role="region" aria-label="Simpan perubahan">
+      {/* The usual ☰: a square icon button, with the open part named beside it as plain text. */}
+      {!cms && <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} aria-label={wide ? (sidebarHidden ? "Tampilkan menu bagian" : "Sembunyikan menu bagian") : "Buka menu bagian"} title={wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Menu bagian"} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
+        <Menu size={20} aria-hidden="true" />
+      </button>}
+      {!cms && numbered.length > 0 && <BlockChips current={open} onOpen={openBlock} chips={numbered.map(item => {
+        const status = statuses[item.id];
+        const flagged = status === "todo" || status === "error" || status === "dirty" ? status : undefined;
+        return { id: item.id, title: item.title, short: (visit ? visitChipNames[item.id] : place ? placeChipNames[item.id] : chipNames[item.id]) ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
+      })} />}
+      {!wide && !cms && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
+      {!card && <div className={e.viewSwitch} role="group" aria-label="Tampilan">
+        <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
+        <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
+      </div>}
+      {/* CMS layout: one quiet line for the save state (only while something is unsaved) and Simpan; sharing is an icon. */}
+      <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : cms ? <span className="sr-only">Semua perubahan tersimpan</span> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
+      {visit && <Button type="button" variant="secondary" className={`${e.shareButton} ${cms ? e.iconButton : ""}`.trimEnd()} onClick={shareLink} disabled={publishIssues.length > 0} aria-label="Bagikan tautan tamu" title={publishIssues.length > 0 ? "Lengkapi dulu bagian bertanda Perlu diisi" : "Bagikan tautan tamu"}><Share2 size={16} aria-hidden="true" /> {!cms && <span className={e.btnText}>Bagikan tautan</span>}</Button>}
+      <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
+        {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
+      </Button>
+    </div>
+    {/* A card has no invitation to preview: its block shows the card itself. */}
+    <div className={e.layout} data-view={card ? "form" : view} data-device={device} data-card={card || undefined} data-menu={!cms && sidebarHidden ? "hidden" : undefined} data-cms={cms || undefined}>
+      {drawerOpen && <button type="button" className={e.menuBackdrop} aria-label="Tutup menu" onClick={() => setDrawerOpen(false)} />}
+      <nav id="editor-menu" className={e.menu} aria-label="Bagian acara" data-open={drawerOpen || undefined}>
+        <div className={e.menuHead}>
+          <strong>Bagian acara</strong>
+          <button type="button" aria-label="Tutup menu" onClick={() => setDrawerOpen(false)}><X size={18} aria-hidden="true" /></button>
+        </div>
+        {editorStages.map(stage => {
+          const items = mainBlocks.filter(item => item.stage === stage.key);
+          return items.length > 0 && <div key={stage.key} className={e.menuGroup}>
+            <p className={e.menuStage}>{stage.label}</p>
+            <ul>{items.map(menuItem)}</ul>
+          </div>;
+        })}
+        {extraBlocks.length > 0 && <details className={e.menuMore}>
+          <summary>Bagian lain ({extraBlocks.length})</summary>
+          <p className="field-hint">Belum dipakai acara ini. Buka untuk menambahkannya.</p>
+          <ul>{extraBlocks.map(menuItem)}</ul>
+        </details>}
+        {dangerZone && <ul className={e.menuDanger}><li><button type="button" onClick={() => openBlock("delete")} aria-current={open === "delete" ? "true" : undefined}><Trash2 size={16} aria-hidden="true" /><span>Hapus acara</span></button>{cms && wide && open === "delete" && <div className={e.inlineForm}>{formPane}</div>}</li></ul>}
+      </nav>
+      {!cms && formPane}
+      {/* CMS layout on a phone or tablet: the picked part opens as a full sheet over the list. */}
+      {cms && !wide && sheet && <div className={e.sheet} role="dialog" aria-modal="true" aria-label={openTitle}>
+        <div className={e.sheetHead}>
+          <button type="button" className={e.sheetClose} onClick={() => setSheet(false)} aria-label="Tutup, kembali ke daftar bagian"><X size={20} aria-hidden="true" /></button>
+          <strong>{openTitle}</strong>
+        </div>
+        <div className={e.sheetBody}>{formPane}</div>
+        <div className={e.sheetFoot}>
+          <Button type="button" variant="secondary" onClick={() => { setSheet(false); setView("preview"); }}><Eye size={16} aria-hidden="true" /> Lihat pratinjau</Button>
+          <Button type="button" onClick={() => setSheet(false)}>Selesai</Button>
+        </div>
+      </div>}
+      {!card && <aside ref={previewPane} className={e.previewPane} aria-label="Pratinjau undangan">
         <PhonePreview event={english ? { ...event, language: "en" } : event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open, kind)} onFocusArea={area => { const target = blockForArea(area, kind); openBlock(blocks.some(item => item.id === target) ? target : guide ? "guide" : target); }} src={previewSrc}
           link={visit ? { personal: personalPreview, guestName: previewGuest || "Bapak/Ibu Tamu", onPersonal: setPersonalPreview } : undefined} highlight={visit ? highlight : null} hidden={visit && blockSwitch(open)?.on === false} />
       </aside>}

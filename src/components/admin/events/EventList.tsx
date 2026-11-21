@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Copy, EyeOff, MoreHorizontal, Pencil, Plus, Search, Settings2, Star, StarOff, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
@@ -62,7 +62,7 @@ function Thumb({ event, className }: { event: EventRecord; className: string }) 
  * The admin's home: apps, then events. `superAdmin` is set only for a super admin session: hidden
  * events then carry a label.
  */
-export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [], apps = [], canCreate = true }: { canCreate?: boolean; events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[]; apps?: StandaloneApp[] }) {
+export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [], apps = [], canCreate = true, account }: { account?: ReactNode; canCreate?: boolean; events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[]; apps?: StandaloneApp[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -196,7 +196,10 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
   return <div className={css.home} aria-busy={!!busy}>
     <header className={css.top}>
       <h1>Beranda</h1>
-      <label className={css.search}><Search size={16} aria-hidden="true" /><input type="search" value={query} onChange={change => setQuery(change.target.value)} placeholder="Cari acara atau aplikasi" aria-label="Cari acara atau aplikasi" /></label>
+      <div className={css.topTools}>
+        <label className={css.search}><Search size={16} aria-hidden="true" /><input type="search" value={query} onChange={change => setQuery(change.target.value)} placeholder="Cari acara atau aplikasi" aria-label="Cari acara atau aplikasi" /></label>
+        {account}
+      </div>
     </header>
 
     {deleting && <div className={styles.panelLayer}>

@@ -92,6 +92,8 @@ const config: NextConfig = {
       { source: "/admin/pratinjau-langsung", headers: sameOriginFrame },
       // Development twin of the editor preview (404 in production).
       { source: "/dev-preview/pratinjau-langsung", headers: sameOriginFrame },
+      // The editor options preview frames this sample guest page (404 in production).
+      { source: "/dev-preview/welcome", headers: sameOriginFrame },
     ];
   },
 };

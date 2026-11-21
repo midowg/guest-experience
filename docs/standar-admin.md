@@ -41,7 +41,12 @@ Contoh yang sudah jadi: Beranda (`EventList`) dan kepala acara (`EventHeader`).
 
 ## 4. Editor (formulir)
 
-- **Tiga kolom di laptop**: daftar bagian (kiri) · formulir (tengah) · pratinjau (kanan).
+- **Menu samping + pratinjau besar** (dipilih 22 Nov 2026, opsi D di `/dev-preview/editor-opsi`):
+  menu bagian yang jelas di kiri, dikelompokkan; isi bagian yang dipilih **terbuka di dalam menunya**;
+  pratinjau besar mengisi sisa layar dan selalu tampil utuh (tidak ada bagian HP yang tertinggal di
+  bawah layar). Berlaku untuk semua jenis acara kecuali Kartu dan E-Guide, yang editornya memang lain.
+- Di HP dan tablet: menu menjadi daftar; ketuk satu bagian, isinya terbuka sebagai **lembar penuh**
+  dengan tombol "Lihat pratinjau" dan "Selesai".
 - Satu kartu per bagian. Yang wajib di atas; yang jarang dipakai dilipat ("Pengaturan lanjutan").
 - Setiap kolom punya **label yang terlihat**, contoh isian sebagai placeholder, dan petunjuk singkat
   bila perlu. Tidak ada kolom tanpa label.
@@ -95,7 +100,7 @@ Sesuai `brain/aturan/desain-ui.md`:
 
 1. Beranda — selesai (21 Nov 2026).
 2. Kepala dan tab semua halaman acara — selesai (21 Nov 2026).
-3. Isi editor acara: tiga kolom, simpan otomatis, pratinjau ukuran asli, Isi/Pratinjau di HP.
+3. Isi editor acara: menu samping + pratinjau besar — selesai (22 Nov 2026). Simpan otomatis menyusul.
 4. Tamu, RSVP, Check-in: daftar sesuai bagian 3.
 5. BEO, Galeri, Survei, Donasi.
 6. Super admin.

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/shared/AdminShell";
 import { EventList } from "@/components/admin/events/EventList";
+import { AccountMenu } from "@/components/admin/shared/AccountMenu";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventRecord } from "@/lib/types";
 import type { StandaloneApp } from "@/lib/server/standalone-apps";
@@ -29,5 +30,5 @@ export default function DevEventListPage() {
     { key: "booking", name: "Booking Kantor", eyebrow: "Booking ruangan", status: "Ruang kantor, di luar WAM", address: "/booking", description: "Booking ruangan kantor untuk semua karyawan dengan akun WAM, berbagi ruang dan jadwal yang sama dengan WAM. Staf administrasi mengelola semua booking.", open: { label: "Buka aplikasi", href: "/booking" }, manage: { label: "Kelola booking", href: "/booking/kelola" } },
     { key: "tv", name: "TV Announcement", eyebrow: "Digital signage", status: "TV kantor", address: "/tv", description: "Kendali signage TV kantor: alamat tiap TV, jadwal ruang hari ini dan minggu ini, gambar pengumuman dan durasinya, mode, serta QR. Semua bisa diatur sendiri.", open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: "/admin/wam/tv" } },
   ];
-  return <AdminShell bare><EventList events={events} featuredId={events[0].id} phases={{ [events[1].id]: "day", [events[3].id]: "after" }} templates={["kunjungan-klien", "trip-klien"]} apps={apps} /></AdminShell>;
+  return <AdminShell><EventList events={events} featuredId={events[0].id} phases={{ [events[1].id]: "day", [events[3].id]: "after" }} templates={["kunjungan-klien", "trip-klien"]} apps={apps} account={<AccountMenu name="Contoh Dewi Lestari" role="super" />} /></AdminShell>;
 }
