@@ -43,6 +43,8 @@ export const idKuis = {
   "kuis.introMeta": "Mudah, Sedang, Sulit, lalu Sangat sulit",
   "kuis.levelMeta": "{s} detik per soal · benar 300–500",
   "kuis.question": "Soal {n} dari {count}",
+  "kuis.agenda.join": "Ikut kuis",
+  "kuis.readScreen": "Baca soal di layar besar",
   "kuis.ready": "Bersiap. Soal muncul di sini dan di layar besar.",
   "kuis.countdown": "Soal dibuka dalam",
   "kuis.value": "Nilai saat ini",

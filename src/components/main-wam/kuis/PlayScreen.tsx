@@ -5,7 +5,7 @@ import { ArrowUp, Ban, Check, CloudOff, Flame, Gamepad2, Hourglass, Lock, Pause,
 import { number } from "@/lib/main-wam/i18n";
 import { PODIUM_LAND_AT, boardRequiredBefore, podiumPlaceOpen, podiumState, soalState } from "@/lib/main-wam/kuis/flow";
 import { OPTION_LETTERS, correctPoints, isPaused, levelMs } from "@/lib/main-wam/kuis/rules";
-import type { Alias, PlaySnapshot, QuestionView, RunView } from "@/lib/main-wam/kuis/types";
+import type { Alias, PhoneQuestionView, PlaySnapshot, RunView } from "@/lib/main-wam/kuis/types";
 import { mainWamApi } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
@@ -198,7 +198,7 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
 }) {
   const t = useT();
   const state = soalState(run, now);
-  const question: QuestionView | null = snap.question;
+  const question: PhoneQuestionView | null = snap.question;
   const me = snap.me!;
   const level = run.levels[run.index];
   const seconds = Math.ceil(state.leftMs / 1000);
@@ -293,7 +293,7 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
     </div>
     <div className={css.stage}>{stageView}</div>
     {open && question && <>
-      <p className={css.qtext}>{question.body}</p>
+      <p className={css.qtext}>{t("kuis.readScreen")}</p>
       <div className={css.options} ref={options}>
         {question.options.map((text, i) => {
           const picked = answer?.choice === i;

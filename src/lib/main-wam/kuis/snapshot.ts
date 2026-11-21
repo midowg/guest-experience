@@ -1,7 +1,7 @@
 import { answerOpen, podiumPlaceOpen, publicUpto, snapshotVersion, soalTimes, winnersOf } from "./flow";
 import { captionsOf, correctPoints, countChoices, percents, rankTallies, streakOf, totalOf } from "./rules";
 import type {
-  Alias, AnswerRow, BoardRow, Caption, ControlSnapshot, Fastest, MeView, MineRow, MyBoard, MyFinal, PlaySnapshot, PodiumEntry, QuestionView,
+  Alias, AnswerRow, BoardRow, Caption, ControlSnapshot, Fastest, MeView, MineRow, MyBoard, MyFinal, PhoneQuestionView, PlaySnapshot, PodiumEntry, QuestionView,
   QuizRef, QuizRun, RunView, ScreenSnapshot, Spread, TallyRow,
 } from "./types";
 
@@ -33,6 +33,15 @@ export function questionView(run: QuizRun, now: number): QuestionView | null {
   if (!question) return null;
   const open = answerOpen(flowOf(run), now);
   return { index: run.index, level: question.level, body: question.body, options: [...question.options], correct: open ? question.correct : null };
+}
+
+/** The phone's question: the same, without the text of the question (it is read on the big screen). */
+export function phoneQuestionView(run: QuizRun, now: number): PhoneQuestionView | null {
+  const view = questionView(run, now);
+  if (!view) return null;
+  const rest: Partial<QuestionView> = { ...view };
+  delete rest.body;
+  return rest as PhoneQuestionView;
 }
 
 /** How the answers fell, once open. */
@@ -89,7 +98,7 @@ export function buildPlay(input: PlayInput): PlaySnapshot {
   const open = answerOpen(flow, now);
   const view = runView(run, players);
   const out: PlaySnapshot = {
-    ...base, run: view, question: questionView(run, now), lobby: run.phase === "lobi" ? { players } : null,
+    ...base, run: view, question: phoneQuestionView(run, now), lobby: run.phase === "lobi" ? { players } : null,
     remaining: run.index >= 0 ? Math.max(0, run.questions.length - 1 - run.index) : run.questions.length,
   };
   if (open && input.answers) out.spread = spreadOf(input.answers, players);

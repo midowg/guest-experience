@@ -83,6 +83,9 @@ export type Alias = {
 /** The question on screen: the key only once the answer is open. */
 export type QuestionView = { index: number; level: QuizLevel; body: string; options: string[]; correct: number | null };
 
+/** The question on a phone: the text of the question is read on the big screen (owner's decision); the options stay. */
+export type PhoneQuestionView = Omit<QuestionView, "body">;
+
 /** How the answers fell (after the answer opens): per option, of those who answered. */
 export type Spread = { counts: number[]; percents: number[]; answered: number; none: number };
 
@@ -145,7 +148,7 @@ export type PlaySnapshot = {
   same?: boolean;
   quiz: QuizRef;
   run: RunView | null;
-  question: QuestionView | null;
+  question: PhoneQuestionView | null;
   lobby: { players: number } | null;
   /** null: not joined (yet). */
   me: MeView | null;

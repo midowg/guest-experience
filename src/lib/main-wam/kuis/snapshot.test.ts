@@ -24,7 +24,9 @@ describe("a phone during a question", () => {
   const running = SAMPLE_T0 + times.open + 6_000;
   it("gets the question without its key, its own lock without right or wrong, and its total before this question", () => {
     const snap = play(running);
-    expect(snap.question).toMatchObject({ index, body: SAMPLE_QUESTIONS[index].body, correct: null });
+    expect(snap.question).toMatchObject({ index, options: SAMPLE_QUESTIONS[index].options, correct: null });
+    expect(snap.question).not.toHaveProperty("body");
+    expect(JSON.stringify(snap)).not.toContain(SAMPLE_QUESTIONS[index].body);
     expect(snap.me?.answer).toEqual({ choice: SAMPLE_QUESTIONS[index].correct, value: 458 });
     expect(snap.me?.result).toBeNull();
     const before = [0, 1].flatMap(i => sampleAnswers(i)).filter(answer => answer.employeeId === SAMPLE_ME).reduce((sum, answer) => sum + answer.points, 0);

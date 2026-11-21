@@ -41,6 +41,8 @@ export const enKuis: Record<keyof typeof idKuis, string> = {
   "kuis.introMeta": "Easy, Medium, Hard, then Very hard",
   "kuis.levelMeta": "{s} seconds a question · right 300–500",
   "kuis.question": "Question {n} of {count}",
+  "kuis.agenda.join": "Join the quiz",
+  "kuis.readScreen": "Read the question on the big screen",
   "kuis.ready": "Get ready. The question shows here and on the big screen.",
   "kuis.countdown": "The question opens in",
   "kuis.value": "Points now",
