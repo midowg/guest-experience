@@ -1,4 +1,5 @@
 import "server-only";
+import { visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
 import { mayUseMcp } from "@/lib/pra-wam/mcp";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { groupNotifications, type NotificationRow } from "@/lib/main-wam/peserta/notifications";
@@ -53,7 +54,7 @@ export async function loadTravel({ viewer, settings }: MainWamContext): Promise<
   const lang = await readLang();
   const [trips, seats, sessions, log] = await Promise.all([
     listTrips(), seatsOf(viewer.id).then(read => read.data).catch(() => []),
-    shownSessions().then(read => read.data).catch(() => []),
+    shownSessions().then(read => visibleSessions(read.data, settings.event, settings.modules.ceklis)).catch(() => []),
     rundownLog(undefined, 500).then(read => read.data).catch(() => []),
   ]);
   const ids = { berangkat: coordinatorOf(trips.data, "berangkat"), pulang: coordinatorOf(trips.data, "pulang") };

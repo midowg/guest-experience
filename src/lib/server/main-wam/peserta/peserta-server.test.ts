@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  sampleActivityGroups, sampleAttendance, sampleAwards, sampleGroups, sampleGuides, sampleNotifications, samplePeopleList, sampleSeats, sampleSessions,
+  sampleSession, sampleActivityGroups, sampleAttendance, sampleAwards, sampleGroups, sampleGuides, sampleNotifications, samplePeopleList, sampleSeats, sampleSessions,
   sampleSettings, sampleSilentQuestion, sampleTrips, sampleViewers,
 } from "@/lib/main-wam/sample";
 import type { MainWamSettings, MainWamViewer } from "@/lib/main-wam/types";
@@ -137,6 +137,17 @@ describe("Saya's loaders", () => {
     expect(read.seatsOf).toHaveBeenCalledWith(sampleViewers.peserta.id);
     expect(data.steps.berangkat).toHaveLength(4);
     expect(data.coordinators.berangkat).toMatchObject({ name: "Bima" });
+  });
+
+  it("Perjalanan: a Persiapan agenda is left out with module Ceklis off (as in Beranda and Agenda)", async () => {
+    const prep = { ...sampleSession("kumpul"), startsAt: "2027-01-02T05:30:00+07:00", endsAt: null };
+    const moved = { id: "log1", sessionId: prep.id, changes: [{ field: "startsAt" as const, from: "2027-01-02T05:45:00+07:00", to: prep.startsAt }], notified: false, recipients: 0, changedBy: null, changedAt: "2027-01-01T10:00:00+07:00" };
+    const withPrep = () => { read.shownSessions.mockResolvedValueOnce({ data: [prep], migrated: true }); read.rundownLog.mockResolvedValueOnce({ data: [moved] as never[], migrated: true }); };
+    withPrep();
+    expect((await loadTravel(context(sampleViewers.peserta))).changed.berangkat).toBeDefined();
+    withPrep();
+    const off = sampleSettings().modules;
+    expect((await loadTravel(context(sampleViewers.peserta, { modules: { ...off, ceklis: false } }))).changed.berangkat).toBeUndefined();
   });
 
   it("Akses MCP only for BOD", async () => {

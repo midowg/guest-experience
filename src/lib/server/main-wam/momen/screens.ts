@@ -1,4 +1,5 @@
 import "server-only";
+import { visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
 import { canSee } from "@/lib/main-wam/momen/access";
 import { GALLERY_PAGE, parsePhotoId, parseSession, parseView, STACK_PAGE } from "@/lib/main-wam/momen/filters";
 import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
@@ -17,10 +18,13 @@ import { feedPhotos, listFeed, photoRecord, sessionCounts } from "./feed";
 
 type Search = Record<string, string | string[] | undefined>;
 
-/** Published sessions, as the sheets need them (no more fields than that). */
-async function publishedSessions(): Promise<MwSession[]> {
+/**
+ * Published sessions, as the sheets need them (no more fields than that). With module Ceklis off the
+ * Persiapan agendas (H-n) are left out, as in Beranda and Agenda.
+ */
+async function publishedSessions({ settings }: Pick<MainWamContext, "settings">): Promise<MwSession[]> {
   const sessions = await allSessions().catch(() => ({ data: [] as MwSession[], migrated: false }));
-  return sessions.data.filter(session => session.status === "terbit");
+  return visibleSessions(sessions.data.filter(session => session.status === "terbit"), settings.event, settings.modules.ceklis);
 }
 
 const titleOf = (session: SessionFilter, sessions: readonly { id: string; title: string }[]) =>
@@ -53,7 +57,7 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
   const view = "semua" as const;
   const session = parseSession(search.sesi);
   const foto = parsePhotoId(search.foto);
-  const [sessions, counts] = await Promise.all([publishedSessions(), sessionCounts(context, view)]);
+  const [sessions, counts] = await Promise.all([publishedSessions(context), sessionCounts(context, view)]);
   const base = {
     session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
     mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, me: { name: viewer.name, photo: viewer.photo }, nowIso: now.toISOString(),
@@ -102,7 +106,7 @@ export async function galleryScreen(context: MainWamContext, search: Search, now
   const view = parseView(search.lihat);
   const session = parseSession(search.sesi);
   const [sessions, counts, page] = await Promise.all([
-    publishedSessions(), sessionCounts(context, view), listFeed(context, { view, session, mode: "semua", limit: GALLERY_PAGE }),
+    publishedSessions(context), sessionCounts(context, view), listFeed(context, { view, session, mode: "semua", limit: GALLERY_PAGE }),
   ]);
   return {
     view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
@@ -118,7 +122,7 @@ export type CameraScreenData = {
 /** The camera: the sessions it can tag (only what a sheet row needs), the address's choice. */
 export async function cameraScreen(context: MainWamContext, search: Search, now = new Date()): Promise<CameraScreenData> {
   const { settings } = context;
-  const sessions = (await publishedSessions()).map(session => ({
+  const sessions = (await publishedSessions(context)).map(session => ({
     ...session, place: "", mapGuideId: null, dresscode: "", bring: "", lineup: [], meal: "", contactId: null, description: "", changedAt: null, changedBy: null,
   }));
   // Before area B's migration the camera says "menunggu pembaruan sistem" (its uploads would wait anyway).
