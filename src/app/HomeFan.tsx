@@ -56,9 +56,9 @@ export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
     <header className={css.top}><SchemeSwitch /></header>
 
     <div className={css.head}>
-      <span className={css.crest} role="img" aria-label="Werkudara Group" />
+      <span className={css.crest} role="img" aria-label="Werkudara Group" style={{ viewTransitionName: "wk-crest" }} />
       <p className={css.kicker}>Selamat datang</p>
-      <h1 className={css.mark}>Journey</h1>
+      <h1 className={css.mark} style={{ viewTransitionName: "wk-title" }}>Journey</h1>
       <p className={css.by}>by Werkudara Group</p>
     </div>
 

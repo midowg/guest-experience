@@ -1,7 +1,7 @@
 /*
- * Masuk admin (22 Nov 2026): full screen, a picture on one side and the form on the other. Kartu 3D:
- * a still colour field, light or dark with the device. Lampu: the joglo at dusk, dark. No motion but
- * one quiet fade-in.
+ * Masuk admin (22 Nov 2026): full screen, the office photo on one side and the form on the other.
+ * Kartu 3D: a light form side (dark with the device); Lampu: dark. No motion but one quiet entrance,
+ * and from the front page the pegasus and "Journey" glide into place.
  */
 .page {
   --l-bg: #f6f7f9; --l-panel: #ffffff; --l-ink: #0f172a; --l-soft: #5b6472; --l-line: #e4e7ec; --l-accent: #1f4fd1;
@@ -14,20 +14,18 @@
 .page[data-style="lampu"] { --l-bg: #05070b; --l-panel: #0c1017; --l-ink: #f1f3f7; --l-soft: #9aa3b2; --l-line: #232a36; --l-accent: #9cc1ff; --l-v-ink: #ffffff; --l-v-soft: rgba(255, 255, 255, .78); --l-mark: #ffffff; color-scheme: dark; }
 :global(html:has(main[data-style])) { background: var(--l-bg, #f6f7f9); }
 
-/* The picture side. */
+/* The picture side: the office photo, toned to the look (light wash for Kartu 3D, dusk for Lampu). */
 .visual { position: relative; isolation: isolate; display: grid; align-content: end; overflow: hidden; padding: clamp(28px, 5vw, 64px); }
-.photo { z-index: -2; object-fit: cover; animation: settle 1.4s cubic-bezier(.2, .8, .2, 1) both; }
-.page[data-style="lampu"] .visual::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(120% 90% at 40% 30%, rgba(5, 7, 11, .15), rgba(5, 7, 11, .82) 75%), linear-gradient(to top, rgba(5, 7, 11, .85), transparent 55%); }
-.field { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: color-mix(in srgb, var(--l-accent) 6%, var(--l-bg)); }
-.field i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(90px); opacity: .38; }
-.field i:nth-child(1) { left: -18vmax; top: -22vmax; background: #2f6feb; }
-.field i:nth-child(2) { right: -24vmax; top: 4vmax; background: #0d9488; opacity: .26; }
-.field i:nth-child(3) { left: 6vmax; bottom: -34vmax; background: #e0457b; opacity: .22; }
-@media (prefers-color-scheme: dark) { .page[data-style="kartu"] .field i { opacity: .3; } }
+.photo { z-index: -2; object-fit: cover; object-position: 50% 45%; animation: settle 1.6s cubic-bezier(.2, .8, .2, 1) both; }
+.visual::before { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(8, 12, 24, .78), rgba(8, 12, 24, .18) 55%, rgba(8, 12, 24, .05)); }
+.page[data-style="lampu"] .visual::before { background: radial-gradient(130% 90% at 50% 25%, rgba(5, 7, 11, .1), rgba(5, 7, 11, .7) 70%), linear-gradient(to top, rgba(5, 7, 11, .92), rgba(5, 7, 11, .25) 60%); }
+.page .visual { --l-v-ink: #ffffff; --l-v-soft: rgba(255, 255, 255, .82); --l-mark: #ffffff; }
 .visualText { display: grid; gap: 10px; max-width: 30rem; animation: rise .7s .1s cubic-bezier(.2, .8, .2, 1) both; }
 .mark { width: 44px; height: 51px; margin-bottom: 6px; background: var(--l-mark);
   -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat; }
 .page .name { margin: 0; font-size: clamp(2.25rem, 4.2vw, 3.5rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; color: var(--l-v-ink); }
+.journey { display: inline-block; }
 .page .line { margin: 0; font-size: 1.0625rem; line-height: 1.55; color: var(--l-v-soft); }
 
 /* The form side. */
@@ -48,14 +46,20 @@
 @keyframes rise { from { opacity: 0; translate: 0 12px; } }
 @keyframes settle { from { opacity: 0; scale: 1.04; } }
 
-/* A phone: the picture as a band on top, the form below. */
+/* A phone: the photo fills the top half with the name on it; the form rises over it as a card. */
 @media (max-width: 60rem) {
-  .page { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-  .visual { min-height: 32svh; padding: 24px 20px; }
-  .page .name { font-size: 2.25rem; }
-  .page .line { display: none; }
+  .page { grid-template-columns: 1fr; grid-template-rows: minmax(46svh, auto) 1fr; }
+  .visual { min-height: 46svh; padding: 24px 22px 56px; }
+  .photo { object-position: 58% 50%; }
+  .page .name { font-size: clamp(2.25rem, 10vw, 2.75rem); }
+  .page .line { font-size: .9375rem; }
   .mark { width: 34px; height: 40px; }
-  .panel { border-left: 0; border-top: 1px solid var(--l-line); padding: 28px 20px 20px; border-radius: 22px 22px 0 0; margin-top: -22px; position: relative; }
-  .form { align-self: start; }
+  .panel { position: relative; z-index: 1; margin-top: -32px; padding: 28px 22px 16px; border: 0; border-radius: 26px 26px 0 0; box-shadow: 0 -12px 32px rgba(8, 12, 24, .18); }
+  .form { align-self: start; gap: 14px; }
+  .form h1 { font-size: 1.625rem; }
 }
 @media (prefers-reduced-motion: reduce) { .photo, .visualText, .form { animation: none; } }
+
+/* Coming from the front page: one cross-fade, the pegasus and "Journey" moving into place. */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }

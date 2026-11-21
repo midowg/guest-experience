@@ -7,21 +7,22 @@ import css from "@/components/admin/shared/login.module.css";
 import { MIN_PASSWORD_LENGTH, MIN_SECRET_LENGTH } from "@/lib/admin-token";
 import type { HomeStyle } from "@/lib/home-style";
 
-const PHOTO = "/panduan-ke-werkudara/assets/garden-960.webp";
+// The office from the street, the pegasus on its wall: the one picture that says Werkudara at a glance.
+const PHOTO = "/panduan-ke-werkudara/assets/exterior-1280.webp";
 
 /**
  * Masuk admin (22 Nov 2026): one full screen, split. The picture side follows the look the super admin
- * picked for the front page (Kartu 3D: a calm colour field; Lampu: the joglo at dusk), quietly: no
- * cursor effects, nothing that keeps moving. The form side is plain and the same for both.
+ * picked for the front page (Kartu 3D: light, Lampu: dark) over the office photo, quietly: no cursor
+ * effects, nothing that keeps moving. Coming from the front page, its pegasus and "Journey" glide into
+ * place (a cross-document view transition, where the browser has one).
  */
 export function LoginScreen({ style, configured, next, expired }: { style: HomeStyle; configured: boolean; next: string; expired: boolean }) {
   return <main className={css.page} data-style={style}>
     <div className={css.visual} aria-hidden="true">
-      {style === "lampu" ? <Image src={PHOTO} alt="" fill priority sizes="(min-width: 60rem) 58vw, 100vw" className={css.photo} />
-        : <span className={css.field}><i /><i /><i /></span>}
+      <Image src={PHOTO} alt="" fill priority sizes="(min-width: 60rem) 58vw, 100vw" className={css.photo} />
       <div className={css.visualText}>
-        <span className={css.mark} />
-        <p className={css.name}>Journey Admin</p>
+        <span className={css.mark} style={{ viewTransitionName: "wk-crest" }} />
+        <p className={css.name}><span className={css.journey} style={{ viewTransitionName: "wk-title" }}>Journey</span> Admin</p>
         <p className={css.line}>Undangan, kunjungan tamu, dan aplikasi tim Werkudara, dikelola di satu tempat.</p>
       </div>
     </div>

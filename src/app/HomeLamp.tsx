@@ -53,9 +53,9 @@ export function HomeLamp({ doors, guest }: { doors: Door[]; guest: string }) {
     <header className={css.top}><SchemeSwitch start="dark" /></header>
 
     <div className={css.head}>
-      <span className={css.crest} role="img" aria-label="Werkudara Group" />
+      <span className={css.crest} role="img" aria-label="Werkudara Group" style={{ viewTransitionName: "wk-crest" }} />
       <p className={css.kicker}>Selamat datang</p>
-      <h1 className={css.mark} aria-label="Journey">{'Journey'.split('').map((letter, index) =>
+      <h1 className={css.mark} aria-label="Journey" style={{ viewTransitionName: "wk-title" }}>{'Journey'.split('').map((letter, index) =>
         <span key={index} style={{ '--i': index } as CSSProperties} aria-hidden="true">{letter}</span>)}</h1>
       <p className={css.by}>by Werkudara Group</p>
     </div>

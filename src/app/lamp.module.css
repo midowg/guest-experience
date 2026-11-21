@@ -82,3 +82,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page *, .page { animation: none !important; transition: none !important; }
 }
+
+/* To Masuk admin: the pegasus and "Journey" glide into the login (a cross-document view transition). */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
