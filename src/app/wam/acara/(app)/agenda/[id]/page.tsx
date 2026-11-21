@@ -9,6 +9,7 @@ import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
 import { readLang } from "@/lib/server/main-wam/lang";
 import { loadAgenda, loadSession, tabOfSession } from "@/lib/server/main-wam/peserta/agenda";
+import { unreadCount } from "@/lib/server/pra-wam/announcements";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Detail sesi · WAM", robots: { index: false } };
@@ -26,10 +27,10 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const data = await loadSession(context, id, now);
   if (!data) notFound();
   const tab = tabOfSession(data.session, context);
-  const agenda = await loadAgenda(context, tab, now);
+  const [agenda, unread] = await Promise.all([loadAgenda(context, tab, now), unreadCount(context.viewer.id).catch(() => 0)]);
   const closeHref = tab?.startsWith("h") ? mainWamPath.agendaPrep(Number(tab.slice(1))) : mainWamPath.agenda(tab ? Number(tab) : undefined);
   return <>
-    <AgendaScreen {...agenda} since={hhmm(now.toISOString(), await readLang())} />
+    <AgendaScreen {...agenda} unread={unread} since={hhmm(now.toISOString(), await readLang())} />
     <SessionSheet view={data.view} contact={data.contact} denahHref={denahHrefOf(data.denah)} closeHref={closeHref}
       checklist={data.checklist ? { sessionId: data.session.id, items: data.checklist.items, required: data.checklist.required, sample: data.checklist.sample } : null}
       slots={{

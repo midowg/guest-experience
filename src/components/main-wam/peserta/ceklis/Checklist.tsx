@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, CircleCheck, Info, Lock } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
-import { Banner, Button } from "@/components/main-wam/ui";
 import { DEMO_CEKLIS_COOKIE } from "@/lib/main-wam/ceklis/sample";
 import type { ChecklistItemView } from "@/lib/main-wam/ceklis/ceklis";
 import { mainWamApi } from "@/lib/routes";
@@ -83,12 +82,12 @@ export function Checklist({ sessionId, items, required, sample = false }: { sess
   return <section className={css.box} aria-labelledby={`ceklis-${sessionId}`}>
     <div className={css.head}>
       <h3 id={`ceklis-${sessionId}`} className={css.cap}>{t("ceklis.progress", { done, total })}</h3>
-      {!complete && <Button variant="secondary" size="m" loading={busyAll} loadingLabel={t("ceklis.allBusy")} onClick={() => void all()}>{t("ceklis.all")}</Button>}
+      {!complete && <button type="button" className={css.all} disabled={busyAll} onClick={() => void all()}>{busyAll ? t("ceklis.allBusy") : t("ceklis.all")}</button>}
     </div>
     <span className={css.bar} role="progressbar" aria-label={t("ceklis.progressSr", { done, total })} aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
       <span className={css.barFill} style={{ width: `${total ? Math.round((done / total) * 100) : 0}%` }} />
     </span>
-    <Banner tone="info" icon={required ? <Lock /> : <Info />} title={required ? t("ceklis.required") : t("ceklis.reminder")} />
+    <p className={css.rule}>{required ? <Lock aria-hidden /> : <Info aria-hidden />}<span>{required ? t("ceklis.required") : t("ceklis.reminder")}</span></p>
     <ul className={css.list}>
       {items.map(item => {
         const on = checked.has(item.id);

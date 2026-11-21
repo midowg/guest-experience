@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarDays, Hourglass } from "lucide-react";
+import { Bell, CalendarDays, Hourglass } from "lucide-react";
 import type { AgendaDayTab, AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
-import { ScreenContent } from "@/components/main-wam/shell";
-import { DayTabs, EmptyState, Pill } from "@/components/main-wam/ui";
+import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
+import { EmptyState, EyebrowLabel, IconButton, NetworkMotif } from "@/components/main-wam/ui";
 import { OfflineBanner } from "../Live";
+import { AgendaDayTabs } from "./AgendaDayTabs";
 import { AgendaTimeline } from "./AgendaTimeline";
 import { DaySwipe } from "./DaySwipe";
 import css from "../peserta.module.css";
@@ -16,15 +17,18 @@ import own from "./agenda.module.css";
 const tabHref = (item: AgendaDayTab) => (item.prep ? mainWamPath.agendaPrep(Number(item.key.slice(1))) : mainWamPath.agenda(item.number));
 
 /**
- * Agenda (P03, revisi 16 Nov; laid out after the handbook's rundown): the four days (today marked;
- * the chosen day in the address, so Back and a reload keep it), the day's header ("Hari 2 · Sel,
- * 5 Jan", how many sessions), then a timeline: hours, kind of entry, title, place; the running one
- * lit with "Sedang berlangsung", the next marked "Berikutnya", a moved one "Jam berubah", a
- * cancelled one struck through and not openable. A row opens Detail sesi.
+ * Agenda (P03, prototipe final SC.agenda): the screen draws its own head, "AGENDA" over "HARI KE-2" (or
+ * "PERSIAPAN") in big Barlow capitals with the bell, then the day tabs (the chosen day in the address, so
+ * Back and a reload keep it; a big number over "Sel Jan", "H-3" over "1 Jan" for a Persiapan day, today
+ * dotted), then a timeline: hours, a rail with a node, title, place and small tags (kind, "Wajib absen",
+ * "Ceklis 0/2"); the running one lit gold with "Sedang berlangsung", the next marked "Berikutnya", a moved
+ * one "Jam berubah", a cancelled one struck through and not openable. A row opens Detail sesi (a sheet).
  */
-export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, since, forceOffline }: {
+export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, since, forceOffline, unread = 0 }: {
   migrated: boolean; days: AgendaDayTab[]; day: number; /** The tab's key ("2", or "h3" for a Persiapan day); the day's number when left out. */ tab?: string;
   rows: AgendaRow[]; anyPublished: boolean; since: string; forceOffline?: boolean;
+  /** Unread notifications, the bell's badge (the shell only draws the bell on Beranda). */
+  unread?: number;
 }) {
   const t = useT();
   const key = tab ?? String(day);
@@ -33,9 +37,19 @@ export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, sin
   // Swiping goes through every tab in order, Persiapan days first.
   const prev = index > 0 ? tabHref(days[index - 1]) : null;
   const next = index >= 0 && index < days.length - 1 ? tabHref(days[index + 1]) : null;
-  return <ScreenContent>
+  const title = current?.prep ? t("ceklis.tabPrep") : t("peserta.agenda.title", { n: current?.number ?? day });
+  return <ScreenContent className={own.screen}>
+    <ShellChrome hideTopBar />
+    <NetworkMotif name="konstelasi" place="top" />
+    <header className={own.head}>
+      <div className={own.headText}>
+        <EyebrowLabel>{t("peserta.agenda.eyebrow")}</EyebrowLabel>
+        <h1 className={own.headTitle}>{title}</h1>
+      </div>
+      <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
+    </header>
     <div className={css.dayBar}>
-      <DayTabs className={css.dayTabs} current={key} days={days.map(item => ({ key: item.key, day: item.day, date: item.date, today: item.today, href: tabHref(item) }))} />
+      <AgendaDayTabs className={css.dayTabs} current={key} days={days} hrefOf={tabHref} label={t("ui.eventDays")} />
     </div>
     <OfflineBanner since={since} force={forceOffline} />
     <DaySwipe prev={prev} next={next} className={css.daySwipe}>
@@ -43,16 +57,7 @@ export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, sin
         ? <EmptyState icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("peserta.waiting.agenda")}</EmptyState>
         : !rows.length
           ? <EmptyState icon={<CalendarDays />} title={t("peserta.now.emptyTitle")}>{anyPublished ? undefined : t("peserta.now.emptySub")}</EmptyState>
-          : <>
-            {current && <div className={own.dayHead}>
-              <h2 className={own.dayTitle}>{current.day} · {current.date}</h2>
-              <p className={own.dayMeta}>
-                {current.today && <Pill tone="primary">{t("fmt.today")}</Pill>}
-                <span>{t("peserta.agenda.count", { n: rows.length })}</span>
-              </p>
-            </div>}
-            <AgendaTimeline rows={rows} label={current ? t("peserta.agenda.sessionsOf", { day: current.day, date: current.date }) : t("peserta.agenda.sessions")} />
-          </>}
+          : <AgendaTimeline rows={rows} label={current ? t("peserta.agenda.sessionsOf", { day: current.day, date: current.date }) : t("peserta.agenda.sessions")} />}
     </DaySwipe>
   </ScreenContent>;
 }

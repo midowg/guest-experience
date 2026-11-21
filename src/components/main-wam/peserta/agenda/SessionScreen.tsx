@@ -1,13 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Backpack, CalendarClock, CircleX, Clock, MapPin, Shirt } from "lucide-react";
+import { Backpack, CalendarClock, CircleX, Clock, FileText, MapPin, Shirt } from "lucide-react";
 import type { ChecklistItemView } from "@/lib/main-wam/ceklis/ceklis";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import type { SessionView } from "@/lib/main-wam/peserta/session";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent, Stack } from "@/components/main-wam/shell";
-import { Banner, Button, IconBox, StatusPill } from "@/components/main-wam/ui";
+import { Banner, Button, StatusPill } from "@/components/main-wam/ui";
 import { Checklist } from "../ceklis/Checklist";
 import { InfoLainnya } from "./InfoLainnya";
 import { KIND_ICONS } from "./AgendaTimeline";
@@ -44,34 +44,21 @@ export type SessionBodyProps = {
 export function SessionBody({ view, contact, denahHref, slots, checklist, openInfo, withTitle = true }: SessionBodyProps) {
   const t = useT();
   const cancelled = view.status === "cancelled";
-  const KindIcon = KIND_ICONS[view.kind];
   return <>
     <Stack>
       {view.change && <Banner tone="warning" icon={<CalendarClock />} title={view.change} />}
       {cancelled && <Banner tone="error" icon={<CircleX />} title={t("peserta.session.cancelled")} />}
-      <div className={own.head}>
-        <span className={own.kind}><span className={own.kindIcon} aria-hidden><KindIcon /></span>{t(`peserta.session.kind.${view.kind}`)}</span>
-        {(view.status === "live" || view.status === "done") && <StatusPill status={view.status} />}
-      </div>
-      {withTitle && <h2 className={css.sessionTitle}>{view.title}</h2>}
-      {view.description && <p className={own.lead}>{view.description}</p>}
-      <div className={own.facts}>
-        <div className={own.fact}>
-          <IconBox icon={<Clock />} />
-          <span className={own.factText}>
-            <span className={own.factLabel}>{t("peserta.session.whenLabel")}</span>
-            <span className={own.factValue}>{view.when}</span>
-            {view.length && <span className={own.factSub}>{view.length}</span>}
-          </span>
-        </div>
-        {view.place && <div className={own.fact}>
-          <IconBox icon={<MapPin />} />
-          <span className={own.factText}>
-            <span className={own.factLabel}>{t("peserta.session.placeLabel")}</span>
-            <span className={own.factValue}>{view.place}</span>
-          </span>
-          {denahHref && <Button variant="text" size="m" href={denahHref} className={own.factAction} aria-label={t("peserta.session.mapOf", { place: view.place })}>{t("peserta.session.map")}</Button>}
+      {/* The sheet shows the kind in its head; as a page the body starts with it. */}
+      {withTitle && <SessionKicker view={view} />}
+      {withTitle ? <h2 className={own.dh}>{view.title}</h2> : <p className={own.dh} aria-hidden>{view.title}</p>}
+      <div className={own.infos}>
+        <div className={own.info}><Clock aria-hidden /><span><b>{view.when}</b>{view.length && <> · {view.length}</>}</span></div>
+        {view.place && <div className={own.info}>
+          <MapPin aria-hidden />
+          <span>{view.place}</span>
+          {denahHref && <Button variant="text" size="m" href={denahHref} className={own.infoAction} aria-label={t("peserta.session.mapOf", { place: view.place })}>{t("peserta.session.map")}</Button>}
         </div>}
+        {view.description && <div className={own.info}><FileText aria-hidden /><span className={own.lead}>{view.description}</span></div>}
       </div>
       {checklist && checklist.items.length > 0 && <Checklist {...checklist} />}
       {!cancelled && slots.absen}
@@ -86,6 +73,16 @@ export function SessionBody({ view, contact, denahHref, slots, checklist, openIn
       {view.infoSub && <InfoLainnya sub={view.infoSub} lineup={view.lineup} meal={view.meal} contact={contact} defaultOpen={openInfo} />}
     </div>
   </>;
+}
+
+/** The kind of entry as a small tag with its icon (prototipe .kt), and its pill when running or done: the sheet's kicker, or the page's first line. */
+export function SessionKicker({ view }: { view: SessionView }) {
+  const t = useT();
+  const KindIcon = KIND_ICONS[view.kind];
+  return <span className={own.kicker}>
+    <span className={own.kind}><KindIcon aria-hidden />{t(`peserta.session.kind.${view.kind}`)}</span>
+    {(view.status === "live" || view.status === "done") && <StatusPill status={view.status} />}
+  </span>;
 }
 
 /** Detail sesi as a page (previews and tests; the app opens it as a sheet over Agenda, SessionSheet). */

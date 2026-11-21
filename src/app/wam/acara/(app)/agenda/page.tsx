@@ -4,6 +4,7 @@ import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
 import { readLang } from "@/lib/server/main-wam/lang";
 import { loadAgenda } from "@/lib/server/main-wam/peserta/agenda";
+import { unreadCount } from "@/lib/server/pra-wam/announcements";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agenda · WAM", robots: { index: false } };
@@ -16,6 +17,6 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const { hari } = await searchParams;
   const context = await requireMainWamPage(hereOf(Array.isArray(hari) ? hari[0] : hari));
   const now = new Date();
-  const data = await loadAgenda(context, hari, now);
-  return <AgendaScreen {...data} since={hhmm(now.toISOString(), await readLang())} />;
+  const [data, unread] = await Promise.all([loadAgenda(context, hari, now), unreadCount(context.viewer.id).catch(() => 0)]);
+  return <AgendaScreen {...data} unread={unread} since={hhmm(now.toISOString(), await readLang())} />;
 }

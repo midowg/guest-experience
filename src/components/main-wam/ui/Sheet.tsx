@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useSyncExternalStore, type Point
 import { X } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { cx } from "./Pressable";
+import shared from "./shared.module.css";
 import { useModal } from "./useModal";
 import css from "./sheet.module.css";
 
@@ -17,11 +18,15 @@ import css from "./sheet.module.css";
  * Control it with `open`/`onClose`. For a sheet with its own address (a link can open it, as
  * Pengaturan#notifikasi in Pra WAM), use useHashSheet and pass `history={false}`.
  */
-export function Sheet({ open, onClose, title, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel, flush, className }: {
+export function Sheet({ open, onClose, title, kicker, hideTitle, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel, flush, className }: {
   open: boolean;
   onClose: () => void;
   /** Heading and spoken name. */
   title: ReactNode;
+  /** A line above the title, in the head beside the ✕ (Detail sesi: the kind of entry). */
+  kicker?: ReactNode;
+  /** The title stays the dialog's name and takes focus but is not drawn (the content shows it large itself). */
+  hideTitle?: boolean;
   /** A line under the title. */
   subtitle?: ReactNode;
   children: ReactNode;
@@ -83,7 +88,8 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, histor
       <div className={css.handle} aria-hidden {...dragProps}><span /></div>
       <header className={css.head} {...dragProps}>
         <div className={css.headText}>
-          <h2 ref={titleRef} id={`${id}-title`} tabIndex={-1} className={css.title}>{title}</h2>
+          {kicker && <div className={css.kicker}>{kicker}</div>}
+          <h2 ref={titleRef} id={`${id}-title`} tabIndex={-1} className={cx(css.title, hideTitle && shared.srOnly)}>{title}</h2>
           {subtitle && <p id={`${id}-sub`} className={css.subtitle}>{subtitle}</p>}
         </div>
         <button type="button" className={css.close} onClick={onClose} disabled={locked} aria-label={closeLabel ?? t("ui.close")}><X aria-hidden /></button>
