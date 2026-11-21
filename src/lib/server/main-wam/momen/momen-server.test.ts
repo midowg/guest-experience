@@ -285,9 +285,9 @@ describe("who reacted with what", () => {
     reactorsAnswer = { data: rows, error: null };
     const answer = await feed.photoReactors(context().viewer, record().id);
     expect(answer.reactors).toEqual([
-      { person: { id: rani, name: "Rani", photo: "/foto/rani" }, emoji: HEART, mine: true, at: "2027-01-05T03:02:00Z" },
-      { person: { id: "sari", name: "Sari", photo: null }, emoji: "😂", mine: false, at: "2027-01-05T03:01:00Z" },
-      { person: { id: "someone-new", name: "Rekan", photo: null }, emoji: "🔥", mine: false, at: "2027-01-05T03:00:00Z" },
+      { person: { id: rani, name: "Rani", photo: "/foto/rani", department: "" }, emoji: HEART, mine: true, at: "2027-01-05T03:02:00Z" },
+      { person: { id: "sari", name: "Sari", photo: null, department: "" }, emoji: "😂", mine: false, at: "2027-01-05T03:01:00Z" },
+      { person: { id: "someone-new", name: "Rekan", photo: null, department: "" }, emoji: "🔥", mine: false, at: "2027-01-05T03:00:00Z" },
     ]);
     expect(reactorCalls()).toEqual([{ name: "mw_photo_reactors", args: { p_photo: record().id, p_viewer: rani } }]);
   });

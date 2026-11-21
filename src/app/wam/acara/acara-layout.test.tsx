@@ -19,7 +19,7 @@ let viewer: MainWamViewer | null = null;
 vi.mock("server-only", () => ({}));
 vi.mock("@/components/main-wam/theme/font", () => ({ mainWamFontVars: "font-jakarta" }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url: string) => { throw new Error(`REDIRECT ${url}`); } }));
-vi.mock("@/lib/server/main-wam/appearance", () => ({ readMainWamMode: async () => look }));
+vi.mock("@/lib/server/main-wam/appearance", () => ({ readMainWamMode: async () => look, readReduceMotion: async () => false }));
 vi.mock("@/lib/server/main-wam/gate", () => ({ mainWamShown: async () => shown }));
 vi.mock("@/lib/server/main-wam/theme", () => ({ mainWamThemeInput: async () => ({ primary: "#C2410C", images: { homeHeader: "/api/wam/acara/tema/homeHeader?v=1" } }) }));
 vi.mock("@/lib/server/main-wam/settings", () => ({ readMainWamSettings: async () => ({ ...defaultSettings(), migrated: true, mode }) }));
