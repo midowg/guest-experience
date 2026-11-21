@@ -481,6 +481,28 @@ export async function reviewRecord(id: string, review: { status: "sah" | "ditola
  * Admin HR → "Hapus absen": a clock-in (test data, a mistake) gone for good, with its selfie. The
  * row goes first, so a failed file delete leaves at most an orphan file, never a row without its file.
  */
+/** Admin HR changes a clock-in's time and place (same work day); the status stays, the change is noted. */
+export async function editRecord(id: string, input: { time: string; zone: ViewerZone; place: "kantor" | ReasonKind; reasonText: string; note: string }, actor: AdminActorRef, now = new Date()): Promise<DailyRecord> {
+  const client = createPrivilegedClient();
+  const { data: found, error: readError } = await client.from("pw_daily_attendance").select("id,work_date,office_id,method").eq("id", id).maybeSingle();
+  if (readError) fail(readError);
+  const row = found as { id: string; work_date: string; office_id: string | null; method: "wajah" | "manual" } | null;
+  if (!row) throw new ServiceError(404, "Absen tidak ditemukan.");
+  // "In the office" is the office point it was taken inside (office_id); outside, only the nearest one's name is kept.
+  if (input.place === "kantor" && !row.office_id && row.method === "wajah") throw new ServiceError(422, "Absen ini tidak diambil di titik kantor. Pilih alasannya (Event, Dinas, WFH, Lainnya).");
+  if (input.place === "lainnya" && input.reasonText.length < 3) throw new ServiceError(422, "Tulis keterangan untuk Lainnya.");
+  const { data, error } = await client.from("pw_daily_attendance").update({
+    at: instantOf(row.work_date, input.time, input.zone),
+    reason_kind: input.place === "kantor" ? null : input.place,
+    reason_text: input.place === "kantor" ? null : input.reasonText || null,
+    review_note: `Diubah Admin HR: ${input.note}`.slice(0, 300),
+    reviewed_by: actor.employeeId, reviewed_label: actor.label, reviewed_at: now.toISOString(),
+  }).eq("id", id).select(await recordColumns()).maybeSingle();
+  if (error) fail(error);
+  if (!data) throw new ServiceError(404, "Absen tidak ditemukan.");
+  return asRecord(data as unknown as RecordRow);
+}
+
 export async function deleteRecord(id: string): Promise<DailyRecord> {
   const client = createPrivilegedClient();
   const { data, error } = await client.from("pw_daily_attendance").select(await recordColumns()).eq("id", id).maybeSingle();

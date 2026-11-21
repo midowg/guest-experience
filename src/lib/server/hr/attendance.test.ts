@@ -85,7 +85,7 @@ const other: Member = { ...member, id: OTHER };
 // Jumat 20 Nov 2026, 08.30 WIB.
 const morning = new Date("2026-11-20T01:30:00Z");
 
-const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, importFaceFromLink, readChallenge, setImportedFace, setUploadedFace, startClockIn, startEnroll, startFaceUpload, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
+const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, editRecord, importFaceFromLink, readChallenge, setImportedFace, setUploadedFace, startClockIn, startEnroll, startFaceUpload, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
 
 /** A made-up face: a fixed direction, and looks of it with a little noise. */
 function vector(seed: number): number[] {
@@ -322,6 +322,22 @@ describe("Revisi (21 Nov 2026)", () => {
     const decided = await decideRequest(asked.id, { approve: false, note: "Tetap dicatat" }, actor, morning);
     expect(decided).toMatchObject({ status: "ditolak", decisionNote: "Tetap dicatat" });
     expect(db.pw_daily_attendance).toHaveLength(1);
+  });
+});
+
+describe("Ubah absen (Admin HR, 21 Nov 2026)", () => {
+  it("moves the time within the work day and sets the place, noting who and why", async () => {
+    const { record } = await clockIn(member, face);
+    const changed = await editRecord(record.id, { time: "08:05", zone: "WIB", place: "dinas", reasonText: "Klien di Solo", note: "Sesuai surat tugas" }, { employeeId: OTHER, label: "Admin Contoh" }, morning);
+    expect(changed).toMatchObject({ at: "2026-11-20T01:05:00.000Z", workDate: "2026-11-20", reasonKind: "dinas", reasonText: "Klien di Solo", reviewNote: "Diubah Admin HR: Sesuai surat tugas" });
+    const back = await editRecord(record.id, { time: "09:05", zone: "WITA", place: "kantor", reasonText: "", note: "Kembali ke kantor" }, { employeeId: OTHER, label: "Admin Contoh" }, morning);
+    expect(back).toMatchObject({ at: "2026-11-20T01:05:00.000Z", reasonKind: null });
+  });
+  it("does not call an outside clock-in 'in the office', and needs a note for Lainnya", async () => {
+    const { record } = await clockIn(member, face, { lat: -7.9, lng: 110.6, reason: { kind: "event", text: "Venue" } });
+    await expect(editRecord(record.id, { time: "08:00", zone: "WIB", place: "kantor", reasonText: "", note: "Salah" }, { employeeId: OTHER, label: "Admin" }, morning)).rejects.toMatchObject({ status: 422 });
+    await expect(editRecord(record.id, { time: "08:00", zone: "WIB", place: "lainnya", reasonText: "", note: "Salah" }, { employeeId: OTHER, label: "Admin" }, morning)).rejects.toMatchObject({ status: 422 });
+    await expect(editRecord("tidak-ada", { time: "08:00", zone: "WIB", place: "event", reasonText: "", note: "Salah" }, { employeeId: OTHER, label: "Admin" }, morning)).rejects.toMatchObject({ status: 404 });
   });
 });
 

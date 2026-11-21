@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, FilterChips, PageHeader, Pill, SearchField, useViewPreference, ViewToggle, type ConsoleTone } from "@/components/console";
@@ -10,6 +10,7 @@ import type { DayTable } from "@/lib/hr/recap";
 import { CellLegend, StatusCell } from "./cells";
 import { hrAdminApi, hrAdminPath } from "@/lib/routes";
 import { RecordReview } from "./RecordReview";
+import { Flash } from "./Flash";
 import css from "./hr-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -44,6 +45,7 @@ export function DayAttendance({ initial, today }: { initial: DayTable; today: st
   const [manualTime, setManualTime] = useState("08:00");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const clearMessage = useCallback(() => setMessage(null), []);
   const [view, setView] = useViewPreference("admin-hr-absen", "tabel");
   /** The day asked for last: an answer for another day (a slow quiet reload) is dropped. */
   const wanted = useRef(initial.date);
@@ -129,7 +131,7 @@ export function DayAttendance({ initial, today }: { initial: DayTable; today: st
   return <>
     <PageHeader title="Absen harian" subtitle={`Masuk dan pulang semua karyawan per hari. Telat = masuk setelah ${day.lateAfter.replace(":", ".")}. Buka satu orang untuk melihat detail, menyetujui, atau mencatat manual.`}
       actions={<ConsoleButton icon={<Trash2 size={16} aria-hidden />} disabled={busy} onClick={() => void deleteOld()}>Hapus selfie lama</ConsoleButton>} />
-    {message && <Notice tone={message.tone}>{message.text}</Notice>}
+    <Flash message={message} onClose={clearMessage} />
     {day.offices.length === 0 && <Notice tone="warning">Belum ada titik kantor, jadi semua absen terhitung di luar area. <a href={hrAdminPath.offices}>Atur titik kantor</a>.</Notice>}
     <Card title={longDay(day.date)}>
       <div className={css.toolbar}>

@@ -57,7 +57,7 @@ vi.mock("../pra-wam/appraisal", () => ({
   ],
 }));
 
-const { adminMonth, cancelLeave, createLeave, decideLeave, teamLeaves, withdrawLeave } = await import("./leave");
+const { adminCreateLeave, adminMonth, adminUpdateLeave, cancelLeave, createLeave, decideLeave, teamLeaves, withdrawLeave } = await import("./leave");
 const me = { id: PERSON, name: "Contoh Satu" } as Member;
 const now = new Date("2026-11-21T03:00:00Z");
 const actor = { employeeId: OTHER, label: "Admin Contoh" };
@@ -95,6 +95,20 @@ describe("cuti, sakit, izin and dinas", () => {
     await expect(withdrawLeave(made.id, "", actor, now)).rejects.toMatchObject({ status: 409 });
     // Its days are free again.
     expect((await createLeave(me, { type: "izin", startDate: "2026-11-24", endDate: "2026-11-24", note: "Urusan keluarga" }, now)).status).toBe("menunggu");
+  });
+  it("lets Admin HR record one for an employee (approved at once) and change its days, not over another", async () => {
+    const made = await adminCreateLeave(OTHER, { type: "sakit", startDate: "2026-11-20", endDate: "2026-11-21", note: "Kabar lewat telepon" }, actor, now);
+    expect(made).toMatchObject({ status: "disetujui", name: "Contoh Dua", decidedLabel: "Admin Contoh", decisionNote: "Dicatat Admin HR" });
+    await expect(adminCreateLeave(OTHER, { type: "izin", startDate: "2026-11-21", endDate: "2026-11-21", note: "Urusan" }, actor, now)).rejects.toMatchObject({ status: 409 });
+    const moved = await adminUpdateLeave(made.id, { type: "sakit", startDate: "2026-11-23", endDate: "2026-11-24", note: "Diperpanjang" }, actor, now);
+    expect(moved).toMatchObject({ startDate: "2026-11-23", endDate: "2026-11-24", note: "Diperpanjang", status: "disetujui" });
+    // Its own old days do not count as a clash; another one's do.
+    const other = await adminCreateLeave(OTHER, { type: "cuti", startDate: "2026-11-26", endDate: "2026-11-27", note: "Cuti" }, actor, now);
+    await expect(adminUpdateLeave(other.id, { type: "cuti", startDate: "2026-11-24", endDate: "2026-11-27", note: "Cuti" }, actor, now)).rejects.toMatchObject({ status: 409 });
+    await decideLeave(other.id, { approve: false, note: "x" }, actor, now).catch(() => undefined);
+    await withdrawLeave(other.id, "", actor, now);
+    await expect(adminUpdateLeave(other.id, { type: "cuti", startDate: "2026-11-28", endDate: "2026-11-28", note: "Cuti" }, actor, now)).rejects.toMatchObject({ status: 409 });
+    await expect(adminCreateLeave("tidak-ada", { type: "cuti", startDate: "2026-11-28", endDate: "2026-11-28", note: "Cuti" }, actor, now)).rejects.toMatchObject({ status: 404 });
   });
   it("shows the team who and when, without the notes, waiting and approved only", async () => {
     db.pw_leave_requests.push(

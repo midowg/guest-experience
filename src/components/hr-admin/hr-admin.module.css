@@ -138,3 +138,17 @@ button.slot:hover, button.slot[aria-expanded="true"] { border-color: var(--cs-pr
 .uploadForm input[type="file"] { padding: 6px 0; border: 0; background: none; }
 .uploadPreview { width: 96px; height: 96px; border-radius: 14px; object-fit: cover; background: var(--cs-fill); border: 1px solid var(--cs-line); }
 @media (max-width: 720px) { .uploadForm { grid-template-columns: 1fr; } }
+
+/* What an action did, floating at the foot of the screen (Flash). */
+.flash { position: fixed; z-index: 80; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); display: flex; align-items: flex-start; gap: 10px; padding: 12px 8px 12px 14px; border-radius: 14px; background: var(--cs-strong); color: var(--cs-on-strong); box-shadow: var(--cs-shadow); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.flash > svg { flex: none; margin-top: 2px; }
+.flash[data-tone="success"] > svg { color: #8fd3a8; }
+.flash[data-tone="error"] { background: var(--cs-bad-fg); }
+.flash span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.flashClose { flex: none; width: 32px; height: 32px; margin: -6px 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.flashClose:hover { background: rgb(255 255 255 / .12); }
+@media (prefers-reduced-motion: no-preference) { .flash { animation: flashIn 200ms cubic-bezier(.2, 0, 0, 1) both; } }
+@keyframes flashIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Ubah absen: its fields on a soft panel inside the review. */
+.editBox { display: grid; gap: 12px; padding: 12px; border-radius: 12px; background: var(--cs-primary-soft); }

@@ -5,7 +5,7 @@ import { hrAdminSection } from "@/components/hr-admin/sections";
 import { Notice } from "@/components/ui";
 import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
-import { adminLeaves } from "@/lib/server/hr/leave";
+import { adminLeaves, leavePeople } from "@/lib/server/hr/leave";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${hrAdminSection("cuti").label} · Admin HR` };
@@ -14,11 +14,11 @@ export const metadata = { title: `${hrAdminSection("cuti").label} · Admin HR` }
 export default async function HrAdminLeaves() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const data = await adminLeaves().catch((error: unknown) => {
+  const data = await Promise.all([adminLeaves(), leavePeople()]).catch((error: unknown) => {
     if (error instanceof ServiceError && error.status === 503) return error;
     throw error;
   });
   return <HrAdminFrame current="cuti">
-    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <LeaveQueue initial={data} />}
+    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <LeaveQueue initial={data[0]} people={data[1]} />}
   </HrAdminFrame>;
 }

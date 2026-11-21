@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Crosshair, ExternalLink, Plus } from "lucide-react";
-import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { VIEWER_ZONES, type ViewerZone } from "@/lib/pra-wam/zone";
 import { mapsLink, parseLatLng, type GeoPoint } from "@/lib/hr/geo";
 import { hrAdminApi } from "@/lib/routes";
+import { Flash } from "./Flash";
 import css from "./hr-admin.module.css";
 
 export type Office = { id: string; name: string; lat: number; lng: number; radiusM: number; zone: ViewerZone; active: boolean };
@@ -21,6 +21,8 @@ const draftOf = (office: Office): Draft => ({ id: office.id, name: office.name, 
  * Admin HR → Titik kantor (20 Nov 2026): where "di dalam area kantor" is for absensi. A point
  * is pasted from Google Maps ("lat, lng" or the map's link) or taken from this device's location,
  * with a radius of 30 to 1,000 m. A phone less sure than 100 m counts as outside anyway.
+ * The form opens where it was asked for (21 Nov 2026, the audit): Ubah inside that office's row,
+ * Tambah titik at the top, and the first field takes focus, so on a phone it is never off-screen.
  */
 /**
  * A small OpenStreetMap of the point (no key, no tracking cookie), about two radii around it, so the
@@ -38,7 +40,16 @@ export function OfficePoints({ initial }: { initial: Office[] }) {
   const [draft, setDraft] = useState<Draft | null>(initial.length ? null : empty);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const clearMessage = useCallback(() => setMessage(null), []);
   const point = draft ? parseLatLng(draft.point) : null;
+  const first = useRef<HTMLInputElement>(null);
+  // The form just opened (Tambah titik, or Ubah on a row): bring it into view and start typing there.
+  const opened = draft ? draft.id ?? "baru" : null;
+  useEffect(() => {
+    if (!opened) return;
+    first.current?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    first.current?.focus({ preventScroll: true });
+  }, [opened]);
 
   const here = () => {
     if (!navigator.geolocation) { setMessage({ tone: "error", text: "Browser ini tidak bisa membaca lokasi." }); return; }
@@ -77,16 +88,10 @@ export function OfficePoints({ initial }: { initial: Office[] }) {
     finally { setBusy(false); }
   }
 
-  return <>
-    <PageHeader title="Titik kantor" subtitle="Absen di dalam radius titik ini tercatat sah; di luar radius wajib alasan dan menunggu dicek."
-      actions={<>
-        <ConsoleButton variant="primary" icon={<Plus size={16} aria-hidden />} disabled={busy} onClick={() => { setMessage(null); setDraft(empty); }}>Tambah titik</ConsoleButton>
-      </>} />
-    {message && <Notice tone={message.tone}>{message.text}</Notice>}
-
-    {draft && <Card title={draft.id ? `Ubah ${draft.name}` : "Titik kantor baru"}>
+  /** The fields and buttons of the open draft: at the top for a new point, inside its row for Ubah. */
+  const form = () => draft && <>
       <div className={css.form}>
-        <label className={css.field}>Nama kantor<input type="text" maxLength={60} value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Mis. Kantor Pusat" /></label>
+        <label className={css.field}>Nama kantor<input ref={first} type="text" maxLength={60} value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Mis. Kantor Pusat" /></label>
         <label className={`${css.field} ${css.grow}`}>Koordinat (lat, lng) atau link Google Maps
           <input type="text" value={draft.point} onChange={event => setDraft({ ...draft, point: event.target.value })} placeholder="-7.78, 110.36" aria-invalid={draft.point !== "" && !point} />
         </label>
@@ -104,7 +109,16 @@ export function OfficePoints({ initial }: { initial: Office[] }) {
         <ConsoleButton variant="primary" disabled={busy || !point || draft.name.trim().length < 2} onClick={() => void save()}>Simpan</ConsoleButton>
         <ConsoleButton disabled={busy} onClick={() => setDraft(null)}>Batal</ConsoleButton>
       </div>
-    </Card>}
+  </>;
+
+  return <>
+    <PageHeader title="Titik kantor" subtitle="Absen di dalam radius titik ini tercatat sah; di luar radius wajib alasan dan menunggu dicek."
+      actions={<>
+        <ConsoleButton variant="primary" icon={<Plus size={16} aria-hidden />} disabled={busy} onClick={() => { setMessage(null); setDraft(empty); }}>Tambah titik</ConsoleButton>
+      </>} />
+    <Flash message={message} onClose={clearMessage} />
+
+    {draft && !draft.id && <Card title="Titik kantor baru">{form()}</Card>}
 
     <Card title={`Titik kantor (${offices.length})`}>
       {offices.length === 0 ? <p className={css.muted}>Belum ada titik kantor. Sampai ada, semua absen harian terhitung di luar area.</p> : <ul className={css.rows}>
@@ -114,12 +128,13 @@ export function OfficePoints({ initial }: { initial: Office[] }) {
             <Pill tone={office.active ? "ok" : "neutral"}>{office.active ? "Aktif" : "Nonaktif"}</Pill>
           </div>
           <p className={css.muted}>{office.lat}, {office.lng} · radius {office.radiusM} m · {office.zone}</p>
-          {draft?.id !== office.id && <MapPreview point={office} radiusM={office.radiusM} title={`Peta ${office.name}`} />}
+          {draft?.id === office.id ? <div className={css.review}>{form()}</div> : <>
+          <MapPreview point={office} radiusM={office.radiusM} title={`Peta ${office.name}`} />
           <div className={css.actions}>
             <ConsoleButtonLink href={mapsLink(office)} target="_blank" rel="noopener" icon={<ExternalLink size={16} aria-hidden />}>Lihat di Maps</ConsoleButtonLink>
             <ConsoleButton disabled={busy} onClick={() => { setMessage(null); setDraft(draftOf(office)); }}>Ubah</ConsoleButton>
             <ConsoleButton disabled={busy} onClick={() => void remove(office)}>Hapus</ConsoleButton>
-          </div>
+          </div></>}
         </li>)}
       </ul>}
     </Card>

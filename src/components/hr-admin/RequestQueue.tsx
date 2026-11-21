@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, PartyPopper, X } from "lucide-react";
-import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, PageHeader, Pill, type ConsoleTone } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { kindLabels, reasonLabels, requestStatusLabels, requestSummary, requestTypeLabels, type AdminRequest, type RequestStatus } from "@/lib/hr/attendance";
 import { hrAdminApi } from "@/lib/routes";
+import { Flash } from "./Flash";
 import css from "./hr-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -27,6 +27,7 @@ export function RequestQueue({ initial }: { initial: AdminRequest[] }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const clearMessage = useCallback(() => setMessage(null), []);
   const waiting = items.filter(item => item.status === "menunggu");
   const decided = items.filter(item => item.status !== "menunggu").slice(0, 20);
 
@@ -47,7 +48,7 @@ export function RequestQueue({ initial }: { initial: AdminRequest[] }) {
 
   return <>
     <PageHeader title="Revisi" subtitle="Perbaikan absen yang diajukan karyawan. Setujui langsung diterapkan ke absensi; tolak dengan alasan." />
-    {message && <Notice tone={message.tone}>{message.text}</Notice>}
+    <Flash message={message} onClose={clearMessage} />
     {waiting.length === 0
       ? <Card title="Tidak ada revisi menunggu"><div className={css.empty}><PartyPopper size={32} aria-hidden /><p>Revisi baru dari karyawan akan muncul di sini.</p></div></Card>
       : <Card title={`${waiting.length} revisi menunggu`}>

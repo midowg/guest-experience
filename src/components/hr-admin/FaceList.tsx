@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ImageUp, RotateCcw, ScanFace, X } from "lucide-react";
-import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, FilterChips, PageHeader, Pill, SearchField, type ConsoleTone } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { imageProblemLabels, loadFaceEngine } from "@/components/hr/faceEngine";
 import { faceStatusLabels, type FaceRow, type FaceStatus } from "@/lib/hr/attendance";
 import { hrAdminApi } from "@/lib/routes";
 import { FaceUpload, type FaceCandidate } from "./FaceUpload";
+import { Flash } from "./Flash";
 import css from "./hr-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -35,6 +35,7 @@ export function FaceList({ initial, candidates: initialCandidates = [] }: { init
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; name: string } | null>(null);
   const [message, setMessage] = useState<Message>(null);
+  const clearMessage = useCallback(() => setMessage(null), []);
   const [candidates, setCandidates] = useState(initialCandidates);
   const [picked, setPicked] = useState("");
   const pickForUpload = (employeeId: string) => {
@@ -98,7 +99,7 @@ export function FaceList({ initial, candidates: initialCandidates = [] }: { init
 
   return <>
     <PageHeader title="Wajah terdaftar" subtitle="Foto acuan untuk mencocokkan wajah saat absen. Foto dari GreatDay perlu diproses sekali; wajah yang didaftarkan sendiri kadang perlu disetujui." />
-    {message && <Notice tone={message.tone}>{message.text}</Notice>}
+    <Flash message={message} onClose={clearMessage} />
 
     {(imports.length > 0 || progress) && <Card title="Foto dari GreatDay yang belum diproses">
       <p className={css.muted}>{imports.length} foto akan dibaca di browser ini (butuh sekitar 1–2 detik per foto). Jangan tutup halaman sampai selesai.</p>

@@ -85,7 +85,7 @@ export default async function DevHrAdminPage({ searchParams }: { searchParams: P
   return <HrAdminNav current={current} superAdmin waiting={waiting.length} requests={2} leaves={2} className={admin.shell} personName="Super admin">
     {current === "revisi" && <RequestQueue initial={requests} />}
     {current === "ringkasan" && <HrOverview summary={summary} waiting={waiting} superAdmin late={{ time: "09:00", ready: true, leaves: 2 }} />}
-    {current === "cuti" && <LeaveQueue initial={leaveSample} />}
+    {current === "cuti" && <LeaveQueue initial={leaveSample} people={[{ employeeId: "e2", name: "Contoh Dua", department: "Event Production" }, { employeeId: "e3", name: "Contoh Tiga", department: "Finance" }]} />}
     {current === "rekap" && <MonthRecap initial={month} />}
     {current === "perlu" && <ReviewQueue initial={waiting} />}
     {current === "absen" && <DayAttendance initial={day} today="2026-11-20" />}

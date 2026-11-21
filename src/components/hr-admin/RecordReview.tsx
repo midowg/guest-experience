@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ImageOff, ScanFace, Trash2, X } from "lucide-react";
+import { Check, ImageOff, Pencil, ScanFace, Trash2, X } from "lucide-react";
 import { ConsoleButton } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { clockMethodLabels, flagLabels, kindLabels, reasonLabels, type DailyRecord } from "@/lib/hr/attendance";
+import { clockMethodLabels, flagLabels, kindLabels, REASON_KINDS, reasonLabels, type DailyRecord, type ReasonKind } from "@/lib/hr/attendance";
+import { VIEWER_ZONES, zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
 import { matchPercent, scoreLabel } from "@/lib/hr/face-match";
 import { distanceLabel } from "@/lib/hr/geo";
 import { hrAdminApi } from "@/lib/routes";
@@ -15,6 +16,8 @@ import css from "./hr-admin.module.css";
  * the score, where it was and why it waits, then Setujui, Tolak (with a reason) or Jadikan foto acuan.
  * "Hapus absen" (21 Nov 2026, for test data and mistakes) sits last and apart, and asks once, in place,
  * naming whose clock-in it is and that the selfie goes too. Used by Perlu dicek and Absen harian alike.
+ * "Ubah" (21 Nov 2026, the audit): the time (same work day, in a chosen zone) and where it was
+ * (the office it was taken in, or a reason outside), always with why; the status stays.
  */
 const when = (record: DailyRecord) => `${new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${record.workDate}T12:00:00Z`))} ${new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(record.at))}`;
 
@@ -29,6 +32,13 @@ export function RecordReview({ record, employeeId, name, hasFace, onChanged, onD
   const [refusing, setRefusing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Taken inside an office point (no reason was needed), or recorded by hand; the server checks it again.
+  const inOffice = !record.reasonKind || record.method === "manual";
+  const [change, setChange] = useState<{ time: string; zone: ViewerZone; place: "kantor" | ReasonKind; reasonText: string; note: string } | null>(null);
+  const startChange = () => {
+    setRefusing(false); setDeleting(false);
+    setChange({ time: zoneTime(record.at, "WIB"), zone: "WIB", place: record.reasonKind ?? (inOffice ? "kantor" : "event"), reasonText: record.reasonText ?? "", note: "" });
+  };
 
   async function decide(status: "sah" | "ditolak") {
     setBusy(true);
@@ -37,6 +47,17 @@ export function RecordReview({ record, employeeId, name, hasFace, onChanged, onD
       if (result.data) onChanged(result.data);
       onMessage({ tone: "success", text: `${result.message} (${name})` });
       setRefusing(false); setNote("");
+    } catch (error) { onMessage({ tone: "error", text: errorMessage(error) }); }
+    finally { setBusy(false); }
+  }
+  async function saveChange() {
+    if (!change) return;
+    setBusy(true);
+    try {
+      const result = await adminRequest<DailyRecord>(hrAdminApi.record(record.id), { method: "PATCH", body: JSON.stringify({ action: "ubah", ...change }) });
+      if (result.data) onChanged(result.data);
+      onMessage({ tone: "success", text: `${result.message} (${name})` });
+      setChange(null);
     } catch (error) { onMessage({ tone: "error", text: errorMessage(error) }); }
     finally { setBusy(false); }
   }
@@ -84,7 +105,28 @@ export function RecordReview({ record, employeeId, name, hasFace, onChanged, onD
       {record.flags.length > 0 && <><dt>Kenapa dicek</dt><dd>{record.flags.map(flag => flagLabels[flag]).join(", ")}</dd></>}
       {record.reviewNote && <><dt>Catatan</dt><dd>{record.reviewNote}</dd></>}
     </dl>
-    {deleting
+    {change
+      ? <div className={css.editBox}>
+        <div className={css.form}>
+          <label className={css.field}>Jam {kindLabels[record.kind].toLowerCase()}<input type="time" value={change.time} autoFocus onChange={event => setChange({ ...change, time: event.target.value })} /></label>
+          <label className={css.field}>Zona
+            <select value={change.zone} onChange={event => { const zone = event.target.value as ViewerZone; setChange({ ...change, zone, time: change.zone === zone ? change.time : zoneTime(record.at, zone) }); }}>{VIEWER_ZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}</select>
+          </label>
+          <label className={css.field}>Tempat
+            <select value={change.place} onChange={event => setChange({ ...change, place: event.target.value as "kantor" | ReasonKind })}>
+              <option value="kantor">{record.officeName && inOffice ? `Di kantor (${record.officeName})` : "Di kantor"}</option>
+              {REASON_KINDS.map(kind => <option key={kind} value={kind}>{reasonLabels[kind]}</option>)}
+            </select>
+          </label>
+          {change.place !== "kantor" && <label className={`${css.field} ${css.grow}`}>Keterangan tempat{change.place === "lainnya" ? "" : " (boleh kosong)"}<input type="text" maxLength={300} value={change.reasonText} onChange={event => setChange({ ...change, reasonText: event.target.value })} placeholder="Mis. nama venue atau klien" /></label>}
+          <label className={`${css.field} ${css.grow}`}>Alasan perubahan<input type="text" maxLength={300} value={change.note} onChange={event => setChange({ ...change, note: event.target.value })} placeholder="Mis. sesuai laporan atasan" /></label>
+        </div>
+        <div className={css.actions}>
+          <ConsoleButton variant="primary" icon={<Check size={16} aria-hidden />} disabled={busy || !change.time || change.note.trim().length < 3 || (change.place === "lainnya" && change.reasonText.trim().length < 3)} onClick={() => void saveChange()}>Simpan perubahan</ConsoleButton>
+          <ConsoleButton disabled={busy} onClick={() => setChange(null)}>Batal</ConsoleButton>
+        </div>
+      </div>
+      : deleting
       ? <div className={css.confirm} role="alertdialog" aria-labelledby={`hapus-${record.id}`}>
         <p id={`hapus-${record.id}`}><strong>Hapus absen {kindLabels[record.kind].toLowerCase()} {name}, {when(record)}?</strong> {record.hasSelfie ? "Selfie-nya ikut terhapus. " : ""}Ini tidak bisa dibatalkan.</p>
         <div className={css.actions}>
@@ -101,6 +143,7 @@ export function RecordReview({ record, employeeId, name, hasFace, onChanged, onD
       : <div className={css.actions}>
         {record.status !== "sah" && <ConsoleButton variant="primary" icon={<Check size={16} aria-hidden />} disabled={busy} onClick={() => void decide("sah")}>Setujui</ConsoleButton>}
         {record.status !== "ditolak" && record.method === "wajah" && <ConsoleButton icon={<X size={16} aria-hidden />} disabled={busy} onClick={() => setRefusing(true)}>Tolak</ConsoleButton>}
+        <ConsoleButton icon={<Pencil size={16} aria-hidden />} disabled={busy} onClick={startChange}>Ubah</ConsoleButton>
         {record.hasSelfie && record.method === "wajah" && <ConsoleButton icon={<ScanFace size={16} aria-hidden />} disabled={busy} onClick={() => void asReference()}>Jadikan foto acuan</ConsoleButton>}
         <span className={css.spacer} aria-hidden />
         <ConsoleButton className={css.danger} icon={<Trash2 size={16} aria-hidden />} disabled={busy} onClick={() => { setRefusing(false); setDeleting(true); }}>Hapus absen</ConsoleButton>

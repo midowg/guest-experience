@@ -204,6 +204,21 @@ export const officeSchema = z.object({
 });
 export type OfficeInput = z.infer<typeof officeSchema>;
 
+/**
+ * Admin HR changes a clock-in (21 Nov 2026, the audit): its time ("HH:MM" in `zone`, the same work
+ * day) and where it was: "kantor" keeps the office it was taken in, or one of the reasons outside.
+ * Always with why; the record keeps who changed it.
+ */
+export const recordEditSchema = z.object({
+  action: z.literal("ubah"),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Jam tidak dikenali."),
+  zone: z.enum(VIEWER_ZONES),
+  place: z.union([z.literal("kantor"), z.enum(REASON_KINDS)]),
+  reasonText: z.string().trim().max(300, "Keterangan paling banyak 300 karakter.").default(""),
+  note: z.string().trim().min(3, "Tulis alasan perubahan (minimal 3 huruf).").max(300, "Alasan paling banyak 300 karakter."),
+});
+export type RecordEdit = z.infer<typeof recordEditSchema>;
+
 export const reviewSchema = z.object({
   status: z.enum(["sah", "ditolak"]),
   note: z.string().trim().max(300, "Catatan paling banyak 300 karakter.").default(""),

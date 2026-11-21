@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCheck, PartyPopper } from "lucide-react";
-import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, FilterChips, PageHeader, Pill } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { flagLabels, kindLabels, type DailyFlag, type DailyRecord, type WaitingRecord } from "@/lib/hr/attendance";
 import { hrAdminApi } from "@/lib/routes";
 import { RecordReview } from "./RecordReview";
+import { Flash } from "./Flash";
 import css from "./hr-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -33,6 +33,7 @@ export function ReviewQueue({ initial }: { initial: WaitingRecord[] }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const clearMessage = useCallback(() => setMessage(null), []);
   const counts = useMemo(() => ({
     semua: items.length,
     di_luar: items.filter(item => kindOf(item) === "di_luar").length,
@@ -76,7 +77,7 @@ export function ReviewQueue({ initial }: { initial: WaitingRecord[] }) {
 
   return <>
     <PageHeader title="Perlu dicek" subtitle="Absen yang menunggu keputusanmu. Lihat selfie dan foto acuannya, lalu setujui atau tolak." />
-    {message && <Notice tone={message.tone}>{message.text}</Notice>}
+    <Flash message={message} onClose={clearMessage} />
     {items.length === 0
       ? <Card title="Semua sudah dicek"><div className={css.empty}><PartyPopper size={32} aria-hidden /><p>Tidak ada absen yang menunggu. Absen baru yang perlu dicek akan muncul di sini.</p></div></Card>
       : <Card title={`${shown.length} absen menunggu`}>

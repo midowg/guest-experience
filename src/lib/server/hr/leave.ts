@@ -188,6 +188,64 @@ export async function decideLeave(id: string, decision: { approve: boolean; note
   return asLeave(row);
 }
 
+/** Whether a person already has a waiting or approved request touching these days (another than `except`). */
+async function clashes(employeeId: string, span: { startDate: string; endDate: string }, except: string | null = null): Promise<boolean> {
+  const { data, error } = await createPrivilegedClient().from("pw_leave_requests").select("id,start_date,end_date")
+    .eq("employee_id", employeeId).in("status", ["menunggu", "disetujui"]).lte("start_date", span.endDate).gte("end_date", span.startDate);
+  if (error) fail(error);
+  return ((data ?? []) as LeaveRow[]).some(row => row.id !== except && overlaps({ startDate: row.start_date, endDate: row.end_date }, span));
+}
+const clashError = (name: string) => new ServiceError(409, `${name} sudah punya cuti, sakit, izin, atau dinas di tanggal itu. Ubah atau batalkan yang lama dulu.`);
+const ADMIN_DAYS = 366;
+
+/**
+ * Admin HR records one for an employee (21 Nov 2026, the audit): a sick call by phone, a cuti
+ * agreed in person. It is approved at once (Admin HR decided it) and shows in the team calendar.
+ */
+export async function adminCreateLeave(employeeId: string, input: LeaveInput, actor: AdminActorRef, now = new Date()): Promise<AdminLeave> {
+  if (!(await leaveReady())) throw leaveWaiting();
+  const person = (await listPeople()).find(item => item.id === employeeId && item.active);
+  if (!person) throw new ServiceError(404, "Karyawan ini tidak ditemukan atau sudah tidak aktif.");
+  const today = jakartaToday(now);
+  if (input.startDate < daysFrom(today, -ADMIN_DAYS) || input.startDate > daysFrom(today, ADMIN_DAYS)) throw new ServiceError(422, "Tanggal paling jauh setahun ke belakang atau ke depan.");
+  if (await clashes(employeeId, input)) throw clashError(person.fullName);
+  const at = now.toISOString();
+  const { data, error } = await createPrivilegedClient().from("pw_leave_requests").insert({
+    employee_id: employeeId, type: input.type, start_date: input.startDate, end_date: input.endDate, note: input.note,
+    status: "disetujui", decided_by: actor.employeeId, decided_label: actor.label, decided_at: at, decision_note: "Dicatat Admin HR",
+  }).select(LEAVE_COLUMNS).single();
+  if (error) fail(error);
+  return { ...asLeave(data as LeaveRow), employeeId, name: person.fullName, department: person.department };
+}
+
+/** Admin HR changes the kind, the days or the note of a waiting or approved request. */
+export async function adminUpdateLeave(id: string, input: LeaveInput, actor: AdminActorRef, now = new Date()): Promise<LeaveRequest> {
+  if (!(await leaveReady())) throw leaveWaiting();
+  const client = createPrivilegedClient();
+  const { data: found, error: readError } = await client.from("pw_leave_requests").select(LEAVE_COLUMNS).eq("id", id).maybeSingle();
+  if (readError) fail(readError);
+  const row = found as LeaveRow | null;
+  if (!row) throw new ServiceError(404, "Pengajuan tidak ditemukan.");
+  if (row.status !== "menunggu" && row.status !== "disetujui") throw new ServiceError(409, "Pengajuan yang ditolak atau dibatalkan tidak bisa diubah.");
+  const today = jakartaToday(now);
+  if (input.startDate < daysFrom(today, -ADMIN_DAYS) || input.startDate > daysFrom(today, ADMIN_DAYS)) throw new ServiceError(422, "Tanggal paling jauh setahun ke belakang atau ke depan.");
+  if (await clashes(row.employee_id, input, id)) throw clashError("Karyawan ini");
+  const { data, error } = await client.from("pw_leave_requests").update({
+    type: input.type, start_date: input.startDate, end_date: input.endDate, note: input.note,
+    decision_note: `Diubah ${actor.label}`.slice(0, 300),
+    ...(row.status === "disetujui" ? { decided_by: actor.employeeId, decided_label: actor.label, decided_at: now.toISOString() } : {}),
+  }).eq("id", id).in("status", ["menunggu", "disetujui"]).select(LEAVE_COLUMNS);
+  if (error) fail(error);
+  const updated = (data ?? [])[0] as LeaveRow | undefined;
+  if (!updated) throw new ServiceError(409, "Pengajuan ini baru saja diubah. Muat ulang halaman.");
+  return asLeave(updated);
+}
+
+/** Cuti & izin's picker: everyone active, by name. */
+export async function leavePeople(): Promise<{ employeeId: string; name: string; department: string }[]> {
+  return (await clockers()).map(person => ({ employeeId: person.id, name: person.fullName, department: person.department })).sort((a, b) => a.name.localeCompare(b.name, "id"));
+}
+
 /** Admin HR withdraws a waiting or an approved request (plans changed): its days leave the calendar and the tables. */
 export async function withdrawLeave(id: string, note: string, actor: AdminActorRef, now = new Date()): Promise<LeaveRequest> {
   if (!(await leaveReady())) throw leaveWaiting();
