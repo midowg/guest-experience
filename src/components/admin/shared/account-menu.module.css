@@ -1,0 +1,12 @@
+/* The account button on Beranda and its small menu. */
+.root { position: relative; }
+.trigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line, #e4e7ec); border-radius: 999px; background: #fff; color: var(--blue, #1f4fd1); font: inherit; font-size: .875rem; font-weight: 800; cursor: pointer; transition: border-color .15s; }
+.trigger:hover, .trigger[aria-expanded="true"] { border-color: var(--blue, #1f4fd1); }
+.trigger:focus-visible { outline: 3px solid var(--blue, #1f4fd1); outline-offset: 2px; }
+.menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40; display: grid; gap: 2px; min-width: 14rem; padding: 6px; border: 1px solid var(--line, #e4e7ec); border-radius: 14px; background: #fff; box-shadow: 0 12px 32px rgba(15, 25, 50, .16); }
+.who { display: grid; margin: 0 0 4px; padding: 8px 10px; border-bottom: 1px solid var(--line, #e4e7ec); }
+.who span { color: #5b6472; font-size: .8125rem; }
+.menu a, .menu button { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 10px; border: 0; border-radius: 9px; background: none; color: var(--color-text, #0f172a); font: inherit; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
+.menu a:hover, .menu button:hover { background: #f4f6f9; }
+.menu button:disabled { opacity: .6; cursor: default; }
+.error { margin: 4px 10px; color: #b42318; font-size: .8125rem; }

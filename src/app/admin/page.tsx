@@ -11,6 +11,7 @@ import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { disabledModulesFor, templatesFor } from "@/lib/server/admin-settings";
 import { listStaff } from "@/lib/server/staff";
 import { standaloneApps } from "@/lib/server/standalone-apps";
+import { AccountMenu } from "@/components/admin/shared/AccountMenu";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function AdminPage() {
   return <AdminShell>
     <EventList events={events} featuredId={featuredId} phases={Object.fromEntries(events.map(event => [event.id, currentPhase(event)]))}
       superAdmin={role === "super" ? { hiddenIds: [...hidden.ids], migrated: hidden.migrated } : undefined} disabledModules={disabledModules} templates={templates} staff={team.staff} apps={shown}
-      canCreate={!actor || actorHasApp(actor, "acara")} />
+      canCreate={!actor || actorHasApp(actor, "acara")}
+      account={<AccountMenu name={actor?.kind === "person" ? actor.name : role === "super" ? "Super admin" : "Admin"} role={role} />} />
   </AdminShell>;
 }

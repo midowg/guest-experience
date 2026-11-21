@@ -5,7 +5,6 @@ import { listDonations } from "@/lib/server/donations";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { DonationBoard } from "@/components/admin/donations/DonationBoard";
-import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
 import { absolute, adminEventPath, eventPath } from "@/lib/routes";
 import { shareUrl } from "@/lib/site-url";
@@ -26,8 +25,6 @@ export default async function DonationsPage({ params }: { params: Promise<{ ref:
   if (event.event_kind !== "csr") notFound();
   const { donations, migrated } = await listDonations(id);
   return <AdminShell>
-    <p className="eyebrow">Donasi</p>
-    <h1 className={styles.title}>{event.title}</h1>
     <EventNavigation event={event} current="donations" />
     <DonationBoard event={{ id: event.id, title: event.title, timezone: event.timezone, donation: event.donation }} link={absolute(shareUrl().origin, eventPath(event))} initial={donations} migrated={migrated} />
   </AdminShell>;

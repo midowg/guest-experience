@@ -39,7 +39,7 @@ export function WamNav({ current, badges = {}, superAdmin = false, wide = false,
   const footerLinks: ConsoleLink[] = [
     { key: "app", label: "Buka aplikasi WAM", href: praWamPath.home, icon: <ExternalLink size={20} />, external: true },
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
-    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
+    { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
   ];
   const hidden = wamSections.filter(section => section.owner && !without.includes(section.key) && !without.includes(section.owner)).map(section => {
     const Icon = section.icon;

@@ -25,7 +25,7 @@ export function HrAdminNav({ current, superAdmin = false, waiting = 0, requests 
   const footerLinks: ConsoleLink[] = [
     { key: "app", label: "Buka WG People", href: hrPath.home, icon: <ExternalLink size={20} />, external: true },
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
-    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
+    { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
   ];
   return <ConsoleShell theme="admin" area={HR_ADMIN_LABEL} storageKey="admin-hr" className={className}
     person={{ name: personName ?? (superAdmin ? "Super admin" : "Admin"), sub: "Werkudara" }}

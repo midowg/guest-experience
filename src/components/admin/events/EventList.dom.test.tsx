@@ -22,16 +22,20 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it("shows each event as status, title, and date only", () => {
+it("shows each event as one row: photo, title, kind, date, where it stands, and the ways out", () => {
   render(<EventList events={[first, draft]} featuredId={null} />);
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Acara 2");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Beranda");
+  expect(screen.getByRole("heading", { level: 2, name: /^Acara/ }).textContent).toBe("Acara 2");
   const item = card("Acara Draf");
-  expect(within(item).getByText("Draf")).toBeTruthy();
+  expect(within(item).getByRole("link", { name: "Acara Draf" }).getAttribute("href")).toBe(`/admin/acara/${draft.id}`);
+  expect(within(item).getAllByText(/Draf/).length).toBeGreaterThan(0);
   expect(within(item).getByText(/Senin, 12 Oktober 2026 · 18\.00 WIB/)).toBeTruthy();
-  expect(within(item).getByRole("link", { name: "Buka" }).getAttribute("href")).toBe(`/admin/acara/${draft.id}`);
-  // The page preview above the card is a picture of the guest page (it shows the place); the card's own text stays short.
-  item.querySelector("[aria-hidden='true']")?.closest("a")?.remove();
-  for (const gone of [/\/e\/acara-draf/, /Terakhir disimpan/, /Eksternal|Internal/, /Werkudara$/]) expect(within(item).queryByText(gone)).toBeNull();
+  // A draft has no guest page yet: its way out is the editor, where the preview is.
+  expect(within(item).getByRole("link", { name: "Edit dan pratinjau Acara Draf" }).getAttribute("href")).toBe(`/admin/acara/${draft.id}`);
+  // A published event opens its guest page in a new tab.
+  const open = within(card("Acara A")).getByRole("link", { name: /Buka undangan Acara A/ });
+  expect(open.getAttribute("href")).toBe("/e/" + first.slug);
+  expect(open.getAttribute("target")).toBe("_blank");
 });
 
 it("offers an empty-state button when there are no events", () => {
@@ -46,8 +50,8 @@ it("keeps rarer actions in the card menu, depending on the event", () => {
   // The front page features no event any more: nothing new can be put on it.
   expect(within(menu("Acara B")).queryByRole("button", { name: /Tayangkan di halaman utama/ })).toBeNull();
   expect(within(menu("Acara Draf")).queryByRole("button", { name: /halaman utama/ })).toBeNull();
-  expect(within(menu("Acara Draf")).queryByRole("link", { name: /Lihat undangan/ })).toBeNull();
-  expect(within(menu("Acara B")).getByRole("link", { name: /Lihat undangan/ }).getAttribute("href")).toBe("/e/acara-b");
+  expect(within(card("Acara Draf")).queryByRole("link", { name: /Buka undangan/ })).toBeNull();
+  expect(within(card("Acara B")).getByRole("link", { name: /Buka undangan Acara B/ }).getAttribute("href")).toBe("/e/acara-b");
 });
 
 it("asks before taking an event off the front page", () => {
@@ -89,16 +93,25 @@ it("closes an open card menu on a click elsewhere or Escape", () => {
   expect(details.open).toBe(false);
 });
 
-it("groups the events as Tayang, Draf and a folded Arsip, today's and coming ones first", () => {
+it("lists today's and coming events first, then drafts; the archive behind its filter", () => {
   const done = { ...second, id: "10f3a511-2331-4000-8000-000000000004", title: "Acara Selesai", slug: "acara-selesai" };
   const archived = { ...createSeedEvent(), id: "10f3a511-2331-4000-8000-000000000005", status: "archived" as const, title: "Acara Lama", slug: "acara-lama" };
   render(<EventList events={[done, draft, archived, first]} featuredId={null} phases={{ [done.id]: "after", [first.id]: "day" }} />);
-  const live = screen.getByRole("region", { name: /^Tayang/ });
-  expect(within(live).getAllByRole("heading", { level: 2 }).slice(1).map(heading => heading.textContent)).toEqual(["Acara A", "Acara Selesai"]);
-  expect(within(screen.getByRole("region", { name: /^Draf/ })).getByRole("link", { name: "Acara Draf" })).toBeTruthy();
-  const archive = card("Acara Lama").closest("details")!;
-  expect(archive.open).toBe(false);
-  expect(archive.querySelector("summary")?.textContent).toBe("Arsip 1");
+  const titles = () => within(screen.getByRole("list", { name: "Daftar acara" })).getAllByRole("listitem").map(item => within(item).getAllByRole("link")[0].textContent);
+  expect(titles()).toEqual(["Acara A", "Acara Selesai", "Acara Draf"]);
+  expect(within(card("Acara A")).getAllByText(/Hari H/).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: /^Arsip 1/ }));
+  expect(titles()).toEqual(["Acara Lama"]);
+  fireEvent.click(screen.getByRole("button", { name: /^Draf 1/ }));
+  expect(titles()).toEqual(["Acara Draf"]);
+});
+
+it("finds events and apps by name", () => {
+  render(<EventList events={[first, draft]} featuredId={null} apps={[{ key: "tv", name: "TV Announcement", eyebrow: "Digital signage", status: "TV kantor", address: "/tv", description: "Signage.", open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: "/admin/wam/tv" } }]} />);
+  fireEvent.change(screen.getByRole("searchbox", { name: "Cari acara atau aplikasi" }), { target: { value: "draf" } });
+  expect(screen.queryByRole("link", { name: "Acara A" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Acara Draf" })).toBeTruthy();
+  expect(screen.getByText("Tidak ada aplikasi yang cocok.")).toBeTruthy();
 });
 
 it("deletes from the card menu only after the event's code is typed", async () => {
@@ -126,17 +139,18 @@ it("closes the delete confirmation with Batal without deleting", () => {
   expect(globalThis.fetch).not.toHaveBeenCalled();
 });
 
-it("heads the list with the standalone apps and the Your Visit guide under Aplikasi, apart from the events", () => {
+it("heads the page with the apps and the Your Visit guide under Aplikasi: the card opens its admin, the arrow the app", () => {
   const guide = { ...createSeedEvent(), id: "10f3a511-2331-4000-8000-000000000009", status: "published" as const, title: "Your Visit to Werkudara", slug: "your-visit", event_kind: "panduan" as const };
   render(<EventList events={[first, guide]} featuredId={null} apps={[
-    { key: "wam", name: "Pra WAM", eyebrow: "Aplikasi karyawan", status: "Minggu Pra WAM", address: "/wam", description: "Agenda dan appraisal.", open: { label: "Buka aplikasi", href: "/wam" }, manage: { label: "Kelola di Admin Pra WAM", href: "/admin/wam" } },
+    { key: "wam", name: "Pra WAM", eyebrow: "Aplikasi karyawan", status: "Minggu Pra WAM", address: "/wam", description: "Agenda dan appraisal.", open: { label: "Buka aplikasi", href: "/wam" }, manage: { label: "Kelola di Admin Pra WAM", href: "/admin/wam" }, waiting: { label: "2 permintaan reset password", href: "/admin/wam/permintaan-reset" } },
     { key: "tv", name: "TV Announcement", eyebrow: "Digital signage", status: "TV kantor", address: "/tv", description: "Signage.", open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: "/admin/wam/tv" } },
   ]} />);
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Acara 1");
+  expect(screen.getByRole("heading", { level: 2, name: /^Acara/ }).textContent).toBe("Acara 1");
   const apps = within(screen.getByRole("region", { name: /Aplikasi/ }));
   expect(apps.getByRole("heading", { name: /Aplikasi/ }).textContent).toContain("3");
-  expect(apps.getByRole("link", { name: "Atur TV" }).getAttribute("href")).toBe("/admin/wam/tv");
-  expect(apps.getByRole("link", { name: /Buka aplikasi/ }).getAttribute("target")).toBe("_blank");
-  expect(apps.getByRole("link", { name: "Your Visit to Werkudara" })).toBeTruthy();
-  expect(screen.queryByRole("heading", { name: /^Your Visit \d/ })).toBeNull();
+  expect(apps.getByRole("link", { name: "Atur TV: TV Announcement" }).getAttribute("href")).toBe("/admin/wam/tv");
+  expect(apps.getByRole("link", { name: /Buka aplikasi Pra WAM/ }).getAttribute("target")).toBe("_blank");
+  expect(apps.getByRole("link", { name: "2 permintaan reset password" }).getAttribute("href")).toBe("/admin/wam/permintaan-reset");
+  expect(apps.getByRole("link", { name: "Kelola Your Visit to Werkudara" })).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Your Visit to Werkudara" })).toBeNull();
 });

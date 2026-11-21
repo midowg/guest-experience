@@ -41,7 +41,7 @@ it("ends the sidebar with the app (new tab), all events, super admin only for th
   expect(app.getAttribute("href")).toBe("/wam");
   expect(app.getAttribute("target")).toBe("_blank");
   expect(app.textContent).toContain("(tab baru)");
-  expect(screen.getByRole("link", { name: "Semua acara Journey" }).getAttribute("href")).toBe("/admin");
+  expect(screen.getByRole("link", { name: "Beranda Journey" }).getAttribute("href")).toBe("/admin");
   expect(screen.queryByRole("link", { name: "Super admin" })).toBeNull();
   expect(screen.getByRole("button", { name: "Keluar" })).toBeTruthy();
   rerender(<WamNav current="ringkasan" superAdmin><p /></WamNav>);

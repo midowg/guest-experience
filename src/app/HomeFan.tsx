@@ -13,7 +13,7 @@ import css from './home.module.css';
  * tilts toward the mouse. On a phone the fan is a swipeable cover flow: the middle card faces the
  * reader and glows, the others turn away. Motion stops with "reduce motion".
  */
-export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
+export function HomeFan({ doors, guest, year }: { doors: Door[]; guest: string; year: number }) {
   const stage = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
 
@@ -56,15 +56,15 @@ export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
     <header className={css.top}><SchemeSwitch /></header>
 
     <div className={css.head}>
-      <span className={css.crest} role="img" aria-label="Werkudara Group" />
+      <span className={css.crest} role="img" aria-label="Werkudara Group" style={{ viewTransitionName: "wk-crest" }} />
       <p className={css.kicker}>Selamat datang</p>
-      <h1 className={css.mark}>Journey</h1>
+      <h1 className={css.mark} style={{ viewTransitionName: "wk-title" }}>Journey</h1>
       <p className={css.by}>by Werkudara Group</p>
     </div>
 
     <nav aria-labelledby="doors-title" className={css.doors}>
       <h2 id="doors-title" className={css.srOnly}>Pilih aplikasi</h2>
-      <div className={css.fan} ref={stage} onScroll={() => requestAnimationFrame(flow)}>{doors.map((door, index) => {
+      <div className={css.fan} ref={stage} style={{ "--count": doors.length } as CSSProperties} onScroll={() => requestAnimationFrame(flow)}>{doors.map((door, index) => {
         const Icon = icons[door.icon];
         return <a key={door.href} data-card href={door.href} className={css.card} style={{ '--tone': door.tone, '--n': index - (doors.length - 1) / 2 } as CSSProperties}>
           <span className={css.glow} aria-hidden="true" />
@@ -85,6 +85,7 @@ export function HomeFan({ doors, guest }: { doors: Door[]; guest: string }) {
     <footer className={css.guest}>
       <p>{guest}</p>
       <p lang="en">Welcome. If you are our guest, the link we sent you has everything ready for you.</p>
+      <p className={css.copy}>© {year} Werkudara Group</p>
     </footer>
   </main>;
 }

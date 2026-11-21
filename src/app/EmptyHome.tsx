@@ -31,5 +31,6 @@ export function EmptyHome({ style = 'kartu', menu = defaultHomeMenu }: { style?:
   const doors: Door[] = menu.filter(item => item.shown).map(item => ({
     ...appDoors[item.app], icon: item.app, tone: item.tone, name: item.name, what: item.what, key: item.account, description: item.description,
   }));
-  return style === 'lampu' ? <HomeLamp doors={doors} guest={guest} /> : <HomeFan doors={doors} guest={guest} />;
+  const year = new Date().getFullYear();
+  return style === 'lampu' ? <HomeLamp doors={doors} guest={guest} year={year} /> : <HomeFan doors={doors} guest={guest} year={year} />;
 }

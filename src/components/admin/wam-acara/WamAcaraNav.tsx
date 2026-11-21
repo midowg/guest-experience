@@ -30,7 +30,7 @@ export function WamAcaraNav({ current, superAdmin = false, opensPraWam = false, 
   const footerLinks: ConsoleLink[] = [
     ...(opensPraWam ? [{ key: "pra-wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> }] : []),
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
-    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
+    { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
   ];
   const tabs = wamAcaraSections.filter(section => section.owner).map(section => {
     const Icon = section.icon;

@@ -3,8 +3,8 @@
  * select above form and phone; on a phone the form and the preview take turns (Isi | Lihat).
  */
 /* --header-h is the sticky admin header's height: the toolbar sticks just below it. */
-.editor { --menu-width: 15.5rem; --phone-width: 22rem; --header-h: 4.4rem; --sticky-top: calc(var(--header-h) + 4.25rem); }
-@media (max-width: 47.99rem) { .editor { --header-h: 4.05rem; } }
+.editor { --menu-width: 15.5rem; --phone-width: 22rem; --header-h: 0rem; --sticky-top: calc(var(--header-h) + 4.25rem); }
+/* No admin top bar since 22 Nov 2026: the toolbar sticks to the top of the screen. */
 /* Below 72rem the toolbar has a second row: the numbered chips. */
 @media (max-width: 71.99rem) { .editor { --sticky-top: calc(var(--header-h) + 7.4rem); } }
 
@@ -196,3 +196,49 @@
 /* A card (event_kind "kartu") has no phone preview: menu and form only. */
 @media (min-width: 72rem) { .layout[data-card] { grid-template-columns: var(--menu-width) minmax(0, 1fr); } .layout[data-card][data-menu="hidden"] { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 71.99rem) { .layout[data-card] { grid-template-columns: minmax(0, 1fr); } }
+
+/*
+ * The CMS layout (22 Nov 2026, docs/standar-admin.md), for every kind but Kartu and E-Guide: a clear
+ * side menu whose open item holds its form, and a big preview. On a phone or tablet the menu is a list
+ * and a part opens as a full sheet (Lihat pratinjau, Selesai).
+ */
+.inlineForm { flex: 1 1 100%; min-width: 0; margin: 6px 0 10px; }
+.inlineForm .formPane { gap: var(--space-3); padding: var(--space-4); border-radius: 14px; box-shadow: 0 1px 0 rgba(15, 25, 50, .04); }
+.inlineForm .formHeader, .sheetBody .formHeader { padding-bottom: var(--space-2); }
+/* The menu row already names the part: its title stays for screen readers only. */
+.inlineForm .formHeader h2, .sheetBody .formHeader h2, .inlineForm .formIcon, .inlineForm .formHeader > span:first-child, .sheetBody .formHeader > span:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.inlineForm .formHeader:not(:has(label)):not(:has(.field-hint)) { display: none; }
+.layout[data-cms] .menuRow { flex-wrap: wrap; }
+.layout[data-cms] .menu ul { gap: 4px; }
+.layout[data-cms] .menu button { min-height: 48px; padding: 8px 10px; font-size: .9375rem; }
+.layout[data-cms] .menuStage { padding-top: var(--space-2); letter-spacing: .04em; }
+.layout[data-cms] .menu li:has(> .inlineForm) { padding: 4px; border-radius: 14px; background: #f3f6fd; box-shadow: inset 0 0 0 1px #d6e2fb; }
+.layout[data-cms] .menu li:has(> .inlineForm) > button[aria-current="true"], .layout[data-cms] .menu .menuRow:has(> .inlineForm) > button[aria-current="true"] { background: transparent; color: var(--blue); font-weight: 800; }
+@media (min-width: 72rem) {
+  .layout[data-cms], .layout[data-cms][data-device="web"] { grid-template-columns: minmax(24rem, 31rem) minmax(0, 1fr); gap: var(--space-5); }
+  .layout[data-cms] .menu { position: static; max-height: none; overflow: visible; padding: var(--space-3); }
+  .layout[data-cms] .previewPane { padding: var(--space-3); border-radius: 18px; background: #e9ecf1; }
+}
+@media (max-width: 71.99rem) {
+  /* A grid item keeps its z-index even when static: the drawer's 60 would cover the sticky toolbar. */
+  .layout[data-cms] .menu { position: static; z-index: auto; width: auto; overflow: visible; transform: none; visibility: visible; border-radius: 16px; box-shadow: none; transition: none; }
+  .layout[data-cms] .menuHead { display: none; }
+  .layout[data-cms] .menu button[aria-current="true"] { background: transparent; color: var(--color-text); }
+  .layout[data-cms] .menu button::after { content: "›"; margin-left: auto; padding-left: 6px; color: #8a93a3; font-size: 1.25rem; line-height: 1; }
+  .layout[data-cms] .menuRow > button::after { content: none; }
+}
+@media (max-width: 47.99rem) {
+  .layout[data-cms][data-view="preview"] .menu { display: none; }
+}
+.sheet { position: fixed; inset: 0; z-index: 70; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--page); animation: sheetIn .22s cubic-bezier(.2, .8, .2, 1); }
+.sheetHead { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: var(--space-2); padding: 8px 12px; border-bottom: 1px solid var(--line); background: #fff; text-align: center; }
+.sheetHead strong { overflow: hidden; font-size: 1rem; white-space: nowrap; text-overflow: ellipsis; }
+.sheetClose { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: var(--page); color: var(--color-text); cursor: pointer; }
+.sheetBody { overflow-y: auto; padding: var(--space-3); }
+.sheetBody .formPane { padding: var(--space-4); }
+.sheetFoot { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fff; }
+.sheetFoot > * { justify-content: center; min-height: 46px; }
+@keyframes sheetIn { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+
+.iconButton { width: 44px; min-width: 44px; padding: 0 !important; justify-content: center; }

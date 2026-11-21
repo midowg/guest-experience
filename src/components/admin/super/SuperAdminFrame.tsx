@@ -38,7 +38,7 @@ export function SuperAdminFrame({ current, wide = false, children }: { current: 
   const footerLinks: ConsoleLink[] = [
     { key: "wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> },
     { key: "wam2026", label: WAM_EVENT_ADMIN_LABEL, href: mainWamAdminPath.home, icon: <CalendarDays size={20} /> },
-    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
+    { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
   ];
   return <ConsoleShell theme="admin" area="Super admin" storageKey="super-admin" className={admin.shell} wide={wide}
     person={{ name: "Super admin", sub: "Werkudara" }} groups={nav} current={current} pageTitle={labelOf(current)}

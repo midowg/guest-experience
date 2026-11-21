@@ -4,7 +4,6 @@ import { listRsvps } from "@/lib/server/responses";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { ResponsesView } from "@/components/admin/responses/ResponseViews";
-import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +22,6 @@ export default async function ResponsesPage({ params, searchParams }: { params: 
   const q = single(search.q).trim().slice(0, 100);
   const responses = await listRsvps(id, { page: Number(single(search.page)) || 1, attendance, q: q || undefined });
   return <AdminShell>
-    <p className="eyebrow">Konfirmasi kehadiran</p>
-    <h1 className={styles.title}>{event.title}</h1>
     <EventNavigation event={event} current="responses" />
     <ResponsesView eventId={id} initial={responses} initialFilters={{ attendance: attendance ?? "", q }} />
   </AdminShell>;

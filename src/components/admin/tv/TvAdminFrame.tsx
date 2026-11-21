@@ -30,7 +30,7 @@ export function TvAdminFrame({ current, wide = false, children }: { current: TvA
   const nav: ConsoleNavGroup[] = groups.map(group => ({ label: group.label, items: group.items.map(({ key, label, href, icon }) => ({ key, label, href, icon })) }));
   const footerLinks: ConsoleLink[] = [
     { key: "wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> },
-    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
+    { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
   ];
   return <ConsoleShell theme="admin" area="Admin TV" storageKey="tv-admin" className={admin.shell} wide={wide}
     person={{ name: "Admin", sub: "TV Announcement" }} groups={nav} current={current} pageTitle={tvAdminLabel(current)}

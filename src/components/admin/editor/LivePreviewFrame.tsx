@@ -46,6 +46,14 @@ const areaOf = (target: Element): PreviewArea | null => {
 export function LivePreviewFrame() {
   const [draft, setDraft] = useState<{ event: EventRecord; phase: EventPhase; guest?: string; version: number } | null>(null);
   const [highlight, setHighlight] = useState<{ area: PreviewArea; label: string; field?: string } | null>(null);
+  // Inside the editor's phone the page scrolls like a phone: no scrollbar of its own beside the editor's.
+  useEffect(() => {
+    if (parent === window) return;
+    const style = document.createElement("style");
+    style.textContent = "html{scrollbar-width:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}";
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
   useEffect(() => {
     const send = (message: PreviewMessage) => parent.postMessage(message, location.origin);
     const receive = (message: MessageEvent) => {

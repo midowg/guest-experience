@@ -22,7 +22,7 @@
 
 .top { position: absolute; z-index: 2; top: 16px; right: 16px; }
 
-.head { align-self: end; text-align: center; pointer-events: none;
+.head { align-self: center; text-align: center; pointer-events: none;
   /* A soft halo in the page colour keeps the title readable where the lamp lights the photo behind it. */
   text-shadow: 0 0 18px rgba(var(--shade), .95), 0 0 42px rgba(var(--shade), .8); }
 .crest { display: block; width: 52px; height: 60px; margin: 0 auto 14px; background: var(--logo);
@@ -63,7 +63,7 @@
 .tipFoot > span { display: inline-flex; align-items: center; gap: 4px; }
 
 .guest { display: grid; gap: 4px; max-width: 40rem; text-align: center; font-size: .875rem; line-height: 1.55; color: var(--soft); animation: fade .8s 1.4s both; }
-.guest p:last-child { font-size: .75rem; }
+
 
 /* A phone: no hover, so no tooltip; the dock wraps into two rows of tiles with their names. */
 @media (max-width: 40rem) {
@@ -82,3 +82,15 @@
 @media (prefers-reduced-motion: reduce) {
   .page *, .page { animation: none !important; transition: none !important; }
 }
+
+/* To Masuk admin: the pegasus and "Journey" glide into the login (a cross-document view transition). */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+
+/* The title and the apps in the middle of the screen; the guest note and © stay at the bottom. */
+.page { grid-template-rows: 1fr auto auto 1fr auto; }
+.head { grid-row: 2; }
+.guest { grid-row: 5; }
+.guest p[lang] { font-size: .75rem; }
+.page .copy { margin-top: 6px !important; font-size: .75rem; font-weight: 600; letter-spacing: .02em; opacity: .85; }
+.dock { grid-row: 3; }
