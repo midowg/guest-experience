@@ -5,7 +5,7 @@ import { Notice } from "@/components/ui";
 import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { FaceList } from "@/components/hr-admin/FaceList";
-import { listFaces } from "@/lib/server/hr/attendance";
+import { faceCandidates, listFaces } from "@/lib/server/hr/attendance";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${hrAdminSection("wajah").label} · Admin HR` };
@@ -16,12 +16,12 @@ const waitingFor = (error: unknown) => {
   throw error;
 };
 
-/** Admin HR → Wajah terdaftar: the reference faces, approving them, Proses foto impor. */
+/** Admin HR → Wajah terdaftar: the reference faces, approving them, Proses foto impor, Unggah foto acuan. */
 export default async function HrAdminFaces() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const data = await listFaces().catch(waitingFor);
+  const data = await Promise.all([listFaces(), faceCandidates()]).catch(waitingFor);
   return <HrAdminFrame current="wajah">
-    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <FaceList initial={data} />}
+    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <FaceList initial={data[0]} candidates={data[1]} />}
   </HrAdminFrame>;
 }

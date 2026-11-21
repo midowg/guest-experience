@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { EMBEDDING_SIZE } from "@/lib/hr/face-match";
+import { photoStartSchema } from "@/lib/pra-wam/photo";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
-import { decideFace, setImportedFace } from "@/lib/server/hr/attendance";
+import { decideFace, setImportedFace, setUploadedFace } from "@/lib/server/hr/attendance";
 import { hrAdminActor } from "@/lib/server/hr/session";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,11 @@ const schema = z.union([
   // "Proses foto impor": what the admin's browser read from the GreatDay photo, or why it could not.
   z.object({ action: z.literal("proses"), embedding: z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE) }),
   z.object({ action: z.literal("proses"), problem: z.string().trim().min(3).max(120) }),
+  // "Unggah foto acuan": the photo Admin HR uploaded for this person (startFaceUpload) and what their browser read from it.
+  photoStartSchema.extend({
+    action: z.literal("unggah"), key: z.string().min(10).max(200), token: z.string().min(10).max(200),
+    embedding: z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE),
+  }),
 ]);
 
 /** POST {action}: decides a reference face, or stores what was read from an imported photo. */
@@ -25,7 +31,11 @@ export async function POST(request: Request, { params }: Params) {
     const input = validate(schema, await readJson(request, 10_000));
     if (input.action === "proses") {
       const status = await setImportedFace(employeeId, "embedding" in input ? { embedding: input.embedding } : { problem: input.problem });
-      return success({ status }, status === "siap" ? "Foto terbaca. Menunggu persetujuan karyawan." : "Foto tidak terbaca; orangnya diminta daftar wajah.");
+      return success({ status }, status === "ditolak" ? "Foto tidak terbaca; orangnya diminta daftar wajah." : status === "siap" ? "Foto terbaca. Menunggu persetujuan karyawan." : "Foto terbaca dan langsung dipakai.");
+    }
+    if (input.action === "unggah") {
+      const status = await setUploadedFace(employeeId, input, await hrAdminActor());
+      return success({ status }, status === "aktif" ? "Foto acuan tersimpan dan langsung dipakai untuk absen." : "Foto acuan tersimpan; aktif setelah karyawannya setuju di absen pertama.");
     }
     const decision = input.action;
     await decideFace(employeeId, decision, await hrAdminActor(), "note" in input ? input.note : "");

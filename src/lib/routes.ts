@@ -869,6 +869,8 @@ export const hrAdminApi = {
   face: (employeeId: string) => `${HR_ADMIN_API}/wajah/${employeeId}`,
   /** GET: the reference photo (same origin, for Proses foto impor); `?lihat=1` redirects to storage. */
   facePhoto: (employeeId: string, view = false) => `${HR_ADMIN_API}/wajah/${employeeId}/foto${view ? "?lihat=1" : ""}`,
+  /** POST {mime, size}: where Admin HR's reference photo for this person goes ("Unggah foto acuan"). */
+  faceUpload: (employeeId: string) => `${HR_ADMIN_API}/wajah/${employeeId}/unggah`,
   /** GET/POST: the office points; PUT/DELETE one. */
   offices: `${HR_ADMIN_API}/kantor`,
   office: (id: string) => `${HR_ADMIN_API}/kantor/${id}`,

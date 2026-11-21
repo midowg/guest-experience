@@ -225,7 +225,11 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
   /** The main button: consent and enrolment first when needed, else the location. */
   const begin = (kind: DailyKind) => {
     setNotice(null); setAgreed(false); setPlace(null); setPlaceError(null); setReasonPicked(false); setReason({ kind: "event", text: "" });
-    if (!usable(state.face?.status)) open({ name: "persetujuan", then: "daftar" }, "Daftar wajah");
+    if (!usable(state.face?.status)) {
+      // Say why: no photo from HR (missing from GreatDay), or one that cannot be used.
+      setNotice(state.face ? "Foto acuanmu belum bisa dipakai. Daftarkan wajahmu sekali lagi." : "Akunmu belum punya foto acuan dari HR (tidak ada di data GreatDay), jadi wajahmu didaftarkan sekali di sini. Admin HR akan menyetujuinya.");
+      open({ name: "persetujuan", then: "daftar" }, "Daftar wajah");
+    }
     else if (state.face?.status === "siap" && !state.face.consented) open({ name: "persetujuan", then: kind }, absenTitle(kind));
     else open({ name: "lokasi", kind, consent: null }, absenTitle(kind));
   };

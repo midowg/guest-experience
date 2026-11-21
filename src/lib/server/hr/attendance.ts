@@ -219,7 +219,9 @@ export async function startClockIn(member: Member, kind: DailyKind, now = new Da
   if (!isR2Configured()) throw storageNotReady();
   const profile = await profileOf(member.id);
   if (!profile || !usableFace(profile.status) || profile.model_version !== FACE_MODEL_VERSION || !isEmbedding(profile.embedding)) {
-    return { kind: "daftar", message: profile?.status === "impor" ? "Foto acuanmu belum diproses Admin HR. Daftarkan wajahmu sekarang." : "Daftarkan wajahmu dulu, sekali saja." };
+    return { kind: "daftar", message: profile?.status === "impor" ? "Foto acuanmu belum diproses Admin HR. Daftarkan wajahmu sekarang."
+      : profile ? "Foto acuanmu belum bisa dipakai. Daftarkan wajahmu sekali lagi."
+        : "Akunmu belum punya foto acuan dari HR (tidak ada di data GreatDay), jadi wajahmu didaftarkan sekali di sini. Admin HR akan menyetujuinya." };
   }
   const zone = await viewerZone();
   const today = zoneDate(now.toISOString(), zone);
@@ -567,6 +569,67 @@ export async function setImportedFace(employeeId: string, result: { embedding: n
   }
   if (error) fail(error);
   return update.status;
+}
+
+/*
+ * "Unggah foto acuan" (21 Nov 2026): Admin HR gives a person a reference photo (someone missing from
+ * the GreatDay sheet, or a better photo). Like Proses foto impor, the admin's browser reads the face
+ * with the phones' engine before anything is stored; here the photo goes to private storage (a
+ * ten-minute address for this person only), then it becomes their reference, in use at once. Kept as
+ * source "greatday" (a photo from HR, no consent step), with a note saying who gave it.
+ */
+const adminFaceSignature = (key: string, mime: string, size: number, employeeId: string, expires: number) => sign("hr-wajah-admin", key, mime, size, employeeId, expires);
+const ADMIN_UPLOAD_SECONDS = 10 * 60;
+
+/** Step one: where the photo goes. Only for someone who clocks in (an active employee account). */
+export async function startFaceUpload(employeeId: string, input: { mime: PhotoMime; size: number }, now = new Date()): Promise<{ key: string; uploadUrl: string; token: string }> {
+  if (!isR2Configured()) throw storageNotReady();
+  if (!(await clockers()).some(person => person.id === employeeId)) throw new ServiceError(404, "Karyawan ini tidak ditemukan atau akunnya belum aktif.");
+  const expires = Math.floor(now.getTime() / 1000) + ADMIN_UPLOAD_SECONDS;
+  const key = faceKeyFor(employeeId, randomUUID(), input.mime);
+  return { key, uploadUrl: await presignUpload(key, input.mime, input.size), token: `${expires}.${adminFaceSignature(key, input.mime, input.size, employeeId, expires)}` };
+}
+
+/** Step two: the uploaded photo and what the admin's browser read from it become the person's reference. */
+export async function setUploadedFace(employeeId: string, input: { key: string; mime: PhotoMime; size: number; token: string; embedding: number[] }, actor: AdminActorRef, now = new Date()): Promise<FaceStatus> {
+  const [expiresText, given] = input.token.split(".");
+  const expires = Number(expiresText);
+  const valid = Number.isFinite(expires) && expires * 1000 >= now.getTime() && /^[0-9a-f]{64}$/.test(given ?? "")
+    && same(given, adminFaceSignature(input.key, input.mime, input.size, employeeId, expires)) && isOwnFaceKey(input.key, employeeId, input.mime);
+  if (!valid) throw unknownUpload();
+  if (!isR2Configured()) throw storageNotReady();
+  if (!isEmbedding(input.embedding)) throw new ServiceError(422, "Wajah di foto belum terbaca. Pilih foto lain.");
+  let keep = false;
+  try {
+    await checkUploaded(input);
+    const before = await profileOf(employeeId);
+    const oldKey = before?.photo_key ?? null;
+    const at = now.toISOString();
+    const row = {
+      employee_id: employeeId, embedding: input.embedding, model_version: FACE_MODEL_VERSION, photo_key: input.key, source: "greatday" as FaceSource,
+      status: "aktif" as FaceStatus, note: `Foto diunggah ${actor.label}`.slice(0, 300), consent_at: before?.consent_at ?? null,
+      approved_by: actor.employeeId, approved_label: actor.label.slice(0, 120), approved_at: at, updated_at: at,
+    };
+    const client = createPrivilegedClient();
+    let { error } = await client.from("pw_face_profiles").upsert(row, { onConflict: "employee_id" });
+    // Before migration 202611270001 a photo from HR waits for the person's consent ("siap").
+    if (error?.code === "23514") { row.status = "siap"; ({ error } = await client.from("pw_face_profiles").upsert(row, { onConflict: "employee_id" })); }
+    if (error) fail(error);
+    keep = true;
+    if (oldKey && oldKey !== input.key) await removeObjects([oldKey]).catch(() => undefined);
+    return row.status;
+  } finally {
+    if (!keep) await removeObjects([input.key]).catch(() => undefined);
+  }
+}
+
+/** Wajah terdaftar's picker: everyone who clocks in, and whether they have a reference face. */
+export async function faceCandidates(): Promise<{ employeeId: string; name: string; department: string; hasFace: boolean }[]> {
+  const [people, { data, error }] = await Promise.all([clockers(), createPrivilegedClient().from("pw_face_profiles").select("employee_id")]);
+  if (error) fail(error);
+  const withFace = new Set(((data ?? []) as { employee_id: string }[]).map(row => row.employee_id));
+  return people.map(person => ({ employeeId: person.id, name: person.fullName, department: person.department, hasFace: withFace.has(person.id) }))
+    .sort((a, b) => Number(a.hasFace) - Number(b.hasFace) || a.name.localeCompare(b.name, "id"));
 }
 
 export async function decideFace(employeeId: string, decision: "setujui" | "tolak" | "reset", actor: AdminActorRef, note = "", now = new Date()): Promise<void> {

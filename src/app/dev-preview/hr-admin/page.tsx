@@ -89,7 +89,12 @@ export default async function DevHrAdminPage({ searchParams }: { searchParams: P
     {current === "rekap" && <MonthRecap initial={month} />}
     {current === "perlu" && <ReviewQueue initial={waiting} />}
     {current === "absen" && <DayAttendance initial={day} today="2026-11-20" />}
-    {current === "wajah" && <FaceList initial={faces} />}
+    {current === "wajah" && <FaceList initial={faces} candidates={[
+      { employeeId: "e6", name: "Contoh Enam", department: "Finance", hasFace: false },
+      { employeeId: "e7", name: "Contoh Tujuh", department: "Event Production", hasFace: false },
+      { employeeId: "e1", name: "Contoh Satu", department: "Center of Excellence", hasFace: true },
+      { employeeId: "e4", name: "Contoh Empat", department: "Center of Excellence", hasFace: true },
+    ]} />}
     {current === "kantor" && <OfficePoints initial={[{ ...office, active: true }]} />}
   </HrAdminNav>;
 }

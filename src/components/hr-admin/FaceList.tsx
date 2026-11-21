@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, RotateCcw, ScanFace, X } from "lucide-react";
+import { Check, ImageUp, RotateCcw, ScanFace, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, FilterChips, PageHeader, Pill, SearchField, type ConsoleTone } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { imageProblemLabels, loadFaceEngine } from "@/components/hr/faceEngine";
 import { faceStatusLabels, type FaceRow, type FaceStatus } from "@/lib/hr/attendance";
 import { hrAdminApi } from "@/lib/routes";
+import { FaceUpload, type FaceCandidate } from "./FaceUpload";
 import css from "./hr-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -21,8 +22,10 @@ const needsAction = (row: FaceRow) => row.status === "impor" || row.status === "
  * Admin HR → Wajah terdaftar (20 Nov 2026): every reference face with its photo. "Proses foto impor"
  * reads the GreatDay photos here in this browser with the same engine as the phones (only the
  * numbers are kept); a self-enrolled face that did not match its GreatDay photo waits for Setujui.
+ * "Unggah foto acuan" (21 Nov 2026) gives someone a photo from HR (missing from GreatDay, or a
+ * better one); "Ganti foto" on a row picks that person there.
  */
-export function FaceList({ initial }: { initial: FaceRow[] }) {
+export function FaceList({ initial, candidates: initialCandidates = [] }: { initial: FaceRow[]; candidates?: FaceCandidate[] }) {
   const router = useRouter();
   const [faces, setFaces] = useState(initial);
   const [filter, setFilter] = useState<Filter>(initial.some(needsAction) ? "tindakan" : "semua");
@@ -32,6 +35,17 @@ export function FaceList({ initial }: { initial: FaceRow[] }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; name: string } | null>(null);
   const [message, setMessage] = useState<Message>(null);
+  const [candidates, setCandidates] = useState(initialCandidates);
+  const [picked, setPicked] = useState("");
+  const pickForUpload = (employeeId: string) => {
+    setPicked(employeeId);
+    document.getElementById("unggah-foto")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  };
+  const uploaded = (employeeId: string, text: string) => {
+    setCandidates(list => list.map(item => item.employeeId === employeeId ? { ...item, hasFace: true } : item));
+    setPicked(""); setMessage({ tone: "success", text });
+    void reload();
+  };
 
   const count = (status: FaceStatus) => faces.filter(row => row.status === status).length;
   const counts = useMemo(() => ({ semua: faces.length, tindakan: faces.filter(needsAction).length }), [faces]);
@@ -74,7 +88,7 @@ export function FaceList({ initial }: { initial: FaceRow[] }) {
         await adminRequest(hrAdminApi.face(row.employeeId), { method: "POST", body: JSON.stringify(body) });
         if (check.ok) ready += 1; else unreadable += 1;
       }
-      setMessage({ tone: "success", text: `Selesai: ${ready} foto terbaca dan siap dipakai (setelah karyawannya setuju), ${unreadable} tidak terbaca (orangnya daftar wajah sendiri di aplikasi).` });
+      setMessage({ tone: "success", text: `Selesai: ${ready} foto terbaca dan langsung dipakai, ${unreadable} tidak terbaca (unggah foto lain di bawah, atau orangnya daftar wajah sendiri di aplikasi).` });
     } catch (error) {
       setMessage({ tone: "error", text: `${ready + unreadable} foto diproses, lalu berhenti: ${errorMessage(error)}. Tekan lagi untuk melanjutkan.` });
     } finally {
@@ -95,6 +109,8 @@ export function FaceList({ initial }: { initial: FaceRow[] }) {
         </div>
         : <div className={css.actions}><ConsoleButton variant="primary" icon={<ScanFace size={16} aria-hidden />} disabled={busy} onClick={() => void processImports()}>Proses {imports.length} foto</ConsoleButton></div>}
     </Card>}
+
+    {candidates.length > 0 && <FaceUpload candidates={candidates} picked={picked} onPick={setPicked} onDone={uploaded} />}
 
     <Card title={`${faces.length} wajah`}>
       <div className={css.toolbar}>
@@ -119,7 +135,7 @@ export function FaceList({ initial }: { initial: FaceRow[] }) {
                 // eslint-disable-next-line @next/next/no-img-element -- a five-minute storage address; next/image would cache it
                 ? <img className={css.thumb} src={hrAdminApi.facePhoto(row.employeeId, true)} alt="" loading="lazy" />
                 : <span className={css.thumb} aria-hidden />}
-              <span className={css.who}><strong>{row.name}</strong><span className={css.muted}>{row.department || "Tanpa departemen"} · {row.source === "greatday" ? "Foto GreatDay" : "Daftar sendiri"}{row.consented ? " · sudah setuju" : ""}</span></span>
+              <span className={css.who}><strong>{row.name}</strong><span className={css.muted}>{row.department || "Tanpa departemen"} · {row.source === "daftar" ? "Daftar sendiri" : row.note?.startsWith("Foto diunggah") ? "Foto dari Admin HR" : "Foto GreatDay"}{row.consented ? " · sudah setuju" : ""}</span></span>
             </span>
             <Pill tone={tone[row.status]}>{faceStatusLabels[row.status]}</Pill>
           </div>
@@ -133,6 +149,7 @@ export function FaceList({ initial }: { initial: FaceRow[] }) {
             : <div className={css.actions}>
               {row.status === "menunggu" && <ConsoleButton variant="primary" icon={<Check size={16} aria-hidden />} disabled={busy} onClick={() => void decide(row, "setujui")}>Setujui</ConsoleButton>}
               {row.status === "menunggu" && <ConsoleButton icon={<X size={16} aria-hidden />} disabled={busy} onClick={() => setRefusing(row.employeeId)}>Tolak</ConsoleButton>}
+              {candidates.some(item => item.employeeId === row.employeeId) && <ConsoleButton icon={<ImageUp size={16} aria-hidden />} disabled={busy} onClick={() => pickForUpload(row.employeeId)}>Ganti foto</ConsoleButton>}
               <ConsoleButton icon={<RotateCcw size={16} aria-hidden />} disabled={busy} onClick={() => void decide(row, "reset")}>Minta daftar ulang</ConsoleButton>
             </div>}
         </li>)}

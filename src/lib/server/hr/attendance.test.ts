@@ -83,7 +83,7 @@ const other: Member = { ...member, id: OTHER };
 // Jumat 20 Nov 2026, 08.30 WIB.
 const morning = new Date("2026-11-20T01:30:00Z");
 
-const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, readChallenge, setImportedFace, startClockIn, startEnroll, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
+const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, readChallenge, setImportedFace, setUploadedFace, startClockIn, startEnroll, startFaceUpload, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
 
 /** A made-up face: a fixed direction, and looks of it with a little noise. */
 function vector(seed: number): number[] {
@@ -250,6 +250,31 @@ describe("Foto cepat (21 Nov 2026)", () => {
     db.pw_face_profiles[0] = { ...db.pw_face_profiles[0], source: "greatday", status: "impor", embedding: null, consent_at: null };
     expect(await setImportedFace(PERSON, { embedding: face })).toBe("aktif");
     expect(db.pw_face_profiles[0]).toMatchObject({ status: "aktif", embedding: face });
+  });
+});
+
+describe("Unggah foto acuan (21 Nov 2026)", () => {
+  const admin = { employeeId: OTHER, label: "Admin Contoh" };
+  it("gives someone without a face a photo from HR, in use at once, and they clock in with it", async () => {
+    db.pw_face_profiles = [];
+    expect((await startClockIn(member, "masuk", morning)).kind).toBe("daftar");
+    const start = await startFaceUpload(PERSON, { mime: "image/webp", size: 40_000 }, morning);
+    expect(start.key).toMatch(new RegExp(`^pra-wam/wajah/${PERSON}/`));
+    expect(await setUploadedFace(PERSON, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, morning)).toBe("aktif");
+    expect(db.pw_face_profiles[0]).toMatchObject({ employee_id: PERSON, source: "greatday", status: "aktif", photo_key: start.key, note: "Foto diunggah Admin Contoh" });
+    expect((await clockIn(member, face)).record.status).toBe("sah");
+  });
+  it("replaces an old photo (and removes it), and refuses a forged or late token", async () => {
+    db.pw_face_profiles[0] = { ...db.pw_face_profiles[0], photo_key: `pra-wam/wajah/${PERSON}/old.webp` };
+    const start = await startFaceUpload(PERSON, { mime: "image/webp", size: 40_000 }, morning);
+    await expect(setUploadedFace(PERSON, { ...start, token: `${start.token.slice(0, -4)}0000`, mime: "image/webp", size: 40_000, embedding: face }, admin, morning)).rejects.toMatchObject({ status: 403 });
+    await expect(setUploadedFace(OTHER, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, morning)).rejects.toMatchObject({ status: 403 });
+    await expect(setUploadedFace(PERSON, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, new Date(morning.getTime() + 11 * 60_000))).rejects.toMatchObject({ status: 403 });
+    await setUploadedFace(PERSON, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, morning);
+    expect(removeObjects).toHaveBeenCalledWith([`pra-wam/wajah/${PERSON}/old.webp`]);
+  });
+  it("only for someone who clocks in", async () => {
+    await expect(startFaceUpload(OTHER, { mime: "image/webp", size: 40_000 }, morning)).rejects.toMatchObject({ status: 404 });
   });
 });
 

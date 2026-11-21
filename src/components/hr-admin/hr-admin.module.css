@@ -131,3 +131,10 @@ button.slot:hover, button.slot[aria-expanded="true"] { border-color: var(--cs-pr
 .strip .cell { min-width: 0; width: 100%; height: 20px; padding: 0; border-radius: 4px; font-size: 10px; }
 .counts { display: flex; flex-wrap: wrap; gap: 6px; }
 .counts .cell { height: 26px; font-size: 12px; font-weight: 700; }
+
+/* Unggah foto acuan: who, which photo, and the photo itself before it is read. */
+.uploadForm { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(200px, 1fr) auto; gap: 12px 16px; align-items: end; margin: 12px 0; }
+.uploadForm select, .uploadForm input[type="file"] { width: 100%; min-height: 40px; }
+.uploadForm input[type="file"] { padding: 6px 0; border: 0; background: none; }
+.uploadPreview { width: 96px; height: 96px; border-radius: 14px; object-fit: cover; background: var(--cs-fill); border: 1px solid var(--cs-line); }
+@media (max-width: 720px) { .uploadForm { grid-template-columns: 1fr; } }
