@@ -64,12 +64,13 @@ export async function saveChecklist(sessionId: string, input: ChecklistInput): P
   }));
   const keepIds = new Set(rows.map(row => row.id));
   const removed = before.items.filter(item => !keepIds.has(item.id));
-  if (removed.length) {
-    const { error } = await db().from("mw_checklist_items").delete().in("id", removed.map(item => item.id));
-    if (error) adminFail(error, refusals);
-  }
+  // Save first, remove after: a failed save must not take away items (and, by cascade, the people's ticks) that were kept.
   if (rows.length) {
     const { error } = await db().from("mw_checklist_items").upsert(rows, { onConflict: "id" });
+    if (error) adminFail(error, refusals);
+  }
+  if (removed.length) {
+    const { error } = await db().from("mw_checklist_items").delete().in("id", removed.map(item => item.id));
     if (error) adminFail(error, refusals);
   }
   // The switch rides with the list; touching updated_at is left to the row's own trigger (a checklist edit is not a schedule change).

@@ -152,6 +152,15 @@ describe("saveChecklist (admin)", () => {
     expect(rows.every(row => row.session_id === PREP)).toBe(true);
     expect(db.calls.find(call => call.table === "mw_sessions" && call.op === "update")!.args[0]).toEqual({ checklist_required: true });
   });
+  it("saves before it removes, and removes nothing when the save fails (ticks of kept items are safe)", async () => {
+    await saveChecklist(PREP, input);
+    const order = db.calls.filter(call => call.table === "mw_checklist_items" && (call.op === "upsert" || call.op === "delete")).map(call => call.op);
+    expect(order).toEqual(["upsert", "delete"]);
+    db.calls.length = 0;
+    db.answer = (base => (call: Call) => (call.table === "mw_checklist_items" && call.op === "upsert" ? { data: null, error: { code: "XX000", message: "boom" } } : base(call)))(db.answer);
+    await expect(saveChecklist(PREP, input)).rejects.toBeDefined();
+    expect(db.calls.some(call => call.op === "delete")).toBe(false);
+  });
   it("refuses an id that is not this agenda's", async () => {
     await expect(saveChecklist(PREP, { ...input, items: [{ id: uuid(999), text: "Asing", note: "", photo: null }] })).rejects.toMatchObject({ status: 409 });
     expect(db.calls.some(call => call.op === "upsert" || call.op === "delete")).toBe(false);
