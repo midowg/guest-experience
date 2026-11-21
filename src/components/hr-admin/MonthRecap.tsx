@@ -71,6 +71,7 @@ export function MonthRecap({ initial }: { initial: MonthTable }) {
     <PageHeader title="Rekap bulanan" subtitle={`Semua karyawan × semua tanggal, berwarna. Telat = masuk setelah ${table.lateAfter.replace(":", ".")}. Ketuk satu kotak untuk membuka harinya.`} />
     {!table.leaveReady && <Notice tone="info">Cuti, sakit, izin, dan dinas yang diajukan karyawan ikut tampil setelah migrasi <code>{LEAVE_MIGRATION}</code>. Sampai itu, yang tampil hanya absen.</Notice>}
     {problem && <Notice tone="error">{problem}</Notice>}
+    {!table.since && <Notice tone="info">Belum ada yang absen di WG People, jadi belum ada hari yang dihitung Tidak absen.</Notice>}
     {table.since && table.since > `${table.month}-01` && table.since <= `${table.month}-31` && <Notice tone="info">Absen di WG People dimulai {new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${table.since}T12:00:00Z`))}; tanggal sebelumnya dibiarkan kosong, bukan Tidak absen.</Notice>}
     <Card title={monthLabel(table.month)}>
       <div className={css.toolbar}>

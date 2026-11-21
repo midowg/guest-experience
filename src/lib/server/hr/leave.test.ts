@@ -111,6 +111,13 @@ describe("cuti, sakit, izin and dinas", () => {
 });
 
 describe("Rekap bulanan", () => {
+  it("counts no day as missing before anyone has clocked in", async () => {
+    const month = await adminMonth("2026-11", "2026-11-21");
+    expect(month.since).toBeNull();
+    const cells = month.people[0].cells;
+    expect(cells.find(cell => cell.date === "2026-11-17")?.kind).toBe("nanti");
+    expect(cells.some(cell => cell.kind === "alpa")).toBe(false);
+  });
   it("colours each day from the clock-ins (late in the office's zone) and the requests", async () => {
     db.pw_daily_attendance.push(
       // The first clock-in anyone made: absensi starts on 16 Nov, so 1–13 Nov stay blank.

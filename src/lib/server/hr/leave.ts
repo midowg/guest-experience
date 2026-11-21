@@ -235,8 +235,10 @@ async function cellsBetween(first: string, last: string, dates: string[], today:
   const asDay = (row: LightRow | undefined) => row ? { status: row.status, reasonKind: row.reason_kind, officeName: row.office_name, method: row.method, local: local(row) } : null;
   const byPerson = new Map<string, LeaveRow[]>();
   for (const leave of leaves) byPerson.set(leave.employee_id, [...(byPerson.get(leave.employee_id) ?? []), leave]);
+  // Nobody has clocked in yet: no day before today counts as missing.
+  const counted = since ?? today;
   const cellsOf = (employeeId: string): Cell[] => dates.map(date => cellOf({
-    date, today, lateAfter: late, since,
+    date, today, lateAfter: late, since: counted,
     masuk: asDay(byKey.get(`${employeeId}|${date}|masuk`)), pulang: asDay(byKey.get(`${employeeId}|${date}|pulang`)),
     leaves: (byPerson.get(employeeId) ?? []).map(leave => ({ type: leave.type, startDate: leave.start_date, endDate: leave.end_date, status: leave.status as "menunggu" | "disetujui" })),
   }));
