@@ -28,7 +28,8 @@
 .nowLabel { margin: 0; min-height: 1.4em; font-size: 13px; font-weight: 600; color: var(--hr-on-brand-muted); font-variant-numeric: tabular-nums; }
 .nowLabel strong { color: var(--hr-accent); font-weight: 800; }
 
-.sheet { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 24px max(20px, calc(12px + env(safe-area-inset-bottom))); border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-surface); }
+/* min-height 0: the site-wide `main { min-height: 65vh }` would push the page past one screen. */
+.sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 28px 24px max(20px, calc(12px + env(safe-area-inset-bottom))); border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-surface); }
 .sheetInner { width: 100%; max-width: 26rem; margin: 0 auto; display: grid; gap: 8px; }
 .foot { margin: auto 0 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--hr-muted); }
 .page .title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; color: var(--hr-text); }
