@@ -11,20 +11,20 @@ import type { HomeStyle } from "@/lib/home-style";
 const PHOTO = "/panduan-ke-werkudara/assets/exterior-1280.webp";
 
 /**
- * Masuk admin (22 Nov 2026): one full screen, split. The picture side follows the look the super admin
- * picked for the front page (Kartu 3D: light, Lampu: dark) over the office photo, quietly: no cursor
+ * Masuk admin (22 Nov 2026): the office photo over the whole screen, the form as one card on it, in the look the super admin
+ * picked for the front page (Kartu 3D: a light card, Lampu: a dark one) over the office photo, full screen, quietly: no cursor
  * effects, nothing that keeps moving. Coming from the front page, its pegasus and "Journey" glide into
  * place (a cross-document view transition, where the browser has one).
  */
 export function LoginScreen({ style, configured, next, expired }: { style: HomeStyle; configured: boolean; next: string; expired: boolean }) {
   return <main className={css.page} data-style={style}>
-    <div className={css.visual} aria-hidden="true">
-      <Image src={PHOTO} alt="" fill priority sizes="(min-width: 60rem) 58vw, 100vw" className={css.photo} />
-      <div className={css.visualText}>
-        <span className={css.mark} style={{ viewTransitionName: "wk-crest" }} />
-        <p className={css.name}><span className={css.journey} style={{ viewTransitionName: "wk-title" }}>Journey</span> Admin</p>
-        <p className={css.line}>Undangan, kunjungan tamu, dan aplikasi tim Werkudara, dikelola di satu tempat.</p>
-      </div>
+    {/* The office photo fills the whole screen; the form sits on it as one card. */}
+    <Image src={PHOTO} alt="" fill priority sizes="100vw" className={css.photo} />
+    <div className={css.shade} aria-hidden="true" />
+    <div className={css.visualText} aria-hidden="true">
+      <span className={css.mark} style={{ viewTransitionName: "wk-crest" }} />
+      <p className={css.name}><span className={css.journey} style={{ viewTransitionName: "wk-title" }}>Journey</span> Admin</p>
+      <p className={css.line}>Undangan, kunjungan tamu, dan aplikasi tim Werkudara, dikelola di satu tempat.</p>
     </div>
 
     <section className={css.panel} aria-labelledby="login-title">
