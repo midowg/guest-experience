@@ -15,7 +15,7 @@ const appDoors: Record<HomeApp, { href: string; logo?: string }> = {
   wam: { href: PRA_WAM_PATH, logo: '/wam/icon-192.png' },
   wlm: { href: WELLBEING_PATH, logo: '/wlm/icon-192.png' },
   booking: { href: BOOKING_PATH },
-  hr: { href: HR_PATH, logo: '/hr/icon-192.png' },
+  hr: { href: HR_PATH, logo: '/people/icon-192.png' },
   signage: { href: SIGNAGE_PATH },
   admin: { href: ADMIN_HOME },
 };

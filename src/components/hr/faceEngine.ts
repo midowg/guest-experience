@@ -1,7 +1,7 @@
 /*
  * Absen harian (20 Nov 2026): the face check that runs in the browser. Nothing of the face leaves
  * the phone for this: MediaPipe's face landmarker (Google, Apache-2.0) follows the face, and SFace
- * (OpenCV Zoo, Apache-2.0, public/hr/models/) turns it into 128 numbers. Only their programs and
+ * (OpenCV Zoo, Apache-2.0, public/people/models/) turns it into 128 numbers. Only their programs and
  * models are fetched, once, from the addresses below; the browser keeps them afterwards. Loaded
  * only on the screens that use the camera (Absen, enrolment, Kelola → Proses foto impor).
  */
@@ -16,7 +16,7 @@ import type { FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-visi
 const VISION_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm";
 const LANDMARKER_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const ORT_WASM = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/";
-export const SFACE_MODEL = "/hr/models/sface-2021dec-int8.onnx";
+export const SFACE_MODEL = "/people/models/sface-2021dec-int8.onnx";
 
 /** Below this the face is too blurred to compare (variance of the Laplacian on the 112 px face). */
 export const MIN_SHARPNESS = 20;

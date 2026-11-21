@@ -132,7 +132,7 @@ describe("WG People (20 Nov 2026)", () => {
     expect(areaOfPath("/api/admin/hr/absen/abc")).toBe("hr");
     expect(areaOfPath("/admin/hrx")).toBeNull();
     // The employees' app itself is not part of the admin.
-    expect(areaOfPath("/hr")).toBeNull();
+    expect(areaOfPath("/people")).toBeNull();
     expect(mayOpenArea({ employeeId: "e1", apps: ["hr"], allEvents: false, eventIds: [] }, "hr")).toBe(true);
     expect(mayOpenArea({ employeeId: "e1", apps: ["wam", "wellbeing"], allEvents: false, eventIds: [] }, "hr")).toBe(false);
   });

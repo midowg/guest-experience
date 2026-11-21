@@ -28,7 +28,7 @@ export function HrOverview({ summary, waiting, superAdmin, late, away = 0 }: {
     { done: summary.offices > 0, title: "Atur titik kantor", text: summary.offices ? `${summary.offices} titik kantor aktif.` : "Tanpa titik kantor, semua absen dianggap di luar area.", action: { label: summary.offices ? "Lihat titik" : "Atur sekarang", href: hrAdminPath.offices } },
     { done: faces.impor === 0, title: "Proses foto dari GreatDay", text: faces.impor ? `${faces.impor} foto belum diproses. Setelah diproses, fotonya langsung jadi foto acuan.` : "Semua foto GreatDay sudah diproses.", action: { label: faces.impor ? "Proses foto" : "Lihat wajah", href: hrAdminPath.faces } },
     ...(superAdmin ? [{ done: false, title: "Beri akses Admin HR", text: "Centang \"WG People\" untuk orang HR di Super admin → Akses admin.", action: { label: "Buka Akses admin", href: superAdminPath.admins } }] : []),
-    { done: summary.masuk > 0, title: "Bagikan aplikasi ke karyawan", text: "Karyawan membuka journey.werkudara.group/hr di HP, masuk dengan akun WAM, lalu memasangnya ke layar utama.", action: { label: "Buka aplikasi", href: hrPath.home } },
+    { done: summary.masuk > 0, title: "Bagikan aplikasi ke karyawan", text: "Karyawan membuka journey.werkudara.group/people di HP, masuk dengan akun WAM, lalu memasangnya ke layar utama.", action: { label: "Buka aplikasi", href: hrPath.home } },
   ];
 
   return <>

@@ -25,13 +25,13 @@ it("signs in with the WAM account and goes on to WG People", async () => {
   expect((screen.getByLabelText("Password") as HTMLInputElement).type).toBe("text");
   expect(submit.disabled).toBe(false);
   fireEvent.click(submit);
-  await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/hr"));
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/people"));
   expect(request.mock.calls[0][1]).toMatchObject({ method: "POST", json: { email: "contoh@example.com", password: "rahasia-contoh" } });
 });
 
 it("says why signing in failed, next to the form", async () => {
   request.mockRejectedValue(new Error("Email atau password salah."));
-  render(<HrLogin next="/hr/riwayat" />);
+  render(<HrLogin next="/people/riwayat" />);
   fireEvent.change(screen.getByLabelText("Email kantor"), { target: { value: "contoh@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "salah" } });
   fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
@@ -45,5 +45,5 @@ it("sends a forgotten-password request and says what happens next", async () => 
   fireEvent.change(screen.getByLabelText("Email kantor"), { target: { value: "contoh@example.com" } });
   fireEvent.click(screen.getByRole("button", { name: "Kirim permintaan" }));
   expect(await screen.findByRole("status")).toBeTruthy();
-  expect(screen.getByRole("link", { name: /Kembali ke Masuk/ }).getAttribute("href")).toBe("/hr/masuk");
+  expect(screen.getByRole("link", { name: /Kembali ke Masuk/ }).getAttribute("href")).toBe("/people/masuk");
 });

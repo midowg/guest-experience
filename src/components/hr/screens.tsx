@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, CheckCircle2, Clock3, FileText, MapPin, Plus, ScanFace, ShieldCheck } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { CalendarDays, CheckCircle2, Clock3, FileText, LifeBuoy, MapPin, Palette, Plus, ScanFace, ShieldCheck } from "lucide-react";
 import {
-  clockMethodLabels, consentPoints, faceStatusLabels, flagLabels, kindLabels, nextKind, reasonLabels, REQUEST_DAYS, requestStatusLabels, requestSummary, requestTypeLabels, statusLabels,
-  type AttendanceRequest, type ClockInState, type DailyKind, type DailyRecord, type FaceStatus,
+  clockMethodLabels, faceStatusLabels, flagLabels, kindLabels, nextKind, reasonLabels, REQUEST_DAYS, requestStatusLabels, requestSummary, requestTypeLabels, statusLabels, type AttendanceRequest, type ClockInState, type DailyKind, type DailyRecord, type FaceStatus,
 } from "@/lib/hr/attendance";
 import { distanceLabel } from "@/lib/hr/geo";
+import { THEMES, themeLabels, type Theme } from "@/lib/hr/theme";
 import { covers, leaveDays, leaveLabels, leaveStatusLabels, leaveSummary, spanLabel, type LeaveRequest } from "@/lib/hr/leave";
 import { matchPercent } from "@/lib/hr/face-match";
 import { byWeek, durationLabel, historySummary, minuteOfDay, minutesByDate, shiftDate, weekOf, workedMinutes } from "@/lib/hr/history";
@@ -225,8 +225,8 @@ export function RequestsScreen({ state, onNew, onOpen, onOpenLeave }: { state: C
 
 /* ── Profil ──────────────────────────────────────────────────────────── */
 
-export function ProfileScreen({ state, fullName, zone, onFace, onOffices, onSignOut }: {
-  state: ClockInState; fullName: string; zone: ViewerZone; onFace(): void; onOffices(): void; onSignOut(): void;
+export function ProfileScreen({ state, fullName, zone, theme, onTheme, onFace, onHelp, onSignOut }: {
+  state: ClockInState; fullName: string; zone: ViewerZone; theme: Theme; onTheme(theme: Theme): void; onFace(): void; onHelp(): void; onSignOut(): void;
 }) {
   return <div className={styles.screen}>
     <header className={styles.idCard}>
@@ -237,11 +237,20 @@ export function ProfileScreen({ state, fullName, zone, onFace, onOffices, onSign
         <p className={styles.idSub}>Akun WAM · wajah {state.face ? faceStatusLabels[state.face.status].toLowerCase() : "belum terdaftar"}</p>
       </div>
     </header>
+    {/* Only what is changed or looked at often (21 Nov 2026, the owner's ask); the rest is in Bantuan & FAQ. */}
     <Group label="Absen" icons>
       <RowButton mark="wajah" icon={<ShieldCheck size={20} />} title="Data wajah" value={state.face ? faceStatusLabels[state.face.status] : "Belum terdaftar"} onClick={onFace} />
-      <RowButton mark="kantor" icon={<MapPin size={20} />} title="Titik kantor" value={`${state.offices.length} kantor`} onClick={onOffices} />
-      <RowInfo icon={<ScanFace size={20} />} title="Cara absen" value={clockMethodLabels[state.method]} />
-      <RowInfo icon={<Clock3 size={20} />} title="Zona waktu" value={zone} />
+    </Group>
+    <Group label="Pengaturan" icons>
+      <li><div className={`${styles.row} ${styles.info}`}>
+        <span className={styles.rowIcon} aria-hidden><Palette size={20} /></span>
+        <span className={styles.rowText}><span className={styles.rowTitle}>Tampilan</span></span>
+        <span className={styles.rowControl}><Segmented<Theme> label="Tampilan" value={theme} onChange={onTheme} options={THEMES.map(value => ({ value, label: themeLabels[value] }))} /></span>
+      </div></li>
+      <RowInfo icon={<Clock3 size={20} />} title="Zona waktu" value={zone} sub="Mengikuti HP-mu" />
+    </Group>
+    <Group icons>
+      <RowButton mark="bantuan" icon={<LifeBuoy size={20} />} title="Bantuan & FAQ" sub="Cara absen, titik kantor, revisi, cuti, data wajah" onClick={onHelp} />
     </Group>
     <Group><RowButton title="Keluar" danger chevron={false} onClick={onSignOut} /></Group>
   </div>;
@@ -331,42 +340,84 @@ export function LeaveDetail({ leave, zone, onBack, onCancel }: { leave: LeaveReq
 
 /* ── Detail: face data ───────────────────────────────────────────────── */
 
-const faceStory: Record<FaceStatus | "kosong", string> = {
-  aktif: "Wajahmu dipakai untuk mencocokkan setiap absen.",
-  menunggu: "Wajahmu sudah terdaftar dan menunggu disetujui Admin HR. Absenmu tetap tercatat, dengan status Perlu dicek.",
-  siap: "Foto acuanmu dari GreatDay sudah siap. Aktif setelah kamu setuju di absen pertama.",
-  impor: "Foto acuanmu dari GreatDay sedang disiapkan Admin HR.",
-  ditolak: "Foto acuanmu belum bisa dipakai. Daftarkan wajahmu sekali lagi.",
-  kosong: "Daftarkan wajahmu sekali, lalu setiap absen cukup dengan kamera depan.",
+/** Each face status said plainly: a short title and what it means for absen. */
+const faceStory: Record<FaceStatus | "kosong", { title: string; line: string }> = {
+  aktif: { title: "Aktif", line: "Wajahmu siap dipakai. Setiap absen cukup dengan kamera depan." },
+  menunggu: { title: "Menunggu Admin HR", line: "Wajahmu sudah terdaftar. Sampai disetujui, absenmu tetap tercatat dengan status Perlu dicek." },
+  siap: { title: "Tinggal setuju", line: "Foto acuan dari HR sudah siap. Setujui pemakaiannya di absen pertamamu." },
+  impor: { title: "Sedang disiapkan", line: "Admin HR sedang menyiapkan foto acuanmu. Sementara ini kamu bisa daftar wajah sendiri." },
+  ditolak: { title: "Perlu daftar ulang", line: "Foto acuanmu belum bisa dipakai. Daftarkan wajahmu sekali lagi, sekitar satu menit." },
+  kosong: { title: "Belum terdaftar", line: "Belum ada foto acuan untukmu dari HR. Daftarkan wajahmu sekali, sekitar satu menit." },
 };
+/**
+ * Data wajah (rewritten 21 Nov 2026, the owner found it unclear and roundabout): the status and what
+ * it means, the one action that fits, then three short parts: how it works, what is kept and for how
+ * long, and the right to remove it.
+ */
 export function FaceDetail({ state, onBack, onEnroll, onWithdraw }: { state: ClockInState; onBack(): void; onEnroll(): void; onWithdraw(): void }) {
   const status = state.face?.status;
+  const story = faceStory[status ?? "kosong"];
   return <Detail title="Data wajah" onBack={onBack}>
-    <div className={styles.summary}>
-      <h2 className={styles.summaryTitle}>{status ? faceStatusLabels[status] : "Belum terdaftar"}</h2>
-      <p className={styles.lead}>{faceStory[status ?? "kosong"]}{state.face?.source === "greatday" ? " Sumber: foto GreatDay." : ""}</p>
+    <div className={styles.faceStatus} data-ok={status === "aktif" || undefined}>
+      <span className={styles.faceStatusIcon} aria-hidden>{status === "aktif" ? <ShieldCheck size={26} /> : status === "menunggu" || status === "impor" ? <Clock3 size={26} /> : <ScanFace size={26} />}</span>
+      <div className={styles.headText}>
+        <h2 className={styles.summaryTitle}>{story.title}</h2>
+        <p className={styles.lead}>{story.line}</p>
+        {state.face && <p className={styles.faceSource}>{state.face.source === "greatday" ? "Foto acuan dari HR" : "Didaftarkan sendiri di WG People"}</p>}
+      </div>
     </div>
     {state.ready && !usable(status) && <button type="button" className={styles.wide} onClick={onEnroll}><ScanFace size={20} aria-hidden /> Daftar wajah</button>}
-    <section className={styles.group} aria-labelledby="tentang-wajah">
-      <h3 id="tentang-wajah" className={styles.groupLabel}>Yang perlu kamu tahu</h3>
-      <ul className={styles.notes}>{consentPoints.map(point => <li key={point}>{point}</li>)}</ul>
+    <section className={styles.group} aria-labelledby="cara-kerja-wajah">
+      <h3 id="cara-kerja-wajah" className={styles.groupLabel}>Cara kerjanya</h3>
+      <ol className={styles.howList}>
+        <li>Saat absen, kamera depan mengambil selfie{state.method === "gerakan" ? " sambil kamu berkedip atau menoleh" : ""}.</li>
+        <li>HP-mu mengubah wajah jadi angka ciri; server mencocokkannya dengan foto acuanmu.</li>
+        <li>Cocok dan kamu di dalam titik kantor: absen tercatat Sah.</li>
+      </ol>
     </section>
-    {state.face?.consented && <Group><RowButton title="Hapus data wajah" danger chevron={false} onClick={onWithdraw} /></Group>}
+    <Group label="Yang disimpan" note="Hanya kamu dan Admin HR yang bisa melihatnya. Tidak dipakai untuk hal lain selain absensi.">
+      <RowInfo title="Foto acuan" value="Sampai kamu hapus" />
+      <RowInfo title="Selfie tiap absen" value="90 hari" />
+      <RowInfo title="Lokasi saat absen" value="Bersama absennya" />
+    </Group>
+    {state.face && <Group label="Hakmu" note="Setelah dihapus, absenmu dicatat Admin HR secara manual sampai kamu daftar wajah lagi.">
+      <RowButton title="Hapus data wajah" danger chevron={false} onClick={onWithdraw} />
+    </Group>}
   </Detail>;
 }
 
-/* ── Detail: office points ───────────────────────────────────────────── */
+/* ── Detail: Bantuan & FAQ ──────────────────────────────────────────── */
 
-export function OfficesDetail({ state, onBack }: { state: ClockInState; onBack(): void }) {
-  return <Detail title="Titik kantor" onBack={onBack}>
-    {state.offices.length
-      ? <Group note="Absen di dalam lingkaran ini tercatat Sah. Di luar, kamu memilih alasan dan Admin HR memeriksanya." icons>
-        {state.offices.map(office => <li key={office.id}><a className={styles.row} href={`https://www.google.com/maps/search/?api=1&query=${office.lat},${office.lng}`} target="_blank" rel="noopener noreferrer">
-          <span className={styles.rowIcon} aria-hidden><MapPin size={20} /></span>
-          <span className={styles.rowText}><span className={styles.rowTitle}>{office.name}</span><span className={styles.rowSub}>Radius {office.radiusM} m · {office.zone}</span></span>
-          <span className={styles.rowValue}>Peta<SrOnly> (buka di tab baru)</SrOnly></span>
-        </a></li>)}
-      </Group>
-      : <Empty icon={<MapPin size={32} aria-hidden />} title="Belum ada titik kantor">Admin HR akan menambahkannya.</Empty>}
+/**
+ * Bantuan & FAQ (21 Nov 2026, the owner's ask: help and the FAQ as one, out of the way of the
+ * settings): the questions people ask, each opening in place; the office points sit in their
+ * answer, with a map link each.
+ */
+export function HelpDetail({ state, onBack }: { state: ClockInState; onBack(): void }) {
+  const method = state.method === "gerakan" ? "selfie sambil berkedip atau menoleh sesuai petunjuk" : "satu selfie yang langsung dicocokkan";
+  const faq: { q: string; a: ReactNode }[] = [
+    { q: "Bagaimana cara absen?", a: <>Di Beranda tekan <strong>Absen masuk</strong> atau <strong>Absen pulang</strong>. WG People membaca lokasimu, lalu membuka kamera depan untuk {method}. Selesai dalam beberapa detik.</> },
+    { q: "Di mana saja titik kantor?", a: state.offices.length
+      ? <><span>Absen di dalam lingkaran ini tercatat Sah:</span><ul className={styles.helpList}>{state.offices.map(office => <li key={office.id}>
+        <a href={`https://www.google.com/maps/search/?api=1&query=${office.lat},${office.lng}`} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden /> {office.name}<SrOnly> (peta, tab baru)</SrOnly></a>
+        <span> · radius {office.radiusM} m · {office.zone}</span>
+      </li>)}</ul></>
+      : "Admin HR belum memasang titik kantor. Sampai ada, semua absen tercatat di luar kantor." },
+    { q: "Saya absen di luar kantor (event, dinas, WFH)", a: "Absen tetap bisa. Pilih alasannya saat absen; statusnya Perlu dicek sampai Admin HR memeriksanya." },
+    { q: "Lupa absen atau jamnya salah", a: <>Buka <strong>Pengajuan → Ajukan → Revisi absen</strong>, pilih harinya (sampai 31 hari ke belakang), lalu tulis alasannya. Admin HR yang memutuskan.</> },
+    { q: "Mengajukan cuti, sakit, izin, atau dinas", a: <>Buka <strong>Pengajuan → Ajukan</strong>, pilih jenis dan tanggalnya. Tim melihat jenis dan tanggalnya di menu <strong>Tim</strong>; keteranganmu hanya untuk Admin HR.</> },
+    { q: "Arti Sah, Perlu dicek, dan Ditolak", a: <><strong>Sah</strong>: wajah cocok dan di dalam titik kantor. <strong>Perlu dicek</strong>: ada yang perlu dilihat Admin HR (di luar kantor, kecocokan rendah). <strong>Ditolak</strong>: Admin HR menolaknya; ajukan revisi bila keliru.</> },
+    { q: "Kenapa saya diminta daftar wajah?", a: "Akunmu belum punya foto acuan dari HR, atau fotonya belum bisa dipakai. Daftar sekali saja, sekitar satu menit; Admin HR menyetujuinya." },
+    { q: "Kamera atau lokasi tidak mau terbuka", a: "Izinkan Kamera dan Lokasi untuk situs ini di pengaturan browser, nyalakan GPS, lalu coba lagi. Di iPhone, pakai Safari." },
+    { q: "Masih ada yang membingungkan?", a: "Hubungi Admin HR di kantor. Sebutkan tanggal dan jam absennya supaya cepat dicek." },
+  ];
+  return <Detail title="Bantuan & FAQ" onBack={onBack}>
+    <p className={styles.lead}>Jawaban singkat untuk yang paling sering ditanyakan. Ketuk pertanyaannya.</p>
+    <div className={styles.faq}>
+      {faq.map(item => <details key={item.q} className={styles.faqItem}>
+        <summary>{item.q}</summary>
+        <div className={styles.faqAnswer}>{item.a}</div>
+      </details>)}
+    </div>
   </Detail>;
 }

@@ -22,6 +22,9 @@ const config: NextConfig = {
   async redirects() {
     return [
       { source: "/panduan", destination: "/your-visit", permanent: false },
+      // WG People moved from /hr to /people (21 Nov 2026, the owner's ask); old links and installs keep working.
+      { source: "/hr", destination: "/people", permanent: true },
+      { source: "/hr/:path*", destination: "/people/:path*", permanent: true },
       { source: "/panduan-ke-werkudara", destination: "/your-visit", permanent: false },
       // The app was first published as /pra-wam with Indonesian paths; it is WAM now (Pra WAM is a
       // phase inside it). Old links and printed QR codes keep working.
@@ -70,8 +73,8 @@ const config: NextConfig = {
       { source: "/admin/:path*", headers: cameraHere },
       { source: "/wam", headers: cameraHere },
       { source: "/wam/:path*", headers: cameraHere },
-      { source: "/hr", headers: faceAndPlace },
-      { source: "/hr/:path*", headers: faceAndPlace },
+      { source: "/people", headers: faceAndPlace },
+      { source: "/people/:path*", headers: faceAndPlace },
       // Development calibration of the face check and the clock-in layout (404 in production).
       { source: "/dev-preview/wajah", headers: faceAndPlace },
       { source: "/dev-preview/absen", headers: faceAndPlace },

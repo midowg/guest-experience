@@ -54,12 +54,13 @@ const team: TeamLeave[] = [
 /**
  * Layout check for WG People's employee screens without signing in (20 Nov 2026), with made-up
  * data; ?kosong=1 for someone without a face or a clock-in yet, ?langkah=hasil|rendah|lokasi|revisi|persetujuan|gagal|kirim
- * for one sheet step, ?detail=hari|pengajuan|wajah|kantor for a detail screen (on Beranda). The
+ * for one sheet step, ?detail=hari|pengajuan|wajah|bantuan for a detail screen (on Beranda). The
  * bottom menu works as in the app. Its buttons call the real API, which refuses without a session.
  */
-export default async function DevHrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; langkah?: string; detail?: string }> }) {
+export default async function DevHrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; langkah?: string; detail?: string; tema?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { kosong, langkah, detail } = await searchParams;
+  const { kosong, langkah, detail, tema } = await searchParams;
+  const theme = tema === "gelap" ? "gelap" : "terang";
   const steps: Record<string, ClockInStep> = {
     hasil: { name: "hasil", title: "Tercatat. Hati-hati di jalan!", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.47 }), note: null, then: null },
     rendah: { name: "hasil", title: "Tercatat, Admin HR akan memeriksanya", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.33, status: "perlu_cek", flags: ["skor_rendah"] }), note: "Perlu dicek Admin HR: kecocokan wajah rendah.", then: null },
@@ -73,11 +74,11 @@ export default async function DevHrPage({ searchParams }: { searchParams: Promis
     hari: { kind: "hari", date: "2026-11-18", tab: "beranda" },
     pengajuan: { kind: "pengajuan", id: "q2", tab: "beranda" },
     wajah: { kind: "wajah", tab: "beranda" },
-    kantor: { kind: "kantor", tab: "beranda" },
+    bantuan: { kind: "bantuan", tab: "beranda" },
   };
   const initial = kosong ? { ...state, face: null, today: { ...state.today, masuk: null }, recent: [], requests: [], leaves: [] } : state;
-  return <div className={`${jakarta.variable} ${hr.theme}`}><HrFrame>
-    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now="2026-11-20T02:41:00.000Z" preview previewTeam={team}
+  return <div id="wg-tema" className={`${jakarta.variable} ${hr.theme}`} data-tema={theme}><HrFrame>
+    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now="2026-11-20T02:41:00.000Z" preview previewTeam={team} theme={theme}
       initialStep={langkah ? steps[langkah] : undefined} initialDetail={detail ? details[detail] : undefined} />
   </HrFrame></div>;
 }

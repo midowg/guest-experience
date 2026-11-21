@@ -792,7 +792,7 @@ export const bookingApi = {
  * with the same employee account as WAM and Booking Kantor, on its own pages and in its own look.
  * Its admin lives in Journey Admin (/admin/hr), given per person in Super admin → Akses admin.
  */
-export const HR_PATH = "/hr";
+export const HR_PATH = "/people";
 const HR_API = "/api/hr";
 export const hrPath = {
   /** Absen: today's masuk and pulang, and the way to clock in; `?daftar=1` opens enrolment. */

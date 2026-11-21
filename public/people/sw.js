@@ -1,4 +1,4 @@
-// WG People's service worker (scope /hr/, 20 Nov 2026): makes the app installable, answers with
+// WG People's service worker (scope /people/, 20 Nov 2026; was /hr/ until 21 Nov): makes the app installable, answers with
 // a short offline page when there is no signal, and keeps the face check's programs and models
 // (about 25 MB, the same for everyone; each address names its exact version) after the first
 // clock-in, so the next one starts at once and spends no data. Pages are personal: never cached.
@@ -10,7 +10,7 @@ const OFFLINE = `<!doctype html><html lang="id"><meta charset="utf-8"><meta name
 // A new version is a new address; FACE_CACHE changes only to drop the old files.
 const FACE_CACHE = "hr-face-v1";
 const FACE_FILES = [
-  "/hr/models/",
+  "/people/models/",
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/",
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm/",
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/",

@@ -35,23 +35,23 @@
   background: var(--hr-app); color: var(--hr-text);
   font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  .theme {
-    --hr-app: #0B1220; --hr-surface: #131C2E; --hr-surface-soft: #1B2539; --hr-line: #26324A; --hr-line-strong: #6E7C93;
-    --hr-text: #EDF2FA; --hr-muted: #A7B3C6;
-    --hr-brand: #1A4C94; --hr-brand-raised: #2258A4; --hr-on-brand: #FFFFFF; --hr-on-brand-muted: #C3D5EE; --hr-brand-line: rgb(255 255 255 / .18);
-    --hr-accent: #F9BC4E; --hr-accent-hover: #FFCB6B; --hr-on-accent: #1B1A10;
-    --hr-primary: #8DB8F2; --hr-primary-hover: #A9CBF6; --hr-primary-soft: #16294A; --hr-on-primary: #0B1220;
-    --hr-ring: #1F3A66;
-    --hr-success: #8FD3A8; --hr-success-soft: #17301F;
-    --hr-warning: #F2C46D; --hr-warning-soft: #3A2C10;
-    --hr-danger: #F4A39A; --hr-danger-soft: #3D1A16; --hr-on-danger: #3D1A16;
-    --hr-cuti: #B79CF2; --hr-cuti-soft: #2A2145; --hr-cuti-ink: #B79CF2;
-    --hr-sakit: #F08DA7; --hr-sakit-soft: #3D1A26; --hr-sakit-ink: #F08DA7;
-    --hr-izin: #F2C46D; --hr-izin-soft: #3A2C10; --hr-izin-ink: #F2C46D;
-    --hr-dinas: #6FD0D9; --hr-dinas-soft: #12343A; --hr-dinas-ink: #6FD0D9;
-    --hr-float: 0 10px 30px rgb(0 0 0 / .45), 0 1px 3px rgb(0 0 0 / .35);
-  }
+/* Dark only when picked (Profil → Tampilan), whatever the phone is set to. */
+.theme[data-tema="gelap"] {
+  --hr-app: #0B1220; --hr-surface: #131C2E; --hr-surface-soft: #1B2539; --hr-line: #26324A; --hr-line-strong: #6E7C93;
+  --hr-text: #EDF2FA; --hr-muted: #A7B3C6;
+  --hr-brand: #1A4C94; --hr-brand-raised: #2258A4; --hr-on-brand: #FFFFFF; --hr-on-brand-muted: #C3D5EE; --hr-brand-line: rgb(255 255 255 / .18);
+  --hr-accent: #F9BC4E; --hr-accent-hover: #FFCB6B; --hr-on-accent: #1B1A10;
+  --hr-primary: #8DB8F2; --hr-primary-hover: #A9CBF6; --hr-primary-soft: #16294A; --hr-on-primary: #0B1220;
+  --hr-ring: #1F3A66;
+  --hr-success: #8FD3A8; --hr-success-soft: #17301F;
+  --hr-warning: #F2C46D; --hr-warning-soft: #3A2C10;
+  --hr-danger: #F4A39A; --hr-danger-soft: #3D1A16; --hr-on-danger: #3D1A16;
+  --hr-cuti: #B79CF2; --hr-cuti-soft: #2A2145; --hr-cuti-ink: #B79CF2;
+  --hr-sakit: #F08DA7; --hr-sakit-soft: #3D1A26; --hr-sakit-ink: #F08DA7;
+  --hr-izin: #F2C46D; --hr-izin-soft: #3A2C10; --hr-izin-ink: #F2C46D;
+  --hr-dinas: #6FD0D9; --hr-dinas-soft: #12343A; --hr-dinas-ink: #6FD0D9;
+  --hr-float: 0 10px 30px rgb(0 0 0 / .45), 0 1px 3px rgb(0 0 0 / .35);
+  color-scheme: dark;
 }
 /*
  * On the same element as booking.module.css's .app (the frame): WG People's colours instead of
@@ -66,6 +66,13 @@
   --bk-shadow: none; --bk-radius: var(--hr-r-card); --bk-radius-sm: var(--hr-r-control);
   font-family: var(--font-hr), 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 }
+/*
+ * The page behind the app is the app's own colour, edge to edge: no white strip when a phone pulls
+ * the page past its end or the address bar slides, and nothing can be pushed sideways.
+ */
+:global(html):has(.theme), :global(body):has(.theme) { background: #F3F6FA; overflow-x: clip; }
+:global(html):has(.theme[data-tema="gelap"]), :global(body):has(.theme[data-tema="gelap"]) { background: #0B1220; }
+.theme { min-height: 100dvh; overflow-x: clip; }
 .narrow { max-width: 30rem; margin-inline: auto; width: 100%; }
 /* A page loading inside the frame: soft blocks where its cards will be. */
 .skeleton { border-radius: var(--hr-r-card); background: var(--hr-surface-soft); }

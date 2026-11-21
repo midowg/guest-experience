@@ -9,6 +9,7 @@ import {
 } from "@/lib/hr/attendance";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
 import { tabOf, type HrTab } from "@/lib/hr/tabs";
+import { THEME_COOKIE, themeColors, type Theme } from "@/lib/hr/theme";
 import { LEAVE_TYPES, leaveHints, leaveLabels, type LeaveType, type TeamLeave } from "@/lib/hr/leave";
 import { instantLabel, zoneDate, zoneSuffix } from "@/lib/pra-wam/zone";
 import { hrPath, praWamApi } from "@/lib/routes";
@@ -19,7 +20,7 @@ import { FaceCamera, type FaceCapture } from "./FaceCamera";
 import { LeaveSheet } from "./LeaveForm";
 import { RevisionSheet } from "./RevisionForm";
 import { TeamScreen } from "./TeamScreen";
-import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, LeaveDetail, OfficesDetail, placeOf, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
+import { DayDetail, FaceDetail, HelpDetail, HistoryScreen, HomeScreen, LeaveDetail, placeOf, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
 import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Pick, Sheet, Ticket } from "./ui";
 import styles from "./absen.module.css";
 import app from "./app.module.css";
@@ -38,7 +39,7 @@ type Step =
   | { name: "gagal"; text: string; retry: Step }
   | { name: "revisi"; date?: string }
   | { name: "cuti"; type: LeaveType };
-type DetailTarget = { kind: "hari"; date: string } | { kind: "pengajuan"; id: string } | { kind: "cuti"; id: string } | { kind: "wajah" } | { kind: "kantor" };
+type DetailTarget = { kind: "hari"; date: string } | { kind: "pengajuan"; id: string } | { kind: "cuti"; id: string } | { kind: "wajah" } | { kind: "bantuan" };
 /** A screen pushed inside a tab, with a back button; the bottom menu stays. */
 export type ClockInDetail = DetailTarget & { tab: HrTab };
 type Question = { kind: "keluar" } | { kind: "hapus-wajah" } | { kind: "batal-pengajuan"; id: string } | { kind: "batal-cuti"; id: string } | { kind: "ajukan" };
@@ -95,13 +96,15 @@ function useNow(initial: string, frozen = false): string {
  * Clocking in: the location first (inside an office point, or a reason), then the face (two movements,
  * or one steady look in Foto cepat), then the server decides.
  */
-export function ClockInFlow({ initial, openEnroll = false, name = "", fullName = "", now: serverNow = new Date().toISOString(), initialStep, initialDetail, preview = false, previewTeam = null }: {
+export function ClockInFlow({ initial, openEnroll = false, name = "", fullName = "", now: serverNow = new Date().toISOString(), initialStep, initialDetail, preview = false, previewTeam = null, theme: initialTheme = "terang" }: {
   initial: ClockInState; openEnroll?: boolean; name?: string; fullName?: string; now?: string;
   initialStep?: ClockInStep; initialDetail?: ClockInDetail;
   /** The layout preview: no quiet refresh (its API refuses without a session). */
   preview?: boolean;
   /** The layout preview's made-up team for Tim. */
   previewTeam?: TeamLeave[] | null;
+  /** Terang or Gelap on this device (cookie wg_tema, read by the server). */
+  theme?: Theme;
 }) {
   const tab = tabOf(usePathname());
   const zone = useViewerZone();
@@ -124,6 +127,15 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
   const [spoken, setSpoken] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [askedDay, setAskedDay] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  /** Profil → Tampilan: at once on this page (no reload), and remembered for the next visit. */
+  const changeTheme = (next: Theme) => {
+    setTheme(next);
+    document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    const root = document.getElementById("wg-tema");
+    if (root) root.dataset.tema = next;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColors[next]);
+  };
 
   const next = nextKind(state.today);
   const verdict = useMemo(() => (place ? locationVerdict(place, state.offices) : null), [place, state.offices]);
@@ -434,7 +446,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
         : <Detail title="Pengajuan" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 120 hari.</Empty></Detail>;
     }
     if (detail.kind === "wajah") return <FaceDetail state={state} onBack={pop} onEnroll={enrolFromProfile} onWithdraw={() => setQuestion({ kind: "hapus-wajah" })} />;
-    return <OfficesDetail state={state} onBack={pop} />;
+    return <HelpDetail state={state} onBack={pop} />;
   }
 
   function root(): ReactNode {
@@ -442,7 +454,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
     if (tab === "tim") return <TeamScreen stamp={leaveStamp} today={state.today.workDate} preview={previewTeam} />;
     if (tab === "pengajuan") return <RequestsScreen state={state} onNew={() => setQuestion({ kind: "ajukan" })} onOpen={id => push({ kind: "pengajuan", id })} onOpenLeave={id => push({ kind: "cuti", id })} />;
     if (tab === "profil") return <ProfileScreen state={state} fullName={fullName || name} zone={zone}
-      onFace={() => push({ kind: "wajah" })} onOffices={() => push({ kind: "kantor" })} onSignOut={() => setQuestion({ kind: "keluar" })} />;
+      theme={theme} onTheme={changeTheme} onFace={() => push({ kind: "wajah" })} onHelp={() => push({ kind: "bantuan" })} onSignOut={() => setQuestion({ kind: "keluar" })} />;
     return <HomeScreen state={state} now={now} zone={zone} name={name} onClock={begin}
       onDay={date => push({ kind: "hari", date })} onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} />;
   }

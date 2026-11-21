@@ -8,6 +8,13 @@
 
 /* The blue is fixed (light and dark) so it meets the splash and the launch picture without a seam. */
 .page { min-height: 100dvh; display: flex; flex-direction: column; background: #1551A0; color: var(--hr-text); }
+/*
+ * Full screen on a phone (21 Nov 2026): behind the page, blue above and the sheet's colour below, so
+ * pulling past either end or the address bar sliding never shows a white strip; the sheet reaches
+ * the bottom and keeps clear of the home indicator.
+ */
+:global(html):has(:global(#wg-tema) .page), :global(body):has(:global(#wg-tema) .page) { background: linear-gradient(#1551A0 50%, #FFFFFF 50%); }
+:global(html):has(:global(#wg-tema[data-tema="gelap"]) .page), :global(body):has(:global(#wg-tema[data-tema="gelap"]) .page) { background: linear-gradient(#1551A0 50%, #131C2E 50%); }
 /* A clear ring on every control: blue on the white sheet, white on the blue. */
 .page :focus-visible { outline: 3px solid var(--hr-primary); outline-offset: 2px; }
 .top :focus-visible { outline-color: var(--hr-on-brand); }
@@ -21,7 +28,7 @@
 .nowLabel { margin: 0; min-height: 1.4em; font-size: 13px; font-weight: 600; color: var(--hr-on-brand-muted); font-variant-numeric: tabular-nums; }
 .nowLabel strong { color: var(--hr-accent); font-weight: 800; }
 
-.sheet { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 24px calc(20px + env(safe-area-inset-bottom)); border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-surface); }
+.sheet { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 24px max(20px, calc(12px + env(safe-area-inset-bottom))); border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-surface); }
 .sheetInner { width: 100%; max-width: 26rem; margin: 0 auto; display: grid; gap: 8px; }
 .foot { margin: auto 0 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--hr-muted); }
 .page .title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; color: var(--hr-text); }
@@ -61,10 +68,16 @@
 
 /* A short phone (SE, small Android): the line and the day line step aside so the form and its button fit on the first screen. */
 @media (max-height: 740px) and (max-width: 759px) {
-  .top { gap: 16px; padding-bottom: 20px; }
-  .headline { font-size: 28px; }
-  .pitchLead, .today { display: none; }
-  .sheet { padding-top: 22px; }
+  .top { gap: 14px; padding-top: calc(14px + env(safe-area-inset-top)); padding-bottom: 18px; }
+  .brandMark { width: 34px; height: 34px; }
+  .headline { font-size: 26px; }
+  .pitchLead, .today, .foot { display: none; }
+  .sheet { gap: 12px; padding-top: 20px; }
+  .page .title { font-size: 24px; }
+  .lead { margin-bottom: 0; font-size: 14px; }
+  .form { gap: 12px; margin-top: 6px; }
+  .field input { min-height: 48px; }
+  .action { min-height: 52px; }
 }
 @media (min-width: 760px) {
   .page { justify-content: center; padding: 40px 16px; }

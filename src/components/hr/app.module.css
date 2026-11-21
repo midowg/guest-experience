@@ -295,3 +295,30 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .calendarMore { font-size: 10px; font-weight: 700; line-height: 8px; }
 .calendar .groupNote { margin: 6px 4px 0; }
 @media (prefers-reduced-motion: reduce) { .calendarDay { transition: none; } }
+
+/* Profil → Pengaturan: a compact segmented control at the end of a row (Tampilan). */
+.rowControl { flex: none; width: 168px; }
+.rowControl .segment { min-height: 36px; font-size: 13px; }
+
+/* Data wajah: the status first, with what it means and where the photo came from. */
+.faceStatus { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.faceStatusIcon { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; background: var(--hr-surface-soft); color: var(--hr-muted); }
+.faceStatus[data-ok] .faceStatusIcon { background: var(--hr-success-soft); color: var(--hr-success); }
+.faceSource { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--hr-muted); }
+.howList { margin: 0; padding: 6px 16px 6px 40px; display: grid; gap: 10px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); font-size: 15px; line-height: 1.5; }
+.howList li { padding: 6px 0; }
+.howList li::marker { color: var(--hr-primary); font-weight: 800; }
+
+/* Bantuan & FAQ: each question opens in place. */
+.faq { display: grid; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); overflow: hidden; }
+.faqItem + .faqItem { border-top: 1px solid var(--hr-line); }
+.faqItem summary { min-height: 52px; padding: 14px 44px 14px 16px; position: relative; display: flex; align-items: center; font-size: 16px; font-weight: 600; line-height: 1.35; cursor: pointer; list-style: none; }
+.faqItem summary::-webkit-details-marker { display: none; }
+.faqItem summary::after { content: ""; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; margin-top: -6px; border-right: 2px solid var(--hr-muted); border-bottom: 2px solid var(--hr-muted); transform: rotate(45deg); transition: transform var(--hr-fast) var(--hr-ease); }
+.faqItem[open] summary::after { transform: rotate(-135deg); margin-top: -2px; }
+.faqItem summary:focus-visible { outline: 3px solid var(--hr-primary); outline-offset: -3px; }
+.faqAnswer { padding: 0 16px 16px; font-size: 15px; line-height: 1.55; color: var(--hr-muted); }
+.faqAnswer strong { color: var(--hr-text); }
+.helpList { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.helpList a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--hr-primary); font-weight: 700; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .faqItem summary::after { transition: none; } }

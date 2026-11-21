@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { ClockInFlow } from "@/components/hr/ClockInFlow";
+import { asTheme, THEME_COOKIE } from "@/lib/hr/theme";
 import { appState } from "@/lib/server/hr/leave";
 import { requireHrPage } from "@/lib/server/hr/session";
 
@@ -9,6 +11,6 @@ import { requireHrPage } from "@/lib/server/hr/session";
  */
 export async function HrScreen({ here, enroll = false }: { here: string; enroll?: boolean }) {
   const member = await requireHrPage(here);
-  const state = await appState(member);
-  return <ClockInFlow initial={state} openEnroll={enroll} name={member.nickname || member.name.split(" ")[0]} fullName={member.name} now={new Date().toISOString()} />;
+  const [state, jar] = await Promise.all([appState(member), cookies()]);
+  return <ClockInFlow initial={state} theme={asTheme(jar.get(THEME_COOKIE)?.value)} openEnroll={enroll} name={member.nickname || member.name.split(" ")[0]} fullName={member.name} now={new Date().toISOString()} />;
 }

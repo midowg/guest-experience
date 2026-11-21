@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("./clockInApi", () => api);
 // The bottom menu's place comes from the address; Beranda unless a test says otherwise.
-const nav = vi.hoisted(() => ({ path: "/hr" }));
+const nav = vi.hoisted(() => ({ path: "/people" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.path }));
 vi.mock("./FaceCamera", () => ({
   FaceCamera: ({ onDone, purpose }: { onDone: (capture: unknown) => void; purpose: string }) =>
@@ -40,7 +40,7 @@ beforeEach(() => {
   api.startClockIn.mockResolvedValue({ kind: "tantangan", challenge, needsConsent: false });
   api.submitClockIn.mockResolvedValue({ data: { kind: "tercatat", record }, message: "Absen masuk tercatat." });
 });
-afterEach(() => { cleanup(); nav.path = "/hr"; });
+afterEach(() => { cleanup(); nav.path = "/people"; });
 window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 
 it("says what it waits for before it is ready", () => {
@@ -119,16 +119,16 @@ it("opens clocking in as a sheet with Batal as the one way out, which the back b
 
 it("shows each place of the bottom menu from the same data, each button once", () => {
   const today = { ...base, today: { ...base.today, masuk: record }, recent: [record], requests: [] };
-  nav.path = "/hr/riwayat";
+  nav.path = "/people/riwayat";
   const { rerender } = render(<ClockInFlow initial={today} name="Contoh" fullName="Contoh Satu" />);
   expect(screen.getByRole("heading", { name: "Riwayat" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Hari ini, masuk/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Absen/ })).toBeNull();
-  nav.path = "/hr/pengajuan";
+  nav.path = "/people/pengajuan";
   rerender(<ClockInFlow initial={today} name="Contoh" fullName="Contoh Satu" />);
   expect(screen.getAllByRole("button", { name: /Ajukan/ })).toHaveLength(1);
   expect(screen.getByText("Tidak ada yang menunggu")).toBeTruthy();
-  nav.path = "/hr/profil";
+  nav.path = "/people/profil";
   rerender(<ClockInFlow initial={today} name="Contoh" fullName="Contoh Satu" />);
   expect(screen.getByRole("heading", { name: "Contoh Satu" })).toBeTruthy();
   expect(screen.getAllByRole("button", { name: "Keluar" })).toHaveLength(1);
@@ -137,7 +137,7 @@ it("shows each place of the bottom menu from the same data, each button once", (
 
 it("opens a day as a detail screen with a back button and Revisi, which opens the revision sheet on that day", () => {
   const today = { ...base, today: { ...base.today, masuk: record }, recent: [record] };
-  nav.path = "/hr/riwayat";
+  nav.path = "/people/riwayat";
   render(<ClockInFlow initial={today} />);
   fireEvent.click(screen.getByRole("button", { name: /Hari ini, masuk/ }));
   expect(screen.getByRole("heading", { level: 1, name: /20 Nov/ })).toBeTruthy();
@@ -148,7 +148,7 @@ it("opens a day as a detail screen with a back button and Revisi, which opens th
 });
 
 it("asks before signing out", () => {
-  nav.path = "/hr/profil";
+  nav.path = "/people/profil";
   render(<ClockInFlow initial={base} fullName="Contoh Satu" />);
   fireEvent.click(screen.getByRole("button", { name: "Keluar" }));
   expect(screen.getByRole("alertdialog", { name: "Keluar dari WG People?" })).toBeTruthy();
