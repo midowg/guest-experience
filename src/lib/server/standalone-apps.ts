@@ -43,7 +43,7 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
   ]);
   return [
     {
-      key: "wam", name: "WAM 2026", eyebrow: "Aplikasi karyawan",
+      key: "wam", name: "Pra WAM", eyebrow: "Aplikasi karyawan",
       status: phase ? `${phase.kind === "pra_wam" ? "Minggu Pra WAM" : phase.name} · ${short(phase.startDate)}–${short(phase.endDate)}${phase.daysToWam ? ` · WAM ${phase.daysToWam} hari lagi` : ""}` : "Werkudara Annual Meeting, 4–7 Jan 2027",
       address: praWamPath.home,
       description: "Login per karyawan: agenda, appraisal, booking ruang, absen QR, dokumen, dan pengumuman. Panitia mengelola sesi dari dalam aplikasi.",
