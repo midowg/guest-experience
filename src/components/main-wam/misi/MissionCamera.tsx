@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CheckCircle2, Hourglass, ImageOff, Lock, RotateCcw, Send, SwitchCamera } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { Banner, Button, EmptyState, IconBox, IconButton, Pill, Text } from "@/components/main-wam/ui";
+import { Banner, Button, EmptyState, EyebrowLabel, IconBox, IconButton, Pill, Text } from "@/components/main-wam/ui";
 import { grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto } from "@/components/main-wam/momen/upload/compress";
 import type { MissionItem } from "@/lib/main-wam/misi/missions";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
@@ -132,16 +132,16 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
 
   return <ScreenContent>
     <div className={css.head}>
-      <IconBox icon={<Camera />} tone="awarding" />
       <div className={css.headText}>
-        <Text variant="label" color="2">{t("misi.sheet.points", { points: item.points })}</Text>
-        <Text as="h2" variant="title">{item.title}</Text>
+        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+        <h2 className={css.headTitle}>{item.title}</h2>
       </div>
     </div>
     <PlaceBanner place={place} item={item} onCheck={() => void check()} />
     {problem && <Banner tone="error">{problem}</Banner>}
 
     <div className={css.stage}>
+      <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
       {shot
         // eslint-disable-next-line @next/next/no-img-element -- the photo just made on this phone (object URL)
         ? <img className={css.shot} src={shot.url} alt={t("misi.cam.preview")} />

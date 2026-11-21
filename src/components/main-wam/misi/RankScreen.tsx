@@ -3,15 +3,16 @@
 import { Hourglass, Medal, Trophy } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { Banner, Button, Card, EmptyState, Pill, SrOnly } from "@/components/main-wam/ui";
+import { Button, EmptyState, Pill, SrOnly } from "@/components/main-wam/ui";
 import { medalOf, myPlace, type RankRow } from "@/lib/main-wam/misi/rank";
 import { mainWamPath } from "@/lib/routes";
 import css from "./misi.module.css";
 
 /**
- * Peringkat: everyone of the event ranked by points. A row is the rank (a medal for 1 to 3), the nama
- * panggilan, the department's short form and the points; the asker's own row is lit and says "Kamu".
- * Nothing else about a person is here, and the answer carries no ids (rank.ts).
+ * Peringkat (prototipe SC.rank): everyone of the event ranked by points, flat rows. A row is the rank
+ * (a medal for 1 to 3), the nama panggilan, the department's short form and the points; the asker's
+ * own row is lit in gold and says "Kamu". Nothing else about a person is here, and the answer carries
+ * no ids (rank.ts).
  */
 export function RankScreen({ migrated, open, rows }: { migrated: boolean; open: boolean; rows: readonly RankRow[] }) {
   const t = useT();
@@ -19,8 +20,8 @@ export function RankScreen({ migrated, open, rows }: { migrated: boolean; open: 
   if (!migrated) return <ScreenContent><EmptyState icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("misi.waiting")}</EmptyState></ScreenContent>;
   if (!open) return <ScreenContent><EmptyState icon={<Trophy />} title={t("misi.rank.closedTitle")} action={<Button variant="secondary" href={mainWamPath.missions}>{t("misi.rank.back")}</Button>}>{t("misi.rank.closedBody")}</EmptyState></ScreenContent>;
   return <ScreenContent>
-    <Banner tone="info" icon={<Medal />}>{place ? t("misi.rank.summary", { rank: place.rank, total: place.of, points: place.points }) : t("misi.rank.summaryNone")}</Banner>
-    <Card flush as="section">
+    <p className={css.rankSummary}><Medal aria-hidden /><span>{place ? t("misi.rank.summary", { rank: place.rank, total: place.of, points: place.points }) : t("misi.rank.summaryNone")}</span></p>
+    <section>
       <ol className={css.rank} aria-label={t("misi.rank.list")}>
         {rows.map((row, index) => {
           const medal = medalOf(row.rank);
@@ -36,6 +37,6 @@ export function RankScreen({ migrated, open, rows }: { migrated: boolean; open: 
           </li>;
         })}
       </ol>
-    </Card>
+    </section>
   </ScreenContent>;
 }
