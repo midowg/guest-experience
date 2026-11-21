@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Activity, Crown, ListVideo, MonitorPlay, Palette, ShieldCheck } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGroup, type Crumb } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
+import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
 import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, tvAdminPath, wamAdminPath } from "@/lib/routes";
 
 export type TvAdminSection = "pantauan" | "tayangan" | "layar" | "tampilan";
@@ -28,7 +29,7 @@ export const tvAdminCrumbs = (key: TvAdminSection): Crumb[] => [{ label: "Admin 
 export function TvAdminFrame({ current, wide = false, children }: { current: TvAdminSection; wide?: boolean; children: ReactNode }) {
   const nav: ConsoleNavGroup[] = groups.map(group => ({ label: group.label, items: group.items.map(({ key, label, href, icon }) => ({ key, label, href, icon })) }));
   const footerLinks: ConsoleLink[] = [
-    { key: "wam", label: "Admin WAM", href: wamAdminPath.home, icon: <ShieldCheck size={20} /> },
+    { key: "wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> },
     { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
   ];
   return <ConsoleShell theme="admin" area="Admin TV" storageKey="tv-admin" className={admin.shell} wide={wide}

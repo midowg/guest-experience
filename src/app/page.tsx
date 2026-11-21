@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getHomeMenu, getHomeStyle } from '@/lib/server/admin-settings';
 import { EmptyHome } from './EmptyHome';
 
 export const metadata: Metadata = {
@@ -7,10 +8,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// The look is read at most once a minute, and at once after the super admin changes it (revalidatePath).
+export const revalidate = 60;
+
 /**
- * journey.werkudara.group: a plain welcome that features and reveals no event. Guests come in
- * through the link they were given; what lies behind the links is for them only.
+ * journey.werkudara.group: the team's apps in the look picked in Super admin → Halaman utama. It
+ * features and reveals no event; guests come in through the link they were given.
  */
-export default function Home() {
-  return <EmptyHome />;
+export default async function Home() {
+  const [{ style }, { menu }] = await Promise.all([getHomeStyle(), getHomeMenu()]);
+  return <EmptyHome style={style} menu={menu} />;
 }

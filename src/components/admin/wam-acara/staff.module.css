@@ -1,0 +1,22 @@
+/* Admin WAM 2026 → Panitia WAM. Console tokens only (--cs-*). */
+.note { margin: 0; color: var(--cs-muted); font-size: 14px; }
+.pick { display: grid; gap: 8px 12px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: end; }
+.pick :global(.field) { margin: 0; min-width: 0; }
+@media (max-width: 640px) { .pick { grid-template-columns: 1fr; } }
+
+.summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; padding: 0; list-style: none; }
+
+.rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; min-height: 56px; padding: 10px 0; border-top: 1px solid var(--cs-line); }
+.row:first-child { border-top: 0; }
+.who { display: grid; gap: 2px; min-width: 0; }
+.who strong { font-size: 14px; overflow-wrap: anywhere; }
+.who span { color: var(--cs-muted); font-size: 12px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.edit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.edit :global(.field) { flex: 1 1 12rem; margin: 0; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: 1fr; }
+  .actions { justify-content: flex-start; }
+}

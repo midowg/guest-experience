@@ -16,6 +16,7 @@ import { absenBlock } from "../ceklis/data";
 import { mwFail, mwMissing } from "../errors";
 import { mainWamAttendees } from "../people";
 import { allSessions, attendanceOf } from "../read";
+import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 
 /*
  * Absen QR (A01–A04, aturan-wam §7) on Main WAM's own rundown (mw_sessions, mw_attendance), with
@@ -94,9 +95,9 @@ export async function sessionQrToken(sessionId: string, renew = false): Promise<
   if (!data) throw new ServiceError(404, "Sesi tidak ditemukan.");
   const row = data as Record<string, unknown> & { qr_token: string | null };
   const session = sessionFromRow(row);
-  if (!session.usesAttendance) throw new ServiceError(409, "Sesi ini tidak memakai absen. Tandai pakai absen di Admin WAM → Rundown.");
+  if (!session.usesAttendance) throw new ServiceError(409, `Sesi ini tidak memakai absen. Tandai pakai absen di ${WAM_EVENT_ADMIN_LABEL} → Rundown.`);
   if (!renew) {
-    if (!row.qr_token) throw new ServiceError(409, "QR belum dibuat. Simpan ulang sesi dengan Pakai absen di Admin WAM → Rundown.");
+    if (!row.qr_token) throw new ServiceError(409, `QR belum dibuat. Simpan ulang sesi dengan Pakai absen di ${WAM_EVENT_ADMIN_LABEL} → Rundown.`);
     return { token: row.qr_token, session };
   }
   const token = newQrToken(size => randomBytes(size));

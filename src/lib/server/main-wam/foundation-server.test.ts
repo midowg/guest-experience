@@ -20,8 +20,12 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 const ME = id(1);
 let accounts: string[] = [];
 let roles: { employee_id: string; role: string }[] = [];
+/** Panitia WAM (pw_event_staff of the WAM event; 20 Nov 2026): apart from Pra WAM's roles. */
+let staff: string[] = [];
 let mode = "semua";
 let testers: string[] = [];
+/** Main WAM shown in Journey (admin_settings.main_wam_shown); hidden is the other half of the tests. */
+let shown = true;
 
 function answer(q: Query) {
   switch (q.table) {
@@ -29,9 +33,14 @@ function answer(q: Query) {
       const [from, to] = callsOf(q, "range")[0] as [number, number];
       return { data: accounts.slice(from, to + 1).map(employee_id => ({ employee_id })) };
     }
-    case "pw_roles": return { data: roles };
+    case "pw_roles": {
+      const role = callsOf(q, "eq").find(call => call[0] === "role")?.[1];
+      return { data: role ? roles.filter(row => row.role === role) : roles };
+    }
+    case "pw_event_staff": return { data: staff.map(employee_id => ({ employee_id, seksi: "Acara" })) };
     case "mw_settings": return { data: [{ mode, modules: {} }] };
     case "mw_testers": return { data: testers.map(employee_id => ({ employee_id })) };
+    case "admin_settings": return { data: [{ main_wam_shown: shown }] };
     default: return { data: [] };
   }
 }
@@ -45,9 +54,12 @@ beforeEach(() => {
   newRequest();
   fake.answer = answer;
   accounts = [ME, id(2), id(3), id(4), id(5)];
+  // id(2) and id(3) are Pra WAM's panitia and admin; ME is on Panitia WAM.
   roles = [{ employee_id: id(4), role: "bod" }, { employee_id: id(2), role: "panitia" }, { employee_id: id(3), role: "admin" }];
+  staff = [ME];
   mode = "semua";
   testers = [];
+  shown = true;
 });
 
 describe("mainWamAttendees: the event's people (R5)", () => {
@@ -62,7 +74,8 @@ describe("mainWamAttendees: the event's people (R5)", () => {
     await Promise.all([people.mainWamAttendees(), people.mainWamAttendees(), people.mainWamEventPeople()]);
     expect(fake.queries.filter(q => q.table === "pw_accounts").length).toBe(1);
     expect(fake.queries.filter(q => q.table === "pw_roles").length).toBe(1);
-    // The accounts and the roles side by side: one round.
+    expect(fake.queries.filter(q => q.table === "pw_event_staff").length).toBe(1);
+    // The accounts, BOD and Panitia WAM side by side: one round.
     expect(fake.deepest).toBe(1);
   });
 
@@ -77,12 +90,29 @@ describe("mainWamAttendees: the event's people (R5)", () => {
     await expect(people.mainWamAttendees()).rejects.toThrow();
   });
 
-  it("mainWamAudience uses the same list: everyone in mode semua, the penguji otherwise", async () => {
+  it("mainWamAudience uses the same list: everyone in mode semua, the penguji otherwise (listed and Panitia WAM, not Pra WAM's committee or admins)", async () => {
     expect(await notes.mainWamAudience()).toEqual([ME, id(2), id(3), id(4), id(5)]);
     newRequest();
     mode = "uji";
     testers = [id(5)];
-    expect(await notes.mainWamAudience()).toEqual([id(2), id(3), id(5)]);
+    expect(await notes.mainWamAudience()).toEqual([ME, id(5)]);
+  });
+
+  it("Panitia WAM is the committee: BOD from the role, panitia from pw_event_staff of the WAM event", async () => {
+    const event = await people.mainWamEventPeople();
+    expect([...event.panitia]).toEqual([ME]);
+    expect([...event.bod]).toEqual([id(4)]);
+    const query = fake.queries.find(q => q.table === "pw_event_staff")!;
+    expect(callsOf(query, "eq")).toEqual([["pw_events.kind", "wam"]]);
+    expect(callsOf(fake.queries.find(q => q.table === "pw_roles")!, "eq")).toEqual([["role", "bod"]]);
+  });
+
+  it("before migration 202611200603: no Panitia WAM (only the listed penguji), never an error", async () => {
+    fake.answer = q => (q.table === "pw_event_staff" ? { error: { code: "PGRST205", message: "Could not find the table 'public.pw_event_staff' in the schema cache" } } : answer(q));
+    mode = "uji";
+    testers = [id(5)];
+    expect([...(await people.mainWamEventPeople()).panitia]).toEqual([]);
+    expect(await notes.mainWamAudience()).toEqual([id(5)]);
   });
 });
 
@@ -167,6 +197,48 @@ describe("a note's tone is kept", () => {
     };
     await notes.sendMainWamNote({ kind: "pengumuman", title: "Bawa jaket", body: "Dingin.", to: { people: [ME], label: "Rani" }, by: id(2), tone: "warning" });
     expect(inserts).toContainEqual(["mw_notes", expect.objectContaining({ kind: "pengumuman", tone: "warning" })]);
+  });
+});
+
+describe("while Main WAM is hidden from Journey (until the super admin shows it)", () => {
+  it("its notes reach only the penguji (listed and Panitia WAM), whatever the mode: never Pra WAM's committee or admins by role", async () => {
+    shown = false;
+    testers = [id(5)];
+    expect(await notes.mainWamAudience()).toEqual([ME, id(5)]);
+    newRequest();
+    mode = "uji";
+    expect(await notes.mainWamAudience()).toEqual([ME, id(5)]);
+    newRequest();
+    shown = true;
+    expect(await notes.mainWamAudience()).toEqual([ME, id(5)]);
+  });
+
+  it("a note to everyone (Kuis dimulai) goes to the penguji, labelled so, never as a committee announcement (Pra WAM's list, the office TV)", async () => {
+    shown = false;
+    testers = [id(5)];
+    const inserts: [string, unknown][] = [];
+    fake.answer = q => {
+      const insert = callsOf(q, "insert")[0];
+      if (insert) inserts.push([q.table, insert[0]]);
+      if (q.table === "pw_announcements") return { data: [{ id: id(71) }] };
+      return answer(q);
+    };
+    const sent = await notes.sendMainWamNote({ kind: "kuis", title: "Kuis dimulai", body: "Kuis WAM: ketuk untuk ikut.", to: { audience: { type: "semua" } }, link: "/wam/acara/kuis/x", by: null });
+    expect(sent).toBe(2);
+    expect(inserts).toContainEqual(["pw_announcements", expect.objectContaining({ kind: "sesi", audience_label: "Penguji WAM 2026" })]);
+    expect(inserts).toContainEqual(["pw_notification_receipts", [{ announcement_id: id(71), employee_id: ME }, { announcement_id: id(71), employee_id: id(5) }]]);
+  });
+
+  it("shown again: everyone in mode semua, a committee announcement stays one", async () => {
+    const inserts: [string, unknown][] = [];
+    fake.answer = q => {
+      const insert = callsOf(q, "insert")[0];
+      if (insert) inserts.push([q.table, insert[0]]);
+      if (q.table === "pw_announcements") return { data: [{ id: id(72) }] };
+      return answer(q);
+    };
+    expect(await notes.sendMainWamNote({ kind: "pengumuman", title: "Bawa jaket", body: "Dingin.", to: { audience: { type: "semua" } }, by: id(2) })).toBe(5);
+    expect(inserts).toContainEqual(["pw_announcements", expect.objectContaining({ kind: "pengumuman", audience_label: "Semua peserta" })]);
   });
 });
 

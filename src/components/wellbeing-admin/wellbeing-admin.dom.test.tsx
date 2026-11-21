@@ -117,6 +117,21 @@ describe("Admin Wellbeing", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /bukti 1 dari/ })).toBeNull());
   });
 
+  it("downloads one employee's data from their panel: only the period to choose (19 Nov 2026)", async () => {
+    open("karyawan");
+    const list = await screen.findByRole("list", { name: "Karyawan menurut poin" }, { timeout: 3000 });
+    fireEvent.click(within(list).getAllByRole("button").find(button => button.textContent?.includes("Bima"))!);
+    const person = await screen.findByRole("dialog", { name: "Detail karyawan" });
+    fireEvent.click(await within(person).findByRole("button", { name: "Unduh Excel" }));
+    const panel = await screen.findByRole("dialog", { name: "Unduh Excel" });
+    expect(within(panel).getByText(/Data Bima Rekaan: ringkasan poin, semua aktivitasnya, dan poin dari admin/)).toBeTruthy();
+    expect(within(panel).queryByRole("radio")).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Bulan lalu" })).toBeTruthy();
+    fireEvent.click(within(panel).getByRole("button", { name: "Unduh Excel" }));
+    // The preview has no server to make the file: the message shows in the panel.
+    expect(await within(panel).findByText(/berkas Excel dibuat oleh server/)).toBeTruthy();
+  });
+
   it("chooses a report and its period in Laporan", async () => {
     open("laporan");
     const cards = await screen.findAllByRole("button", { name: "Unduh Excel" });

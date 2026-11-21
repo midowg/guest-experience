@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, Circle, CircleDashed, Download, Trash2, Users } from "lucide-react";
+import { Bell, CheckCircle2, Circle, CircleDashed, Download, Trash2, Users, Utensils } from "lucide-react";
 import { ConsoleButton, ConsoleButtonLink, FilterChips, Pill, SearchField, StatCard, StatRow, type ConsoleTone } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
@@ -188,6 +188,8 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
         </select>
       </label>
       <ConsoleButtonLink href={praWamQuestionnaireApi.table} download icon={<Download size={18} aria-hidden="true" />}>Unduh Excel</ConsoleButtonLink>
+      {/* Only the food answers, for the catering (19 Nov 2026). */}
+      <ConsoleButtonLink href={`${praWamQuestionnaireApi.table}?isi=makanan`} download icon={<Utensils size={18} aria-hidden="true" />}>Unduh data makanan</ConsoleButtonLink>
     </div>
     {/* Who answered what (11 Nov 2026): one question, then one of its answers. */}
     <div className={css.tools} role="group" aria-label="Saring jawaban">

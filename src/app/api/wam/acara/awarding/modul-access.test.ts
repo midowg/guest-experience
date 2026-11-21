@@ -6,7 +6,7 @@ import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-
  * Who reaches agen D's APIs (KONTRAK §3), through the real gate: nobody signed in → 401; anyone it
  * is not for → 404, one answer (audit L10, KONTRAK §9 #4): a module that is off, and a role that may
  * not (BOD do not vote, send or open Silent Meeting feedback; participants do not open or close it,
- * read the recap, approve, or open a session's QR). Admin WAM's module APIs need the admin session.
+ * read the recap, approve, or open a session's QR). Admin WAM 2026's module APIs need the admin session.
  * The work itself is mocked.
  */
 
@@ -110,11 +110,11 @@ describe("agen D's participant APIs", () => {
     expect(await statuses()).toEqual({ absen: 200, qrGet: 404, qrNew: 404, silent: 200, opened: 200, feedback: 200, control: 404, recap: 404, awards: 200, vote: 200, approve: 404 });
   });
 
-  it("let panitia open or close Silent Meeting and handle the session's QR", async () => {
+  it("let Panitia WAM open or close Silent Meeting and handle the session's QR (not Pra WAM's admin role, 20 Nov 2026)", async () => {
     state.viewer = person(["panitia"]);
     expect(await statuses(["control", "qrGet", "qrNew", "recap", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, recap: 404, approve: 404 });
     state.viewer = person(["admin"]);
-    expect(await statuses(["control", "qrGet"])).toEqual({ control: 200, qrGet: 200 });
+    expect(await statuses(["control", "qrGet"])).toEqual({ control: 404, qrGet: 404 });
   });
 
   it("let the BOD read the recap and approve, but not vote, send feedback or count as an opener", async () => {
@@ -146,8 +146,8 @@ describe("agen D's participant APIs", () => {
 describe("Admin WAM → Main WAM module APIs", () => {
   async function adminCalls() {
     const [awards, award, nominees, silent, question] = await Promise.all([
-      import("../../../admin/wam/main/awarding/route"), import("../../../admin/wam/main/awarding/[id]/route"), import("../../../admin/wam/main/awarding/[id]/nominasi/route"),
-      import("../../../admin/wam/main/silent-meeting/route"), import("../../../admin/wam/main/silent-meeting/[id]/route"),
+      import("../../../admin/wam2026/awarding/route"), import("../../../admin/wam2026/awarding/[id]/route"), import("../../../admin/wam2026/awarding/[id]/nominasi/route"),
+      import("../../../admin/wam2026/silent-meeting/route"), import("../../../admin/wam2026/silent-meeting/[id]/route"),
     ]);
     const category = { title: "Rekan paling suportif", method: "juri", nomineeKind: "orang" };
     const q = { sessionId: ID, question: "Apa yang perlu diubah?" };

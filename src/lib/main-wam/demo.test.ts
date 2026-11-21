@@ -89,7 +89,8 @@ describe("the role drawn (Lihat sebagai)", () => {
     const drawn = (roles: MainWamViewer["roles"], pick: "peserta" | "panitia" | "bod") => ({ demo: demoViewer({ roles, tester: true }, pick).demo });
     expect(sampleOnlyFor(drawn([], "panitia"), "kelola")).toBe(true);
     expect(sampleOnlyFor(drawn(["panitia"], "panitia"), "kelola")).toBe(false);
-    expect(sampleOnlyFor(drawn(["admin"], "panitia"), "kelola")).toBe(false);
+    // 20 Nov 2026: Pra WAM's admin role gives nothing in Main WAM (its roles never carry it; mainWamRolesOf).
+    expect(sampleOnlyFor(drawn(["admin"], "panitia"), "kelola")).toBe(true);
     expect(sampleOnlyFor(drawn(["panitia"], "bod"), "ringkasan")).toBe(true);
     // Without the demo there is nothing to ask: nothing changes.
     expect(sampleOnlyFor({}, "kelola")).toBe(false);

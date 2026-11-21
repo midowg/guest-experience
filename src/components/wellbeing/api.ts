@@ -52,7 +52,12 @@ export type WellbeingApi = {
   claimReward(input: { rewardId: string; note: string }): Promise<WbClaimResult>;
   /** Cancel my claim while it waits. */
   cancelClaim(id: string): Promise<WbClaimResult>;
+  /** Unduh rekap saya (19 Nov 2026): my own data for a period as an Excel file, with its name. */
+  exportMine(input: MyExport): Promise<{ blob: Blob; name: string }>;
 };
+
+/** The period of Unduh rekap saya: this month, last month, a range (from, to), or all of it. */
+export type MyExport = { period: "month" | "last_month" | "range" | "all"; from?: string | null; to?: string | null };
 
 /** A refused request: the server's message, its status, and per-field messages (fieldErrors.code for 409s). */
 export class WellbeingApiError extends Error {
@@ -105,6 +110,21 @@ async function request<T>(url: string, init: { method?: "GET" | "POST" | "DELETE
   return body.data as T;
 }
 
+/** A file from the server (the recap); a refusal comes as the usual JSON. */
+async function download(url: string, json: unknown): Promise<{ blob: Blob; name: string }> {
+  let response: Response;
+  try {
+    response = await fetch(url, { method: "POST", credentials: "same-origin", cache: "no-store", body: JSON.stringify(json), headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT) });
+  } catch { throw new WellbeingApiError("Tidak dapat terhubung. Periksa jaringan lalu coba lagi."); }
+  if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") window.location.assign(wellbeingPath.login(`${window.location.pathname}${window.location.search}`));
+    const body = await response.json().catch(() => null) as Envelope<unknown> | null;
+    throw new WellbeingApiError(body?.message || "Rekap belum dapat dibuat. Coba lagi.", response.status, body?.fieldErrors);
+  }
+  const name = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ?? "rekap-wlm.xlsx";
+  return { blob: await response.blob(), name };
+}
+
 export const realApi: WellbeingApi = {
   home: () => request<WbHome>(wellbeingApi.home),
   catalog: () => request<WbAppCatalog>(wellbeingApi.catalog),
@@ -133,6 +153,7 @@ export const realApi: WellbeingApi = {
   rewards: () => request<WbRewards>(wellbeingApi.rewards),
   claimReward: input => request<WbClaimResult>(wellbeingApi.claims, { method: "POST", json: input }),
   cancelClaim: id => request<WbClaimResult>(wellbeingApi.claim(id), { method: "POST" }),
+  exportMine: input => download(wellbeingApi.export, input),
 };
 
 const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {

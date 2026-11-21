@@ -4,8 +4,8 @@ Acuan untuk setiap agen yang membangun layar Main WAM. Layar **disusun dari kit 
 warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belum ada: tambahkan ke kit
 (pemilik: agen UI kit) atau catat di laporan.
 
-- Galeri hidup: `/dev-preview/main-wam/kit` (semua komponen dan statusnya; `?mode=dark`, `?aksen=%23B45309`).
-- Kerangka: `/dev-preview/main-wam/kit/shell?layar=beranda|agenda|momen|saya|detail|tugas|kamera`.
+- Galeri hidup: `/dev-preview/wam2026/kit` (semua komponen dan statusnya; `?mode=dark`, `?aksen=%23B45309`).
+- Kerangka: `/dev-preview/wam2026/kit/shell?layar=beranda|agenda|momen|saya|detail|tugas|kamera`.
 - Sumber desain: `DESIGN_SYSTEM.md`, `prototipe/wam.css`, `PANDUAN_PROTO.md` §6 dan §9–§10.7, `komponen.html`.
 
 | Folder | Isi | Impor |
@@ -391,4 +391,4 @@ Aturan lengkap dan keputusan: `KONTRAK.md` §11. Ringkasnya untuk yang membuat l
 
 ## 8. Mode demo (banner dan pengalih peran)
 
-`<MainWamShell demo>` menggambar strip "Mode demo · data contoh" (token `--mw-warning-container`) di atas bilah atas; layout nyata mengisinya dari `settings.moduleConfig.demo`, `DevFrame` dari propnya. Kartu "Lihat sebagai" (`components/main-wam/demo/DemoSwitch`, di Saya lewat prop `demo` pada `SayaScreen`) hanya muncul untuk penguji. Pratinjau: `/dev-preview/main-wam/demo?layar=saya|beranda|panitia&peran=peserta|panitia|bod`. Aturan lengkap: KONTRAK §12.
+`<MainWamShell demo>` menggambar strip "Mode demo · data contoh" (token `--mw-warning-container`) di atas bilah atas; layout nyata mengisinya dari `settings.moduleConfig.demo`, `DevFrame` dari propnya. Kartu "Lihat sebagai" (`components/main-wam/demo/DemoSwitch`, di Saya lewat prop `demo` pada `SayaScreen`) hanya muncul untuk penguji. Pratinjau: `/dev-preview/wam2026/demo?layar=saya|beranda|panitia&peran=peserta|panitia|bod`. Aturan lengkap: KONTRAK §12.

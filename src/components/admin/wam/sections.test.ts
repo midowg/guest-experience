@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { wamAdminPath } from "@/lib/routes";
 import { wamCrumbs, wamGroups, wamMenuKey, wamSection, wamSectionAt, wamSections } from "./sections";
 
-describe("Admin WAM sections", () => {
+describe("Admin Pra WAM sections", () => {
   it("give every section its own key and address under /admin/wam", () => {
     expect(new Set(wamSections.map(section => section.key)).size).toBe(wamSections.length);
     expect(new Set(wamSections.map(section => section.href)).size).toBe(wamSections.length);
@@ -13,18 +13,14 @@ describe("Admin WAM sections", () => {
   });
 
   it("leave units and positions to Data karyawan", () => {
-    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv",
-      "mw-pengaturan", "mw-isi", "mw-kamar", "mw-perjalanan", "mw-panduan", "mw-info", "mw-modul", "mw-silent", "mw-kuis", "mw-misi", "tema", "mcp"]);
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv", "tema", "mcp"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 
   it("group the menu in the order the sections are listed, leaving tab-only pages out", () => {
     const groups = wamGroups();
-    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Acara dan meeting", "Untuk peserta", "Main WAM", "Pengaturan"]);
-    // Main WAM: four menu items (Misi is its own), the content pages as tabs of Isi acara and Modul acara.
-    expect(groups.find(group => group.label === "Main WAM")!.sections.map(section => section.key)).toEqual(["mw-pengaturan", "mw-isi", "mw-modul", "mw-misi"]);
-    expect(wamMenuKey("mw-kamar")).toBe("mw-isi");
-    expect(wamMenuKey("mw-silent")).toBe("mw-modul");
+    // 20 Nov 2026: no Main WAM group; Main WAM has its own door (Admin WAM 2026).
+    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Acara dan meeting", "Untuk peserta", "Pengaturan"]);
     expect(groups.flatMap(group => group.sections)).toEqual(wamSections.filter(section => !section.owner));
     expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun"]);
     // Rarely touched settings at the bottom, Akses MCP last.
@@ -40,10 +36,10 @@ describe("Admin WAM sections", () => {
     for (const section of wamSections) if (section.owner) expect(wamSection(section.owner).owner).toBeUndefined();
   });
 
-  it("build the breadcrumb: Admin WAM, the group, the section, then any extra step", () => {
-    expect(wamCrumbs("akun")).toEqual([{ label: "Admin WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran" }]);
-    expect(wamCrumbs("akun", "Peran")).toEqual([{ label: "Admin WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran", href: wamAdminPath.accounts }, { label: "Peran" }]);
-    expect(wamCrumbs("reset").map(step => step.label)).toEqual(["Admin WAM", "Orang", "Akun dan peran", "Permintaan reset password"]);
+  it("build the breadcrumb: Admin Pra WAM, the group, the section, then any extra step", () => {
+    expect(wamCrumbs("akun")).toEqual([{ label: "Admin Pra WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran" }]);
+    expect(wamCrumbs("akun", "Peran")).toEqual([{ label: "Admin Pra WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran", href: wamAdminPath.accounts }, { label: "Peran" }]);
+    expect(wamCrumbs("reset").map(step => step.label)).toEqual(["Admin Pra WAM", "Orang", "Akun dan peran", "Permintaan reset password"]);
     expect(wamCrumbs("reset")[2].href).toBe(wamAdminPath.accounts);
     expect(wamCrumbs("kuesioner", { label: "Rekap", href: wamAdminPath.questionnaire.recap }).at(-1)).toEqual({ label: "Rekap" });
   });
@@ -76,7 +72,7 @@ function routes(dir: URL): string[] {
   return walk(decodeURIComponent(root));
 }
 
-describe("who may use Admin WAM", () => {
+describe("who may use Admin Pra WAM", () => {
   const api = new URL("../../../app/api/admin/", import.meta.url);
 
   // The unit import sits on Data karyawan, beside the workbook it reads: super admin only.

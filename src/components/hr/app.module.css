@@ -1,0 +1,371 @@
+/*
+ * WG People's screens (21 Nov 2026, after the UX, accessibility and code audits): Apple HIG first.
+ * Tab roots have no bar: a large title in the page, or the greeting on Beranda. Detail screens have
+ * a bar: a back chevron, the title in the middle, at most one action on the right. Tasks are sheets
+ * (Batal on the left, the action on the right). Look of 21 Nov 2026 (third round): Werkudara blue and yellow. The
+ * one action colour is yellow (a pill); blue tints the current tab and the bar actions (the iOS
+ * tint). The receipt is the time card (.ticket: a blue stub, a perforation, a white part); the day
+ * line (.dayLine) draws when work ran. Beranda (fourth look, 21 Nov 2026, "status sentence"): the
+ * greeting, the day in one large sentence with its times in blue, the day line and the one action.
+ * Times in tabular figures. Status always as a word, never the colour alone. 44px targets.
+ * Scales from brain/aturan/desain-ui.md: 34 large title, 28 title, 22 headline, 17 subtitle, 15–16
+ * body, 13 label, 12 caption; radii from the --hr-r-* tokens.
+ * The doubled scope (.screen …, .detail …) outranks the shared .app h1–h3 rules of booking.module.css.
+ */
+
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Tab roots */
+.screen { display: grid; gap: 24px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 0; }
+.headText { display: grid; gap: 4px; min-width: 0; }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; color: var(--hr-muted); }
+.screen .largeTitle { margin: 0; font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -.035em; color: var(--hr-text); text-wrap: balance; }
+.lead { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-muted); }
+.headAction { flex: none; min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 120ms var(--hr-ease); }
+.headAction:active { transform: scale(.96); }
+
+/* Beranda: the greeting, then the day as one sentence (its times strong, in blue). */
+.hello { display: grid; gap: 6px; padding: 8px 0 0; }
+.screen .helloTitle { margin: 0; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -.035em; color: var(--hr-text); overflow-wrap: anywhere; }
+.helloLine { margin: 2px 0 0; max-width: 22ch; font-size: 24px; font-weight: 600; line-height: 1.25; letter-spacing: -.02em; color: var(--hr-muted); text-wrap: pretty; }
+.helloLine strong { color: var(--hr-primary); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The day line and the one action under the sentence. */
+.todayAct { display: grid; gap: 18px; margin-top: -4px; }
+.todayAct .dayLine { padding: 0 2px; }
+.todayAct .dayTrack { height: 14px; }
+.todayAct .dayTrack::before { top: 6px; }
+.todayAct .daySpan { top: 3px; }
+.todayAct .dayPin { top: 2px; }
+.todayAct .daySun { top: -2px; box-shadow: 0 0 0 3px var(--hr-app); }
+.actHint { margin: -8px 0 0; font-size: 13px; color: var(--hr-muted); text-align: center; }
+.todayAct .quiet { margin-top: -10px; }
+/* Today's two records as rows: In / Out, the time, the place, a status badge when not Verified. */
+.slotKind { flex: none; width: 56px; font-size: 13px; font-weight: 700; color: var(--hr-muted); }
+.slotClock { font-size: 20px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.warnIcon { color: var(--hr-warning); }
+.dangerIcon { color: var(--hr-danger); }
+
+/* Grouped lists (inset, like Settings). Labels and notes line up with the text in the rows. */
+.group { display: grid; gap: 8px; min-width: 0; }
+.screen .groupLabel, .detail .groupLabel, .sheetBody .groupLabel { margin: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--hr-muted); }
+.list { margin: 0; padding: 0; list-style: none; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); overflow: hidden; }
+.list > li { position: relative; }
+.list > li + li::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hr-line); }
+.list.iconList > li + li::before { left: 52px; }
+.row { width: 100%; min-height: 52px; padding: 11px 16px; display: flex; align-items: center; gap: 12px; border: 0; background: transparent; color: var(--hr-text); font: inherit; text-align: left; }
+.list .row:focus-visible { outline-offset: -3px; }
+button.row, label.row { cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); -webkit-tap-highlight-color: transparent; }
+button.row:hover, label.row:hover { background: color-mix(in srgb, var(--hr-surface-soft) 60%, transparent); }
+button.row:active, label.row:active { background: var(--hr-surface-soft); }
+.list a.row { color: var(--hr-text); text-decoration: none; }
+.rowIcon { flex: none; width: 24px; display: grid; place-items: center; color: var(--hr-muted); }
+.rowText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rowTitle { font-size: 16px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.rowSub { font-size: 13px; line-height: 1.4; color: var(--hr-muted); overflow-wrap: anywhere; }
+.rowValue { flex: none; max-width: 58%; font-size: 15px; color: var(--hr-muted); text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+/* Rows that only tell: the name quiet, the value plain. */
+.info .rowTitle { font-weight: 400; }
+.info .rowValue { color: var(--hr-text); }
+.plainText { font-weight: 400; font-size: 15px; line-height: 1.5; }
+.chevron { flex: none; color: var(--hr-muted); opacity: .6; }
+.destructive { justify-content: center; color: var(--hr-danger); font-weight: 600; }
+.destructive .rowText { text-align: center; }
+.check { flex: none; color: var(--hr-primary); }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice:focus-within { outline: 3px solid var(--hr-primary); outline-offset: -3px; }
+.groupNote { margin: 0 16px; font-size: 13px; line-height: 1.5; color: var(--hr-muted); }
+
+/* Status as a word with a mark (never the colour alone). */
+.status { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--hr-muted); }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.status_sah, .status_disetujui { color: var(--hr-success); }
+.status_perlu_cek, .status_menunggu { color: var(--hr-warning); }
+.status_ditolak { color: var(--hr-danger); }
+.status_dibatalkan, .status_kosong { color: var(--hr-muted); }
+/* The same word as a small tinted pill, under a row's text (Riwayat, Pengajuan, Tim, Beranda's today). */
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.statusBadge { padding: 3px 10px 3px 8px; border-radius: 999px; background: var(--hr-surface-soft); font-size: 12px; line-height: 1.35; }
+.statusBadge::before { width: 6px; height: 6px; }
+.statusBadge.status_sah, .statusBadge.status_disetujui { background: var(--hr-success-soft); }
+.statusBadge.status_perlu_cek, .statusBadge.status_menunggu { background: var(--hr-warning-soft); }
+.statusBadge.status_ditolak { background: var(--hr-danger-soft); }
+
+/* One main button for the whole app: a yellow pill. Disabled looks inert, not faded yellow. */
+.wide, .action { width: 100%; min-height: 56px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; letter-spacing: -.005em; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
+.wide:hover:not(:disabled), .action:hover:not(:disabled) { background: var(--hr-accent-hover); }
+.wide:active:not(:disabled), .action:active:not(:disabled) { transform: scale(.98); }
+.wide:disabled, .action:disabled { background: var(--hr-surface-soft); color: var(--hr-muted); cursor: default; }
+.action:focus-visible { outline: 3px solid var(--hr-on-brand); outline-offset: 3px; }
+.quiet { justify-self: center; min-height: 44px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-underline-offset: 3px; }
+.quiet:hover:not(:disabled) { text-decoration: underline; }
+.quiet:disabled { opacity: .5; cursor: default; }
+.quietMuted { color: var(--hr-muted); font-weight: 500; }
+
+/*
+ * The time card: a blue stub over a white part, cut by a perforation with a notch on each side
+ * (circles in the page colour). Beranda's today and the receipt after an absen.
+ */
+.ticket { display: grid; border-radius: var(--hr-r-panel); }
+.ticketStub { display: grid; gap: 14px; padding: 20px 20px 22px; border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-brand); color: var(--hr-on-brand); }
+.ticketCut { position: relative; height: 2px; margin: 0 1px; background: var(--hr-surface) repeating-linear-gradient(90deg, var(--hr-line-strong) 0 6px, transparent 6px 12px) 22px 0 / calc(100% - 44px) 100% no-repeat; }
+.ticketCut::before, .ticketCut::after { content: ""; position: absolute; top: -10px; width: 22px; height: 22px; border-radius: 50%; background: var(--hr-app); }
+.ticketCut::before { left: -12px; }
+.ticketCut::after { right: -12px; }
+.ticketPart { display: grid; gap: 14px; padding: 18px 20px 20px; border-radius: 0 0 var(--hr-r-panel) var(--hr-r-panel); background: var(--hr-surface); border: 1px solid var(--hr-line); border-top: 0; }
+.sheetBody .ticketCut::before, .sheetBody .ticketCut::after { background: var(--hr-app); }
+
+/* Beranda's stub: the label, the clock now, how the day goes, the day line, the one action. */
+.stubLabel { margin: 0; font-size: 13px; font-weight: 700; color: var(--hr-on-brand-muted); }
+.clockLine { margin: -6px 0 0; display: flex; align-items: baseline; gap: 8px; }
+.clock { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.zone { font-size: 15px; font-weight: 700; color: var(--hr-accent); }
+.state { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-on-brand-muted); }
+.live { color: var(--hr-on-brand); font-weight: 800; font-variant-numeric: tabular-nums; }
+.done { margin: 0; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: var(--hr-success-soft); color: var(--hr-success); font-weight: 700; }
+.hint { margin: -4px 0 0; font-size: 13px; color: var(--hr-on-brand-muted); text-align: center; }
+/* The receipt's stamp: Sah in yellow, Perlu dicek dashed; pressed on like a rubber stamp. */
+.stamp { justify-self: start; margin: 0; padding: 6px 14px 6px 10px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--hr-accent); border-radius: 999px; color: var(--hr-accent); font-size: 15px; font-weight: 800; transform: rotate(-3deg); }
+.stamp[data-tone="perlu_cek"], .stamp[data-tone="ditolak"] { border-style: dashed; border-color: var(--hr-on-brand-muted); color: var(--hr-on-brand); }
+@media (prefers-reduced-motion: no-preference) { .stamp { animation: stamp 420ms var(--hr-ease) 120ms both; } }
+@keyframes stamp { 0% { opacity: 0; transform: rotate(-3deg) scale(1.5); } 60% { opacity: 1; transform: rotate(-3deg) scale(.94); } 100% { transform: rotate(-3deg) scale(1); } }
+/* The stamped times below the perforation. */
+.slots { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.slot { display: grid; gap: 2px; align-content: start; min-width: 0; }
+.slot + .slot { padding-left: 14px; border-left: 1px solid var(--hr-line); }
+.slotLabel { font-size: 13px; font-weight: 700; color: var(--hr-muted); }
+.slotTime { font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.slotEmpty { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--hr-line-strong); }
+.slotWhere { font-size: 13px; color: var(--hr-muted); overflow-wrap: anywhere; }
+.slot .status { margin-top: 4px; }
+.ticketPart .quiet { margin-top: -4px; }
+
+/*
+ * The day line, 06.00 to 22.00: a hairline track, the work as a bar, the sun (yellow, ringed in
+ * the colour under it) at the time it is now. On blue (brand) or on white (plain); thin in Riwayat.
+ */
+.dayLine { display: grid; gap: 6px; width: 100%; }
+.dayTrack { position: relative; display: block; height: 10px; }
+.dayTrack::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; border-radius: 1px; background: var(--hr-line); }
+.daySpan { position: absolute; top: 1px; height: 8px; border-radius: 999px; background: var(--hr-primary); }
+.dayPin { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--hr-primary); }
+.daySun { position: absolute; top: -4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--hr-accent); box-shadow: 0 0 0 3px var(--hr-surface); }
+.dayLabels { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--hr-muted); font-variant-numeric: tabular-nums; }
+.dayLine[data-tone="brand"] .dayTrack::before { background: var(--hr-brand-line); }
+.dayLine[data-tone="brand"] .daySpan, .dayLine[data-tone="brand"] .dayPin { background: var(--hr-on-brand); }
+.dayLine[data-tone="brand"] .daySun { box-shadow: 0 0 0 3px var(--hr-brand); }
+.dayLine[data-tone="brand"] .dayLabels { color: var(--hr-on-brand-muted); }
+.dayLine[data-thin] { margin: 6px 0 4px; max-width: 14rem; }
+.dayLine[data-thin] .dayTrack { height: 6px; }
+.dayLine[data-thin] .dayTrack::before { top: 2px; }
+.dayLine[data-thin] .daySpan { top: 0; height: 6px; }
+.dayLine[data-thin] .dayPin { width: 6px; height: 6px; margin-left: -3px; }
+@media (prefers-reduced-motion: no-preference) { .daySpan { transition: width 400ms var(--hr-ease); } }
+
+/* A group's label with a number on the right (the week's hours). */
+.groupHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-right: 16px; }
+.groupValue { font-size: 13px; font-weight: 700; color: var(--hr-text); font-variant-numeric: tabular-nums; }
+/*
+ * This week: seven days, each a round date (filled blue = complete, a blue ring = incomplete, amber =
+ * needs review), the hours under it, today underlined; the legend below says the same in words.
+ */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 10px 4px 8px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.day { min-height: 92px; min-width: 0; padding: 4px 0; display: grid; justify-items: center; align-content: start; gap: 6px; border: 0; border-radius: 14px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
+.day:hover:not(:disabled) { background: var(--hr-surface-soft); }
+.day:disabled { cursor: default; color: var(--hr-muted); }
+.dayName { font-size: 12px; font-weight: 700; color: var(--hr-muted); }
+.dayNumber { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.day[data-day="lengkap"] .dayNumber { background: var(--hr-primary); color: var(--hr-on-primary); }
+.day[data-day="sebagian"] .dayNumber { box-shadow: inset 0 0 0 2px var(--hr-primary); color: var(--hr-primary); }
+.day[data-day="cek"] .dayNumber { background: var(--hr-warning-soft); color: var(--hr-warning); box-shadow: inset 0 0 0 2px var(--hr-warning); }
+.day[aria-current="date"] .dayName { color: var(--hr-text); }
+.day[aria-current="date"]::after { content: ""; width: 16px; height: 3px; margin-top: -2px; border-radius: 2px; background: var(--hr-accent); }
+.dayHours { min-height: 14px; font-size: 11px; font-weight: 700; color: var(--hr-muted); font-variant-numeric: tabular-nums; }
+.mark { width: 8px; height: 8px; }
+.mark_lengkap { width: 10px; height: 10px; border-radius: 50%; background: var(--hr-primary); }
+.mark_sebagian { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--hr-primary); }
+.mark_cek { width: 10px; height: 10px; border-radius: 50%; background: var(--hr-warning-soft); box-shadow: inset 0 0 0 2px var(--hr-warning); }
+.mark_kosong { background: transparent; }
+.legend { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
+.legend .mark { display: inline-block; }
+
+/* Segmented control: Riwayat's filter and Pengajuan's status. The chosen one is ringed. */
+.segmented { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 2px; padding: 3px; border-radius: var(--hr-r-control); background: var(--hr-surface-soft); }
+.segment { min-height: 44px; min-width: 0; padding: 0 6px; border: 0; border-radius: 10px; background: transparent; color: var(--hr-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color var(--hr-fast) var(--hr-ease), color var(--hr-fast) var(--hr-ease); }
+.segment[aria-pressed="true"] { background: var(--hr-surface); color: var(--hr-text); font-weight: 700; box-shadow: 0 0 0 1px var(--hr-line-strong), 0 1px 2px rgb(0 0 0 / .08); }
+/* A count as a small round badge after its label; amber when it needs the person, quiet at zero. */
+.segment { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 4px; }
+.segmentCount { flex: none; min-width: 20px; height: 20px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--hr-line); color: var(--hr-text); font-size: 12px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.segment[aria-pressed="true"] .segmentCount { background: var(--hr-primary); color: var(--hr-on-primary); }
+.segmentCount[data-alert] { background: var(--hr-warning-soft); color: var(--hr-warning); }
+.segment[aria-pressed="true"] .segmentCount[data-alert] { background: var(--hr-warning); color: var(--hr-on-primary); }
+.segmentCount[data-zero] { background: transparent; color: var(--hr-muted); box-shadow: inset 0 0 0 1px var(--hr-line-strong); }
+
+/* Riwayat rows: the date first, then the times. */
+/* The date as a small calendar tile (a badge); today in blue. */
+.date { flex: none; align-self: flex-start; width: 46px; padding: 6px 0 7px; display: grid; justify-items: center; gap: 1px; line-height: 1.1; border-radius: 12px; background: var(--hr-surface-soft); }
+.dateName { font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--hr-muted); }
+.dateNumber { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.date[data-today] { background: var(--hr-primary); color: var(--hr-on-primary); }
+.date[data-today] .dateName { color: inherit; opacity: .8; }
+.times { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.timesEmpty { color: var(--hr-muted); font-weight: 500; }
+
+/* "Nothing here", the Apple way: a quiet icon, a title, one line. */
+.empty { margin: 0; padding: 40px 24px; display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 15px; line-height: 1.5; color: var(--hr-muted); }
+.empty svg { color: var(--hr-muted); opacity: .7; margin-bottom: 4px; }
+.empty strong { font-size: 17px; font-weight: 600; color: var(--hr-text); }
+
+/* Profil: the person as a staff card in blue (the same family as the time card). */
+.idCard { position: relative; display: grid; gap: 14px; padding: 20px; border-radius: var(--hr-r-panel); background: var(--hr-brand); color: var(--hr-on-brand); overflow: hidden; }
+.idBrand { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--hr-accent); }
+.idSub { margin: 0; font-size: 14px; line-height: 1.45; color: var(--hr-on-brand-muted); }
+.avatar { flex: none; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 20px; background: var(--hr-accent); color: var(--hr-on-accent); font-size: 22px; font-weight: 800; letter-spacing: .02em; }
+.screen .personName { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; color: var(--hr-on-brand); overflow-wrap: anywhere; }
+
+/* Detail screens: a bar with back, the title, one action. The bottom menu stays. */
+.detail { display: grid; gap: 24px; margin-top: calc(-12px - env(safe-area-inset-top)); }
+.bar { position: sticky; top: 0; z-index: 5; margin: 0 -16px; padding: env(safe-area-inset-top) 4px 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 52px; background: color-mix(in srgb, var(--hr-app) 92%, transparent); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--hr-line); }
+.barLead { justify-self: start; display: flex; }
+.barTrail { justify-self: end; display: flex; }
+.detail .barTitle, .sheetBar .barTitle { margin: 0; max-width: 58vw; font-size: 17px; font-weight: 600; letter-spacing: -.01em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; }
+.barIcon { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 12px; background: transparent; color: var(--hr-primary); cursor: pointer; }
+.barIcon:hover { background: var(--hr-surface-soft); }
+.barText { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 17px; font-weight: 400; cursor: pointer; }
+.barText:disabled { color: var(--hr-muted); opacity: .6; cursor: default; }
+.barStrong { font-weight: 600; }
+.summary { display: grid; gap: 4px; padding: 0 4px; }
+.detail .summaryTitle, .sheetBody .summaryTitle { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.25; letter-spacing: -.02em; }
+/* One day's detail: the two times large, how long, the day line. */
+.daySummary { display: grid; gap: 4px; padding: 16px 16px 14px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.daySummaryTimes { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.daySummary .dayLine { margin-top: 10px; }
+/* A request's way: sent, then decided. */
+.steps { margin: 0; padding: 0 4px; list-style: none; display: grid; }
+.stepItem { position: relative; display: grid; gap: 2px; padding: 0 0 18px 28px; }
+.stepItem::before { content: ""; position: absolute; left: 4px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--hr-text); }
+.stepItem:not(:last-child)::after { content: ""; position: absolute; left: 8px; top: 19px; bottom: 2px; width: 2px; background: var(--hr-line); }
+.stepItem[data-state="now"]::before { background: var(--hr-warning); }
+.stepItem[data-state="no"]::before { background: var(--hr-danger); }
+.stepItem[data-state="ok"]::before { background: var(--hr-success); }
+.stepItem[data-state="off"]::before { background: var(--hr-muted); }
+.stepTitle { font-size: 15px; font-weight: 600; }
+.stepSub { font-size: 13px; color: var(--hr-muted); }
+/* Plain points, like the face-data notes. */
+.notes { margin: 0; padding: 4px 16px; list-style: none; display: grid; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.notes li { padding: 12px 0; font-size: 15px; line-height: 1.5; }
+.notes li + li { border-top: 1px solid var(--hr-line); }
+
+/* Sheets: a task over the app, as a page sheet (rounded top, the app dimmed behind). */
+.scrimSheet { position: fixed; inset: 0; z-index: 39; background: rgb(20 14 10 / .38); }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top) + 10px); z-index: 40; display: flex; flex-direction: column; border-radius: 14px 14px 0 0; background: var(--hr-app); color: var(--hr-text); outline: none; overflow: hidden; }
+.sheetBar { flex: none; padding: 4px 4px 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 52px; border-bottom: 1px solid var(--hr-line); }
+.sheetBody { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 20px 16px calc(32px + env(safe-area-inset-bottom)); }
+.sheetInner { max-width: 30rem; margin: 0 auto; display: grid; gap: 20px; }
+
+/* A small question from the bottom: Keluar, Hapus, Batalkan. Batal is the safe default. */
+.scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); background: rgb(20 14 10 / .38); }
+.ask { width: min(100%, 28rem); display: grid; gap: 8px; }
+.askCard { display: grid; border-radius: var(--hr-r-card); background: var(--hr-surface); overflow: hidden; }
+.askText { margin: 0; padding: 16px 20px 14px; display: grid; gap: 4px; text-align: center; border-bottom: 1px solid var(--hr-line); }
+.askText strong { font-size: 15px; }
+.askText span { font-size: 13px; line-height: 1.45; color: var(--hr-muted); }
+.askButton { min-height: 56px; border: 0; background: var(--hr-surface); color: var(--hr-primary); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+.askButton:focus-visible { outline-offset: -3px; }
+.askDanger { color: var(--hr-danger); font-weight: 400; }
+.askCancel { border-radius: var(--hr-r-card); font-weight: 700; }
+
+/* Motion: push from the right, sheets from below, a new tab settles. Nothing moves when reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .detail { animation: push 260ms var(--hr-ease) both; }
+  .sheet { animation: rise 300ms var(--hr-ease) both; }
+  .screen { animation: settle 200ms var(--hr-ease) both; }
+  .ask { animation: rise 220ms var(--hr-ease) both; }
+  .scrim, .scrimSheet { animation: fade 180ms ease both; }
+}
+@keyframes push { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .wide, .action, .headAction, button.row, label.row, .segment, .day { transition: none; } .wide:active, .action:active, .headAction:active { transform: none; } }
+
+/* A short message after an action, above the bottom menu. A problem stays until it is closed. */
+.toast { position: fixed; z-index: 70; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto; padding: 12px 8px 12px 16px; display: flex; align-items: center; gap: 8px; border-radius: var(--hr-r-card); background: var(--hr-text); color: var(--hr-app); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.toast span { flex: 1; }
+.toastClose { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: rise 220ms var(--hr-ease) both; } }
+
+/* Ajukan apa?: the action sheet's rows, each with a line under it. */
+.pickButton { min-height: 60px; padding: 10px 20px; display: grid; justify-items: center; gap: 2px; border-top: 1px solid var(--hr-line); font-weight: 600; }
+.pickButton small { font-size: 12px; font-weight: 500; color: var(--hr-muted); }
+
+/* Beranda: today's own cuti, sakit, izin or dinas, under the sentence, in its own colour. */
+.awayChip { justify-self: start; margin: 4px 0 0; padding: 5px 12px; border-radius: 999px; background: var(--leave-soft, var(--hr-surface-soft)); color: var(--leave-ink, var(--hr-text)); font-size: 13px; font-weight: 700; }
+.awayChip[data-type="cuti"] { --leave-soft: var(--hr-cuti-soft); --leave-ink: var(--hr-cuti-ink); }
+.awayChip[data-type="sakit"] { --leave-soft: var(--hr-sakit-soft); --leave-ink: var(--hr-sakit-ink); }
+.awayChip[data-type="izin"] { --leave-soft: var(--hr-izin-soft); --leave-ink: var(--hr-izin-ink); }
+.awayChip[data-type="dinas"] { --leave-soft: var(--hr-dinas-soft); --leave-ink: var(--hr-dinas-ink); }
+
+/*
+ * Cuti, sakit, izin, dinas: each its own colour, always with its word. A round initial (avatar),
+ * a dot in the calendar (full = approved, a ring = waiting).
+ */
+.teamAvatar[data-type="cuti"], .teamDot[data-type="cuti"] { --leave: var(--hr-cuti); --leave-soft: var(--hr-cuti-soft); --leave-ink: var(--hr-cuti-ink); }
+.teamAvatar[data-type="sakit"], .teamDot[data-type="sakit"] { --leave: var(--hr-sakit); --leave-soft: var(--hr-sakit-soft); --leave-ink: var(--hr-sakit-ink); }
+.teamAvatar[data-type="izin"], .teamDot[data-type="izin"] { --leave: var(--hr-izin); --leave-soft: var(--hr-izin-soft); --leave-ink: var(--hr-izin-ink); }
+.teamAvatar[data-type="dinas"], .teamDot[data-type="dinas"] { --leave: var(--hr-dinas); --leave-soft: var(--hr-dinas-soft); --leave-ink: var(--hr-dinas-ink); }
+.teamAvatar { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 14px; background: var(--leave-soft, var(--hr-surface-soft)); color: var(--leave-ink, var(--hr-text)); font-size: 14px; font-weight: 800; }
+.teamMine { color: var(--hr-muted); font-weight: 500; }
+.teamDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--leave, var(--hr-muted)); }
+.teamDot[data-waiting] { background: transparent; box-shadow: inset 0 0 0 2px var(--leave, var(--hr-muted)); }
+.teamLoading { height: 360px; border-radius: var(--hr-r-card); background: var(--hr-surface-soft); }
+@media (prefers-reduced-motion: no-preference) { .teamLoading { animation: breathe 1.2s ease-in-out infinite alternate; } }
+@keyframes breathe { from { opacity: .55; } to { opacity: 1; } }
+
+/* Tim: the month with ‹ ›, then the calendar (Monday first) or the list. */
+.monthBar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; margin: -8px 0 -8px; }
+.screen .monthName { margin: 0; text-align: center; font-size: 17px; font-weight: 800; letter-spacing: -.01em; text-transform: capitalize; }
+.monthStep { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 14px; background: transparent; color: var(--hr-primary); cursor: pointer; }
+.monthStep:hover { background: var(--hr-surface-soft); }
+.calendar { display: grid; gap: 6px; padding: 10px 8px 8px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.calendarHead, .calendarGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.calendarHead span { text-align: center; font-size: 12px; font-weight: 700; color: var(--hr-muted); }
+.calendarDay { min-height: 52px; min-width: 0; padding: 6px 0 4px; display: grid; justify-items: center; align-content: start; gap: 4px; border: 0; border-radius: 12px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
+.calendarDay:hover { background: var(--hr-surface-soft); }
+.calendarDay[aria-current="date"] .calendarNumber { color: var(--hr-primary); font-weight: 800; }
+.calendarDay[aria-pressed="true"] { background: var(--hr-primary); color: var(--hr-on-primary); }
+.calendarDay[aria-pressed="true"] .calendarNumber { color: inherit; }
+.calendarDay[aria-pressed="true"] .teamDot { box-shadow: 0 0 0 1.5px var(--hr-on-primary); }
+.calendarDay[aria-pressed="true"] .teamDot[data-waiting] { box-shadow: inset 0 0 0 2px var(--leave), 0 0 0 1.5px var(--hr-on-primary); }
+.calendarNumber { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calendarDots { min-height: 8px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px; }
+.calendarMore { font-size: 10px; font-weight: 700; line-height: 8px; }
+.calendar .groupNote { margin: 6px 4px 0; }
+@media (prefers-reduced-motion: reduce) { .calendarDay { transition: none; } }
+
+/* Profil → Pengaturan: a compact segmented control at the end of a row (Tampilan). */
+.rowControl { flex: none; width: 168px; }
+.rowControl .segment { min-height: 36px; font-size: 13px; }
+
+/* Data wajah: the status first, with what it means and where the photo came from. */
+.faceStatus { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.faceStatusIcon { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; background: var(--hr-surface-soft); color: var(--hr-muted); }
+.faceStatus[data-ok] .faceStatusIcon { background: var(--hr-success-soft); color: var(--hr-success); }
+.faceSource { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--hr-muted); }
+.howList { margin: 0; padding: 6px 16px 6px 40px; display: grid; gap: 10px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); font-size: 15px; line-height: 1.5; }
+.howList li { padding: 6px 0; }
+.howList li::marker { color: var(--hr-primary); font-weight: 800; }
+
+/* Bantuan & FAQ: each question opens in place. */
+.faq { display: grid; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); overflow: hidden; }
+.faqItem + .faqItem { border-top: 1px solid var(--hr-line); }
+.faqItem summary { min-height: 52px; padding: 14px 44px 14px 16px; position: relative; display: flex; align-items: center; font-size: 16px; font-weight: 600; line-height: 1.35; cursor: pointer; list-style: none; }
+.faqItem summary::-webkit-details-marker { display: none; }
+.faqItem summary::after { content: ""; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; margin-top: -6px; border-right: 2px solid var(--hr-muted); border-bottom: 2px solid var(--hr-muted); transform: rotate(45deg); transition: transform var(--hr-fast) var(--hr-ease); }
+.faqItem[open] summary::after { transform: rotate(-135deg); margin-top: -2px; }
+.faqItem summary:focus-visible { outline: 3px solid var(--hr-primary); outline-offset: -3px; }
+.faqAnswer { padding: 0 16px 16px; font-size: 15px; line-height: 1.55; color: var(--hr-muted); }
+.faqAnswer strong { color: var(--hr-text); }
+.helpList { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.helpList a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--hr-primary); font-weight: 700; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .faqItem summary::after { transition: none; } }

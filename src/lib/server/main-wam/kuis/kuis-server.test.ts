@@ -36,6 +36,10 @@ const QUIZ = "00000000-0000-4000-a000-0000000000aa";
 const RUN = "00000000-0000-4000-a000-000000000001";
 const ME = "11111111-1111-4111-8111-111111111111";
 const context = (roles: string[] = []) => ({ viewer: { id: ME, name: "Rani", roles }, settings: { modules: { kuis: true } } }) as unknown as MainWamContext;
+/** The apps of ME's admin grant (20 Nov 2026: Admin WAM 2026, wam_acara, runs every quiz). */
+let grantApps: string[] = [];
+/** ME holding Admin WAM 2026 on their WAM account. */
+const asWamAdmin = () => { grantApps = ["wam_acara"]; return context(); };
 
 type RunPatch = Partial<{ phase: string; question_index: number; phase_at: string; pauses: unknown[]; rev: number; podium_revealed: number; boards: number[] }>;
 let run: RunPatch & Record<string, unknown>;
@@ -54,6 +58,7 @@ beforeEach(() => {
   rpcArgs.calls = [];
   alias.value = null;
   settings.kuis = true;
+  grantApps = [];
   answer = q => {
     switch (q.table) {
       case "mw_quizzes": return { data: [{ id: QUIZ, title: "Kuis WAM", mw_quiz_runs: [runRow()] }] };
@@ -64,6 +69,7 @@ beforeEach(() => {
         return { data: [], count: 12 };
       case "mw_quiz_answers": return { data: [], count: 7 };
       case "mw_quiz_hosts": return { data: [] };
+      case "admin_grants": return { data: grantApps.length ? [{ apps: grantApps }] : [] };
       case "rpc:mw_quiz_board": return { data: [] };
       case "rpc:mw_quiz_join": return { data: "ok" };
       case "mw_quiz_runs": return { data: [{ rev: 6 }] };
@@ -181,7 +187,14 @@ describe("the MC's control", () => {
     await expect(controlState(context(["panitia"]), QUIZ)).rejects.toMatchObject({ status: 404 });
   });
 
-  it("opens for a pengendali of the quiz, and for Admin WAM without asking", async () => {
+  it("does not exist for Pra WAM's admin role either (20 Nov 2026), nor for a grant without Admin WAM 2026", async () => {
+    await expect(controlState(context(["admin"]), QUIZ)).rejects.toMatchObject({ status: 404 });
+    grantApps = ["wam"];
+    newRequest(false);
+    await expect(controlState(context(), QUIZ)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("opens for a pengendali of the quiz, and for a holder of Admin WAM 2026 without asking", async () => {
     const base = answer;
     answer = q => (q.table === "mw_quiz_hosts" ? { data: [{ employee_id: ME }] } : base(q));
     const snap = await controlState(context(), QUIZ, SAMPLE_T0 + times.open + 1_000);
@@ -189,26 +202,26 @@ describe("the MC's control", () => {
     expect(snap.question?.correct).toBeNull();
     newRequest(false);
     answer = base;
-    await controlState(context(["admin"]), QUIZ, SAMPLE_T0 + times.open + 1_000);
+    await controlState(asWamAdmin(), QUIZ, SAMPLE_T0 + times.open + 1_000);
     expect(tables()).not.toContain("mw_quiz_hosts");
   });
 
   it("applies Lanjut on the rev it saw, and refuses an older one", async () => {
     run = { phase: "siap", question_index: -1 };
-    await controlAct(context(["admin"]), QUIZ, { runId: RUN, rev: 5, action: "buka-lobi" }, SAMPLE_T0);
+    await controlAct(asWamAdmin(), QUIZ, { runId: RUN, rev: 5, action: "buka-lobi" }, SAMPLE_T0);
     const update = fake.queries.find(q => q.table === "mw_quiz_runs" && has(q, "update"))!;
     expect(callsOf(update, "update")[0][0]).toMatchObject({ phase: "lobi", rev: 6 });
     expect(callsOf(update, "eq")).toEqual([["id", RUN], ["rev", 5]]);
     expect(notes.sent).toEqual([expect.objectContaining({ kind: "kuis", title: "Kuis dimulai", link: `/wam/acara/kuis/${QUIZ}`, to: { audience: { type: "semua" } } })]);
-    await expect(controlAct(context(["admin"]), QUIZ, { runId: RUN, rev: 4, action: "buka-lobi" }, SAMPLE_T0)).rejects.toMatchObject({ status: 409 });
+    await expect(controlAct(asWamAdmin(), QUIZ, { runId: RUN, rev: 4, action: "buka-lobi" }, SAMPLE_T0)).rejects.toMatchObject({ status: 409 });
   });
 
   it("refuses a step Lanjut does not name, and a lost race", async () => {
     run = { phase: "soal" };
-    await expect(controlAct(context(["admin"]), QUIZ, { runId: RUN, rev: 5, action: "lanjut-soal" }, SAMPLE_T0 + times.open + 1_000)).rejects.toMatchObject({ status: 409 });
+    await expect(controlAct(asWamAdmin(), QUIZ, { runId: RUN, rev: 5, action: "lanjut-soal" }, SAMPLE_T0 + times.open + 1_000)).rejects.toMatchObject({ status: 409 });
     const base = answer;
     answer = q => (q.table === "mw_quiz_runs" ? { data: [] } : base(q));
-    await expect(controlAct(context(["admin"]), QUIZ, { runId: RUN, rev: 5, action: "jeda" }, SAMPLE_T0 + times.open + 1_000)).rejects.toMatchObject({ status: 409, message: "Sudah dilanjutkan dari layar lain. Lihat keadaan terbaru." });
+    await expect(controlAct(asWamAdmin(), QUIZ, { runId: RUN, rev: 5, action: "jeda" }, SAMPLE_T0 + times.open + 1_000)).rejects.toMatchObject({ status: 409, message: "Sudah dilanjutkan dari layar lain. Lihat keadaan terbaru." });
   });
 });
 

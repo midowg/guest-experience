@@ -14,21 +14,32 @@ export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 // "kuesioner" (14 Nov 2026, migration 202611140001): the WAM questionnaire inside Admin WAM, given
 // on its own, for Admin WAM holders too (Admin WAM alone no longer opens it).
 // "wellbeing" (16 Nov 2026, migration 202611160050): Admin Wellbeing at /admin/wlm (was /admin/wellbeing, which redirects).
-export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "kuesioner", "tv", "wellbeing"] as const;
+// "wam_acara" (20 Nov 2026, migration 202611200603): Admin WAM 2026, the admin of the WAM event itself (Main WAM:
+// rundown, modules, Kuis live, penguji, Panitia WAM) at /admin/wam2026, given apart from Admin Pra WAM ("wam").
+// "hr" (20 Nov 2026, migration 202611200703): Admin WG People at /admin/hr (absensi, wajah, titik kantor).
+export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
 export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
 export const ADMIN_WELLBEING_MIGRATION = "202611160050_wellbeing.sql";
+export const ADMIN_WAM_ACARA_MIGRATION = "202611200603_admin_wam_acara.sql";
+export const ADMIN_HR_MIGRATION = "202611200703_admin_grants_hr.sql";
+/** The two WAM admin doors' names, each in one place (change them here). */
+export const PRA_WAM_ADMIN_LABEL = "Admin Pra WAM";
+export const WAM_EVENT_ADMIN_LABEL = "Admin WAM 2026";
 export const adminAppLabels: Record<AdminApp, string> = {
-  acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: "Admin WAM", kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
+  acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: PRA_WAM_ADMIN_LABEL, kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
+  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People",
 };
 export const adminAppHints: Record<AdminApp, string> = {
   acara: "Undangan, kartu, e-guide, dan kunjungan: membuat acara dan membuka acara yang dipilih di bawah.",
   friday_sharing: "Halaman donasi Friday Sharing dan laporannya.",
   your_visit: "Panduan kunjungan kantor (Your Visit).",
-  wam: "Admin WAM: akun, ruang, MoM, Telegram, tema, dan lainnya. Kuesioner diatur sendiri di bawah.",
-  kuesioner: "Kuesioner di Admin WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin WAM; Admin WAM tanpa centang ini tidak bisa membuka kuesioner.",
+  wam: "Admin Pra WAM: akun dan peran, ruang, MoM, Telegram, TV, tema, Akses MCP, dan lainnya. Kuesioner diatur sendiri di bawah. Tidak membuka Admin WAM 2026.",
+  kuesioner: "Kuesioner di Admin Pra WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin Pra WAM; Admin Pra WAM tanpa centang ini tidak bisa membuka kuesioner.",
   tv: "TV kantor: layar, tayangan, dan tampilan.",
   wellbeing: "Program wellbeing kantor: periksa aktivitas, poin karyawan, tambah poin ke banyak orang, katalog kegiatan.",
+  hr: "Admin WG People: absensi karyawan (yang perlu dicek, absen harian, catat manual), wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",
+  wam_acara: "Admin aplikasi acara WAM 2026: pengaturan, penguji, rundown, kamar, perjalanan, panduan, info acara, Awarding, Silent Meeting, Kuis live, dan Panitia WAM. Terpisah dari Admin Pra WAM.",
 };
 /** Opens the WAM questionnaire: only with its own grant. */
 export const opensQuestionnaire = (apps: readonly AdminApp[]) => apps.includes("kuesioner");
@@ -65,20 +76,24 @@ export type AdminArea = AdminApp | "events" | "home" | "super";
 const areas: [RegExp, AdminArea][] = [
   [/^\/admin\/?$/, "home"],
   [/^\/admin\/(super|akses)(\/|$)/, "super"],
+  [/^\/admin\/wam2026(\/|$)/, "wam_acara"],
   [/^\/admin\/wam\/tv(\/|$)/, "tv"],
   [/^\/admin\/wam\/kuesioner(\/|$)/, "kuesioner"],
   [/^\/admin\/wam(\/|$)/, "wam"],
   [/^\/admin\/tv(\/|$)/, "tv"],
   [/^\/admin\/(wlm|wellbeing)(\/|$)/, "wellbeing"],
+  [/^\/admin\/hr(\/|$)/, "hr"],
   [/^\/admin\/friday-sharing(\/|$)/, "friday_sharing"],
   [/^\/admin\/your-visit(\/|$)/, "your_visit"],
   [/^\/admin\/(acara|checkin|events|hero-preview|pratinjau-langsung)(\/|$)/, "events"],
+  [/^\/api\/admin\/wam2026(\/|$)/, "wam_acara"],
   [/^\/api\/admin\/wam\/tv(\/|$)/, "tv"],
   [/^\/api\/admin\/wellbeing(\/|$)/, "wellbeing"],
+  [/^\/api\/admin\/hr(\/|$)/, "hr"],
   [/^\/api\/admin\/wam\/questionnaire(\/|$)/, "kuesioner"],
   [/^\/api\/admin\/wam(\/|$)/, "wam"],
   [/^\/api\/admin\/(events|featured|photos|poster-designs|staff)(\/|$)/, "events"],
-  [/^\/api\/admin\/(employees|modules|templates|visibility|grants)(\/|$)/, "super"],
+  [/^\/api\/admin\/(employees|modules|templates|visibility|grants|home-style|wam2026-tampil)(\/|$)/, "super"],
 ];
 export function areaOfPath(path: string | null | undefined): AdminArea | null {
   if (!path) return null;
@@ -119,6 +134,8 @@ export function showsAppCard(grant: Pick<AdminGrant, "apps"> | null, key: string
   if (!grant) return true;
   if (key === "wam") return grant.apps.includes("wam") || opensQuestionnaire(grant.apps);
   if (key === "wellbeing") return grant.apps.includes("wellbeing");
+  if (key === "wam_acara") return grant.apps.includes("wam_acara");
+  if (key === "hr") return grant.apps.includes("hr");
   return key === "tv" && grant.apps.includes("tv");
 }
 

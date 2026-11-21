@@ -1,5 +1,6 @@
-import { appraisalRules, clockLabel, isWorkday, wibInstant, wibTime, type Booking, type Room } from "./appraisal";
+import { appraisalRules, isWorkday, wibInstant, type Booking, type Room } from "./appraisal";
 import { durationLabel } from "./room-day";
+import { zoneSpan, type ViewerZone } from "./zone";
 
 /*
  * Timeline's room cards (11 Nov 2026): one card per room for the day picked on the calendar, as the
@@ -31,7 +32,7 @@ export const whoLabel = (booking: Pick<Booking, "bookedBy" | "others" | "isSessi
   booking.isSession ? "Panitia" : `${booking.bookedBy.name}${booking.others ? ` +${booking.others}` : ""}`;
 
 /** One room's card on `date`: `bookings` are that day's, of every room (those of this room are taken). */
-export function roomCard(room: Room, bookings: readonly Booking[], date: string, now: Date): RoomCard {
+export function roomCard(room: Room, bookings: readonly Booking[], date: string, now: Date, zone: ViewerZone = "WIB"): RoomCard {
   const mine = bookings.filter(booking => booking.roomId === room.id).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const spans = mine.map(booking => ({ booking, from: minuteOf(date, booking.startsAt), to: minuteOf(date, booking.endsAt) })).filter(span => span.to > span.from);
   // Free time from now on: all of a coming day, the rest of today, none of a day gone. Overlaps count once.
@@ -51,12 +52,12 @@ export function roomCard(room: Room, bookings: readonly Booking[], date: string,
     blocks: spans.map((span, index) => ({ id: span.booking.id, share: (span.to - span.from) / DAY, tone: index % 2 })),
     items: mine.map((booking, index) => ({
       id: booking.id, title: booking.title, tone: index % 2, session: !!booking.isSession, who: whoLabel(booking),
-      time: `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`,
+      time: zoneSpan(booking.startsAt, booking.endsAt, zone),
     })),
   };
 }
 
 /** The cards of a day: every bookable room, and any other room holding something, in the admin's order. */
-export function roomCards(rooms: readonly Room[], bookings: readonly Booking[], date: string, now: Date): RoomCard[] {
-  return rooms.filter(room => room.bookable || bookings.some(booking => booking.roomId === room.id)).map(room => roomCard(room, bookings, date, now));
+export function roomCards(rooms: readonly Room[], bookings: readonly Booking[], date: string, now: Date, zone: ViewerZone = "WIB"): RoomCard[] {
+  return rooms.filter(room => room.bookable || bookings.some(booking => booking.roomId === room.id)).map(room => roomCard(room, bookings, date, now, zone));
 }

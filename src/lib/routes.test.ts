@@ -109,7 +109,7 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
     for (const page of pages) expect(page.startsWith("/wam/acara")).toBe(true);
   });
 
-  it("put the APIs under /api/wam/acara and Admin WAM's under /api/admin/wam/main", () => {
+  it("put the APIs under /api/wam/acara and Admin WAM 2026's under /api/admin/wam2026 (20 Nov 2026: its own door)", () => {
     expect(mainWamApi.themeImage("splash", "17")).toBe("/api/wam/acara/tema/splash?v=17");
     expect(mainWamApi.photos({ lihat: "saya", sebelum: "x" })).toBe("/api/wam/acara/momen?lihat=saya&sebelum=x");
     expect(mainWamApi.photoReaction("p1")).toBe("/api/wam/acara/momen/p1/reaksi");
@@ -121,12 +121,14 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
     }
     for (const value of Object.values(mainWamAdminApi)) {
       const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
-      expect(path.startsWith("/api/admin/wam/main/")).toBe(true);
+      expect(path.startsWith("/api/admin/wam2026/")).toBe(true);
     }
     for (const value of Object.values(mainWamAdminPath)) {
       const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
-      expect(path.startsWith("/admin/wam/main/")).toBe(true);
+      expect(path === "/admin/wam2026" || path.startsWith("/admin/wam2026/")).toBe(true);
     }
+    expect(mainWamAdminPath.committee).toBe("/admin/wam2026/panitia");
+    expect(mainWamAdminApi.committeeMember("e1")).toBe("/api/admin/wam2026/panitia/e1");
   });
 
   it("give Kuis live its game, control, admin and a public big screen outside /wam", () => {
@@ -134,8 +136,8 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
     expect(mainWamPath.quizControl("k1")).toBe("/wam/acara/kuis/k1/kendali");
     expect(mainWamApi.quiz("k1", "r.3.1")).toBe("/api/wam/acara/kuis/k1?v=r.3.1");
     expect(mainWamApi.quizAnswer("k1")).toBe("/api/wam/acara/kuis/k1/jawab");
-    expect(mainWamAdminPath.quiz("k1")).toBe("/admin/wam/main/kuis/k1");
-    expect(mainWamAdminApi.quizResults("k1", "r1", true)).toBe("/api/admin/wam/main/kuis/k1/hasil?permainan=r1&unduh=1");
+    expect(mainWamAdminPath.quiz("k1")).toBe("/admin/wam2026/kuis/k1");
+    expect(mainWamAdminApi.quizResults("k1", "r1", true)).toBe("/api/admin/wam2026/kuis/k1/hasil?permainan=r1&unduh=1");
     expect(kuisScreenPath("kuis_abc")).toBe("/kuis/kuis_abc");
     expect(kuisScreenApi("kuis_abc")).toBe("/api/kuis/kuis_abc");
   });

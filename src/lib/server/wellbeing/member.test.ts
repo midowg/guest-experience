@@ -79,6 +79,8 @@ const { home, leaderboard, logActivity, myActivities, startUpload } = await impo
 const { resetTimeColumn } = await import("./shared");
 const { ServiceError } = await import("../config");
 const { logSchema } = await import("@/lib/wellbeing/rules");
+const { myExportWorkbook, myExportSchema, fileSlug } = await import("./member-export");
+const { readXlsx } = await import("../xlsx");
 
 const me: Member = { id: "2f1c6a4e-8b7d-4c3a-9e21-5d6f7a8b9c0d", name: "Contoh Satu", nickname: "Satu", department: "CoE", position: "Staff", mustChangePassword: false, roles: [], photo: null };
 const other: Member = { ...me, id: "7a8b9c0d-1c2d-4e5f-8a9b-0c1d2e3f4a5b", name: "Contoh Dua", nickname: "Dua" };
@@ -117,6 +119,45 @@ beforeEach(() => {
       { id: other.id, full_name: "Contoh Dua", nickname: "Dua", department: "HR", active: true },
     ],
   };
+});
+
+describe("Unduh rekap saya (19 Nov 2026)", () => {
+  it("puts only my own data in the file: the summary as the app counts it, every activity with its status, and the admin's points that count", async () => {
+    await log(me, { code: "physical.steps", steps: 9128 });
+    await log(me, { code: "emotional.meditasi" });
+    await log(other, { code: "emotional.meditasi" });
+    tables.wb_activities[1].status = "rejected"; tables.wb_activities[1].review_reason = "Foto tidak jelas";
+    tables.wb_point_entries.push(
+      { id: "p1", employee_id: me.id, points: 150, dimension_id: "social", reason: "Hadir Friday Sharing", happened_on: "2026-11-10", kind: "admin", voided_at: null, created_at: "2026-11-10T03:00:00Z" },
+      { id: "p2", employee_id: me.id, points: 999, dimension_id: null, reason: "Salah input", happened_on: "2026-11-11", kind: "admin", voided_at: "2026-11-12T03:00:00Z", created_at: "2026-11-11T03:00:00Z" },
+      { id: "p3", employee_id: other.id, points: 500, dimension_id: null, reason: "Juara", happened_on: "2026-11-12", kind: "admin", voided_at: null, created_at: "2026-11-12T03:00:00Z" },
+    );
+    const { file, name } = await myExportWorkbook(me, myExportSchema.parse({ period: "month" }), now);
+    expect(name).toBe("rekap-wlm-satu-2026-11-01_2026-11-30.xlsx");
+    const [summary, activities, points] = readXlsx(file);
+    expect([summary.name, activities.name, points.name]).toEqual(["Ringkasan", "Aktivitas", "Poin dari admin"]);
+    const value = (label: string) => summary.rows.find(row => row[0] === label)?.[1];
+    expect(value("Rekap WLM")).toBe("Contoh Satu");
+    // 912 from the steps and 150 from the admin; the rejected meditation and the cancelled 999 do not count.
+    expect(value("Total poin")).toBe("1062");
+    expect(value("Poin Fisik")).toBe("912");
+    expect(value("Poin Sosial")).toBe("150");
+    expect(value("Aktivitas dihitung")).toBe("1");
+    expect(value("Aktivitas ditolak")).toBe("1");
+    expect(activities.rows).toHaveLength(3);
+    expect(activities.rows.slice(1).map(row => [row[2], row[13], row[14]])).toEqual([["Langkah harian", "Dihitung", ""], ["Meditasi", "Ditolak", "Foto tidak jelas"]]);
+    expect(points.rows.slice(1).map(row => [row[1], row[3]])).toEqual([["150", "Hadir Friday Sharing"]]);
+    // Nobody else's name anywhere in the file.
+    expect(JSON.stringify([summary, activities, points])).not.toMatch(/Contoh Dua|Juara/);
+  });
+
+  it("takes a period: last month, a range in order, or all of it", () => {
+    expect(myExportSchema.safeParse({ period: "range", from: "2026-11-10" }).success).toBe(false);
+    expect(myExportSchema.safeParse({ period: "range", from: "2026-11-10", to: "2026-11-01" }).success).toBe(false);
+    expect(myExportSchema.parse({}).period).toBe("month");
+    expect(fileSlug("Raja Damai Sejahtera")).toBe("raja-damai-sejahtera");
+    expect(fileSlug("Ñoño ✨")).toBe("nono");
+  });
 });
 
 describe("Catat", () => {

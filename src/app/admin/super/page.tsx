@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { Blocks, EyeOff, KeyRound, LayoutTemplate, ShieldAlert, UserCog, Users } from "lucide-react";
+import { Blocks, CalendarDays, EyeOff, KeyRound, LayoutTemplate, ShieldAlert, UserCog, Users } from "lucide-react";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
 import { Card, PageHeader, StatCard, StatRow } from "@/components/console";
-import { EMPLOYEES_ADMIN, superAdminPath, wamAdminPath } from "@/lib/routes";
+import { PRA_WAM_ADMIN_LABEL, WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
+import { EMPLOYEES_ADMIN, mainWamAdminPath, superAdminPath, wamAdminPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { listAccessLog } from "@/lib/server/access-log";
 import { listAdminEvents } from "@/lib/server/events";
@@ -46,7 +47,8 @@ export default async function SuperAdminPage() {
       <StatRow label="Pengaturan admin">
         <StatCard label="Templat di Buat acara" value={templates.templates.length} icon={<LayoutTemplate size={18} />} href={superAdminPath.templates} />
         <StatCard label="Modul dimatikan" value={modules.modules.length} icon={<Blocks size={18} />} href={superAdminPath.modules} />
-        <StatCard label="Admin WAM" value="Buka" note="Panitia, akun, ruang" icon={<KeyRound size={18} />} href={wamAdminPath.home} />
+        <StatCard label={PRA_WAM_ADMIN_LABEL} value="Buka" note="Akun dan peran, ruang, kuesioner" icon={<KeyRound size={18} />} href={wamAdminPath.home} />
+        <StatCard label={WAM_EVENT_ADMIN_LABEL} value="Buka" note="Pengaturan, Panitia WAM, Kuis live" icon={<CalendarDays size={18} />} href={mainWamAdminPath.home} />
       </StatRow>
     </Card>
   </SuperAdminFrame>;

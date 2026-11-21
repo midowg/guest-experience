@@ -1,0 +1,84 @@
+/*
+ * The front page's "Lampu" look (26 Nov 2026). Dark by default, whatever the device's setting; light
+ * only when the visitor picks it (data-scheme="light"). The shade is the page colour with a clear
+ * circle where the lamp is. --w-* feed the shared SchemeSwitch.
+ */
+.page {
+  --x: 50vw; --y: 40vh; --shade: 5, 7, 11; --ink: #f4f6fa; --soft: #b6bdc9; --accent: #9cc1ff; --logo: #ffffff; --glass: rgba(20, 24, 33, .6); --glass-line: rgba(255, 255, 255, .16);
+  --w-bg: #131821; --w-line: #262d39; --w-soft: #9aa3b2; --w-accent: var(--accent);
+  position: relative; isolation: isolate; min-height: 100svh; display: grid; grid-template-rows: 1fr auto auto; justify-items: center; align-items: center; gap: 28px;
+  padding: 64px 16px 24px; overflow: hidden; background: rgb(var(--shade)); color: var(--ink); color-scheme: dark; cursor: default;
+}
+:global(:root[data-scheme="light"]) .page { --shade: 246, 247, 249; --ink: #111827; --soft: #4b5563; --accent: #1f4fd1; --logo: #1f4fd1; --glass: rgba(255, 255, 255, .72); --glass-line: rgba(17, 24, 39, .1); --w-bg: #fff; --w-line: #e3e6ec; --w-soft: #5b6472; color-scheme: light; }
+:global(html:has(main[data-lamp])) { background: #05070b; }
+:global(:root[data-scheme="light"]:has(main[data-lamp])) { background: #f6f7f9; }
+.page p { margin: 0; }
+
+/* The joglo and the lamp: a clear circle at the cursor, the page colour everywhere else. */
+.photo { z-index: -2; object-fit: cover; scale: 1.06; animation: drift 22s ease-in-out infinite alternate; }
+@keyframes drift { to { scale: 1.14; translate: -2% -1%; } }
+.shade { position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle clamp(180px, 22vw, 300px) at var(--x) var(--y), rgba(var(--shade), 0) 0, rgba(var(--shade), .5) 45%, rgba(var(--shade), .95) 100%); }
+
+.top { position: absolute; z-index: 2; top: 16px; right: 16px; }
+
+.head { align-self: end; text-align: center; pointer-events: none;
+  /* A soft halo in the page colour keeps the title readable where the lamp lights the photo behind it. */
+  text-shadow: 0 0 18px rgba(var(--shade), .95), 0 0 42px rgba(var(--shade), .8); }
+.crest { display: block; width: 52px; height: 60px; margin: 0 auto 14px; background: var(--logo);
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
+  animation: crest 1s .1s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes crest { from { opacity: 0; translate: 0 -12px; scale: .85; } }
+.kicker { font-size: .75rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); animation: fade .8s .2s both; }
+.page .mark { margin: 6px 0 0; font-size: clamp(4rem, 15vw, 10.5rem); font-weight: 800; line-height: .9; letter-spacing: -.045em; color: var(--ink); }
+.mark span { display: inline-block; animation: letter .9s cubic-bezier(.2,.9,.2,1) both; animation-delay: calc(var(--i) * 70ms + .3s); }
+@keyframes letter { from { opacity: 0; translate: 0 .5em; rotate: 8deg; filter: blur(8px); } }
+.by { margin-top: 10px !important; font-size: clamp(1rem, 2vw, 1.375rem); font-weight: 600; color: var(--soft); animation: fade .8s .9s both; }
+@keyframes fade { from { opacity: 0; } }
+
+/* The dock: glass, the app's own logo or drawn icon; grows under the mouse and tells what the app does. */
+.dock { display: flex; align-items: flex-end; gap: 12px; padding: 12px 14px; border-radius: 28px; background: var(--glass); border: 1px solid var(--glass-line);
+  backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3); animation: rise .7s 1.1s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { opacity: 0; translate: 0 24px; } }
+.app { --tone: var(--accent); position: relative; display: grid; justify-items: center; gap: 6px; color: var(--ink); text-decoration: none; outline: none; }
+.tile { display: grid; place-items: center; width: 60px; height: 60px; overflow: hidden; border-radius: 18px; background: var(--tone); color: #fff;
+  box-shadow: 0 10px 24px -12px var(--tone); transition: width .2s cubic-bezier(.2,.8,.2,1), height .2s cubic-bezier(.2,.8,.2,1), translate .2s cubic-bezier(.2,.8,.2,1); }
+.tile img { width: 100%; height: 100%; object-fit: cover; }
+.label { font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.app:hover .tile, .app:focus-visible .tile { width: 80px; height: 80px; translate: 0 -10px; }
+.app:hover + .app .tile, .app:has(+ .app:hover) .tile { width: 68px; height: 68px; translate: 0 -4px; }
+.app:focus-visible .tile { box-shadow: 0 0 0 3px var(--tone); }
+
+/* What the app is for: a card above the dock, on hover or keyboard focus. */
+.tip { position: absolute; bottom: calc(100% + 18px); left: 50%; z-index: 3; display: grid; gap: 4px; width: 240px; padding: 14px 16px; translate: -50% 8px; text-align: left;
+  border-radius: 18px; background: var(--w-bg); color: var(--ink); border: 1px solid color-mix(in srgb, var(--tone) 40%, var(--w-line));
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, .45); opacity: 0; pointer-events: none; transition: opacity .18s, translate .18s; }
+.app:hover .tip, .app:focus-visible .tip { opacity: 1; translate: -50% 0; }
+.app:first-child .tip { left: 0; translate: 0 8px; } .app:first-child:hover .tip, .app:first-child:focus-visible .tip { translate: 0 0; }
+.app:last-child .tip { left: auto; right: 0; translate: 0 8px; } .app:last-child:hover .tip, .app:last-child:focus-visible .tip { translate: 0 0; }
+.tipWhat { font-size: .6875rem; font-weight: 700; color: var(--tone); }
+.tip strong { font-size: 1.0625rem; }
+.tipText { font-size: .8125rem; line-height: 1.5; color: var(--w-soft); }
+.tipFoot { display: flex; justify-content: space-between; margin-top: 6px; font-size: .75rem; font-weight: 700; color: var(--tone); }
+.tipFoot > span { display: inline-flex; align-items: center; gap: 4px; }
+
+.guest { display: grid; gap: 4px; max-width: 40rem; text-align: center; font-size: .875rem; line-height: 1.55; color: var(--soft); animation: fade .8s 1.4s both; }
+.guest p:last-child { font-size: .75rem; }
+
+/* A phone: no hover, so no tooltip; the dock wraps into two rows of tiles with their names. */
+@media (max-width: 40rem) {
+  .page { padding-top: 56px; gap: 24px; }
+  .crest { width: 44px; height: 51px; }
+  .dock { flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 14px 10px; max-width: 300px; padding: 16px; border-radius: 24px; }
+  .app { width: 76px; }
+  .label { white-space: normal; text-align: center; line-height: 1.25; }
+  .tile { width: 58px; height: 58px; }
+  .app:hover .tile, .app:hover + .app .tile, .app:has(+ .app:hover) .tile { width: 58px; height: 58px; translate: none; }
+  .app:active .tile { scale: .94; }
+  .tip { display: none; }
+}
+@media (hover: none) { .tip { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page { animation: none !important; transition: none !important; }
+}

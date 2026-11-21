@@ -1,4 +1,4 @@
-import { bookingPath, praWamApi, praWamPath } from "@/lib/routes";
+import { bookingPath, hrPath, praWamApi, praWamPath } from "@/lib/routes";
 
 export type Conflict = { kind: "room" | "participants"; sameRoom?: { start: string; end: string }[]; otherRooms?: string[]; people?: string[] };
 
@@ -26,7 +26,9 @@ export async function praWamRequest<T>(url: string, init: RequestInit & { json?:
   if (response.status === 401 && !signingIn && typeof window !== "undefined") {
     // Booking Kantor (/booking) signs in on its own page with the same account (11 Nov 2026).
     const here = `${window.location.pathname}${window.location.search}`;
-    window.location.assign(window.location.pathname.startsWith(bookingPath.home) ? bookingPath.login(here) : praWamPath.login(here));
+    // WG People (/hr, 20 Nov 2026) too.
+    const path = window.location.pathname;
+    window.location.assign(path.startsWith(bookingPath.home) ? bookingPath.login(here) : path.startsWith(hrPath.home) ? hrPath.login(here) : praWamPath.login(here));
   }
   if (!response.ok || !result.ok) throw new PraWamApiError(result.message || "Permintaan gagal. Coba lagi.", response.status, result.fieldErrors, result.conflict);
   return { data: result.data as T, message: result.message ?? "" };

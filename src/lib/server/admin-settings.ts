@@ -2,12 +2,14 @@ import "server-only";
 import { adminModules, isAdminModule, type AdminModule } from "@/lib/admin-modules";
 import type { AdminRole } from "@/lib/admin-token";
 import { defaultTemplates, templateKeys, type TemplateKey } from "@/lib/event-templates";
+import { DEFAULT_HOME_STYLE, HOME_STYLE_MIGRATION, isHomeStyle, type HomeStyle } from "@/lib/home-style";
+import { HOME_MENU_MIGRATION, readHomeMenu, type HomeMenuItem } from "@/lib/home-menu";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
 import { ServiceError } from "./config";
 
 const notMigrated = (error: { code?: string; message?: string }) =>
-  error.code === "42P01" || error.code === "PGRST205" || error.code === "42703" || error.code === "PGRST204" || /admin_settings|enabled_templates/.test(error.message ?? "");
+  error.code === "42P01" || error.code === "PGRST205" || error.code === "42703" || error.code === "PGRST204" || /admin_settings|enabled_templates|home_style|home_menu/.test(error.message ?? "");
 const isTemplate = (value: string): value is TemplateKey => (templateKeys as readonly string[]).includes(value);
 
 /** Modules the super admin switched off. Before 202610200006 nothing is switched off. */
@@ -54,4 +56,49 @@ export async function setEnabledTemplates(templates: TemplateKey[]): Promise<Tem
 
 export function moduleNames(keys: AdminModule[]): string {
   return keys.map(key => adminModules.find(module => module.key === key)!.label).join(", ");
+}
+
+/**
+ * The front page's look. Never throws: before migration 202611260001, without a database, or on any
+ * error the front page shows the default (Kartu 3D), so the front page cannot fail on a setting.
+ */
+export async function getHomeStyle(): Promise<{ style: HomeStyle; migrated: boolean }> {
+  try {
+    const { data, error } = await createPrivilegedClient().from("admin_settings").select("home_style").maybeSingle();
+    if (error) return { style: DEFAULT_HOME_STYLE, migrated: !notMigrated(error) };
+    const style = (data as { home_style?: unknown } | null)?.home_style;
+    return { style: isHomeStyle(style) ? style : DEFAULT_HOME_STYLE, migrated: true };
+  } catch {
+    return { style: DEFAULT_HOME_STYLE, migrated: false };
+  }
+}
+
+export async function setHomeStyle(style: HomeStyle): Promise<HomeStyle> {
+  const { data, error } = await createPrivilegedClient().from("admin_settings").update({ home_style: style, updated_at: new Date().toISOString() }).eq("id", true).select("home_style").maybeSingle();
+  if (error) {
+    if (notMigrated(error)) throw new ServiceError(503, `Pilihan tampilan menunggu migrasi ${HOME_STYLE_MIGRATION}.`);
+    databaseError(error);
+  }
+  const saved = (data as { home_style?: unknown } | null)?.home_style;
+  return isHomeStyle(saved) ? saved : style;
+}
+
+/** The front page's app menu. Never throws: before migration 202611260002 or on any error, the default menu. */
+export async function getHomeMenu(): Promise<{ menu: HomeMenuItem[]; migrated: boolean }> {
+  try {
+    const { data, error } = await createPrivilegedClient().from("admin_settings").select("home_menu").maybeSingle();
+    if (error) return { menu: readHomeMenu(null), migrated: !notMigrated(error) };
+    return { menu: readHomeMenu((data as { home_menu?: unknown } | null)?.home_menu ?? null), migrated: true };
+  } catch {
+    return { menu: readHomeMenu(null), migrated: false };
+  }
+}
+
+export async function setHomeMenu(menu: HomeMenuItem[]): Promise<HomeMenuItem[]> {
+  const { data, error } = await createPrivilegedClient().from("admin_settings").update({ home_menu: menu, updated_at: new Date().toISOString() }).eq("id", true).select("home_menu").maybeSingle();
+  if (error) {
+    if (notMigrated(error)) throw new ServiceError(503, `Menu halaman utama menunggu migrasi ${HOME_MENU_MIGRATION}.`);
+    databaseError(error);
+  }
+  return readHomeMenu((data as { home_menu?: unknown } | null)?.home_menu ?? menu);
 }

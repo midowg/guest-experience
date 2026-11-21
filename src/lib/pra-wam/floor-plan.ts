@@ -1,5 +1,6 @@
-import { clockLabel, overlaps, wibTime, type Room } from "./appraisal";
+import { overlaps, type Room } from "./appraisal";
 import type { SeatLayout } from "./seating";
+import { zoneSpan, type ViewerZone } from "./zone";
 
 /*
  * The office floor plan, traced from the office's CAD drawing (1600 × 1043, the river on the left
@@ -285,7 +286,7 @@ export type PlanTone = "free" | "busy" | "mine" | "small" | "off" | "closed";
 export type PlanStatus = { tone: PlanTone; text: string };
 export type PlanHold = { startsAt: string; endsAt: string; mine?: boolean };
 
-const spanLabel = (span: PlanHold) => `${clockLabel(wibTime(span.startsAt))}–${clockLabel(wibTime(span.endsAt))}`;
+const spanLabel = (span: PlanHold, zone: ViewerZone = "WIB") => zoneSpan(span.startsAt, span.endsAt, zone);
 
 /**
  * A room's status for the chosen hours (`span`), as the HTML's statusFor() but for a span rather
@@ -295,17 +296,19 @@ const spanLabel = (span: PlanHold) => `${clockLabel(wibTime(span.startsAt))}–$
 export function roomStatus(input: {
   bookable: boolean; holds: PlanHold[]; span: { startsAt: string; endsAt: string } | null; now?: Date;
   capacity?: number | null; needed?: number;
+  /** The viewer's zone for the hours in the words (19 Nov 2026); WIB by default. */
+  zone?: ViewerZone;
 }): PlanStatus {
-  const { bookable, holds, span, now, capacity, needed } = input;
+  const { bookable, holds, span, now, capacity, needed, zone = "WIB" } = input;
   if (!bookable) return { tone: "off", text: "Tidak bisa dibooking" };
   if (!span) return { tone: "closed", text: "Pilih jam dulu" };
   if (now && new Date(span.endsAt) <= now) return { tone: "closed", text: "Jam sudah lewat" };
   const hits = holds.filter(hold => overlaps(hold, span)).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const other = hits.find(hold => !hold.mine);
-  if (other) return { tone: "busy", text: `Terpakai ${spanLabel(other)}` };
-  if (hits.length) return { tone: "mine", text: `Booking kamu ${spanLabel(hits[0])}` };
+  if (other) return { tone: "busy", text: `Terpakai ${spanLabel(other, zone)}` };
+  if (hits.length) return { tone: "mine", text: `Booking kamu ${spanLabel(hits[0], zone)}` };
   if (capacity != null && needed != null && needed > capacity) return { tone: "small", text: `Kurang ${needed - capacity} kursi` };
-  return { tone: "free", text: `Kosong ${spanLabel(span)}` };
+  return { tone: "free", text: `Kosong ${spanLabel(span, zone)}` };
 }
 
 /** Whether a room in this status can be picked on the plan. */

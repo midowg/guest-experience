@@ -1,29 +1,32 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, CircleCheck, Clock, Info, MapPin, QrCode, XCircle } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import type { CheckInResult } from "@/lib/pra-wam/attendance";
 import { sessionWhere, type Session } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { checkIn } from "@/lib/server/pra-wam/attendance";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { viewerZone } from "@/lib/server/pra-wam/zone";
+import { instantLabel, zoneSpan, zoneSuffix, type ViewerZone } from "@/lib/pra-wam/zone";
 import { getSession } from "@/lib/server/pra-wam/sessions";
 import styles from "@/components/pra-wam/pra-wam.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Absen · WAM", robots: { index: false }, referrer: "no-referrer" };
 
-const at = (iso: string) => `${dayLabel(wibDate(iso))}, ${clockLabel(wibTime(iso))}`;
-const span = (opens: string, closes: string) => `${clockLabel(wibTime(opens))}–${clockLabel(wibTime(closes))}`;
+// 19 Nov 2026: in the viewer's own zone.
+const at = (iso: string, zone: ViewerZone) => `${dayLabel(wibDate(iso))}, ${instantLabel(iso, zone)}${zoneSuffix(zone)}`;
+const span = (opens: string, closes: string, zone: ViewerZone) => zoneSpan(opens, closes, zone);
 
 type Shown = { tone: "success" | "info" | "warning" | "error"; title: string; text: string; status: string };
 
-function answer(result: CheckInResult, name: string): Shown {
+function answer(result: CheckInResult, name: string, zone: ViewerZone = "WIB"): Shown {
   switch (result.kind) {
-    case "tercatat": return { tone: "success", title: "Absen tercatat", text: `Terima kasih, ${name}. Selamat mengikuti sesi.`, status: at(result.checkedInAt) };
-    case "sudah": return { tone: "success", title: "Sudah tercatat", text: "Kehadiranmu sudah tercatat. Tidak perlu memindai lagi.", status: at(result.checkedInAt) };
-    case "belum": return { tone: "warning", title: "Absen belum dibuka", text: `QR sesi ini hanya berlaku pada ${span(result.window.opens, result.window.closes)}. Scan lagi saat sesi berlangsung.`, status: "Belum tercatat" };
-    case "tutup": return { tone: "warning", title: "Absen sudah ditutup", text: `Absen ditutup ${at(result.window.closes)}. Bila kamu hadir, minta panitia mencatat secara manual.`, status: "Belum tercatat" };
+    case "tercatat": return { tone: "success", title: "Absen tercatat", text: `Terima kasih, ${name}. Selamat mengikuti sesi.`, status: at(result.checkedInAt, zone) };
+    case "sudah": return { tone: "success", title: "Sudah tercatat", text: "Kehadiranmu sudah tercatat. Tidak perlu memindai lagi.", status: at(result.checkedInAt, zone) };
+    case "belum": return { tone: "warning", title: "Absen belum dibuka", text: `QR sesi ini hanya berlaku pada ${span(result.window.opens, result.window.closes, zone)}. Scan lagi saat sesi berlangsung.`, status: "Belum tercatat" };
+    case "tutup": return { tone: "warning", title: "Absen sudah ditutup", text: `Absen ditutup ${at(result.window.closes, zone)}. Bila kamu hadir, minta panitia mencatat secara manual.`, status: "Belum tercatat" };
     case "bukan-peserta": return { tone: "warning", title: "Kamu tidak terdaftar", text: "Kamu bukan peserta sesi ini. Bila seharusnya ikut, minta panitia menambahkanmu atau mencatat kehadiranmu.", status: "Tidak dicatat" };
     case "belum-terbit": return { tone: "info", title: "Sesi belum terbit", text: "Sesi ini belum diterbitkan panitia, jadi absen belum bisa dicatat.", status: "Belum tercatat" };
     case "pakai-tombol": return { tone: "info", title: "Absen dengan Saya hadir", text: "Sesi ini dari booking ruang. Buka Beranda dan ketuk Saya hadir; QR tidak dipakai.", status: "Belum tercatat" };
@@ -46,7 +49,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     ? await checkIn(token, member).catch((error: unknown) => { if (error instanceof ServiceError) return error.message; throw error; })
     : { result: { kind: "tidak-dikenal" } as CheckInResult, session: null };
   if (typeof outcome === "string") return <><Notice tone="warning">{outcome}</Notice></>;
-  const shown = answer(outcome.result, member.nickname || member.name.split(" ")[0]);
+  const shown = answer(outcome.result, member.nickname || member.name.split(" ")[0], await viewerZone());
   // The room for the card; a person outside the session simply gets no room line.
   const session: Session | null = outcome.session ? await getSession(outcome.session.id, member).catch(() => null) : null;
   const recorded = outcome.result.kind === "tercatat" || outcome.result.kind === "sudah";

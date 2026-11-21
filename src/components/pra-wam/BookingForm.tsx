@@ -15,6 +15,8 @@ import { headcount, isOver, largestCapacity, peopleLabel, roomFit } from "@/lib/
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import { useConfirm } from "./ConfirmDialog";
 import { DateStrip } from "./DateStrip";
+import { useViewerZone } from "./ViewerZone";
+import { wibClockLabel, zoneSuffix } from "@/lib/pra-wam/zone";
 import { dayName, TimelineMonth } from "./TimelineMonth";
 import type { TimelineEntry } from "@/lib/pra-wam/timeline";
 import timelineCss from "./timeline.module.css";
@@ -200,7 +202,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const length = clockMinutes(draft.end) - clockMinutes(draft.start);
   const lengths = durationsFrom(draft.start, freeHours);
   const chosen = { startsAt: wibInstant(draft.date, draft.start), endsAt: wibInstant(draft.date, draft.end) };
-  const hours = `${clockLabel(draft.start)}–${clockLabel(draft.end)}`;
+  // 19 Nov 2026: the hours are kept in WIB (the office's rules) but read in the booker's own zone.
+  const zone = useViewerZone();
+  const at = (time: string) => wibClockLabel(time, zone);
+  const hours = `${at(draft.start)}–${at(draft.end)}${zoneSuffix(zone)}`;
+  const officeHours = zone === "WIB" ? "" : ` = ${clockLabel(draft.start)}–${clockLabel(draft.end)} WIB di kantor`;
 
   // Until another day's bookings arrive, rooms are not marked free or taken from the wrong day.
   const dayKnown = loadedDate === draft.date;
@@ -219,7 +225,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     if (!fit.ok) return { ok: false, pending: false, tone: "off", text: fit.text };
     if (!dayKnown) return { ok: false, pending: true, tone: "closed", text: "Memuat jadwal…" };
     const status = roomStatus({
-      bookable: room.bookable, span: chosen, now: clock,
+      bookable: room.bookable, span: chosen, now: clock, zone,
       holds: others.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: !booking.isSession && booking.bookedBy.id === viewer.id })),
     });
     return { ok: status.tone === "free", pending: false, tone: status.tone, text: status.tone === "free" && fit.over ? `${status.text} · melebihi kapasitas` : status.text };
@@ -446,7 +452,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </div>
         <p className={styles.hint}>{purpose === "lain"
           ? "Untuk keperluan lain, misalnya tamu klien atau interview: jam bebas (00.00–23.30), boleh lebih dari 4 jam, dan boleh akhir pekan. Tetap masuk jadwal ruang dan kalender, tanpa absen dan tanpa MoM."
-          : `Meeting WAM di ruang kantor: ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam, dengan absen dan MoM.`}</p>
+          : `Meeting WAM di ruang kantor: ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} WIB, Senin–Jumat, 30 menit sampai 4 jam, dengan absen dan MoM.`}</p>
       </div>
       {datePicker === "month"
         // The month as on Timeline (9 Nov 2026): the forums' bars instead of free/full dots; a day picks the date.
@@ -460,14 +466,14 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           }} /></div>
         : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={date => { void pickDate(date); }} pastPickable label="Tanggal" />}
       {fieldError("date")}
-      {record && <Notice tone="info">{draft.date === today ? `Jam ${clockLabel(draft.start)} hari ini sudah lewat` : `${dayLabel(draft.date)} sudah lewat`}: booking ini dicatat sebagai meeting yang sudah terjadi. Bentrok ruang tetap dicek; partisipan tidak diundang atau diberi notifikasi.</Notice>}
+      {record && <Notice tone="info">{draft.date === today ? `Jam ${at(draft.start)}${zoneSuffix(zone)} hari ini sudah lewat` : `${dayLabel(draft.date)} sudah lewat`}: booking ini dicatat sebagai meeting yang sudah terjadi. Bentrok ruang tetap dicek; partisipan tidak diundang atau diberi notifikasi.</Notice>}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
       <div className={styles.times}>
         <div>
-          <label className={styles.label} htmlFor={`${uid}-start`}>Jam mulai</label>
+          <label className={styles.label} htmlFor={`${uid}-start`}>Jam mulai{zone === "WIB" ? "" : ` (${zone})`}</label>
           <select id={`${uid}-start`} className="select" value={draft.start} aria-invalid={!!fieldErrors.start} aria-describedby={described("start")} onChange={event => set(hoursFrom(event.target.value))}>
-            {!starts.includes(draft.start) && <option value={draft.start} disabled>{clockLabel(draft.start)}</option>}
-            {starts.map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
+            {!starts.includes(draft.start) && <option value={draft.start} disabled>{at(draft.start)}</option>}
+            {starts.map(time => <option key={time} value={time}>{at(time)}</option>)}
           </select>
           {fieldError("start")}
         </div>
@@ -481,7 +487,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           {fieldError("end")}
         </div>
       </div>
-      <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
+      <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}{officeHours}</p>
       {starts.length === 0 && <Notice tone="info">{freeHours ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
       {draft.date === today && !pastToday && <button type="button" className={css.pastLink} onClick={() => { void (async () => {
         if (!(await confirm({
@@ -497,11 +503,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
         : purpose === "lain"
           ? "Ruang dipilih di langkah Tempat; Di luar kantor juga bisa dipilih di sana."
-          : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
+          : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} WIB, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
       {/* The day's rooms and bookings while the date is picked (11 Nov 2026), as on Timeline, so no going back there. */}
       <div className={css.dayRooms} aria-label={`Jadwal ruang ${dayLabel(draft.date)}`} role="region">
         <p className={styles.label}>Jadwal ruang · {dayLabel(draft.date)}</p>
-        {dayKnown ? <RoomCardList cards={roomCards(rooms, others, draft.date, nowDate)} />
+        {dayKnown ? <RoomCardList cards={roomCards(rooms, others, draft.date, nowDate, zone)} />
           : <p className={styles.hint} role="status">{loadError ?? "Memuat jadwal ruang…"}</p>}
       </div>
     </section>
@@ -597,7 +603,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         {freeTimes.length > 0 && <>
           <p>Jam terdekat yang masih kosong:</p>
           <div className={styles.actions}>{freeTimes.map(option => <button key={option.room.id} type="button" className={`${styles.chip} ${styles.chipSmall}`}
-            onClick={() => set({ start: option.start, end: option.end, roomId: option.room.id })}>{option.room.name} {clockLabel(option.start)}–{clockLabel(option.end)}</button>)}</div>
+            onClick={() => set({ start: option.start, end: option.end, roomId: option.room.id })}>{option.room.name} {at(option.start)}–{at(option.end)}{zoneSuffix(zone)}</button>)}</div>
         </>}
         <div className={styles.actions}>
           {fitting.length > 0 && <Button type="button" variant="secondary" onClick={() => goTo(0)}>Ubah waktu</Button>}
@@ -653,7 +659,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         <h3>{conflict.kind === "room" ? "Ruang sudah diambil" : "Partisipan bentrok"}</h3>
         <p>{conflict.message}</p>
         {conflict.kind === "room" && <>
-          {conflict.sameRoom?.length ? <div className={styles.actions}>{conflict.sameRoom.map(option => <button key={option.start} type="button" className={`${styles.chip} ${styles.chipSmall}`} onClick={() => set({ start: option.start, end: option.end })}>{roomName(draft.roomId)} {clockLabel(option.start)}–{clockLabel(option.end)}</button>)}</div> : <p>Tidak ada jam kosong lain di ruang ini hari itu.</p>}
+          {conflict.sameRoom?.length ? <div className={styles.actions}>{conflict.sameRoom.map(option => <button key={option.start} type="button" className={`${styles.chip} ${styles.chipSmall}`} onClick={() => set({ start: option.start, end: option.end })}>{roomName(draft.roomId)} {at(option.start)}–{at(option.end)}{zoneSuffix(zone)}</button>)}</div> : <p>Tidak ada jam kosong lain di ruang ini hari itu.</p>}
           {(() => {
             const suited = (conflict.otherRooms ?? []).filter(id => { const other = rooms.find(item => item.id === id); return !!other && roomFit(other, count).ok; });
             return suited.length ? <div className={styles.actions}>{suited.map(id => <button key={id} type="button" className={`${styles.chip} ${styles.chipSmall}`} onClick={() => set({ roomId: id })}>{roomName(id)}, jam yang sama</button>)}</div> : null;

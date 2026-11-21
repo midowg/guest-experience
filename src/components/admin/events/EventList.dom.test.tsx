@@ -129,7 +129,7 @@ it("closes the delete confirmation with Batal without deleting", () => {
 it("heads the list with the standalone apps and the Your Visit guide under Aplikasi, apart from the events", () => {
   const guide = { ...createSeedEvent(), id: "10f3a511-2331-4000-8000-000000000009", status: "published" as const, title: "Your Visit to Werkudara", slug: "your-visit", event_kind: "panduan" as const };
   render(<EventList events={[first, guide]} featuredId={null} apps={[
-    { key: "wam", name: "WAM 2027", eyebrow: "Aplikasi karyawan", status: "Minggu Pra WAM", address: "/wam", description: "Agenda dan appraisal.", open: { label: "Buka aplikasi", href: "/wam" }, manage: { label: "Kelola WAM", href: "/admin/wam" } },
+    { key: "wam", name: "WAM 2026", eyebrow: "Aplikasi karyawan", status: "Minggu Pra WAM", address: "/wam", description: "Agenda dan appraisal.", open: { label: "Buka aplikasi", href: "/wam" }, manage: { label: "Kelola di Admin Pra WAM", href: "/admin/wam" } },
     { key: "tv", name: "TV Announcement", eyebrow: "Digital signage", status: "TV kantor", address: "/tv", description: "Signage.", open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: "/admin/wam/tv" } },
   ]} />);
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Acara 1");

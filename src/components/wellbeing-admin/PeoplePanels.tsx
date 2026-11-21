@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Minus, Plus, Undo2 } from "lucide-react";
+import { FileSpreadsheet, Minus, Plus, Undo2 } from "lucide-react";
 import { Avatar, ConsoleButton, Pill } from "@/components/console";
 import { errorMessage } from "@/components/admin/shared/api";
 import { Panel, SkeletonRows } from "@/components/app-shell/Panel";
@@ -12,6 +12,7 @@ import { DIMENSIONS, dimensionLabels, wibToday, type DimensionId } from "@/lib/w
 import type { WbBatchResult } from "@/lib/wellbeing/types";
 import { dayLabel, points, send, signed, wb } from "./api";
 import { DimensionBar, DimensionPill, Empty, LoadError, WaitingMigration } from "./parts";
+import { useWbActions } from "./WellbeingAdmin";
 import css from "./wellbeing-admin.module.css";
 
 const norm = (text: string) => text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -124,11 +125,15 @@ export function PointsPanel({ open, round, initialIds, onClose }: { open: boolea
   </Panel>;
 }
 
-/** One person: points (this month and all time) per dimension, latest activities, and admin points with Urungkan. */
+/**
+ * One person: points (this month and all time) per dimension, latest activities, and admin points with Urungkan.
+ * Unduh Excel (19 Nov 2026): their summary, every activity and admin points, for a period chosen in the panel.
+ */
 export function PersonPanel({ id, onClose }: { id: string | null; onClose: () => void }) {
   const source = id ? wb.person(id) : null;
   const detail = useResource(source?.key ?? null, source?.fetch ?? (() => Promise.reject(new Error("—"))));
   const toast = useToast();
+  const { openExport } = useWbActions();
   const today = wibToday();
   const data = detail.data && detail.data.person.id === id ? detail.data : undefined;
 
@@ -138,7 +143,9 @@ export function PersonPanel({ id, onClose }: { id: string | null; onClose: () =>
   }
   return <Panel open={!!id} onClose={onClose} label="Detail karyawan"
     title={data ? data.person.nickname || data.person.name : "Memuat…"}
-    subtitle={data ? [data.person.name !== data.person.nickname ? data.person.name : "", data.person.department, data.person.position].filter(Boolean).join(" · ") : undefined}>
+    subtitle={data ? [data.person.name !== data.person.nickname ? data.person.name : "", data.person.department, data.person.position].filter(Boolean).join(" · ") : undefined}
+    footer={data ? <ConsoleButton icon={<FileSpreadsheet size={18} aria-hidden="true" />}
+      onClick={() => openExport({ data: "person", employee: data.person.id, employeeName: data.person.name })}>Unduh Excel</ConsoleButton> : undefined}>
     {detail.error && !data ? <LoadError message={detail.error} onRetry={() => void detail.reload()} />
       : !data ? <SkeletonRows rows={6} />
       : <div className={css.stack}>

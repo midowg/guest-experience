@@ -1,5 +1,6 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -47,6 +48,7 @@ type Busy = { text: string; progress?: number } | null;
 type Picked = { blob: Blob; mime: ProofMime; url: string };
 
 export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "block", autoOpen = false }: Props) {
+  const zone = useViewerZone();
   const router = useRouter();
   const [recorded, setRecorded] = useState<SelfCheckInAnswer | null>(null);
   const [open, setOpen] = useState(autoOpen && selfReady && status.kind === "buka");
@@ -86,12 +88,12 @@ export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "bloc
   if (!selfReady || shown.kind === "hadir" || shown.kind === "tidak-tersedia") {
     if (variant === "hero") return <div className={own.hero}>
       {shown.kind === "hadir"
-        ? <p className={own.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(shown, at).title}</p>
+        ? <p className={own.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(shown, at, { zone }).title}</p>
         : <p className={own.heroNote}>Absen dengan Saya hadir belum tersedia. Hubungi panitia untuk dicatat.</p>}
       {said && <p className={own.heroNote} role="status">{said}</p>}
     </div>;
     return <>
-      <CheckInBlock status={shown} now={at} self={selfReady} />
+      <CheckInBlock status={shown} now={at} self={selfReady} zone={zone} />
       {said && <p className={css.status} role="status"><span className={css.done}>{said}</span></p>}
     </>;
   }
@@ -186,7 +188,7 @@ export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "bloc
     </dialog>;
 
   if (variant === "hero") return <div className={own.hero}>
-    <p className={own.heroNote} id={describe}>{heroCheckInNote(shown, now)}</p>
+    <p className={own.heroNote} id={describe}>{heroCheckInNote(shown, now, zone)}</p>
     <div className={own.heroRow}>
       <button ref={trigger} type="button" className={own.heroHadir} disabled={!canTap}
         aria-describedby={describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
@@ -197,7 +199,7 @@ export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "bloc
   </div>;
 
   return <div className={own.block}>
-    <CheckInBlock status={shown} now={at} self id={describe} />
+    <CheckInBlock status={shown} now={at} self id={describe} zone={zone} />
     <button ref={trigger} type="button" className={`button button--primary ${own.hadir}`} disabled={!canTap}
       aria-describedby={canTap ? undefined : describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
       <CheckCircle2 size={20} aria-hidden /> Saya hadir

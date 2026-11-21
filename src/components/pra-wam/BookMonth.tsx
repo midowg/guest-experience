@@ -1,5 +1,7 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
+import { instantLabel, zoneSpan } from "@/lib/pra-wam/zone";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Notice } from "@/components/ui";
@@ -57,6 +59,7 @@ type Props = {
 const fromApi = async (from: string, to: string) => (await praWamRequest<{ bookings: Booking[] }>(praWamApi.bookings(undefined, { from, to }))).data.bookings;
 
 export function MonthView({ month, rooms, viewerId, today, selected, summary, version, onMonth, onPickDay, onOpen, load = fromApi }: Props) {
+  const zone = useViewerZone();
   const weeks = monthGrid(month);
   const from = weeks[0][0], to = weeks.at(-1)![6];
   const [room, setRoom] = useState(ALL);
@@ -118,8 +121,8 @@ export function MonthView({ month, rooms, viewerId, today, selected, summary, ve
           {!ready && !error && open && !weekend && !other ? <span className={css.skeleton} aria-hidden /> : <ul className={css.list}>
             {list.slice(0, SHOWN).map(booking => <li key={bookingKey(booking)}>
               <button type="button" className={`${css.chip} ${kindOf(booking)}`} onClick={() => onOpen(booking)} aria-haspopup="dialog"
-                title={`${booking.title} · ${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))} · ${roomName(booking)}`}>
-                <small className={css.chipTime}>{clockLabel(wibTime(booking.startsAt))}{room === ALL ? ` · ${roomName(booking)}` : `–${clockLabel(wibTime(booking.endsAt))}`}</small>
+                title={`${booking.title} · ${zoneSpan(booking.startsAt, booking.endsAt, zone)} · ${roomName(booking)}`}>
+                <small className={css.chipTime}>{instantLabel(booking.startsAt, zone)}{room === ALL ? ` · ${roomName(booking)}` : `–${clockLabel(wibTime(booking.endsAt))}`}</small>
                 <strong>{booking.title}</strong>
               </button>
             </li>)}

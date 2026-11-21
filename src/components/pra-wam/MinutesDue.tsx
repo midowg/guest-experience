@@ -1,5 +1,6 @@
+import { zoneSpan, type ViewerZone } from "@/lib/pra-wam/zone";
 import { ChevronRight, NotebookPen } from "lucide-react";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import type { Session } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
 import css from "./minutes.module.css";
@@ -11,14 +12,14 @@ const SHOWN = 5;
  * opening its detail, where anyone who took part writes it. Nothing when there are none. One with a
  * draft already says Lanjutkan (12 Nov 2026).
  */
-export function MinutesDue({ sessions, drafts = [] }: { sessions: Session[]; drafts?: readonly string[] }) {
+export function MinutesDue({ sessions, drafts = [], zone = "WIB" }: { sessions: Session[]; drafts?: readonly string[]; zone?: ViewerZone }) {
   if (!sessions.length) return null;
   return <section className={css.due} aria-labelledby="mom-due">
     <p id="mom-due" className={css.title}><NotebookPen size={18} aria-hidden /> Notulen belum diisi <span className={css.count}>{sessions.length}</span></p>
     <p className={css.dueLead}>Meeting yang sudah selesai ini menunggu MoM. Siapa pun yang ikut bisa menulisnya.</p>
     <ul className={css.dueList}>{sessions.slice(0, SHOWN).map(session => <li key={session.id}>
       <a className={css.dueRow} href={praWamPath.session(session.id)}>
-        <span className={css.actionText}><strong>{session.title}</strong><small>{dayLabel(wibDate(session.startsAt!))} · {clockLabel(wibTime(session.startsAt!))}–{clockLabel(wibTime(session.endsAt!))}</small></span>
+        <span className={css.actionText}><strong>{session.title}</strong><small>{dayLabel(wibDate(session.startsAt!))} · {zoneSpan(session.startsAt!, session.endsAt!, zone)}</small></span>
         <span className={css.dueGo}>{drafts.includes(session.id) ? "Lanjutkan" : "Tulis"}<ChevronRight size={18} aria-hidden /></span>
       </a>
     </li>)}</ul>

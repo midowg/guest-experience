@@ -2,7 +2,7 @@ import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PraWamResetRequests } from "@/components/admin/wam/PraWamResetRequests";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
 import { accountSummary, summaryLine } from "@/components/admin/wam/akun/account-view";
-import { wamSection } from "@/components/admin/wam/sections";
+import { WAM_ADMIN_LABEL, wamSection } from "@/components/admin/wam/sections";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { defaultPasswordReady, listAccounts } from "@/lib/server/pra-wam/accounts";
@@ -10,7 +10,7 @@ import { accountExtras, RESET_HISTORY_DAYS, resetHistory } from "@/lib/server/pr
 import { listResetRequests } from "@/lib/server/pra-wam/reset-requests";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: `${wamSection("reset").label} · Admin WAM` };
+export const metadata = { title: `${wamSection("reset").label} · ${WAM_ADMIN_LABEL}` };
 
 /**
  * Any admin, tab Permintaan reset of Akun dan peran: the "Lupa password" requests, answered with a

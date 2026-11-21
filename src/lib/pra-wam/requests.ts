@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { clockLabel, dayLabel, wibDate, wibTime } from "./appraisal";
+import { dayLabel, wibDate } from "./appraisal";
+import { zoneSpan, type ViewerZone } from "./zone";
 
 /*
  * A participant asks panitia to move a published session. The request keeps where the session
@@ -30,4 +31,4 @@ export type RequestInput = z.infer<typeof requestInputSchema>;
 export const reviewSchema = z.object({ approve: z.boolean(), note: z.string().trim().max(1000).default("") });
 
 /** "Rabu, 13 Nov · 10.00–12.00" */
-export const spanLabel = (startsAt: string, endsAt: string) => `${dayLabel(wibDate(startsAt))} · ${clockLabel(wibTime(startsAt))}–${clockLabel(wibTime(endsAt))}`;
+export const spanLabel = (startsAt: string, endsAt: string, zone: ViewerZone = "WIB") => `${dayLabel(wibDate(startsAt))} · ${zoneSpan(startsAt, endsAt, zone)}`;

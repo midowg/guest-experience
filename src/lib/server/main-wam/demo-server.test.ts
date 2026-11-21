@@ -28,6 +28,8 @@ const REAL = "00000000-0000-4000-8000-0000000000aa";
 let demo = true;
 let sessionRows: Record<string, unknown>[] = [];
 let testers: string[] = [];
+/** Panitia WAM (pw_event_staff of the WAM event; 20 Nov 2026). */
+let staff: string[] = [];
 let modules: Record<string, boolean> = { absen: true };
 
 function answer(q: Query) {
@@ -35,6 +37,7 @@ function answer(q: Query) {
     case "mw_settings": return { data: [{ mode: "semua", modules, module_config: { demo } }] };
     case "mw_sessions": return { data: sessionRows, count: sessionRows.length };
     case "mw_testers": return { data: testers.map(employee_id => ({ employee_id })) };
+    case "pw_event_staff": return { data: staff.map(employee_id => ({ employee_id, seksi: "" })) };
     default: return { data: [] };
   }
 }
@@ -50,7 +53,7 @@ const member = (roles: string[]) => ({ id: REAL, name: "Budi Asli", nickname: "B
 beforeEach(() => {
   newRequest();
   fake.answer = answer;
-  demo = true; sessionRows = []; testers = []; modules = { absen: true }; cookieRole = undefined;
+  demo = true; sessionRows = []; testers = []; staff = []; modules = { absen: true }; cookieRole = undefined;
 });
 
 describe("the settings as the demo draws them", () => {
@@ -102,10 +105,24 @@ describe("the role a penguji picked", () => {
   });
 
   it("does not exist when the demo is off: the cookie is ignored and the viewer has no demo part", async () => {
-    demo = false; testers = [REAL]; cookieRole = "bod";
-    const viewer = await viewerModule.viewerOf(member(["panitia"]));
+    demo = false; staff = [REAL]; cookieRole = "bod";
+    const viewer = await viewerModule.viewerOf(member([]));
     expect(viewer.roles).toEqual(["panitia"]);
     expect("demo" in viewer).toBe(false);
+  });
+
+  it("20 Nov 2026: panitia is Panitia WAM; Pra WAM's panitia or admin role alone is a peserta who does not test", async () => {
+    demo = false;
+    const pra = await viewerModule.viewerOf(member(["panitia", "admin"]));
+    expect(pra.roles).toEqual([]);
+    expect(pra.tester).toBe(false);
+    newRequest(); staff = [REAL];
+    const wam = await viewerModule.viewerOf(member(["admin"]));
+    expect(wam.roles).toEqual(["panitia"]);
+    expect(wam.tester).toBe(true);
+    // BOD stays BOD from the account.
+    newRequest(); staff = [];
+    expect((await viewerModule.viewerOf(member(["bod"]))).roles).toEqual(["bod"]);
   });
 });
 

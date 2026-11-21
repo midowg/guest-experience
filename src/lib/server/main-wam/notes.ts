@@ -10,6 +10,8 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "../pra-wam/events";
 import { schedulePush } from "../pra-wam/push";
+import { HIDDEN_AUDIENCE_LABEL } from "@/lib/main-wam-visibility";
+import { mainWamHidden } from "../main-wam-visibility";
 import { demoOn } from "./demo";
 import { mwFail, mwMissing } from "./errors";
 import { mainWamEventPeople } from "./people";
@@ -17,7 +19,7 @@ import { readMainWamSettings, testerIds } from "./settings";
 
 /*
  * Main WAM's notes on WAM's one inbox (docs/main-wam/KONTRAK.md §4): a note is a pw_announcements
- * row (event WAM 2027) with a receipt per person, so the bell, "dibaca", and Pra WAM's own
+ * row (event WAM 2026) with a receipt per person, so the bell, "dibaca", and Pra WAM's own
  * Notifikasi keep working; mw_notes adds its kind, link, pin and audience. Phones get it through
  * the existing Web Push with the topic notePushTopic gives. Only people Main WAM is on for receive
  * a note: everyone in mode semua, the penguji otherwise (so a test never reaches the whole office).
@@ -27,19 +29,21 @@ const db = () => createPrivilegedClient();
 
 async function wamEventId(): Promise<string> {
   const wam = (await listEvents()).events.find(event => event.kind === "wam");
-  if (!wam) throw new ServiceError(503, "Acara WAM 2027 belum disiapkan. Hubungi tim CoE.");
+  if (!wam) throw new ServiceError(503, "Acara WAM 2026 belum disiapkan. Hubungi tim CoE.");
   return wam.id;
 }
 
 /**
  * Who Main WAM is on for now, among everyone with an active WAM account (people.ts, the one list):
- * everyone in mode semua; else the penguji (listed, panitia, admin).
+ * everyone in mode semua once the super admin shows Main WAM in Journey; else (another mode, or still
+ * hidden whatever the mode) the penguji: the listed ones and Panitia WAM (20 Nov 2026, KONTRAK §15:
+ * never Pra WAM's committee or admins by their role).
  */
 export async function mainWamAudience(settings?: MainWamSettings): Promise<string[]> {
-  const [{ mode }, people] = await Promise.all([settings ?? readMainWamSettings(), mainWamEventPeople()]);
-  if (mode === "semua") return [...people.accounts];
+  const [{ mode }, people, hidden] = await Promise.all([settings ?? readMainWamSettings(), mainWamEventPeople(), mainWamHidden()]);
+  if (mode === "semua" && !hidden) return [...people.accounts];
   const listed = await testerIds();
-  return people.accounts.filter(id => listed.has(id) || people.panitia.has(id) || people.admin.has(id));
+  return people.accounts.filter(id => listed.has(id) || people.panitia.has(id));
 }
 
 /** Who an announcement's audience means now, within Main WAM's audience. */
@@ -47,7 +51,8 @@ export async function resolveAudience(audience: AnnouncementAudience, settings?:
   const within = new Set(await mainWamAudience(settings));
   const keep = (ids: string[]) => [...new Set(ids)].filter(id => within.has(id));
   switch (audience.type) {
-    case "semua": return { ids: [...within], label: "Semua peserta" };
+    // Hidden: "everyone" is the listed penguji, and says so (the TV and Pra WAM's lists read "Semua peserta").
+    case "semua": return { ids: [...within], label: (await mainWamHidden()) ? HIDDEN_AUDIENCE_LABEL : "Semua peserta" };
     case "panitia": return { ids: keep([...(await mainWamEventPeople()).panitia]), label: "Panitia" };
     case "departemen": {
       const { data } = await db().from("employees").select("id").in("department", audience.departments).eq("active", true);
@@ -81,17 +86,19 @@ export type NoteInput = {
 /** Writes the note to every recipient's bell and pushes it; how many got it. Throws (503 before the migration). */
 export async function sendMainWamNote(input: NoteInput): Promise<number> {
   const settings = await readMainWamSettings();
-  const [resolved, within, eventId] = await Promise.all([
+  const [resolved, within, eventId, hidden] = await Promise.all([
     "audience" in input.to ? resolveAudience(input.to.audience, settings) : { ids: input.to.people, label: input.to.label },
     "audience" in input.to ? null : mainWamAudience(settings).then(ids => new Set(ids)),
     // No recipients is said first (422); the missing event only matters when there are some.
     wamEventId().catch((error: unknown) => ({ error })),
+    mainWamHidden(),
   ]);
   const ids = resolved.ids.filter(id => id !== input.except && (!within || within.has(id)));
   if (!ids.length) throw new ServiceError(422, "Belum ada penerima untuk pilihan ini.");
   if (typeof eventId !== "string") throw eventId.error;
   const { data, error } = await db().from("pw_announcements")
-    .insert({ event_id: eventId, kind: announcementKind(input.kind), title: input.title, body: input.body, audience_label: resolved.label.slice(0, 300), created_by: input.by })
+    // Hidden: never a committee announcement (kind pengumuman shows in Pra WAM's sent list, BOD's numbers and the office TV).
+    .insert({ event_id: eventId, kind: hidden ? "sesi" : announcementKind(input.kind), title: input.title, body: input.body, audience_label: resolved.label.slice(0, 300), created_by: input.by })
     .select("id").single();
   if (error) databaseError(error);
   const link = input.link ?? "";

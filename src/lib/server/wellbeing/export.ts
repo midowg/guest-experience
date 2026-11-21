@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { DIMENSIONS, dimensionLabels, monthRange, previousMonth, rank, wibToday, type DimensionId } from "@/lib/wellbeing/rules";
 import type { WbActivity } from "@/lib/wellbeing/types";
+import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { writeXlsx, type Cell, type SheetOut } from "../xlsx-write";
 import { ACTIVITY_COLUMNS, ACTIVITY_FILTERS, ACTIVITY_KINDS, employees, toActivity, type Actor } from "./admin";
@@ -15,7 +16,8 @@ import { db, missing, readAll, readTotals, waiting, withTime, withTimeColumn } f
  */
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-export const EXPORT_DATA = ["people", "activities", "points"] as const;
+/** person (19 Nov 2026): one employee's data, from their panel in Karyawan. */
+export const EXPORT_DATA = ["people", "activities", "points", "person"] as const;
 export const EXPORT_PERIODS = ["month", "last_month", "range", "all"] as const;
 export const exportSchema = z.object({
   data: z.enum(EXPORT_DATA),
@@ -26,13 +28,18 @@ export const exportSchema = z.object({
   kind: z.enum(ACTIVITY_KINDS).default("all"),
   /** Only these activities (ticked in Periksa); the period and filters are then not used. */
   ids: z.array(z.uuid()).min(1).max(500).optional(),
+  /** The employee of a "person" export. */
+  employee: z.uuid().optional(),
 }).superRefine((value, ctx) => {
+  if (value.data === "person" && !value.employee) ctx.addIssue({ code: "custom", path: ["employee"], message: "Pilih karyawannya." });
   if (value.period === "range" && (!value.from || !value.to)) ctx.addIssue({ code: "custom", path: ["from"], message: "Isi tanggal mulai dan akhir." });
   if (value.from && value.to && value.from > value.to) ctx.addIssue({ code: "custom", path: ["to"], message: "Tanggal akhir sebelum tanggal mulai." });
 });
 export type ExportInput = z.infer<typeof exportSchema>;
 
-const dataTitles: Record<ExportInput["data"], string> = { people: "Rekap poin per karyawan", activities: "Daftar aktivitas", points: "Poin dari admin" };
+const dataTitles: Record<ExportInput["data"], string> = { people: "Rekap poin per karyawan", activities: "Daftar aktivitas", points: "Poin dari admin", person: "Data karyawan" };
+/** A name as a file name part: "Ayu Contoh" → "ayu-contoh" (ASCII, so the download header stays valid). */
+const slug = (text: string) => text.normalize("NFKD").replace(/[^\x20-\x7e]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "karyawan";
 const statusLabels: Record<(typeof ACTIVITY_FILTERS)[number], string> = { all: "Semua status", unchecked: "Belum diperiksa", adjusted: "Diubah admin", rejected: "Ditolak" };
 const kindLabels: Record<(typeof ACTIVITY_KINDS)[number], string> = { all: "Semua jenis", daily: "Kegiatan harian", sport: "Olahraga", strava: "Dari Strava" };
 const sourceLabels: Record<WbActivity["source"], string> = { manual: "Dicatat sendiri", strava: "Strava", import: "Aplikasi lama" };
@@ -52,6 +59,7 @@ const periodText = (range: { from: string | null; to: string | null }) => range.
 
 export async function exportWorkbook(input: ExportInput, actor: Actor, now = new Date()): Promise<{ file: Buffer; name: string }> {
   const today = wibToday(now);
+  if (input.data === "person" && input.employee) return personWorkbook(input.employee, periodOf(input, today), actor, now, today);
   const range = input.ids ? { from: null, to: null } : periodOf(input, today);
   const data = input.data === "people" ? await peopleSheet(range) : input.data === "activities" ? await activitiesSheet(input, range) : await pointsSheet(range);
   const filters = input.data === "activities" ? input.ids ? `${input.ids.length} aktivitas yang dipilih di Periksa` : `${statusLabels[input.status]}, ${kindLabels[input.kind]}` : "-";
@@ -65,11 +73,44 @@ export async function exportWorkbook(input: ExportInput, actor: Actor, now = new
     ["Sumber", "Admin Wellbeing, Werkudara Journey"],
   ] };
   const stamp = range.from && range.to ? `${range.from}_${range.to}` : input.ids ? `pilihan-${today}` : `semua-${today}`;
-  return { file: writeXlsx([data, info]), name: `wellbeing-${{ people: "rekap-poin", activities: "aktivitas", points: "poin-admin" }[input.data]}-${stamp}.xlsx` };
+  return { file: writeXlsx([data, info]), name: `wellbeing-${{ people: "rekap-poin", activities: "aktivitas", points: "poin-admin", person: "karyawan" }[input.data]}-${stamp}.xlsx` };
 }
 
-/** Points per employee in the period, per dimension, ranked (ties share a place); active employees without points are listed too. */
-async function peopleSheet(range: { from: string | null; to: string | null }): Promise<SheetOut> {
+/**
+ * One employee (19 Nov 2026, Karyawan → their panel → Unduh Excel): Ringkasan (who, the period, the
+ * place and points per dimension as in the recap), every activity in the period, and the points an
+ * admin gave them; then Keterangan.
+ */
+async function personWorkbook(employeeId: string, range: { from: string | null; to: string | null }, actor: Actor, now: Date, today: string): Promise<{ file: Buffer; name: string }> {
+  const ranked = await rankedPeople(range);
+  const row = ranked.find(item => item.person.id === employeeId) ?? null;
+  const person = row?.person ?? (await employees()).find(item => item.id === employeeId);
+  if (!person) throw new ServiceError(404, "Karyawan tidak ditemukan.");
+  const withPoints = ranked.filter(item => item.points > 0).length;
+  const summary: SheetOut = { name: "Ringkasan", widths: [26, 44], rows: [
+    ["Nama", person.full_name], ["Nama panggilan", person.nickname || null], ["Divisi", person.department || null], ["Jabatan", person.position || null],
+    ["Status", person.active ? "Aktif" : "Nonaktif"], ["Periode", periodText(range)],
+    ["Peringkat", row?.rank ? `${row.rank} dari ${withPoints}` : "-"],
+    ["Total poin", row?.points ?? 0],
+    ...DIMENSIONS.map((dimension): Cell[] => [dimensionLabels[dimension], row?.sum?.dims[dimension] ?? 0]),
+    ["Poin lain", row?.sum?.other ?? 0], ["Aktivitas dihitung", row?.sum?.activities ?? 0],
+  ] };
+  const [activities, entries] = await Promise.all([activitiesSheet(exportSchema.parse({ data: "activities" }), range, employeeId), pointsSheet(range, employeeId)]);
+  const info: SheetOut = { name: "Keterangan", widths: [22, 60], rows: [
+    ["Laporan", `${dataTitles.person}: ${person.full_name}`],
+    ["Periode", periodText(range)],
+    ["Isi", "Ringkasan, Aktivitas (semua status), Poin admin"],
+    ["Jumlah aktivitas", activities.rows.length - 1],
+    ["Dibuat", `${wibStamp(now)} WIB`],
+    ["Oleh", actor.name],
+    ["Sumber", "Admin Wellbeing, Werkudara Journey"],
+  ] };
+  const stamp = range.from && range.to ? `${range.from}_${range.to}` : `semua-${today}`;
+  return { file: writeXlsx([summary, activities, entries, info]), name: `wellbeing-${slug(person.full_name)}-${stamp}.xlsx` };
+}
+
+/** Everyone in the recap, ranked: points in the period (per dimension), ties sharing a place, those without points last. */
+async function rankedPeople(range: { from: string | null; to: string | null }) {
   const [people, totals] = await Promise.all([employees(), readTotals(range.from, range.to)]);
   if (!totals.migrated) throw waiting();
   const sums = new Map<string, { points: number; activities: number; dims: Record<DimensionId, number>; other: number }>();
@@ -82,6 +123,12 @@ async function peopleSheet(range: { from: string | null; to: string | null }): P
   const listed = people.filter(person => person.active || sums.has(person.id)).map(person => ({ person, points: sums.get(person.id)?.points ?? 0, sum: sums.get(person.id) }));
   const ranked = rank(listed.filter(row => row.points > 0)).concat(listed.filter(row => row.points <= 0).map(row => ({ ...row, rank: 0 })));
   ranked.sort((a, b) => b.points - a.points || a.person.full_name.localeCompare(b.person.full_name, "id"));
+  return ranked;
+}
+
+/** Points per employee in the period, per dimension, ranked (ties share a place); active employees without points are listed too. */
+async function peopleSheet(range: { from: string | null; to: string | null }): Promise<SheetOut> {
+  const ranked = await rankedPeople(range);
   return {
     name: "Rekap poin", widths: [10, 30, 16, 28, 26, 10, 12, ...DIMENSIONS.map(() => 12), 14, 12],
     rows: [
@@ -94,9 +141,10 @@ async function peopleSheet(range: { from: string | null; to: string | null }): P
   };
 }
 
-async function activitiesSheet(input: ExportInput, range: { from: string | null; to: string | null }): Promise<SheetOut> {
+async function activitiesSheet(input: ExportInput, range: { from: string | null; to: string | null }, employeeId?: string): Promise<SheetOut> {
   const { rows, error } = await readAll((start, end) => withTimeColumn(on => {
     let request = db().from("wb_activities").select(withTime(ACTIVITY_COLUMNS, on)).order("happened_on", { ascending: true }).order("created_at", { ascending: true }).order("id");
+    if (employeeId) request = request.eq("employee_id", employeeId);
     if (input.ids) request = request.in("id", input.ids);
     else {
       if (range.from) request = request.gte("happened_on", range.from);
@@ -125,9 +173,10 @@ async function activitiesSheet(input: ExportInput, range: { from: string | null;
   };
 }
 
-async function pointsSheet(range: { from: string | null; to: string | null }): Promise<SheetOut> {
+async function pointsSheet(range: { from: string | null; to: string | null }, employeeId?: string): Promise<SheetOut> {
   const [people, read] = await Promise.all([employees(), readAll((start, end) => {
     let request = db().from("wb_point_entries").select("id,employee_id,points,dimension_id,reason,happened_on,kind,created_by_name,created_at,voided_at,voided_by_name").order("happened_on", { ascending: true }).order("created_at").order("id");
+    if (employeeId) request = request.eq("employee_id", employeeId);
     if (range.from) request = request.gte("happened_on", range.from);
     if (range.to) request = request.lte("happened_on", range.to);
     return request.range(start, end);

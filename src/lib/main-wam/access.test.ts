@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTester, liveForEveryone, mainWamCan, mainWamGate, mainWamRole, moduleAllows, opensMainWamHome, showsCommitteeTab, MAIN_WAM_ACTIONS } from "./access";
+import { isTester, liveForEveryone, mainWamCan, mainWamGate, mainWamRole, mainWamRolesOf, moduleAllows, opensMainWamHome, showsCommitteeTab, MAIN_WAM_ACTIONS } from "./access";
 import { DEFAULT_MODULES } from "./settings";
 import type { MainWamMode } from "./types";
 
@@ -42,10 +42,33 @@ describe("who sees Main WAM, by mode", () => {
   });
 });
 
+describe("Main WAM's own roles (20 Nov 2026: Panitia WAM apart from Pra WAM's committee)", () => {
+  it("keep BOD from the account, drop Pra WAM's panitia and admin, and add panitia for Panitia WAM", () => {
+    expect(mainWamRolesOf(["panitia"], false)).toEqual([]);
+    expect(mainWamRolesOf(["admin"], false)).toEqual([]);
+    expect(mainWamRolesOf(["admin", "panitia", "ga"], false)).toEqual(["ga"]);
+    expect(mainWamRolesOf(["bod"], false)).toEqual(["bod"]);
+    expect(mainWamRolesOf([], true)).toEqual(["panitia"]);
+    expect(mainWamRolesOf(["panitia"], true)).toEqual(["panitia"]);
+  });
+  it("so Pra WAM's panitia or admin is a peserta in Main WAM, without the Panitia tab or its tools, unless on Panitia WAM", () => {
+    const praCommittee = { roles: mainWamRolesOf(["panitia", "admin"], false) };
+    expect(mainWamRole(praCommittee)).toBe("peserta");
+    expect(showsCommitteeTab(praCommittee)).toBe(false);
+    expect(mainWamCan(praCommittee, "kelola")).toBe(false);
+    expect(isTester(praCommittee, false)).toBe(false);
+    const wamCommittee = { roles: mainWamRolesOf([], true) };
+    expect(showsCommitteeTab(wamCommittee)).toBe(true);
+    expect(mainWamCan(wamCommittee, "kelola")).toBe(true);
+    expect(isTester(wamCommittee, false)).toBe(true);
+  });
+});
+
 describe("penguji", () => {
-  it("are panitia and Admin WAM always, anyone else only on the list", () => {
+  it("are Panitia WAM always, anyone else only on the list", () => {
     expect(isTester({ roles: ["panitia"] }, false)).toBe(true);
-    expect(isTester({ roles: ["admin"] }, false)).toBe(true);
+    // Pra WAM's admin role no longer makes a penguji (Main WAM's roles never carry it).
+    expect(isTester({ roles: ["admin"] }, false)).toBe(false);
     expect(isTester({ roles: [] }, true)).toBe(true);
     expect(isTester({ roles: [] }, false)).toBe(false);
     expect(isTester({ roles: ["bod"] }, false)).toBe(false);
@@ -80,10 +103,10 @@ describe("what each role may do", () => {
     }
   });
 
-  it("gives the panitia tools to panitia and admin only, and Momen to everyone", () => {
+  it("gives the panitia tools to Panitia WAM only, and Momen to everyone", () => {
     for (const action of ["kelola", "silent-kontrol"] as const) {
       expect(mainWamCan(panitia, action)).toBe(true);
-      expect(mainWamCan(admin, action)).toBe(true);
+      expect(mainWamCan(admin, action)).toBe(false);
       expect(mainWamCan(peserta, action)).toBe(false);
       expect(mainWamCan(bod, action)).toBe(false);
     }

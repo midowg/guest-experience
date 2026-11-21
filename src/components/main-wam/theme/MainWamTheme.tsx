@@ -40,7 +40,7 @@ export function MainWamTheme({ theme, mode = "light", reduceMotion = false, chil
 }) {
   const resolved = theme && "warnings" in theme && "colors" in theme ? theme as ResolvedTheme : resolveTheme(theme as MainWamThemeInput | null | undefined);
   if (process.env.NODE_ENV !== "production" && resolved.warnings.length > 0) {
-    console.warn(`[Main WAM] tema: ${resolved.warnings.join("; ")}`);
+    console.warn(`[WAM 2026] tema: ${resolved.warnings.join("; ")}`);
   }
   const vars: Record<string, string> = themeVars(resolved);
   const fontVar = DISPLAY_FONT_VARS[resolved.displayFont];

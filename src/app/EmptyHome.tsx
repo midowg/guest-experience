@@ -1,33 +1,35 @@
-import Image from 'next/image';
-import { SchemeSwitch } from './SchemeSwitch';
+import { ADMIN_HOME, BOOKING_PATH, HR_PATH, PRA_WAM_PATH, WELLBEING_PATH, wamAdminPath } from '@/lib/routes';
+import type { HomeStyle } from '@/lib/home-style';
+import { defaultHomeMenu, type HomeApp, type HomeMenuItem } from '@/lib/home-menu';
+import type { Door } from './home-doors';
+import { HomeFan } from './HomeFan';
+import { HomeLamp } from './HomeLamp';
+
+const SIGNAGE_PATH = wamAdminPath.tv;
 
 /**
- * The front page of Werkudara Journey: one full, quiet screen that greets whoever arrives, light or
- * dark (the system's, or the visitor's pick), beside a photo of the joglo in the office garden. It
- * says nothing about what the guest pages hold and links to none of them.
+ * Where each app opens, and its logo when it has one (19 Nov 2026): fixed here, never from the menu
+ * the super admin edits, so the front page can only open these apps, each behind its own sign-in.
  */
-export function EmptyHome() {
-  return <main className="welcome-page">
-    <div className="welcome-photo">
-      <Image src="/panduan-ke-werkudara/assets/garden-960.webp" alt="Rumah joglo di taman Werkudara" fill priority sizes="(min-width: 64rem) 45vw, 100vw" />
-    </div>
-    <div className="welcome-text">
-      <div className="welcome-top">
-        {/* The Werkudara mark as a silhouette (public/werkudara-mark.png), coloured by the theme. */}
-        <span className="welcome-logo" role="img" aria-label="Werkudara Group" />
-        <SchemeSwitch />
-      </div>
-      <div className="welcome-main">
-        <p className="welcome-kicker">Selamat datang</p>
-        <h1 className="welcome-mark">Journey</h1>
-        <p className="welcome-by">by Werkudara Group</p>
-        <p className="welcome-lead">Senang sekali Anda mampir. Kalau Anda tamu kami, silakan buka tautan yang sudah kami kirimkan. Semua yang Anda perlukan sudah kami siapkan di sana.</p>
-        <p className="welcome-note">Belum menerima tautan? Hubungi tim Werkudara yang mengundang Anda, kami dengan senang hati membantu.</p>
-      </div>
-      <div className="welcome-foot">
-        <p lang="en">Welcome. If you are our guest, the link we sent you has everything ready for you.</p>
-        <p className="welcome-sign">Salam hangat, Werkudara Group</p>
-      </div>
-    </div>
-  </main>;
+const appDoors: Record<HomeApp, { href: string; logo?: string }> = {
+  wam: { href: PRA_WAM_PATH, logo: '/wam/icon-192.png' },
+  wlm: { href: WELLBEING_PATH, logo: '/wlm/icon-192.png' },
+  booking: { href: BOOKING_PATH },
+  hr: { href: HR_PATH, logo: '/people/icon-192.png' },
+  signage: { href: SIGNAGE_PATH },
+  admin: { href: ADMIN_HOME },
+};
+
+const guest = 'Tamu kami? Silakan buka tautan yang sudah kami kirimkan, semuanya sudah kami siapkan di sana.';
+
+/**
+ * The front page of Werkudara Journey: the apps of the team, each behind its own sign-in, in the look
+ * the super admin picked (Kartu 3D or Lampu) and the menu set there (which apps, order, text, colour). Guests are sent back to their link. No guest page is
+ * named or linked.
+ */
+export function EmptyHome({ style = 'kartu', menu = defaultHomeMenu }: { style?: HomeStyle; menu?: HomeMenuItem[] }) {
+  const doors: Door[] = menu.filter(item => item.shown).map(item => ({
+    ...appDoors[item.app], icon: item.app, tone: item.tone, name: item.name, what: item.what, key: item.account, description: item.description,
+  }));
+  return style === 'lampu' ? <HomeLamp doors={doors} guest={guest} /> : <HomeFan doors={doors} guest={guest} />;
 }

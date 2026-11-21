@@ -1,0 +1,38 @@
+/* Admin WAM 2026 → Kuis live. Console tokens only (--cs-*). */
+.stack { display: grid; gap: 16px; }
+.note { margin: 0; color: var(--cs-muted); font-size: 14px; }
+.small { color: var(--cs-muted); font-size: 12px; }
+.steps { margin: 0; padding-left: 20px; color: var(--cs-muted); font-size: 14px; display: grid; gap: 4px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; color: var(--cs-muted); font-size: 13px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.form { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cs-line); }
+.formGrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.form :global(.field) { margin: 0; }
+.inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.inline :global(.field) { flex: 1 1 16rem; margin: 0; }
+.level { display: grid; gap: 8px; }
+.levelHead { display: flex; align-items: baseline; gap: 8px; margin: 8px 0 0; font-size: 15px; font-weight: 700; }
+.levelHead span { color: var(--cs-muted); font-size: 12px; font-weight: 500; }
+.questions { display: grid; margin: 0; padding: 0; list-style: none; }
+.question { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--cs-line); }
+.question:first-child { border-top: 0; }
+.qbody { font-size: 14px; font-weight: 700; }
+.options { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--cs-muted); }
+.correct { color: var(--cs-ok-fg); font-weight: 700; }
+.optionRow { display: flex; align-items: center; gap: 8px; }
+.optionRow :global(.input) { flex: 1; }
+.optionRow input[type="radio"] { width: 20px; height: 20px; accent-color: var(--cs-primary); flex: none; }
+.rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 0; border-top: 1px solid var(--cs-line); }
+.row:first-child { border-top: 0; }
+.rowText { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.rowText > span:first-child { font-size: 14px; font-weight: 700; }
+.rowText > span + span { color: var(--cs-muted); font-size: 12px; }
+.link { word-break: break-all; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--cs-line); }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--cs-line); white-space: nowrap; }
+.table th { color: var(--cs-muted); font-weight: 600; border-top: 0; }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; }
+.danger { color: var(--cs-bad-fg); }

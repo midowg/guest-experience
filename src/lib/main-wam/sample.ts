@@ -59,12 +59,13 @@ export const sampleRoomBod: ViewerRoom = { id: uid(3, 101), name: "101", kind: "
 /* ── Who is looking ───────────────────────────────────────────────────────────────────────────── */
 
 const viewer = (key: string, roles: MainWamViewer["roles"], room: ViewerRoom | null, group: MainWamViewer["group"]): MainWamViewer => ({
-  id: person(key).id, name: person(key).name, fullName: person(key).fullName, department: person(key).department, photo: null, roles, tester: roles.some(role => role === "panitia" || role === "admin"), group, room,
+  id: person(key).id, name: person(key).name, fullName: person(key).fullName, department: person(key).department, photo: null, roles, tester: roles.includes("panitia"), group, room,
 });
 export const sampleViewers = {
   peserta: viewer("rani", [], sampleRoom3, { id: sampleGroup4.id, number: 4, name: "Arjuno", coordinator: false, size: 10 }),
   panitia: viewer("dimas", ["panitia"], null, { id: sampleGroups[1].id, number: 2, name: "Kawi", coordinator: true, size: 10 }),
   bod: viewer("arman", ["bod"], sampleRoomBod, null),
+  // Pra WAM's admin role (20 Nov 2026): nothing more than a peserta in Main WAM, and not a penguji.
   admin: viewer("hadi", ["admin"], null, null),
 };
 export type SampleRole = keyof typeof sampleViewers;

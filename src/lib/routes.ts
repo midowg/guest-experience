@@ -79,7 +79,13 @@ export const superAdminPath = {
   admins: "/admin/super/admin",
   /** Voucher re-roll (18 Nov 2026): every re-roll voucher from WLM's Hadiah, to cancel, refund, restore, or give. */
   vouchers: "/admin/super/voucher",
+  /** Halaman utama (26 Nov 2026): which look the front page (journey.werkudara.group) shows. */
+  home: "/admin/super/beranda",
 };
+/** The front page's look: GET, or PUT { style } (super admin). */
+export const HOME_STYLE_API = "/api/admin/home-style";
+/** Main WAM in Journey (20 Nov 2026): GET whether it shows, PUT { shown } (super admin only; hidden by default). */
+export const MAIN_WAM_VISIBILITY_API = "/api/admin/wam2026-tampil";
 /** Super admin's voucher re-roll: the list (GET), a voucher by hand (POST), or one voucher's correction (POST <id>). */
 export const vouchersApi = (id?: string) => id ? `/api/admin/vouchers/${id}` : "/api/admin/vouchers";
 /** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */
@@ -648,9 +654,17 @@ export const mainWamApi = {
   missionPhotoConfirm: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/foto/simpan`,
 };
 
-/** Admin WAM → Main WAM: Pengaturan (fondasi), Isi acara (E), Modul acara (D). */
-const MAIN_WAM_ADMIN = `${WAM_ADMIN}/main`;
+/**
+ * Admin WAM 2026 (20 Nov 2026, KONTRAK §15): the admin of the WAM event itself, its own door apart from
+ * Admin Pra WAM (/admin/wam): Ringkasan, Pengaturan (fondasi), Panitia WAM, Isi acara (E), Modul acara (D, F).
+ * Its old address /admin/wam/main/** redirects here (next.config.ts).
+ */
+const MAIN_WAM_ADMIN = "/admin/wam2026";
 export const mainWamAdminPath = {
+  /** Ringkasan: where Main WAM stands, and a way into every part. */
+  home: MAIN_WAM_ADMIN,
+  /** The WAM event's committee (pw_event_staff), apart from Pra WAM's. */
+  committee: `${MAIN_WAM_ADMIN}/panitia`,
   /** Mode acara, penguji, modul on/off, tema (fondasi). */
   settings: `${MAIN_WAM_ADMIN}/pengaturan`,
   /* E · isi acara */
@@ -671,9 +685,13 @@ export const mainWamAdminPath = {
   /** Misi: missions, completions and their proofs, manual points, the Peringkat. */
   missions: `${MAIN_WAM_ADMIN}/misi`,
 };
-const MAIN_WAM_ADMIN_API = "/api/admin/wam/main";
+const MAIN_WAM_ADMIN_API = "/api/admin/wam2026";
 export const mainWamAdminApi = {
   /* fondasi */
+  /** GET: Panitia WAM; POST {employeeId, seksi}: add one (or change their seksi). */
+  committee: `${MAIN_WAM_ADMIN_API}/panitia`,
+  /** PATCH {seksi}; DELETE: one person of Panitia WAM. */
+  committeeMember: (employeeId: string) => `${MAIN_WAM_ADMIN_API}/panitia/${enc(employeeId)}`,
   /** PUT {mode?, modules?, moduleConfig?, theme?}: Pengaturan. */
   settings: `${MAIN_WAM_ADMIN_API}/pengaturan`,
   /** POST {employeeId}: add a penguji. */
@@ -819,6 +837,110 @@ export const bookingApi = {
   rooms: (id?: string) => `${BOOKING_API}/kelola/rooms${id ? `/${id}` : ""}`,
   /** Kelola: PUT {on} gives or takes one person's Admin Booking. */
   access: (employeeId: string) => `${BOOKING_API}/kelola/access/${employeeId}`,
+};
+
+/*
+ * WG People (/hr, 20 Nov 2026): the employees' own HR app, apart from WAM. Absensi first (masuk
+ * and pulang with the face and the office point); cuti, lembur DW and more to come. It signs in
+ * with the same employee account as WAM and Booking Kantor, on its own pages and in its own look.
+ * Its admin lives in Journey Admin (/admin/hr), given per person in Super admin → Akses admin.
+ */
+export const HR_PATH = "/people";
+const HR_API = "/api/hr";
+export const hrPath = {
+  /** Absen: today's masuk and pulang, and the way to clock in; `?daftar=1` opens enrolment. */
+  home: HR_PATH,
+  /** The bottom menu's other places (21 Nov 2026); switching between them never reloads. */
+  history: `${HR_PATH}/riwayat`,
+  requests: `${HR_PATH}/pengajuan`,
+  profile: `${HR_PATH}/profil`,
+  /** Tim (21 Nov 2026): who is on cuti, sakit, izin or dinas, as a calendar or a list. */
+  team: `${HR_PATH}/tim`,
+  enroll: `${HR_PATH}?daftar=1`,
+  login: (next?: string) => `${HR_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  forgot: `${HR_PATH}/lupa-password`,
+  newPassword: (next?: string) => `${HR_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,
+};
+export const hrApi = {
+  /** GET: the person's absensi today, their face status, the office points, the last 14 days. */
+  clockIn: `${HR_API}/absen`,
+  /** POST {kind}: a nonce and its liveness steps; then upload {token, mime, size}; then submit. */
+  clockInStart: `${HR_API}/absen/start`,
+  clockInUpload: `${HR_API}/absen/upload`,
+  clockInSubmit: `${HR_API}/absen/submit`,
+  /** Enrolment: POST start, then the same upload, then POST {consent, token, embeddings, signals, photo}. */
+  enrollStart: `${HR_API}/wajah/start`,
+  enroll: `${HR_API}/wajah`,
+  /** DELETE: the person withdraws consent; their face data goes. */
+  face: `${HR_API}/wajah/saya`,
+  /** POST: ask Admin HR to fix an absen (21 Nov 2026); with an id, DELETE withdraws a waiting request. */
+  requests: `${HR_API}/revisi`,
+  request: (id: string) => `${HR_API}/revisi/${id}`,
+  /** GET ?bulan=YYYY-MM: the team's cuti, sakit, izin and dinas that month (21 Nov 2026); POST asks for one; with an id, DELETE withdraws a waiting one. */
+  leaves: (month?: string) => `${HR_API}/cuti${month ? `?bulan=${month}` : ""}`,
+  leave: (id: string) => `${HR_API}/cuti/${id}`,
+};
+/** Admin WG People in Journey Admin (20 Nov 2026): one page per section (src/components/hr-admin/sections.ts). */
+export const HR_ADMIN = "/admin/hr";
+const HR_ADMIN_API = "/api/admin/hr";
+export const hrAdminPath = {
+  /** Ringkasan: today's numbers, what to set up, and what waits. */
+  home: HR_ADMIN,
+  /** Perlu dicek: every clock-in that waits for a decision, newest first. */
+  waiting: `${HR_ADMIN}/perlu-dicek`,
+  /** Absen harian: everyone's masuk and pulang on one day (`tanggal`). */
+  day: (date?: string) => `${HR_ADMIN}/absen${date ? `?tanggal=${date}` : ""}`,
+  /** Wajah terdaftar: the reference faces, approving them, and Proses foto impor. */
+  faces: `${HR_ADMIN}/wajah`,
+  /** Titik kantor: the office points and their radius. */
+  offices: `${HR_ADMIN}/kantor`,
+  /** Revisi: what employees ask to fix, to approve or refuse (21 Nov 2026). */
+  requests: `${HR_ADMIN}/revisi`,
+  /** Cuti & izin: cuti, sakit, izin and dinas asked for, to approve or refuse (21 Nov 2026). */
+  leaves: `${HR_ADMIN}/cuti`,
+  /** Rekap bulanan: everyone × every day of a month, coloured like a spreadsheet (`bulan`). */
+  month: (month?: string) => `${HR_ADMIN}/rekap${month ? `?bulan=${month}` : ""}`,
+};
+export const hrAdminApi = {
+  /** GET ?tanggal=: everyone's masuk and pulang that day. */
+  day: (date: string) => `${HR_ADMIN_API}/absen?tanggal=${date}`,
+  /** GET: the clock-ins that wait. */
+  waiting: `${HR_ADMIN_API}/absen/perlu-dicek`,
+  /** PATCH {status, note}: Setujui or Tolak one clock-in; DELETE: Hapus absen (and its selfie). */
+  record: (id: string) => `${HR_ADMIN_API}/absen/${id}`,
+  /** GET: a redirect to the clock-in's selfie (five minutes). */
+  selfie: (id: string) => `${HR_ADMIN_API}/absen/${id}/selfie`,
+  /** POST: this clock-in's selfie becomes the person's reference face. */
+  asReference: (id: string) => `${HR_ADMIN_API}/absen/${id}/acuan`,
+  /** POST {employeeId, workDate, kind, time, zone, note}: a clock-in recorded by hand. */
+  manual: `${HR_ADMIN_API}/absen/manual`,
+  /** POST: delete the selfies older than 90 days (the admin presses it; no schedule). */
+  oldSelfies: `${HR_ADMIN_API}/absen/selfie-lama`,
+  /** GET: every reference face. */
+  faces: `${HR_ADMIN_API}/wajah`,
+  /** POST {action}: setujui, tolak, reset, or proses (an imported photo's embedding or why it is unreadable). */
+  face: (employeeId: string) => `${HR_ADMIN_API}/wajah/${employeeId}`,
+  /** GET: the reference photo (same origin, for Proses foto impor); `?lihat=1` redirects to storage. */
+  facePhoto: (employeeId: string, view = false) => `${HR_ADMIN_API}/wajah/${employeeId}/foto${view ? "?lihat=1" : ""}`,
+  /** POST {mime, size}: where Admin HR's reference photo for this person goes ("Unggah foto acuan"). */
+  faceUpload: (employeeId: string) => `${HR_ADMIN_API}/wajah/${employeeId}/unggah`,
+  /** GET/POST: the office points; PUT/DELETE one. */
+  offices: `${HR_ADMIN_API}/kantor`,
+  office: (id: string) => `${HR_ADMIN_API}/kantor/${id}`,
+  /** GET: the revision requests; with an id, POST {approve, note} decides one. */
+  requests: `${HR_ADMIN_API}/revisi`,
+  request: (id: string) => `${HR_ADMIN_API}/revisi/${id}`,
+  /** PUT {method}: how everyone clocks in (gerakan or foto). */
+  method: `${HR_ADMIN_API}/metode`,
+  /** PUT {time}: a masuk after this time (HH:MM, the office's zone) is Telat. */
+  lateAfter: `${HR_ADMIN_API}/jam-masuk`,
+  /** GET: the cuti/sakit/izin/dinas requests; with an id, POST {approve, note} decides one. */
+  leaves: `${HR_ADMIN_API}/cuti`,
+  leave: (id: string) => `${HR_ADMIN_API}/cuti/${id}`,
+  /** POST {note}: withdraw a waiting or approved one. */
+  leaveCancel: (id: string) => `${HR_ADMIN_API}/cuti/${id}/batal`,
+  /** GET ?bulan=YYYY-MM: Rekap bulanan's cells. */
+  month: (month: string) => `${HR_ADMIN_API}/rekap?bulan=${month}`,
 };
 
 /*
@@ -1008,10 +1130,45 @@ export const wellbeingApi = {
   stravaSync: `${WELLBEING_API}/strava/sync`,
   /** Strava's webhook (its check and its events). */
   stravaWebhook: `${WELLBEING_API}/strava/webhook`,
+  /** POST { period, from, to }: Unduh rekap saya, my own data as an Excel file (19 Nov 2026). */
+  export: `${WELLBEING_API}/export`,
   /** Hadiah (18 Nov 2026): my saldo, the rewards, my claims. */
   rewards: `${WELLBEING_API}/rewards`,
   /** POST { rewardId, note }: ask for a reward. */
   claims: `${WELLBEING_API}/rewards/claims`,
   /** POST: cancel my claim while it waits. */
   claim: (id: string) => `${WELLBEING_API}/rewards/claims/${id}`,
+};
+
+/*
+ * Refleksi Leader (19 Nov 2026): the reflection leaders write before the Leadership Reset training.
+ * No sign-in: the form is open at /leadership-reset; a leader's own answer, the CMS and the coach's
+ * page open by a key each. A leader's key stays after "#", so it never reaches a server or its logs;
+ * the CMS and coach keys sit in their address and go to the APIs in a header, never in a query.
+ */
+export const LEADERSHIP_RESET_PATH = "/refleksi";
+export const LEADERSHIP_RESET_SECTIONS = ["ringkasan", "isi"] as const;
+export type LeadershipResetSection = (typeof LEADERSHIP_RESET_SECTIONS)[number];
+export const leadershipResetPath = {
+  home: LEADERSHIP_RESET_PATH,
+  own: (key: string) => `${LEADERSHIP_RESET_PATH}#jawaban=${key}`,
+  /** /refleksi/kelola: the CMS, open to anyone with the address (19 Nov 2026). */
+  cmsHome: `${LEADERSHIP_RESET_PATH}/kelola`,
+  cmsSection: (section: LeadershipResetSection) => `${LEADERSHIP_RESET_PATH}/kelola${section === "ringkasan" ? "" : `?bagian=${section}`}`,
+  cms: (key: string, section: LeadershipResetSection = "ringkasan") => `${LEADERSHIP_RESET_PATH}/kelola/${key}${section === "ringkasan" ? "" : `?bagian=${section}`}`,
+};
+const LEADERSHIP_RESET_API = "/api/leadership-reset";
+/** The header the CMS and coach keys travel in. */
+export const LEADERSHIP_RESET_KEY_HEADER = "x-refleksi-key";
+export const leadershipResetApi = {
+  /** PUT: save my answer (new or changed). POST {key}: read it back. */
+  answer: `${LEADERSHIP_RESET_API}/jawaban`,
+  /** CMS (key header). GET the overview. */
+  cms: `${LEADERSHIP_RESET_API}/kelola`,
+  /** PUT {content, isOpen}. */
+  cmsForm: `${LEADERSHIP_RESET_API}/kelola/form`,
+  /** DELETE: one answer (a test or a double). */
+  cmsResponse: (id: string) => `${LEADERSHIP_RESET_API}/kelola/jawaban/${enc(id)}`,
+  /** GET: every answer as Excel. */
+  cmsExcel: `${LEADERSHIP_RESET_API}/kelola/excel`,
 };

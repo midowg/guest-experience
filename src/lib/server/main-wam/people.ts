@@ -7,6 +7,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "../pra-wam/appraisal";
 import { demoOn } from "./demo";
+import { wamStaff } from "./staff";
 
 /*
  * Everyone as Main WAM shows them (aturan-wam §4): the nama panggilan (callName, from listPeople),
@@ -44,7 +45,8 @@ export const mainWamPeople = cache(peopleUncached);
 
 /*
  * The people of the event (audit R5: one definition for every count): everyone with an active WAM
- * account and an active Data karyawan row; BOD, panitia and admin by role. "Orang acara" (who checks
+ * account and an active Data karyawan row; BOD by role (pw_roles), panitia from Panitia WAM
+ * (pw_event_staff of the WAM event; 20 Nov 2026, never Pra WAM's committee). "Orang acara" (who checks
  * in, "Hadir 96 dari 120", Kehadiran) is that minus BOD. Read once per request; a database failure
  * throws (the caller decides: a count left out, or a 5xx).
  */
@@ -52,8 +54,8 @@ export type MainWamEventPeople = {
   /** Every active WAM account (BOD included), sorted by id. */
   accounts: readonly string[];
   bod: ReadonlySet<string>;
+  /** Panitia WAM. */
   panitia: ReadonlySet<string>;
-  admin: ReadonlySet<string>;
 };
 
 async function activeAccountsUncached(): Promise<string[]> {
@@ -69,13 +71,13 @@ async function activeAccountsUncached(): Promise<string[]> {
 }
 
 async function eventPeopleUncached(): Promise<MainWamEventPeople> {
-  const [accounts, roles] = await Promise.all([
+  const [accounts, roles, staff] = await Promise.all([
     activeAccountsUncached(),
-    createPrivilegedClient().from("pw_roles").select("employee_id,role").in("role", ["bod", "panitia", "admin"]),
+    createPrivilegedClient().from("pw_roles").select("employee_id,role").eq("role", "bod"),
+    wamStaff(),
   ]);
   if (roles.error) databaseError(roles.error);
-  const of = (role: string) => new Set((roles.data ?? []).filter(row => row.role === role).map(row => row.employee_id as string));
-  return { accounts, bod: of("bod"), panitia: of("panitia"), admin: of("admin") };
+  return { accounts, bod: new Set((roles.data ?? []).map(row => row.employee_id as string)), panitia: new Set(staff.keys()) };
 }
 
 /** The event's people and roles (see MainWamEventPeople), once per request. */

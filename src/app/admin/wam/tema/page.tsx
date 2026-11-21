@@ -1,13 +1,13 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PraWamTheme } from "@/components/admin/wam/PraWamTheme";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
+import { WAM_ADMIN_LABEL, wamCrumbs, wamSection } from "@/components/admin/wam/sections";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { THEME_MIGRATION, wamLookState } from "@/lib/server/pra-wam/theme";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: `${wamSection("tema").label} · Admin WAM` };
+export const metadata = { title: `${wamSection("tema").label} · ${WAM_ADMIN_LABEL}` };
 
 /** Any admin: the theme everyone sees in the WAM app, each shown in light and dark. */
 export default async function WamThemePage() {

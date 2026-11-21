@@ -11,6 +11,7 @@ import type { AttendanceData } from "@/lib/server/main-wam/panitia/attendance";
 import { errorText, useLiveRefresh, useOnline, usePanitiaApi, useServerState } from "./api";
 import { Bar, EmptyBlock } from "./parts";
 import css from "./panitia.module.css";
+import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 
 type Tab = "belum" | "hadir";
 
@@ -66,7 +67,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
   }
 
   if (!props.migrated && !session) return <ScreenContent><Banner tone="info" title="Menunggu pembaruan sistem">Absen sesi aktif setelah pembaruan sistem dijalankan.</Banner></ScreenContent>;
-  if (!session) return <ScreenContent><EmptyState icon={<UserCheck />} title="Belum ada sesi yang memakai absen.">Tandai sesi &ldquo;pakai absen&rdquo; di Admin WAM.</EmptyState></ScreenContent>;
+  if (!session) return <ScreenContent><EmptyState icon={<UserCheck />} title="Belum ada sesi yang memakai absen.">Tandai sesi &ldquo;pakai absen&rdquo; di {WAM_EVENT_ADMIN_LABEL}.</EmptyState></ScreenContent>;
 
   const percent = total ? Math.round((present.length / total) * 100) : 0;
   return <ScreenContent>

@@ -1,10 +1,12 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
+import { zoneSpan, type ViewerZone } from "@/lib/pra-wam/zone";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarPlus, ChartGantt, ChevronRight, Clock, DoorOpen, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, loadedWeek, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, dayLabel, draftHours, isOutside, loadedWeek, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
@@ -56,7 +58,8 @@ type SheetState =
   | { kind: "detail"; booking: Booking }
   | { kind: "form"; key: number; editId?: string; initial: BookingDraft; dayOf: string; dayBookings: Booking[] };
 
-const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
+// 19 Nov 2026: the hours in the viewer's own zone.
+const span = (booking: Booking, zone: ViewerZone) => zoneSpan(booking.startsAt, booking.endsAt, zone);
 const shortDate = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
 
@@ -71,6 +74,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * since its bookings are loaded on the server.
  */
 export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [], cancelled = [], timeline = [], viewerDepartments = [] }: Props) {
+  const zone = useViewerZone();
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -166,7 +170,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     const room = bookingWhere(booking, rooms);
     if (!(await confirm({
       title: "Batalkan booking?",
-      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}, ${room}.${isOutside(booking) ? "" : " Ruang langsung bisa dipesan orang lain."}`,
+      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking, zone)}, ${room}.${isOutside(booking) ? "" : " Ruang langsung bisa dipesan orang lain."}`,
       confirmLabel: "Batalkan booking",
       danger: true,
     }))) return;
@@ -198,7 +202,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     </div> : <ul className={css.mineList}>
       {[...mine.map(booking => ({ at: booking.startsAt, row: <li key={bookingKey(booking)}>
         <button type="button" className={`${css.mineRow} ${mineFlag(booking) ? css.mine : css.busy}`} onClick={() => openBooking(booking)} aria-haspopup="dialog">
-          <span className={css.when}><b>{shortDate(wibDate(booking.startsAt))}</b>{span(booking)}</span>
+          <span className={css.when}><b>{shortDate(wibDate(booking.startsAt))}</b>{span(booking, zone)}</span>
           <span className={css.what}>
             <strong>{booking.title}</strong>
             <small>{bookingWhere(booking, rooms)} · {mineFlag(booking) ? "Kamu pemesannya" : `Dipesan ${booking.bookedBy.name}`}</small>
@@ -209,7 +213,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       // Cancelled ones (9 Nov 2026): greyed among the rest, not opened. Newest date on top, oldest at the bottom.
       ...cancelled.map(item => ({ at: item.startsAt, row: <li key={`batal-${item.key}`}>
         <div className={`${css.mineRow} ${css.cancelledRow}`} aria-disabled="true">
-          <span className={css.when}><b>{shortDate(wibDate(item.startsAt))}</b>{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</span>
+          <span className={css.when}><b>{shortDate(wibDate(item.startsAt))}</b>{zoneSpan(item.startsAt, item.endsAt, zone)}</span>
           <span className={css.what}>
             <strong>{item.title}</strong>
             <small>{item.where}</small>
@@ -246,6 +250,7 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
   /** A booking made as HOD: each HOD's answer, and Terima and Tolak for an invited HOD. */
   hod?: HodBookingInfo; viewerId: string; onAnswered: (text: string) => void; onAnswerError: (text: string) => void;
 }) {
+  const zone = useViewerZone();
   const room = rooms.find(item => item.id === booking.roomId);
   const ended = new Date(booking.endsAt) <= now;
   const working = !!busy && busy.endsWith(booking.id);
@@ -255,13 +260,13 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
     {canCancel && !ended && <button type="button" className={`button button--secondary ${styles.dangerQuiet}`} onClick={onCancel} disabled={working}>{working ? "Membatalkan…" : "Batalkan"}</button>}
   </>;
   const hasActions = !ended && (canCancel || canEdit);
-  return <Sheet open={shown} onClose={onClose} title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking)}`} footer={hasActions ? actions : undefined}>
+  return <Sheet open={shown} onClose={onClose} title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking, zone)}`} footer={hasActions ? actions : undefined}>
     <span className={`${css.tag} ${tone}`}>{booking.isSession ? "Sesi Pra WAM" : mine ? "Booking kamu" : "Terpakai"}{ended ? " · selesai" : ""}</span>
     <dl className={css.facts}>
       {isOutside(booking)
         ? <div><MapPin aria-hidden /><dt>Tempat</dt><dd>{booking.place || "Tempat belum diisi"}<small>Di luar kantor</small></dd></div>
         : <div><DoorOpen aria-hidden /><dt>Ruang</dt><dd>{room?.name ?? "Ruang"}{room?.capacity ? <small>Kapasitas {room.capacity} orang</small> : null}</dd></div>}
-      <div><Clock aria-hidden /><dt>Waktu</dt><dd>{dayLabel(wibDate(booking.startsAt))}<small>{span(booking)}</small></dd></div>
+      <div><Clock aria-hidden /><dt>Waktu</dt><dd>{dayLabel(wibDate(booking.startsAt))}<small>{span(booking, zone)}</small></dd></div>
       <div><User aria-hidden /><dt>Pemesan</dt><dd>{booking.isSession ? "Panitia Pra WAM" : mine ? "Kamu" : booking.bookedBy.name}{!booking.isSession && !mine && booking.bookedBy.department ? <small>{booking.bookedBy.department}</small> : null}</dd></div>
       {booking.participants && <div><Users aria-hidden /><dt>Partisipan</dt><dd>{booking.participants.length ? booking.participants.map(person => person.name).join(", ") : "Tanpa partisipan lain"}</dd></div>}
       {booking.description && <div><Text aria-hidden /><dt>Deskripsi</dt><dd>{booking.description}</dd></div>}

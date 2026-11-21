@@ -58,7 +58,9 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202611200401_main_wam_modul.sql` | Main WAM, modul: kirim, buka, tutup, dan rekap Silent Meeting di basis data (tanpa orang, tanpa waktu, tidak bisa dibuka lagi; rekap diacak setelah ditutup), persetujuan pemenang Awarding oleh BOD hanya setelah voting tutup. Butuh `202611200003` |
 | `202611200501_main_wam_admin.sql` | Main WAM, Admin WAM → isi acara: anggota kelompok, impor kelompok dan kelompok kegiatan, kursi perjalanan, Hapus sesi (ditolak bila sesi sudah punya absen, foto, masukan, atau suara; pakai Batalkan), Geser jam dengan versi. Fungsi saja, tanpa perubahan tabel. Butuh `202611200001`, `202611200002`, `202611200003` |
 | `202611200601_main_wam_kuis.sql` | Main WAM, Kuis live (modul `kuis`, `docs/rancangan-kuis-wam.md` §8a): kuis dan tautan layar besar (hanya sha256 kuncinya), pengendali per kuis, soal 4 pilihan per level, permainan dengan soal yang dibekukan, pemain dengan alias tokoh atau Tokoh misterius bernomor (`mw_quiz_join`), satu jawaban per orang per soal, total yang dijumlah dari jawaban (`mw_quiz_board`); menambah jenis notifikasi `kuis` di `mw_notes`. Butuh `202611200001`. Modul `kuis` tetap mati sampai dinyalakan di Pengaturan. Sebelum migrasi ini Kuis live menjawab "menunggu pembaruan sistem" |
-| `202611220001_main_wam_panitia_tab.sql` | Main WAM: modul Silent Meeting dimatikan di pengaturan yang sudah ada (Silent Meeting bagian Pra WAM; bisa dinyalakan lagi di Admin WAM → Main WAM → Pengaturan). Aman diulang; tidak menyentuh tabel Silent Meeting. Salinan: `main-wam-update-panitia.sql` |
+| `202611200602_main_wam_visibility.sql` | Main WAM tersembunyi dari Journey (KONTRAK §14): `admin_settings.main_wam_shown` (bawaan tidak) + kapan dan oleh siapa. Super admin menampilkannya di Super admin → Halaman utama. Sebelum migrasi ini Main WAM dianggap tersembunyi (menu Admin WAM tanpa Main WAM, `/wam` tidak mengalihkan, notifikasi Main WAM hanya ke penguji yang dipilih namanya). Butuh `202610200006`. Aman diulang |
+| `202611200603_admin_wam_acara.sql` | Dua pintu admin dan Panitia WAM (KONTRAK §15): `wam_acara` (**Admin WAM 2026**, `/admin/wam2026`) masuk cek `admin_grants.apps`, terpisah dari Admin Pra WAM (`wam`); tabel `pw_event_staff` (panitia per acara, seksi sebagai label, khusus server). Main WAM membaca panitia dan penguji dari sini, bukan dari peran panitia/admin Pra WAM. Tidak ada yang disalin: sesudah migrasi Panitia WAM kosong dan tidak ada yang memegang Admin WAM 2026 kecuali super admin. Sebelum migrasi ini hanya super admin yang membuka Admin WAM 2026, dan Main WAM tanpa panitia (hanya penguji di daftar). Butuh `202611130012`, `202611160050`, dan `pw_events`. Aman diulang. Uji SQL: `tests/backend/admin-wam-acara-check.sql` |
+| `202611220001_main_wam_panitia_tab.sql` | Main WAM: modul Silent Meeting dimatikan di pengaturan yang sudah ada (Silent Meeting bagian Pra WAM; bisa dinyalakan lagi di Admin WAM 2026 → Pengaturan). Aman diulang; tidak menyentuh tabel Silent Meeting. Salinan: `main-wam-update-panitia.sql` |
 | `202611260001_main_wam_misi.sql` | Main WAM, Misi dan Peringkat: misi (foto, check-in lokasi, sesi), penyelesaian per orang per misi (bukti foto dan lokasi, status menunggu/disetujui/ditolak), catatan poin (saldo = jumlah baris, dijaga trigger), tampilan jumlah poin per orang, dan pengaturan (radius bawaan, ketelitian lokasi terburuk, Peringkat terbuka atau tidak). Tabel baru saja, tidak mengubah yang ada. Butuh `202611200001` (`mw_sessions`). Modul Misi mati bawaan |
 | `202611250001_main_wam_persiapan.sql` | Main WAM, Persiapan: kolom `mw_sessions.checklist_required`, item ceklis per sesi (teks, keterangan, foto), centang per orang (modul `ceklis`). Nomor lebih kecil dari Misi, jalankan sebelum `0260001`. |
 | `202611270001_main_wam_kuis_agenda.sql` | Main WAM, Kuis live: kolom `mw_quizzes.session_id` (tautan ke agenda Kuis live). Jalankan sesudah `202611200601`. |
@@ -131,6 +133,19 @@ Kerjakan di browser biasa, lalu ulangi bagian tamu di ponsel.
 - [ ] Kirim satu RSVP uji; jawaban muncul di tab RSVP dan di CSV.
 - [ ] Tautan per tamu: tambah satu tamu uji, salin tautan, buka; status *Dibuka* tercatat.
 - [ ] Hapus atau arsipkan acara uji setelah selesai.
+
+**Sesudah migrasi `202611200603` (dua pintu admin, langkah pemilik):**
+
+1. Super admin → **Akses admin**: centang **Admin WAM 2026** untuk tim WAM (orang per orang). Pemegang Admin Pra WAM tidak
+   otomatis mendapatkannya; tanpa centang ini `/admin/wam2026` 404 untuk mereka.
+2. Admin WAM 2026 → **Panitia WAM** (`/admin/wam2026/panitia`): tambahkan panitia acara WAM beserta seksinya (BOD tidak
+   bisa). Panitia dan admin Pra WAM tidak lagi menjadi panitia atau penguji Main WAM karena perannya.
+3. Admin WAM 2026 → **Pengaturan → Penguji**: tambahkan orang lain yang ikut mencoba Main WAM (di luar Panitia WAM).
+   Pemegang Admin WAM 2026 yang ingin mengendalikan kuis dari HP di mode `uji` juga perlu ada di penguji atau Panitia WAM.
+4. Tautan lama `/admin/wam/main/...` tetap jalan (dialihkan ke `/admin/wam2026/...`).
+
+- [ ] Login sebagai pemegang Admin Pra WAM saja: menu tanpa Main WAM, `/admin/wam2026` 404, `/admin/wam/main/kuis` dialihkan lalu 404.
+- [ ] Login sebagai pemegang Admin WAM 2026 saja: `/admin/wam` 404, `/admin/wam2026` terbuka, Panitia WAM bisa ditambah.
 
 Bila ada yang gagal: Vercel → Deployments → deployment sebelumnya → **Promote to Production** mengembalikan kode lama dalam satu klik. Migrasi database tidak perlu dibatalkan karena versi lama tetap kompatibel.
 

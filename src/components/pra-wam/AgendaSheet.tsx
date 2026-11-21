@@ -1,5 +1,5 @@
 "use client";
-
+import { useViewerZone } from "./ViewerZone";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CheckCircle2, RotateCw, X } from "lucide-react";
@@ -54,6 +54,7 @@ function useSessionView(id: string | null, version: string) {
 }
 
 export function AgendaSheet({ items, version, cancelsAny, bookingOpen }: Props) {
+  const zone = useViewerZone();
   const router = useRouter();
   const search = useSearchParams();
   // The sheet's content depends on the clock and the browser: only after hydration.
@@ -115,7 +116,7 @@ export function AgendaSheet({ items, version, cancelsAny, bookingOpen }: Props) 
     body = <BookingDetailBody item={booking} />;
     if (rights && (rights.edit || rights.cancel)) footer = <BookingDetailActions item={booking} viewer={viewer} onDone={done} />;
   } else if (item && view?.kind === "sesi") {
-    body = <SessionDetailBody view={view} now={now} />;
+    body = <SessionDetailBody view={view} now={now} zone={zone} />;
     footer = sessionDetailActions({ view, now }, true);
     // A session made from a booking (202611050004) is changed or cancelled as the booking, by its booker or panitia.
     const fromBooking: BookingItem | null = item.booking && item.bookingId ? { key: item.bookingId, title: item.title, startsAt: item.startsAt, endsAt: item.endsAt, booking: item.booking } : null;

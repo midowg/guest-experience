@@ -5,7 +5,7 @@ import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill, RowList, StatCard, StatRow, type ConsoleTone, type TimelineRow } from "@/components/console";
 import { WamAdminFrame, waitingResetRequests } from "@/components/admin/wam/WamAdminFrame";
 import { accountSummary } from "@/components/admin/wam/akun/account-view";
-import { wamCrumbs, wamSection, wamSections } from "@/components/admin/wam/sections";
+import { WAM_ADMIN_LABEL, wamCrumbs, wamSection, wamSections } from "@/components/admin/wam/sections";
 import styles from "@/components/admin/wam/wam-admin.module.css";
 import { dateRange } from "@/lib/pra-wam/about";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
@@ -19,7 +19,7 @@ import { listRooms } from "@/lib/server/pra-wam/appraisal";
 import { currentPhase, listEvents, moduleLabels, type PraWamEvent } from "@/lib/server/pra-wam/events";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Admin WAM" };
+export const metadata = { title: WAM_ADMIN_LABEL };
 
 const statusPills: Record<PraWamEvent["status"], { label: string; tone: ConsoleTone }> = {
   aktif: { label: "Aktif", tone: "ok" }, disiapkan: { label: "Disiapkan", tone: "blue" }, selesai: { label: "Selesai", tone: "neutral" },
@@ -27,7 +27,7 @@ const statusPills: Record<PraWamEvent["status"], { label: string; tone: ConsoleT
 type Todo = { key: string; icon: ReactNode; tone: ConsoleTone; title: string; sub: string; href: string };
 
 /**
- * Admin WAM → Ringkasan, for any admin (HR checks WAM here): the key numbers, today's rooms as a
+ * Admin Pra WAM → Ringkasan, for any admin (HR checks WAM here): the key numbers, today's rooms as a
  * timeline (bookings and Pra WAM sessions), what needs doing, the Pra WAM and WAM status, and a
  * way into every section. Each part that cannot be read yet (a migration) hides or says so.
  */
@@ -36,6 +36,7 @@ export default async function WamAdminPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   // A personal admin sees only the sections their grant opens (14 Nov 2026: Kuesioner on its own).
   const actor = await currentAdmin();
+  // Main WAM is never here (20 Nov 2026): it has its own door, Admin WAM 2026.
   const without: string[] = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
   const now = new Date();
   const today = wibDate(now.toISOString());
@@ -110,7 +111,7 @@ export default async function WamAdminPage() {
     </div>
 
     <Card title="Semua bagian" id="semua-bagian">
-      <RowList label="Bagian Admin WAM">{wamSections.filter(section => section.key !== "ringkasan" && !without.includes(section.key)).map(section => {
+      <RowList label={`Bagian ${WAM_ADMIN_LABEL}`}>{wamSections.filter(section => section.key !== "ringkasan" && !without.includes(section.key)).map(section => {
         const Icon = section.icon;
         return <ListRow key={section.key} icon={<Icon size={18} />} tone="neutral" title={section.label} sub={section.summary} href={section.href} />;
       })}</RowList>

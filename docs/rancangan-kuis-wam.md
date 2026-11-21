@@ -197,10 +197,10 @@ Prototipe acuan: `D:\projects\events\2027-01-werkudara-wam\aplikasi\prototipe-ku
 Kuis live dibangun sebagai **modul Main WAM** (`docs/main-wam/KONTRAK.md` §13), bukan fitur Pra WAM.
 
 **Modul dan akses.**
-- Modul `kuis` di `mw_settings.modules`, bawaannya **mati**. Dinyalakan di Admin WAM → Main WAM → Pengaturan.
+- Modul `kuis` di `mw_settings.modules`, bawaannya **mati**. Dinyalakan di Admin WAM 2026 → Pengaturan.
   Modul mati: halaman dan API 404, kartu Beranda tidak ada, layar besar "tidak ditemukan".
 - **Pemain:** semua yang boleh melihat Main WAM (mode acara dan penguji seperti biasa), termasuk BOD.
-- **Pengendali:** dipilih per kuis di Admin WAM (`mw_quiz_hosts`), ditambah pemegang peran Admin WAM.
+- **Pengendali:** dipilih per kuis di Admin WAM 2026 (`mw_quiz_hosts`), ditambah akun WAM pemegang hak Admin WAM 2026 (`wam_acara`; sejak 20 Nov 2026, KONTRAK §15, bukan lagi peran admin Pra WAM). Panitia WAM saja tidak cukup.
   Peran panitia saja tidak cukup. Bagi orang lain halaman kendali 404.
 - Gerbang: setiap halaman `requireModulePage("kuis", …)`, setiap API `requireModuleApi("kuis")` (tes `acara-pages`).
 
@@ -225,15 +225,16 @@ Migrasi yang sama menambah jenis notifikasi `kuis` di `mw_notes`.
 - Server `src/lib/server/main-wam/kuis/`: `play.ts` (HP: keadaan, gabung, jawab), `control.ts` (MC), `screen.ts`
   (layar besar), `home.ts` (kartu Beranda), `admin.ts` (Admin WAM), `alias.ts` (tokoh dari kartu kuesioner), `store.ts`.
 - API: `/api/wam/acara/kuis/{kuis}` (GET keadaan `?v=`, POST gabung), `/jawab`, `/kendali` (GET, POST aksi);
-  `/api/kuis/{kunci}` (layar besar, publik); `/api/admin/wam/main/kuis/…`.
+  `/api/kuis/{kunci}` (layar besar, publik); `/api/admin/wam2026/kuis/…`.
 - Halaman: `/wam/acara/kuis/{kuis}` (main), `/wam/acara/kuis/{kuis}/kendali` (MC), `/kuis/{kunci}` (layar besar),
-  Admin WAM → Main WAM → Modul acara → **Kuis live** (`/admin/wam/main/kuis`).
-- Pratinjau tanpa login: `/dev-preview/main-wam/kuis?layar=hp-jalan|kendali-benar|layar-podium-putar|…` dan
-  `/dev-preview/main-wam/kuis/admin?layar=daftar|kuis`.
+  Admin WAM 2026 → Modul acara → **Kuis live** (`/admin/wam2026/kuis`).
+- Pratinjau tanpa login: `/dev-preview/wam2026/kuis?layar=hp-jalan|kendali-benar|layar-podium-putar|…` dan
+  `/dev-preview/wam2026/kuis/admin?layar=daftar|kuis`.
 
 **Alur dan waktu (semua pada jam server).**
 - Admin membuat permainan (fase Siap). MC menekan **Lanjut: Buka lobi**: kartu Beranda "Kuis dimulai · Ikut" muncul
   dan notifikasi "Kuis dimulai" dikirim (jenis `kuis`, topik push `pengumuman` yang sudah ada; tanpa topik baru).
+  Selama Main WAM tersembunyi dari Journey (KONTRAK §14), notifikasinya hanya ke penguji yang dipilih namanya.
 - "Mulai soal" menjadwalkan soal dibuka **3 detik** kemudian (3-2-1). Jawaban dibuka pada jam buka + waktu soal + 2 detik;
   batang sebaran 1,5 detik, lalu jawaban benar menyala. Jeda menggeser semua jam itu; waktu jeda tidak dihitung.
 - Setiap layar menyamakan jam ke server (contoh dengan perjalanan bolak-balik terpendek, pola TV kantor) dan memutar
@@ -264,9 +265,9 @@ untuk polling ini baru dipertimbangkan bila uji beban menunjukkan perlu.
 - **Teks soal tidak ada di HP** (keputusan pemilik): soal dibaca di layar besar, HP menulis "Baca soal di layar besar".
   Teks pilihan A–D tetap tampil di HP. Server tidak mengirim teks soal ke HP sama sekali (`phoneQuestionView`, tes `snapshot.test.ts`);
   layar besar dan kendali MC tetap memuatnya.
-- **Tautan ke agenda:** kuis bisa ditautkan ke item agenda "Kuis live" (Admin WAM → Kuis live → satu kuis → kartu **Agenda**,
+- **Tautan ke agenda:** kuis bisa ditautkan ke item agenda "Kuis live" (Admin WAM 2026 → Kuis live → satu kuis → kartu **Agenda**,
   kolom `mw_quizzes.session_id`, migrasi `202611270001_main_wam_kuis_agenda.sql`). Selama permainan terbuka (lobi sampai podium),
-  Detail sesi item itu menampilkan tombol **Ikut kuis**. Sebelum migrasi: tidak ada yang tertaut, Admin WAM menulis "menunggu pembaruan sistem".
+  Detail sesi item itu menampilkan tombol **Ikut kuis**. Sebelum migrasi: tidak ada yang tertaut, Admin WAM 2026 menulis "menunggu pembaruan sistem".
 - **Mode demo:** kuis contoh tiga soal (`src/lib/main-wam/kuis/demo.ts`) memutar dirinya sendiri berulang (lobi, tiga soal, papan skor,
   podium) menurut jam server, tanpa data tersimpan. Kartunya ada di Beranda bila tidak ada permainan sungguhan, dan item agenda berjudul
   mengandung "kuis" membuka kuis contoh itu. Mengetuk jawaban tidak disimpan (pesan Mode demo); tokoh saya menjawab benar otomatis.

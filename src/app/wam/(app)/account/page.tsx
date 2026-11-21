@@ -34,7 +34,7 @@ export default async function AccountPage() {
   return <>
     <div className={own.profile}>
       <header className={`${styles.head} ${own.headRow}`}>
-        <div><h1>Profil</h1><p>Satu akun untuk Pra WAM dan WAM 2027</p></div>
+        <div><h1>Profil</h1><p>Satu akun untuk Pra WAM dan WAM 2026</p></div>
         <a className={own.gear} href={praWamPath.settings} aria-label="Pengaturan" title="Pengaturan"><Settings aria-hidden /></a>
       </header>
 

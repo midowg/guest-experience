@@ -8,6 +8,7 @@ import { ServiceError } from "../../config";
 import type { MainWamContext } from "../gate";
 import { trySendMainWamNote } from "../notes";
 import { answeredCount, isQuizHost, notFound, playerCount, questionAnswers, quizAndRun, saveRun } from "./store";
+import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 
 /*
  * The MC's control (rancangan §7): only a pengendali chosen for this quiz in Admin WAM, or Admin WAM
@@ -44,7 +45,7 @@ export async function controlAct(context: MainWamContext, quizId: string, input:
   const { quiz, run, migrated } = await quizAndRun(quizId);
   if (!migrated) throw new ServiceError(503, "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.");
   if (!quiz || !run) throw notFound();
-  if (run.id !== input.runId) throw new ServiceError(409, "Permainan ini sudah diganti di Admin WAM. Muat ulang.");
+  if (run.id !== input.runId) throw new ServiceError(409, `Permainan ini sudah diganti di ${WAM_EVENT_ADMIN_LABEL}. Muat ulang.`);
   if (run.rev !== input.rev) throw new ServiceError(409, "Sudah dilanjutkan dari layar lain. Lihat keadaan terbaru.");
   const players = await playerCount(run.id);
   const result = applyAction(flowOf(run), input.action, { now, players });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
 import { useEffect, useState } from "react";
 import { CalendarPlus, User } from "lucide-react";
 import { Notice } from "@/components/ui";
@@ -20,6 +21,7 @@ const fromServer: DayLoader = date => praWamRequest<{ rooms: Room[]; bookings: B
  * layout check gives its own); `round` reads it again (after a booking is saved).
  */
 export function DayRooms({ date, today, canBook, round = 0, onBook, load = fromServer }: { date: string; today: string; canBook: boolean; round?: number; onBook: (roomId: string) => void; load?: DayLoader }) {
+  const zone = useViewerZone();
   const [loaded, setLoaded] = useState<{ key: string; rooms: Room[]; bookings: Booking[] } | null>(null);
   const [error, setError] = useState<{ key: string; text: string } | null>(null);
   const key = `${date}|${round}`;
@@ -38,7 +40,7 @@ export function DayRooms({ date, today, canBook, round = 0, onBook, load = fromS
   const inPeriod = date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
   return <section className={css.day} aria-label={`Ruang ${dayLabel(date)}`}>
     {title}
-    <RoomCardList cards={roomCards(loaded.rooms, loaded.bookings, date, new Date())} book={canBook && inPeriod ? onBook : null} />
+    <RoomCardList cards={roomCards(loaded.rooms, loaded.bookings, date, new Date(), zone)} book={canBook && inPeriod ? onBook : null} />
   </section>;
 }
 

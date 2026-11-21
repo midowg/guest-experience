@@ -1,10 +1,12 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
+import { zoneSpan, type ViewerZone } from "@/lib/pra-wam/zone";
 import { useState } from "react";
 import { CalendarDays, MapPin, Pencil, UserRound, Users } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import { bookingRights, type AgendaBooking } from "@/lib/pra-wam/agenda";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { useConfirm } from "./ConfirmDialog";
@@ -15,13 +17,15 @@ import own from "./agenda-sheet.module.css";
 /** What a booking's detail needs from its agenda item. */
 export type BookingItem = { key: string; title: string; startsAt: string; endsAt: string; booking: AgendaBooking };
 
-const span = (item: Pick<BookingItem, "startsAt" | "endsAt">) => `${clockLabel(wibTime(item.startsAt))}–${clockLabel(wibTime(item.endsAt))}`;
+// 19 Nov 2026: the hours in the viewer's own zone.
+const span = (item: Pick<BookingItem, "startsAt" | "endsAt">, zone: ViewerZone) => zoneSpan(item.startsAt, item.endsAt, zone);
 
 /**
  * A booking on the agenda, in the sheet over Agenda and Beranda (AgendaSheet): when, which room,
  * who booked it, who else takes part, and what it is for. The same facts as Book's detail.
  */
 export function BookingDetailBody({ item }: { item: BookingItem }) {
+  const zone = useViewerZone();
   const { booking } = item;
   return <div className={rows.detail}>
     <div className={styles.pills}>
@@ -30,7 +34,7 @@ export function BookingDetailBody({ item }: { item: BookingItem }) {
     </div>
     <section className={styles.card} aria-label="Rincian">
       <dl className={styles.infoList}>
-        <div className={styles.row}><span className={styles.tile}><CalendarDays aria-hidden /></span><div><dt>Waktu</dt><dd>{dayLabel(wibDate(item.startsAt))} · {span(item)}</dd></div></div>
+        <div className={styles.row}><span className={styles.tile}><CalendarDays aria-hidden /></span><div><dt>Waktu</dt><dd>{dayLabel(wibDate(item.startsAt))} · {span(item, zone)}</dd></div></div>
         <div className={styles.row}><span className={styles.tile}><MapPin aria-hidden /></span><div><dt>Ruang</dt><dd>{booking.room}</dd></div></div>
         <div className={styles.row}><span className={styles.tile}><UserRound aria-hidden /></span><div>
           <dt>Dipesan oleh</dt>
@@ -61,6 +65,7 @@ type ActionProps = {
  * the API for test data). Null when the person can do neither.
  */
 export function BookingDetailActions({ item, viewer, onDone }: ActionProps) {
+  const zone = useViewerZone();
   const [confirm, confirmDialog] = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +78,7 @@ export function BookingDetailActions({ item, viewer, onDone }: ActionProps) {
     const someoneElse = item.booking.mine ? "" : ` milik ${item.booking.bookedBy.name}`;
     if (!(await confirm({
       title: "Batalkan booking?",
-      body: `"${item.title}"${someoneElse}, ${dayLabel(wibDate(item.startsAt))}, ${span(item)}, ${item.booking.room}. Ruang langsung bisa dipesan orang lain.`,
+      body: `"${item.title}"${someoneElse}, ${dayLabel(wibDate(item.startsAt))}, ${span(item, zone)}, ${item.booking.room}. Ruang langsung bisa dipesan orang lain.`,
       confirmLabel: "Batalkan booking",
       danger: true,
     }))) return;

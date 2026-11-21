@@ -120,6 +120,25 @@ describe("Unduh Excel", () => {
     expect(picked.name).toMatch(/^wellbeing-aktivitas-pilihan-2026-11-17\.xlsx$/);
   });
 
+  it("exports one employee: summary with place and dimensions, their activities (every status) and admin points (19 Nov 2026)", async () => {
+    expect(exportSchema.safeParse({ data: "person", period: "month" }).success).toBe(false);
+    const { file, name } = await exportWorkbook(exportSchema.parse({ data: "person", period: "month", employee: BUDI }), actor, now);
+    expect(name).toBe("wellbeing-budi-contoh-2026-11-01_2026-11-30.xlsx");
+    const [summary, activities, entries, info] = readXlsx(file);
+    expect([summary.name, activities.name, entries.name, info.name]).toEqual(["Ringkasan", "Aktivitas", "Poin admin", "Keterangan"]);
+    const value = (label: string) => summary.rows.find(row => row[0] === label)?.[1];
+    expect([value("Nama"), value("Divisi"), value("Peringkat"), value("Total poin"), value("Emosional"), value("Sosial"), value("Aktivitas dihitung")])
+      .toEqual(["Budi Contoh", "Finance", "1 dari 2", "570", "70", "500", "1"]);
+    // Only Budi's, the rejected one included (marked Ditolak, 0 points).
+    expect(activities.rows.slice(1).map(row => [row[0], row[2], row[15]])).toEqual([["2026-11-10", "Budi Contoh", "Disetujui"], ["2026-11-11", "Budi Contoh", "Ditolak"]]);
+    expect(entries.rows.slice(1).map(row => [row[1], row[3]])).toEqual([["Budi Contoh", "500"]]);
+    expect(info.rows[0][1]).toBe("Data karyawan: Budi Contoh");
+    // Someone without points in the period (inactive here): a summary all the same, no place.
+    const citra = readXlsx((await exportWorkbook(exportSchema.parse({ data: "person", period: "month", employee: CITRA }), actor, now)).file);
+    expect([citra[0].rows.find(row => row[0] === "Peringkat")?.[1], citra[0].rows.find(row => row[0] === "Total poin")?.[1], citra[1].rows.length]).toEqual(["-", "0", 1]);
+    await expect(exportWorkbook(exportSchema.parse({ data: "person", period: "all", employee: "99999999-9999-4999-8999-999999999999" }), actor, now)).rejects.toMatchObject({ status: 404 });
+  });
+
   it("lists the points from an admin, with who gave them and what was voided", async () => {
     const sheet = readXlsx((await exportWorkbook(exportSchema.parse({ data: "points", period: "month" }), actor, now)).file)[0];
     expect(sheet.rows[1]).toEqual(["2026-11-05", "Budi Contoh", "Finance", "500", "Sosial", "Kehadiran internal activities", "Admin", "Admin HR", "Tidak", expect.any(String)]);

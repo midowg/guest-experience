@@ -11,6 +11,7 @@ import type { RundownDay, RundownHistory } from "@/lib/server/main-wam/panitia/r
 import { errorText, useLiveRefresh, useOnline, usePanitiaApi, useServerState, type RundownChangeAnswer } from "./api";
 import { UbahJamSheet } from "./UbahJamSheet";
 import css from "./panitia.module.css";
+import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 
 export type RundownLiveProps = {
   migrated: boolean;
@@ -120,7 +121,7 @@ export function RundownLive(props: RundownLiveProps) {
     {!props.migrated && <Banner tone="info" title="Menunggu pembaruan sistem">Rundown live aktif setelah pembaruan sistem dijalankan.</Banner>}
     {props.days.length > 0 && <DayTabs label="Hari" days={props.days} current={String(props.day)} />}
     {sessions.length === 0
-      ? <EmptyState icon={<CalendarClock />} title="Belum ada sesi di hari ini." size="s">Rundown diisi lewat Admin WAM.</EmptyState>
+      ? <EmptyState icon={<CalendarClock />} title="Belum ada sesi di hari ini." size="s">Rundown diisi lewat {WAM_EVENT_ADMIN_LABEL}.</EmptyState>
       : <List inset={16} label="Sesi">
         {sessions.map(session => <RundownRow key={session.id} session={session} now={now} busy={busy}
           onTime={() => { setTimeFor(session.id); setOpen({ kind: "jam", id: session.id }); }}

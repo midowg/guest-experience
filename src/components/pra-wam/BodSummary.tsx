@@ -1,9 +1,10 @@
+import { instantLabel, type ViewerZone } from "@/lib/pra-wam/zone";
 import type { CSSProperties, ReactNode } from "react";
 import {
   AlertTriangle, ArrowLeftRight, BarChart3, CalendarClock, CalendarDays, CheckCircle2, ChevronRight, Clock, DoorOpen,
   FileText, ListChecks, MapPin, Megaphone, UserCheck, UserX, Users, Video,
 } from "lucide-react";
-import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { wibDate } from "@/lib/pra-wam/appraisal";
 import { methodLabels as checkInWayLabels } from "@/lib/pra-wam/attendance";
 import { lowAttendance, percent, type AttentionKind } from "@/lib/pra-wam/bod";
 import { sessionKindLabels } from "@/lib/pra-wam/sessions";
@@ -37,6 +38,8 @@ const hoursLabel = (hours: number) => `${hours.toLocaleString("id-ID", { maximum
 type Props = {
   data: Summary; insights: BodInsights; greeting: string; date: string;
   survey?: { name: string; participation: Participation } | null;
+  /** 19 Nov 2026: the viewer's zone for the hours; WIB by default. */
+  zone?: ViewerZone;
 };
 
 /**
@@ -46,7 +49,7 @@ type Props = {
  * requests and HOD meetings, announcements and documents, and quick links.
  * Nothing is invented: a part without data says so.
  */
-export function BodSummary({ data, insights, greeting, date, survey = null }: Props) {
+export function BodSummary({ data, insights, greeting, date, survey = null, zone = "WIB" }: Props) {
   const notSignedIn = data.accounts - data.signedIn;
   const started = data.forums.filter(forum => forum.expected > 0);
   const average = data.attendanceReady && started.length ? percent(started.reduce((sum, forum) => sum + forum.present, 0), started.reduce((sum, forum) => sum + forum.expected, 0)) : null;
@@ -70,7 +73,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null }: Pr
     </header>
 
     <div className={styles.top}>
-      <ForumHero data={data} insights={insights} />
+      <ForumHero data={data} insights={insights} zone={zone} />
       <section className={`${base.card} ${styles.attention}`} aria-labelledby="perhatian">
         <div className={styles.cardHead}><h2 id="perhatian">Perlu perhatian</h2>{data.attention.length > 0 && <span className={styles.countPill}>{data.attention.length}</span>}</div>
         {data.attention.length === 0
@@ -129,7 +132,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null }: Pr
 
       <section className={`${base.card} ${styles.span5} ${styles.agendaCard}`} aria-labelledby="berikutnya">
         <div className={styles.cardHead}><h2 id="berikutnya">Agenda berikutnya</h2><a href={praWamPath.sessions}>Lihat jadwal</a></div>
-        <Upcoming insights={insights} />
+        <Upcoming insights={insights} zone={zone} />
       </section>
 
       <section className={`${base.card} ${styles.span4}`} aria-labelledby="alur">
@@ -194,10 +197,10 @@ function Meter({ value, of, label, warn }: { value: number; of: number; label: s
 }
 
 /** The blue card: the forum running now (or the last one), its attendance, and what comes next. */
-function ForumHero({ data, insights }: { data: Summary; insights: BodInsights }) {
+function ForumHero({ data, insights, zone }: { data: Summary; insights: BodInsights; zone: ViewerZone }) {
   const active = data.active;
   const next = insights.upcoming.find(session => session.id !== active?.id && new Date(session.startsAt) > new Date(`${insights.today}T00:00:00+07:00`));
-  const nextLine = next && <p className={styles.heroNext}><CalendarDays aria-hidden /><span>Berikutnya · <strong>{next.title}</strong> · {whenLabel(next.startsAt, insights.today)}, {clockLabel(wibTime(next.startsAt))}</span></p>;
+  const nextLine = next && <p className={styles.heroNext}><CalendarDays aria-hidden /><span>Berikutnya · <strong>{next.title}</strong> · {whenLabel(next.startsAt, insights.today)}, {instantLabel(next.startsAt, zone)}</span></p>;
   if (!active) return <section className={`${base.hero} ${styles.hero}`} aria-label="Forum">
     <span className={styles.heroPill}>Forum</span>
     <h2>Belum ada forum yang berjalan</h2>
@@ -208,7 +211,7 @@ function ForumHero({ data, insights }: { data: Summary; insights: BodInsights })
   return <section className={`${base.hero} ${styles.hero}`} aria-label={active.live ? "Forum berlangsung" : "Forum terakhir"}>
     <div className={styles.heroTop}>
       <span className={styles.heroPill}>{active.live ? "Sedang berlangsung" : "Forum terakhir"}</span>
-      <span><Clock aria-hidden />{whenLabel(active.startsAt, insights.today)}, {clockLabel(wibTime(active.startsAt))}</span>
+      <span><Clock aria-hidden />{whenLabel(active.startsAt, insights.today)}, {instantLabel(active.startsAt, zone)}</span>
     </div>
     <h2><a href={praWamPath.session(active.id)}>{active.title}</a></h2>
     {data.attendanceReady ? <>
@@ -355,11 +358,11 @@ function SessionKinds({ insights }: { insights: BodInsights }) {
 }
 
 /** Itinerary rows (DS "Agenda dan permintaan"): the time big on the left, then title, place and people. */
-function Upcoming({ insights }: { insights: BodInsights }) {
+function Upcoming({ insights, zone }: { insights: BodInsights; zone: ViewerZone }) {
   if (insights.upcoming.length === 0) return <p className={styles.empty}>Belum ada sesi panitia yang terjadwal ke depan.</p>;
   return <ul className={styles.agenda}>{insights.upcoming.map(session => <li key={session.id}>
     <a href={praWamPath.session(session.id)}>
-      <span className={styles.agendaTime}><strong>{clockLabel(wibTime(session.startsAt))}</strong><small>{whenLabel(session.startsAt, insights.today)}</small></span>
+      <span className={styles.agendaTime}><strong>{instantLabel(session.startsAt, zone)}</strong><small>{whenLabel(session.startsAt, insights.today)}</small></span>
       <span className={styles.agendaMain}>
         <strong>{session.title}</strong>
         <small>{session.where && <><MapPin aria-hidden />{session.where} · </>}{session.participants} peserta · {sessionKindLabels[session.kind]}</small>

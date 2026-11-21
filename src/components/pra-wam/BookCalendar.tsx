@@ -1,8 +1,10 @@
 "use client";
 
+import { useViewerZone } from "./ViewerZone";
+import { zoneSpan, type ViewerZone } from "@/lib/pra-wam/zone";
 import { useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, wibDate, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, wibDate, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
 import { durationLabel } from "@/lib/pra-wam/room-day";
 import css from "./book-calendar.module.css";
 
@@ -42,7 +44,8 @@ function kindOf(booking: Booking, viewerId: string): Kind {
 const whoOf = (booking: Booking, viewerId: string) => booking.isSession ? "Sesi Pra WAM" : booking.bookedBy.id === viewerId ? "Booking kamu"
   : `${booking.bookedBy.name}${booking.bookedBy.department ? ` · ${booking.bookedBy.department}` : ""}`;
 export const bookingKey = (booking: Booking) => `${booking.id}@${booking.roomId}@${booking.startsAt}`;
-const bookingSpan = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
+// 19 Nov 2026: the hours in the viewer's own zone.
+const bookingSpan = (booking: Booking, zone: ViewerZone) => zoneSpan(booking.startsAt, booking.endsAt, zone);
 
 /** The colour key as a plain line: a dot and a word each, no pills; wraps on a narrow screen. */
 export function Legend() {
@@ -125,6 +128,7 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
   date: string; room: Room; segments: DaySegment<Booking>[]; viewerId: string; line: number | null; over: boolean; canBook: boolean;
   onOpen: (booking: Booking) => void; onBook: (room: Room, gap: Gap, start: number) => void;
 }) {
+  const zone = useViewerZone();
   const taken = segments.filter(segment => segment.kind === "busy").length;
   const free = segments.filter(segment => segment.kind === "free");
   // One tag says it all: gone by, full, free all day, or the hours still free (overlaps counted once).
@@ -148,7 +152,7 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
           const running = line != null && segment.from <= line && line < segment.to;
           return <li key={bookingKey(booking)}>
             <button type="button" className={`${css.item} ${css[kindOf(booking, viewerId)]} ${done ? css.done : ""}`} onClick={() => onOpen(booking)} aria-haspopup="dialog">
-              <span className={css.itemTime}>{bookingSpan(booking)}</span>
+              <span className={css.itemTime}>{bookingSpan(booking, zone)}</span>
               <span className={css.itemWhat}>
                 <strong>{booking.title}</strong>
                 <small>{whoOf(booking, viewerId)}{running ? " · berlangsung" : done ? " · selesai" : ""}</small>
@@ -210,10 +214,11 @@ function NowLine({ line }: { line: number }) {
 function TimeBlock({ segment, viewerId, line, onOpen }: {
   segment: Extract<DaySegment<Booking>, { kind: "busy" }>; viewerId: string; line: number | null; onOpen: (booking: Booking) => void;
 }) {
+  const zone = useViewerZone();
   const { booking } = segment;
   const kind = kindOf(booking, viewerId);
   const running = line != null && segment.from <= line && line < segment.to;
-  const span = bookingSpan(booking);
+  const span = bookingSpan(booking, zone);
   const short = segment.to - segment.from <= 30;
   return <button type="button" className={`${css.block} ${css[kind]} ${short ? css.blockShort : ""}`} style={{ top: at(segment.from), height: at(segment.to - segment.from) }}
     onClick={() => onOpen(booking)} aria-haspopup="dialog" title={`${booking.title} · ${span} · ${whoOf(booking, viewerId)}`}

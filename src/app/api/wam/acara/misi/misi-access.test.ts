@@ -129,9 +129,9 @@ describe("Misi's participant APIs", () => {
 describe("Admin WAM → Main WAM → Misi APIs", () => {
   async function adminCalls() {
     const [list, one, grant, completion, proof, points, point, settings] = await Promise.all([
-      import("../../../admin/wam/main/misi/route"), import("../../../admin/wam/main/misi/[id]/route"), import("../../../admin/wam/main/misi/[id]/catat/route"),
-      import("../../../admin/wam/main/misi/penyelesaian/[id]/route"), import("../../../admin/wam/main/misi/penyelesaian/[id]/foto/route"),
-      import("../../../admin/wam/main/misi/poin/route"), import("../../../admin/wam/main/misi/poin/[id]/route"), import("../../../admin/wam/main/misi/pengaturan/route"),
+      import("../../../admin/wam2026/misi/route"), import("../../../admin/wam2026/misi/[id]/route"), import("../../../admin/wam2026/misi/[id]/catat/route"),
+      import("../../../admin/wam2026/misi/penyelesaian/[id]/route"), import("../../../admin/wam2026/misi/penyelesaian/[id]/foto/route"),
+      import("../../../admin/wam2026/misi/poin/route"), import("../../../admin/wam2026/misi/poin/[id]/route"), import("../../../admin/wam2026/misi/pengaturan/route"),
     ]);
     const mission = { title: "Foto apel", kind: "foto", points: 40 };
     return [
@@ -153,11 +153,11 @@ describe("Admin WAM → Main WAM → Misi APIs", () => {
   });
 
   it("refuse a mission that breaks the schema, points by hand of zero, and a decision that is not one", async () => {
-    const list = await import("../../../admin/wam/main/misi/route");
+    const list = await import("../../../admin/wam2026/misi/route");
     expect((await list.POST(req("POST", { title: "Taman", kind: "checkin", points: 30 }))).status).toBe(422);
-    const points = await import("../../../admin/wam/main/misi/poin/route");
+    const points = await import("../../../admin/wam2026/misi/poin/route");
     expect((await points.POST(req("POST", { employeeId: ID, points: 0, note: "Nol" }))).status).toBe(422);
-    const completion = await import("../../../admin/wam/main/misi/penyelesaian/[id]/route");
+    const completion = await import("../../../admin/wam2026/misi/penyelesaian/[id]/route");
     expect((await completion.PATCH(req("PATCH", { status: "menunggu" }), p({ id: ID }))).status).toBe(422);
     expect(state.calls).toEqual([]);
   });

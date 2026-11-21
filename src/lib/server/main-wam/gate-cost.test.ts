@@ -84,9 +84,9 @@ describe("the gate's cost per request (S5)", () => {
     expect(tables).not.toContain("cq_stay_members");
     expect(tables).not.toContain("employees");
     // Before: 15 queries in 6 rounds (the room, every name and photo). Now: settings + the WAM dates,
-    // the session (account, roles) with the penguji list beside it, then the kelompok with its size.
-    expect(tables.sort()).toEqual(["mw_group_members", "mw_settings", "mw_testers", "pw_accounts", "pw_events", "pw_roles"]);
-    expect(queries).toBe(6);
+    // the session (account, roles) with the penguji list and Panitia WAM (20 Nov 2026) beside it, then the kelompok with its size.
+    expect(tables.sort()).toEqual(["mw_group_members", "mw_settings", "mw_testers", "pw_accounts", "pw_event_staff", "pw_events", "pw_roles"]);
+    expect(queries).toBe(7);
     expect(rounds).toBe(3);
   });
 
@@ -94,7 +94,7 @@ describe("the gate's cost per request (S5)", () => {
     const context = await gate.requireMainWamPage("/wam/acara/agenda");
     expect(context.viewer.room).toBeNull();
     expect(cost().tables).not.toContain("cq_stay_members");
-    expect(cost().queries).toBeLessThanOrEqual(6);
+    expect(cost().queries).toBeLessThanOrEqual(7);
   });
 
   it("Saya, Kamar, Perjalanan read the room, once, however often they ask", async () => {

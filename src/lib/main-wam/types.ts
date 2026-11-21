@@ -13,7 +13,7 @@ import type { PraWamRole } from "@/lib/pra-wam/roles";
 /** Mode acara (Admin WAM → Main WAM → Pengaturan): who sees Main WAM, and where /wam goes. */
 export const MAIN_WAM_MODES = ["pra", "uji", "semua"] as const;
 export type MainWamMode = (typeof MAIN_WAM_MODES)[number];
-export const mainWamModeLabels: Record<MainWamMode, string> = { pra: "Pra WAM", uji: "Main WAM (uji)", semua: "Main WAM (semua)" };
+export const mainWamModeLabels: Record<MainWamMode, string> = { pra: "Pra WAM", uji: "WAM 2026 (uji)", semua: "WAM 2026 (semua)" };
 
 /** The modules an admin switches on; a module that is off leaves no trace in the app. */
 /** kuis: Kuis live (docs/rancangan-kuis-wam.md), off by default like every module. */

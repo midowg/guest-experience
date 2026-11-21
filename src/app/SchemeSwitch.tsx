@@ -6,21 +6,22 @@ import { Moon, Sun } from 'lucide-react';
 const KEY = 'wk_scheme';
 
 /**
- * Light or dark for the front page. It starts from the visitor's system setting; a choice made
- * here is kept on this device (data-scheme on <html>, read by the front page's styles).
+ * Light or dark for the front page. It starts from the visitor's system setting, or from dark when
+ * the look is dark by default (Lampu, `start="dark"`); a choice made here is kept on this device
+ * (data-scheme on <html>, read by the front page's styles).
  */
-export function SchemeSwitch() {
+export function SchemeSwitch({ start = 'system' }: { start?: 'system' | 'dark' }) {
   const [dark, setDark] = useState<boolean | null>(null);
   useEffect(() => {
     let saved: string | null = null;
     try { saved = window.localStorage.getItem(KEY); } catch { /* storage blocked: follow the system */ }
     const system = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-    const next = saved === 'dark' ? true : saved === 'light' ? false : system;
+    const next = saved === 'dark' ? true : saved === 'light' ? false : start === 'dark' || system;
     if (saved === 'dark' || saved === 'light') document.documentElement.dataset.scheme = saved;
     // Reading the device's setting after hydration; the server cannot know it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(next);
-  }, []);
+  }, [start]);
   function toggle() {
     const next = !dark;
     setDark(next);

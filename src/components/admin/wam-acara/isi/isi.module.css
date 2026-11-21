@@ -1,0 +1,252 @@
+/*
+ * Admin WAM 2026 → isi acara (agen E): Rundown, Kelompok, Kamar, Perjalanan, Panduan, Info
+ * acara. Console tokens only (--cs-*, console.module.css), so the pages sit in the console frame.
+ * Laptop first, still usable on a phone (one column under 640 px, sheets from the bottom).
+ */
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.toolbarGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.note { margin: 0; color: var(--cs-muted); font-size: 14px; line-height: 1.5; }
+.small { margin: 0; color: var(--cs-muted); font-size: 13px; line-height: 1.45; }
+.strong { font-weight: 700; color: var(--cs-text); }
+.message { display: grid; gap: 8px; }
+.page [hidden], .sheet [hidden] { display: none !important; }
+
+/* Summary numbers above a list. */
+.summary { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; color: var(--cs-muted); font-size: 14px; }
+.summary strong { color: var(--cs-text); font-size: 15px; }
+
+/* ---------- Rundown: one day as a timeline ---------- */
+.days { flex: 1 1 20rem; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.days::-webkit-scrollbar { display: none; }
+.days > div { min-width: max-content; }
+/* A phone: the four days as a 2 × 2 grid, every day in sight (audit T-A04). */
+@media (max-width: 639.98px) {
+  .days { flex-basis: 100%; overflow: visible; }
+  .days > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; width: 100%; box-sizing: border-box; }
+  .days > div > * { justify-content: center; }
+}
+/* The isi acara tabs: on a phone they wrap to a second line instead of running off the edge (audit T-A04). */
+@media (max-width: 639.98px) {
+  .tabStrip nav { overflow: visible; }
+  .tabStrip nav ul { flex-wrap: wrap; gap: 0 20px; min-width: 0; }
+}
+.timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.slot { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 12px; position: relative; padding-bottom: 12px; }
+.slot::before { content: ""; position: absolute; left: calc(7.5rem + 5px); top: 22px; bottom: 0; width: 2px; background: var(--cs-line); }
+.slot:last-child::before { display: none; }
+.time { position: relative; display: grid; align-content: start; gap: 2px; padding-top: 12px; font-variant-numeric: tabular-nums; }
+.time strong { font-size: 15px; font-weight: 800; color: var(--cs-text); }
+.time span { font-size: 13px; color: var(--cs-muted); }
+.dot { position: absolute; right: -12px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: var(--cs-surface); border: 2px solid var(--cs-primary); box-sizing: border-box; }
+.dotDraft { border-color: var(--cs-subtle); border-style: dashed; }
+.dotCancelled { border-color: var(--cs-bad-fg); background: var(--cs-bad-bg); }
+.session { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: start; min-width: 0; padding: 12px 12px 12px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.sessionDraft { border-style: dashed; background: var(--cs-surface-2); }
+.sessionCancelled .sessionTitle { text-decoration: line-through; color: var(--cs-muted); }
+.sessionMain { display: grid; gap: 4px; min-width: 0; }
+.sessionTitle { margin: 0; padding: 0; border: 0; background: none; color: var(--cs-text); font: inherit; font-size: 15px; font-weight: 800; line-height: 1.35; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.sessionTitle:hover { text-decoration: underline; }
+.sessionTitle:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; border-radius: 4px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--cs-muted); font-size: 13px; }
+.meta > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 2px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+@media (max-width: 639.98px) {
+  .slot { grid-template-columns: 1fr; gap: 4px; padding-bottom: 12px; }
+  .slot::before { display: none; }
+  .time { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 8px; padding-top: 0; }
+  .dot { display: none; }
+  .session { grid-template-columns: 1fr; }
+  .actions { justify-content: flex-start; }
+}
+
+/* A touch screen: the session title (it opens the sheet) is a 44 px target and the row's buttons keep 8 px apart. */
+@media (pointer: coarse) {
+  .sessionTitle { display: inline-flex; align-items: center; min-height: 44px; }
+  .actions { gap: 8px; }
+}
+
+/* Icon buttons (44 × 44 touch). */
+.iconButton { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--cs-muted); cursor: pointer; }
+.iconButton:hover:not(:disabled) { border-color: var(--cs-line); background: var(--cs-surface-2); color: var(--cs-text); }
+.iconButton:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.iconButton:disabled { opacity: .45; cursor: not-allowed; }
+.iconDanger:hover:not(:disabled) { border-color: var(--cs-bad-fg); background: var(--cs-bad-bg); color: var(--cs-bad-fg); }
+/* Hapus that cannot work (the session already has absen, photos, Silent Meeting or Awarding): looks off, still says why when pressed. */
+.iconOff { opacity: .45; }
+.iconOff:hover:not(:disabled) { opacity: .7; border-color: var(--cs-line); background: var(--cs-surface-2); }
+.textButton { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--cs-primary); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.textButton:hover:not(:disabled) { background: var(--cs-primary-soft); }
+.textButton:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.textButton:disabled { opacity: .5; cursor: not-allowed; }
+.dangerButton { color: var(--cs-bad-fg); }
+.dangerButton:hover:not(:disabled) { background: var(--cs-bad-bg); }
+
+/* ---------- Empty and waiting ---------- */
+.empty { display: grid; justify-items: start; gap: 8px; padding: 20px; border: 1px dashed var(--cs-line); border-radius: 16px; background: var(--cs-surface-2); }
+.empty h2, .empty h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--cs-text); }
+.empty p { margin: 0; color: var(--cs-muted); font-size: 14px; }
+.emptyActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* ---------- Cards grid (kelompok, langkah, panduan) ---------- */
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); margin: 0; padding: 0; list-style: none; align-items: start; }
+.item { display: grid; gap: 8px; min-width: 0; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.itemDraft { border-style: dashed; background: var(--cs-surface-2); }
+.itemHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-width: 0; }
+.itemHead > .actions { flex: none; flex-wrap: nowrap; margin: -6px -8px 0 0; }
+.itemTitle { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.35; color: var(--cs-text); overflow-wrap: anywhere; }
+.itemSub { margin: 2px 0 0; color: var(--cs-muted); font-size: 13px; }
+.names { margin: 0; color: var(--cs-text); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.itemFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin-top: 2px; }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.sectionHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.sectionHead h2 { margin: 0; font-size: 18px; font-weight: 800; color: var(--cs-text); }
+.steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 12px 12px 14px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.stepIcon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--cs-primary-soft); color: var(--cs-primary); }
+@media (max-width: 639.98px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step > .actions { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* ---------- Kamar ---------- */
+.rooms { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); overflow: hidden; }
+.room { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(0, 1.4fr) minmax(7rem, 9rem) minmax(0, 1.2fr) 7.5rem; gap: 12px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--cs-line); }
+.room:first-child { border-top: 0; }
+.roomHead { background: var(--cs-surface-2); color: var(--cs-muted); font-size: 12px; font-weight: 700; }
+.roomName strong { display: block; font-size: 15px; font-weight: 800; }
+.roomName span { font-size: 12px; color: var(--cs-muted); }
+.roomPeople { margin: 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.roomPeople small { display: block; color: var(--cs-muted); font-size: 12px; }
+.roomRowLabel { display: none; }
+.room :global(.input) { min-height: 44px; padding: 8px 10px; }
+.room > button { justify-self: end; }
+@media (max-width: 899.98px) {
+  .roomHead { display: none; }
+  .room { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; padding: 14px 16px; }
+  .roomName, .roomPeople { grid-column: 1 / -1; }
+  .roomRowLabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--cs-muted); }
+  .room > :last-child { grid-column: 1 / -1; justify-self: start; }
+}
+@media (max-width: 479.98px) { .room { grid-template-columns: 1fr; } }
+
+/* ---------- Sheet (side panel on a laptop, from the bottom on a phone) ---------- */
+.sheet { width: min(40rem, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; padding: 0; border: 0; border-radius: 24px 0 0 24px; background: var(--cs-surface); color: var(--cs-text); box-shadow: var(--cs-shadow); }
+.sheetWide { width: min(56rem, 100vw); }
+.sheet::backdrop { background: var(--cs-scrim); }
+@media (max-width: 639.98px) { .sheet, .sheetWide { width: 100vw; height: 94dvh; margin: auto 0 0; border-radius: 24px 24px 0 0; } }
+.sheetInner { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+.sheetHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 24px 12px; border-bottom: 1px solid var(--cs-line); }
+.sheetHead h2 { margin: 0; color: var(--cs-text); font-size: 20px; font-weight: 800; line-height: 1.3; }
+.sheetHead h2:focus { outline: none; }
+.sheetHead p { margin: 4px 0 0; font-size: 14px; color: var(--cs-muted); }
+.sheetBody { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 20px; padding: 16px 24px 24px; overflow-y: auto; overscroll-behavior: contain; }
+.sheetFoot { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--cs-line); background: var(--cs-surface); }
+.sheetFoot .push { margin-right: auto; }
+/* A refusal while the sheet is open, above its buttons (empty: takes no room). */
+.sheetError { display: flex; align-items: flex-start; gap: 8px; flex: 1 1 100%; margin: 0; color: var(--cs-bad-fg); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.sheetError:empty { display: none; }
+.sheetError > svg { flex: none; margin-top: 1px; }
+@media (max-width: 639.98px) { .sheetHead, .sheetBody, .sheetFoot { padding-left: 16px; padding-right: 16px; } }
+
+/* ---------- Form ---------- */
+.group { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.group > legend { padding: 0; margin-bottom: 4px; font-size: 15px; font-weight: 800; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; align-items: start; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; align-items: start; }
+@media (max-width: 479.98px) { .pair, .trio { grid-template-columns: 1fr; } }
+.field { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.field > label, .label { font-size: 13px; font-weight: 700; color: var(--cs-text); }
+.field :global(.input), .field :global(.select), .field :global(.textarea) { width: 100%; box-sizing: border-box; min-height: 44px; }
+.field :global(.textarea) { min-height: 96px; }
+.hint { margin: 0; font-size: 12px; color: var(--cs-muted); line-height: 1.45; }
+.error { margin: 0; font-size: 12px; font-weight: 700; color: var(--cs-bad-fg); }
+.optional { font-weight: 500; color: var(--cs-muted); }
+.segmentedField { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: var(--cs-fill); }
+.segment { position: relative; display: inline-grid; place-items: center; flex: 1 1 auto; min-height: 40px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--cs-muted); cursor: pointer; }
+.segment input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.segment:has(input:checked) { background: var(--cs-surface); color: var(--cs-primary); box-shadow: var(--cs-raise); }
+.segment:has(input:focus-visible) { outline: 2px solid var(--cs-primary); outline-offset: 1px; }
+.segment:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+button.segment { border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--cs-muted); }
+button.segment[aria-pressed="true"] { background: var(--cs-surface); color: var(--cs-primary); box-shadow: var(--cs-raise); }
+button.segment:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 1px; }
+@media (pointer: coarse), (max-width: 37.5rem) { .segment { min-height: 44px; } }
+.switchRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 12px; border: 1px solid var(--cs-line); border-radius: 12px; cursor: pointer; }
+.switchRow > span { display: grid; gap: 2px; min-width: 0; }
+.switchRow strong { font-size: 14px; }
+.switchRow small { font-size: 12px; color: var(--cs-muted); }
+.switchRow:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.switch { position: relative; flex: none; display: inline-flex; width: 44px; height: 26px; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.track { position: relative; width: 44px; height: 26px; border-radius: 999px; background: var(--cs-line); transition: background-color 160ms ease; }
+.track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--cs-surface); box-shadow: var(--cs-raise); transition: transform 160ms ease; }
+.switch input:checked + .track { background: var(--cs-primary); }
+.switch input:checked + .track::after { transform: translateX(18px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .track, .track::after { transition: none; } }
+.switches { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+
+/* ---------- People picker ---------- */
+.picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+.pickerTools { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.pickerTools :global(.input) { flex: 1 1 12rem; min-height: 44px; }
+.pickerList { display: grid; max-height: 22rem; margin: 0; padding: 4px; overflow-y: auto; overscroll-behavior: contain; list-style: none; border: 1px solid var(--cs-line); border-radius: 12px; }
+.pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.pick:hover { background: var(--cs-hover); }
+.pick input { width: 20px; height: 20px; margin: 0; accent-color: var(--cs-primary); }
+.pick span, .pick label { display: grid; min-width: 0; }
+.pick label { cursor: pointer; }
+.pick strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pick small { font-size: 12px; color: var(--cs-muted); }
+.pick em { font-style: normal; font-size: 12px; color: var(--cs-muted); text-align: right; }
+.pickWarn em { color: var(--cs-warn-fg); font-weight: 700; }
+.chosen { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+/* ---------- Paste and preview ---------- */
+.paste::placeholder { color: var(--cs-subtle); }
+.paste { width: 100%; min-height: 9rem; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; white-space: pre; }
+.previewWrap { max-width: 100%; max-height: 24rem; overflow: auto; border: 1px solid var(--cs-line); border-radius: 12px; }
+.preview { width: 100%; border-collapse: collapse; font-size: 13px; }
+.preview th, .preview td { padding: 8px 10px; border-bottom: 1px solid var(--cs-line); text-align: left; vertical-align: top; }
+.preview th { position: sticky; top: 0; z-index: 1; background: var(--cs-surface-2); font-size: 12px; font-weight: 700; color: var(--cs-muted); white-space: nowrap; }
+.preview tr:last-child td { border-bottom: 0; }
+.preview td { max-width: 16rem; overflow-wrap: anywhere; }
+.rowBad td { background: var(--cs-bad-bg); }
+.rowBad td:first-child { box-shadow: inset 3px 0 0 var(--cs-bad-fg); }
+.rowProblems { margin: 0; padding-left: 16px; color: var(--cs-bad-fg); font-weight: 600; }
+.okText { color: var(--cs-ok-fg); font-weight: 700; }
+.columns { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.columns li { padding: 2px 8px; border-radius: 6px; background: var(--cs-fill); font-family: ui-monospace, monospace; font-size: 12px; }
+
+/* ---------- History ---------- */
+.history { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.history li { display: grid; gap: 2px; padding: 8px 12px; border-radius: 10px; background: var(--cs-surface-2); font-size: 13px; }
+.history small { color: var(--cs-muted); }
+
+/* ---------- Info acara ---------- */
+.cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); align-items: start; }
+.cardActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 4px; }
+.dateTime { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+.unit { display: flex; align-items: center; gap: 8px; }
+.unit :global(.input) { flex: 1 1 auto; }
+.unit span { flex: none; font-size: 13px; color: var(--cs-muted); min-width: 2.5rem; }
+
+/* ---------- Files ---------- */
+.file { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface-2); }
+.fileName { display: grid; gap: 2px; min-width: 0; flex: 1 1 12rem; }
+.fileName strong { font-size: 14px; }
+.fileName small { font-size: 12px; color: var(--cs-muted); }
+.fileInput { position: relative; display: inline-flex; overflow: hidden; }
+.fileInput input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.fileInput:has(input:focus-visible) { outline: 2px solid var(--cs-primary); outline-offset: 2px; border-radius: 12px; }
+.thumb { width: 72px; height: 54px; border-radius: 8px; object-fit: cover; background: var(--cs-line); }
+
+/* Sub-tabs inside a page (Kelompok · Kelompok kegiatan). */
+.subtabs { justify-self: start; display: inline-flex; max-width: 100%; gap: 4px; padding: 4px; border-radius: 12px; background: var(--cs-fill); }
+.subtab { display: inline-grid; place-items: center; min-height: 40px; padding: 0 14px; border-radius: 9px; color: var(--cs-muted); font-size: 14px; font-weight: 700; text-decoration: none; }
+.subtab[aria-current="page"] { background: var(--cs-surface); color: var(--cs-primary); box-shadow: var(--cs-raise); }
+.subtab:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+@media (max-width: 639.98px) { .subtab { min-height: 44px; } }
+.grow { flex: 1 1 16rem; }
+.page :global(.notice), .sheet :global(.notice) { overflow-wrap: anywhere; }
+.preLine { white-space: pre-line; }

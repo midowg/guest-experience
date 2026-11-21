@@ -62,7 +62,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 const noop: Api = {
-  show: () => { if (process.env.NODE_ENV !== "production") console.warn("[Main WAM] useToast di luar ToastProvider"); return 0; },
+  show: () => { if (process.env.NODE_ENV !== "production") console.warn("[WAM 2026] useToast di luar ToastProvider"); return 0; },
   dismiss: () => {},
 };
 

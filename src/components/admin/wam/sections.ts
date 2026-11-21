@@ -1,18 +1,16 @@
-import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, ListChecks, Map as MapIcon, Palette, Plug, Send, SlidersHorizontal, Target, Trophy, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Palette, Plug, Send, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
-import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
+import { wamAdminPath } from "@/lib/routes";
 
 /*
- * Admin WAM's sections, in menu order. The menu, the Ringkasan cards and the page titles all read
+ * Admin Pra WAM's sections (/admin/wam; called Admin WAM until 20 Nov 2026), in menu order. The menu, the Ringkasan cards and the page titles all read
  * this list, so a new section (the "Data personal" pages HR will fill for WAM and Pra WAM, say) is
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
- * name starts a new group in the menu.
+ * name starts a new group in the menu. Main WAM is not here (20 Nov 2026): it has its own door,
+ * Admin WAM 2026 (src/components/admin/wam-acara/sections.ts), given apart.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner"
-  // Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): Pengaturan (fondasi), Isi acara and its tabs (agen E), Modul acara and its tab (agen D).
-  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent" | "mw-misi"
-  // Kuis live (20 Nov 2026, docs/rancangan-kuis-wam.md): a tab of Modul acara.
-  | "mw-kuis";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -45,17 +43,6 @@ export const wamSections: readonly WamSection[] = [
   { key: "kuesioner", label: "Kuesioner", group: "Untuk peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
   { key: "about", label: "Apa itu WAM", group: "Untuk peserta", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
   { key: "tv", label: "TV Announcement", group: "Untuk peserta", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
-  // Main WAM: the app during WAM itself, hidden until its mode is switched (17 Nov 2026).
-  { key: "mw-pengaturan", label: "Pengaturan", group: "Main WAM", href: mainWamAdminPath.settings, icon: SlidersHorizontal, summary: "Mode acara, penguji, modul yang aktif, dan tema Main WAM." },
-  { key: "mw-isi", label: "Isi acara", group: "Main WAM", href: mainWamAdminPath.rundown, icon: ListChecks, summary: "Rundown, kamar, perjalanan, dan panduan untuk peserta." },
-  { key: "mw-kamar", label: "Kamar", group: "Main WAM", href: mainWamAdminPath.rooms, icon: ListChecks, summary: "Lantai dan catatan kamar dari pembagian kamar HR.", owner: "mw-isi" },
-  { key: "mw-perjalanan", label: "Perjalanan", group: "Main WAM", href: mainWamAdminPath.travel, icon: ListChecks, summary: "Kumpul, kereta, shuttle, dan kursi tiap orang.", owner: "mw-isi" },
-  { key: "mw-panduan", label: "Panduan", group: "Main WAM", href: mainWamAdminPath.guides, icon: ListChecks, summary: "Denah, hotel dan fasilitas, dress code, tata tertib.", owner: "mw-isi" },
-  { key: "mw-info", label: "Info acara", group: "Main WAM", href: mainWamAdminPath.eventInfo, icon: ListChecks, summary: "Hotel, alamat, check-in/out, kontak panitia, tagihan hotel untuk Jejak karbon.", owner: "mw-isi" },
-  { key: "mw-modul", label: "Modul acara", group: "Main WAM", href: mainWamAdminPath.awards, icon: Trophy, summary: "Kategori dan nominasi Awarding, pertanyaan Silent Meeting, Kuis live." },
-  { key: "mw-silent", label: "Silent Meeting", group: "Main WAM", href: mainWamAdminPath.silent, icon: Trophy, summary: "Pertanyaan Silent Meeting per sesi.", owner: "mw-modul" },
-  { key: "mw-kuis", label: "Kuis live", group: "Main WAM", href: mainWamAdminPath.quizzes, icon: Trophy, summary: "Soal, pengendali, tautan layar besar, permainan, dan hasil kuis.", owner: "mw-modul" },
-  { key: "mw-misi", label: "Misi", group: "Main WAM", href: mainWamAdminPath.missions, icon: Target, summary: "Misi foto, check-in lokasi, dan sesi; poin, bukti peserta, dan Peringkat." },
   { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];
@@ -83,10 +70,11 @@ export function wamGroups(): { label: string; sections: WamSection[] }[] {
   return groups;
 }
 
-export const WAM_ADMIN_LABEL = "Admin WAM";
+/** "Admin Pra WAM" (one constant, admin-access.ts). */
+export const WAM_ADMIN_LABEL = PRA_WAM_ADMIN_LABEL;
 
 /**
- * The breadcrumb of an Admin WAM page: "Admin WAM / Orang / Akun dan peran", then `extra` steps
+ * The breadcrumb of an Admin Pra WAM page: "Admin Pra WAM / Orang / Akun dan peran", then `extra` steps
  * (a tab, a person). A tab-only page sits under its owner: "… / Akun dan peran / Permintaan reset password".
  * Every step but the last links back (the group has no page of its own).
  */
