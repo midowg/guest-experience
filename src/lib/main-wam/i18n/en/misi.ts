@@ -99,10 +99,10 @@ export const enMisi: Record<keyof typeof idMisi, string> = {
 
   "misi.loc.checking": "Checking location",
   "misi.loc.on": "Location on",
-  "misi.loc.inside": "{distance} m from {place} · inside the mission area",
+  "misi.loc.inside": "At {place} · inside the mission area",
   "misi.loc.insideNoPlace": "Your location is read (±{accuracy} m)",
   "misi.loc.outside": "Outside the mission area",
-  "misi.loc.outsideNote": "You are {distance} m from {place}. Get within {radius} m.",
+  "misi.loc.outsideNote": "You are not at {place} yet. Get within {radius} m.",
   "misi.loc.off": "Location is off",
   "misi.loc.offNote": "Turn on location to do the mission.",
   "misi.loc.denied": "Location permission denied",

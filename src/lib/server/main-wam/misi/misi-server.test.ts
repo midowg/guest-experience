@@ -71,7 +71,7 @@ const mission = (over: Partial<MwMission> = {}): MwMission => ({
   id: MISSION_ID, title: "Jelajah Taman Kota", description: "", kind: "checkin", points: 30, placeName: "Taman Kota", latitude: ALUN.latitude, longitude: ALUN.longitude, radiusM: 50,
   sessionId: null, credit: "panitia", review: false, opensAt: null, closesAt: null, sort: 1, active: true, ...over,
 });
-const here = (over: Partial<{ latitude: number; longitude: number; accuracy: number }> = {}) => ({ ...ALUN, accuracy: 12, ...over });
+const here = (over: Partial<{ latitude: number; longitude: number; accuracy: number; at: string }> = {}) => ({ ...ALUN, accuracy: 12, at: NOW.toISOString(), ...over });
 const writes = () => state.from.flatMap(call => call.ops.filter(([name]) => name === "insert" || name === "update").map(([name, args]) => ({ table: call.table, name, row: args[0] as Record<string, unknown> })));
 const refused = async (promise: Promise<unknown>) => promise.then(() => null, (error: { status: number; message: string }) => ({ status: error.status, message: error.message }));
 
@@ -163,7 +163,8 @@ describe("check-in", () => {
     expect(inside).toMatchObject({ inside: true, reason: null, radiusM: 50, hasPlace: true, accuracyM: 12 });
     const outside = await checkPosition(context, MISSION_ID, "checkin", here({ latitude: ALUN.latitude + 0.003 }), NOW);
     expect(outside).toMatchObject({ inside: false, reason: "terlalu-jauh", radiusM: 50 });
-    expect(outside.distanceM).toBeGreaterThan(300);
+    expect(outside).not.toHaveProperty("distanceM");
+    expect(inside).not.toHaveProperty("distanceM");
     expect(writes()).toEqual([]);
   });
 });
@@ -249,6 +250,23 @@ describe("photo missions", () => {
     state.insertError = { code: "23505", message: "duplicate key" };
     expect((await refused(confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW)))?.status).toBe(409);
     expect(state.removed.flat().some(key => key.startsWith("main-wam/misi/"))).toBe(false);
+  });
+
+  it("removes the files of an earlier, rejected proof when a new one replaces them", async () => {
+    state.existing = { id: "c0", mission_id: MISSION_ID, employee_id: viewer.id, status: "ditolak", source: "foto", proof_key: "main-wam/misi/lama.jpg", proof_thumb_key: "main-wam/misi/lama-kecil.jpg" };
+    const started = await startPhoto(context, MISSION_ID, body(), NOW);
+    await confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW);
+    expect(state.removed.flat()).toEqual(expect.arrayContaining(["main-wam/misi/lama.jpg", "main-wam/misi/lama-kecil.jpg"]));
+    expect(state.removed.flat()).not.toContain(`main-wam/misi/${started.id}.jpg`);
+  });
+
+  it("removes its own files when another photo of this person won the race (409)", async () => {
+    state.existing = { id: "c0", mission_id: MISSION_ID, employee_id: viewer.id, status: "ditolak", source: "foto", proof_key: "main-wam/misi/lain.jpg", proof_thumb_key: "main-wam/misi/lain-kecil.jpg" };
+    const started = await startPhoto(context, MISSION_ID, body(), NOW);
+    state.insertError = { code: "23505", message: "duplicate key" };
+    expect((await refused(confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW)))?.status).toBe(409);
+    expect(state.removed.flat()).toContain(`main-wam/misi/${started.id}.jpg`);
+    expect(state.removed.flat()).not.toContain("main-wam/misi/lain.jpg");
   });
 
   it("removes what it kept when saving fails for another reason", async () => {

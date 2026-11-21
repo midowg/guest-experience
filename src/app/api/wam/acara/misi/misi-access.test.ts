@@ -42,7 +42,7 @@ const p = <T extends Record<string, string>>(value: T) => ({ params: Promise.res
 const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "22222222-2222-4222-8222-222222222222", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.length > 0, group: null, room: null });
 const ALL_ON: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, kuis: true, ceklis: true, misi: true };
 const withModules = (modules: Partial<ModuleSwitches>) => { state.settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...defaultSettings().modules, ...modules } }; };
-const position = { latitude: -7.87, longitude: 112.52, accuracy: 12 };
+const position = { latitude: -7.87, longitude: 112.52, accuracy: 12, at: new Date().toISOString() };
 const photo = { clientId: ID, position, size: 400_000, thumbSize: 40_000, width: 1280, height: 1600 };
 
 async function routes() {
@@ -97,6 +97,13 @@ describe("Misi's participant APIs", () => {
     }
   });
 
+  it("do not send the admin settings to the phone", async () => {
+    const list = await import("./route");
+    const body = await (await list.GET()).json() as { data: Record<string, unknown> };
+    expect(body.data).not.toHaveProperty("settings");
+    expect(body.data).toHaveProperty("items");
+  });
+
   it("stay apart from the other modules", async () => {
     withModules({ misi: true, voting: false, absen: false, karbon: false, silent: false });
     expect(Object.values(await statuses()).every(status => status === 200)).toBe(true);
@@ -107,7 +114,7 @@ describe("Misi's participant APIs", () => {
     const foreign = new Request(`${ORIGIN}/x`, { method: "POST", headers: { origin: "https://lain.example", "content-type": "application/json" }, body: JSON.stringify({ position }) });
     expect((await checkin.POST(foreign, p({ id: ID }))).status).toBe(403);
     expect((await checkin.POST(req("POST", { position, employeeId: ID }), p({ id: ID }))).status).toBe(422);
-    expect((await checkin.POST(req("POST", { position: { latitude: 200, longitude: 0, accuracy: 3 } }), p({ id: ID }))).status).toBe(422);
+    expect((await checkin.POST(req("POST", { position: { latitude: 200, longitude: 0, accuracy: 3, at: new Date().toISOString() } }), p({ id: ID }))).status).toBe(422);
     expect((await checkin.POST(req("POST", { position }), p({ id: "bukan-uuid" }))).status).toBe(422);
     const start = await import("./[id]/foto/unggah/route");
     expect((await start.POST(req("POST", { ...photo, size: 9_000_000 }), p({ id: ID }))).status).toBe(422);

@@ -12,7 +12,7 @@ import { mwFail, type DbError } from "../errors";
 import type { MainWamContext } from "../gate";
 import { limitPerson } from "../modul/rate";
 import { allMissions, missionSettings } from "./read";
-import { checkProofUploaded, keepProof, proofIdFor, proofToken, proofTokenMatches, proofUploadAddresses, removeProofFiles, removeProofUploads } from "./storage";
+import { checkProofUploaded, keepProof, proofIdFor, proofToken, proofTokenMatches, proofUploadAddresses, removeProofFiles, removeProofKeys, removeProofUploads } from "./storage";
 
 /*
  * Doing a mission (check-in and photo): the server finds the mission, checks that it is open and not
@@ -32,7 +32,7 @@ const REFUSALS: Record<PositionRefusal, string> = {
   "terlalu-jauh": "Kamu belum berada di area misi.",
 };
 
-export type MissionTarget = { mission: MwMission; settings: MissionSettings; radiusM: number; target: LatLng | null; existing: MwCompletion | null };
+export type MissionTarget = { mission: MwMission; settings: MissionSettings; radiusM: number; target: LatLng | null; existing: MwCompletion | null; oldProof: string[] };
 
 /** The mission a person may do now: it exists, is active, is of this kind, is open, and is not done or waiting. */
 export async function doableMission(context: MainWamContext, missionId: string, kind: MissionKind, now: Date): Promise<MissionTarget> {
@@ -52,7 +52,9 @@ export async function doableMission(context: MainWamContext, missionId: string, 
   if (existing?.status === "disetujui") throw refuse(409, "Misi ini sudah selesai.");
   if (existing?.status === "menunggu") throw refuse(409, "Kirimanmu sedang ditinjau.");
   const target = mission.latitude !== null && mission.longitude !== null ? { latitude: mission.latitude, longitude: mission.longitude } : null;
-  return { mission, settings, radiusM: mission.radiusM ?? settings.defaultRadiusM, target, existing };
+  // The kept files of an earlier, rejected proof: a new proof replaces them, so they are removed then.
+  const oldProof = [data?.proof_key, data?.proof_thumb_key].filter((key): key is string => typeof key === "string" && !!key);
+  return { mission, settings, radiusM: mission.radiusM ?? settings.defaultRadiusM, target, existing, oldProof };
 }
 
 const fixOf = (position: PositionInput) => ({ latitude: position.latitude, longitude: position.longitude, accuracy: position.accuracy, at: position.at ?? null });
@@ -75,7 +77,7 @@ export async function checkPosition(context: MainWamContext, missionId: string, 
   const found = await doableMission(context, missionId, kind, now);
   const verdict = judge(found, position, now);
   return {
-    inside: verdict.ok, reason: verdict.ok ? null : verdict.reason, distanceM: verdict.distanceM, radiusM: found.radiusM, accuracyM: Math.round(position.accuracy), hasPlace: !!found.target,
+    inside: verdict.ok, reason: verdict.ok ? null : verdict.reason, radiusM: found.radiusM, accuracyM: Math.round(position.accuracy), hasPlace: !!found.target,
   };
 }
 
@@ -109,6 +111,13 @@ export async function checkIn(context: MainWamContext, missionId: string, positi
   return keepCompletion(context, found, { source: "lokasi", ...positionColumns(position, distanceM, now), proof_key: null, proof_thumb_key: null });
 }
 
+/** Does the completion that is there now point at these files? When it cannot be read, the files stay (an orphan costs less than a lost proof). */
+async function winnerKeeps(context: MainWamContext, missionId: string, keys: { besar: string; kecil: string }): Promise<boolean> {
+  const { data, error } = await db().from("mw_mission_completions").select("proof_key,proof_thumb_key").eq("mission_id", missionId).eq("employee_id", context.viewer.id).maybeSingle();
+  if (error || !data) return true;
+  return data.proof_key === keys.besar || data.proof_thumb_key === keys.kecil;
+}
+
 export type PhotoStart = { id: string; token: string; uploads: { besar: string; kecil: string } };
 
 /** Photo mission, step one: the position is judged now, so nobody uploads for nothing. */
@@ -134,10 +143,13 @@ export async function confirmPhoto(context: MainWamContext, missionId: string, i
   try {
     const completion = await keepCompletion(context, found, { source: "foto", ...positionColumns(input.position, distanceM, now), proof_key: keys.besar, proof_thumb_key: keys.kecil });
     await removeProofUploads(id);
+    // Sent again after "ditolak": the earlier proof's files are no longer anyone's.
+    await removeProofKeys(found.oldProof.filter(key => key !== keys.besar && key !== keys.kecil));
     return completion;
   } catch (error) {
-    // A 409 means the first confirmation of this same photo won the race and its files are the kept ones: leave them.
-    if (!(error instanceof ServiceError && error.status === 409)) await removeProofFiles(id);
+    // A 409 may mean the first confirmation of this same photo won the race (its files are the kept ones:
+    // leave them), or that another photo of this person won (ours are orphans: remove them).
+    if (!(error instanceof ServiceError && error.status === 409) || !(await winnerKeeps(context, found.mission.id, keys))) await removeProofFiles(id);
     throw error;
   }
 }

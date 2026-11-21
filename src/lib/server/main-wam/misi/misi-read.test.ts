@@ -77,6 +77,12 @@ describe("loadMisi", () => {
     expect(data.summary).toMatchObject({ total: 2, done: 1, earnedPoints: 20, availablePoints: 50 });
   });
 
+  it("keeps the person's place back while the Peringkat is closed", async () => {
+    state.rows.mw_mission_settings = [{ default_radius_m: 50, max_accuracy_m: 100, leaderboard_open: false }];
+    const data = await loadMisi(context, NOW);
+    expect(data).toMatchObject({ leaderboardOpen: false, place: null });
+  });
+
   it("credits a session mission from absen, once, and does nothing for one already credited or not attended", async () => {
     state.rows.mw_attendance = [{ session_id: "s1" }];
     const data = await loadMisi(context, NOW);

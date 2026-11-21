@@ -78,6 +78,13 @@ export async function removeProofFiles(id: string, extra: (string | null | undef
   await removeObjects([...new Set(keys)]).catch(() => undefined);
 }
 
+/** Kept files by their exact keys (an earlier, rejected proof that a new one replaced). Quiet: a file that stays is only an orphan. */
+export async function removeProofKeys(keys: readonly (string | null | undefined)[]): Promise<void> {
+  const list = [...new Set(keys.filter((key): key is string => !!key))];
+  if (!list.length || !proofStorageReady()) return;
+  await removeObjects(list).catch(() => undefined);
+}
+
 /** Both uploads are there with the agreed sizes and are JPEGs; otherwise 422 (and the uploads go). */
 export async function checkProofUploaded(id: string, sizes: { size: number; thumbSize: number }): Promise<void> {
   if (!proofStorageReady()) throw notReady();

@@ -109,10 +109,10 @@ export const idMisi = {
   // Location (the camera and the check-in)
   "misi.loc.checking": "Memeriksa lokasi",
   "misi.loc.on": "Lokasi aktif",
-  "misi.loc.inside": "{distance} m dari {place} · di dalam area misi",
+  "misi.loc.inside": "Di {place} · di dalam area misi",
   "misi.loc.insideNoPlace": "Lokasimu terbaca (±{accuracy} m)",
   "misi.loc.outside": "Di luar area misi",
-  "misi.loc.outsideNote": "Kamu {distance} m dari {place}. Dekati sampai radius {radius} m.",
+  "misi.loc.outsideNote": "Kamu belum di {place}. Dekati sampai radius {radius} m.",
   "misi.loc.off": "Lokasi mati",
   "misi.loc.offNote": "Aktifkan lokasi agar misi bisa dikerjakan.",
   "misi.loc.denied": "Izin lokasi ditolak",

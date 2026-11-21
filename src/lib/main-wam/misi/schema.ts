@@ -73,12 +73,12 @@ export const manualPointsSchema = z.object({
   note: z.string().trim().min(2, "Tulis alasannya.").max(200, "Alasan paling banyak 200 karakter."),
 }).strict();
 
-/** A position as the phone read it (navigator.geolocation). */
+/** A position as the phone read it (navigator.geolocation). `at` is required: without it the freshness check could be skipped. */
 export const positionSchema = z.object({
   latitude: z.number("Lokasi belum terbaca.").min(-90).max(90),
   longitude: z.number("Lokasi belum terbaca.").min(-180).max(180),
   accuracy: z.number("Lokasi belum terbaca.").min(0).max(100_000),
-  at: iso.optional(),
+  at: iso,
 }).strict();
 export type PositionInput = z.infer<typeof positionSchema>;
 

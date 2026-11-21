@@ -30,7 +30,11 @@ export function currentFix(): Promise<PositionInput> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) { reject(new Error("unsupported")); return; }
     navigator.geolocation.getCurrentPosition(
-      position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
+      position => resolve({
+        latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy,
+        // The phone's own stamp of the reading: the server refuses one that is old.
+        at: new Date(Number.isFinite(position.timestamp) ? position.timestamp : Date.now()).toISOString(),
+      }),
       error => reject(error.code === error.PERMISSION_DENIED ? new Denied() : new Error("unavailable")),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     );
@@ -41,8 +45,8 @@ const RECHECK_MS = 25_000;
 
 /** Mode demo: a made-up position inside the area (nothing is read, nothing is asked of the server, nothing is saved). */
 const demoPlace = (hasPlace: boolean, radiusM: number): Place => ({
-  status: "ready", fix: { latitude: 0, longitude: 0, accuracy: 12 },
-  answer: { inside: true, reason: null, distanceM: hasPlace ? 18 : null, radiusM, accuracyM: 12, hasPlace },
+  status: "ready", fix: { latitude: 0, longitude: 0, accuracy: 12, at: new Date().toISOString() },
+  answer: { inside: true, reason: null, radiusM, accuracyM: 12, hasPlace },
 });
 
 export function useMissionPlace(missionId: string, kind: MissionKind, { demo = false, hasPlace = false, radiusM = 50 }: { demo?: boolean; hasPlace?: boolean; radiusM?: number } = {}) {

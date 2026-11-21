@@ -219,8 +219,8 @@ describe("Peringkat", () => {
 
 describe("kata lokasi", () => {
   const item = { placeName: "Alun-alun Batu", hasPlace: true, radiusM: 50 };
-  const ready = (answer: Partial<{ inside: boolean; reason: "terlalu-jauh" | "tidak-akurat" | "kedaluwarsa" | null; distanceM: number | null }>) => ({
-    status: "ready" as const, fix: { latitude: 0, longitude: 0, accuracy: 12 }, answer: { inside: true, reason: null, distanceM: 18, radiusM: 50, accuracyM: 12, hasPlace: true, ...answer },
+  const ready = (answer: Partial<{ inside: boolean; reason: "terlalu-jauh" | "tidak-akurat" | "kedaluwarsa" | null }>) => ({
+    status: "ready" as const, fix: { latitude: 0, longitude: 0, accuracy: 12, at: "2027-01-05T10:00:00+07:00" }, answer: { inside: true, reason: null, radiusM: 50, accuracyM: 12, hasPlace: true, ...answer },
   });
   const words = (place: Parameters<typeof PlaceBanner>[0]["place"]) => { const { container } = render(<PlaceBanner place={place} item={item} onCheck={() => undefined} />); const text = container.textContent ?? ""; cleanup(); return text; };
 
@@ -229,8 +229,8 @@ describe("kata lokasi", () => {
     expect(words({ status: "reading" })).toContain("Memeriksa lokasi");
     expect(words({ status: "denied" })).toContain("Izin lokasi ditolak");
     expect(words({ status: "unsupported" })).toContain("HP ini tidak bisa membaca lokasi");
-    expect(words(ready({}))).toContain("18 m dari Alun-alun Batu · di dalam area misi");
-    expect(words(ready({ inside: false, reason: "terlalu-jauh", distanceM: 340 }))).toContain("Kamu 340 m dari Alun-alun Batu. Dekati sampai radius 50 m.");
+    expect(words(ready({}))).toContain("Di Alun-alun Batu · di dalam area misi");
+    expect(words(ready({ inside: false, reason: "terlalu-jauh" }))).toContain("Kamu belum di Alun-alun Batu. Dekati sampai radius 50 m.");
     expect(words(ready({ inside: false, reason: "tidak-akurat" }))).toContain("Sinyal lokasi lemah");
     expect(words(ready({ inside: false, reason: "kedaluwarsa" }))).toContain("Lokasi sudah lama");
     expect(words({ status: "failed", message: "Tidak ada sinyal." })).toContain("Tidak ada sinyal.");
@@ -276,7 +276,7 @@ describe("kamera misi", () => {
     await waitFor(() => expect(container.querySelector("video")).not.toBeNull());
     expect((screen.getByRole("button", { name: "Ambil foto" }) as HTMLButtonElement).disabled).toBe(false);
     expect(container.textContent).not.toContain("Kamera terkunci");
-    expect(container.textContent).toContain("18 m dari Alun-alun Batu");
+    expect(container.textContent).toContain("Di Alun-alun Batu");
   });
 
   it("says plainly when the camera is refused or missing", async () => {
@@ -294,19 +294,19 @@ describe("kamera misi", () => {
 describe("check-in misi", () => {
   const checkin = itemOf("Jelajah Taman Kota");
   const geo = (latitude = -7.87, accuracy = 12) => ({ getCurrentPosition: (ok: (position: unknown) => void) => ok({ coords: { latitude, longitude: 112.52, accuracy } }) });
-  const answer = (over: object) => ({ inside: true, reason: null, distanceM: 12, radiusM: 50, accuracyM: 12, hasPlace: true, ...over });
+  const answer = (over: object) => ({ inside: true, reason: null, radiusM: 50, accuracyM: 12, hasPlace: true, ...over });
   const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => ({ ok: status < 400, data, message: status < 400 ? "Misi selesai." : "Kamu belum berada di area misi." }) });
 
   it("keeps the button locked until the server says inside, then checks in and says so", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(json(answer({ inside: false, reason: "terlalu-jauh", distanceM: 340 })));
+      .mockResolvedValueOnce(json(answer({ inside: false, reason: "terlalu-jauh" })));
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("navigator", { ...navigator, geolocation: geo(), permissions: { query: async () => ({ state: "granted", onchange: null }) } });
     render(<MissionCheckIn item={checkin} />);
-    await waitFor(() => expect(screen.getByText("Kamu 340 m dari Taman Kota. Dekati sampai radius 50 m.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Kamu belum di Taman Kota. Dekati sampai radius 50 m.")).toBeTruthy());
     expect((screen.getByRole("button", { name: /Check-in · \+30 poin/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/wam/acara/misi/${checkin.id}/cek`);
-    expect(JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)).toEqual({ kind: "checkin", position: { latitude: -7.87, longitude: 112.52, accuracy: 12 } });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)).toEqual({ kind: "checkin", position: { latitude: -7.87, longitude: 112.52, accuracy: 12, at: expect.any(String) } });
 
     fetchMock.mockResolvedValueOnce(json(answer({})));
     fireEvent.click(screen.getByRole("button", { name: "Cek lagi" }));
@@ -321,14 +321,14 @@ describe("check-in misi", () => {
   });
 
   it("shows the server's refusal and checks the position again", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(json(answer({}))).mockResolvedValueOnce(json(null, 422)).mockResolvedValueOnce(json(answer({ inside: false, reason: "terlalu-jauh", distanceM: 90 })));
+    const fetchMock = vi.fn().mockResolvedValueOnce(json(answer({}))).mockResolvedValueOnce(json(null, 422)).mockResolvedValueOnce(json(answer({ inside: false, reason: "terlalu-jauh" })));
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("navigator", { ...navigator, geolocation: geo(), permissions: { query: async () => ({ state: "granted", onchange: null }) } });
     render(<MissionCheckIn item={checkin} />);
     await waitFor(() => expect((screen.getByRole("button", { name: /Check-in/ }) as HTMLButtonElement).disabled).toBe(false));
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Check-in/ })); });
     await waitFor(() => expect(screen.getByText("Kamu belum berada di area misi.")).toBeTruthy());
-    await waitFor(() => expect(screen.getByText("Kamu 90 m dari Taman Kota. Dekati sampai radius 50 m.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Kamu belum di Taman Kota. Dekati sampai radius 50 m.")).toBeTruthy());
   });
 
   it("in Mode demo nothing is asked of the server or saved", async () => {

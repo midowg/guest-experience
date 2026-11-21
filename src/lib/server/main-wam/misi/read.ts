@@ -119,7 +119,8 @@ export async function loadMisi(context: MainWamContext, now: Date): Promise<Misi
   const items = missionItems(missions.data, completions, { sessions, settings, now });
   return {
     migrated: true, sample: false, items, summary: summarize(items), points: totals.data.get(viewer.id)?.points ?? 0,
-    place: placeOf(board), leaderboardOpen: settings.leaderboardOpen, settings,
+    // While the Peringkat is closed nobody learns their place, not even from the API.
+    place: settings.leaderboardOpen ? placeOf(board) : null, leaderboardOpen: settings.leaderboardOpen, settings,
   };
 }
 

@@ -25,12 +25,12 @@ export function PlaceBanner({ place, item, onCheck }: { place: Place; item: Pick
       const { answer } = place;
       if (answer.inside) {
         return <Banner tone="success" icon={<MapPin />} title={t("misi.loc.on")}>
-          {answer.hasPlace && answer.distanceM !== null ? t("misi.loc.inside", { distance: answer.distanceM, place: name }) : t("misi.loc.insideNoPlace", { accuracy: answer.accuracyM })}
+          {answer.hasPlace ? t("misi.loc.inside", { place: name }) : t("misi.loc.insideNoPlace", { accuracy: answer.accuracyM })}
         </Banner>;
       }
       if (answer.reason === "terlalu-jauh") {
         return <Banner tone="warning" icon={<MapPin />} title={t("misi.loc.outside")} action={again}>
-          {t("misi.loc.outsideNote", { distance: answer.distanceM ?? 0, place: name, radius: answer.radiusM })}
+          {t("misi.loc.outsideNote", { place: name, radius: answer.radiusM })}
         </Banner>;
       }
       if (answer.reason === "tidak-akurat") return <Banner tone="warning" icon={<MapPin />} title={t("misi.loc.weak")} action={again}>{t("misi.loc.weakNote", { accuracy: answer.accuracyM })}</Banner>;

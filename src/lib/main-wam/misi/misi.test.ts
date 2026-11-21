@@ -282,13 +282,15 @@ describe("the schemas", () => {
     expect(manualPointsSchema.safeParse({ employeeId: person, points: -5, note: "Koreksi" }).success).toBe(true);
     expect(manualPointsSchema.safeParse({ employeeId: person, points: 0, note: "Nol" }).success).toBe(false);
     expect(manualPointsSchema.safeParse({ employeeId: person, points: 10, note: "" }).success).toBe(false);
-    expect(positionSchema.safeParse({ latitude: -7.87, longitude: 112.5, accuracy: 12 }).success).toBe(true);
+    const at = "2027-01-05T10:00:00+07:00";
+    expect(positionSchema.safeParse({ latitude: -7.87, longitude: 112.5, accuracy: 12, at }).success).toBe(true);
+    expect(positionSchema.safeParse({ latitude: -7.87, longitude: 112.5, accuracy: 12 }).success).toBe(false);
     expect(positionSchema.safeParse({ latitude: -7.87, longitude: 112.5 }).success).toBe(false);
     expect(positionSchema.safeParse({ latitude: 200, longitude: 112.5, accuracy: 12 }).success).toBe(false);
   });
 
   it("photo steps: sizes within Momen's limits, a token only on the second step", () => {
-    const start = { clientId: "11111111-1111-4111-8111-111111111111", position: { latitude: -7.87, longitude: 112.5, accuracy: 12 }, size: 400_000, thumbSize: 40_000, width: 1280, height: 1600 };
+    const start = { clientId: "11111111-1111-4111-8111-111111111111", position: { latitude: -7.87, longitude: 112.5, accuracy: 12, at: "2027-01-05T10:00:00+07:00" }, size: 400_000, thumbSize: 40_000, width: 1280, height: 1600 };
     expect(photoStartSchema.safeParse(start).success).toBe(true);
     expect(photoStartSchema.safeParse({ ...start, size: 2_000_000 }).success).toBe(false);
     expect(photoStartSchema.safeParse({ ...start, thumbSize: 0 }).success).toBe(false);

@@ -55,5 +55,8 @@ export function judgePosition({ fix, target, radiusM, maxAccuracyM, now }: {
   return { ok: true, distanceM };
 }
 
-/** What the server tells the phone about a position (POST …/cek): the verdict, the radius, and how far (only for a mission with a place). */
-export type PositionAnswer = { inside: boolean; reason: PositionRefusal | null; distanceM: number | null; radiusM: number; accuracyM: number; hasPlace: boolean };
+/**
+ * What the server tells the phone about a position (POST …/cek): the verdict and why not, never how far.
+ * A distance would let anyone find the mission's point from three positions (trilateration).
+ */
+export type PositionAnswer = { inside: boolean; reason: PositionRefusal | null; radiusM: number; accuracyM: number; hasPlace: boolean };
