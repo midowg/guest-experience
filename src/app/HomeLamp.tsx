@@ -7,7 +7,8 @@ import { doorIcons, type Door } from './home-doors';
 import { SchemeSwitch } from './SchemeSwitch';
 import css from './lamp.module.css';
 
-const PHOTO = '/panduan-ke-werkudara/assets/garden-960.webp';
+// The office from the street, as on Masuk admin.
+const PHOTO = '/panduan-ke-werkudara/assets/exterior-1280.webp';
 
 /**
  * The front page's second look, "Lampu" (26 Nov 2026): a dark screen where the mouse is a lamp over
@@ -16,7 +17,7 @@ const PHOTO = '/panduan-ke-werkudara/assets/garden-960.webp';
  * its own and the dock shows each app's name. Dark unless the visitor picks light; motion stops with
  * "reduce motion".
  */
-export function HomeLamp({ doors, guest }: { doors: Door[]; guest: string }) {
+export function HomeLamp({ doors, guest, year }: { doors: Door[]; guest: string; year: number }) {
   const root = useRef<HTMLElement>(null);
   const moved = useRef(false);
 
@@ -79,6 +80,7 @@ export function HomeLamp({ doors, guest }: { doors: Door[]; guest: string }) {
     <footer className={css.guest}>
       <p>{guest}</p>
       <p lang="en">Welcome. If you are our guest, the link we sent you has everything ready for you.</p>
+      <p className={css.copy}>© {year} Werkudara Group</p>
     </footer>
   </main>;
 }
