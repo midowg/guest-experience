@@ -28,8 +28,8 @@ describe("Admin WAM 2026 sections", () => {
   });
 
   it("build the breadcrumb under its name, one constant", () => {
-    expect(wamAcaraCrumbs("panitia")).toEqual([{ label: "Admin WAM 2026", href: "/admin/wam2026" }, { label: "Persiapan" }, { label: "Panitia WAM" }]);
-    expect(wamAcaraCrumbs("kuis", "Kuis WAM").map(step => step.label)).toEqual(["Admin WAM 2026", "Untuk peserta", "Modul acara", "Kuis live", "Kuis WAM"]);
+    expect(wamAcaraCrumbs("panitia")).toEqual([{ label: "WAM", href: "/admin/wam2026" }, { label: "Persiapan" }, { label: "Panitia WAM" }]);
+    expect(wamAcaraCrumbs("kuis", "Kuis WAM").map(step => step.label)).toEqual(["WAM", "Untuk peserta", "Modul acara", "Kuis live", "Kuis WAM"]);
   });
 
   it("find the section of a path, one quiz included", () => {

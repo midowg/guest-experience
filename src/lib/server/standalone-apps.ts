@@ -52,11 +52,11 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       ...(resets ? { waiting: { label: `${resets} permintaan reset password`, href: wamAdminPath.resetRequests } } : {}),
     },
     {
-      key: "wam_acara", name: "WAM 2026 (acara)", eyebrow: "Aplikasi selama acara",
+      key: "wam_acara", name: "WAM", eyebrow: "Aplikasi selama acara",
       status: mainWam ? `Mode ${mainWamModeLabels[mainWam.mode]}` : "Aplikasi selama acara WAM",
       address: "",
       description: "Aplikasi selama acara WAM: rundown, kamar, perjalanan, panduan, Awarding, Silent Meeting, dan Kuis live, dengan Panitia WAM-nya sendiri.",
-      manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
+      manage: { label: `Kelola ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
     },
     {
       // WG People (20 Nov 2026): the employees' HR app, managed in Admin HR (/admin/hr).

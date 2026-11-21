@@ -63,7 +63,7 @@ describe("Admin Pra WAM and Admin WAM 2026 (20 Nov 2026): two boxes, given apart
   it("shows each door as its own box, Admin Pra WAM ticked and Admin WAM 2026 not", () => {
     editFor(true);
     expect((screen.getByRole("checkbox", { name: /^Admin Pra WAM/ }) as HTMLInputElement).checked).toBe(true);
-    const wamEvent = screen.getByRole("checkbox", { name: /^Admin WAM 2026/ }) as HTMLInputElement;
+    const wamEvent = screen.getByRole("checkbox", { name: /^WAM(?! 2026)/ }) as HTMLInputElement;
     expect(wamEvent.checked).toBe(false);
     expect(wamEvent.disabled).toBe(false);
     expect(screen.queryByText(/menunggu migrasi 202611200603/)).toBeNull();
@@ -71,8 +71,8 @@ describe("Admin Pra WAM and Admin WAM 2026 (20 Nov 2026): two boxes, given apart
 
   it("before migration 202611200603: Admin WAM 2026 cannot be given yet, and the page says only the super admin opens it", () => {
     editFor(false);
-    const wamEvent = screen.getByRole("checkbox", { name: /^Admin WAM 2026/ }) as HTMLInputElement;
+    const wamEvent = screen.getByRole("checkbox", { name: /^WAM(?! 2026)/ }) as HTMLInputElement;
     expect(wamEvent.disabled).toBe(true);
-    expect(screen.getByText(/Admin WAM 2026 menunggu migrasi/).textContent).toContain("hanya super admin");
+    expect(screen.getByText(/WAM menunggu migrasi/).textContent).toContain("hanya super admin");
   });
 });

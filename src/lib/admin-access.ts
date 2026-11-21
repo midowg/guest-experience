@@ -25,7 +25,7 @@ export const ADMIN_WAM_ACARA_MIGRATION = "202611200603_admin_wam_acara.sql";
 export const ADMIN_HR_MIGRATION = "202611200703_admin_grants_hr.sql";
 /** The two WAM admin doors' names, each in one place (change them here). */
 export const PRA_WAM_ADMIN_LABEL = "Admin Pra WAM";
-export const WAM_EVENT_ADMIN_LABEL = "Admin WAM 2026";
+export const WAM_EVENT_ADMIN_LABEL = "WAM";
 export const adminAppLabels: Record<AdminApp, string> = {
   acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: PRA_WAM_ADMIN_LABEL, kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
   wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People",

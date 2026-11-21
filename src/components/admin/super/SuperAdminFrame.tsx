@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { Blocks, CalendarDays, Crown, Dices, Home, KeyRound, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog, Users } from "lucide-react";
+import { Blocks, Crown, Dices, Home, KeyRound, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog, Users } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGroup } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
-import { PRA_WAM_ADMIN_LABEL, WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
-import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, EMPLOYEES_ADMIN, SUPER_ADMIN_HOME, mainWamAdminPath, superAdminPath, wamAdminPath } from "@/lib/routes";
+import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
+import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, EMPLOYEES_ADMIN, SUPER_ADMIN_HOME, superAdminPath, wamAdminPath } from "@/lib/routes";
 
 export type SuperSection = "dashboard" | "tim" | "karyawan" | "templat" | "modul" | "admin" | "akses" | "voucher" | "beranda";
 
@@ -37,7 +37,6 @@ export function SuperAdminFrame({ current, wide = false, children }: { current: 
   const nav: ConsoleNavGroup[] = groups.map(group => ({ label: group.label, items: group.items.map(({ key, label, href, icon }) => ({ key, label, href, icon })) }));
   const footerLinks: ConsoleLink[] = [
     { key: "wam", label: PRA_WAM_ADMIN_LABEL, href: wamAdminPath.home, icon: <ShieldCheck size={20} /> },
-    { key: "wam2026", label: WAM_EVENT_ADMIN_LABEL, href: mainWamAdminPath.home, icon: <CalendarDays size={20} /> },
     { key: "events", label: "Beranda Journey", href: ADMIN_HOME, icon: <Crown size={20} /> },
   ];
   return <ConsoleShell theme="admin" area="Super admin" storageKey="super-admin" className={admin.shell} wide={wide}

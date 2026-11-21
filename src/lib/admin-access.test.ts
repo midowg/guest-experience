@@ -166,7 +166,7 @@ describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2026", 
   });
   it("names the two doors", () => {
     expect(adminAppLabels.wam).toBe("Admin Pra WAM");
-    expect(adminAppLabels.wam_acara).toBe("Admin WAM 2026");
+    expect(adminAppLabels.wam_acara).toBe("WAM");
     expect(tidyGrant({ apps: ["wam_acara", "wam"], allEvents: false, eventIds: [] }).apps).toEqual(["wam", "wam_acara"]);
   });
 });
