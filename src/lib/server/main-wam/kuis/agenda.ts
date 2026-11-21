@@ -3,6 +3,7 @@ import { KUIS_AGENDA_MIGRATION } from "@/lib/main-wam/kuis/admin";
 import type { QuizPhase } from "@/lib/main-wam/kuis/types";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing } from "../errors";
+import { ServiceError } from "../../config";
 import { isId, notFound } from "./store";
 
 /*
@@ -51,6 +52,8 @@ export async function setQuizAgenda(quizId: string, sessionId: string | null): P
     if (other.error) mwFail(other.error, KUIS_AGENDA_MIGRATION);
   }
   const { data, error } = await db().from("mw_quizzes").update({ session_id: sessionId, updated_at: new Date().toISOString() }).eq("id", quizId).select("id");
+  // 202611280001 (unique per agenda): two admins saving at once, the other one won.
+  if (error?.code === "23505") throw new ServiceError(409, "Agenda ini baru saja dipasangi kuis lain. Muat ulang lalu coba lagi.");
   if (error) mwFail(error, KUIS_AGENDA_MIGRATION);
   if (!data?.length) throw notFound();
 }

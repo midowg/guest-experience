@@ -74,3 +74,16 @@ describe("results", () => {
     expect(file.file.subarray(0, 2).toString()).toBe("PK");
   });
 });
+
+describe("tying a game to an agenda", () => {
+  const SESSION = "00000000-0000-4000-a000-0000000000bb";
+  it("answers 409 (try again) when the database says another quiz holds the agenda at that moment", async () => {
+    const { setQuizAgenda } = await import("./agenda");
+    fake.answer = q => {
+      if (q.table === "mw_sessions") return { data: { id: SESSION } };
+      if (q.table === "mw_quizzes" && callsOf(q, "update").some(call => (call[0] as { session_id?: string | null }).session_id === SESSION)) return { error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+      return { data: [{ id: QUIZ }] };
+    };
+    await expect(setQuizAgenda(QUIZ, SESSION)).rejects.toMatchObject({ status: 409 });
+  });
+});
