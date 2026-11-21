@@ -1,19 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { CalendarCheck, CalendarDays, ChevronRight, Clock, ListChecks, MapPin } from "lucide-react";
+import type { ReactElement, ReactNode } from "react";
+import { CalendarCheck, CalendarDays, ChevronRight, CircleCheck, Clock, ListChecks, MapPin, QrCode, TrainFront, Utensils } from "lucide-react";
 import type { NowView } from "@/lib/main-wam/peserta/home";
+import type { SessionKind } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
-import { Card, CardHead, SrOnly, StatusPill } from "@/components/main-wam/ui";
+import { BracketCard, Card, CardHead, EyebrowLabel, Pill, PulseDot, SrOnly } from "@/components/main-wam/ui";
 import { Until } from "../Live";
-import css from "../peserta.module.css";
+import css from "./beranda.module.css";
+
+/** The little tag at the top right of the card (prototipe .tag: Sesi, Makan, Santai, Kereta). */
+const KIND_ICON = { sesi: <CalendarDays />, makan: <Utensils />, perjalanan: <TrainFront /> } satisfies Record<SessionKind, ReactElement>;
 
 /**
- * Kartu Sekarang (P01, P01__status, P02): the session that matters now: its absen is open (the
- * Absen button is agen D's SessionAbsen, passed as `absen`), it runs, or it comes next; else "Hari
- * ini selesai" with tomorrow's first session. The session part opens Detail sesi; the Absen button
+ * Kartu Sekarang (P01, P01__status, P02; prototipe .mc): the session that matters now, as the gold
+ * bracket card: its state in gold capitals ("SEDANG BERLANGSUNG"), the title in big Barlow capitals,
+ * where and when, how far it has run, "WAJIB ABSEN · Tutup 08.30" beside the gold Absen button (agen D's
+ * SessionAbsen, passed as `absen`), and the session that follows ("BERIKUTNYA 12.00"). Else "Hari
+ * ini selesai" with tomorrow's first session. The title and place open Detail sesi; the Absen button
  * sits beside that link, never inside it.
  */
 export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; absen?: ReactNode; serverNow: string; /** Module Ceklis: this agenda has a checklist that is not finished (one reminder line). */ ceklis?: { done: number; total: number } | null }) {
@@ -27,26 +33,49 @@ export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; abs
     const next = view.tomorrow;
     return <Card as="article" href={mainWamPath.agenda(next?.day ?? undefined)}>
       <CardHead icon={<CalendarCheck />} iconTone="success" title={t("peserta.now.doneTitle")} sub={next ? `${next.when} · ${next.title}` : undefined}
-        end={<ChevronRight aria-hidden className={css.trailIcon} />} />
+        end={<ChevronRight aria-hidden className={css.chevron} />} />
     </Card>;
   }
-  const pill = view.status === "present"
-    ? <StatusPill status="present">{view.statusText}</StatusPill>
-    : <StatusPill status={view.status} />;
-  return <Card as="article">
-    <Link href={mainWamPath.session(view.sessionId)} className={css.nowLink}>
-      <span className={css.nowStatus}>
-        {pill}
-        {view.when && <span className={css.nowWhen}>{view.whenAt ? <Until at={view.whenAt} serverNow={serverNow} initial={view.when} /> : view.when}</span>}
-      </span>
-      <h2 className={css.nowTitle}>{view.title}</h2>
+  const live = view.status === "live";
+  const eyebrow = view.status === "present"
+    ? <EyebrowLabel tone="gold" icon={<CircleCheck />}>{view.statusText}</EyebrowLabel>
+    : live
+      ? <EyebrowLabel tone="gold"><PulseDot />{t("pill.live")}</EyebrowLabel>
+      : view.status === "done"
+        ? <EyebrowLabel tone="gold">{t("pill.done")}</EyebrowLabel>
+        : <EyebrowLabel tone="gold"><PulseDot />{t("pill.next")}</EyebrowLabel>;
+  const when = view.when && (view.status === "live" || view.status === "present" || !view.whenAt)
+    ? view.when
+    : view.when && view.whenAt ? <Until at={view.whenAt} serverNow={serverNow} initial={view.when} /> : null;
+  const kind = view.sessionKind ?? "sesi";
+  const place = [view.place, view.time].filter(Boolean).join(" · ");
+  const percent = view.progress == null ? null : Math.round(view.progress * 100);
+  return <BracketCard as="article" motif="konstelasi" className={css.now}>
+    <div className={css.top}>
+      <span className={css.state}>{eyebrow}{when && <><span aria-hidden>·</span><span className={css.when}>{when}</span></>}</span>
+      <Pill icon={KIND_ICON[kind]}>{t(`peserta.session.kind.${kind}`)}</Pill>
+    </div>
+    <Link href={mainWamPath.session(view.sessionId)} className={css.link}>
+      <h2 className={css.title}>{view.title}</h2>
       <SrOnly>{`, ${t("peserta.now.spokenDetail")}`}</SrOnly>
       <span className={css.meta}>
-        <span className={css.metaItem}><Clock aria-hidden /><span>{view.time}</span></span>
-        {view.place && <span className={css.metaItem}><MapPin aria-hidden /><span>{view.place}</span></span>}
+        <span className={css.metaItem}>{view.place ? <MapPin aria-hidden /> : <Clock aria-hidden />}<span>{place}</span></span>
         {ceklis && <span className={css.metaItem}><ListChecks aria-hidden /><span>{t("ceklis.homeReminder", { done: ceklis.done, total: ceklis.total })}</span></span>}
       </span>
     </Link>
-    {view.absen && absen}
-  </Card>;
+    {percent !== null && <span className={css.bar} role="progressbar" aria-label={t("peserta.now.progress", { percent })} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><i style={{ width: `${percent}%` }} /></span>}
+    {view.absen && absen && <div className={css.foot}>
+      <div className={css.footText}>
+        <EyebrowLabel tone="gold" icon={<QrCode />}>{t("peserta.now.absenRequired")}</EyebrowLabel>
+        {view.absenCloses && <span className={css.footSub}>{t("peserta.now.absenCloses", { time: view.absenCloses })}</span>}
+      </div>
+      <div className={css.absen}>{absen}</div>
+    </div>}
+    {view.next && live && <div className={css.next}>
+      <span className={css.nextTime}>{view.next.time}</span>
+      <span className={css.nextText}><b>{view.next.title}</b>{view.next.place && <small>{view.next.place}</small>}</span>
+      <EyebrowLabel tone="gold" className={css.nextTag}>{t("peserta.now.nextUp")}</EyebrowLabel>
+    </div>}
+  </BracketCard>;
 }
+

@@ -44,7 +44,7 @@ async function violations(): Promise<string[]> {
 describe("Jejak karbon: kartu Beranda", () => {
   it("one link to the page with the name, the total and 'perkiraan'", () => {
     render(<CarbonCard view={view()} />);
-    const card = screen.getByRole("link", { name: /Jejak karbon WAM 2026/ });
+    const card = screen.getByRole("link", { name: /Jejak karbon/ });
     expect(card.getAttribute("href")).toBe(mainWamPath.carbon());
     expect(card.textContent).toContain("13,3");
     expect(card.textContent).toContain("t CO₂e");
@@ -64,9 +64,9 @@ describe("Jejak karbon: kartu Beranda", () => {
     expect(legend.textContent).toMatch(/Makan\s*\d+%/);
   });
 
-  it("a list tile: leaf icon, one line 'perkiraan · sources', the total at the end, no second link", () => {
+  it("a green tile: leaf icon, one line 'perkiraan · sources', the total at the end, no second link", () => {
     const { container } = render(<CarbonCard view={view()} />);
-    const link = screen.getByRole("link", { name: /Jejak karbon WAM 2026/ });
+    const link = screen.getByRole("link", { name: /Jejak karbon/ });
     expect(container.querySelectorAll("a").length).toBe(1);
     expect(link.querySelector("svg.lucide-leaf")).toBeTruthy();
     expect(link.textContent).toMatch(/perkiraan\s·\sHotel\s\d+%\sPerjalanan\s\d+%\sMakan\s\d+%/);
@@ -82,7 +82,7 @@ describe("Jejak karbon: kartu Beranda", () => {
 
   it("speaks English", () => {
     render(<LangProvider lang="en"><CarbonCard view={view("en")} /></LangProvider>);
-    expect(screen.getByRole("link", { name: /WAM 2026 carbon footprint/ }).textContent).toContain("13.3");
+    expect(screen.getByRole("link", { name: /Carbon trail/ }).textContent).toContain("13.3");
   });
 });
 

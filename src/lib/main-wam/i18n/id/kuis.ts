@@ -5,6 +5,9 @@
  */
 export const idKuis = {
   "kuis.home.live": "Kuis dimulai",
+  "kuis.home.tag": "Kuis",
+  "kuis.home.liveLine": "Kamu ikut sebagai tokohmu",
+  "kuis.home.joinedLine": "Kamu sudah ikut",
   "kuis.home.liveSub": "{title} · ikut sebagai tokohmu",
   "kuis.home.joinedSub": "{title} · kamu sudah ikut",
   "kuis.home.join": "Ikut",

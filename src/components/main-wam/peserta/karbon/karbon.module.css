@@ -1,33 +1,29 @@
 /* Jejak karbon (E01) and its Beranda card. Tokens only; the bar's segments are --mw-chart-emisi-1…3 (≥ 3:1 on the page and on cards, light and dark). */
 
-/* The Beranda tile: icon 44 (tonal green), name + one line + a thin bar, the figure in the accent green, ›. Green only on icon, figure, bar. */
-.tile { flex-direction: row; align-items: center; gap: var(--mw-space-12); min-height: 64px; }
-.tile .tileIcon { width: 44px; height: 44px; align-self: flex-start; }
-.tileMain { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); }
-.tileTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
-.tileSub { display: block; font: var(--mw-type-body-small); color: var(--mw-text-2); min-width: 0; }
-.tileMain .bar { height: 6px; margin-top: var(--mw-space-4); }
-.tileEnd { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
-.tileNumber { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--mw-emisi-accent); }
-.tileUnit { font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
-.cardChevron { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
+/* The Beranda tile (prototipe .ft.gg): the green card, a pill, the figure in big Barlow, the thin bar, one line of words. */
+.tile { min-height: 168px; justify-content: space-between; gap: var(--mw-space-8); padding: 14px; border-radius: var(--mw-radius-22); isolation: isolate; overflow: hidden; }
+.tile::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--mw-motif-busur) right bottom / 120% auto no-repeat; opacity: 0.35; filter: brightness(1.6);
+}
+.tileHead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-4); }
+.tile .tilePill { color: var(--mw-on-eco); border-color: color-mix(in srgb, var(--mw-on-eco) 35%, transparent); background: color-mix(in srgb, var(--mw-on-eco) 12%, transparent); }
+.tile .tilePill > svg { color: var(--mw-on-eco); }
+.tileBody { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; }
+.tileEnd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--mw-space-4); }
+.tileNumber { font: var(--mw-type-stat-l); font-size: 34px; line-height: 30px; letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; }
+.tileUnit { font: var(--mw-type-caption-strong); opacity: 0.8; white-space: nowrap; }
+.tileSub { display: block; font: var(--mw-type-caption-strong); opacity: 0.85; min-width: 0; overflow-wrap: anywhere; }
+.tile .bar { height: 4px; }
+.tile .seg1 { background: var(--mw-eco-bar); }
+.tile .seg2 { background: color-mix(in srgb, var(--mw-eco-bar) 60%, transparent); }
+.tile .seg3 { background: color-mix(in srgb, var(--mw-on-eco) 30%, transparent); }
 .legend { display: inline; margin: 0; padding: 0; list-style: none; }
 .legendItem { display: inline; font: inherit; color: inherit; white-space: nowrap; }
 .legendItem:not(:last-child)::after { content: ","; }
 .legendName { overflow-wrap: anywhere; }
 .legendPercent { font-variant-numeric: tabular-nums; }
 .dot { flex: none; width: 8px; height: 8px; border-radius: var(--mw-radius-full); }
-/* Narrow phones: the figure goes under the bar (aligned with the text); at zoom 200 % the text goes under the icon. */
-@media (max-width: 339.98px) {
-  .tile { flex-wrap: wrap; }
-  .tileEnd { order: 3; flex-basis: 100%; flex-direction: row; align-items: baseline; gap: var(--mw-space-4); padding-left: calc(44px + var(--mw-space-12)); }
-  .cardChevron { order: 2; }
-}
-@media (max-width: 299.98px) {
-  .tileMain { flex-basis: 100%; order: 2; }
-  .cardChevron { order: 1; margin-left: auto; }
-  .tileEnd { padding-left: 0; }
-}
 
 /* The main card on the page */
 .main { gap: var(--mw-space-16); }

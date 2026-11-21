@@ -49,9 +49,9 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   return card;
 }
 
-export async function SessionAbsen({ session, context, now }: { session: MwSession; context: MainWamContext; now: Date }) {
+export async function SessionAbsen({ session, context, now, home }: { session: MwSession; context: MainWamContext; now: Date; home?: boolean }) {
   const slot = await absenSlot({ session, context, now }).catch((): AbsenSlot => ({ kind: "none" }));
-  return <AbsenView slot={slot} />;
+  return <AbsenView slot={slot} home={home} />;
 }
 
 export async function moduleSlot({ session, context, now }: { session: MwSession; context: MainWamContext; now: Date }): Promise<ModuleSlot> {

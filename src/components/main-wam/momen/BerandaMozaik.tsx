@@ -1,5 +1,6 @@
 import { ChevronRight, Images } from "lucide-react";
-import { Card } from "@/components/main-wam/ui";
+import { Words } from "@/components/main-wam/i18n";
+import { Card, EyebrowLabel, Pill, PulseDot } from "@/components/main-wam/ui";
 import { number, t } from "@/lib/main-wam/i18n";
 import { mosaicPercent } from "@/lib/main-wam/momen/mosaic";
 import { mainWamPath } from "@/lib/routes";
@@ -28,7 +29,10 @@ export async function BerandaMozaik({ context, now }: { context: MainWamContext;
 export function MozaikCard({ summary, title, filled, rest }: { summary: MosaicSummary; title: string; filled: string; rest: string }) {
   const percent = mosaicPercent(summary.filled, summary.total);
   return <Card href={mainWamPath.mosaic()} className={css.card}>
-    <span className={css.head}><Images aria-hidden />{title}</span>
+    <span className={css.head}>
+      <Pill icon={<Images />}>{title}</Pill>
+      <EyebrowLabel tone="gold" className={css.live}><PulseDot /><Words k="momen.card.live" /></EyebrowLabel>
+    </span>
     <MosaicPreview summary={summary} />
     <span className={css.foot}>
       <span className={css.counts}><b className={css.figure}>{filled}</b><span className={css.rest}>{rest}</span></span>

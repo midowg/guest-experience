@@ -38,7 +38,7 @@ export type ModuleSlot = {
 const ICONS = { lock: Lock, trophy: Trophy, survei: ClipboardList, kuis: Gamepad2 } as const;
 
 /** SessionAbsen's look (P04 + P04__status; Beranda's Sekarang card gets only the open state's button). */
-export function AbsenView({ slot }: { slot: AbsenSlot }) {
+export function AbsenView({ slot, home }: { slot: AbsenSlot; /** On Beranda's Sekarang card: the gold button is "Absen sekarang" and sits beside "Wajib absen", not full width. */ home?: boolean }) {
   const t = useT();
   const { lang } = useLang();
   const [contactOpen, setContactOpen] = useState(false);
@@ -46,7 +46,7 @@ export function AbsenView({ slot }: { slot: AbsenSlot }) {
     case "none": return null;
     case "buka": return <>
       <AbsenQueue />
-      <Button block icon={<QrCode />} href={mainWamPath.scan}>{t("absen.button")}</Button>
+      <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? t("peserta.now.absenNow") : t("absen.button")}</Button>
     </>;
     case "ceklis": return <>
       <Button block icon={<Lock />} disabled>{t("absen.ceklisFirst")}</Button>

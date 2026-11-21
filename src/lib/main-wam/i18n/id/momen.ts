@@ -18,6 +18,8 @@ export const idMomen = {
   "momen.queuedOffline": "Offline · {count} foto antre",
   "momen.queued": "{count} foto antre",
   "momen.newPhotos": "{n} foto baru",
+  "momen.card.new": "{n} baru",
+  "momen.card.live": "Live",
   "momen.seenAll": "Sudah kamu lihat semua",
   "momen.noneYet": "Belum ada foto",
   "momen.photosN": "{n} foto",

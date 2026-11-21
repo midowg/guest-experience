@@ -46,8 +46,8 @@ describe("the frame in English", () => {
   it("marks the root with lang, and Beranda's greeting is English (day line on event days, the date before them)", () => {
     const { container } = render(<LangProvider lang="en"><p>x</p></LangProvider>);
     expect(container.querySelector("[lang]")?.getAttribute("lang")).toBe("en");
-    expect(greeting("en")).toEqual({ kicker: "Good morning", name: "Rani", day: "Day 2 of 4" });
-    expect(greeting("id")).toEqual({ kicker: "Selamat pagi", name: "Rani", day: "Hari ke-2 dari 4" });
+    expect(greeting("en")).toEqual({ kicker: "Good morning", name: "Rani", day: "Day 2 of 4", dayDots: { total: 4, current: 2, label: "Day 2 of 4" } });
+    expect(greeting("id")).toEqual({ kicker: "Selamat pagi", name: "Rani", day: "Hari ke-2 dari 4", dayDots: { total: 4, current: 2, label: "Hari ke-2 dari 4" } });
     // Before the event the kicker carries the date.
     const before = (lang: "id" | "en") => homeGreeting(new Date("2026-12-20T07:40:00+07:00"), "Rani", sampleSettings().event, undefined, lang);
     expect(before("en").kicker).toBe("Good morning · Sun, 20 Dec");

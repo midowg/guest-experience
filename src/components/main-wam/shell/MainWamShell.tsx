@@ -118,7 +118,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   if (screen && !camera) {
     if (screen.level === "akar" && screen.tab === "beranda" && greeting) {
       const bell = showsBell(screen)
-        ? <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
+        ? <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? "dot" : undefined} />
         : null;
       top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} dayDots={greeting.dayDots} actions={<>{actions}{bell}</>} /></div>;
     } else if (screen.level === "akar") {

@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronRight, Target } from "lucide-react";
+import { ChevronRight, Trophy } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
-import { Card, IconBox, Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
+import { Card, EyebrowLabel, Pill, Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import { nextMission, type MisiView } from "@/lib/main-wam/misi/missions";
 import { mainWamPath } from "@/lib/routes";
 import { ReqChips } from "./MisiParts";
-import css from "./misi.module.css";
+import css from "./misi-card.module.css";
 
 /** At most this many little bars show the missions done (a long list is told by the words). */
 const MAX_SEGMENTS = 8;
@@ -29,20 +29,20 @@ export function MisiCard({ view }: { view: MisiView }) {
   else if (summary.pending) { title = t("misi.card.waiting"); sub = t("misi.card.waitingSub"); }
   else if (summary.done === summary.total) { title = t("misi.card.allDone"); sub = t("misi.card.allDoneSub"); }
   else { title = t("misi.card.closedAll"); sub = t("misi.card.closedAllSub"); }
-  return <Card as="article" className={css.tile} href={mainWamPath.missions}>
-    <span className={css.tileLeft}>
-      <span className={css.tileTag}><IconBox icon={<Target />} tone="awarding" smallIcon className={css.tileIcon} />{t("misi.card.title")}</span>
-      <span className={css.tilePoints}><b>{view.points}</b><span>{t("misi.card.points")}</span></span>
+  return <Card as="article" motif="matriks" className={css.tile} href={mainWamPath.missions}>
+    <span className={css.left}>
+      <Pill icon={<Trophy />}>{t("misi.card.title")}</Pill>
+      <span className={css.points}><b>{view.points}</b><span>{t("misi.card.points")}</span></span>
       {segments > 0 && <span className={css.segments} role="img" aria-label={t("misi.card.progress", { done: summary.done, total: summary.total })}>
-        {Array.from({ length: segments }, (_, index) => <i key={index} className={index < lit ? css.segOn : undefined} />)}
+        {Array.from({ length: segments }, (_, index) => <i key={index} className={index < lit ? css.on : undefined} />)}
       </span>}
     </span>
-    <span className={css.tileRight}>
-      {next && <span className={css.tileKicker}>{t("misi.card.next", { points: next.points })}</span>}
-      <span className={css.tileTitle}>{title}</span>
-      {next ? <ReqChips item={next} /> : sub && <span className={css.tileSub}>{sub}</span>}
+    <span className={css.right}>
+      {next && <EyebrowLabel tone="gold">{t("misi.card.next", { points: next.points })}</EyebrowLabel>}
+      <span className={css.title}>{title}</span>
+      {next ? <ReqChips item={next} /> : sub && <span className={css.sub}>{sub}</span>}
     </span>
-    <ChevronRight aria-hidden className={css.tileChevron} />
+    <ChevronRight aria-hidden className={css.chevron} />
   </Card>;
 }
 
@@ -51,8 +51,8 @@ export function MisiCardSkeleton() {
   const t = useT();
   return <SkeletonGroup label={t("misi.loading")}>
     <Card className={css.tile}>
-      <span className={css.tileLeft}><Skeleton width={72} /><Skeleton shape="title" width={88} /><Skeleton shape="block" height={4} /></span>
-      <span className={css.tileRight}><Skeleton width="60%" /><Skeleton width="90%" /><Skeleton width="50%" /></span>
+      <span className={css.left}><Skeleton width={72} /><Skeleton shape="title" width={88} /><Skeleton shape="block" height={4} /></span>
+      <span className={css.right}><Skeleton width="60%" /><Skeleton width="90%" /><Skeleton width="50%" /></span>
     </Card>
   </SkeletonGroup>;
 }

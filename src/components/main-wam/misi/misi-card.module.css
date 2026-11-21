@@ -1,0 +1,18 @@
+/* Beranda's Misi card (prototipe .mis): points big and gold on the left, the next mission on the right behind a thin line. Tokens only. */
+.tile { flex-direction: row; align-items: center; gap: var(--mw-space-12); min-height: 88px; padding: 14px 16px; border-radius: var(--mw-radius-22); }
+.left { flex: none; display: flex; flex-direction: column; justify-content: center; gap: var(--mw-space-8); min-width: 104px; }
+.points { display: flex; align-items: baseline; gap: var(--mw-space-4); color: var(--mw-gold-ink); }
+.points b { font: var(--mw-type-stat-l); font-size: 44px; line-height: 38px; letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; }
+.points span { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.segments { display: flex; gap: var(--mw-space-4); }
+.segments i { width: 18px; height: 4px; border-radius: var(--mw-radius-4); background: var(--mw-outline); }
+.segments i.on { background: var(--mw-gold); }
+.right { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--mw-space-4); padding-left: var(--mw-space-12); border-left: 1px solid var(--mw-outline); }
+.title { font: var(--mw-type-label-lg); font-size: 14px; line-height: 18px; overflow-wrap: anywhere; }
+.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.chevron { flex: none; align-self: center; width: 20px; height: 20px; color: var(--mw-gold-ink); }
+@media (max-width: 339.98px) {
+  .tile { flex-wrap: wrap; }
+  .right { flex-basis: 100%; order: 3; padding-left: 0; border-left: 0; border-top: 1px solid var(--mw-outline); padding-top: var(--mw-space-12); }
+  .chevron { order: 2; margin-left: auto; }
+}

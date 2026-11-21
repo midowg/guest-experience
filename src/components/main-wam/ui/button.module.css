@@ -63,6 +63,8 @@
 .icon[aria-pressed="true"].liked { color: var(--mw-error); }
 .icon[aria-pressed="true"].liked > svg { fill: currentColor; }
 .icon > .badge { position: absolute; left: 34px; top: 10px; transform: translate(-50%, -50%); }
+/* A dot badge (the bell with unread notifications, prototipe): gold with a soft halo, not the red of a count. */
+.icon > .badge:empty { left: 33px; top: 11px; background: var(--mw-gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mw-gold) 25%, transparent); }
 
 @media (prefers-reduced-motion: reduce) {
   .btn, .icon { transition: none; }

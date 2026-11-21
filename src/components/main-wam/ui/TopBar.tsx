@@ -53,7 +53,7 @@ export function TopBar(props: Common & (
       <div className={css.homeText}>
         <span className={css.kicker}>{props.kicker}</span>
         <h1 className={css.name}>{props.name}</h1>
-        {props.day && <span className={css.day}>{props.day}</span>}
+        {props.day && (props.dayDots && props.day === props.dayDots.label ? <span className={shared.srOnly}>{props.day}</span> : <span className={css.day}>{props.day}</span>)}
       </div>
       {(actions || props.dayDots) && <div className={css.homeEnd}>
         {props.dayDots && <SegmentDots total={props.dayDots.total} current={props.dayDots.current} label={props.dayDots.label} />}

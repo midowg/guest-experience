@@ -9,13 +9,14 @@ import { Card, CardHead } from "@/components/main-wam/ui";
 import { OfflineBanner, RefreshAt, RetryBanner } from "../Live";
 import { HomeCard } from "./HomeCard";
 import { NowCard } from "./NowCard";
+import { PegasusMark } from "../PegasusMark";
+import css from "./beranda.module.css";
 
 /**
- * Beranda (P01/P02, revisi 16 Nov): at most four blocks, the head being the shell's: Sekarang, the
- * BOD's Ringkasan under it (agen C; panitia's tools are the Panitia tab, not a card here), one contextual card, the
- * Momen card (agen B), the Mozaik card (module Mozaik), and after them the small Jejak karbon card while its module is on (everyone, a slot too). Kuis live's
- * cards ("Kuis dimulai · Ikut", "Kendalikan kuis") come first while a game is on (a slot of the module kuis). Other
- * areas come in as slots, already rendered by the page.
+ * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: Kuis live's card first while a game is on, Sekarang (the gold
+ * bracket card), the BOD's Ringkasan under it (agen C; panitia's tools are the Panitia tab, not a card here), one contextual
+ * card, Misi, the pair Jejak karbon (green, while its module is on) and Momen side by side, and the Mozaik card
+ * (module Mozaik). Other areas come in as slots, already rendered by the page. The pegasus watermark sits behind.
  */
 export function BerandaScreen({ data, serverNow, since, slots, live = true, forceOffline }: {
   data: HomeData;
@@ -30,6 +31,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
 }) {
   const t = useT();
   return <ScreenContent>
+    <PegasusMark />
     <OfflineBanner since={since} force={forceOffline} />
     {data.failed && <RetryBanner>{t("peserta.live.agendaFailed")}</RetryBanner>}
     {/* Kuis live (module kuis): "Kuis dimulai · Ikut" first while a game is open, it is for now. */}
@@ -39,10 +41,10 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
       : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} ceklis={data.ceklis} />}
     {slots.bod}
     {data.card && <HomeCard card={data.card} />}
-    {slots.momen}
     {slots.misi}
+    {/* Prototipe .pair2: Jejak karbon (green) and Momen side by side; one alone fills the row. */}
+    <div className={css.pair}>{slots.carbon}{slots.momen}</div>
     {slots.mozaik}
-    {slots.carbon}
     {live && <RefreshAt at={data.refreshAt} serverNow={serverNow} />}
   </ScreenContent>;
 }

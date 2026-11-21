@@ -33,6 +33,14 @@ export type NowView =
     whenAt: string | null;
     /** Absen is open and the person has not checked in: the card carries agen D's Absen (SessionAbsen). */
     absen: boolean;
+    /** How far the session has run, 0 to 1 (the thin bar on the card); null before it starts. */
+    /** The session kind (the little tag at the top right: Sesi, Makan, Perjalanan, Jeda). */
+    sessionKind?: MwSession["kind"];
+    progress?: number | null;
+    /** "08.30": until when absen stays open (beside the Absen button); null when it is not open. */
+    absenCloses?: string | null;
+    /** The session after this one (prototipe "BERIKUTNYA 12.00 Makan siang"); null when none follows that day. */
+    next?: { time: string; title: string; place: string } | null;
   }
   /** Today is done; tomorrow's first session ("Besok 06.00 · Trekking Coban Rondo") and its Agenda day. */
   | { kind: "selesai"; tomorrow: { title: string; when: string; day: number | null } | null }
@@ -66,11 +74,16 @@ export function nowView({ sessions, now, event, absenOn, checkedIn, lang = "id" 
   const session = card.session;
   const at = attended.get(session.id) ?? null;
   const running = isRunning(session, now);
-  const base = { kind: "sesi" as const, sessionId: session.id, title: session.title, time: timeRange(session, lang), place: placeLine(session, lang) };
+  const start = Date.parse(session.startsAt), end = Date.parse(sessionEnd(session));
+  const progress = running && end > start ? Math.min(Math.max((now.getTime() - start) / (end - start), 0), 1) : null;
+  const following = sessions.filter(isLive).filter(other => other.id !== session.id && Date.parse(other.startsAt) >= end - 1 && wibDate(other.startsAt) === wibDate(session.startsAt))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.sort - b.sort)[0];
+  const next = following ? { time: hhmm(following.startsAt, lang), title: following.title, place: following.place.trim() } : null;
+  const base = { kind: "sesi" as const, sessionId: session.id, title: session.title, time: timeRange(session, lang), place: placeLine(session, lang), sessionKind: session.kind, progress, next };
   if (card.kind === "absen") {
     // Ended, but absen stays open 30 minutes more: say until when.
-    if (hasEnded(session, now)) return { ...base, status: "done", statusText: null, when: t(lang, "peserta.home.absenUntil", { time: hhmm(checkInWindow(session).closes, lang) }), whenAt: null, absen: true };
-    return { ...base, status: running ? "live" : "next", statusText: null, when: running ? null : untilLabel(now, session.startsAt, lang), whenAt: running ? null : session.startsAt, absen: true };
+    if (hasEnded(session, now)) return { ...base, status: "done", statusText: null, when: t(lang, "peserta.home.absenUntil", { time: hhmm(checkInWindow(session).closes, lang) }), whenAt: null, absen: true, absenCloses: hhmm(checkInWindow(session).closes, lang) };
+    return { ...base, status: running ? "live" : "next", statusText: null, when: running ? null : untilLabel(now, session.startsAt, lang), whenAt: running ? null : session.startsAt, absen: true, absenCloses: hhmm(checkInWindow(session).closes, lang) };
   }
   if (card.kind === "berlangsung") {
     return { ...base, status: "live", statusText: null, when: at ? t(lang, "peserta.home.present", { time: hhmm(at, lang) }) : null, whenAt: null, absen: false };

@@ -1,0 +1,51 @@
+/*
+ * Beranda's own pieces (prototipe .mc, .pair2, .foot, .hl): the Sekarang card, the pair of tiles and
+ * the contextual card. Everything else comes from the kit. Tokens only.
+ */
+
+/* Sekarang (prototipe .mc): the gold bracket card. */
+.now { gap: var(--mw-space-8); padding: 18px 18px 16px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); flex-wrap: wrap; }
+.state { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
+.when { color: var(--mw-gold-ink); }
+.link { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; color: inherit; text-decoration: none; border-radius: var(--mw-radius-12); -webkit-tap-highlight-color: transparent; }
+.title { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
+.meta { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
+.metaItem { display: flex; align-items: flex-start; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-body); color: var(--mw-text-2); }
+.metaItem > svg { flex: none; width: 18px; height: 18px; margin-top: 3px; color: var(--mw-primary); }
+.metaItem > span { min-width: 0; overflow-wrap: anywhere; }
+.chevron { width: 20px; height: 20px; color: var(--mw-text-2); }
+
+/* The thin gold bar of how far the session has run (prototipe .pbar). */
+.bar { display: block; height: 5px; border-radius: 5px; overflow: hidden; background: var(--mw-outline); }
+.bar > i { display: block; height: 100%; border-radius: inherit; background: var(--mw-gold); box-shadow: var(--mw-glow); }
+
+/* "WAJIB ABSEN · Tutup 08.30" and the gold Absen button (prototipe .foot). */
+.foot { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
+.footText { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
+.footSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.absen { flex: 1 1 auto; min-width: 0; max-width: 62%; display: flex; flex-direction: column; align-items: stretch; gap: var(--mw-space-8); }
+.absen > button, .absen > a { width: 100%; }
+
+/* "12.00 Makan siang · BERIKUTNYA" (prototipe .hl). */
+.next { display: flex; align-items: center; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
+.nextTime { flex: none; min-width: 54px; font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
+.nextText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.nextText > b { font: var(--mw-type-label); font-weight: 700; overflow-wrap: anywhere; }
+.nextText > small { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.nextTag { flex: none; text-align: right; }
+
+/* The pair of tiles under Misi: Jejak karbon and Momen side by side (prototipe .pair2); one alone fills the row. */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--mw-space-12); }
+.pair:empty { display: none; }
+.pair > :only-child { grid-column: 1 / -1; }
+@media (max-width: 299.98px) { .pair { grid-template-columns: 1fr; } }
+
+/* A contextual card that is not an announcement (prototipe .mc / .quizcard): eyebrow, big title, one line, one gold button. */
+.ctx { gap: var(--mw-space-8); }
+.ctxTitle { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; }
+.ctxSub { font: var(--mw-type-body); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.ctxLead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); flex-wrap: wrap; }
+.ctxAction { margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
+.labelIcon { display: inline-flex; align-items: center; gap: var(--mw-space-8); white-space: nowrap; }
+.labelIcon > svg { flex: none; width: 20px; height: 20px; }

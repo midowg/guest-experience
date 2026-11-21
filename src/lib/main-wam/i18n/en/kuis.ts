@@ -3,6 +3,9 @@ import type { idKuis } from "../id/kuis";
 /* Kuis live in English (the same keys and {variables} as id/kuis.ts). */
 export const enKuis: Record<keyof typeof idKuis, string> = {
   "kuis.home.live": "Live quiz started",
+  "kuis.home.tag": "Quiz",
+  "kuis.home.liveLine": "You join as your character",
+  "kuis.home.joinedLine": "You have joined",
   "kuis.home.liveSub": "{title} · join as your figure",
   "kuis.home.joinedSub": "{title} · you have joined",
   "kuis.home.join": "Join",

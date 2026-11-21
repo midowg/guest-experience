@@ -19,6 +19,8 @@ export const enMomen: Record<keyof typeof idMomen, string> = {
   "momen.queuedOffline": "Offline · {count, plural, one {# photo} other {# photos}} queued",
   "momen.queued": "{count, plural, one {# photo} other {# photos}} queued",
   "momen.newPhotos": "{n, plural, one {# new photo} other {# new photos}}",
+  "momen.card.new": "{n} new",
+  "momen.card.live": "Live now",
   "momen.seenAll": "You have seen them all",
   "momen.noneYet": "No photos yet",
   "momen.photosN": "{n, plural, one {# photo} other {# photos}}",

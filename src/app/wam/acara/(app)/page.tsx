@@ -28,7 +28,7 @@ export default async function HomePage() {
   const now = new Date();
   const data = await loadHome(context, now);
   return <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(now.toISOString(), await readLang())} slots={{
-    absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} /> : null,
+    absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} home /> : null,
     bod: <BerandaBod context={context} now={now} />,
     momen: <BerandaMomen context={context} now={now} />,
     misi: <BerandaMisi context={context} now={now} />,

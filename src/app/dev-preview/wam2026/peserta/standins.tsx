@@ -8,7 +8,7 @@ import { Button, Card, List, ListRow, StackPreview } from "@/components/main-wam
  * them so Beranda's four blocks and Detail sesi can be checked. Never used in the app.
  */
 
-export const AbsenStandIn = () => <Button block icon={<QrCode />} href={mainWamPath.scan}>Absen</Button>;
+export const AbsenStandIn = ({ home }: { home?: boolean }) => <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? "Absen sekarang" : "Absen"}</Button>;
 
 export const MomenStandIn = ({ count = 12 }: { count?: number }) => <Card as="article">
   <StackPreview photos={[]} sub={`${count} foto baru`} href={mainWamPath.moments()} />

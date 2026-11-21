@@ -1,14 +1,14 @@
 /* The Mozaik WAM 2026 card on Beranda (prototype .mzh, in the theme's tokens: it follows Terang and Gelap). */
-.card { display: flex; flex-direction: column; gap: var(--mw-space-12); }
-.head { display: flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-label-lg); color: var(--mw-text-1); overflow-wrap: anywhere; }
-.head > svg { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
+.card { display: flex; flex-direction: column; gap: var(--mw-space-12); padding: 12px 14px 14px; border-radius: var(--mw-radius-20); }
+.head { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
+.live { font-size: 11px; line-height: 11px; }
 .preview { display: block; width: 100%; height: auto; max-height: 132px; padding: var(--mw-space-8); border-radius: var(--mw-radius-12); background: var(--mw-surface-2); }
 .on { fill: var(--mw-primary); }
 .off { fill: var(--mw-outline-strong); opacity: 0.4; }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
 .counts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--mw-space-8); min-width: 0; }
-.figure { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; color: var(--mw-text-1); }
+.figure { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; color: var(--mw-gold-ink); }
 .rest { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .chevron { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
-.bar { display: block; height: 6px; border-radius: var(--mw-radius-full); background: var(--mw-surface-2); overflow: hidden; }
-.bar > i { display: block; height: 100%; border-radius: var(--mw-radius-full); background: var(--mw-primary); }
+.bar { display: block; height: 5px; border-radius: var(--mw-radius-full); background: var(--mw-outline); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: var(--mw-radius-full); background: var(--mw-gold); box-shadow: var(--mw-glow); }
