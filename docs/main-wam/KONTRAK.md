@@ -597,3 +597,19 @@ tokohnya. Produk: `docs/rancangan-kuis-wam.md` (§8a = yang dibangun). Agen F; m
   `--mw-kuis-medal-1…3`, `--mw-kuis-win-container`, `--mw-on-kuis-medal`), Beranda (`BerandaScreen` slot `kuis` di atas
   Sekarang, dipasang di `(app)/page.tsx`), N01 (ikon dan kata jenis `kuis`), `sample.ts` (modul contoh menyala).
 - **Pratinjau:** `/dev-preview/main-wam/kuis?layar=hp-…|kendali-…|layar-…` (lihat berkasnya), `/dev-preview/main-wam/kuis/admin`.
+## 14. Misi, poin, dan Peringkat (S2, 21 Nov 2026)
+
+Keputusan pemilik: tiap peserta punya **misi** bernilai **poin**; kartu **Misi** di Beranda, halaman **Misi**, halaman **Peringkat**. Modul `misi` (mati bawaan; bukan untuk BOD, yang tidak ikut dan tidak diperingkat). Aturan poin dan radius belum final: semuanya setelan admin dengan nilai awal contoh.
+
+| Hal | Aturan |
+| --- | --- |
+| Data | Migrasi `202611260001_main_wam_misi.sql`: `mw_mission_settings` (satu baris: radius bawaan 50 m, ketelitian lokasi terburuk 100 m, Peringkat terbuka), `mw_missions`, `mw_mission_completions` (satu per orang per misi, bukti foto/lokasi, status `menunggu`/`disetujui`/`ditolak`), `mw_point_entries` (catatan poin), view `mw_point_totals`. Uji SQL: `tests/backend/main-wam-misi-check.sql` (belum dijalankan, tidak ada kontainer). |
+| Poin | **Catatan, bukan saldo.** Satu penyelesaian `disetujui` = satu baris catatan senilai poin misi saat itu (trigger `mw_completion_points`); status lain = tanpa baris, jadi menolak mengembalikan poin dan menyetujui lagi tidak menggandakan. Poin manual = baris `manual` dengan alasan. Mengubah poin misi tidak mengubah yang sudah diberikan. |
+| Jenis | `foto`: foto langsung dari kamera (tanpa galeri), lokasi wajib; bila misi punya titik, foto harus di dalam radius. `checkin`: titik + radius wajib, dinilai di server. `sesi`: sesi terpilih; dicatat **panitia** (Admin WAM → Misi → Catat selesai) atau **otomatis dari absen** (`credit = absen`, dikreditkan saat orang itu membuka Beranda atau Misi). Misi foto bisa `review` (poin masuk setelah admin menyetujui). |
+| Lokasi | HP mengirim koordinat; **server** menilai (`judgePosition`): koordinat sah, ketelitian ≤ batas, jarak ≤ radius. Koordinat misi **tidak pernah** dikirim ke HP; layar bertanya ke `POST …/cek` dan memakai jawabannya (jarak, di dalam atau tidak). Tidak melawan GPS palsu: misi yang rawan dicurangi pakai `review` atau sesi. |
+| Foto misi | Dua langkah seperti Momen (`unggah` lalu `simpan`), dua JPEG (besar, kecil) lewat `prepareMomenPhoto`, ke `tmp/main-wam/misi/` lalu `main-wam/misi/`; id dari HMAC orang+misi+`clientId`; token 15 menit; posisi dinilai ulang di `simpan`. Bukan di Momen, hanya dilihat admin (alamat sementara). Kamera: **hanya aliran langsung** (`getUserMedia`), tanpa `<input type=file>`/`capture`, jadi galeri tidak bisa dipilih. |
+| Peringkat | `rankPeople`: peringkat kompetisi (poin sama berbagi tempat: 1, 2, 2, 4), orang acara = `mainWamAttendees()` (tanpa BOD). Yang keluar hanya **nama panggilan, singkatan departemen, poin**, dan penanda baris sendiri; tanpa id. Admin melihat nama lengkap. Admin bisa menutup Peringkat. |
+| Alamat | Halaman: `mainWamPath.missions`, `missionRank`, `missionDo(id)`. API: `mainWamApi.missions`, `leaderboard`, `missionCheck`, `missionCheckIn`, `missionPhotoStart`, `missionPhotoConfirm`. Admin: `mainWamAdminPath.missions`, `mainWamAdminApi.missions…`. Aksi `misi` di `access.ts` (peserta, panitia, admin; bukan BOD; modul `misi`). |
+| Demo | Selama tabel misi **kosong** dan Mode demo menyala: lima misi contoh prototipe (dua selesai) dan 118 orang karangan (peserta ke-7, 340 poin). Kamera dan check-in demo memakai posisi contoh dan tidak menyimpan apa pun. |
+| Belum | Notifikasi ke peserta saat bukti ditolak/disetujui dan saat misi baru dibuka (`NoteKind` belum punya jenis misi); panitia mencatat sesi dari aplikasi (kini lewat Admin WAM); berkas foto lama yang diganti kiriman ulang tidak dibersihkan. |
+

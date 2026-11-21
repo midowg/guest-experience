@@ -23,7 +23,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
   serverNow: string;
   /** "07.38": when the data was read, for the offline banner. */
   since: string;
-  slots: { absen?: ReactNode; bod?: ReactNode; momen?: ReactNode; carbon?: ReactNode; kuis?: ReactNode };
+  slots: { absen?: ReactNode; bod?: ReactNode; momen?: ReactNode; carbon?: ReactNode; kuis?: ReactNode; misi?: ReactNode };
   /** Refresh by itself when a card changes (off in previews, where time stands still). */
   live?: boolean;
   forceOffline?: boolean;
@@ -40,6 +40,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {slots.bod}
     {data.card && <HomeCard card={data.card} />}
     {slots.momen}
+    {slots.misi}
     {slots.carbon}
     {live && <RefreshAt at={data.refreshAt} serverNow={serverNow} />}
   </ScreenContent>;

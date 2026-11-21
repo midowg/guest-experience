@@ -1,4 +1,4 @@
-import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, ListChecks, Map as MapIcon, Palette, Plug, Send, SlidersHorizontal, Trophy, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, ListChecks, Map as MapIcon, Palette, Plug, Send, SlidersHorizontal, Target, Trophy, Tv, UsersRound, type LucideIcon } from "lucide-react";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
 import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
 
@@ -10,7 +10,7 @@ import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
  */
 export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner"
   // Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): Pengaturan (fondasi), Isi acara and its tabs (agen E), Modul acara and its tab (agen D).
-  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent"
+  | "mw-pengaturan" | "mw-isi" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-info" | "mw-modul" | "mw-silent" | "mw-misi"
   // Kuis live (20 Nov 2026, docs/rancangan-kuis-wam.md): a tab of Modul acara.
   | "mw-kuis";
 export type WamSection = {
@@ -55,6 +55,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "mw-modul", label: "Modul acara", group: "Main WAM", href: mainWamAdminPath.awards, icon: Trophy, summary: "Kategori dan nominasi Awarding, pertanyaan Silent Meeting, Kuis live." },
   { key: "mw-silent", label: "Silent Meeting", group: "Main WAM", href: mainWamAdminPath.silent, icon: Trophy, summary: "Pertanyaan Silent Meeting per sesi.", owner: "mw-modul" },
   { key: "mw-kuis", label: "Kuis live", group: "Main WAM", href: mainWamAdminPath.quizzes, icon: Trophy, summary: "Soal, pengendali, tautan layar besar, permainan, dan hasil kuis.", owner: "mw-modul" },
+  { key: "mw-misi", label: "Misi", group: "Main WAM", href: mainWamAdminPath.missions, icon: Target, summary: "Misi foto, check-in lokasi, dan sesi; poin, bukti peserta, dan Peringkat." },
   { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];

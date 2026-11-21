@@ -435,6 +435,7 @@ Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang s
 | Absen | Per sesi yang ditandai "pakai absen" di Rundown admin (token QR dibuat saat itu). Scan offline dikirim belakangan hanya bila jam scan di dalam jendela dan paling lama 30 menit sebelumnya. Panitia hanya bisa membatalkan absen manual. |
 | Hitungan orang | "Orang acara" = akun WAM aktif kecuali BOD (`mainWamAttendees`), sama di semua layar. |
 | Kuis live | Modul `kuis` (mati bawaan; `docs/rancangan-kuis-wam.md` §8a, KONTRAK §13). Pemain: semua yang melihat Main WAM, tampil sebagai tokohnya. Pengendali dipilih per kuis di Admin WAM, ditambah Admin WAM; panitia saja tidak cukup. Kunci jawaban, sebaran, dan skor baru keluar dari server saat jawaban dibuka (jam server). Nama asli hanya di podium layar besar dan di Admin WAM. Layar besar publik berkunci `/kuis/{kunci}` (hanya hash kunci disimpan). Migrasi `202611200601`. |
+| Misi | Modul `misi` (mati bawaan; BOD tidak ikut). Misi foto (kamera langsung, tanpa galeri, lokasi wajib), check-in lokasi, dan sesi; poin = catatan (saldo = jumlah baris); lokasi dinilai di server dan koordinat misi tidak dikirim ke HP; Peringkat hanya nama panggilan, singkatan departemen, dan poin. Aturan poin dan radius adalah setelan admin (Admin WAM → Main WAM → Misi). Lihat `docs/main-wam/KONTRAK.md` §13. |
 
 ## Dokumen terkait
 

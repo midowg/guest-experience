@@ -62,6 +62,10 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
     case "jejak-karbon": return second === "saya"
       ? { tab: "saya", level: "detail", title: say("screen.carbon"), back: saya }
       : { tab: "beranda", level: "detail", title: say("screen.carbon"), back: home };
+    case "misi":
+      if (!second) return { tab: "beranda", level: "detail", title: say("screen.missions"), back: home };
+      if (second === "peringkat") return { tab: "beranda", level: "detail", title: say("screen.rank"), back: { href: mainWamPath.missions, title: say("screen.missions") } };
+      return { tab: "beranda", level: "tugas", title: say("screen.missionDo"), back: { href: mainWamPath.missions, title: say("screen.missions") } };
     case "mulai": return { tab: null, level: "tugas", title: say("screen.notifications") };
     case "notifikasi": return { tab: "beranda", level: "detail", title: say("screen.notifications"), back: home };
     // P04 Detail sesi is a bottom sheet over Agenda (the sheet has its own title and close button), so the frame behind it is Agenda's own.

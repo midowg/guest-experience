@@ -70,6 +70,8 @@ export const MAIN_WAM_ACTIONS = [
   "silent-kirim",
   /** Awarding: vote (BOD approve instead). */
   "voting",
+  /** Misi: do missions and see the Peringkat (BOD are not ranked, they do not take part). */
+  "misi",
   /** Panitia's 4 tools: Rundown live, Absen manual, Pengumuman, Moderasi. */
   "kelola",
   /** Open or close a Silent Meeting by hand. */
@@ -88,7 +90,7 @@ export function mainWamCan(who: WithRoles, action: MainWamAction): boolean {
   const bod = has(who, "bod");
   const manages = has(who, "panitia", "admin");
   switch (action) {
-    case "absen": case "silent-kirim": case "voting": return !bod;
+    case "absen": case "silent-kirim": case "voting": case "misi": return !bod;
     case "foto": return true;
     case "kelola": case "silent-kontrol": return manages;
     case "ringkasan": case "awarding-setujui": case "silent-rekap": return bod;
@@ -97,7 +99,7 @@ export function mainWamCan(who: WithRoles, action: MainWamAction): boolean {
 
 /** The module an action belongs to; it is refused (and hidden) while that module is off. */
 export const actionModule: Partial<Record<MainWamAction, MainWamModule>> = {
-  absen: "absen", "silent-kirim": "silent", "silent-kontrol": "silent", "silent-rekap": "silent", voting: "voting", "awarding-setujui": "voting",
+  absen: "absen", "silent-kirim": "silent", "silent-kontrol": "silent", "silent-rekap": "silent", voting: "voting", "awarding-setujui": "voting", misi: "misi",
 };
 
 /** The action is allowed for the person and its module (if any) is on. */

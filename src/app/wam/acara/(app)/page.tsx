@@ -1,5 +1,6 @@
 import { BerandaScreen } from "@/components/main-wam/peserta/beranda/BerandaScreen";
 import { SessionAbsen } from "@/components/main-wam/modul/SessionModule";
+import { BerandaMisi } from "@/components/main-wam/misi/BerandaMisi";
 import { BerandaMomen } from "@/components/main-wam/momen/BerandaMomen";
 import { BerandaCarbon } from "@/components/main-wam/peserta/karbon/BerandaCarbon";
 import { BerandaBod } from "@/components/main-wam/panitia/BerandaBod";
@@ -28,6 +29,7 @@ export default async function HomePage() {
     absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} /> : null,
     bod: <BerandaBod context={context} now={now} />,
     momen: <BerandaMomen context={context} now={now} />,
+    misi: <BerandaMisi context={context} now={now} />,
     carbon: <BerandaCarbon context={context} now={now} />,
     kuis: <BerandaKuis context={context} />,
   }} />;
