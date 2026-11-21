@@ -91,7 +91,10 @@
 .splash {
   position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
   background: radial-gradient(120% 70% at 80% 0, #16347A 0, #050914 62%); color: var(--lg-ink);
+  /* If the script never runs (and so never clears this), the splash gives up and the sign-in beneath is usable. */
+  animation: splashGiveUp 0s 12s forwards;
 }
+@keyframes splashGiveUp { to { visibility: hidden; pointer-events: none; } }
 .splashImage { background: #050914 var(--mw-image-splash) center / cover no-repeat; }
 .splashPeg { position: absolute; left: 50%; top: calc(var(--mw-safe-top) + 8px); width: min(104%, 470px); transform: translateX(-50%); z-index: 1; pointer-events: none; }
 .splashPeg .pegLight { display: none; }

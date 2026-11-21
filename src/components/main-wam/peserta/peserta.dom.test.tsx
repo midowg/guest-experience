@@ -301,6 +301,25 @@ describe("O01 Splash", () => {
     root.unmount(); container.remove();
   });
 
+  it("keeps the sign-in beneath out of reach (inert) while it is up, and gives it back after Masuk", async () => {
+    vi.resetModules();
+    const { Splash } = await import("./masuk/Splash");
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const Page = () => <div><Splash {...props} /><main data-testid="beneath"><h1>Masuk</h1><button type="button">Kirim</button></main></div>;
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    container.innerHTML = renderToString(<Page />);
+    // Without the script the page is plain: the sign-in is not inert.
+    expect(container.querySelector("[data-testid=beneath]")?.hasAttribute("inert")).toBe(false);
+    const root = await act(async () => hydrateRoot(container, <Page />));
+    const beneath = () => container.querySelector("[data-testid=beneath]") as HTMLElement;
+    expect(beneath().inert).toBe(true);
+    fireEvent.click(within(container.querySelector("[data-testid=splash]") as HTMLElement).getByRole("button", { name: "Masuk" }));
+    expect(beneath().inert).toBe(false);
+    root.unmount(); container.remove();
+  });
+
   it("once per session, and an in-app navigation never shows it", async () => {
     const first = await hydrate();
     expect(first.splash()).toBeTruthy();

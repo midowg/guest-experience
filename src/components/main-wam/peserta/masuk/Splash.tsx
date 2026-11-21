@@ -28,7 +28,10 @@ const noSubscription = () => () => undefined;
  * (that is already there and ready). Or Admin WAM's splash image (the theme's `splash` slot) in place
  * of the art and words, with the same button. Once per browser session; not after an in-app
  * navigation (it opens the app, not a page). It is a labelled region with a real button (focus starts
- * on it), so a screen reader meets Masuk at once.
+ * on it), so a screen reader meets Masuk at once. While it is up, the page beneath (the sign-in, a
+ * sibling) is `inert`: no Tab, no tap and no screen reader reaches it, so there is one heading at a
+ * time and nothing to type into behind the art. If the script never runs, the splash gives up by
+ * itself (css `splashGiveUp`, cleared here once hydrated) and the sign-in stays usable.
  */
 export function Splash({ title, subtitle, dates, venue, image, hold }: {
   title: string;
@@ -48,6 +51,8 @@ export function Splash({ title, subtitle, dates, venue, image, hold }: {
   const [opening] = useState(hydrating);
   const [gone, setGone] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
+  const region = useRef<HTMLElement>(null);
+  const visible = !((!opening && !hold) || gone);
 
   useEffect(() => {
     if (hold || !opening) return;
@@ -55,12 +60,21 @@ export function Splash({ title, subtitle, dates, venue, image, hold }: {
     if (!firstTimeThisSession()) { setGone(true); return; } // eslint-disable-line react-hooks/set-state-in-effect -- read from the browser after the first paint
   }, [hold, opening]);
   useEffect(() => { if (button.current && (hold || opening)) quietFocus(button.current); }, [hold, opening]);
+  // The script is running: the splash waits for the tap, and what is beneath it is out of reach meanwhile.
+  useEffect(() => {
+    const own = region.current;
+    if (!visible || !own) return;
+    own.style.animation = "none";
+    const beneath = Array.from(own.parentElement?.children ?? []).filter((node): node is HTMLElement => node !== own && node instanceof HTMLElement);
+    for (const node of beneath) node.inert = true;
+    return () => { for (const node of beneath) node.inert = false; };
+  }, [visible]);
 
-  if ((!opening && !hold) || gone) return null;
+  if (!visible) return null;
   const words = t("peserta.splash.tagline").split(" ");
   const last = words.pop();
   const line = [title, dates, venue].filter(Boolean).join(" · ");
-  return <section className={`${css.splash} ${image ? css.splashImage : ""}`} data-testid="splash" aria-label={title}>
+  return <section ref={region} className={`${css.splash} ${image ? css.splashImage : ""}`} data-testid="splash" aria-label={title}>
     {!image && <PegasusArt className={css.splashPeg} />}
     <div className={css.splashBody}>
       {!image && <>
