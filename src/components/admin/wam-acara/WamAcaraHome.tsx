@@ -1,11 +1,11 @@
-import { ExternalLink, UsersRound } from "lucide-react";
+import { UsersRound } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { Card, ConsoleButtonLink, ListRow, PageHeader, RowList, StatCard, StatRow } from "@/components/console";
+import { Card, ListRow, PageHeader, RowList, StatCard, StatRow } from "@/components/console";
 import { WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 import { activeModules, activeModulesLabel } from "@/lib/main-wam/modules";
 import { mainWamModeLabels, type MainWamSettings } from "@/lib/main-wam/types";
 import { dateRange } from "@/lib/pra-wam/about";
-import { mainWamAdminPath, mainWamPath } from "@/lib/routes";
+import { mainWamAdminPath } from "@/lib/routes";
 import { wamAcaraCrumbs, wamAcaraSection, wamAcaraSections } from "./sections";
 
 export type WamAcaraHomeView = {
@@ -26,8 +26,7 @@ export function WamAcaraHome({ settings, testers, staff, shown }: WamAcaraHomeVi
   const event = settings.event;
   const subtitle = [event.name, event.startDate && event.endDate ? dateRange(event.startDate, event.endDate) : ""].filter(Boolean).join(" · ");
   return <>
-    <PageHeader crumbs={wamAcaraCrumbs("ringkasan")} title={wamAcaraSection("ringkasan").label} subtitle={subtitle || "Aplikasi selama acara WAM."}
-      actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka WAM 2026<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
+    <PageHeader crumbs={wamAcaraCrumbs("ringkasan")} title={wamAcaraSection("ringkasan").label} subtitle={subtitle || "Aplikasi selama acara WAM."} />
     {!staff.migrated && <Notice tone="warning">Panitia WAM menunggu migrasi <code>202611200603</code> (admin_wam_acara). Sampai itu WAM 2026 belum punya panitia, dan hanya super admin yang bisa membuka {WAM_EVENT_ADMIN_LABEL}.</Notice>}
     {!shown && <Notice tone="info">WAM 2026 masih tersembunyi di aplikasi: /wam selalu membuka Pra WAM, dan notifikasinya hanya sampai ke penguji dan Panitia WAM. Super admin yang menampilkannya (Super admin → Halaman utama). Admin ini tidak terpengaruh.</Notice>}
 

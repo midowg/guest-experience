@@ -1,9 +1,9 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { ExternalLink, ImagePlus, Trash2, UserPlus } from "lucide-react";
+import { ImagePlus, Trash2, UserPlus } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { buttonClass, Card, ConsoleButton, ConsoleButtonLink, PageHeader, type Crumb } from "@/components/console";
+import { buttonClass, Card, ConsoleButton, PageHeader, type Crumb } from "@/components/console";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { DISPLAY_FONTS } from "@/components/main-wam/theme/tokens";
@@ -13,7 +13,7 @@ import {
   MAIN_WAM_MODES, MAIN_WAM_MODULES, THEME_IMAGE_SLOTS, mainWamModeLabels, themeImageLabels,
   type MainWamMode, type MainWamSettings as Settings, type ModuleSwitches, type ThemeImageSlot,
 } from "@/lib/main-wam/types";
-import { mainWamAdminApi, mainWamApi, mainWamPath } from "@/lib/routes";
+import { mainWamAdminApi, mainWamApi } from "@/lib/routes";
 import type { Tester } from "@/lib/server/main-wam/settings";
 import { CommitteeCard, DemoCard } from "./DemoCards";
 import css from "./main-wam-settings.module.css";
@@ -65,8 +65,7 @@ export function MainWamSettings({ initial, testers: firstTesters, testersMigrate
 
   return <div className="stack">
     <PageHeader crumbs={crumbs} title={title}
-      subtitle="Aplikasi selama acara WAM 2026, tersembunyi sampai modenya diubah di sini."
-      actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka WAM 2026<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
+      subtitle="Aplikasi selama acara WAM 2026, tersembunyi sampai modenya diubah di sini." />
     {hidden && <Notice tone="info"><strong>WAM 2026 tersembunyi di aplikasi</strong> sampai super admin menampilkannya (Super admin → Halaman utama). Selama itu /wam selalu membuka Pra WAM, dan notifikasi WAM 2026 hanya sampai ke penguji (daftar di bawah dan Panitia WAM). Admin ini tetap terbuka, dan mode acara tetap berlaku untuk tautan langsung /wam/acara.</Notice>}
     {!settings.migrated && <Notice tone="warning">Pengaturan WAM 2026 menunggu pembaruan sistem. Sampai saat itu WAM 2026 tersembunyi untuk semua orang dan pengaturan belum bisa disimpan. Hubungi tim CoE.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>

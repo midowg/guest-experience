@@ -2,7 +2,7 @@ import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { PRA_WAM_ADMIN_LABEL, WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 import { mainWamModeLabels } from "@/lib/main-wam/types";
-import { BOOKING_PATH, bookingPath, HR_PATH, hrAdminPath, hrPath, mainWamAdminPath, mainWamPath, MAIN_WAM_PATH, praWamPath, wamAdminPath, WELLBEING_PATH, wellbeingAdminPath, wellbeingPath } from "@/lib/routes";
+import { BOOKING_PATH, bookingPath, HR_PATH, hrAdminPath, hrPath, mainWamAdminPath, praWamPath, wamAdminPath, WELLBEING_PATH, wellbeingAdminPath, wellbeingPath } from "@/lib/routes";
 import { currentPhase } from "./pra-wam/events";
 import { openResetRequestCount } from "./pra-wam/reset-requests";
 import { readMainWamSettings } from "./main-wam/settings";
@@ -26,7 +26,8 @@ export type StandaloneApp = {
   /** Its fixed address, as shown. */
   address: string;
   description: string;
-  open: { label: string; href: string };
+  /** Left out when the app has no link from the admin (WAM 2026: reached by its address only). */
+  open?: { label: string; href: string };
   manage: { label: string; href: string };
   /** Something waiting on an admin, when there is. */
   waiting?: { label: string; href: string };
@@ -53,9 +54,9 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
     {
       key: "wam_acara", name: "WAM 2026 (acara)", eyebrow: "Aplikasi selama acara",
       status: mainWam ? `Mode ${mainWamModeLabels[mainWam.mode]}` : "Aplikasi selama acara WAM",
-      address: MAIN_WAM_PATH,
+      address: "",
       description: "Aplikasi selama acara WAM: rundown, kamar, perjalanan, panduan, Awarding, Silent Meeting, dan Kuis live, dengan Panitia WAM-nya sendiri.",
-      open: { label: "Buka WAM 2026", href: mainWamPath.home }, manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
+      manage: { label: `Kelola di ${WAM_EVENT_ADMIN_LABEL}`, href: mainWamAdminPath.home },
     },
     {
       // WG People (20 Nov 2026): the employees' HR app, managed in Admin HR (/admin/hr).

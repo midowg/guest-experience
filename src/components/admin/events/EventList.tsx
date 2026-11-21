@@ -18,9 +18,9 @@ import { adminEventPath, adminEventsApi, eventPath, PLACE_GUIDE_PATH } from "@/l
 import type { StandaloneApp } from "@/lib/server/standalone-apps";
 
 /** Each standalone app's preview: its own colour and mark (10 Nov 2026). */
-const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: string; color: string; accent: string }> = {
+const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: string; color: string; accent: string; image?: string }> = {
   wam: { Icon: Sparkles, background: "linear-gradient(135deg, #0b1230, #2a1f5c)", color: "#f4f1ff", accent: "#f2c46d" },
-  wam_acara: { Icon: CalendarDays, background: "linear-gradient(135deg, #2a1f5c, #5b2a6e)", color: "#fbf3ff", accent: "#f2c46d" },
+  wam_acara: { Icon: CalendarDays, background: "linear-gradient(135deg, #2a1f5c, #5b2a6e)", color: "#fbf3ff", accent: "#f2c46d", image: "/wam/pegasus-jaringan-terang.svg" },
   booking: { Icon: DoorOpen, background: "linear-gradient(135deg, #0f3b3a, #146c66)", color: "#effaf8", accent: "#9be7d8" },
   tv: { Icon: Tv, background: "linear-gradient(135deg, #10203d, #1d4f91)", color: "#eef4ff", accent: "#8cc2ff" },
   wellbeing: { Icon: HeartPulse, background: "linear-gradient(135deg, #0d3b35, #0d7c72)", color: "#ecfbf8", accent: "#7fd3c9" },
@@ -120,7 +120,8 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     return <li key={app.key} className={`${styles.eventCard} ${styles.stage_guest}`}>
       <a href={app.manage.href} className={styles.cardPreviewLink} tabIndex={-1} aria-hidden="true">
         <div className={`${styles.cardPreview} ${styles.appPreview}`} style={{ background: look.background, color: look.color }}>
-          <look.Icon className={styles.appPreviewMark} style={{ color: look.accent }} aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local file */}
+          {look.image ? <img src={look.image} alt="" className={styles.appPreviewMark} style={{ width: 52, height: 52, objectFit: "contain", objectPosition: "left center" }} /> : <look.Icon className={styles.appPreviewMark} style={{ color: look.accent }} aria-hidden="true" />}
           <span className={styles.cardPreviewText}>
             <span className={styles.cardPreviewEyebrow} style={{ color: look.accent }}>{app.eyebrow}</span>
             <strong className={styles.cardPreviewTitle}>{app.name}</strong>
@@ -129,12 +130,12 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
       </a>
       <div className={styles.cardBadges}><span className={styles.stageBadge}><Globe size={14} aria-hidden="true" /> {app.status}</span></div>
       <h2><a href={app.manage.href} className={styles.cardLink}>{app.name}</a></h2>
-      <p className={styles.eventWhen}><Globe size={16} aria-hidden="true" /> {app.address}</p>
+      {app.address && <p className={styles.eventWhen}><Globe size={16} aria-hidden="true" /> {app.address}</p>}
       <p className={styles.eventKind}>{app.description}</p>
       {app.waiting && <p className={styles.eventKind}><a href={app.waiting.href}><KeyRound size={14} aria-hidden="true" /> {app.waiting.label}</a></p>}
       <div className={styles.cardFooter}>
         <ButtonLink href={app.manage.href}><Settings size={16} aria-hidden="true" /> {app.manage.label}</ButtonLink>
-        <ButtonLink variant="secondary" href={app.open.href} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {app.open.label}<span className="sr-only"> (tab baru)</span></ButtonLink>
+        {app.open && <ButtonLink variant="secondary" href={app.open.href} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {app.open.label}<span className="sr-only"> (tab baru)</span></ButtonLink>}
       </div>
     </li>;
   };
