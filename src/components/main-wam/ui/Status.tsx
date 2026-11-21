@@ -15,10 +15,10 @@ export function Badge({ count, dot, label, className }: { count?: number; dot?: 
   return <span className={cx(css.badge, dot && css.dot, className)} aria-hidden={label ? undefined : true} role={label ? "img" : undefined} aria-label={label}>{text}</span>;
 }
 
-export type PillTone = "neutral" | "active" | "success" | "warning" | "error" | "momen" | "emisi" | "awarding" | "onmedia" | "primary";
+export type PillTone = "neutral" | "active" | "success" | "warning" | "error" | "momen" | "emisi" | "awarding" | "onmedia" | "primary" | "gold";
 
 /**
- * A short status in words (DS #29): 24 tall, never truncated, so keep it to one or two words.
+ * A short status in words (DS #29, prototipe .tag): 26 tall, small capitals, never truncated, so keep it to one or two words.
  * Colour never carries the meaning alone: always a word, and an icon or dot where it helps.
  */
 export function Pill({ tone = "neutral", icon, dot, pulse, children, className }: {
@@ -40,7 +40,7 @@ export function Pill({ tone = "neutral", icon, dot, pulse, children, className }
 
 /** The statuses the screens use, each with its fixed look and words (prototipe, PANDUAN §6.3). */
 export const STATUS_PILLS = {
-  live: { tone: "success", dot: true, pulse: true, label: "Sedang berlangsung" },
+  live: { tone: "active", dot: true, pulse: true, label: "Sedang berlangsung" },
   next: { tone: "neutral", label: "Berikutnya" },
   notStarted: { tone: "neutral", label: "Belum mulai" },
   done: { tone: "neutral", icon: Check, label: "Selesai" },

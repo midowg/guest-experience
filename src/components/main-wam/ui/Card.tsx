@@ -3,16 +3,29 @@ import { ChevronRight } from "lucide-react";
 import { cx, KitIcon, Pressable, type ActionProps, type IconProp } from "./Pressable";
 import css from "./card.module.css";
 
-export type CardVariant = "outline" | "tonal" | "momen" | "emisi" | "wellbeing" | "awarding" | "role" | "accent";
+export type CardVariant = "outline" | "tonal" | "gold" | "eco" | "momen" | "emisi" | "wellbeing" | "awarding" | "role" | "accent";
+
+/** The corner motifs of the Kit Visual (public/wam/kit), light and dark chosen by the theme. */
+export type MotifName = "konstelasi" | "kontur" | "sirkuit" | "radar" | "matriks" | "orbit" | "busur";
+const MOTIF_CLASS: Record<MotifName, string> = {
+  konstelasi: css.motifKonstelasi, kontur: css.motifKontur, sirkuit: css.motifSirkuit, radar: css.motifRadar,
+  matriks: css.motifMatriks, orbit: css.motifOrbit, busur: css.motifBusur,
+};
 
 /**
  * Card (DS #19): surface + 1 px line, or tonal; no shadow. A category colour (momen, emisi,
  * awarding, wellbeing) at most once per screen; `role` = the panitia/BOD card; `accent` = the event
- * colour (EventHero-like blocks only). With `href`/`onClick` the whole card is pressable: then put
+ * colour (EventHero-like blocks only). `gold` = the prototype's gold-lined card for what is happening now;
+ * `eco` = the green Jejak karbon card. `bracket` adds the two corner brackets, `motif` a network motif in
+ * the corner (both decorative, aria-hidden). With `href`/`onClick` the whole card is pressable: then put
  * nothing else pressable inside it.
  */
-export function Card({ variant = "outline", flush, as = "div", children, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
+export function Card({ variant = "outline", flush, as = "div", bracket, motif, children, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
   variant?: CardVariant;
+  /** Corner brackets, top left and bottom right (prototipe .mc .br). */
+  bracket?: boolean;
+  /** A network motif in the corner. */
+  motif?: MotifName;
   /** No padding (lists, photos inside). */
   flush?: boolean;
   /** Element when not pressable. */
@@ -22,9 +35,15 @@ export function Card({ variant = "outline", flush, as = "div", children, classNa
 }) {
   const pressable = !!(href || onClick);
   return <Pressable href={href} external={external} onClick={onClick} staticAs={as}
-    className={cx(css.card, variant !== "outline" && css[variant], flush && css.flush, pressable && css.pressable, className)} {...aria}>
+    className={cx(css.card, variant !== "outline" && css[variant], flush && css.flush, pressable && css.pressable, motif && css.hasMotif, motif && MOTIF_CLASS[motif], (bracket || motif) && css.deco, className)} {...aria}>
+    {bracket && <><i className={cx(css.brk, css.brkA)} aria-hidden /><i className={cx(css.brk, css.brkB)} aria-hidden /></>}
     {children}
   </Pressable>;
+}
+
+/** A gold-lined card with the two corner brackets, and a motif if you name one: the screen's "now" card (prototipe .mc). */
+export function BracketCard({ motif, ...props }: Omit<Parameters<typeof Card>[0], "variant" | "bracket">) {
+  return <Card variant="gold" bracket motif={motif} {...props} />;
 }
 
 /** A card's head row: icon box, title and one line, and something at the end (a pill, a button). */
@@ -43,9 +62,9 @@ export function CardHead({ icon, iconTone, title, sub, end, className }: {
   </div>;
 }
 
-export type IconBoxTone = "neutral" | "primary" | "success" | "warning" | "error" | "momen" | "emisi" | "wellbeing" | "awarding";
+export type IconBoxTone = "neutral" | "primary" | "gold" | "success" | "warning" | "error" | "momen" | "emisi" | "wellbeing" | "awarding";
 const BOX_TONE: Record<IconBoxTone, string | undefined> = {
-  neutral: undefined, primary: css.boxPrimary, success: css.boxSuccess, warning: css.boxWarning, error: css.boxError,
+  neutral: undefined, primary: css.boxPrimary, gold: css.boxGold, success: css.boxSuccess, warning: css.boxWarning, error: css.boxError,
   momen: css.boxMomen, emisi: css.boxEmisi, wellbeing: css.boxWellbeing, awarding: css.boxAwarding,
 };
 

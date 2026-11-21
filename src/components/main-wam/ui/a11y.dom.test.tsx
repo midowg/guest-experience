@@ -163,7 +163,7 @@ describe("CSS for 320 px, zoom 200 % and desktop (the rules that hold the layout
   it("SessionRow under 300 px: time on its own line, no rail, full-width title; a pill may wrap", () => {
     const text = css("./data.module.css");
     expect(text).toMatch(/@media \(max-width: 299\.98px\) \{[\s\S]*\.session \{ flex-wrap: wrap;[\s\S]*\.rail \{ display: none; \}[\s\S]*\.sessionBody \{ order: 2; flex: 1 1 100%; \}/);
-    expect(css("./status.module.css")).toMatch(/\.pill \{[^}]*min-height: 24px; max-width: 100%/);
+    expect(css("./status.module.css")).toMatch(/\.pill \{[^}]*min-height: 26px; max-width: 100%/);
   });
 
   it("StackPreview wraps rather than pushing Lihat out of its card", () => {

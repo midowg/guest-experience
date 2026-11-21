@@ -25,6 +25,8 @@ export type ShellGreeting = {
   name: string;
   /** "Hari ke-2 dari 4" during the event. */
   day?: string;
+  /** The same as segment dots before the bell (current day, how many days, the words for screen readers). */
+  dayDots?: { total: number; current: number; label: string };
 };
 
 /**
@@ -116,9 +118,9 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   if (screen && !camera) {
     if (screen.level === "akar" && screen.tab === "beranda" && greeting) {
       const bell = showsBell(screen)
-        ? <IconButton icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
+        ? <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
         : null;
-      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} actions={<>{actions}{bell}</>} /></div>;
+      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} dayDots={greeting.dayDots} actions={<>{actions}{bell}</>} /></div>;
     } else if (screen.level === "akar") {
       top = <>
         <div ref={largeRef} className={css.top}><TopBar title={screen.title} actions={actions} /></div>

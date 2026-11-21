@@ -14,7 +14,7 @@ const VARIANT: Record<ButtonVariant, string> = {
 
 export type ButtonProps = ActionProps & AriaAttributes & {
   variant?: ButtonVariant;
-  /** L 48 (default) or M 40; both keep a 44 touch area. */
+  /** L 52 (default) or M 40; both keep a 44 touch area. */
   size?: "l" | "m";
   /** As wide as its parent (action bars, dialogs, sheets). */
   block?: boolean;

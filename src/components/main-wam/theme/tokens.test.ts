@@ -40,8 +40,9 @@ describe("theme tokens", () => {
 
   it("accepts only known display faces", () => {
     expect(resolveTheme({ displayFont: "plus-jakarta-sans" }).displayFont).toBe("plus-jakarta-sans");
+    expect(resolveTheme(null).displayFont).toBe("barlow-condensed");
     const other = resolveTheme({ displayFont: "Comic Sans" });
-    expect(other.displayFont).toBe("plus-jakarta-sans");
+    expect(other.displayFont).toBe("barlow-condensed");
     expect(other.warnings.length).toBe(1);
   });
 

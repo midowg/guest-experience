@@ -1,34 +1,50 @@
 /*
- * Main WAM tokens (DESIGN_SYSTEM.md v1, prototipe/wam.css §1). Everything lives on the theme root
+ * Main WAM tokens (prototipe final: prototipe-wam.html, kelas .ph). Everything lives on the theme root
  * (.root, carrying data-main-wam), so nothing leaks into Pra WAM or the rest of Journey.
- * Name map from the prototype: --color-X → --mw-X (--color-text-2 → --mw-text-2,
- * --color-event-accent → --mw-accent), --text-X → --mw-type-X, --ls-X → --mw-ls-X,
- * --space-N → --mw-space-N, --radius-N → --mw-radius-N, --elev-N → --mw-elev-N.
+ * Name map from the prototype: --bg → --mw-bg, --panel → --mw-surface, --panel2 → --mw-surface-2,
+ * --line → --mw-outline, --ink → --mw-text-1, --ink2 → --mw-text-2, --gold → --mw-gold,
+ * --on-gold → --mw-on-gold, --goldink → --mw-gold-ink, --cy → --mw-primary, --eco → --mw-emisi,
+ * --glow → --mw-glow. Older names (--color-X → --mw-X, --text-X → --mw-type-X, --space-N, --radius-N,
+ * --elev-N) keep working; their values are the prototype's now.
  * Theme slots (KV) are read from --mw-kv-* that <MainWamTheme> writes; without them the neutral
  * default below applies. Components never write a hex colour, a font size or a shadow of their own.
  */
 .root {
-  /* 1.1 Netral */
-  --mw-bg: #F6F7F9;
+  /* 1.1 Netral (prototipe: --bg --panel --panel2 --line --ink --ink2) */
+  --mw-bg: #EEF3FB;
   --mw-surface: #FFFFFF;
-  --mw-surface-2: #F1F3F6;
-  --mw-outline: #E4E7EC;
-  --mw-outline-2: #D0D5DD;
-  --mw-outline-strong: #868E9C;
-  --mw-text-1: #111827;
-  --mw-text-2: #4B5563;
-  --mw-text-3: #656D7B;
-  --mw-disabled-bg: #F1F3F6;
-  --mw-disabled-fg: #9CA3AF;
-  --mw-press: rgb(17 24 39 / 0.06);
+  --mw-surface-2: #E4ECF8;
+  --mw-surface-raised: #FFFFFF;
+  --mw-outline: #D5E0F0;
+  --mw-outline-2: #C0CFE6;
+  --mw-outline-strong: #6F82A6;
+  --mw-text-1: #0B1638;
+  --mw-text-2: #4A5A7E;
+  --mw-text-3: #55658A;
+  --mw-disabled-bg: #E4ECF8;
+  --mw-disabled-fg: #8D9AB5;
+  --mw-press: rgb(11 22 56 / 0.06);
 
-  /* 1.2 Brand (slot tema) */
+  /* 1.2 Brand (slot tema). Prototipe --cy: icons, links, info, the focus ring. */
   --mw-primary: var(--mw-kv-primary, #2F6FEB);
   --mw-primary-strong: var(--mw-kv-primary-strong, #1D4ED8);
   --mw-on-primary: var(--mw-kv-on-primary, #FFFFFF);
   --mw-primary-container: var(--mw-kv-primary-container, #E3ECFD);
   --mw-on-primary-container: var(--mw-kv-on-primary-container, #1D4ED8);
   --mw-focus: var(--mw-primary);
+
+  /* 1.2b Emas (prototipe --gold --on-gold --goldink): the action colour. Button primary, the lit tab, the live dot, the brackets. */
+  --mw-gold: #E0A200;
+  --mw-on-gold: #0B1638;
+  --mw-gold-ink: #7A5200;
+  --mw-gold-soft: color-mix(in srgb, var(--mw-gold) 16%, transparent);
+  --mw-gold-line: color-mix(in srgb, var(--mw-gold) 55%, transparent);
+  --mw-glow: 0 0 0 0 transparent;
+  /* Selected chip / segment: ink on light, gold on dark (prototipe .fchip.on, .seg3b span.on). */
+  --mw-select-bg: #0B1638;
+  --mw-select-fg: #FFFFFF;
+  --mw-seg-on-bg: #FFFFFF;
+  --mw-seg-on-fg: #0B1638;
 
   /* 1.3 Semantik (info = primary) */
   --mw-success: #16A34A;
@@ -37,7 +53,7 @@
   --mw-warning: #D97706;
   --mw-warning-container: #FEF3C7;
   --mw-on-warning-container: #92400E;
-  --mw-error: #DC2626;
+  --mw-error: #CF2020;
   --mw-error-container: #FEE2E2;
   --mw-on-error-container: #991B1B;
   --mw-on-error: #FFFFFF;
@@ -49,7 +65,7 @@
   --mw-on-momen-container: #5B21B6;
   --mw-emisi: #15803D;
   --mw-emisi-accent: #166534;
-  --mw-emisi-container: #DCFCE7;
+  --mw-emisi-container: #E4F6EA;
   --mw-on-emisi-container: #14532D;
   --mw-wellbeing: #2F6FEB;
   --mw-wellbeing-container: #E3ECFD;
@@ -60,6 +76,11 @@
   --mw-chart-emisi-1: #14532D;
   --mw-chart-emisi-2: #15803D;
   --mw-chart-emisi-3: #1F9D4F;
+  /* Kartu Jejak karbon (prototipe .eco, .ft.gg): gradasi hijau tua, teks putih, batang hijau muda. */
+  --mw-eco-grad-1: #064E3B;
+  --mw-eco-grad-2: #0D7F62;
+  --mw-on-eco: #FFFFFF;
+  --mw-eco-bar: #86EFAC;
 
   /* 1.7 Kuis live: pilihan A–D (huruf + warna, teks --mw-on-kuis) dan medali podium (teks --mw-on-kuis-medal). */
   --mw-kuis-a: #6D28D9;
@@ -79,45 +100,64 @@
   --mw-on-accent-2: var(--mw-kv-on-accent-2, #C9D6E8);
   --mw-accent-container: var(--mw-kv-accent-container, #E6EDF5);
   --mw-on-accent-container: var(--mw-kv-on-accent-container, #1E3A5F);
-  --mw-inverse-surface: #1F2937;
-  --mw-inverse-on-surface: #F9FAFB;
-  --mw-inverse-on-surface-2: #D1D5DB;
+  --mw-inverse-surface: #0B1638;
+  --mw-inverse-on-surface: #F2F6FF;
+  --mw-inverse-on-surface-2: #C5D2EE;
   --mw-inverse-primary: #8AB4F8;
   --mw-inverse-success: #4ADE80;
   --mw-inverse-error: #F87171;
-  --mw-media-scrim: rgb(17 24 39 / 0.6);
+  --mw-media-scrim: rgb(11 22 56 / 0.6);
   --mw-media-on: #FFFFFF;
   /* Secondary text and accent text on dark media (photo scrim, the live view): the same in both modes. */
   --mw-media-on-2: #D1D5DB;
   --mw-media-primary: #8AB4F8;
-  --mw-overlay-scrim: rgb(17 24 39 / 0.5);
+  --mw-overlay-scrim: rgb(5 9 20 / 0.55);
   /* A photo's own background while it loads (Momen's stack): the page's second surface. */
   --mw-photo-bg: var(--mw-surface-2);
 
-  /* 2. Tipografi: font: var(--mw-type-…) + letter-spacing: var(--mw-ls-…) */
+  /* 1.8 Motif jaringan (Kit Visual: aset sudut, terang/gelap; public/wam/kit). Dipakai lewat <NetworkMotif> dan Card motif. */
+  --mw-motif-konstelasi: url("/wam/kit/03-konstelasi-sudut-terang.svg");
+  --mw-motif-kontur: url("/wam/kit/08-kontur-sudut-terang.svg");
+  --mw-motif-sirkuit: url("/wam/kit/01-sirkuit-sudut-terang.svg");
+  --mw-motif-radar: url("/wam/kit/07-radar-sudut-terang.svg");
+  --mw-motif-matriks: url("/wam/kit/15-matriks-titik-sudut-terang.svg");
+  --mw-motif-orbit: url("/wam/kit/18-orbit-sudut-terang.svg");
+  --mw-motif-busur: url("/wam/kit/12-busur-progres-sudut-terang.svg");
+  --mw-motif-opacity: 0.75;
+  --mw-motif-filter: none;
+
+  /* 2. Tipografi: font: var(--mw-type-…) + letter-spacing: var(--mw-ls-…).
+     Tampilan = Barlow Condensed (--mw-font-barlow dari next/font), isi = Plus Jakarta Sans. */
   --mw-font-sans: var(--mw-font-jakarta, "Plus Jakarta Sans"), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mw-display-font: var(--mw-kv-display-font, var(--mw-font-sans));
-  --mw-type-display: 800 40px/48px var(--mw-display-font);
-  --mw-type-title: 700 28px/36px var(--mw-display-font);
-  --mw-type-headline: 700 22px/28px var(--mw-display-font);
-  --mw-type-subtitle: 600 17px/24px var(--mw-font-sans);
+  --mw-font-condensed: var(--mw-font-barlow, "Barlow Condensed"), "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --mw-display-font: var(--mw-kv-display-font, var(--mw-font-condensed));
+  --mw-type-display: 800 40px/40px var(--mw-display-font);
+  --mw-type-title: 800 30px/32px var(--mw-display-font);
+  --mw-type-headline: 800 24px/28px var(--mw-display-font);
+  --mw-type-subtitle: 700 17px/24px var(--mw-font-sans);
   --mw-type-body: 400 15px/22px var(--mw-font-sans);
   --mw-type-body-strong: 600 15px/22px var(--mw-font-sans);
   --mw-type-body-long: 400 15px/24px var(--mw-font-sans);
   --mw-type-body-small: 400 13px/18px var(--mw-font-sans);
-  --mw-type-label-lg: 600 15px/20px var(--mw-font-sans);
+  --mw-type-label-lg: 700 16px/20px var(--mw-font-sans);
   --mw-type-label: 600 13px/18px var(--mw-font-sans);
   --mw-type-caption: 500 12px/16px var(--mw-font-sans);
   --mw-type-caption-strong: 600 12px/16px var(--mw-font-sans);
-  --mw-type-stat-xl: 800 48px/52px var(--mw-font-sans);
-  --mw-type-stat-l: 800 32px/40px var(--mw-font-sans);
-  --mw-type-stat-m: 700 20px/24px var(--mw-font-sans);
-  --mw-ls-display: -0.8px;
-  --mw-ls-title: -0.4px;
-  --mw-ls-headline: -0.2px;
-  --mw-ls-stat-xl: -1px;
-  --mw-ls-stat-l: -0.6px;
-  --mw-ls-stat-m: -0.2px;
+  --mw-type-stat-xl: 800 64px/56px var(--mw-display-font);
+  --mw-type-stat-l: 800 40px/40px var(--mw-display-font);
+  --mw-type-stat-m: 800 24px/26px var(--mw-display-font);
+  /* Prototipe .cap: kecil, kapital, jarak huruf lebar ("SELAMAT PAGI", "SEDANG BERLANGSUNG"). Selalu bersama text-transform: uppercase dan --mw-ls-cap. */
+  --mw-type-cap: 700 12px/16px var(--mw-display-font);
+  --mw-type-cap-lg: 700 14px/18px var(--mw-display-font);
+  --mw-type-hero: 800 76px/68px var(--mw-display-font);
+  --mw-ls-display: 0.01em;
+  --mw-ls-title: 0.03em;
+  --mw-ls-headline: 0.02em;
+  --mw-ls-stat-xl: 0.005em;
+  --mw-ls-stat-l: 0.01em;
+  --mw-ls-stat-m: 0.02em;
+  --mw-ls-cap: 0.16em;
+  --mw-ls-cap-tight: 0.12em;
 
   /* 3. Spasi (kelipatan 4) */
   --mw-space-4: 4px;
@@ -130,19 +170,24 @@
   --mw-space-48: 48px;
   --mw-space-64: 64px;
 
-  /* 4.1 Radius */
+  /* 4.1 Radius (prototipe: tombol 16, baris 18–20, kartu 22, kartu sesi 28, pil 99) */
   --mw-radius-4: 4px;
   --mw-radius-8: 8px;
   --mw-radius-12: 12px;
   --mw-radius-16: 16px;
+  --mw-radius-20: 20px;
+  --mw-radius-22: 22px;
   --mw-radius-24: 24px;
+  --mw-radius-28: 28px;
   --mw-radius-full: 999px;
 
-  /* 4.2 Elevasi (hanya elemen mengambang) */
+  /* 4.2 Elevasi (kartu hanya bayangan tipis; yang mengambang lebih kuat) */
   --mw-elev-0: none;
-  --mw-elev-1: 0 1px 2px 0 rgb(17 24 39 / 0.06), 0 1px 3px 0 rgb(17 24 39 / 0.10);
-  --mw-elev-2: 0 4px 12px 0 rgb(17 24 39 / 0.08), 0 2px 4px 0 rgb(17 24 39 / 0.06);
-  --mw-elev-3: 0 12px 32px 0 rgb(17 24 39 / 0.16);
+  --mw-elev-1: 0 1px 2px 0 rgb(11 22 56 / 0.06), 0 1px 3px 0 rgb(11 22 56 / 0.08);
+  --mw-elev-2: 0 4px 12px 0 rgb(11 22 56 / 0.08), 0 2px 4px 0 rgb(11 22 56 / 0.06);
+  --mw-elev-3: 0 12px 32px 0 rgb(11 22 56 / 0.18);
+  --mw-elev-card: 0 1px 2px rgb(11 22 56 / 0.04), 0 6px 18px rgb(11 22 56 / 0.05);
+  --mw-elev-hero: 0 1px 2px rgb(11 22 56 / 0.04), 0 10px 26px rgb(11 22 56 / 0.07);
 
   /* 7.1 Gerak */
   --mw-ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -157,7 +202,7 @@
   --mw-touch: 44px;
   --mw-topbar-h: 56px;
   --mw-topbar-large-h: 64px;
-  --mw-nav-h: 64px;
+  --mw-nav-h: 68px;
   --mw-safe-top: env(safe-area-inset-top, 0px);
   --mw-safe-bottom: env(safe-area-inset-bottom, 0px);
   --mw-safe-left: env(safe-area-inset-left, 0px);
@@ -172,14 +217,14 @@
   --mw-image-mosaic: none;
 
   /* Placeholder foto (gradasi netral, bukan foto orang) */
-  --mw-ph-1: linear-gradient(135deg, #DDE3EA 0%, #C7D0DB 100%);
-  --mw-ph-2: linear-gradient(135deg, #E8E2D9 0%, #D2C8BB 100%);
-  --mw-ph-3: linear-gradient(135deg, #DCE5DF 0%, #C3D2C8 100%);
-  --mw-ph-4: linear-gradient(135deg, #E3E1EB 0%, #CBC8DA 100%);
-  --mw-ph-5: linear-gradient(135deg, #DAE4EE 0%, #C0D0DF 100%);
-  --mw-ph-6: linear-gradient(135deg, #ECE4DE 0%, #D8CBC1 100%);
+  --mw-ph-1: linear-gradient(135deg, #DCE8FA 0%, #C3D5F0 100%);
+  --mw-ph-2: linear-gradient(135deg, #E6E8F7 0%, #CDD2EE 100%);
+  --mw-ph-3: linear-gradient(135deg, #D9EDF0 0%, #BFDDE3 100%);
+  --mw-ph-4: linear-gradient(135deg, #E3E1F2 0%, #C9C6E4 100%);
+  --mw-ph-5: linear-gradient(135deg, #D6E4F5 0%, #BCD0EA 100%);
+  --mw-ph-6: linear-gradient(135deg, #F1E8DA 0%, #DCCFB8 100%);
   --mw-ph-glow: rgb(255 255 255 / 0.38);
-  --mw-ph-shade: rgb(17 24 39 / 0.06);
+  --mw-ph-shade: rgb(11 22 56 / 0.06);
 
   color-scheme: light;
   font: var(--mw-type-body);
@@ -191,29 +236,40 @@
 }
 
 /*
- * 1.6 Mode gelap (DESIGN_SYSTEM.md, "catatan, belum digambar"): token disiapkan, layar belum
- * dirancang untuknya. Slot KV terang tidak dipakai di sini; aksen gelap punya nilainya sendiri.
+ * 1.6 Mode gelap (prototipe data-t="dark"): latar biru-hitam, kartu kaca biru tua, emas lebih terang, motif bercahaya.
+ * Slot KV terang tidak dipakai di sini; aksen gelap punya nilainya sendiri.
  */
 .root[data-mw-mode="dark"] {
-  --mw-bg: #0E1116;
-  --mw-surface: #171B22;
-  --mw-surface-2: #1F242D;
-  --mw-outline: #2A303A;
-  --mw-outline-2: #353C48;
-  --mw-outline-strong: #6B7482;
-  --mw-text-1: #F3F4F6;
-  --mw-text-2: #C2C8D0;
-  --mw-text-3: #8B93A0;
-  --mw-disabled-bg: #1F242D;
-  --mw-disabled-fg: #6B7482;
-  --mw-press: rgb(243 244 246 / 0.08);
-  --mw-primary: #8AB4F8;
-  --mw-primary-strong: #8AB4F8;
-  --mw-on-primary: #0B1B3A;
-  --mw-primary-container: #1E3A6E;
-  --mw-on-primary-container: #D6E3FC;
+  --mw-bg: #050914;
+  --mw-surface: #0E1936;
+  --mw-surface-2: #14224A;
+  --mw-surface-raised: #0A1330;
+  --mw-outline: rgb(110 158 234 / 0.24);
+  --mw-outline-2: rgb(110 158 234 / 0.38);
+  --mw-outline-strong: #6E8CC0;
+  --mw-text-1: #F2F6FF;
+  --mw-text-2: #A9B9DA;
+  --mw-text-3: #8D9FC6;
+  --mw-disabled-bg: #14224A;
+  --mw-disabled-fg: #62749D;
+  --mw-press: rgb(242 246 255 / 0.08);
+  --mw-primary: #46D2FF;
+  --mw-primary-strong: #46D2FF;
+  --mw-on-primary: #04121F;
+  --mw-primary-container: #12335F;
+  --mw-on-primary-container: #CDEEFF;
+  --mw-gold: #F5C542;
+  --mw-on-gold: #0B1638;
+  --mw-gold-ink: #F5C542;
+  --mw-gold-soft: color-mix(in srgb, var(--mw-gold) 16%, transparent);
+  --mw-gold-line: color-mix(in srgb, var(--mw-gold) 55%, transparent);
+  --mw-glow: 0 0 22px color-mix(in srgb, var(--mw-gold) 35%, transparent);
+  --mw-select-bg: #F5C542;
+  --mw-select-fg: #0B1638;
+  --mw-seg-on-bg: #F5C542;
+  --mw-seg-on-fg: #0B1638;
   --mw-success: #4ADE80;
-  --mw-success-container: #14381F;
+  --mw-success-container: #11301F;
   --mw-on-success-container: #BBF7D0;
   --mw-warning: #FBBF24;
   --mw-warning-container: #3D2E0A;
@@ -228,11 +284,15 @@
   --mw-on-momen-container: #E9DDFF;
   --mw-emisi: #4ADE80;
   --mw-emisi-accent: #86EFAC;
-  --mw-emisi-container: #14532D;
+  --mw-emisi-container: #0E3A2E;
   --mw-on-emisi-container: #DCFCE7;
   --mw-chart-emisi-1: #86EFAC;
   --mw-chart-emisi-2: #4ADE80;
   --mw-chart-emisi-3: #16A34A;
+  --mw-eco-grad-1: #052E2B;
+  --mw-eco-grad-2: #0B5148;
+  --mw-on-eco: #FFFFFF;
+  --mw-eco-bar: #86EFAC;
   --mw-awarding: #FDBA74;
   --mw-awarding-container: #4A2A14;
   --mw-on-awarding-container: #FFDCC4;
@@ -250,24 +310,36 @@
   --mw-wellbeing-container: #1E3A6E;
   --mw-on-wellbeing-container: #D6E3FC;
   --mw-accent: #9DB7D9;
-  --mw-on-accent: #0E1116;
+  --mw-on-accent: #050914;
   --mw-on-accent-2: #1F2937;
-  --mw-accent-container: #1E2A3A;
+  --mw-accent-container: #14224A;
   --mw-on-accent-container: #C9D6E8;
-  --mw-inverse-surface: #E5E7EB;
-  --mw-inverse-on-surface: #111827;
-  --mw-inverse-on-surface-2: #374151;
+  --mw-inverse-surface: #F2F6FF;
+  --mw-inverse-on-surface: #0B1638;
+  --mw-inverse-on-surface-2: #35446A;
   --mw-inverse-primary: #1D4ED8;
   --mw-inverse-success: #166534;
   --mw-inverse-error: #991B1B;
+  --mw-motif-konstelasi: url("/wam/kit/03-konstelasi-sudut-gelap.svg");
+  --mw-motif-kontur: url("/wam/kit/08-kontur-sudut-gelap.svg");
+  --mw-motif-sirkuit: url("/wam/kit/01-sirkuit-sudut-gelap.svg");
+  --mw-motif-radar: url("/wam/kit/07-radar-sudut-gelap.svg");
+  --mw-motif-matriks: url("/wam/kit/15-matriks-titik-sudut-gelap.svg");
+  --mw-motif-orbit: url("/wam/kit/18-orbit-sudut-gelap.svg");
+  --mw-motif-busur: url("/wam/kit/12-busur-progres-sudut-gelap.svg");
+  --mw-motif-opacity: 0.9;
+  --mw-motif-filter: brightness(1.7) saturate(1.3);
   --mw-elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --mw-elev-2: 0 4px 12px 0 rgb(0 0 0 / 0.45);
   --mw-elev-3: 0 12px 32px 0 rgb(0 0 0 / 0.55);
-  --mw-ph-1: linear-gradient(135deg, #2B323D 0%, #1F252E 100%);
-  --mw-ph-2: linear-gradient(135deg, #34302B 0%, #28251F 100%);
-  --mw-ph-3: linear-gradient(135deg, #2A342E 0%, #1F2822 100%);
-  --mw-ph-4: linear-gradient(135deg, #302E3A 0%, #25232F 100%);
-  --mw-ph-5: linear-gradient(135deg, #28323D 0%, #1D2630 100%);
+  --mw-elev-card: 0 0 0 1px rgb(70 210 255 / 0.06), 0 0 26px rgb(70 210 255 / 0.06);
+  --mw-elev-hero: 0 0 0 1px rgb(70 210 255 / 0.08), 0 0 30px color-mix(in srgb, var(--mw-gold) 10%, transparent);
+  --mw-overlay-scrim: rgb(5 9 20 / 0.7);
+  --mw-ph-1: linear-gradient(135deg, #1B2A55 0%, #121D3E 100%);
+  --mw-ph-2: linear-gradient(135deg, #25264F 0%, #181A3A 100%);
+  --mw-ph-3: linear-gradient(135deg, #16324A 0%, #0F2236 100%);
+  --mw-ph-4: linear-gradient(135deg, #272250 0%, #1A173B 100%);
+  --mw-ph-5: linear-gradient(135deg, #1A2D55 0%, #101E3F 100%);
   --mw-ph-6: linear-gradient(135deg, #342F2B 0%, #28231F 100%);
   --mw-ph-glow: rgb(255 255 255 / 0.06);
   --mw-ph-shade: rgb(0 0 0 / 0.2);
@@ -277,25 +349,36 @@
 /* Ikuti perangkat: sama dengan blok gelap di atas (dua blok harus sama). */
 @media (prefers-color-scheme: dark) {
   .root[data-mw-mode="system"] {
-    --mw-bg: #0E1116;
-    --mw-surface: #171B22;
-    --mw-surface-2: #1F242D;
-    --mw-outline: #2A303A;
-    --mw-outline-2: #353C48;
-    --mw-outline-strong: #6B7482;
-    --mw-text-1: #F3F4F6;
-    --mw-text-2: #C2C8D0;
-    --mw-text-3: #8B93A0;
-    --mw-disabled-bg: #1F242D;
-    --mw-disabled-fg: #6B7482;
-    --mw-press: rgb(243 244 246 / 0.08);
-    --mw-primary: #8AB4F8;
-    --mw-primary-strong: #8AB4F8;
-    --mw-on-primary: #0B1B3A;
-    --mw-primary-container: #1E3A6E;
-    --mw-on-primary-container: #D6E3FC;
+    --mw-bg: #050914;
+    --mw-surface: #0E1936;
+    --mw-surface-2: #14224A;
+    --mw-surface-raised: #0A1330;
+    --mw-outline: rgb(110 158 234 / 0.24);
+    --mw-outline-2: rgb(110 158 234 / 0.38);
+    --mw-outline-strong: #6E8CC0;
+    --mw-text-1: #F2F6FF;
+    --mw-text-2: #A9B9DA;
+    --mw-text-3: #8D9FC6;
+    --mw-disabled-bg: #14224A;
+    --mw-disabled-fg: #62749D;
+    --mw-press: rgb(242 246 255 / 0.08);
+    --mw-primary: #46D2FF;
+    --mw-primary-strong: #46D2FF;
+    --mw-on-primary: #04121F;
+    --mw-primary-container: #12335F;
+    --mw-on-primary-container: #CDEEFF;
+    --mw-gold: #F5C542;
+    --mw-on-gold: #0B1638;
+    --mw-gold-ink: #F5C542;
+    --mw-gold-soft: color-mix(in srgb, var(--mw-gold) 16%, transparent);
+    --mw-gold-line: color-mix(in srgb, var(--mw-gold) 55%, transparent);
+    --mw-glow: 0 0 22px color-mix(in srgb, var(--mw-gold) 35%, transparent);
+    --mw-select-bg: #F5C542;
+    --mw-select-fg: #0B1638;
+    --mw-seg-on-bg: #F5C542;
+    --mw-seg-on-fg: #0B1638;
     --mw-success: #4ADE80;
-    --mw-success-container: #14381F;
+    --mw-success-container: #11301F;
     --mw-on-success-container: #BBF7D0;
     --mw-warning: #FBBF24;
     --mw-warning-container: #3D2E0A;
@@ -310,11 +393,15 @@
     --mw-on-momen-container: #E9DDFF;
     --mw-emisi: #4ADE80;
     --mw-emisi-accent: #86EFAC;
-    --mw-emisi-container: #14532D;
+    --mw-emisi-container: #0E3A2E;
     --mw-on-emisi-container: #DCFCE7;
     --mw-chart-emisi-1: #86EFAC;
     --mw-chart-emisi-2: #4ADE80;
     --mw-chart-emisi-3: #16A34A;
+    --mw-eco-grad-1: #052E2B;
+    --mw-eco-grad-2: #0B5148;
+    --mw-on-eco: #FFFFFF;
+    --mw-eco-bar: #86EFAC;
     --mw-awarding: #FDBA74;
     --mw-awarding-container: #4A2A14;
     --mw-on-awarding-container: #FFDCC4;
@@ -332,24 +419,36 @@
     --mw-wellbeing-container: #1E3A6E;
     --mw-on-wellbeing-container: #D6E3FC;
     --mw-accent: #9DB7D9;
-    --mw-on-accent: #0E1116;
+    --mw-on-accent: #050914;
     --mw-on-accent-2: #1F2937;
-    --mw-accent-container: #1E2A3A;
+    --mw-accent-container: #14224A;
     --mw-on-accent-container: #C9D6E8;
-    --mw-inverse-surface: #E5E7EB;
-    --mw-inverse-on-surface: #111827;
-    --mw-inverse-on-surface-2: #374151;
+    --mw-inverse-surface: #F2F6FF;
+    --mw-inverse-on-surface: #0B1638;
+    --mw-inverse-on-surface-2: #35446A;
     --mw-inverse-primary: #1D4ED8;
     --mw-inverse-success: #166534;
     --mw-inverse-error: #991B1B;
+    --mw-motif-konstelasi: url("/wam/kit/03-konstelasi-sudut-gelap.svg");
+    --mw-motif-kontur: url("/wam/kit/08-kontur-sudut-gelap.svg");
+    --mw-motif-sirkuit: url("/wam/kit/01-sirkuit-sudut-gelap.svg");
+    --mw-motif-radar: url("/wam/kit/07-radar-sudut-gelap.svg");
+    --mw-motif-matriks: url("/wam/kit/15-matriks-titik-sudut-gelap.svg");
+    --mw-motif-orbit: url("/wam/kit/18-orbit-sudut-gelap.svg");
+    --mw-motif-busur: url("/wam/kit/12-busur-progres-sudut-gelap.svg");
+    --mw-motif-opacity: 0.9;
+    --mw-motif-filter: brightness(1.7) saturate(1.3);
     --mw-elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --mw-elev-2: 0 4px 12px 0 rgb(0 0 0 / 0.45);
     --mw-elev-3: 0 12px 32px 0 rgb(0 0 0 / 0.55);
-    --mw-ph-1: linear-gradient(135deg, #2B323D 0%, #1F252E 100%);
-    --mw-ph-2: linear-gradient(135deg, #34302B 0%, #28251F 100%);
-    --mw-ph-3: linear-gradient(135deg, #2A342E 0%, #1F2822 100%);
-    --mw-ph-4: linear-gradient(135deg, #302E3A 0%, #25232F 100%);
-    --mw-ph-5: linear-gradient(135deg, #28323D 0%, #1D2630 100%);
+    --mw-elev-card: 0 0 0 1px rgb(70 210 255 / 0.06), 0 0 26px rgb(70 210 255 / 0.06);
+    --mw-elev-hero: 0 0 0 1px rgb(70 210 255 / 0.08), 0 0 30px color-mix(in srgb, var(--mw-gold) 10%, transparent);
+    --mw-overlay-scrim: rgb(5 9 20 / 0.7);
+    --mw-ph-1: linear-gradient(135deg, #1B2A55 0%, #121D3E 100%);
+    --mw-ph-2: linear-gradient(135deg, #25264F 0%, #181A3A 100%);
+    --mw-ph-3: linear-gradient(135deg, #16324A 0%, #0F2236 100%);
+    --mw-ph-4: linear-gradient(135deg, #272250 0%, #1A173B 100%);
+    --mw-ph-5: linear-gradient(135deg, #1A2D55 0%, #101E3F 100%);
     --mw-ph-6: linear-gradient(135deg, #342F2B 0%, #28231F 100%);
     --mw-ph-glow: rgb(255 255 255 / 0.06);
     --mw-ph-shade: rgb(0 0 0 / 0.2);

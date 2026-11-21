@@ -444,8 +444,8 @@ describe("Kit fixes: button labels are never cut", () => {
     expect(labelRule).toMatch(/overflow-wrap:\s*break-word/);
     const btn = rule("./button.module.css", ".btn");
     expect(btn).not.toMatch(/white-space:\s*nowrap/);
-    expect(btn).not.toMatch(/(^|[\s;])height:\s*48px/);
-    expect(btn).toMatch(/min-height:\s*48px/);
+    expect(btn).not.toMatch(/(^|[\s;])height:\s*52px/);
+    expect(btn).toMatch(/min-height:\s*52px/);
     expect(btn).toMatch(/height:\s*fit-content/);
   });
 

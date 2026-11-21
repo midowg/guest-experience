@@ -32,7 +32,7 @@ const COLOR_FIELDS = [
   { key: "primary", label: "Warna utama", fallback: "#2F6FEB" },
   { key: "accent", label: "Warna aksen acara", fallback: "#1E3A5F" },
 ] as const;
-const fontLabels: Record<string, string> = { "plus-jakarta-sans": "Plus Jakarta Sans" };
+const fontLabels: Record<string, string> = { "barlow-condensed": "Barlow Condensed (bawaan)", "plus-jakarta-sans": "Plus Jakarta Sans" };
 
 async function save(body: unknown): Promise<{ settings: Settings; message: string }> {
   const result = await adminRequest<Settings>(mainWamAdminApi.settings, { method: "PUT", body: JSON.stringify(body) });

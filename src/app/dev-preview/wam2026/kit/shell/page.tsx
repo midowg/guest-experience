@@ -5,7 +5,7 @@ import { mainWamPath } from "@/lib/routes";
 import { MainWamTheme } from "@/components/main-wam/theme";
 import { MainWamShell, ScreenContent, ScreenSection, ShellActions, ShellChrome, Stack } from "@/components/main-wam/shell";
 import {
-  ActionBar, Banner, Button, Card, CardHead, Chip, EmptyState, IconButton, List, ListRow, SectionHeader, SessionList, SessionRow, StackPreview, StatusPill, Text,
+  ActionBar, Banner, BigNumber, BracketCard, Button, Card, CardHead, EyebrowLabel, PulseDot, ProgressBar, SegmentDots, Pill, Divider, Chip, EmptyState, IconButton, List, ListRow, SectionHeader, SessionList, SessionRow, StackPreview, StatusPill, Text,
 } from "@/components/main-wam/ui";
 
 export const dynamic = "force-dynamic";
@@ -23,16 +23,16 @@ const SCREENS: Record<string, string> = {
 
 /**
  * Development-only check of the Main WAM frame (no sign-in, 404 in production):
- * ?layar=beranda|agenda|momen|saya|detail|tugas|kamera. Built from server components with icons
+ * ?layar=beranda|agenda|momen|saya|detail|tugas|kamera; &mode=dark|system. Built from server components with icons
  * as elements, as a real screen would be.
  */
-export default async function MainWamShellPreview({ searchParams }: { searchParams: Promise<{ layar?: string }> }) {
+export default async function MainWamShellPreview({ searchParams }: { searchParams: Promise<{ layar?: string; mode?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { layar = "beranda" } = await searchParams;
+  const { layar = "beranda", mode } = await searchParams;
   const address = SCREENS[layar] ?? SCREENS.beranda;
   const screen: MainWamScreen | null = mainWamScreen(address.split("?")[0]);
-  return <MainWamTheme>
-    <MainWamShell screen={screen} unread={3} badges={{ momen: 12 }} greeting={{ kicker: "Selamat pagi · Sel, 5 Jan", name: "Rani", day: "Hari ke-2 dari 4" }}>
+  return <MainWamTheme mode={mode === "dark" ? "dark" : mode === "system" ? "system" : "light"}>
+    <MainWamShell screen={screen} unread={3} badges={{ momen: 12 }} greeting={{ kicker: "Selamat pagi", name: "Rani", dayDots: { total: 4, current: 2, label: "Hari ke-2 dari 4" } }}>
       {layar === "momen" ? <Momen /> : layar === "kamera" ? <Kamera /> : layar === "tugas" ? <Tugas /> : <Isi layar={layar} />}
     </MainWamShell>
   </MainWamTheme>;
@@ -43,13 +43,20 @@ function Isi({ layar }: { layar: string }) {
     {layar === "detail" && <ShellActions><IconButton icon={<Share />} label="Bagikan" /></ShellActions>}
     {layar === "beranda" && <Banner tone="info" title="Pengumuman penting" href="#">Bus berangkat 06.30 dari lobi.</Banner>}
     <ScreenSection label="Sekarang">
-      <Card>
-        <CardHead title={<StatusPill status="live" />} end={<Text variant="caption" color="2" as="span">mulai 5 menit lalu</Text>} />
-        <Text variant="headline" as="h2">Pemaparan departemen</Text>
-        <List plain inset={0}><ListRow icon={<MapPin />} title="Aula Utama" sub="08.00–12.00" /></List>
-        <Button block icon={<QrCode />}>Absen</Button>
-      </Card>
+      <BracketCard motif="konstelasi">
+        <CardHead title={<EyebrowLabel tone="gold"><PulseDot /> Sedang berlangsung</EyebrowLabel>} end={<Pill>Sesi</Pill>} />
+        <Text variant="display" as="h2">Pemaparan departemen</Text>
+        <Text color="2">Aula Utama · lantai 1 · 08.00–12.00</Text>
+        <ProgressBar label="Berjalan" value={38} thin />
+        <Divider />
+        <Button block icon={<QrCode />}>Absen sekarang</Button>
+      </BracketCard>
     </ScreenSection>
+    <Card motif="matriks">
+      <div><Pill>Misi</Pill></div>
+      <BigNumber value="340" unit="Poin" tone="gold" />
+      <SegmentDots total={5} current={3} label="Misi 3 dari 5" fill />
+    </Card>
     <ScreenSection>
       <SectionHeader title="Hari ini" action={{ label: "Agenda", href: "#" }} />
       <Card flush>

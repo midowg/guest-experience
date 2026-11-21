@@ -1,7 +1,7 @@
 /* Banner (.wam-banner), EmptyState (.wam-empty), Skeleton (.wam-skel), Spinner. Tokens only. */
 .banner {
-  display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-12) var(--mw-space-16); border-radius: var(--mw-radius-12);
-  background: var(--mw-primary-container); color: var(--mw-on-primary-container); text-align: left; width: 100%;
+  display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-12) var(--mw-space-16); border-radius: 18px;
+  background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); border-left: 3px solid var(--mw-gold); text-align: left; width: 100%;
 }
 .banner > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
 a.banner, button.banner { cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -17,14 +17,16 @@ a.banner:active, button.banner:active { background-image: linear-gradient(var(--
 }
 .bannerAction:active { background: var(--mw-press); }
 .bannerChevron { flex: none; align-self: center; width: 20px; height: 20px; color: var(--mw-text-3); }
-.info { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
-.offline, .warning { background: var(--mw-warning-container); color: var(--mw-on-warning-container); }
-.error { background: var(--mw-error-container); color: var(--mw-on-error-container); }
-.success { background: var(--mw-success-container); color: var(--mw-on-success-container); }
+/* Info (prototipe .ann): the panel with a gold left edge and a gold icon; the rest keep their container colours. */
+.info { background: var(--mw-surface); color: var(--mw-text-1); }
+.info > svg { color: var(--mw-gold-ink); }
+.offline, .warning { background: var(--mw-warning-container); color: var(--mw-on-warning-container); box-shadow: none; border-left-color: var(--mw-warning); }
+.error { background: var(--mw-error-container); color: var(--mw-on-error-container); box-shadow: none; border-left-color: var(--mw-error); }
+.success { background: var(--mw-success-container); color: var(--mw-on-success-container); box-shadow: none; border-left-color: var(--mw-success); }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); padding: var(--mw-space-48) var(--mw-space-24); text-align: center; }
 .emptySm { padding: var(--mw-space-24) var(--mw-space-16); }
-.emptyTitle { font: var(--mw-type-subtitle); color: var(--mw-text-1); text-wrap: balance; }
+.emptyTitle { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); text-wrap: balance; }
 .emptyBody { max-width: 296px; font: var(--mw-type-body); color: var(--mw-text-2); text-wrap: balance; }
 .emptyAction { margin-top: var(--mw-space-4); }
 
@@ -42,7 +44,7 @@ a.banner:active, button.banner:active { background-image: linear-gradient(var(--
 @keyframes mw-shimmer { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) { .skel::after { display: none; } }
 
-.spinner { flex: none; width: 24px; height: 24px; color: var(--mw-primary); }
+.spinner { flex: none; width: 24px; height: 24px; color: var(--mw-gold-ink); }
 .spinnerSm { width: 20px; height: 20px; }
 
 /* Zoom 200 % (under 300 px): the banner's action goes under its text instead of squeezing it to a few letters. */

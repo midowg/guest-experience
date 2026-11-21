@@ -1,5 +1,5 @@
 /*
- * Main WAM's frame (SPEC §1.2, prototipe .wam-screen/.wam-bottomnav): one phone-wide column, the top
+ * Main WAM's frame (prototipe final: .ph, .hdr, .nav): one phone-wide column, the top
  * bar and the bottom bar drawn once, the screen in between. On a wide screen the column stays phone
  * wide in the middle (the app is a phone app; sheets open from the right from 1024). Tokens only.
  */
@@ -7,7 +7,20 @@
 .column {
   position: relative; display: flex; flex-direction: column; min-height: 100dvh; width: 100%; max-width: var(--mw-column); margin: 0 auto;
   background: var(--mw-bg); padding-left: var(--mw-safe-left); padding-right: var(--mw-safe-right);
+  /* Own stacking context so the page art (::before, z-index -1) sits above the column's colour and under every screen. */
+  isolation: isolate;
 }
+/*
+ * Page art (prototipe .mot): a network motif (konstelasi, Kit Visual) in the empty space at the bottom
+ * right, fixed while the screen scrolls, above the bottom bar's height. Soft; it never carries
+ * information. The art is light or dark with the theme (--mw-motif-*).
+ */
+.column::before {
+  content: ""; position: fixed; z-index: -1; bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom)); left: 50%; width: min(100%, var(--mw-column)); height: 300px;
+  transform: translateX(-50%); pointer-events: none; background: var(--mw-motif-konstelasi) right bottom / 100% auto no-repeat;
+  opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter);
+}
+.app:has([data-mw-hide-nav]) .column::before { bottom: 0; }
 @media (min-width: 600px) {
   .app { background: var(--mw-surface-2); }
   .column { box-shadow: 1px 0 0 var(--mw-outline), -1px 0 0 var(--mw-outline); }
@@ -33,15 +46,15 @@
 /* Top bars. The safe area above the first bar is the bar's own colour. */
 .top { position: relative; z-index: 20; padding-top: var(--mw-safe-top); }
 .topSticky { position: sticky; top: 0; transition: background-color var(--mw-motion-fast), box-shadow var(--mw-motion-fast); }
-.topSticky[data-scrolled] { background: var(--mw-surface); box-shadow: inset 0 -1px 0 var(--mw-outline); }
+.topSticky[data-scrolled] { background: var(--mw-bg); box-shadow: inset 0 -1px 0 var(--mw-outline); }
 /* A compact bar that appears once a large title has scrolled away (iOS-like). */
 .compact {
   position: fixed; top: 0; left: 50%; transform: translate(-50%, -100%); z-index: 21; width: min(100%, var(--mw-column));
-  padding-top: var(--mw-safe-top); background: var(--mw-surface); box-shadow: inset 0 -1px 0 var(--mw-outline);
+  padding-top: var(--mw-safe-top); background: var(--mw-bg); box-shadow: inset 0 -1px 0 var(--mw-outline);
   opacity: 0; pointer-events: none; transition: transform var(--mw-motion-base), opacity var(--mw-motion-base);
 }
 .compact[data-shown] { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
-.compactTitle { display: flex; align-items: center; justify-content: center; height: var(--mw-topbar-h); padding: 0 var(--mw-space-48); font: var(--mw-type-subtitle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compactTitle { display: flex; align-items: center; justify-content: center; height: var(--mw-topbar-h); padding: 0 var(--mw-space-48); font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .actions { display: contents; }
 
 /* Hidden by the screen itself (<ShellChrome hideTopBar />, the camera, the QR scanner): CSS only, so no flash. */
@@ -51,11 +64,11 @@
 .app[data-mw-nav] .main { padding-bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom) + var(--mw-space-8)); }
 .app:has([data-mw-hide-nav]) .main { padding-bottom: 0; }
 
-/* Bottom bar: 4 tabs (5 for panitia), 64 + the home bar's safe area, fixed under the column. */
+/* Bottom bar (prototipe .nav): 4 tabs (5 for panitia), 64 + the home bar's safe area, fixed under the column. Flat on the page colour, no pill, no line: the lit tab is ink with a gold dot under its label. */
 .nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 30; width: min(100%, var(--mw-column));
   display: flex; padding: 0 var(--mw-safe-right) var(--mw-safe-bottom) var(--mw-safe-left);
-  background: var(--mw-surface); box-shadow: inset 0 1px 0 var(--mw-outline);
+  background: color-mix(in srgb, var(--mw-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 .app:has([data-mw-hide-nav]) .nav { display: none; }
 .item {
@@ -65,9 +78,10 @@
 .item:focus-visible { outline-offset: -4px; border-radius: var(--mw-radius-12); }
 .ind { position: relative; width: 56px; height: 32px; border-radius: var(--mw-radius-full); display: flex; align-items: center; justify-content: center; transition: background-color var(--mw-motion-base); }
 .ind > svg { width: 24px; height: 24px; }
-.label { font: var(--mw-type-caption); white-space: nowrap; }
-.item[aria-current="page"] .ind { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
-.item[aria-current="page"] .label { font: var(--mw-type-caption-strong); color: var(--mw-primary-strong); }
+.label { position: relative; font: 600 11px/16px var(--mw-font-sans); white-space: nowrap; }
+.item[aria-current="page"] { color: var(--mw-text-1); }
+.item[aria-current="page"] .label { font: 700 11px/16px var(--mw-font-sans); color: var(--mw-text-1); }
+.item[aria-current="page"] .label::after { content: ""; position: absolute; left: 50%; top: calc(100% + 1px); width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--mw-gold); box-shadow: var(--mw-glow); }
 .item:active .ind { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 .badge { position: absolute; left: 38px; top: 4px; transform: translate(-50%, -50%); }
 /* Under 240 px (zoom 200 % on a small phone) four words do not fit: icons only, the words stay for screen readers (T-P03). */

@@ -2,7 +2,7 @@
  * Main WAM's theme slots (keputusan 5.2, BRIEF_TIM): the event's colours, the display face and the KV
  * images live in one set of values that an admin can change later, without touching a component.
  * Everything else (neutrals, semantic colours, type, spacing, radius, elevation, motion) is fixed in
- * theme.module.css, straight from DESIGN_SYSTEM.md v1 and prototipe/wam.css.
+ * theme.module.css, straight from the final prototype (prototipe-wam.html).
  *
  * Values may come from the database, so nothing is written as it is: colours must be #RGB or
  * #RRGGBB, every text pair must keep a contrast of at least 4.5:1 (WCAG 1.4.3) or the whole group
@@ -27,7 +27,7 @@ export const DEFAULT_THEME = {
 export type ThemeColors = { -readonly [K in keyof typeof DEFAULT_THEME]: string };
 
 /** Display faces the app loads (font.ts). A theme names one by key, never by a free font-family. */
-export const DISPLAY_FONTS = ["plus-jakarta-sans"] as const;
+export const DISPLAY_FONTS = ["barlow-condensed", "plus-jakarta-sans"] as const;
 export type DisplayFont = (typeof DISPLAY_FONTS)[number];
 
 /** Image slots of the KV. `icon` feeds the manifest and is not a CSS value. */
@@ -94,7 +94,7 @@ export function readableOn(background: string): string {
 
 const TEXT_CONTRAST = 4.5;
 const SURFACE = "#FFFFFF";
-const BG = "#F6F7F9";
+const BG = "#EEF3FB";
 
 /**
  * Image address for CSS url(): https anywhere, or a path on this site. Quotes, brackets, spaces and
@@ -215,7 +215,7 @@ export function themeVars(theme: ResolvedTheme): Record<string, string> {
  * Fixed, not a theme slot: the body's colour (MainWamTheme) and the phone's status bar
  * (theme-color, mainWamThemeColor) both read it, so the bar and the page are one surface.
  */
-export const PAGE_COLORS = { light: "#F6F7F9", dark: "#0E1116" } as const;
+export const PAGE_COLORS = { light: "#EEF3FB", dark: "#050914" } as const;
 
 /**
  * `theme-color` for the phone's status and address bar (Next's Viewport.themeColor), one entry per

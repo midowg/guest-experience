@@ -3,29 +3,31 @@
 /* Badge: count on error red; dot 8 with a surface ring. Decorative: the control carries the words. */
 .badge {
   display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 18px; height: 18px; padding: 0 var(--mw-space-4);
-  border-radius: var(--mw-radius-full); background: var(--mw-error); color: var(--mw-on-error); font: var(--mw-type-caption-strong);
+  border-radius: var(--mw-radius-full); background: var(--mw-gold); color: var(--mw-on-gold); font: var(--mw-type-caption-strong);
   font-variant-numeric: tabular-nums; line-height: 18px;
 }
 .dot { min-width: 0; width: 8px; height: 8px; padding: 0; box-shadow: 0 0 0 2px var(--mw-badge-ring, var(--mw-surface)); }
 
-/* Pill: 24 tall, caption strong, never truncated (short words only); in a row narrower than its words (zoom 200 %) it wraps and grows rather than leave its card. */
+/* Pill (prototipe .tag, .kt): small letter-spaced capitals in a pill with a line; 26 tall, never truncated (short words only); in a row narrower than its words (zoom 200 %) it wraps and grows rather than leave its card. */
 .pill {
-  flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); min-height: 24px; max-width: 100%; padding: 2px var(--mw-space-8);
-  border-radius: var(--mw-radius-full); font: var(--mw-type-caption-strong); white-space: normal; overflow-wrap: anywhere;
-  background: var(--mw-surface-2); color: var(--mw-text-2); font-variant-numeric: tabular-nums;
+  flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); min-height: 26px; max-width: 100%; padding: 3px 10px;
+  border-radius: var(--mw-radius-full); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; white-space: normal; overflow-wrap: anywhere;
+  background: var(--mw-surface); color: var(--mw-text-2); box-shadow: inset 0 0 0 1px var(--mw-outline); font-variant-numeric: tabular-nums;
 }
 .pill > svg { flex: none; width: 16px; height: 16px; }
 .pillDot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.active { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
-.active .pillDot { background: var(--mw-primary); }
-.success { background: var(--mw-success-container); color: var(--mw-on-success-container); }
-.warning { background: var(--mw-warning-container); color: var(--mw-on-warning-container); }
-.error { background: var(--mw-error-container); color: var(--mw-on-error-container); }
-.momen { background: var(--mw-momen-container); color: var(--mw-on-momen-container); }
-.emisi { background: var(--mw-emisi-container); color: var(--mw-on-emisi-container); }
-.awarding { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
-.onmedia { background: var(--mw-media-scrim); color: var(--mw-media-on); }
-.primary { background: var(--mw-primary); color: var(--mw-on-primary); }
+/* Active / live: the gold dot and gold-ink words (prototipe .live, .wajib). */
+.active { background: var(--mw-gold-soft); color: var(--mw-gold-ink); box-shadow: inset 0 0 0 1px var(--mw-gold-line); }
+.active .pillDot { background: var(--mw-gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mw-gold) 25%, transparent); }
+.success { background: var(--mw-success-container); color: var(--mw-on-success-container); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-success) 40%, transparent); }
+.warning { background: var(--mw-warning-container); color: var(--mw-on-warning-container); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-warning) 45%, transparent); }
+.error { background: var(--mw-error-container); color: var(--mw-on-error-container); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-error) 40%, transparent); }
+.momen { background: var(--mw-momen-container); color: var(--mw-on-momen-container); box-shadow: none; }
+.emisi { background: var(--mw-emisi-container); color: var(--mw-on-emisi-container); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-emisi) 40%, transparent); }
+.awarding { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); box-shadow: none; }
+.onmedia { background: var(--mw-media-scrim); color: var(--mw-media-on); box-shadow: none; }
+.primary { background: var(--mw-primary); color: var(--mw-on-primary); box-shadow: none; }
+.gold { background: var(--mw-gold); color: var(--mw-on-gold); box-shadow: none; }
 /* A live dot breathes; still with reduced motion. */
 .pulse .pillDot { animation: mw-pulse 1.6s ease-in-out infinite; }
 @keyframes mw-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -35,11 +37,11 @@
 .avatar {
   position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--mw-primary-container); color: var(--mw-on-primary-container); font: var(--mw-type-body-strong); text-transform: uppercase;
+  background: var(--mw-surface-2); color: var(--mw-text-1); box-shadow: inset 0 0 0 2px var(--mw-gold); font: 800 18px/1 var(--mw-display-font); text-transform: uppercase;
 }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .a24 { width: 24px; height: 24px; font: var(--mw-type-caption-strong); background: var(--mw-surface-2); color: var(--mw-text-2); }
 .a24 > svg { width: 16px; height: 16px; }
-.a32 { width: 32px; height: 32px; font: var(--mw-type-caption-strong); }
-.a48 { width: 48px; height: 48px; font: var(--mw-type-subtitle); }
-.a64 { width: 64px; height: 64px; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); }
+.a32 { width: 32px; height: 32px; font: 800 14px/1 var(--mw-display-font); }
+.a48 { width: 48px; height: 48px; font: 800 22px/1 var(--mw-display-font); }
+.a64 { width: 64px; height: 64px; font: 800 28px/1 var(--mw-display-font); letter-spacing: var(--mw-ls-headline); }

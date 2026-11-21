@@ -1,9 +1,9 @@
 /* List (.wam-list), ListRow (.wam-row), StatRow (.wam-bod-row). Tokens only. */
 .list {
-  display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--mw-radius-16);
-  background: var(--mw-surface); border: 1px solid var(--mw-outline); --mw-divider-inset: 68px;
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--mw-radius-20);
+  background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); --mw-divider-inset: 68px;
 }
-.plain { background: transparent; border: 0; border-radius: 0; }
+.plain { background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .inset16 { --mw-divider-inset: 16px; }
 .inset0 { --mw-divider-inset: 0px; }
 .list > * { position: relative; }

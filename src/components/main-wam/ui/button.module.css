@@ -1,9 +1,9 @@
-/* Button (DS §6.2, wam.css .wam-btn) and IconButton (.wam-iconbtn). Tokens only. */
+/* Button (prototipe .abtn .gbtn .ghost2 .rkb) and IconButton (.ib). Gold action, dark text. Tokens only. */
 .btn {
   position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-8);
-  /* 48 tall. A label longer than the room it gets (a narrow card, two buttons side by side) wraps to a
+  /* 52 tall (prototipe .abtn). A label longer than the room it gets (a narrow card, two buttons side by side) wraps to a
      second line and the button grows; it is never cut. fit-content, not auto: a row does not stretch it. */
-  height: fit-content; min-height: 48px; min-width: var(--mw-touch); padding: var(--mw-space-4) var(--mw-space-20); border-radius: var(--mw-radius-12);
+  height: fit-content; min-height: 52px; min-width: var(--mw-touch); padding: var(--mw-space-4) var(--mw-space-20); border-radius: var(--mw-radius-16);
   font: var(--mw-type-label-lg); text-align: center; text-decoration: none; cursor: pointer;
   transition: background-color var(--mw-motion-press), transform var(--mw-motion-press);
   -webkit-tap-highlight-color: transparent; user-select: none;
@@ -12,23 +12,23 @@
 .label { min-width: 0; overflow-wrap: break-word; text-wrap: balance; }
 
 /* M: 40 tall, the touch area stays 44. */
-.m { min-height: 40px; padding: var(--mw-space-4) var(--mw-space-16); }
+.m { min-height: 40px; padding: var(--mw-space-4) var(--mw-space-16); border-radius: var(--mw-radius-12); }
 .m::after { content: ""; position: absolute; left: 0; right: 0; top: -2px; bottom: -2px; }
 .block { display: flex; width: 100%; }
 
-.primary { background: var(--mw-primary); color: var(--mw-on-primary); }
-.primary:active { background: var(--mw-primary-strong); }
-.secondary { background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline-2); }
-.tonal { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
-.text { background: transparent; color: var(--mw-primary-strong); padding: 0 var(--mw-space-12); }
+.primary { background: var(--mw-gold); color: var(--mw-on-gold); box-shadow: var(--mw-glow); }
+.primary:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
+.secondary { background: transparent; color: var(--mw-text-1); box-shadow: inset 0 0 0 1.5px var(--mw-outline-2); }
+.tonal { background: transparent; color: var(--mw-gold-ink); box-shadow: inset 0 0 0 1.5px var(--mw-gold); }
+.text { background: transparent; color: var(--mw-gold-ink); padding: 0 var(--mw-space-12); }
 .danger { background: var(--mw-error); color: var(--mw-on-error); }
 .danger:active { background: var(--mw-error-pressed); }
-.dangerOutline { background: var(--mw-surface); color: var(--mw-on-error-container); box-shadow: inset 0 0 0 1px var(--mw-error); }
+.dangerOutline { background: transparent; color: var(--mw-on-error-container); box-shadow: inset 0 0 0 1px var(--mw-error); }
 .dangerText { background: transparent; color: var(--mw-on-error-container); padding: 0 var(--mw-space-12); }
 .secondary:active, .tonal:active, .text:active, .dangerOutline:active, .dangerText:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 
 @media (hover: hover) {
-  .primary:hover { background: var(--mw-primary-strong); }
+  .primary:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
   .danger:hover { background: var(--mw-error-pressed); }
   .secondary:hover, .tonal:hover, .text:hover, .dangerOutline:hover, .dangerText:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 }
@@ -47,9 +47,10 @@
 }
 .icon > svg { width: 24px; height: 24px; }
 .icon56 { width: 56px; height: 56px; }
-.iconTonal { background: var(--mw-surface-2); }
-.iconFilled { background: var(--mw-primary); color: var(--mw-on-primary); }
-.iconFilled:active { background: var(--mw-primary-strong); }
+/* Prototipe .ib: a rounded square with a line, the panel colour (the bell, the back arrow's tonal cousin). */
+.iconTonal { background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline); border-radius: var(--mw-radius-16); }
+.iconFilled { background: var(--mw-gold); color: var(--mw-on-gold); box-shadow: var(--mw-glow); }
+.iconFilled:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 .iconOnmedia { background: var(--mw-media-scrim); color: var(--mw-media-on); }
 .iconStandard:active, .iconTonal:active { background-image: linear-gradient(var(--mw-icon-press, var(--mw-press)), var(--mw-icon-press, var(--mw-press))); }
 @media (hover: hover) {

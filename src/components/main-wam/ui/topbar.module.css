@@ -1,30 +1,35 @@
 /* TopBar (DS §6.1, .wam-topbar --large/--back/--home) and ActionBar (.wam-actionbar). Tokens only. */
 .bar { flex: none; position: relative; z-index: 4; display: flex; align-items: center; gap: var(--mw-space-4); background: transparent; color: var(--mw-text-1); }
 .sticky { position: sticky; top: 0; }
-.scrolled { background: var(--mw-surface); box-shadow: inset 0 -1px 0 var(--mw-outline); }
+.scrolled { background: var(--mw-bg); box-shadow: inset 0 -1px 0 var(--mw-outline); }
 
-.large { min-height: var(--mw-topbar-large-h); padding: 12px 6px 16px 16px; }
-.largeTitle { flex: 1 1 auto; min-width: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Prototipe .hdr h1: Barlow Condensed 800, 30/32, capitals, a small capital label above (eyebrow). */
+.large { min-height: var(--mw-topbar-large-h); padding: 12px 6px 16px 20px; }
+.largeText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.largeTitle { min-width: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eyebrow { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Back: the title starts after the back button (x 52), left-aligned (PM 14 Nov). */
 .back { min-height: var(--mw-topbar-h); padding: 0 6px; display: grid; grid-template-columns: minmax(44px, auto) minmax(0, 1fr) auto; column-gap: 2px; }
-.backTitle { grid-column: 2; min-width: 0; font: var(--mw-type-subtitle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.backTitle { grid-column: 2; min-width: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .start { grid-column: 1; justify-self: start; display: flex; align-items: center; }
 .end { display: flex; align-items: center; gap: var(--mw-space-8); flex: none; min-width: 0; }
 .back .end { grid-column: 3; justify-self: end; }
 
-/* Beranda: greeting, name, "Hari ke-2 dari 4"; the bell on the right (the only bell in the app). */
-.home { min-height: 84px; padding: var(--mw-space-8) 6px var(--mw-space-12) var(--mw-space-16); gap: var(--mw-space-8); }
+/* Beranda (prototipe): "SELAMAT PAGI" as a small capital label, the name in big Barlow capitals, the day's segments and the bell on the right (the only bell in the app). */
+.home { min-height: 84px; padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-12) var(--mw-space-20); gap: var(--mw-space-8); align-items: flex-start; }
 .homeText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.kicker { font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.name { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day { margin-top: 2px; font: var(--mw-type-caption-strong); color: var(--mw-primary-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kicker { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.name { font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day { margin-top: 2px; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-gold-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.homeEnd { flex: none; display: flex; align-items: center; gap: var(--mw-space-12); padding-top: var(--mw-space-4); }
+.homeEnd .end { gap: var(--mw-space-8); }
 
 /* ActionBar: the screen's main action at the bottom of a task screen (no bottom nav there). */
 .actionbar {
   position: sticky; bottom: 0; z-index: 6; display: flex; flex-direction: column; gap: var(--mw-space-8); margin-top: auto;
   padding: var(--mw-space-16) var(--mw-space-16) calc(var(--mw-space-16) + var(--mw-safe-bottom));
-  background: var(--mw-surface); box-shadow: inset 0 1px 0 var(--mw-outline);
+  background: var(--mw-bg); box-shadow: inset 0 1px 0 var(--mw-outline);
 }
 .actionbar > :not(.actionRow):not(.actionNote) { width: 100%; }
 .actionNote { font: var(--mw-type-body-small); color: var(--mw-text-2); }

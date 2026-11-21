@@ -3,17 +3,18 @@
 /* Sheet: from the bottom, the width of the app's column (on a tablet or laptop too, T-M03). */
 .sheet {
   box-sizing: border-box; width: 100%; max-width: 100%; max-height: min(92dvh, var(--mw-vvh, 100dvh) - 24px); margin: auto 0 0; padding: 0; border: 0;
-  border-radius: var(--mw-radius-24) var(--mw-radius-24) 0 0; background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-3);
+  border-radius: var(--mw-radius-28) var(--mw-radius-28) 0 0; background: var(--mw-surface-raised); color: var(--mw-text-1); box-shadow: var(--mw-elev-3);
+  border-top: 1px solid var(--mw-outline);
   overflow: hidden; font: var(--mw-type-body);
 }
 /* ::backdrop does not inherit the root's custom properties in every browser, hence the literal fallback (a listed exception of colors.test.ts). */
 .sheet::backdrop { background: var(--mw-overlay-scrim, rgb(17 24 39 / 0.5)); }
 .inner { position: relative; display: flex; flex-direction: column; max-height: inherit; padding-top: 12px; transition: transform var(--mw-motion-base); }
 .handle { position: absolute; top: 0; left: 0; right: 0; height: 24px; display: flex; justify-content: center; padding-top: 8px; touch-action: none; cursor: grab; }
-.handle > span { width: 36px; height: 4px; border-radius: 2px; background: var(--mw-outline-strong); }
+.handle > span { width: 40px; height: 4px; border-radius: 4px; background: var(--mw-outline-2); }
 .head { flex: none; display: flex; align-items: center; gap: var(--mw-space-8); min-height: 60px; padding: 0 6px 0 var(--mw-space-16); touch-action: none; }
 .headText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: var(--mw-space-8) 0; }
-.title { font: var(--mw-type-subtitle); color: var(--mw-text-1); outline: none; overflow-wrap: anywhere; }
+.title { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); outline: none; overflow-wrap: anywhere; }
 .subtitle { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .close {
   flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--mw-touch); height: var(--mw-touch);
@@ -32,7 +33,7 @@
 .foot {
   flex: none; display: flex; flex-direction: column; gap: var(--mw-space-8);
   padding: var(--mw-space-16) var(--mw-space-16) calc(var(--mw-space-16) + var(--mw-safe-bottom));
-  box-shadow: inset 0 1px 0 var(--mw-outline); background: var(--mw-surface);
+  box-shadow: inset 0 1px 0 var(--mw-outline); background: var(--mw-surface-raised);
 }
 .foot > * { width: 100%; }
 
@@ -60,11 +61,12 @@
 /* Dialog: 326 wide (max screen − 64), centred, r24, padding 24, gap 16. */
 .dialog {
   box-sizing: border-box; width: 326px; max-width: calc(100vw - 64px); max-height: calc(100dvh - 64px); margin: auto; padding: var(--mw-space-24); border: 0;
-  border-radius: var(--mw-radius-24); background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-3); overflow-y: auto; font: var(--mw-type-body);
+  border-radius: var(--mw-radius-28); background: var(--mw-surface-raised); color: var(--mw-text-1); box-shadow: var(--mw-elev-3); overflow-y: auto; font: var(--mw-type-body);
+  border: 1px solid var(--mw-outline);
 }
 .dialog::backdrop { background: var(--mw-overlay-scrim, rgb(17 24 39 / 0.5)); }
 .dialogInner { display: flex; flex-direction: column; gap: var(--mw-space-16); }
-.dialogTitle { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); color: var(--mw-text-1); outline: none; }
+.dialogTitle { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); outline: none; }
 .dialogBody { font: var(--mw-type-body); color: var(--mw-text-2); }
 .dialogActions { display: flex; flex-direction: column; gap: var(--mw-space-8); }
 

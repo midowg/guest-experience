@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { IconButton } from "./Button";
+import { SegmentDots } from "./Brand";
 import { cx, type ActionProps, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
 import css from "./topbar.module.css";
@@ -21,15 +22,17 @@ type Common = {
  * - `variant="back"`: a detail or task screen: ‹ (to `backHref`, or `onBack`), the title left-aligned
  *   after it, 0–2 actions. A task screen may use ✕ instead (`backIcon`, `backLabel="Tutup"`). An
  *   empty title draws no heading; `label` then names the screen for screen readers (hidden h1).
- * - `variant="home"`: Beranda: greeting, name, "Hari ke-2 dari 4", the bell at the end. No avatar.
+ * - `variant="home"`: Beranda: greeting (a small capital label), the name in big capitals, "Hari ke-2 dari 4" (text and/or the segment dots), the bell at the end. No avatar.
  * The page's h1 is in it. Safe area is the shell's job.
  */
 export function TopBar(props: Common & (
-  | { variant?: "large"; title: ReactNode }
+  | { variant?: "large"; title: ReactNode; /** A small capital label above the title ("AGENDA" over "HARI KE-1"). */ eyebrow?: ReactNode }
   | { variant: "back"; title: ReactNode; backHref?: string; onBack?: ActionProps["onClick"]; backLabel?: string; backIcon?: IconProp;
       /** The screen's name for screen readers when the bar shows no title (P04: "Detail sesi"); without either, no h1 here. */
       label?: string }
-  | { variant: "home"; kicker: ReactNode; name: ReactNode; day?: ReactNode }
+  | { variant: "home"; kicker: ReactNode; name: ReactNode; day?: ReactNode;
+      /** The event's days as segment dots before the bell ("Hari ke-2 dari 4": current 2, total 4); `label` is what screen readers say. */
+      dayDots?: { total: number; current: number; label: string } }
 )) {
   const { actions, sticky, scrolled, className } = props;
   const base = cx(css.bar, sticky && css.sticky, scrolled && css.scrolled, className);
@@ -52,11 +55,17 @@ export function TopBar(props: Common & (
         <h1 className={css.name}>{props.name}</h1>
         {props.day && <span className={css.day}>{props.day}</span>}
       </div>
-      {actions && <div className={css.end}>{actions}</div>}
+      {(actions || props.dayDots) && <div className={css.homeEnd}>
+        {props.dayDots && <SegmentDots total={props.dayDots.total} current={props.dayDots.current} label={props.dayDots.label} />}
+        {actions && <div className={css.end}>{actions}</div>}
+      </div>}
     </header>;
   }
   return <header className={cx(base, css.large)}>
-    <h1 className={css.largeTitle}>{props.title}</h1>
+    <div className={css.largeText}>
+      {props.eyebrow && <span className={css.eyebrow}>{props.eyebrow}</span>}
+      <h1 className={css.largeTitle}>{props.title}</h1>
+    </div>
     {actions && <div className={css.end}>{actions}</div>}
   </header>;
 }

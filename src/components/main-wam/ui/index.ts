@@ -4,7 +4,8 @@
  */
 export { Pressable, KitIcon, cx, type ActionProps, type IconProp } from "./Pressable";
 export { Button, IconButton, type ButtonProps, type ButtonVariant, type IconButtonVariant } from "./Button";
-export { Card, CardHead, IconBox, SectionHeader, TextLink, Divider, type CardVariant, type IconBoxTone } from "./Card";
+export { EyebrowLabel, PulseDot, NetworkMotif, SegmentDots, BigNumber, KeyValue, KeyValueRow } from "./Brand";
+export { Card, BracketCard, CardHead, IconBox, SectionHeader, TextLink, Divider, type CardVariant, type IconBoxTone, type MotifName } from "./Card";
 export { List, ListRow, StatRow } from "./List";
 export { Chip, FilterChip, ChipRow, TagChip, TagChipRow } from "./Chip";
 export { Segmented, type SegmentedOption } from "./Segmented";

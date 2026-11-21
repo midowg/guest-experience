@@ -1,7 +1,7 @@
 /* Field + Input/TextArea (.wam-field, .wam-input), isian pilih (.wam-select), DayTabs (.wam-tabs). Tokens only. */
 .field { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; }
-.label { font: var(--mw-type-label); color: var(--mw-text-1); }
-.optional { color: var(--mw-text-2); font-weight: 500; }
+.label { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.optional { color: var(--mw-text-2); font-weight: 500; letter-spacing: var(--mw-ls-cap-tight); }
 .help { margin-top: calc(-1 * var(--mw-space-4)); display: flex; align-items: flex-start; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-text-2); }
 .help > svg { flex: none; width: 16px; height: 16px; }
 .error { color: var(--mw-on-error-container); }
@@ -12,10 +12,10 @@
 .countOver { color: var(--mw-on-error-container); }
 
 .box {
-  display: flex; align-items: center; gap: var(--mw-space-8); min-height: 48px; padding: 0 var(--mw-space-16); width: 100%;
-  border-radius: var(--mw-radius-12); background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline-strong); color: var(--mw-text-1);
+  display: flex; align-items: center; gap: var(--mw-space-8); min-height: 52px; padding: 0 var(--mw-space-16); width: 100%;
+  border-radius: 14px; background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline-strong); color: var(--mw-text-1);
 }
-.box > svg { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
+.box > svg { flex: none; width: 20px; height: 20px; color: var(--mw-primary); }
 /* The box draws the focus ring (inset 2, primary). The control in it draws none (the theme's
    :focus-visible outline would be a second ring inside the first). (0,3,0) beats the theme. */
 .box:focus-within { box-shadow: inset 0 0 0 2px var(--mw-primary); }
@@ -25,7 +25,7 @@
 .boxError:focus-within { box-shadow: inset 0 0 0 2px var(--mw-error), 0 0 0 4px color-mix(in srgb, var(--mw-error) 28%, transparent); }
 .boxDisabled { background: var(--mw-surface-2); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-3); }
 .control {
-  flex: 1 1 auto; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; background: transparent;
+  flex: 1 1 auto; min-width: 0; height: 50px; padding: 0; border: 0; outline: 0; background: transparent;
   font: var(--mw-type-body); color: inherit;
 }
 .control::placeholder { color: var(--mw-text-3); opacity: 1; }
@@ -47,15 +47,14 @@
 /* DayTabs: the four event days. Chosen = inverse surface (not primary, so it does not compete with the screen's action). */
 .tabs { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
 .tab {
-  flex: 1 1 var(--mw-touch); min-width: var(--mw-touch); height: 56px; border-radius: var(--mw-radius-12); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1 1 var(--mw-touch); min-width: var(--mw-touch); height: 58px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-1); text-decoration: none; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-base);
 }
-.tabDay { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
-.tabDate { font: var(--mw-type-label); color: var(--mw-text-1); white-space: nowrap; }
-.today .tabDay::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mw-primary); }
-.tab[aria-current], .tab[aria-pressed="true"] { background: var(--mw-inverse-surface); box-shadow: none; }
-.tab[aria-current] .tabDay, .tab[aria-pressed="true"] .tabDay { color: var(--mw-inverse-on-surface-2); }
-.tab[aria-current] .tabDate, .tab[aria-pressed="true"] .tabDate { color: var(--mw-inverse-on-surface); }
-.today.tab[aria-current] .tabDay::before, .today.tab[aria-pressed="true"] .tabDay::before { background: var(--mw-inverse-primary); }
+.tabDay { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: 700 11px/14px var(--mw-font-sans); color: var(--mw-text-2); white-space: nowrap; }
+.tabDate { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); color: var(--mw-text-1); white-space: nowrap; }
+.today .tabDay::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mw-gold); }
+/* Chosen day (prototipe .dtab.on): gold line, gold-soft fill, gold-ink figure. */
+.tab[aria-current], .tab[aria-pressed="true"] { background: var(--mw-gold-soft); box-shadow: inset 0 0 0 1px var(--mw-gold); }
+.tab[aria-current] .tabDate, .tab[aria-pressed="true"] .tabDate { color: var(--mw-gold-ink); }
 @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }

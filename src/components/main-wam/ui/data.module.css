@@ -8,9 +8,10 @@
 /* labelSize="subtitle": the progress is the screen's main number (M06 Mozaik "312 dari 600 foto · 52%"). */
 .progressSubtitle .progressLabel, .progressSubtitle .progressValue { font: var(--mw-type-subtitle); color: var(--mw-text-1); }
 .progressSubtitle .progressLabel > svg { width: 20px; height: 20px; }
-.progress { position: relative; display: block; height: 8px; border-radius: var(--mw-radius-full); background: var(--mw-outline); overflow: hidden; }
+/* Prototipe .pbar: a 4–8 high track, the gold bar. */
+.progress { position: relative; display: block; height: 6px; border-radius: var(--mw-radius-full); background: var(--mw-outline); overflow: hidden; }
 .thin { height: 4px; }
-.bar { display: block; height: 100%; border-radius: inherit; background: var(--mw-primary); transition: width var(--mw-motion-expand); }
+.bar { display: block; height: 100%; border-radius: inherit; background: var(--mw-gold); transition: width var(--mw-motion-expand); }
 .momen .bar { background: var(--mw-momen); }
 .emisi .bar { background: var(--mw-emisi); }
 .awarding .bar { background: var(--mw-awarding); }
@@ -25,14 +26,14 @@
 a.session, button.session { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-press); }
 a.session:active, button.session:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 @media (hover: hover) { a.session:hover, button.session:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
-.time { flex: none; width: 52px; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
-.start { font: var(--mw-type-label); color: var(--mw-text-1); }
+.time { flex: none; width: 62px; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+.start { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); color: var(--mw-text-1); }
 .end { font: var(--mw-type-caption); color: var(--mw-text-3); }
 .rail { position: relative; flex: none; width: 16px; align-self: stretch; }
 .rail::before { content: ""; position: absolute; left: 7px; width: 2px; top: -12px; bottom: -12px; background: var(--mw-outline); }
 .rail::after {
   content: ""; position: absolute; left: 2px; top: 4px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--mw-surface); box-shadow: inset 0 0 0 2px var(--mw-outline-strong);
+  background: var(--mw-bg); box-shadow: inset 0 0 0 2px var(--mw-primary);
 }
 .sessions > :first-child .rail::before { top: 10px; }
 .sessions > :last-child .rail::before { bottom: auto; height: 22px; }
@@ -47,10 +48,12 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 .trail { flex: none; display: flex; align-items: center; min-height: 22px; color: var(--mw-text-3); }
 .trail > svg { width: 20px; height: 20px; }
 .ok { color: var(--mw-success); }
-.live { background: var(--mw-primary-container); }
+.live { background: var(--mw-gold-soft); }
+.live .start { color: var(--mw-gold-ink); }
 .live .end { color: var(--mw-text-2); }
-.live .rail::after { background: var(--mw-primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-primary) 22%, transparent); animation: mw-ring 1.6s ease-in-out infinite; }
-.done .rail::after { background: var(--mw-text-3); box-shadow: none; }
+.live .rail::after { background: var(--mw-gold); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-gold) 22%, transparent), var(--mw-glow); animation: mw-ring 1.6s ease-in-out infinite; }
+.done .rail::after { background: var(--mw-primary); box-shadow: none; }
+.done .start { color: var(--mw-text-2); }
 .done .sessionTitle { color: var(--mw-text-2); }
 .cancelled .sessionTitle { color: var(--mw-text-2); text-decoration: line-through; }
 .cancelled .start { color: var(--mw-text-3); }
@@ -70,8 +73,8 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
   .sessionBody [class] { white-space: normal; }
 }
 @keyframes mw-ring {
-  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-primary) 30%, transparent); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--mw-primary) 10%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-gold) 30%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--mw-gold) 10%, transparent); }
 }
 
 /* ShortcutTile: Kelola 2 × 2, icon + label in a row, 64 tall, badge on the right. */
@@ -80,8 +83,8 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 @media (max-width: 379.98px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
 .tile {
   position: relative; min-width: 0; height: 64px; display: flex; align-items: center; gap: var(--mw-space-8);
-  padding: var(--mw-space-12) var(--mw-space-8) var(--mw-space-12) var(--mw-space-12); border-radius: var(--mw-radius-16);
-  background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-1); text-align: left;
+  padding: var(--mw-space-12) var(--mw-space-8) var(--mw-space-12) var(--mw-space-12); border-radius: 18px;
+  background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline), var(--mw-elev-card); color: var(--mw-text-1); text-align: left;
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-press);
 }
 .tile:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
@@ -109,9 +112,12 @@ a.peek, button.peek { cursor: pointer; -webkit-tap-highlight-color: transparent;
 a.peek:active .peekCta, button.peek:active .peekCta { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 
 /* Text: the 15 styles (DS §2) as a component. */
-.t-display { font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); }
-.t-title { font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); }
-.t-headline { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); }
+.t-hero { font: var(--mw-type-hero); letter-spacing: var(--mw-ls-display); text-transform: uppercase; }
+.t-cap { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; }
+.t-cap-lg { font: var(--mw-type-cap-lg); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; }
+.t-display { font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); text-transform: uppercase; }
+.t-title { font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; }
+.t-headline { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; }
 .t-subtitle { font: var(--mw-type-subtitle); }
 .t-body { font: var(--mw-type-body); }
 .t-body-strong { font: var(--mw-type-body-strong); }
@@ -127,6 +133,7 @@ a.peek:active .peekCta, button.peek:active .peekCta { background-image: linear-g
 .c-1 { color: var(--mw-text-1); }
 .c-2 { color: var(--mw-text-2); }
 .c-3 { color: var(--mw-text-3); }
+.c-gold { color: var(--mw-gold-ink); }
 .c-primary { color: var(--mw-primary-strong); }
 .c-success { color: var(--mw-on-success-container); }
 .c-warning { color: var(--mw-on-warning-container); }

@@ -58,19 +58,19 @@ describe("acara/layout: the theme only for whom Main WAM shows", () => {
     shown = true;
     // Sistem (nothing picked yet): each phone's own scheme.
     expect(await generateViewport()).toEqual({ themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
-      { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
+      { media: "(prefers-color-scheme: light)", color: "#EEF3FB" },
+      { media: "(prefers-color-scheme: dark)", color: "#050914" },
     ] });
     // A pick wins over the phone's scheme.
     look = "light";
     expect(await generateViewport()).toEqual({ themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
-      { media: "(prefers-color-scheme: dark)", color: "#F6F7F9" },
+      { media: "(prefers-color-scheme: light)", color: "#EEF3FB" },
+      { media: "(prefers-color-scheme: dark)", color: "#EEF3FB" },
     ] });
     look = "dark";
     expect(await generateViewport()).toEqual({ themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#0E1116" },
-      { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
+      { media: "(prefers-color-scheme: light)", color: "#050914" },
+      { media: "(prefers-color-scheme: dark)", color: "#050914" },
     ] });
   });
 

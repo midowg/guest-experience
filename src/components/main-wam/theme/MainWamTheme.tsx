@@ -7,7 +7,7 @@ import { PAGE_COLORS, resolveTheme, themeVars, type DisplayFont, type MainWamThe
 export type { MainWamMode };
 
 /** A display face other than the default is written as a slot; the default needs nothing. */
-const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sans": null };
+const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "barlow-condensed": null, "plus-jakarta-sans": "--mw-font-jakarta" };
 
 /*
  * The page behind the app (overscroll, the strip under the iPhone's home bar, the space beside the

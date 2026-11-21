@@ -6,7 +6,7 @@ import {
   Search, Send, Share, ShieldAlert, Trash2, Trophy, UserCheck, Users, WifiOff, CalendarCog, Lock, X,
 } from "lucide-react";
 import {
-  ActionBar, Avatar, Badge, Banner, DayTabs, SelectField, TextField, Button, Card, CardHead, Chip, ChipRow, ConfirmDialog, Divider, EmptyState, FilterChip, IconBox, IconButton, List, ListRow,
+  ActionBar, Avatar, Badge, Banner, BigNumber, BracketCard, EyebrowLabel, KeyValue, KeyValueRow, NetworkMotif, PulseDot, SegmentDots, DayTabs, SelectField, TextField, Button, Card, CardHead, Chip, ChipRow, ConfirmDialog, Divider, EmptyState, FilterChip, IconBox, IconButton, List, ListRow,
   Pill, PhotoFill, ProgressBar, SectionHeader, Segmented, SessionList, SessionRow, Sheet, ShortcutGrid, ShortcutTile, Skeleton, SkeletonGroup, Spinner,
   StackPreview, StatRow, StatusPill, Switch, SwitchRow, TagChip, TagChipRow, Text, TextLink, ToastPreview, TopBar, useToast, STATUS_PILLS, type SessionStatus,
 } from "@/components/main-wam/ui";
@@ -21,15 +21,16 @@ import css from "./gallery.module.css";
 
 const SWATCHES = [
   "bg", "surface", "surface-2", "outline", "outline-2", "outline-strong", "text-1", "text-2", "text-3",
-  "primary", "primary-strong", "primary-container", "success", "success-container", "warning", "warning-container", "error", "error-container",
+  "gold", "gold-ink", "gold-soft", "surface-raised", "primary", "primary-strong", "primary-container", "success", "success-container", "warning", "warning-container", "error", "error-container",
   "momen", "momen-container", "emisi", "emisi-container", "awarding", "awarding-container", "accent", "accent-container", "inverse-surface",
 ] as const;
 
 const TYPES = [
-  ["display", "Display 40/48 · 800"], ["title", "Title 28/36 · 700"], ["headline", "Headline 22/28 · 700"], ["subtitle", "Subtitle 17/24 · 600"],
+  ["hero", "Hero 76/68 · Barlow 800"], ["display", "Display 40/40 · Barlow 800"], ["title", "Title 30/32 · Barlow 800"], ["headline", "Headline 24/28 · Barlow 800"], ["subtitle", "Subtitle 17/24 · 700"],
   ["body", "Body 15/22 · 400"], ["body-strong", "Body strong 15/22 · 600"], ["body-long", "Body long 15/24 · 400"], ["body-small", "Body small 13/18 · 400"],
-  ["label-lg", "Label large 15/20 · 600"], ["label", "Label 13/18 · 600"], ["caption", "Caption 12/16 · 500"], ["caption-strong", "Caption strong 12/16 · 600"],
-  ["stat-xl", "48"], ["stat-l", "32"], ["stat-m", "20"],
+  ["label-lg", "Label large 16/20 · 700"], ["label", "Label 13/18 · 600"], ["caption", "Caption 12/16 · 500"], ["caption-strong", "Caption strong 12/16 · 600"],
+  ["cap-lg", "Cap large 14/18 · Barlow 700, huruf lebar"], ["cap", "Cap 12/16 · Barlow 700, huruf lebar"],
+  ["stat-xl", "64 · Barlow"], ["stat-l", "40 · Barlow"], ["stat-m", "24 · Barlow"],
 ] as const;
 
 function Col({ id, title, sub, children }: { id: string; title: string; sub?: string; children: React.ReactNode }) {
@@ -66,9 +67,44 @@ export function KitGallery() {
       <p>Komponen dasar (src/components/main-wam/ui) dan statusnya. Acuan: prototipe/komponen.html. Panduan: docs/main-wam/KIT.md.</p>
     </header>
     <nav className={css.toc} aria-label="Isi galeri">
-      {[["warna", "Warna"], ["teks", "Teks"], ["tombol", "Tombol"], ["chip", "Chip"], ["status", "Status"], ["isian", "Isian"], ["kartu", "Kartu"], ["sesi", "Sesi"],
+      {[["prototipe", "Prototipe"], ["warna", "Warna"], ["teks", "Teks"], ["tombol", "Tombol"], ["chip", "Chip"], ["status", "Status"], ["isian", "Isian"], ["kartu", "Kartu"], ["sesi", "Sesi"],
         ["umpan", "Umpan balik"], ["overlay", "Sheet"], ["bilah", "Bilah"]].map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
     </nav>
+
+    <Col id="prototipe" title="Bahasa prototipe" sub="Kartu emas bersiku, motif jaringan, label kapital, angka besar, segmen hari. Dipakai lewat kit, tanpa hex.">
+      <Group label="BracketCard + motif · beranda 'sedang berlangsung'">
+        <BracketCard motif="konstelasi">
+          <div className={css.row}><EyebrowLabel tone="gold"><PulseDot /> Sedang berlangsung</EyebrowLabel><Pill icon={CalendarClock}>Sesi</Pill></div>
+          <Text variant="display" as="h3">Pemaparan departemen</Text>
+          <Text color="2">Aula Utama · lantai 1 · 08.00–12.00</Text>
+          <ProgressBar label="Berjalan" value={38} thin />
+          <Divider />
+          <div className={css.row}><div className={css.grow}><EyebrowLabel tone="gold" icon={QrCode}>Wajib absen</EyebrowLabel><Text variant="body-small" color="2">Tutup 08.30</Text></div><Button icon={QrCode}>Absen sekarang</Button></div>
+        </BracketCard>
+      </Group>
+      <Group label="Card motif (matriks) · angka besar + eyebrow">
+        <Card motif="matriks">
+          <div className={css.row}><Pill icon={Trophy}>Misi</Pill></div>
+          <BigNumber value="340" unit="Poin" tone="gold" />
+          <SegmentDots total={5} current={3} label="Misi 3 dari 5" fill />
+          <EyebrowLabel tone="gold">Misi berikutnya · +40</EyebrowLabel>
+        </Card>
+      </Group>
+      <Group label="Card eco (Jejak karbon) · KeyValue">
+        <Card variant="eco" motif="busur">
+          <div className={css.row}><Pill icon={Leaf} tone="onmedia">Jejak karbon</Pill></div>
+          <BigNumber value="12,4" unit="kg CO₂" size="l" />
+          <ProgressBar label="Target hari ini" value={72} valueText="72%" thin tone="success" />
+        </Card>
+        <KeyValueRow><KeyValue label="Tempat" value="Aula" /><KeyValue label="Jam" value="08.00" /><KeyValue label="Hari" value="Ke-2" /></KeyValueRow>
+      </Group>
+      <Group label="SegmentDots · hari (4 hari, ke-2) dan eyebrow">
+        <div className={css.row}><SegmentDots total={4} current={2} label="Hari ke-2 dari 4" /><EyebrowLabel>Selamat pagi</EyebrowLabel><EyebrowLabel tone="gold" large>Berikutnya</EyebrowLabel></div>
+      </Group>
+      <Group label="NetworkMotif · latar sebuah blok (kontur)">
+        <div className={css.motifBox}><NetworkMotif name="kontur" place="fill" /><Text color="2">Motif di ruang kosong, di belakang isi.</Text></div>
+      </Group>
+    </Col>
 
     <Col id="warna" title="Warna" sub="Token --mw-* (theme.module.css). Aksen acara dan warna utama bisa diganti tema (slot KV).">
       <div className={css.swatches}>
@@ -76,16 +112,16 @@ export function KitGallery() {
       </div>
     </Col>
 
-    <Col id="teks" title="Teks" sub="15 gaya (DS §2): <Text variant>. Minimal 12, tanpa ukuran sendiri.">
+    <Col id="teks" title="Teks" sub="18 gaya: <Text variant>. Tampilan Barlow Condensed (kapital), isi Plus Jakarta Sans. Minimal 12, tanpa ukuran sendiri.">
       <div className={css.type}>
         {TYPES.map(([variant, note]) => <div key={variant}>
-          <Text variant={variant} as="p">{variant.startsWith("stat") ? "1.240" : "Pemaparan departemen"}</Text>
+          <Text variant={variant} as="p">{variant.startsWith("stat") ? "1.240" : variant.startsWith("cap") ? "Sedang berlangsung" : "Pemaparan departemen"}</Text>
           <span className={css.cap}>{variant} · {note}</span>
         </div>)}
       </div>
     </Col>
 
-    <Col id="tombol" title="Tombol" sub="L 48, M 40 (area ketuk 44). Satu primary per layar.">
+    <Col id="tombol" title="Tombol" sub="L 52, M 40 (area ketuk 44). Satu primary (emas, teks gelap) per layar.">
       <Group label="Primary · L, M, ditekan (tekan lama), nonaktif, memuat">
         <div className={css.row}>
           <Button>Simpan</Button>
@@ -340,14 +376,14 @@ export function KitGallery() {
 
     <Col id="bilah" title="Bilah" sub="TopBar dan BottomNav (di aplikasi digambar shell sekali; lihat /dev-preview/wam2026/kit/shell).">
       <Group label="TopBar · besar">
-        <div className={css.barDemo}><TopBar title="Agenda" /></div>
+        <div className={css.barDemo}><TopBar title="Hari ke-1" eyebrow="Agenda" actions={<IconButton icon={Bell} label="Notifikasi" variant="tonal" badge="dot" />} /></div>
       </Group>
       <Group label="TopBar · kembali, tugas (✕), dengan aksi">
         <div className={css.barDemo}><TopBar variant="back" title="Detail sesi" backHref="#bilah" actions={<IconButton icon={Share} label="Bagikan" />} /></div>
         <div className={css.barDemo}><TopBar variant="back" title="Absen" backHref="#bilah" backIcon={X} backLabel="Tutup" scrolled /></div>
       </Group>
       <Group label="TopBar · Beranda (sapaan, lonceng)">
-        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi · Sel, 5 Jan" name="Rani" day="Hari ke-2 dari 4" actions={<IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} href="#bilah" />} /></div>
+        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi" name="Rani" dayDots={{ total: 4, current: 2, label: "Hari ke-2 dari 4" }} actions={<IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} href="#bilah" />} /></div>
       </Group>
       <Group label="BottomNav (Beranda aktif, lencana; Momen aktif)">
         <BottomNav current="beranda" badges={{ momen: 3, saya: "dot" }} className={css.navStatic} />

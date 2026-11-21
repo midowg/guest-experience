@@ -53,7 +53,8 @@ describe("Main WAM: no literal colours outside the tokens", () => {
     for (const file of all) {
       const name = relative(here, file).split(sep).join("/");
       if (EXCEPTIONS[name]) continue;
-      const code = strip(readFileSync(file, "utf8"));
+      // The token --mw-gold is a name, not the colour "gold".
+      const code = strip(readFileSync(file, "utf8")).replace(/var\(--mw-[a-z0-9-]*gold[a-z0-9-]*/g, "var(--mw-token");
       for (const [label, pattern] of LITERALS) {
         const hit = pattern.exec(code);
         if (hit) found.push(`${name}: ${label}: ${hit[0].slice(0, 60)}`);
@@ -96,7 +97,7 @@ describe("Main WAM: no literal colours outside the tokens", () => {
       }
     }
     // Set by the theme root from the admin's slots (kv-*, font) or by a component's own style prop (toast-*, reserve, w, badge-ring …).
-    expect([...new Set(unknown)].filter(entry => !/--mw-(kv-|font-jakarta|toast-)|-(w|icon-fg|icon-press|badge-ring|vvh)$/.test(entry))).toEqual([]);
+    expect([...new Set(unknown)].filter(entry => !/--mw-(kv-|font-jakarta|font-barlow|toast-)|-(w|icon-fg|icon-press|badge-ring|vvh)$/.test(entry))).toEqual([]);
   });
 });
 
@@ -146,10 +147,11 @@ describe("Main WAM: light and dark tokens", () => {
         text.push([`on-${kind}-container`, `${kind}-container`]);
       }
       text.push(["on-primary", "primary"], ["on-error", "error"], ["on-accent", "accent"], ["on-accent-2", "accent"], ["error", "surface"], ["error", "bg"], ["emisi-accent", "surface"], ["emisi-accent", "bg"], ["primary-strong", "surface"], ["primary-strong", "bg"],
+        ["on-gold", "gold"], ["gold-ink", "surface"], ["gold-ink", "bg"], ["gold-ink", "surface-2"], ["select-fg", "select-bg"], ["seg-on-fg", "seg-on-bg"], ["on-eco", "eco-grad-2"], ["on-eco", "eco-grad-1"],
         ["inverse-on-surface", "inverse-surface"], ["inverse-on-surface-2", "inverse-surface"], ["inverse-primary", "inverse-surface"]);
       const low = text.filter(([front, back]) => contrast(pick(front), pick(back)) < 4.5).map(([front, back]) => `${front} on ${back} ${contrast(pick(front), pick(back)).toFixed(2)}`);
       expect(low).toEqual([]);
-      const icons = ["primary", "success", "warning", "momen", "emisi", "awarding", "wellbeing", "outline-strong"].filter(name => contrast(pick(name), pick("surface")) < 3);
+      const icons = ["primary", "success", "warning", "momen", "emisi", "awarding", "wellbeing", "outline-strong", "gold-ink"].filter(name => contrast(pick(name), pick("surface")) < 3);
       expect(icons).toEqual([]);
     });
   }

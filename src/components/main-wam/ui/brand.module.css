@@ -1,0 +1,56 @@
+/* Pieces of the prototype's visual language: eyebrow label, live dot, network motif, segment dots, big numbers, key-value tile. Tokens only. */
+
+/* Eyebrow (prototipe .cap): small, capitals, wide letter-spacing. */
+.eyebrow { display: inline-flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.eyebrowGold { color: var(--mw-gold-ink); }
+.eyebrowInk { color: var(--mw-text-1); }
+.eyebrowLg { font: var(--mw-type-cap-lg); }
+.eyebrowRow { display: inline-flex; align-items: center; gap: var(--mw-space-8); }
+.eyebrowRow > svg { flex: none; width: 14px; height: 14px; color: var(--mw-gold-ink); }
+
+/* Live dot (prototipe .pulse): gold, with a halo that breathes (still with reduced motion). */
+.pulse {
+  display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--mw-gold);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-gold) 22%, transparent), var(--mw-glow);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pulse { animation: mw-halo 2.4s ease-in-out infinite; }
+  @keyframes mw-halo { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--mw-gold) 0%, transparent), var(--mw-glow); } }
+}
+
+/* Network motif (prototipe .mot): a corner art of the Kit Visual in the empty part of a screen or card, behind the content. */
+.motif { position: absolute; z-index: 0; pointer-events: none; background: var(--mw-motif-image) right bottom / 100% auto no-repeat; opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter); }
+.motifKonstelasi { --mw-motif-image: var(--mw-motif-konstelasi); }
+.motifKontur { --mw-motif-image: var(--mw-motif-kontur); }
+.motifSirkuit { --mw-motif-image: var(--mw-motif-sirkuit); }
+.motifRadar { --mw-motif-image: var(--mw-motif-radar); }
+.motifMatriks { --mw-motif-image: var(--mw-motif-matriks); }
+.motifOrbit { --mw-motif-image: var(--mw-motif-orbit); }
+.motifBusur { --mw-motif-image: var(--mw-motif-busur); }
+.placeBottom { left: 0; right: 0; bottom: 0; height: 300px; }
+.placeTop { right: -6px; top: 0; width: 300px; height: 210px; background-size: contain; transform: scaleY(-1); }
+.placeFill { inset: 0; background-position: center; background-size: cover; }
+.motifFade { -webkit-mask-image: linear-gradient(to top left, black 25%, transparent 80%); mask-image: linear-gradient(to top left, black 25%, transparent 80%); }
+
+/* Segment dots (prototipe .dots, .seg5): the day or the mission's progress as short bars. */
+.dots { display: flex; gap: var(--mw-space-4); }
+.dots > i { display: block; flex: none; width: 22px; height: 4px; border-radius: 4px; background: var(--mw-outline); }
+.dotsFill > i { flex: 1 1 0; width: auto; height: 5px; }
+.dots > i[data-on] { background: var(--mw-gold); }
+.dots > i[data-done] { background: var(--mw-primary); }
+
+/* Big number (prototipe .pts, .cd, .big): Barlow figure, small capital unit after it. */
+.num { display: inline-flex; align-items: baseline; gap: var(--mw-space-8); font-variant-numeric: tabular-nums; }
+.numValue { font: var(--mw-type-stat-xl); letter-spacing: var(--mw-ls-stat-xl); }
+.numL .numValue { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); }
+.numM .numValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); }
+.numHero .numValue { font: var(--mw-type-hero); letter-spacing: var(--mw-ls-display); }
+.numUnit { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.numGold .numValue { color: var(--mw-gold-ink); }
+
+/* Key-value tile (prototipe .kv, .tele): a small capital label over a Barlow value. */
+.kv { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; padding: var(--mw-space-8) var(--mw-space-12); border-radius: var(--mw-radius-12); border: 1px solid var(--mw-outline); background: color-mix(in srgb, var(--mw-bg) 55%, transparent); }
+.kvLabel { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.kvValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.kvRow { display: flex; gap: var(--mw-space-8); }
+.kvRow > * { flex: 1 1 0; }

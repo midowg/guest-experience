@@ -149,8 +149,8 @@ export function StackPreview({ photos, title = <Words k="ui.moments" />, sub, ct
   </Pressable>;
 }
 
-export type TextVariant = "display" | "title" | "headline" | "subtitle" | "body" | "body-strong" | "body-long" | "body-small" | "label-lg" | "label" | "caption" | "caption-strong" | "stat-xl" | "stat-l" | "stat-m";
-export type TextColor = "1" | "2" | "3" | "primary" | "success" | "warning" | "error" | "on-accent" | "on-accent-2" | "media" | "media-2" | "inverse-2";
+export type TextVariant = "hero" | "cap" | "cap-lg" | "display" | "title" | "headline" | "subtitle" | "body" | "body-strong" | "body-long" | "body-small" | "label-lg" | "label" | "caption" | "caption-strong" | "stat-xl" | "stat-l" | "stat-m";
+export type TextColor = "1" | "2" | "3" | "gold" | "primary" | "success" | "warning" | "error" | "on-accent" | "on-accent-2" | "media" | "media-2" | "inverse-2";
 
 /**
  * One of the 15 text styles (DS §2) with a token colour: <Text variant="body-small" color="2">.
