@@ -21,7 +21,7 @@ export default async function PreviewPage({ params, searchParams }: { params: Pr
   const requested = (await searchParams).fase;
   const auto = currentPhase(event);
   const phase: EventPhase = isPhase(requested) ? requested : auto;
-  return <><AdminShell><h1>Preview undangan</h1><EventNavigation event={event} current="preview" /><Notice>Preview admin — versi terakhir tersimpan, bukan perubahan editor yang belum disimpan. Pengiriman RSVP dan feedback dinonaktifkan.</Notice>
+  return <><AdminShell><EventNavigation event={event} current="preview" /><Notice>Preview admin — versi terakhir tersimpan, bukan perubahan editor yang belum disimpan. Pengiriman RSVP dan feedback dinonaktifkan.</Notice>
     <nav aria-label="Lihat fase acara" className="row">{(["before", "day", "after"] as const).map(key => <a key={key} className={`button ${key === phase ? "button--primary" : "button--secondary"}`} href={`?fase=${key}`} aria-current={key === phase ? "page" : undefined}>{phaseLabels[key]}{key === auto ? " (sekarang)" : ""}</a>)}</nav>
   </AdminShell><EventExperience event={event} preview phase={phase} rsvpNeeds={await rsvpNeedsReady()} /></>;
 }
