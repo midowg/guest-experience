@@ -12,7 +12,7 @@
 /* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
 :global(:root:has([data-momen-camera])) { --mw-toast-bottom: 208px; }
 
-.bar { display: flex; align-items: center; justify-content: space-between; height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
+.bar { display: flex; align-items: center; gap: var(--mw-space-12); height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
 .stage { position: relative; flex: 1 1 auto; min-height: 220px; }
 .stageInner { position: absolute; inset: 0; container-type: size; }
 .view {
@@ -20,6 +20,15 @@
   position: relative; width: var(--w); aspect-ratio: 4 / 5; margin: calc((100cqh - var(--w) * 1.25) / 2) 0 0 calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
   background: var(--mw-photo-bg);
 }
+/* Title beside the close button (prototipe SC.cam .hdr) and the four viewfinder corners (.hud). */
+.barText { min-width: 0; display: flex; flex-direction: column; }
+.barEyebrow { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
+.barTitle { font: 800 24px/26px var(--mw-display-font); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
+.hud { position: absolute; z-index: 2; width: 22px; height: 22px; border: 2px solid var(--mw-media-on); opacity: 0.85; pointer-events: none; }
+.hudA { left: 12px; top: 12px; border-right: 0; border-bottom: 0; }
+.hudB { right: 12px; top: 12px; border-left: 0; border-bottom: 0; }
+.hudC { left: 12px; bottom: 12px; border-right: 0; border-top: 0; }
+.hudD { right: 12px; bottom: 12px; border-left: 0; border-top: 0; }
 .video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .mirror { transform: scaleX(-1); }
 .fill { position: absolute; inset: 0; }
@@ -46,7 +55,7 @@
   position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; padding: 0; border: 0; border-radius: var(--mw-radius-full);
   background: none; box-shadow: inset 0 0 0 4px var(--mw-text-1); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.shutter::before { content: ""; width: 60px; height: 60px; border-radius: var(--mw-radius-full); background: var(--mw-text-1); transition: transform var(--mw-motion-press); }
+.shutter::before { content: ""; width: 60px; height: 60px; border-radius: var(--mw-radius-full); background: var(--mw-gold); box-shadow: var(--mw-glow); transition: transform var(--mw-motion-press); }
 .shutter:active::before, .shutter[aria-busy="true"]::before { transform: scale(0.86); }
 .shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-text-1) 28%, transparent); cursor: default; }
 .shutter:disabled::before { background: color-mix(in srgb, var(--mw-text-1) 20%, transparent); }

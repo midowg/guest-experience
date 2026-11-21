@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, CircleCheck, Image as ImageIcon, LayoutGrid, Maximize, Tv } from "lucide-react";
+import { Camera, CircleCheck, Image as ImageIcon, LayoutGrid, Maximize, ScanLine, Tv } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
-import { Button, EmptyState, IconButton, List, Pill, PhotoFill, ProgressBar, SwitchRow, TextLink } from "@/components/main-wam/ui";
+import { Button, EmptyState, IconButton, Pill, PhotoFill, TextLink } from "@/components/main-wam/ui";
 import { clock, number as formatNumber } from "@/lib/main-wam/i18n";
 import { cellLabel, mosaicPercent } from "@/lib/main-wam/momen/mosaic";
 import type { MosaicManifest } from "@/lib/main-wam/momen/types";
@@ -82,13 +82,24 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
   return <ScreenContent>
     {!demo && <MomenQueueRunner />}
     {fullscreen && <ShellActions><IconButton icon={Maximize} label={t("momen.mos.fullscreen")} onClick={goFullscreen} /></ShellActions>}
-    <div ref={holder}>
+    <p className={css.intro}>{t("momen.mos.intro")}</p>
+    <div ref={holder} className={css.panel}>
       <MosaicCanvas manifest={manifest} mark={mark} zoom={zoom} onZoom={setZoom} focus={mark && chosen ? selected?.cell ?? null : null} label={spoken} />
     </div>
 
-    <List inset={16} label={t("momen.mos.markMine")}>
-      <SwitchRow inList title={t("momen.mos.markMine")} sub={mine.length ? t("momen.mos.mineIn", { n: mine.length }) : t("momen.mos.noneIn")} checked={mark} onChange={toggle} />
-    </List>
+    <dl className={css.stats}>
+      <div><dt>{t("momen.mos.statFilled")}</dt><dd>{number(manifest.filled)}</dd></div>
+      <div><dt>{t("momen.mos.statMine")}</dt><dd>{number(mine.length)}</dd></div>
+      <div><dt>{t("momen.mos.statPeople")}</dt><dd>{number(manifest.people)}</dd></div>
+    </dl>
+    <span role="progressbar" className={css.bar} aria-label={t("momen.mos.progress", { filled: number(manifest.filled), total: number(manifest.total) })} aria-valuemin={0} aria-valuemax={manifest.total} aria-valuenow={manifest.filled} aria-valuetext={`${percent}%`}>
+      <span style={{ width: `${percent}%` }} />
+    </span>
+
+    <button type="button" role="switch" aria-checked={mark} className={mark ? `${css.markBtn} ${css.markOn}` : css.markBtn} onClick={() => toggle(!mark)}>
+      <ScanLine aria-hidden />{mark ? t("momen.mos.marked") : t("momen.mos.markMine")}
+    </button>
+    <p className={css.caption} aria-live="polite">{mine.length ? t("momen.mos.mineIn", { n: mine.length }) : t("momen.mos.noneIn")}</p>
 
     {mark && (mine.length ? <div>
       <ul className={css.mine} aria-label={t("momen.mos.mineList")}>
@@ -115,10 +126,7 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
         <Pill tone="success" icon={<CircleCheck />}>{t("momen.mos.complete", { total: number(manifest.total) })}</Pill>
         <p className={css.caption}>{t("momen.mos.newStay")}</p>
       </div>
-      : <div className={css.progress}>
-        <ProgressBar labelSize="subtitle" label={t("momen.mos.progress", { filled: number(manifest.filled), total: number(manifest.total) })} valueText={`${percent}%`} value={manifest.filled} max={manifest.total} />
-        <p className={css.caption}>{t("momen.mos.people", { people: manifest.people, time: clock(lang, wibTime(manifest.updatedAt)) })}</p>
-      </div>}
+      : <p className={css.caption}>{t("momen.mos.people", { people: manifest.people, time: clock(lang, wibTime(manifest.updatedAt)) })}</p>}
 
     <p className={css.meta}><Tv aria-hidden />{t("momen.mos.tv")}</p>
     <Button variant="secondary" block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
