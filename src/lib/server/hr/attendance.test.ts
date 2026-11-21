@@ -61,6 +61,7 @@ function query(table: string) {
 }
 
 const removeObjects = vi.fn(async (keys: string[]) => { void keys; });
+const putObject = vi.fn(async (key: string, bytes: Uint8Array, type: string) => { void key; void bytes; void type; });
 const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0, 0, 0, 0]);
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query }) }));
 vi.mock("../r2", () => ({
@@ -71,6 +72,7 @@ vi.mock("../r2", () => ({
   removeObjects: (keys: string[]) => removeObjects(keys),
   readObject: async () => null,
   copyObject: async () => undefined,
+  putObject: (key: string, bytes: Uint8Array, type: string) => putObject(key, bytes, type),
 }));
 vi.mock("../pra-wam/appraisal", () => ({ listPeople: async () => [{ id: PERSON, name: "Contoh", fullName: "Contoh Satu", department: "Contoh", active: true }] }));
 vi.mock("../pra-wam/zone", () => ({ viewerZone: async () => "WIB" }));
@@ -83,7 +85,7 @@ const other: Member = { ...member, id: OTHER };
 // Jumat 20 Nov 2026, 08.30 WIB.
 const morning = new Date("2026-11-20T01:30:00Z");
 
-const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, readChallenge, setImportedFace, setUploadedFace, startClockIn, startEnroll, startFaceUpload, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
+const { createRequest, decideRequest, deleteOldSelfies, deleteRecord, importFaceFromLink, readChallenge, setImportedFace, setUploadedFace, startClockIn, startEnroll, startFaceUpload, startUpload, submitClockIn, submitEnroll } = await import("./attendance");
 
 /** A made-up face: a fixed direction, and looks of it with a little noise. */
 function vector(seed: number): number[] {
@@ -272,6 +274,25 @@ describe("Unggah foto acuan (21 Nov 2026)", () => {
     await expect(setUploadedFace(PERSON, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, new Date(morning.getTime() + 11 * 60_000))).rejects.toMatchObject({ status: 403 });
     await setUploadedFace(PERSON, { ...start, mime: "image/webp", size: 40_000, embedding: face }, admin, morning);
     expect(removeObjects).toHaveBeenCalledWith([`pra-wam/wajah/${PERSON}/old.webp`]);
+  });
+  it("fetches a GreatDay photo from its link as an imported photo, which Proses puts in use", async () => {
+    db.pw_face_profiles = [];
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, status: 200, url: "https://apic9.greatdayhr.com/storage/x?fileName=a.jpg", arrayBuffer: async () => jpeg.buffer } as unknown as Response);
+    try {
+      expect(await importFaceFromLink(PERSON, "https://apic9.greatdayhr.com/storage/x?fileName=a.jpg", admin)).toBe("impor");
+      expect(putObject).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^pra-wam/wajah/${PERSON}/.+\.jpg$`)), jpeg, "image/jpeg");
+      expect(db.pw_face_profiles[0]).toMatchObject({ source: "greatday", status: "impor", embedding: null });
+      expect(await setImportedFace(PERSON, { embedding: face })).toBe("aktif");
+      // Only GreatDay, only https; nothing is fetched otherwise.
+      fetcher.mockClear();
+      await expect(importFaceFromLink(PERSON, "https://contoh.example/foto.jpg", admin)).rejects.toMatchObject({ status: 422 });
+      await expect(importFaceFromLink(PERSON, "http://apic9.greatdayhr.com/foto.jpg", admin)).rejects.toMatchObject({ status: 422 });
+      expect(fetcher).not.toHaveBeenCalled();
+      // A redirect away from GreatDay is refused.
+      fetcher.mockResolvedValue({ ok: true, status: 200, url: "http://10.0.0.1/x", arrayBuffer: async () => jpeg.buffer } as unknown as Response);
+      await expect(importFaceFromLink(PERSON, "https://apic9.greatdayhr.com/storage/y", admin)).rejects.toMatchObject({ status: 502 });
+    } finally { fetcher.mockRestore(); }
   });
   it("only for someone who clocks in", async () => {
     await expect(startFaceUpload(OTHER, { mime: "image/webp", size: 40_000 }, morning)).rejects.toMatchObject({ status: 404 });

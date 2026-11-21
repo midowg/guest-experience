@@ -14,7 +14,7 @@ import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { asViewerZone, zoneDate, type ViewerZone } from "@/lib/pra-wam/zone";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
-import { copyObject, isR2Configured, presignDownload, presignUpload, readObject, removeObjects, uploadedStart } from "../r2";
+import { copyObject, isR2Configured, presignDownload, presignUpload, putObject, readObject, removeObjects, uploadedStart } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "../pra-wam/appraisal";
 import type { Member } from "../pra-wam/session";
@@ -620,6 +620,47 @@ export async function setUploadedFace(employeeId: string, input: { key: string; 
     return row.status;
   } finally {
     if (!keep) await removeObjects([input.key]).catch(() => undefined);
+  }
+}
+
+/** GreatDay's photo storage: the only place "Ambil dari link GreatDay" fetches from. */
+const GREATDAY_HOST = /(^|\.)greatdayhr\.com$/i;
+const LINK_MAX_BYTES = 8 * 1024 * 1024;
+const isGreatDayLink = (value: string) => { try { const url = new URL(value); return url.protocol === "https:" && GREATDAY_HOST.test(url.hostname) && !url.username && !url.password && !url.port; } catch { return false; } };
+
+/**
+ * "Ambil dari link GreatDay" (21 Nov 2026): the server fetches a person's base photo from its
+ * GreatDay link (the Base Photo column of GreatDay's export) and keeps it as their imported photo
+ * ("impor"); the admin's browser then reads it like Proses foto impor, which puts it in use. Only
+ * https links on greatdayhr.com (and only there after redirects), JPEG or WebP, 8 MB at most.
+ */
+export async function importFaceFromLink(employeeId: string, link: string, actor: AdminActorRef): Promise<FaceStatus> {
+  if (!isR2Configured()) throw storageNotReady();
+  if (!(await clockers()).some(person => person.id === employeeId)) throw new ServiceError(404, "Karyawan ini tidak ditemukan atau akunnya belum aktif.");
+  if (!isGreatDayLink(link)) throw new ServiceError(422, "Tempel link foto dari GreatDay (https://…greatdayhr.com/…).");
+  const response = await fetch(link, { signal: AbortSignal.timeout(15_000), redirect: "follow", cache: "no-store" })
+    .catch(() => { throw new ServiceError(502, "Foto dari GreatDay tidak bisa diambil. Coba lagi, atau unggah filenya."); });
+  if (!response.ok || !isGreatDayLink(response.url || link)) throw new ServiceError(502, `GreatDay menjawab ${response.status}. Periksa linknya, atau unggah filenya.`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > LINK_MAX_BYTES) throw new ServiceError(422, "Ukuran foto dari link tidak wajar. Unggah filenya.");
+  const mime: PhotoMime | null = photoMagicMatches("image/jpeg", bytes) ? "image/jpeg" : photoMagicMatches("image/webp", bytes) ? "image/webp" : null;
+  if (!mime) throw new ServiceError(422, "Link itu bukan foto JPEG atau WebP.");
+  const key = faceKeyFor(employeeId, randomUUID(), mime);
+  await putObject(key, bytes, mime);
+  let keep = false;
+  try {
+    const before = await profileOf(employeeId);
+    const oldKey = before?.photo_key ?? null;
+    const { error } = await createPrivilegedClient().from("pw_face_profiles").upsert({
+      employee_id: employeeId, embedding: null, model_version: null, photo_key: key, source: "greatday", status: "impor",
+      note: `Foto GreatDay dari link, diambil ${actor.label}`.slice(0, 300), consent_at: before?.consent_at ?? null, updated_at: new Date().toISOString(),
+    }, { onConflict: "employee_id" });
+    if (error) fail(error);
+    keep = true;
+    if (oldKey && oldKey !== key) await removeObjects([oldKey]).catch(() => undefined);
+    return "impor";
+  } finally {
+    if (!keep) await removeObjects([key]).catch(() => undefined);
   }
 }
 

@@ -96,3 +96,9 @@ export async function readObject(key: string): Promise<{ bytes: Uint8Array; type
   if (!object?.Body) return null;
   return { bytes: new Uint8Array(await object.Body.transformToByteArray()), type: object.ContentType ?? "application/octet-stream" };
 }
+
+/** Stores bytes the server already holds (a reference photo Admin HR fetched from a GreatDay link). */
+export async function putObject(key: string, bytes: Uint8Array, contentType: string): Promise<void> {
+  const { client, bucket } = connect();
+  await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: contentType, ContentLength: bytes.length }));
+}

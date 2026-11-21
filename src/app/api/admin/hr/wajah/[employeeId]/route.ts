@@ -3,7 +3,7 @@ import { EMBEDDING_SIZE } from "@/lib/hr/face-match";
 import { photoStartSchema } from "@/lib/pra-wam/photo";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
-import { decideFace, setImportedFace, setUploadedFace } from "@/lib/server/hr/attendance";
+import { decideFace, importFaceFromLink, setImportedFace, setUploadedFace } from "@/lib/server/hr/attendance";
 import { hrAdminActor } from "@/lib/server/hr/session";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,8 @@ const schema = z.union([
     action: z.literal("unggah"), key: z.string().min(10).max(200), token: z.string().min(10).max(200),
     embedding: z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE),
   }),
+  // "Ambil dari link GreatDay": the server fetches the base photo; the browser then reads it (proses).
+  z.object({ action: z.literal("link"), url: z.string().trim().url("Link tidak dikenali.").max(1000) }),
 ]);
 
 /** POST {action}: decides a reference face, or stores what was read from an imported photo. */
@@ -32,6 +34,10 @@ export async function POST(request: Request, { params }: Params) {
     if (input.action === "proses") {
       const status = await setImportedFace(employeeId, "embedding" in input ? { embedding: input.embedding } : { problem: input.problem });
       return success({ status }, status === "ditolak" ? "Foto tidak terbaca; orangnya diminta daftar wajah." : status === "siap" ? "Foto terbaca. Menunggu persetujuan karyawan." : "Foto terbaca dan langsung dipakai.");
+    }
+    if (input.action === "link") {
+      const status = await importFaceFromLink(employeeId, input.url, await hrAdminActor());
+      return success({ status }, "Foto dari GreatDay sudah diambil; sedang dibaca.");
     }
     if (input.action === "unggah") {
       const status = await setUploadedFace(employeeId, input, await hrAdminActor());

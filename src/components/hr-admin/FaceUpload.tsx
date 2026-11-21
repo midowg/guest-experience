@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Upload } from "lucide-react";
+import { Link2, Upload } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { Card, ConsoleButton } from "@/components/console";
+import { Card, ConsoleButton, SegmentedControl } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { imageProblemLabels, loadFaceEngine } from "@/components/hr/faceEngine";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
@@ -33,7 +33,9 @@ async function storedCopy(file: File) {
  * photo was missed): pick the person (those without a face first; anyone else gets a new photo),
  * pick a photo of their face, and it is read here with the phones' engine first. A photo without one
  * clear face is refused before anything is sent. A readable one goes to private storage and is in
- * use at once; their old reference photo is removed.
+ * use at once; their old reference photo is removed. Or paste the person's GreatDay photo link (the
+ * Base Photo column of GreatDay's export): the server fetches it, and it is read and put in use the
+ * same way as Proses foto impor.
  */
 export function FaceUpload({ candidates, picked, onPick, onDone }: {
   candidates: FaceCandidate[]; picked: string; onPick(employeeId: string): void; onDone(employeeId: string, message: string): void;
@@ -42,8 +44,10 @@ export function FaceUpload({ candidates, picked, onPick, onDone }: {
   const [preview, setPreview] = useState<string | null>(null);
   const [stage, setStage] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
+  const [mode, setMode] = useState<"berkas" | "link">("berkas");
+  const [link, setLink] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const personId = useId(), fileId = useId();
+  const personId = useId(), fileId = useId(), linkId = useId();
   const person = candidates.find(item => item.employeeId === picked) ?? null;
   const without = candidates.filter(item => !item.hasFace);
   const withFace = candidates.filter(item => item.hasFace);
@@ -84,8 +88,35 @@ export function FaceUpload({ candidates, picked, onPick, onDone }: {
     finally { setStage(null); }
   }
 
+  /** The server fetches the GreatDay photo; this browser reads it and puts it in use (like Proses foto impor). */
+  async function fromLink() {
+    if (!person || !link.trim()) return;
+    setMessage(null);
+    try {
+      setStage("Mengambil foto dari GreatDay…");
+      await adminRequest(hrAdminApi.face(person.employeeId), { method: "POST", body: JSON.stringify({ action: "link", url: link.trim() }) });
+      setStage("Membaca wajah di foto…");
+      const engine = await loadFaceEngine();
+      const response = await fetch(hrAdminApi.facePhoto(person.employeeId), { credentials: "same-origin", cache: "no-store" });
+      const check = response.ok ? await engine.analyzeImage(await response.blob()) : { ok: false as const, reason: "tidak_terbaca" as const };
+      const saved = await adminRequest<{ status: string }>(hrAdminApi.face(person.employeeId), {
+        method: "POST", body: JSON.stringify(check.ok ? { action: "proses", embedding: check.embedding } : { action: "proses", problem: imageProblemLabels[check.reason] }),
+      });
+      setLink("");
+      if (check.ok) onDone(person.employeeId, `${saved.message} (${person.name})`);
+      else { onDone(person.employeeId, `Foto GreatDay ${person.name} tidak terbaca (${imageProblemLabels[check.reason]}). Unggah foto lain, atau orangnya daftar wajah sendiri.`); }
+    } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
+    finally { setStage(null); }
+  }
+
   return <Card title="Unggah foto acuan" id="unggah-foto">
     <p className={css.muted}>Untuk karyawan yang fotonya tidak ada di GreatDay, atau untuk mengganti foto yang kurang jelas. Fotonya dibaca dulu di browser ini; bila wajahnya terbaca, langsung dipakai untuk absen. Pakai foto wajah lurus ke depan, terang, hanya satu orang.</p>
+    <div className={css.toolbar}>
+      <SegmentedControl<"berkas" | "link"> label="Sumber foto" value={mode} onChange={value => { setMode(value); setMessage(null); }} options={[
+        { value: "berkas", label: "Dari berkas", icon: <Upload size={16} aria-hidden /> },
+        { value: "link", label: "Dari link GreatDay", icon: <Link2 size={16} aria-hidden /> },
+      ]} />
+    </div>
     <div className={css.uploadForm}>
       <label className={css.field} htmlFor={personId}>Karyawan
         <select id={personId} value={picked} disabled={Boolean(stage)} onChange={event => { onPick(event.target.value); setMessage(null); }}>
@@ -98,10 +129,14 @@ export function FaceUpload({ candidates, picked, onPick, onDone }: {
           </optgroup>}
         </select>
       </label>
-      <label className={css.field} htmlFor={fileId}>Foto wajah
-        <input ref={input} id={fileId} type="file" accept={acceptPhotos} disabled={Boolean(stage)} onChange={event => choose(event.target.files?.[0] ?? null)} />
-      </label>
-      {preview
+      {mode === "link"
+        ? <label className={css.field} htmlFor={linkId}>Link foto GreatDay
+          <input id={linkId} type="url" inputMode="url" value={link} disabled={Boolean(stage)} onChange={event => setLink(event.target.value)} placeholder="https://…greatdayhr.com/storage/…" />
+        </label>
+        : <label className={css.field} htmlFor={fileId}>Foto wajah
+          <input ref={input} id={fileId} type="file" accept={acceptPhotos} disabled={Boolean(stage)} onChange={event => choose(event.target.files?.[0] ?? null)} />
+        </label>}
+      {mode === "link" ? <span className={css.uploadPreview} aria-hidden /> : preview
         // eslint-disable-next-line @next/next/no-img-element -- a local preview of the chosen file
         ? <img className={css.uploadPreview} src={preview} alt={`Pratinjau foto${person ? ` untuk ${person.name}` : ""}`} />
         : <span className={css.uploadPreview} aria-hidden />}
@@ -110,9 +145,13 @@ export function FaceUpload({ candidates, picked, onPick, onDone }: {
     {stage && <p className={css.muted} role="status">{stage}</p>}
     {message && <Notice tone={message.tone}>{message.text}</Notice>}
     <div className={css.actions}>
-      <ConsoleButton variant="primary" icon={<Upload size={16} aria-hidden />} disabled={!person || !file || Boolean(stage)} onClick={() => void upload()}>
-        {stage ? "Memproses…" : person?.hasFace ? "Ganti foto acuan" : "Unggah dan pakai"}
-      </ConsoleButton>
+      {mode === "link"
+        ? <ConsoleButton variant="primary" icon={<Link2 size={16} aria-hidden />} disabled={!person || !link.trim() || Boolean(stage)} onClick={() => void fromLink()}>
+          {stage ? "Memproses…" : "Ambil dan pakai"}
+        </ConsoleButton>
+        : <ConsoleButton variant="primary" icon={<Upload size={16} aria-hidden />} disabled={!person || !file || Boolean(stage)} onClick={() => void upload()}>
+          {stage ? "Memproses…" : person?.hasFace ? "Ganti foto acuan" : "Unggah dan pakai"}
+        </ConsoleButton>}
     </div>
   </Card>;
 }
