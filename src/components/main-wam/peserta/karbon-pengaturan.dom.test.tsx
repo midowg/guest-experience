@@ -90,7 +90,7 @@ describe("Jejak karbon: halaman", () => {
   it("follows the design's order: total with per person and time, where it comes from, how it is counted, the note", () => {
     const { container } = render(<CarbonScreen view={view()} />);
     const text = container.textContent ?? "";
-    const order = ["Emisi WAM 2026", "Perkiraan", "13,3", "±111 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Cara menghitung", "dihitung otomatis dari data acara"];
+    const order = ["Emisi WAM 2026", "Perkiraan", "13,3", "±111 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Katalog emisi", "dihitung otomatis dari data acara"];
     let at = -1;
     for (const part of order) { const next = text.indexOf(part, at + 1); expect(next, part).toBeGreaterThan(at); at = next; }
     expect(screen.getByRole("heading", { level: 2, name: "Dari mana asalnya" })).toBeTruthy();
@@ -106,24 +106,34 @@ describe("Jejak karbon: halaman", () => {
     expect(within(sources).getByText("1.440 porsi")).toBeTruthy();
   });
 
-  it("Cara menghitung is closed and opens on a tap, with the factors", () => {
+  it("Katalog emisi is closed and opens on a tap: the formula, every factor with its unit, Perlu dicek, no offsetting", () => {
     render(<CarbonScreen view={view()} />);
-    const how = screen.getByRole("button", { name: "Cara menghitung" });
+    const how = screen.getByRole("button", { name: /^Katalog emisi/ });
     expect(how.getAttribute("aria-expanded")).toBe("false");
     const formula = screen.getByText("Emisi = data kegiatan × faktor emisi.");
     expect(formula.closest("[hidden]")).not.toBeNull();
     fireEvent.click(how);
     expect(how.getAttribute("aria-expanded")).toBe("true");
     expect(formula.closest("[hidden]")).toBeNull();
-    expect(screen.getByText("Makan: 1,9 per porsi")).toBeTruthy();
+    const rows = within(how.closest("div")!).getAllByRole("listitem");
+    expect(rows).toHaveLength(8);
+    expect(rows[0].textContent).toContain("Kereta");
+    expect(rows[0].textContent).toContain("0,0164");
+    expect(rows[3].textContent).toContain("40");
+    expect(screen.getByText("Perlu dicek")).toBeTruthy();
+    expect(screen.getByText(/tanpa penebusan, pohon, atau kontribusi/)).toBeTruthy();
     fireEvent.click(how);
     expect(formula.closest("[hidden]")).not.toBeNull();
   });
 
-  it("has no tree, payment or form, only reading", () => {
+  it("has no tree, payment or form, only reading (the catalogue says so: recorded, never offset)", () => {
     const { container } = render(<CarbonScreen view={view()} howOpen />);
     expect(container.querySelector("input, textarea, select, form")).toBeNull();
-    expect(container.textContent).not.toMatch(/pohon|tebus|bayar|donasi|kontribusi/i);
+    expect(container.textContent).not.toMatch(/bayar|donasi/i);
+    expect(container.querySelector("a[href]")).toBeNull();
+    // The words about offsetting appear only to say there is none.
+    expect(container.textContent).toMatch(/tanpa penebusan, pohon, atau kontribusi/);
+    expect((container.textContent?.match(/penebusan|pohon|kontribusi/gi) ?? []).length).toBe(3);
   });
 
   it("nothing counted yet: a friendly empty state, no numbers", () => {
@@ -136,7 +146,7 @@ describe("Jejak karbon: halaman", () => {
     render(<LangProvider lang="en"><CarbonScreen view={view("en")} /></LangProvider>);
     expect(screen.getByText("Where it comes from")).toBeTruthy();
     expect(screen.getByText("±111 kg per person")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "How it is counted" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Emission catalogue/ })).toBeTruthy();
   });
 
   it("axe finds nothing to fix (card, page, empty page)", async () => {
@@ -205,14 +215,14 @@ describe("Pengaturan", () => {
   const help = { id: samplePeople.putri.id, name: "Putri", role: "Panitia", photo: null, ...contactLinks("0800-0000-0002") };
   const screenOf = (extra: Partial<Parameters<typeof SettingsScreen>[0]> = {}) => <SettingsScreen version="0.1.0" help={help} preview={{ push: "on", installed: false }} {...extra} />;
 
-  it("three groups in order, one short line under each row", () => {
+  it("four groups in order, Tampilan first with its controls inline", () => {
     const { container } = render(screenOf());
     const text = container.textContent ?? "";
     let at = -1;
-    for (const part of ["Aplikasi", "Notifikasi", "Pasang ke layar utama", "Tampilan", "Bahasa", "Akun", "Ganti password", "Bantuan", "Hubungi panitia", "WAM 2026 · versi 0.1.0"]) {
+    for (const part of ["Tampilan", "Tema", "Bahasa", "Kurangi gerak", "Aplikasi", "Notifikasi", "Pasang ke layar utama", "Akun", "Ganti password", "Bantuan", "Hubungi panitia", "WAM 2026 · versi 0.1.0"]) {
       const next = text.indexOf(part, at + 1); expect(next, part).toBeGreaterThan(at); at = next;
     }
-    expect(screen.getAllByRole("heading", { level: 2 }).map(heading => heading.textContent)).toEqual(["Aplikasi", "Akun", "Bantuan"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map(heading => heading.textContent)).toEqual(["Tampilan", "Aplikasi", "Akun", "Bantuan"]);
     expect(screen.getByRole("link", { name: /^Bantuan/ }).getAttribute("href")).toBe(mainWamPath.help);
     expect(screen.getByRole("button", { name: /^Notifikasi/ }).textContent).toContain("Aktif");
   });
@@ -230,25 +240,35 @@ describe("Pengaturan", () => {
     expect(screen.getByRole("button", { name: /^Pasang ke layar utama/ }).textContent).toContain("Sudah terpasang di layar utama.");
   });
 
-  it("Tampilan: Terang, Gelap, Sistem; the row shows the pick as soon as it is made", () => {
+  it("Tema: Terang, Gelap, Sistem in the row itself; a pick is painted and kept at once", () => {
     render(screenOf({ mode: "system" }));
-    expect(screen.getByRole("button", { name: /^Tampilan/ }).textContent).toContain("Sistem");
-    fireEvent.click(screen.getByRole("button", { name: /^Tampilan/ }));
-    const dialog = screen.getByRole("dialog", { name: "Tampilan" });
-    for (const name of ["Terang", "Gelap", "Sistem"]) expect(within(dialog).getByRole("radio", { name })).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole("radio", { name: "Gelap" }));
+    for (const name of ["Terang", "Gelap", "Sistem"]) expect(screen.getByRole("radio", { name })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Sistem" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("radio", { name: "Gelap" }));
     expect(document.cookie).toContain("mw_mode=dark");
     expect(router.refresh).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: /^Tampilan/, hidden: true }).textContent).toContain("Gelap");
+    expect(screen.getByRole("radio", { name: "Gelap" }).getAttribute("aria-checked")).toBe("true");
   });
 
-  it("Bahasa: the row names the language, the sheet changes it", () => {
-    render(<LangProvider lang="id">{screenOf()}</LangProvider>);
-    expect(screen.getByRole("button", { name: /^Bahasa/ }).textContent).toContain("Indonesia");
-    fireEvent.click(screen.getByRole("button", { name: /^Bahasa/ }));
-    const dialog = screen.getByRole("dialog", { name: "Bahasa / Language" });
-    fireEvent.click(within(dialog).getByRole("radio", { name: "English" }));
+  it("Bahasa: ID and EN with a flag each, in the row; EN changes the screen at once", () => {
+    const { container } = render(<LangProvider lang="id">{screenOf()}</LangProvider>);
+    expect(screen.getByRole("radio", { name: "ID" }).getAttribute("aria-checked")).toBe("true");
+    expect(container.querySelectorAll("[role=radio] svg[data-flag]")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /^Bahasa/ })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "EN" }));
     expect(screen.getByRole("heading", { level: 2, name: "App", hidden: true })).toBeTruthy();
+  });
+
+  it("Kurangi gerak: a switch level with its title, kept in a cookie and on the app root", () => {
+    const { container } = render(<div data-main-wam="">{screenOf()}</div>);
+    const toggle = screen.getByRole("switch", { name: "Kurangi gerak" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(document.cookie).toContain("mw_motion=reduce");
+    expect(container.querySelector("[data-main-wam]")?.hasAttribute("data-mw-reduce")).toBe(true);
+    fireEvent.click(toggle);
+    expect(container.querySelector("[data-main-wam]")?.hasAttribute("data-mw-reduce")).toBe(false);
   });
 
   it("Ganti password and Hubungi panitia open their sheets; without a contact there is no such row", () => {

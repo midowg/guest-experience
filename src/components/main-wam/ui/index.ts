@@ -12,6 +12,7 @@ export { Badge, Pill, StatusPill, Avatar, SrOnly, initials, STATUS_PILLS, type P
 export { Switch, SwitchRow } from "./Switch";
 export { Sheet, useHashSheet } from "./Sheet";
 export { ConfirmDialog } from "./ConfirmDialog";
+export { LoadingDialog, LOADERS, type LoaderKind } from "./LoadingDialog";
 export { ToastProvider, useToast, ToastPreview, type ToastInput, type ToastTone } from "./Toast";
 export { Banner, EmptyState, Skeleton, type BannerTone, type SkeletonShape } from "./Feedback";
 export { SkeletonGroup, Spinner } from "./Loading";

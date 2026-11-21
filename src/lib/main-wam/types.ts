@@ -128,6 +128,8 @@ export type MainWamViewer = {
   /** For Profil and admin views only. */
   fullName: string;
   department: string;
+  /** The job title ("Creative Designer"), for the profile line in Saya; absent or empty = the department alone. */
+  position?: string;
   photo: string | null;
   /** What Main WAM draws for: in Mode demo a penguji's chosen role stands in for the account's own (see `demo`). */
   roles: PraWamRole[];

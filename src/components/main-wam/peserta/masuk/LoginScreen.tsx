@@ -2,15 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { CloudOff, Eye, EyeOff } from "lucide-react";
+import { ChevronRight, CloudOff, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
 import { afterSignIn, ONBOARDED_KEY } from "@/lib/main-wam/peserta/onboarding";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { praWamApi } from "@/lib/routes";
-import { Banner, Button, Sheet, TextField, ToastProvider, useToast } from "@/components/main-wam/ui";
+import { Banner, Button, LoadingDialog, Sheet, TextField, ToastProvider, useToast } from "@/components/main-wam/ui";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { useOffline } from "../Live";
 import { MwRequestError, failText, mwRequest } from "../request";
+import { PegasusArt } from "./PegasusArt";
 import css from "../peserta.module.css";
+import look from "./masuk.module.css";
 
 const LOCK_MINUTES = 10;
 
@@ -84,19 +86,21 @@ function Login({ next, eventName, preview }: { next: string; eventName: string; 
   const eye = <button type="button" className={css.eye} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? t("peserta.login.hide") : t("peserta.login.show")}>
     {show ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
   </button>;
-  return <main className={css.login}>
-    <p className={css.wordmark}>{eventName}</p>
-    <h1 className={css.pageTitle}>{t("peserta.login.title")}</h1>
-    {shownProblem && <Banner tone={shownProblem.tone} icon={shownProblem.tone === "offline" ? <CloudOff /> : undefined}>{shownProblem.text}</Banner>}
-    <form className={css.form} onSubmit={submit} noValidate>
-      <TextField label={t("peserta.login.identity")} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-        value={email} onChange={event => setEmail(event.target.value)} required />
-      <TextField label={t("peserta.login.password")} type={show ? "text" : "password"} autoComplete="current-password" value={password}
-        onChange={event => setPassword(event.target.value)} error={wrong ?? undefined} suffix={eye} required />
-      <Button variant="text" size="m" className={css.forgot} onClick={() => setForgot(true)} aria-haspopup="dialog">{t("peserta.login.forgot")}</Button>
-      <Button type="submit" block loading={busy} loadingLabel={t("peserta.login.checking")} disabled={!!lockedUntil}>{t("peserta.login.title")}</Button>
-    </form>
-    <p className={css.loginNote}>{t("peserta.login.help")}</p>
+  return <main className={look.login}>
+    <PegasusArt flow className={look.loginPeg} />
+    <div className={look.panel}>
+      <h1 className={look.title}>{t("peserta.login.welcome")} <span className={look.titleEvent}>{eventName}</span></h1>
+      {shownProblem && <Banner tone={shownProblem.tone} icon={shownProblem.tone === "offline" ? <CloudOff /> : undefined}>{shownProblem.text}</Banner>}
+      <form className={look.fields} onSubmit={submit} noValidate>
+        <TextField label={t("peserta.login.email")} type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} icon={UserRound}
+          value={email} onChange={event => setEmail(event.target.value)} required />
+        <TextField label={t("peserta.login.password")} type={show ? "text" : "password"} autoComplete="current-password" value={password} icon={LockKeyhole}
+          onChange={event => setPassword(event.target.value)} error={wrong ?? undefined} suffix={eye} required />
+        <button type="submit" className={look.goldButton} disabled={busy || !!lockedUntil}>{t("peserta.login.title")}<ChevronRight aria-hidden /></button>
+      </form>
+      <button type="button" className={look.fine} onClick={() => setForgot(true)} aria-haspopup="dialog">{t("peserta.login.forgotLine")}</button>
+    </div>
+    <LoadingDialog open={busy} title={t("peserta.login.signingIn")} />
     <ForgotSheet open={forgot} onClose={() => setForgot(false)} email={email} onSent={() => { setForgot(false); toast.show({ text: t("peserta.login.requestSent"), tone: "success" }); }} />
   </main>;
 }

@@ -19,6 +19,9 @@
 
 .row { display: flex; align-items: center; gap: var(--mw-space-12); min-height: var(--mw-touch); cursor: pointer; }
 .inList { min-height: 56px; padding: var(--mw-space-8) var(--mw-space-16); }
+/* With a line under the title the switch stays level with the title, not with the middle of both lines. */
+.row:has(.rowSub) { align-items: flex-start; }
+.row:has(.rowSub) > .switch { margin-top: -5px; }
 .rowText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .rowTitle { font: var(--mw-type-body); color: var(--mw-text-1); }
 .rowSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }

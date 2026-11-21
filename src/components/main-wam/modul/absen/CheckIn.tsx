@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CircleCheck, Clock, CloudOff, Info, ListChecks, Phone, QrCode, TimerOff } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { ActionBar, Button, SkeletonGroup, Spinner } from "@/components/main-wam/ui";
+import { ActionBar, Button, LoadingDialog } from "@/components/main-wam/ui";
 import { clockWhen, outcomeText, type CheckInOutcome, type OutcomeText } from "@/lib/main-wam/modul/absen";
 import type { PanitiaContact } from "@/lib/main-wam/modul/contact";
 import { mainWamPath } from "@/lib/routes";
@@ -100,10 +100,6 @@ export function CheckIn({ token, contact }: { token: string; contact: PanitiaCon
       <ActionBar><Button block onClick={() => void send()}>{t("shell.retry")}</Button></ActionBar>
     </div>;
   }
-  return <ScreenContent>
-    <SkeletonGroup label={t("absen.recording")} className={css.result}>
-      <Spinner />
-      <p className={css.resultBody}>{t("absen.recordingDots")}</p>
-    </SkeletonGroup>
-  </ScreenContent>;
+  // Recording the check-in: the kit's loading dialog over an empty screen (nothing to tap meanwhile).
+  return <ScreenContent><LoadingDialog open title={t("absen.recording")} /></ScreenContent>;
 }

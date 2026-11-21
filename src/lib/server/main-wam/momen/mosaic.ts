@@ -129,3 +129,34 @@ export async function mosaicManifest(context: MainWamContext, now = new Date(), 
     updatedAt: now.toISOString(), complete: tiles.length >= total, migrated: true,
   };
 }
+
+/** What the Beranda card needs of the Mozaik: the grid, which cells hold a photo, and the counts. */
+export type MosaicSummary = Pick<MosaicManifest, "columns" | "rows" | "cells" | "filled" | "total" | "mine" | "migrated"> & { filledCells: number[] };
+
+const summaryOf = (manifest: MosaicManifest): MosaicSummary => ({
+  columns: manifest.columns, rows: manifest.rows, cells: manifest.cells, filled: manifest.filled, total: manifest.total, mine: manifest.mine, migrated: manifest.migrated,
+  filledCells: manifest.tiles.map(tile => tile.cell),
+});
+
+/**
+ * The same facts as `mosaicManifest`, without the pictures: no address is signed and nothing is sent
+ * about the tiles but their cells, so Beranda can show its Mozaik card (the preview, "842 dari 1.200
+ * foto", the bar) at the cost of one narrow query. Places new photos first, as the manifest does.
+ */
+export async function mosaicSummary(context: MainWamContext, now = new Date()): Promise<MosaicSummary> {
+  const { settings, viewer } = context;
+  const { columns, rows } = settings.moduleConfig.mozaik;
+  const total = columns * rows;
+  const head = await mosaicHead(context, now);
+  const cells = await mosaicCells(settings);
+  const empty: MosaicManifest = { version: NOT_MIGRATED.version, columns, rows, cells, tiles: [], filled: 0, total, people: 0, mine: 0, updatedAt: now.toISOString(), complete: false, migrated: false };
+  const demoOr = async (migrated: boolean) => ({ ...summaryOf((await demoMosaic(empty)) ?? empty), ...(migrated ? { migrated } : {}) });
+  if (!head.migrated) return demoOr(false);
+  const { data, error } = await db().from("mw_mosaic_tiles").select("tile,photo_id,mw_photos!inner(owner_id,status,tile_key)")
+    .eq("mw_photos.status", "tampil").lt("tile", total).order("tile").limit(6400);
+  if (error) { if (mwMissing(error)) return demoOr(false); databaseError({ message: error.message ?? "", code: error.code }); }
+  const placed = ((data ?? []) as unknown as TileRow[]).filter(row => row.mw_photos?.tile_key);
+  // Mode demo: a part-filled sample while no photo is placed (as the manifest does).
+  if (!placed.length) return demoOr(true);
+  return { columns, rows, cells, filled: placed.length, total, mine: placed.filter(row => row.mw_photos!.owner_id === viewer.id).length, migrated: true, filledCells: placed.map(row => row.tile) };
+}

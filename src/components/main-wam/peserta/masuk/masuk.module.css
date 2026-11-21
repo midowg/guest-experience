@@ -1,0 +1,145 @@
+/*
+ * Splash (O01) and Masuk (O02), from the final prototype (prototipe-wam.html: .ph.splash, .ph.login).
+ * Their own brand palette, kept here and nowhere else (a listed exception of colors.test.ts): the
+ * splash is always dark; Masuk follows the app's mode (Terang = cream sky and the light pegasus,
+ * Gelap = blue-black and the dark pegasus). Display type: Barlow Condensed (--lg-font-display,
+ * loaded by the page). The gold line of the pegasus flows like current; reduced motion: it rests.
+ */
+
+/* ── Palette: light by default, dark by the mode (data-mw-mode on the theme root) ── */
+.splash, .login {
+  --lg-display: var(--lg-font-display, "Barlow Condensed"), "Arial Narrow", sans-serif;
+  --lg-ink: #0B1638;
+  --lg-ink-2: #4A5A7E;
+  --lg-sky: linear-gradient(180deg, #FDF4E8 0, #F3F7FF 100%);
+  --lg-card: #FFFFFF;
+  --lg-card-edge: transparent;
+  --lg-card-shadow: 0 -14px 40px rgb(21 81 160 / 0.14);
+  --lg-field: #F7F9FD;
+  --lg-field-edge: #D5DEEE;
+  --lg-accent: #1551A0;
+  --lg-title-from: #1551A0;
+  --lg-title-via: #F5821F;
+  --lg-title-to: #F9BC4E;
+  --lg-gold: #E0A200;
+  --lg-on-gold: #0B1638;
+  --lg-glow: 0 0 0 transparent;
+  --lg-peg-light: block;
+  --lg-peg-dark: none;
+}
+:global([data-mw-mode="dark"]) .login {
+  --lg-ink: #F2F6FF;
+  --lg-ink-2: #9FB4E4;
+  --lg-sky: radial-gradient(120% 70% at 80% 0, #16347A 0, #050914 62%);
+  --lg-card: #0A1330;
+  --lg-card-edge: rgb(70 210 255 / 0.3);
+  --lg-card-shadow: 0 -14px 40px rgb(0 0 0 / 0.5), 0 -1px 24px rgb(70 210 255 / 0.12);
+  --lg-field: #0E1936;
+  --lg-field-edge: rgb(70 210 255 / 0.25);
+  --lg-accent: #46D2FF;
+  --lg-title-from: #46D2FF;
+  --lg-title-via: #A8C79A;
+  --lg-title-to: #F9BC4E;
+  --lg-gold: #F5C542;
+  --lg-glow: 0 0 18px rgb(245 197 66 / 0.35);
+  --lg-peg-light: none;
+  --lg-peg-dark: block;
+}
+@media (prefers-color-scheme: dark) {
+  :global([data-mw-mode="system"]) .login {
+    --lg-ink: #F2F6FF;
+    --lg-ink-2: #9FB4E4;
+    --lg-sky: radial-gradient(120% 70% at 80% 0, #16347A 0, #050914 62%);
+    --lg-card: #0A1330;
+    --lg-card-edge: rgb(70 210 255 / 0.3);
+    --lg-card-shadow: 0 -14px 40px rgb(0 0 0 / 0.5), 0 -1px 24px rgb(70 210 255 / 0.12);
+    --lg-field: #0E1936;
+    --lg-field-edge: rgb(70 210 255 / 0.25);
+    --lg-accent: #46D2FF;
+    --lg-title-from: #46D2FF;
+    --lg-title-via: #A8C79A;
+    --lg-title-to: #F9BC4E;
+    --lg-gold: #F5C542;
+    --lg-glow: 0 0 18px rgb(245 197 66 / 0.35);
+    --lg-peg-light: none;
+    --lg-peg-dark: block;
+  }
+}
+/* The splash never follows the mode. */
+.splash {
+  --lg-ink: #F2F6FF;
+  --lg-ink-2: #9FB4E4;
+  --lg-gold: #F5C542;
+  --lg-glow: 0 0 18px rgb(245 197 66 / 0.35);
+}
+
+/* ── The pegasus: a net of dots and lines with the gold path through it (and the flowing light on that path) ── */
+.peg { position: relative; width: 100%; aspect-ratio: 474 / 560; }
+.peg img, .peg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pegLight { display: var(--lg-peg-light); }
+.pegDark { display: var(--lg-peg-dark); }
+.flow {
+  fill: none; stroke: #FFC21A; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 9 91;
+  filter: drop-shadow(0 0 4px #FFB300) drop-shadow(0 0 8px rgb(255 179 0 / 0.7));
+  animation: mw-flow 3.2s linear infinite;
+}
+@keyframes mw-flow { from { stroke-dashoffset: 9; } to { stroke-dashoffset: -91; } }
+@media (prefers-reduced-motion: reduce) { .flow { animation: none; opacity: 0; } }
+:global([data-mw-reduce]) .flow { animation: none; opacity: 0; }
+
+/* ── Splash: dark, the pegasus on top, the words low, Masuk under them ── */
+.splash {
+  position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  background: radial-gradient(120% 70% at 80% 0, #16347A 0, #050914 62%); color: var(--lg-ink);
+}
+.splashImage { background: #050914 var(--mw-image-splash) center / cover no-repeat; }
+.splashPeg { position: absolute; left: 50%; top: calc(var(--mw-safe-top) + 8px); width: min(104%, 470px); transform: translateX(-50%); z-index: 1; pointer-events: none; }
+.splashPeg .pegLight { display: none; }
+.splashPeg .pegDark { display: block; }
+.splashBody {
+  position: relative; z-index: 2; width: 100%; max-width: var(--mw-column); margin: 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  padding: 0 calc(var(--mw-safe-right) + 28px) calc(var(--mw-safe-bottom) + 44px) calc(var(--mw-safe-left) + 28px);
+}
+.splashPill { display: inline-flex; padding: 9px 16px; border-radius: 999px; border: 1px solid #46D2FF; font: 700 13px/18px var(--mw-font-sans); color: var(--lg-ink); overflow-wrap: anywhere; }
+.splashTitle { margin: 0; font: 800 clamp(52px, 19vw, 78px)/0.88 var(--lg-display); text-transform: uppercase; letter-spacing: 0.01em; color: var(--lg-ink); overflow-wrap: anywhere; }
+.splashGold { color: var(--lg-gold); }
+.splashCap { margin: 0; font: 700 12px/16px var(--lg-display); letter-spacing: 0.18em; text-transform: uppercase; color: #6E9EEA; }
+.goldButton {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; padding: 0 20px; border: 0; border-radius: 16px;
+  background: var(--lg-gold); color: var(--lg-on-gold); font: 700 16px/24px var(--mw-font-sans); cursor: pointer; box-shadow: var(--lg-glow);
+  -webkit-tap-highlight-color: transparent;
+}
+.goldButton:disabled { opacity: 0.6; cursor: default; }
+.goldButton > svg { width: 20px; height: 20px; }
+.splashBody .goldButton { margin-top: 6px; }
+
+/* ── Masuk ── */
+.login {
+  position: relative; min-height: 100dvh; width: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  background: var(--lg-sky); color: var(--lg-ink);
+}
+.loginPeg { position: absolute; left: 50%; top: calc(var(--mw-safe-top) + 24px); width: min(350px, 82vw); transform: translateX(-50%); z-index: 1; pointer-events: none; }
+/* Short screens (the keyboard is open, or the phone is on its side): the panel sits over the pegasus, which stays behind. */
+.panel {
+  position: relative; z-index: 3; width: 100%; max-width: var(--mw-column); margin: 0 auto; display: flex; flex-direction: column; gap: 12px;
+  padding: 26px calc(var(--mw-safe-right) + 24px) calc(var(--mw-safe-bottom) + 28px) calc(var(--mw-safe-left) + 24px);
+  border-radius: 30px 30px 0 0; background: var(--lg-card); box-shadow: var(--lg-card-shadow); border-top: 1px solid var(--lg-card-edge); color: var(--lg-ink);
+  /* The kit's fields inside read these tokens. */
+  --mw-surface: var(--lg-field); --mw-outline-strong: var(--lg-field-edge); --mw-text-1: var(--lg-ink); --mw-text-2: var(--lg-ink-2); --mw-text-3: var(--lg-ink-2);
+  --mw-primary: var(--lg-accent); --mw-focus: var(--lg-accent);
+}
+.title { margin: 0; font: 800 clamp(34px, 11.5vw, 44px)/0.92 var(--lg-display); text-transform: uppercase; letter-spacing: 0.01em; color: var(--lg-ink); overflow-wrap: anywhere; }
+.titleEvent {
+  display: inline-block; background: linear-gradient(90deg, var(--lg-title-from), var(--lg-title-via) 70%, var(--lg-title-to));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.panel label { font: 700 12px/16px var(--lg-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--lg-ink-2); }
+.panel :global(input) { font-weight: 600; }
+.fields { display: flex; flex-direction: column; gap: 12px; }
+.panel .goldButton { margin-top: 4px; }
+/* "Lupa password? Minta panitia untuk reset.": one text button, 44 tall, the whole line opens the request. */
+.fine {
+  display: flex; align-items: center; justify-content: center; align-self: center; min-height: 44px; padding: 0 var(--mw-space-8); margin-bottom: calc(-1 * var(--mw-space-8)); border-radius: 12px;
+  font: 500 12px/16px var(--mw-font-sans); color: var(--lg-ink-2); text-align: center; overflow-wrap: anywhere;
+}
+.fine:hover { text-decoration: underline; text-underline-offset: 3px; }

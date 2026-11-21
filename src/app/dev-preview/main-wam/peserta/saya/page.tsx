@@ -21,6 +21,6 @@ export default async function PreviewSaya({ searchParams }: { searchParams: Prom
   const room = params.status === "tanpa-kamar" || !viewer.room ? null : roomRow(viewer.room, lang);
   const open = params.buka === "foto" || params.buka === "keluar" ? params.buka : null;
   return <Frame path={mainWamPath.me} peran={params.peran} now={now} lang={lang}>
-    <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer)} photo={null} room={room} carbon={params.karbon !== "mati"} open={open} />
+    <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer)} photo={null} room={room} carbon={params.karbon !== "mati"} mosaic={params.mozaik !== "mati"} open={open} />
   </Frame>;
 }

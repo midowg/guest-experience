@@ -67,6 +67,17 @@
 .dialogTitle { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); color: var(--mw-text-1); outline: none; }
 .dialogBody { font: var(--mw-type-body); color: var(--mw-text-2); }
 .dialogActions { display: flex; flex-direction: column; gap: var(--mw-space-8); }
+
+/* Loading dialog (LoadingDialog): the loader, a title, "Mohon tunggu sebentar"; the scrim is the same as the dialog's. */
+.loadingDialog {
+  box-sizing: border-box; width: 250px; max-width: calc(100vw - 64px); margin: auto; padding: var(--mw-space-24) var(--mw-space-20) var(--mw-space-20); border: 0;
+  border-radius: var(--mw-radius-24); background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-3); text-align: center;
+}
+.loadingDialog[open] { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); }
+.loadingDialog::backdrop { background: var(--mw-overlay-scrim, rgb(17 24 39 / 0.5)); }
+.loadingLoader { display: block; width: 160px; height: 160px; margin-bottom: var(--mw-space-8); object-fit: contain; }
+.loadingTitle { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; }
+.loadingSub { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .dialogActions > * { width: 100%; }
 @media (prefers-reduced-motion: no-preference) {
   .dialog[open] { animation: mw-dialog-in 200ms var(--mw-ease-decelerate); }

@@ -14,6 +14,8 @@
 /* The 36 segment still answers a touch 44 tall. */
 .item::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 .item > svg { flex: none; width: 16px; height: 16px; }
+/* Flags (the language choice) keep their 3:2 shape. */
+.item > svg[data-flag] { width: 20px; height: 14px; border-radius: 2px; }
 .itemLabel { min-width: 0; text-align: center; overflow-wrap: anywhere; text-wrap: balance; line-height: 16px; }
 .item[aria-checked="true"] { background: var(--mw-surface); color: var(--mw-text-1); box-shadow: var(--mw-elev-1), 0 0 0 1px var(--mw-outline-2); }
 .item:disabled { color: var(--mw-disabled-fg); cursor: default; }

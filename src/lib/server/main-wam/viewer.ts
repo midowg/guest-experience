@@ -94,6 +94,7 @@ export async function viewerOf(member: Member, listed: Promise<Set<string>> = te
     name: callName({ fullName: member.name, nickname: member.nickname }),
     fullName: member.name,
     department: member.department,
+    position: member.position,
     photo: member.photo,
     roles: member.roles,
     tester: isTester(member, onList),

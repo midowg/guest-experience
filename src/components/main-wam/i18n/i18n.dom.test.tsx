@@ -58,7 +58,7 @@ describe("the frame in English", () => {
     expect(mainWamScreen(mainWamPath.room, "en")?.title).toBe("Room");
     expect(mainWamScreen(mainWamPath.room, "id")?.title).toBe("Kamar");
     expect(mainWamScreen(mainWamPath.carbon(), "en")?.title).toBe("Carbon footprint");
-    expect(mainWamScreen(mainWamPath.moments(), "en")?.title).toBe("Moments");
+    expect(mainWamScreen(mainWamPath.moments(), "en")?.title).toBe("Latest");
   });
 });
 

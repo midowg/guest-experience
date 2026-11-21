@@ -14,6 +14,6 @@ export default async function SayaPage() {
   const { viewer, settings } = context;
   const lang = await readLang();
   return <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer)} photo={viewer.photo}
-    room={viewer.room ? roomRow(viewer.room, lang) : null} carbon={moduleOn(settings.modules, "karbon")}
+    room={viewer.room ? roomRow(viewer.room, lang) : null} carbon={moduleOn(settings.modules, "karbon")} mosaic={moduleOn(settings.modules, "mozaik")}
     demo={viewer.demo?.canSwitch ? viewer.demo.role : null} />;
 }

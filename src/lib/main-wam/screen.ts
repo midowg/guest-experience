@@ -71,7 +71,7 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
     // P04 Detail sesi is a bottom sheet over Agenda (the sheet has its own title and close button), so the frame behind it is Agenda's own.
     case "agenda": return { tab: "agenda", level: "akar", title: say("screen.agenda") };
     case "momen":
-      if (!second) return { tab: "momen", level: "akar", title: say("screen.moments") };
+      if (!second) return { tab: "momen", level: "akar", title: say("screen.latest") };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: say("screen.camera"), back: momen, camera: true };
       if (second === "galeri") return { tab: "momen", level: "detail", title: say("screen.gallery"), back: momen };
       if (second === "mozaik") return { tab: "momen", level: "detail", title: say("screen.mosaic"), back: momen };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { carbonEstimate } from "../panitia/carbon";
-import { carbonFactorLines, carbonFigure, carbonShort, carbonView, perPersonKg, splitPercent } from "./carbon";
+import { carbonCatalog, carbonFigure, carbonShort, carbonView, perPersonKg, splitPercent } from "./carbon";
 import { sampleCarbon } from "./sample";
 
 /* Jejak karbon for the person (E01): the sources' order and shares, rounding in kg and tonnes, and the words. */
@@ -94,11 +94,17 @@ describe("the page's view", () => {
     expect(view.updated).toBe("Mon, 4 Jan · 21:00");
   });
 
-  it("lists the factors it counts with", () => {
-    expect(carbonFactorLines().map(line => line.text)).toEqual([
-      "Hotel: 40 per kamar-malam",
-      "Perjalanan: kereta 0,0164 per penumpang-km, shuttle 0,89 per bus-km",
-      "Makan: 1,9 per porsi",
+  it("the catalogue lists every factor the estimate counts with, from the one table", () => {
+    expect(carbonCatalog().map(row => [row.name, row.value, row.unit])).toEqual([
+      ["Kereta", "0,0164", "kg per penumpang-km"],
+      ["Bus", "0,89", "kg per bus-km"],
+      ["Makan", "1,9", "kg per porsi"],
+      ["Hotel", "40", "kg per kamar-malam"],
+      ["Listrik", "0,87", "kg per kWh"],
+      ["Air", "0,4", "kg per m³"],
+      ["LPG", "2,94", "kg per kg"],
+      ["Sampah", "0,5", "kg per kg"],
     ]);
+    expect(carbonCatalog("en")[0]).toEqual({ key: "kereta", name: "Train", value: "0.0164", unit: "kg per passenger-km" });
   });
 });

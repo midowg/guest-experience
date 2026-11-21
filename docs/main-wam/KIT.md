@@ -47,7 +47,7 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
     (gradasi netral), bukan foto orang.
 12. **Aksesibilitas**: target sentuh ≥ 44 (sudah di kit), kontras ≥ 4,5 (dicek otomatis di galeri, terang
     dan gelap), fokus terlihat, `prefers-reduced-motion` dihormati, setiap gestur geser punya tombol
-    (sheet: ✕; tumpukan Momen: ketuk sisi foto / tombol).
+    (sheet: ✕; tumpukan Momen: pengecualian yang diputuskan pemilik, 21 Nov 2026: foto hanya digeser, tanpa tombol berikutnya/sebelumnya, tanpa penghitung; panah keyboard tetap menggeser).
 13. **Tanpa warna literal.** Warna hanya lewat token `--mw-*` (ukuran, bayangan, font juga). `components/main-wam/colors.test.ts`
     menggagalkan hex, `rgb()`/`hsl()`, nama warna, dan `color-mix()` dengan `white`/`black` di `src/components/main-wam` dan
     `src/app/wam/acara`; pengecualian hanya yang tercatat di daftarnya (kanvas Mozaik, perata JPEG, latar `::backdrop`).
@@ -139,7 +139,7 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
 | `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya sendiri, mengikuti tema) | tidak |
 
-Tumpukan foto Momen: kartu depan di tengah (margin kiri = kanan, 24 px dari tepi layar; kartu belakang miring bergeser -5 sampai 5 px, sudutnya tetap di dalam layar). Baris reaksi cepat memilih jumlah tombol dari lebar barisnya sendiri (container query), supaya jarak antar tombol 44 px tetap ≥ 8 px: 7 tombol ≥ 356 px, 6 ≥ 304, 5 ≥ 252, lalu 3.
+Tumpukan foto Momen: kartu depan di tengah (margin kiri = kanan, 24 px dari tepi layar; kartu belakang miring bergeser -5 sampai 5 px, sudutnya tetap di dalam layar). Delapan emoji di bawah foto polos tanpa kartu, tersusun 4 × 2 di tengah dengan jarak merata; baris itu membungkus menurut lebar barisnya sendiri (container query): 4 kolom, 3 kolom di bawah 200 px, 2 di bawah 144 px (ruang untuk tiga baris), target tetap 44. Satu reaksi per orang: ketuk memilih, ketuk lagi membatalkan, emoji lain mengganti. Di dalam foto kiri bawah: pil tiga avatar bertumpuk rapat + jumlah reaksi, satu tombol yang membuka rincian (chip Semua + per emoji, nama, singkatan departemen, emoji). Judul tab Momen = "Terbaru"; tombol Foto di kanan atas (kata Foto jadi nama tersembunyi di bawah 320 px).
 
 Momen mengikuti tema seperti tab lain (tidak ada bilah atau latar gelap tersendiri). ‹/✕ kembali ke layar sebelumnya bila
 ada riwayat di aplikasi, kalau tidak ke `back.href` (dibuka dari notifikasi atau QR). Toast
@@ -276,6 +276,7 @@ sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="
 | `EmptyState` | `icon`, `title`, isi, `action` (Button), `size` `m`/`s` (di kartu), `headingLevel` | kosong, tanpa koneksi, izin ditolak |
 | `Skeleton` + `SkeletonGroup` | `shape` `line` · `title` · `circle` · `box` · `photo` · `card` · `block`; `width`, `height`; grup memberi `aria-busy` + label | `loading.tsx` per bagian (bentuknya mengikuti layar) |
 | `Spinner` | `size` 20/24, `label` | tunggu > 300 ms yang bukan satu bagian |
+| `LoadingDialog` | `open`, `title` ("Sedang masuk", "Mengirim foto"), `loader` `pegasus` (bawaan) · `orbit` · `network` · `mini` | tunggu yang tidak boleh terputus (masuk, kirim foto, catat absen): kartu bertema + animasi kit (`public/wam/loader-*.svg`) + "Mohon tunggu sebentar" di atas latar digelapkan; dialog modal, tidak bisa ditutup pengguna |
 | `Sheet` | `open`, `onClose`, `title`, `subtitle`, `footer`, `history` (bawaan true), `locked`, `initialFocus`, `flush` | detail atau form pendek di atas layar |
 | `useHashSheet(id)` | `{ open, show, close }` | sheet beralamat `#id` (tautan bisa membukanya); pakai dengan `<Sheet history={false}>` |
 | `ConfirmDialog` | `open`, `onCancel`, `onConfirm`, `title` (pertanyaan), `body` (akibat), `confirmLabel` (hasil), `tone` `primary`/`danger` (+ ikon), `busy` + `busyLabel` | konfirmasi aksi berisiko |
@@ -330,6 +331,8 @@ Sheet pilih sesi (contoh di galeri):
   </List>
 </Sheet>
 ```
+
+**Gerak dan gulir (21 Nov 2026).** Semua scrollbar disembunyikan di aplikasi (halaman dan area gulir dalam; layar tetap bisa digulir dengan sentuhan, roda, dan tombol). Pengaturan, Kurangi gerak (cookie `mw_motion`, atribut `data-mw-reduce` di akar tema) memotong semua animasi dan transisi, di atas `prefers-reduced-motion` yang tetap dihormati. Sakelar di baris yang punya keterangan sejajar dengan judul barisnya, bukan tengah dua baris.
 
 ## 5. Tes
 

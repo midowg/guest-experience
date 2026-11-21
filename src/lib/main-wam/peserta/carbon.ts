@@ -1,5 +1,5 @@
 import { CARBON_FACTORS, type CarbonResult } from "../panitia/carbon";
-import { clock, number, shortDateOfInstant, t, type Lang } from "../i18n";
+import { clock, number, shortDateOfInstant, t, type Lang, type MessageKey } from "../i18n";
 import { wibTime } from "../rundown";
 
 /*
@@ -109,13 +109,18 @@ export function carbonView(result: CarbonResult | null, now: Date, lang: Lang = 
   };
 }
 
-/** The factors, as "Cara menghitung" lists them (kg CO₂e per unit), in the language's number style. */
-export function carbonFactorLines(lang: Lang = "id"): { key: CarbonSource; text: string }[] {
+export type CatalogKey = "kereta" | "bus" | "makan" | "hotel" | "listrik" | "air" | "lpg" | "sampah";
+
+/**
+ * "Katalog emisi": every factor the footprint is counted with (kg CO₂e per unit), from the one table
+ * the estimate itself uses (CARBON_FACTORS), in the language's number style. All of them are working
+ * figures, still "perlu dicek".
+ */
+export function carbonCatalog(lang: Lang = "id"): { key: CatalogKey; name: string; unit: string; value: string }[] {
   const f = CARBON_FACTORS;
-  const n = (value: number, digits: number) => number(lang, value, digits);
-  return [
-    { key: "hotel", text: t(lang, "peserta.carbon.factor.hotel", { n: n(f.hotelPerKamarMalam, 0) }) },
-    { key: "perjalanan", text: t(lang, "peserta.carbon.factor.travel", { train: n(f.keretaPerPenumpangKm, 4), bus: n(f.busPerBusKm, 2) }) },
-    { key: "makan", text: t(lang, "peserta.carbon.factor.meals", { n: n(f.makanPerPorsi, 1) }) },
+  const rows: [CatalogKey, number, number][] = [
+    ["kereta", f.keretaPerPenumpangKm, 4], ["bus", f.busPerBusKm, 2], ["makan", f.makanPerPorsi, 1], ["hotel", f.hotelPerKamarMalam, 0],
+    ["listrik", f.listrikPerKwh, 2], ["air", f.airPerM3, 1], ["lpg", f.lpgPerKg, 2], ["sampah", f.sampahPerKg, 1],
   ];
+  return rows.map(([key, value, digits]) => ({ key, name: t(lang, `peserta.carbon.cat.name.${key}` as MessageKey), unit: t(lang, `peserta.carbon.cat.unit.${key}` as MessageKey), value: number(lang, value, digits) }));
 }

@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
  */
 
 const LAYAR = [
-  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-sheet-reaksi", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong", "M01-belum-dilihat", "M01-sebagian", "M01-semua-dilihat",
+  "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong", "M01-belum-dilihat", "M01-sebagian", "M01-semua-dilihat",
   "M02-dari-galeri", "M03", "M04",
   "M05", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
   "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
@@ -75,7 +75,6 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M01-sesi": return at(momen, <MomenStack {...stack({ mode: "sesi", session: sampleSessionIds.pemaparan, sessionTitle: "Pemaparan departemen", items: sampleFeedSemua.slice(8), startIndex: 0, demo: {} })} />);
     case "M01-reaksi-saya": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(24, HEART)), demo: {} })} />);
     case "M01-reaksi-banyak": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, manyReactions), demo: {} })} />);
-    case "M01-sheet-reaksi": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(24, HEART)), demo: { sheet: "reaksi" } })} />);
     case "M01-daftar-reaksi": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(8, HEART)), demo: { sheet: "daftar", reactors: sampleReactors(sampleReactions(8, HEART)) } })} />);
     case "M01-daftar-reaksi-banyak": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, manyReactions), demo: { sheet: "daftar", reactors: sampleReactors(manyReactions) } })} />);
     case "M01-daftar-reaksi-memuat": return at(momen, <MomenStack {...stack({ items: withReactions(sampleFeedSemua, 2, sampleReactions(8, HEART)), demo: { sheet: "daftar", reactors: "memuat" } })} />);

@@ -7,7 +7,7 @@ import { Avatar, IconButton, Pill, PhotoFill } from "@/components/main-wam/ui";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { photoAlt, photoMeta, pileTilt, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
-import { ReactionPills } from "./Reactions";
+import { ReactionSummary } from "./Reactions";
 import { useFreshAddress } from "./useFreshAddress";
 import css from "./momen.module.css";
 
@@ -15,16 +15,16 @@ import css from "./momen.module.css";
  * The swipe stack (RISET §4): Pointer Events on the front card with touch-action: pan-y (the page
  * keeps vertical scrolling, the card takes sideways moves), pointer capture only once a move is a
  * swipe (so a tap still reaches the side buttons), pointercancel puts the card back. At most three
- * cards in the page; the next large photo is fetched ahead. Swipe left = next, right = previous; one
- * tap on a side does the same (WCAG 2.5.1, 2.5.7), and the arrow keys when the stack has focus.
- * Inside the front card: the owner's pill and the photo's options on top, the reactions it got as overlapping
- * pills at the bottom left (one tap on them opens the list of who reacted with what). The cards behind lie at a
+ * cards in the page; the next large photo is fetched ahead. Swipe left = next, right = previous, and the arrow
+ * keys when the stack has focus; there are no next/previous buttons (final prototype: the photo is only swiped).
+ * Inside the front card: the owner's pill and the photo's options on top, the reactions it got as a small pill
+ * at the bottom left (three avatars and the count; one tap on it opens the list of who reacted with what). The cards behind lie at a
  * tilt of their own (pileTilt, from the photo's id) so it shows there are more; the next one straightens as it
  * comes to the front. Reduced motion: no throw, the next photo fades in (the tilt stays as it is).
  */
 
 const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
-const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const reducedMotion = () => typeof window !== "undefined" && (!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || !!document.querySelector("[data-mw-reduce]"));
 
 /**
  * The picture of a card: the small copy at once, the large one over it when it has loaded. The
@@ -45,10 +45,10 @@ function CardPhoto({ photo, large, alt }: { photo: FeedPhoto; large: boolean; al
   </>;
 }
 
-export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions, reactionsOf, now, panel, label, describe, seenTag, children }: {
+export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions, reactionsOf, me, now, panel, label, describe, seenTag, children }: {
   items: FeedPhoto[];
   index: number;
-  onIndex: (next: number, how: "swipe" | "tap" | "key") => void;
+  onIndex: (next: number, how: "swipe" | "key") => void;
   /** Double tap on the photo (never on one's own): the red heart. */
   onLike: (photo: FeedPhoto) => void;
   /** A tap on the reaction pills of the front photo: open the list of who reacted with what. */
@@ -57,6 +57,8 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
   onOptions?: (photo: FeedPhoto) => void;
   /** The reactions to show on a photo (the screen keeps the ones just given); the photo's own when left out. */
   reactionsOf?: (photo: FeedPhoto) => ReactionCount[];
+  /** The viewer, for their avatar on the reactions pill. */
+  me?: { name: string; photo: string | null } | null;
   now: Date;
   /** Shown in the front card's place instead (end, empty, hidden for me, loading). */
   panel?: ReactNode;
@@ -89,7 +91,7 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
     }
   }, [items, index]);
 
-  function go(step: 1 | -1, how: "swipe" | "tap" | "key") {
+  function go(step: 1 | -1, how: "swipe" | "key") {
     const next = index + step;
     if (next < 0 || next > items.length) return;
     onIndex(next, how);
@@ -167,10 +169,6 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
   const shown = items.slice(index, index + 3);
   const swipe = { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd };
   const swallow = (event: ReactMouseEvent) => { if (swallowClick.current) { event.preventDefault(); event.stopPropagation(); } };
-  const taps = <>
-    <button type="button" className={`${css.tap} ${css.tapPrev}`} aria-label={t("momen.stack.prev")} disabled={index === 0} onClick={() => go(-1, "tap")} />
-    {index < items.length && <button type="button" className={`${css.tap} ${css.tapNext}`} aria-label={t("momen.stack.next")} onClick={() => go(1, "tap")} />}
-  </>;
   const showPanel = !!panel || atEnd;
   return <div className={css.deck} data-panel={showPanel || undefined} role="region" aria-roledescription="carousel" aria-label={label} tabIndex={0} onKeyDown={onKeyDown}>
     <div className={css.deckInner}><div className={css.pile}>
@@ -186,14 +184,14 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
           aria-hidden={isFront ? undefined : true}
           {...(isFront ? { ...swipe, onClick: onMiddleTap, onClickCapture: swallow } : {})}>
           <CardPhoto photo={photo} large={isFront} alt={alt} />
-          {isFront && <>
-            {taps}
-            {burst > 0 && <span key={burst} aria-hidden className={css.burst}>{HEART}</span>}
-          </>}
+          {isFront && burst > 0 && <span key={burst} aria-hidden className={css.burst}>{HEART}</span>}
           {isFront && photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.yourPhoto")}</Pill></span>}
           {isFront && seenTag && photo.seen && !photo.mine && <span className={css.mineTag} aria-hidden><Pill tone="onmedia">{t("momen.seenTag")}</Pill></span>}
           {isFront && onOptions && <IconButton className={css.options} variant="onmedia" icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => onOptions(photo)} />}
-          {isFront && <ReactionPills reactions={reactionsOf ? reactionsOf(photo) : photo.reactions} mine={photo.mine} onOpen={onReactors ? () => onReactors(photo) : undefined} />}
+          {isFront && (() => {
+            const reactions = reactionsOf ? reactionsOf(photo) : photo.reactions;
+            return <ReactionSummary reactions={reactions} preview={photo.reactors} me={me} mine={reactions.some(entry => entry.mine)} own={photo.mine} onOpen={onReactors ? () => onReactors(photo) : undefined} />;
+          })()}
           <div className={css.info} aria-hidden>
             <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>
@@ -204,7 +202,6 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
         </div>;
       })}
       {showPanel && <div ref={front} className={`${css.card} ${css.panel}`} data-place="front" role="group" aria-roledescription="slide" aria-label={describe(index)} {...swipe} onClickCapture={swallow}>
-        {taps}
         <div className={css.panelInner} role="status">{panel}</div>
       </div>}
     </div></div>

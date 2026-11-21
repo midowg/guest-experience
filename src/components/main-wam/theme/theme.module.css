@@ -379,3 +379,13 @@
 .root [data-mw-quiet-focus]:focus-visible { outline: none; }
 :where(.root) button:disabled { cursor: default; }
 
+
+/* Kurangi gerak (Pengaturan): the person's own switch, on top of prefers-reduced-motion (which each component honours itself). */
+.root[data-mw-reduce] *, .root[data-mw-reduce] *::before, .root[data-mw-reduce] *::after {
+  animation-duration: 0.001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+}
+
+/* No scrollbar anywhere in the app (a global rule): everything still scrolls by touch, wheel and keys. */
+.root, .root * { scrollbar-width: none; }
+.root::-webkit-scrollbar, .root *::-webkit-scrollbar { display: none; width: 0; height: 0; }

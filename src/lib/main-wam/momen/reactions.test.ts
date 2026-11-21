@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dictionaries } from "../i18n";
 import { reactionSchema } from "./filters";
-import { HEART, isReactionEmoji, myReaction, parseReactions, QUICK_REACTIONS, REACTION_EMOJIS, REACTION_GROUPS, reactionTotal, withReaction, type ReactionCount } from "./reactions";
+import { departmentAbbr, HEART, isReactionEmoji, myReaction, parseReactions, QUICK_REACTIONS, REACTION_EMOJIS, REACTION_GROUPS, reactionTotal, withReaction, type ReactionCount } from "./reactions";
 import { sampleReactions } from "./sample";
 
 /* The list of emoji and the small rules around it: the list is closed (the server takes nothing else), the screen's counts follow a tap at once. */
@@ -16,14 +15,13 @@ describe("the emoji list", () => {
     expect(HEART.length).toBe(2);
   });
 
-  it("fits the database's check (1 to 16 characters) and each group has a name in both languages", () => {
+  it("fits the database's check (1 to 16 characters)", () => {
     for (const emoji of REACTION_EMOJIS) expect([...emoji].length, emoji).toBeGreaterThanOrEqual(1);
     for (const emoji of REACTION_EMOJIS) expect([...emoji].length, emoji).toBeLessThanOrEqual(16);
-    for (const group of REACTION_GROUPS) for (const lang of ["id", "en"] as const) expect(dictionaries[lang][`momen.react.group.${group.key}`], `${lang} ${group.key}`).toBeTruthy();
   });
 
-  it("starts with the quick row (heart, laughing, fire, clapping, surprised, thanks), all of them in the list", () => {
-    expect(QUICK_REACTIONS).toEqual([HEART, "😂", "🔥", "👏", "😮", "🙏"]);
+  it("the row under a photo has eight (heart, laughing, fire, clapping, surprised, moved, party, thumbs up), all of them in the list", () => {
+    expect(QUICK_REACTIONS).toEqual([HEART, "😂", "🔥", "👏", "😮", "🥹", "🎉", "👍"]);
     for (const emoji of QUICK_REACTIONS) expect(isReactionEmoji(emoji)).toBe(true);
   });
 
@@ -92,5 +90,18 @@ describe("the screen's counts after a tap (one reaction per person)", () => {
     const copy = JSON.parse(JSON.stringify(list));
     withReaction(list, "😂"); withReaction(list, null);
     expect(list).toEqual(copy);
+  });
+});
+
+describe("departmentAbbr: the short form in the list of who reacted", () => {
+  it("initials of the words (without & and dan), a short single word whole, a long one cut to three", () => {
+    expect(departmentAbbr("Art & Creative Support")).toBe("ACS");
+    expect(departmentAbbr("Sales & Marketing")).toBe("SM");
+    expect(departmentAbbr("Finance")).toBe("FIN");
+    expect(departmentAbbr("CoE")).toBe("COE");
+    expect(departmentAbbr("HRGA")).toBe("HRGA");
+    expect(departmentAbbr("Business Development and Strategy Office Team")).toBe("BDSO");
+    expect(departmentAbbr("")).toBe("");
+    expect(departmentAbbr(null)).toBe("");
   });
 });

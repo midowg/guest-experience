@@ -8,9 +8,9 @@ import { dayOf, dayTime, hhmm } from "./format";
  * The kelompok are gone from the app (revisi 18 Nov). Colleagues by nama panggilan. Pure.
  */
 
-/** The profile card's second line: the department ("CoE"). */
-export function profileLine(viewer: Pick<MainWamViewer, "department">): string {
-  return viewer.department.trim();
+/** The profile card's second line: "jabatan - nama departemen" ("Creative Designer - Kreatif"); either one alone when the other is empty. */
+export function profileLine(viewer: Pick<MainWamViewer, "department" | "position">): string {
+  return [viewer.position?.trim(), viewer.department.trim()].filter(Boolean).join(" - ");
 }
 
 /** The others in the room, as Saya says it: "bersama Sari, Dewi", "bersama Gilang, Raka, dan 2 lainnya", or "Sendiri". */

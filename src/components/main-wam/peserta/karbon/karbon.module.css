@@ -56,10 +56,12 @@
 .sourceValue { flex: none; font: var(--mw-type-body-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sourceNote { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 
-/* Cara menghitung (closed until opened) */
+/* Katalog emisi (closed until opened) */
 .how { padding: 0; }
 .howRow { display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 56px; padding: var(--mw-space-8) var(--mw-space-16); border: 0; background: none; color: var(--mw-text-1); font: var(--mw-type-body-strong); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: var(--mw-radius-16); }
-.howLabel { flex: 1 1 auto; min-width: 0; }
+.howText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.howLabel { min-width: 0; overflow-wrap: anywhere; }
+.howSub { font: var(--mw-type-body-small); font-weight: 400; color: var(--mw-text-2); overflow-wrap: anywhere; }
 .howChevron { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); transition: transform var(--mw-motion-base); }
 .howChevron[data-open] { transform: rotate(180deg); }
 .howBody { display: flex; flex-direction: column; gap: var(--mw-space-12); padding: var(--mw-space-4) var(--mw-space-16) var(--mw-space-16); font: var(--mw-type-body); color: var(--mw-text-2); }
@@ -67,7 +69,17 @@
 .howBody p { margin: 0; }
 .howLead { color: var(--mw-text-1); font: var(--mw-type-body-strong); }
 .factorHead { margin: 0; font: var(--mw-type-label); color: var(--mw-text-2); }
-.factors { display: flex; flex-direction: column; gap: var(--mw-space-4); margin: 0; padding: 0; list-style: none; font: var(--mw-type-body-small); }
+.catalog { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.catRow { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 48px; }
+.catRow + .catRow { border-top: 1px solid var(--mw-outline); }
+.catIcon { flex: none; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: var(--mw-text-2); }
+.catIcon > svg { width: 20px; height: 20px; }
+.catText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.catName { font: var(--mw-type-body-strong); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.catUnit { font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.catValue { flex: none; font: var(--mw-type-body-strong); font-variant-numeric: tabular-nums; color: var(--mw-text-1); }
+.catNote { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mw-space-8); font: var(--mw-type-body-small); }
+.catNote > span:last-child { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
 
 .auto { display: flex; align-items: flex-start; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .auto > svg { flex: none; width: 20px; height: 20px; }

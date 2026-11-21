@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { ONBOARDED_KEY } from "@/lib/main-wam/peserta/onboarding";
 import { groupNotifications } from "@/lib/main-wam/peserta/notifications";
@@ -190,7 +190,7 @@ describe("Bantuan", () => {
 
 describe("Masuk", () => {
   const fill = () => {
-    fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "rani@example.com" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "rani@example.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "rahasia-1" } });
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
   };
@@ -229,7 +229,7 @@ describe("Masuk", () => {
     const fetch = answer(200, { ok: true, data: { sent: true }, message: "Permintaan tercatat." });
     vi.stubGlobal("fetch", fetch);
     render(<LoginScreen next={mainWamPath.home} eventName="WAM 2026" />);
-    fireEvent.click(screen.getByRole("button", { name: "Lupa password?" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lupa password? Minta panitia untuk reset." }));
     const dialog = screen.getByRole("dialog", { name: "Minta reset password" });
     fireEvent.change(dialog.querySelector("input")!, { target: { value: "rani@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Kirim permintaan" }));
@@ -275,7 +275,7 @@ describe("RefreshAt (S6): the server's clock, spread out, set again after each r
 });
 
 describe("O01 Splash", () => {
-  const props = { title: "WAM 2026", subtitle: "Werkudara Annual Meeting 2026", dates: "4–7 Januari 2027", image: false };
+  const props = { title: "WAM 2026", subtitle: "Werkudara Annual Meeting 2026", dates: "4–7 Januari 2027", venue: "Kota Batu", image: false };
   const hydrate = async () => {
     vi.resetModules();
     const { Splash } = await import("./masuk/Splash");
@@ -289,48 +289,36 @@ describe("O01 Splash", () => {
   };
   beforeEach(() => { sessionStorage.clear(); });
 
-  it("opens the app (server page): the event's name, long name and dates; gone by 0.7 s after load, Masuk never waits", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(performance, "now").mockReturnValue(100);
+  it("opens the app (server page): pill with name, dates and place, the tagline, and Masuk lifts it", async () => {
     const { splash, root, container } = await hydrate();
-    expect(splash()?.textContent).toBe("WAM 2026Werkudara Annual Meeting 20264–7 Januari 2027");
-    expect(splash()?.getAttribute("aria-hidden")).toBe("true");
-    act(() => { vi.advanceTimersByTime(599); });
+    expect(splash()?.textContent).toBe("WAM 2026 · 4–7 Januari 2027 · Kota BatuShaping for tomorrowWerkudara Annual Meeting 2026Masuk");
+    expect(splash()?.querySelector("h1")?.textContent).toBe("Shaping for tomorrow");
+    // It does not leave by itself, nor by a tap on the art: only Masuk.
+    fireEvent.pointerDown(splash()!);
     expect(splash()).toBeTruthy();
-    act(() => { vi.advanceTimersByTime(1); });
+    fireEvent.click(within(splash() as HTMLElement).getByRole("button", { name: "Masuk" }));
     expect(splash()).toBeNull();
     root.unmount(); container.remove();
-    vi.restoreAllMocks();
   });
 
-  it("once per session, a key or a tap lifts it, and an in-app navigation never shows it", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(performance, "now").mockReturnValue(100);
+  it("once per session, and an in-app navigation never shows it", async () => {
     const first = await hydrate();
-    fireEvent.keyDown(window, { key: "Tab" });
-    expect(first.splash()).toBeNull();
+    expect(first.splash()).toBeTruthy();
     first.root.unmount(); first.container.remove();
-    // The next page load in this session: gone as soon as the page is ready.
+    // The next page load in this session: gone at once, Masuk is right there.
     const again = await hydrate();
-    act(() => { vi.advanceTimersByTime(0); });
     expect(again.splash()).toBeNull();
     again.root.unmount(); again.container.remove();
-    sessionStorage.clear();
-    const tapped = await hydrate();
-    fireEvent.pointerDown(tapped.splash()!);
-    expect(tapped.splash()).toBeNull();
-    tapped.root.unmount(); tapped.container.remove();
     // Drawn on the client (Masuk reached inside the app): no splash.
     const { Splash } = await import("./masuk/Splash");
     render(<Splash {...props} />);
     expect(screen.queryByTestId("splash")).toBeNull();
-    vi.restoreAllMocks();
   });
 
-  it("with Admin WAM's splash image: the image alone (from the theme), no words over it", async () => {
+  it("with Admin WAM's splash image: the image and the Masuk button only (from the theme), no words over it", async () => {
     const { Splash } = await import("./masuk/Splash");
     render(<Splash {...props} image hold />);
-    expect(screen.getByTestId("splash").textContent).toBe("");
+    expect(screen.getByTestId("splash").textContent).toBe("Masuk");
     expect(screen.getByTestId("splash").className).toMatch(/splashImage/);
   });
 });
