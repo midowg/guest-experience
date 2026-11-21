@@ -2,19 +2,19 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
-import { CalendarDays, CircleUserRound, FileText, House } from "lucide-react";
+import { CalendarDays, CircleUserRound, FileText, House, UsersRound } from "lucide-react";
 import { HR_TABS, hrTabLabels, hrTabPaths, tabOf, type HrTab } from "@/lib/hr/tabs";
 import { hrPath } from "@/lib/routes";
 import css from "@/components/booking/booking.module.css";
 import { SplashCover } from "./Splash";
 import hr from "./hr.module.css";
 
-const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: CalendarDays, pengajuan: FileText, profil: CircleUserRound };
+const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: CalendarDays, tim: UsersRound, pengajuan: FileText, profil: CircleUserRound };
 
 /**
  * The frame of WG People (21 Nov 2026), like a phone app (Apple HIG): no bar on top (each tab root
  * has its own large title; detail screens bring their own bar), the page, and the bottom menu
- * (Beranda, Riwayat, Pengajuan, Profil), floating above the edge. Moving between them only changes the address
+ * (Beranda, Riwayat, Tim, Pengajuan, Profil), floating above the edge. Moving between them only changes the address
  * (history.pushState, which Next.js keeps in step): nothing reloads or is fetched, the back button
  * walks back through them, and each keeps its own scroll. Tapping the tab you are on again goes back
  * to its root ("hr:tab-again"). For employees only: the admin is in Journey Admin (/admin/hr).

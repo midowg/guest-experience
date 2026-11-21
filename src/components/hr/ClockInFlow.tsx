@@ -9,15 +9,18 @@ import {
 } from "@/lib/hr/attendance";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
 import { tabOf, type HrTab } from "@/lib/hr/tabs";
+import { LEAVE_TYPES, leaveHints, leaveLabels, type LeaveType, type TeamLeave } from "@/lib/hr/leave";
 import { instantLabel, zoneDate, zoneSuffix } from "@/lib/pra-wam/zone";
 import { hrPath, praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
 import { useViewerZone } from "@/components/pra-wam/ViewerZone";
-import { cancelRequest, loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
+import { cancelLeave, cancelRequest, loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
 import { FaceCamera, type FaceCapture } from "./FaceCamera";
+import { LeaveSheet } from "./LeaveForm";
 import { RevisionSheet } from "./RevisionForm";
-import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, OfficesDetail, placeOf, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
-import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Sheet, Ticket } from "./ui";
+import { TeamScreen } from "./TeamScreen";
+import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, LeaveDetail, OfficesDetail, placeOf, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
+import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Pick, Sheet, Ticket } from "./ui";
 import styles from "./absen.module.css";
 import app from "./app.module.css";
 
@@ -33,11 +36,14 @@ type Step =
   | { name: "kirim"; text: string; since: number }
   | { name: "hasil"; title: string; record: DailyRecord | null; note: string | null; then: DailyKind | null }
   | { name: "gagal"; text: string; retry: Step }
-  | { name: "revisi"; date?: string };
-type DetailTarget = { kind: "hari"; date: string } | { kind: "pengajuan"; id: string } | { kind: "wajah" } | { kind: "kantor" };
+  | { name: "revisi"; date?: string }
+  | { name: "cuti"; type: LeaveType };
+type DetailTarget = { kind: "hari"; date: string } | { kind: "pengajuan"; id: string } | { kind: "cuti"; id: string } | { kind: "wajah" } | { kind: "kantor" };
 /** A screen pushed inside a tab, with a back button; the bottom menu stays. */
 export type ClockInDetail = DetailTarget & { tab: HrTab };
-type Question = { kind: "keluar" } | { kind: "hapus-wajah" } | { kind: "batal-pengajuan"; id: string };
+type Question = { kind: "keluar" } | { kind: "hapus-wajah" } | { kind: "batal-pengajuan"; id: string } | { kind: "batal-cuti"; id: string } | { kind: "ajukan" };
+/** What Ajukan offers: the four kinds of leave, or a revision of an absen. */
+type NewRequest = LeaveType | "revisi";
 /**
  * What WG People keeps in each history entry: whether a sheet or a detail screen is on show
  * (`hrTop`), the detail screens open in this tab (`hrDetails`), and, on the entry left behind, where
@@ -54,7 +60,7 @@ const warmTitle = (record: DailyRecord) => record.status !== "sah" ? "Tercatat, 
   : record.kind === "masuk" ? "Tercatat. Selamat bekerja!" : "Tercatat. Hati-hati di jalan!";
 const receiptDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const entry = (): Entry => (window.history.state as Entry | null) ?? {};
-const markOf = (target: DetailTarget) => (target.kind === "hari" ? `hari-${target.date}` : target.kind === "pengajuan" ? `pengajuan-${target.id}` : target.kind);
+const markOf = (target: DetailTarget) => (target.kind === "hari" ? `hari-${target.date}` : target.kind === "pengajuan" ? `pengajuan-${target.id}` : target.kind === "cuti" ? `cuti-${target.id}` : target.kind);
 const detailKey = (detail: ClockInDetail) => `${detail.tab}-${markOf(detail)}`;
 /** The "please wait" step, with when it started (after SLOW_MS it offers Batal). */
 const sending = (text: string): Step => ({ name: "kirim", text, since: Date.now() });
@@ -89,11 +95,13 @@ function useNow(initial: string, frozen = false): string {
  * Clocking in: the location first (inside an office point, or a reason), then the face (two movements,
  * or one steady look in Foto cepat), then the server decides.
  */
-export function ClockInFlow({ initial, openEnroll = false, name = "", fullName = "", now: serverNow = new Date().toISOString(), initialStep, initialDetail, preview = false }: {
+export function ClockInFlow({ initial, openEnroll = false, name = "", fullName = "", now: serverNow = new Date().toISOString(), initialStep, initialDetail, preview = false, previewTeam = null }: {
   initial: ClockInState; openEnroll?: boolean; name?: string; fullName?: string; now?: string;
   initialStep?: ClockInStep; initialDetail?: ClockInDetail;
   /** The layout preview: no quiet refresh (its API refuses without a session). */
   preview?: boolean;
+  /** The layout preview's made-up team for Tim. */
+  previewTeam?: TeamLeave[] | null;
 }) {
   const tab = tabOf(usePathname());
   const zone = useViewerZone();
@@ -289,7 +297,8 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       return;
     }
     try {
-      tell(asked.kind === "hapus-wajah" ? await withdrawFace() : await cancelRequest(asked.id));
+      if (asked.kind === "ajukan") return;
+      tell(asked.kind === "hapus-wajah" ? await withdrawFace() : asked.kind === "batal-cuti" ? await cancelLeave(asked.id) : await cancelRequest(asked.id));
       await refresh();
     } catch (error) { tell(errorText(error), true); }
   };
@@ -414,32 +423,54 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
         ? <RequestDetail request={request} zone={zone} onBack={pop} onCancel={() => setQuestion({ kind: "batal-pengajuan", id: request.id })} />
         : <Detail title="Revisi" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 31 hari.</Empty></Detail>;
     }
+    if (detail.kind === "cuti") {
+      const leave = state.leaves?.find(item => item.id === detail.id);
+      return leave
+        ? <LeaveDetail leave={leave} zone={zone} onBack={pop} onCancel={() => setQuestion({ kind: "batal-cuti", id: leave.id })} />
+        : <Detail title="Pengajuan" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 120 hari.</Empty></Detail>;
+    }
     if (detail.kind === "wajah") return <FaceDetail state={state} onBack={pop} onEnroll={enrolFromProfile} onWithdraw={() => setQuestion({ kind: "hapus-wajah" })} />;
     return <OfficesDetail state={state} onBack={pop} />;
   }
 
   function root(): ReactNode {
     if (tab === "riwayat") return <HistoryScreen state={state} zone={zone} onDay={date => push({ kind: "hari", date })} />;
-    if (tab === "pengajuan") return <RequestsScreen state={state} onNew={() => open({ name: "revisi" }, "Ajukan revisi")} onOpen={id => push({ kind: "pengajuan", id })} />;
+    if (tab === "tim") return <TeamScreen stamp={leaveStamp} today={state.today.workDate} preview={previewTeam} />;
+    if (tab === "pengajuan") return <RequestsScreen state={state} onNew={() => setQuestion({ kind: "ajukan" })} onOpen={id => push({ kind: "pengajuan", id })} onOpenLeave={id => push({ kind: "cuti", id })} />;
     if (tab === "profil") return <ProfileScreen state={state} fullName={fullName || name} zone={zone}
       onFace={() => push({ kind: "wajah" })} onOffices={() => push({ kind: "kantor" })} onSignOut={() => setQuestion({ kind: "keluar" })} />;
     return <HomeScreen state={state} now={now} zone={zone} name={name} onClock={begin}
       onDay={date => push({ kind: "hari", date })} onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} />;
   }
 
+  // Tim reads the team again once the person's own requests change (a new one shows there as waiting).
+  const leaveStamp = (state.leaves ?? []).map(leave => `${leave.id}:${leave.status}`).join(",");
+  const choose = (what: NewRequest) => {
+    setQuestion(null);
+    if (what === "revisi") open({ name: "revisi" }, "Ajukan revisi");
+    else open({ name: "cuti", type: what }, `Ajukan ${leaveLabels[what].toLowerCase()}`);
+  };
   const current = shownDetails.at(-1) ?? null;
   const slow = step.name === "kirim" && Date.parse(now) - step.since > SLOW_MS;
   return <>
     {/* The tab root stays under its detail screens, so coming back finds its filter and place as they were. */}
     <div key={tab} hidden={Boolean(current)}>{root()}</div>
     {current && <div key={detailKey(current)}>{detailScreen(current)}</div>}
-    {step.name === "revisi"
+    {step.name === "cuti"
+      ? <LeaveSheet today={state.today.workDate} initialType={step.type} leaves={state.leaves ?? []}
+        onCancel={close} onDone={message => { tell(message); void refresh(); close(); }} />
+      : step.name === "revisi"
       ? <RevisionSheet today={state.today.workDate} initialDate={step.date} recent={state.recent} requests={state.requests} zone={zone}
         onCancel={close} onDone={message => { tell(message); void refresh(); close(); }} />
       : sheetOpen && <Sheet title={sheetTitle} step={step.name} lead={(step.name === "kirim" && !slow) || step.name === "hasil" ? null : { kind: "cancel", onClick: close }}>{screen(stepContent())}</Sheet>}
-    {question && <Ask
+    {question?.kind === "ajukan" && <Pick<NewRequest> title="Ajukan apa?" onCancel={() => setQuestion(null)} onPick={choose}
+      options={[
+        ...(state.leaves ? LEAVE_TYPES.map(type => ({ value: type, label: leaveLabels[type], sub: leaveHints[type] })) : []),
+        { value: "revisi", label: "Revisi absen", sub: "Lupa absen, jam salah, alasan atau lokasi salah." },
+      ]} />}
+    {question && question.kind !== "ajukan" && <Ask
       title={question.kind === "keluar" ? "Keluar dari WG People?" : question.kind === "hapus-wajah" ? "Hapus data wajah?" : "Batalkan pengajuan ini?"}
-      message={question.kind === "keluar" ? "Masuk lagi dengan email dan password akun WAM-mu." : question.kind === "hapus-wajah" ? "Wajah acuan dan semua selfie absenmu dihapus. Absen berikutnya dicatat Admin HR secara manual sampai kamu daftar lagi." : "Admin HR tidak akan memeriksanya lagi."}
+      message={question.kind === "keluar" ? "Masuk lagi dengan email dan password akun WAM-mu." : question.kind === "hapus-wajah" ? "Wajah acuan dan semua selfie absenmu dihapus. Absen berikutnya dicatat Admin HR secara manual sampai kamu daftar lagi." : question.kind === "batal-cuti" ? "Admin HR tidak akan memeriksanya lagi, dan tanggalnya hilang dari kalender tim." : "Admin HR tidak akan memeriksanya lagi."}
       action={question.kind === "keluar" ? (leaving ? "Keluar…" : "Keluar") : question.kind === "hapus-wajah" ? "Hapus" : "Batalkan pengajuan"} danger
       onAction={() => void answer(question)} onCancel={() => setQuestion(null)} />}
     <Notices spoken={spoken} toast={toast} onClose={() => setToast(null)} />

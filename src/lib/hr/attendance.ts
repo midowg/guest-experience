@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { LeaveRequest } from "./leave";
 import { EMBEDDING_SIZE, type FaceVerdict } from "./face-match";
 import { LIVENESS } from "./liveness";
 import { photoTypes, type PhotoMime } from "@/lib/pra-wam/photo";
@@ -247,6 +248,8 @@ export type ClockInState = {
   method: ClockMethod;
   /** The person's revision requests, newest first. */
   requests: AttendanceRequest[];
+  /** The person's cuti, sakit, izin and dinas requests (src/lib/hr/leave.ts), newest first; null before migration 202611280001. */
+  leaves: LeaveRequest[] | null;
 };
 
 /*

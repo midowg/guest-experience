@@ -1,4 +1,5 @@
 import type { AttendanceRequest, ClockInState, ClockMethod, DailyKind, DailyRecord, FaceStatus, ReasonKind, RequestType } from "@/lib/hr/attendance";
+import type { LeaveInput, LeaveRequest, TeamLeave } from "@/lib/hr/leave";
 import type { LivenessStep } from "@/lib/hr/liveness";
 import { hrApi } from "@/lib/routes";
 import { praWamRequest, PraWamApiError } from "@/components/pra-wam/api";
@@ -70,3 +71,8 @@ export function readPlace(): Promise<Place> {
 export const submitRequest = async (input: { type: RequestType; workDate: string; kind: DailyKind; recordId: string | null; time: string | null; zone: string; reasonKind: ReasonKind | null; reasonText: string; note: string }) =>
   (await praWamRequest<AttendanceRequest>(hrApi.requests, { method: "POST", json: input })).message;
 export const cancelRequest = async (id: string) => (await praWamRequest<null>(hrApi.request(id), { method: "DELETE" })).message;
+
+/** Cuti, sakit, izin and dinas (21 Nov 2026): ask for one, withdraw a waiting one, and the team's month. */
+export const submitLeave = async (input: LeaveInput) => (await praWamRequest<LeaveRequest>(hrApi.leaves(), { method: "POST", json: input })).message;
+export const cancelLeave = async (id: string) => (await praWamRequest<null>(hrApi.leave(id), { method: "DELETE" })).message;
+export const loadTeam = async (month: string) => (await praWamRequest<{ ready: boolean; leaves: TeamLeave[] }>(hrApi.leaves(month))).data;

@@ -13,7 +13,7 @@ import styles from "./splash.module.css";
  * Two uses, one look:
  * - `SplashWait` (the /hr loading boundary): while the server makes the first screen, or the app
  *   right after signing in (`expectSplash`). It stays until the screen replaces it. Moving between
- *   the sign-in pages shows only the plain pine, no mark, so it does not read as the app restarting.
+ *   the sign-in pages shows only the plain blue, no mark, so it does not read as the app restarting.
  * - `SplashCover` (in the frame and on the sign-in pages): drawn over a ready screen, it holds for a
  *   moment after the first paint and fades away, so the change from splash to app is soft. Once
  *   per page load: a screen opened later inside the app shows none, unless the full wait splash was
@@ -32,7 +32,7 @@ export function expectSplash() { arriving = true; }
 
 /** The mark alone, as on the phone's launch picture (public/hr/splash-*.png), so nothing jumps. */
 function Face() {
-  return <span className={styles.mark}><WgMark size={112} head="#F4F1E6" aria-hidden /></span>;
+  return <span className={styles.mark}><WgMark size={112} head="#FFFFFF" aria-hidden /></span>;
 }
 
 /** While the first screen is made: the splash, held. */

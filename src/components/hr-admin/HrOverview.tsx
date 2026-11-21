@@ -1,7 +1,8 @@
-import { CalendarCheck, CheckCircle2, FilePen, Inbox, MapPin, ScanFace, UserX } from "lucide-react";
+import { CalendarCheck, CalendarCheck2, CheckCircle2, FilePen, Inbox, MapPin, ScanFace, UserX } from "lucide-react";
 import { Card, CardGrid, ConsoleButtonLink, ListRow, PageHeader, RowList, StatCard, StatRow } from "@/components/console";
 import { flagLabels, kindLabels, type HrSummary, type WaitingRecord } from "@/lib/hr/attendance";
 import { hrAdminPath, hrPath, superAdminPath } from "@/lib/routes";
+import { LateSetting } from "./LateSetting";
 import { MethodSetting } from "./MethodSetting";
 import css from "./hr-admin.module.css";
 
@@ -15,7 +16,13 @@ type Step = { done: boolean; title: string; text: string; action: { label: strin
  * Admin HR → Ringkasan (20 Nov 2026): today's numbers, the steps to get absensi going (each ticked
  * once done), how the faces stand, and the first clock-ins that wait. Everything is one tap away.
  */
-export function HrOverview({ summary, waiting, superAdmin }: { summary: HrSummary; waiting: WaitingRecord[]; superAdmin: boolean }) {
+export function HrOverview({ summary, waiting, superAdmin, late, away = 0 }: {
+  summary: HrSummary; waiting: WaitingRecord[]; superAdmin: boolean;
+  /** People on an approved cuti, sakit, izin or dinas today without a masuk (not counted in Belum absen). */
+  away?: number;
+  /** The late time, whether cuti is ready, and how many cuti/sakit/izin/dinas wait (null before the migration). */
+  late: { time: string; ready: boolean; leaves: number | null };
+}) {
   const { faces } = summary;
   const steps: Step[] = [
     { done: summary.offices > 0, title: "Atur titik kantor", text: summary.offices ? `${summary.offices} titik kantor aktif.` : "Tanpa titik kantor, semua absen dianggap di luar area.", action: { label: summary.offices ? "Lihat titik" : "Atur sekarang", href: hrAdminPath.offices } },
@@ -28,13 +35,17 @@ export function HrOverview({ summary, waiting, superAdmin }: { summary: HrSummar
     <PageHeader title="Ringkasan" subtitle={`Absensi ${longDay(summary.date)} (WIB).`} />
     <StatRow label="Angka hari ini">
       <StatCard label="Sudah absen masuk" value={`${summary.masuk} / ${summary.people}`} icon={<CalendarCheck size={18} />} tone="ok" href={hrAdminPath.day()} />
-      <StatCard label="Belum absen" value={summary.belum} icon={<UserX size={18} />} href={hrAdminPath.day()} />
+      <StatCard label="Belum absen" value={summary.belum} note={away ? `${away} cuti/izin/dinas tidak dihitung` : undefined} icon={<UserX size={18} />} href={hrAdminPath.day()} />
       <StatCard label="Perlu dicek" value={summary.waiting} note="semua hari" icon={<Inbox size={18} />} tone={summary.waiting ? "warn" : undefined} href={hrAdminPath.waiting} />
       <StatCard label="Di luar kantor" value={summary.diLuar} note="hari ini" icon={<MapPin size={18} />} href={hrAdminPath.day()} />
+      {late.leaves !== null && <StatCard label="Cuti & izin menunggu" value={late.leaves} icon={<CalendarCheck2 size={18} />} tone={late.leaves ? "warn" : undefined} href={hrAdminPath.leaves} />}
       {summary.requests !== null && <StatCard label="Revisi menunggu" value={summary.requests} icon={<FilePen size={18} />} tone={summary.requests ? "warn" : undefined} href={hrAdminPath.requests} />}
     </StatRow>
 
-    <MethodSetting initial={summary.method} ready={summary.requests !== null} />
+    <CardGrid>
+      <MethodSetting initial={summary.method} ready={summary.requests !== null} />
+      <LateSetting initial={late.time} ready={late.ready} />
+    </CardGrid>
 
     <CardGrid>
       <Card title="Siapkan absensi">

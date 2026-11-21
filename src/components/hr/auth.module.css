@@ -1,14 +1,14 @@
 /*
- * WG People's sign-in pages (21 Nov 2026): pine on top (the brand, a short line about the app, the
+ * WG People's sign-in pages (21 Nov 2026): Werkudara blue on top (the brand, a short line about the app, the
  * day line with the sun at the time it is now), then the form on a white sheet with rounded top
- * corners. One marigold action. Phone first; on a wide screen the column sits in the middle and
+ * corners. One yellow action. Phone first; on a wide screen the column sits in the middle and
  * the sheet becomes a card. --hr-* tokens from hr.module.css (.theme on the layout).
  */
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* The pine is fixed (light and dark) so it meets the splash and the launch picture without a seam. */
-.page { min-height: 100dvh; display: flex; flex-direction: column; background: #123B2F; color: var(--hr-text); }
-/* A clear ring on every control: green on the white sheet, cream on the pine. */
+/* The blue is fixed (light and dark) so it meets the splash and the launch picture without a seam. */
+.page { min-height: 100dvh; display: flex; flex-direction: column; background: #1551A0; color: var(--hr-text); }
+/* A clear ring on every control: blue on the white sheet, white on the blue. */
 .page :focus-visible { outline: 3px solid var(--hr-primary); outline-offset: 2px; }
 .top :focus-visible { outline-color: var(--hr-on-brand); }
 .top { width: 100%; max-width: 30rem; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top)) 24px 28px; display: grid; gap: 28px; color: var(--hr-on-brand); }
@@ -42,7 +42,7 @@
 .eye { position: absolute; top: 4px; right: 4px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--hr-muted); cursor: pointer; }
 .eye:hover { background: var(--hr-surface-soft); color: var(--hr-text); }
 
-/* The one action: marigold, full width, a pill. Disabled reads inert, not faded marigold. */
+/* The one action: yellow, full width, a pill. Disabled reads inert, not faded yellow. */
 .action { width: 100%; min-height: 56px; margin-top: 4px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; text-decoration: none; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
 .action:hover:not(:disabled) { background: var(--hr-accent-hover); }
 .action:active:not(:disabled) { transform: scale(.98); }

@@ -6,7 +6,7 @@ import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { DayAttendance } from "@/components/hr-admin/DayAttendance";
 import { wibDate } from "@/lib/pra-wam/appraisal";
-import { adminDay } from "@/lib/server/hr/attendance";
+import { adminDayTable } from "@/lib/server/hr/leave";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${hrAdminSection("absen").label} · Admin HR` };
@@ -24,7 +24,7 @@ export default async function HrAdminDay({ searchParams }: { searchParams: Promi
   const today = wibDate(new Date().toISOString());
   const { tanggal } = await searchParams;
   const date = tanggal && /^\d{4}-\d{2}-\d{2}$/.test(tanggal) && tanggal <= today ? tanggal : today;
-  const data = await adminDay(date).catch(waitingFor);
+  const data = await adminDayTable(date, today).catch(waitingFor);
   return <HrAdminFrame current="absen">
     {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <DayAttendance initial={data} today={today} />}
   </HrAdminFrame>;

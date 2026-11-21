@@ -16,9 +16,9 @@ import styles from "./auth.module.css";
 /*
  * WG People's own sign-in, Lupa password and first new password (21 Nov 2026; the owner found the
  * shared card too ordinary). The same account and APIs as Booking Kantor and WAM (the hooks in
- * BookingAuth), in WG People's look: pine on top with a short line about the app and the day line
+ * BookingAuth), in WG People's look: Werkudara blue on top with a short line about the app and the day line
  * with the sun at the time it is now, then the form on a white sheet. One action per screen, in
- * marigold. On a wide screen the same column sits in the middle.
+ * yellow. On a wide screen the same column sits in the middle.
  */
 
 const paths = { home: hrPath.home, newPassword: hrPath.newPassword };
@@ -36,7 +36,7 @@ function useDeviceNow(): { label: string; minute: number } | null {
   return { label, minute: Number(minute) };
 }
 
-/** The page: pine with the name, the line and the day line; the sheet below with the form. */
+/** The page: blue with the name, the line and the day line; the sheet below with the form. */
 function AuthShell({ title, lead, children }: { title: ReactNode; lead: ReactNode; children: ReactNode }) {
   const now = useDeviceNow();
   return <div className={styles.page}>

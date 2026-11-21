@@ -7,6 +7,7 @@ import { requireAdminPage } from "@/lib/server/admin-session";
 import { HrOverview } from "@/components/hr-admin/HrOverview";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { hrSummary, waitingRecords } from "@/lib/server/hr/attendance";
+import { awayToday, lateAfter, leaveCount, leaveReady } from "@/lib/server/hr/leave";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${hrAdminSection("ringkasan").label} · Admin HR` };
@@ -21,8 +22,9 @@ const waitingFor = (error: unknown) => {
 export default async function HrAdminHome() {
   const role = await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const data = await Promise.all([hrSummary(wibDate(new Date().toISOString())), waitingRecords()]).catch(waitingFor);
+  const today = wibDate(new Date().toISOString());
+  const data = await Promise.all([hrSummary(today), waitingRecords(), lateAfter(), leaveReady(), leaveCount().catch(() => null), awayToday(today).catch(() => new Set<string>())]).catch(waitingFor);
   return <HrAdminFrame current="ringkasan">
-    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <HrOverview summary={data[0]} waiting={data[1].slice(0, 5)} superAdmin={role === "super"} />}
+    {data instanceof ServiceError ? <Notice tone="warning">{data.message}</Notice> : <HrOverview summary={{ ...data[0], belum: Math.max(0, data[0].belum - data[5].size) }} away={data[5].size} waiting={data[1].slice(0, 5)} superAdmin={role === "super"} late={{ time: data[2], ready: data[3], leaves: data[4] }} />}
   </HrAdminFrame>;
 }

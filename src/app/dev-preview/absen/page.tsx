@@ -4,6 +4,7 @@ import { HrFrame } from "@/components/hr/HrFrame";
 import { jakarta } from "@/components/hr/font";
 import hr from "@/components/hr/hr.module.css";
 import type { ClockInState, DailyRecord } from "@/lib/hr/attendance";
+import type { TeamLeave } from "@/lib/hr/leave";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +33,24 @@ const state: ClockInState = {
     ...day("2026-11-11", "01:36", "10:30"),
   ],
   method: "foto",
+  leaves: [
+    { id: "l1", type: "cuti", startDate: "2026-11-25", endDate: "2026-11-27", note: "Pulang kampung, acara keluarga", status: "menunggu", decidedLabel: null, decisionNote: null, createdAt: "2026-11-19T03:00:00Z" },
+    { id: "l2", type: "sakit", startDate: "2026-11-10", endDate: "2026-11-10", note: "Demam", status: "disetujui", decidedLabel: "Admin Contoh", decisionNote: null, createdAt: "2026-11-10T01:00:00Z" },
+  ],
   requests: [
     { id: "q1", type: "tambah", status: "menunggu", workDate: "2026-11-19", kind: "pulang", recordId: null, proposedTime: "17:30", zone: "WIB", reasonKind: null, reasonText: null, note: "HP mati waktu pulang", decisionNote: null, decidedLabel: null, createdAt: "2026-11-20T02:00:00Z" },
     { id: "q2", type: "ubah_jam", status: "disetujui", workDate: "2026-11-12", kind: "masuk", recordId: "2026-11-12-m", proposedTime: "08:15", zone: "WIB", reasonKind: null, reasonText: null, note: "Sudah di kantor, aplikasi lambat", decisionNote: "Sesuai CCTV lobi.", decidedLabel: "Admin Contoh", createdAt: "2026-11-12T03:00:00Z" },
   ],
 };
+// A made-up team month for Tim.
+const team: TeamLeave[] = [
+  { id: "t1", employeeId: "e1", name: "Contoh Satu", department: "Center of Excellence", type: "cuti", startDate: "2026-11-25", endDate: "2026-11-27", status: "menunggu", mine: true },
+  { id: "t2", employeeId: "e2", name: "Contoh Dua", department: "Event Production", type: "dinas", startDate: "2026-11-18", endDate: "2026-11-21", status: "disetujui", mine: false },
+  { id: "t3", employeeId: "e3", name: "Contoh Tiga", department: "Finance", type: "sakit", startDate: "2026-11-20", endDate: "2026-11-20", status: "disetujui", mine: false },
+  { id: "t4", employeeId: "e4", name: "Contoh Empat", department: "Center of Excellence", type: "izin", startDate: "2026-11-20", endDate: "2026-11-20", status: "menunggu", mine: false },
+  { id: "t5", employeeId: "e5", name: "Contoh Lima", department: "Human Resources & General Affair", type: "cuti", startDate: "2026-11-03", endDate: "2026-11-07", status: "disetujui", mine: false },
+  { id: "t6", employeeId: "e6", name: "Contoh Enam", department: "Finance", type: "dinas", startDate: "2026-11-20", endDate: "2026-11-22", status: "disetujui", mine: false },
+];
 /**
  * Layout check for WG People's employee screens without signing in (20 Nov 2026), with made-up
  * data; ?kosong=1 for someone without a face or a clock-in yet, ?langkah=hasil|rendah|lokasi|revisi|persetujuan|gagal|kirim
@@ -61,9 +75,9 @@ export default async function DevHrPage({ searchParams }: { searchParams: Promis
     wajah: { kind: "wajah", tab: "beranda" },
     kantor: { kind: "kantor", tab: "beranda" },
   };
-  const initial = kosong ? { ...state, face: null, today: { ...state.today, masuk: null }, recent: [], requests: [] } : state;
+  const initial = kosong ? { ...state, face: null, today: { ...state.today, masuk: null }, recent: [], requests: [], leaves: [] } : state;
   return <div className={`${jakarta.variable} ${hr.theme}`}><HrFrame>
-    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now="2026-11-20T02:41:00.000Z" preview
+    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now="2026-11-20T02:41:00.000Z" preview previewTeam={team}
       initialStep={langkah ? steps[langkah] : undefined} initialDetail={detail ? details[detail] : undefined} />
   </HrFrame></div>;
 }

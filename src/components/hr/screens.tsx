@@ -7,6 +7,7 @@ import {
   type AttendanceRequest, type ClockInState, type DailyKind, type DailyRecord, type FaceStatus,
 } from "@/lib/hr/attendance";
 import { distanceLabel } from "@/lib/hr/geo";
+import { covers, leaveDays, leaveLabels, leaveStatusLabels, leaveSummary, spanLabel, type LeaveRequest } from "@/lib/hr/leave";
 import { matchPercent } from "@/lib/hr/face-match";
 import { byWeek, durationLabel, historySummary, minuteOfDay, minutesByDate, shiftDate, weekOf, workedMinutes } from "@/lib/hr/history";
 import { instantLabel, zoneDate, zoneSuffix, zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
@@ -70,6 +71,9 @@ export function HomeScreen({ state, now, zone, name, onClock, onDay, onRevise }:
       : masuk && pulang ? <>Selesai, total <span className={styles.live}>{durationLabel(worked)}</span>. Sampai besok!</>
         : "Absen pulang sudah tercatat.";
   const span = spanOf(masuk, pulang, zone, pulang ? null : nowMinute);
+  // Today's own cuti, sakit, izin or dinas (approved first), said on the card; absen stays possible (dinas often clocks in).
+  const away = (state.leaves ?? []).filter(leave => (leave.status === "disetujui" || leave.status === "menunggu") && covers(leave, today))
+    .sort((a, b) => (a.status === "disetujui" ? -1 : 0) - (b.status === "disetujui" ? -1 : 0))[0] ?? null;
 
   // What needs the person: a recent day with masuk but no pulang (and nothing asked yet), or a refused record.
   const earlier = [...new Set(state.recent.map(record => record.workDate))].filter(date => date < today && date >= shiftDate(today, -7)).sort().reverse();
@@ -86,7 +90,7 @@ export function HomeScreen({ state, now, zone, name, onClock, onDay, onRevise }:
     {!state.ready
       ? <Empty icon={<Clock3 size={32} aria-hidden />} title="Absen harian belum dibuka">{state.waiting ?? "Admin HR sedang menyiapkannya."}</Empty>
       : <Ticket label="Absen hari ini" stub={<>
-        <p className={styles.stubLabel}>Hari ini</p>
+        <p className={styles.stubLabel}>Hari ini{away && <span className={styles.awayChip}>{leaveLabels[away.type]} · {away.status === "disetujui" ? "disetujui" : "menunggu"}</span>}</p>
         <p className={styles.clockLine}><time className={styles.clock} dateTime={now}>{instantLabel(now, zone)}</time><span className={styles.zone}>{zone}</span></p>
         <p className={styles.state}>{line}</p>
         <DayLine tone="brand" start={span.start} end={span.end} now={pulang ? null : nowMinute} labels />
@@ -186,10 +190,17 @@ export function HistoryScreen({ state, zone, onDay }: { state: ClockInState; zon
 
 /* ── Pengajuan ───────────────────────────────────────────────────────── */
 
-export function RequestsScreen({ state, onNew, onOpen }: { state: ClockInState; onNew(): void; onOpen(id: string): void }) {
+type Asked = { kind: "revisi"; at: string; request: AttendanceRequest } | { kind: "cuti"; at: string; leave: LeaveRequest };
+/** Pengajuan: revisions and cuti/sakit/izin/dinas together, waiting ones first, newest first. */
+export function RequestsScreen({ state, onNew, onOpen, onOpenLeave }: { state: ClockInState; onNew(): void; onOpen(id: string): void; onOpenLeave(id: string): void }) {
   const [part, setPart] = useState<"menunggu" | "selesai">("menunggu");
-  const waiting = state.requests.filter(request => request.status === "menunggu");
-  const finished = state.requests.filter(request => request.status !== "menunggu");
+  const all: Asked[] = [
+    ...state.requests.map(request => ({ kind: "revisi" as const, at: request.createdAt, request })),
+    ...(state.leaves ?? []).map(leave => ({ kind: "cuti" as const, at: leave.createdAt, leave })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
+  const waits = (item: Asked) => (item.kind === "revisi" ? item.request.status : item.leave.status) === "menunggu";
+  const waiting = all.filter(waits);
+  const finished = all.filter(item => !waits(item));
   const shown = part === "menunggu" ? waiting : finished;
   return <div className={styles.screen}>
     <LargeHead title="Pengajuan" action={state.ready ? <button type="button" className={styles.headAction} onClick={onNew}><Plus size={18} aria-hidden /> Ajukan</button> : null} />
@@ -198,11 +209,16 @@ export function RequestsScreen({ state, onNew, onOpen }: { state: ClockInState; 
       { value: "selesai", label: "Selesai", count: finished.length },
     ]} />
     {shown.length
-      ? <Group>{shown.slice(0, 30).map(request => <RowButton key={request.id} mark={`pengajuan-${request.id}`} onClick={() => onOpen(request.id)}
-        title={requestSummary(request)} sub={`${requestTypeLabels[request.type]} · ${shortDay(request.workDate)}`}
-        trailing={<StatusWord tone={request.status}>{requestStatusLabels[request.status]}</StatusWord>} />)}</Group>
+      ? <Group>{shown.slice(0, 40).map(item => item.kind === "revisi"
+        ? <RowButton key={`r-${item.request.id}`} mark={`pengajuan-${item.request.id}`} onClick={() => onOpen(item.request.id)}
+          title={requestSummary(item.request)} sub={`Revisi · ${requestTypeLabels[item.request.type]} · ${shortDay(item.request.workDate)}`}
+          trailing={<StatusWord tone={item.request.status}>{requestStatusLabels[item.request.status]}</StatusWord>} />
+        : <RowButton key={`c-${item.leave.id}`} mark={`cuti-${item.leave.id}`} onClick={() => onOpenLeave(item.leave.id)}
+          lead={<span className={styles.teamAvatar} data-type={item.leave.type} aria-hidden>{leaveLabels[item.leave.type].slice(0, 1)}</span>}
+          title={`${leaveLabels[item.leave.type]} · ${spanLabel(item.leave.startDate, item.leave.endDate)}`} sub={`${leaveDays(item.leave.startDate, item.leave.endDate)} hari`}
+          trailing={<StatusWord tone={item.leave.status}>{leaveStatusLabels[item.leave.status]}</StatusWord>} />)}</Group>
       : part === "menunggu"
-        ? <Empty icon={<FileText size={32} aria-hidden />} title="Tidak ada yang menunggu">Ada yang salah di absenmu? Buka harinya di Riwayat, atau tekan Ajukan.</Empty>
+        ? <Empty icon={<FileText size={32} aria-hidden />} title="Tidak ada yang menunggu">Mau cuti, izin, dinas, atau ada absen yang salah? Tekan Ajukan.</Empty>
         : <Empty icon={<FileText size={32} aria-hidden />} title="Belum ada yang selesai">Pengajuan yang sudah diputuskan Admin HR muncul di sini.</Empty>}
   </div>;
 }
@@ -287,6 +303,29 @@ export function RequestDetail({ request, zone, onBack, onCancel }: { request: At
     <Group label="Alasanmu"><RowInfo title={<span className={styles.plainText}>{request.note}</span>} /></Group>
     {request.decisionNote && <Group label="Catatan Admin HR"><RowInfo title={<span className={styles.plainText}>{request.decisionNote}</span>} /></Group>}
     {request.status === "menunggu" && <Group><RowButton title="Batalkan pengajuan" danger chevron={false} onClick={onCancel} /></Group>}
+  </Detail>;
+}
+
+/* ── Detail: one cuti, sakit, izin or dinas ────────────────────────────── */
+
+export function LeaveDetail({ leave, zone, onBack, onCancel }: { leave: LeaveRequest; zone: ViewerZone; onBack(): void; onCancel(): void }) {
+  const decided = leave.status === "disetujui" ? { state: "ok", title: "Disetujui", sub: leave.decidedLabel ? `Oleh ${leave.decidedLabel}. Sudah masuk kalender tim.` : "Sudah masuk kalender tim." }
+    : leave.status === "ditolak" ? { state: "no", title: "Ditolak", sub: leave.decidedLabel ? `Oleh ${leave.decidedLabel}.` : "" }
+      : leave.status === "dibatalkan" ? { state: "off", title: "Dibatalkan", sub: "Kamu membatalkannya." }
+        : { state: "now", title: "Menunggu Admin HR", sub: "Tim sudah melihatnya di kalender sebagai menunggu." };
+  return <Detail title={leaveLabels[leave.type]} onBack={onBack}>
+    <div className={styles.summary}>
+      <h2 className={styles.summaryTitle}>{leaveSummary(leave)}</h2>
+      <p className={styles.lead}>{leave.startDate === leave.endDate ? longDay(leave.startDate) : `${longDay(leave.startDate)} – ${longDay(leave.endDate)}`}</p>
+    </div>
+    <ol className={styles.steps} aria-label="Perjalanan pengajuan">
+      <li className={styles.stepItem}><span className={styles.stepTitle}>Dikirim</span><span className={styles.stepSub}>{sentAt(leave.createdAt, zone)}</span></li>
+      <li className={styles.stepItem} data-state={decided.state}><span className={styles.stepTitle}>{decided.title}</span>{decided.sub && <span className={styles.stepSub}>{decided.sub}</span>}</li>
+    </ol>
+    <Group label="Keteranganmu" note="Hanya kamu dan Admin HR yang membacanya."><RowInfo title={<span className={styles.plainText}>{leave.note}</span>} /></Group>
+    {leave.decisionNote && <Group label="Catatan Admin HR"><RowInfo title={<span className={styles.plainText}>{leave.decisionNote}</span>} /></Group>}
+    {leave.status === "menunggu" && <Group><RowButton title="Batalkan pengajuan" danger chevron={false} onClick={onCancel} /></Group>}
+    {leave.status === "disetujui" && <p className={styles.groupNote}>Rencana berubah? Minta Admin HR membatalkannya; tanggalnya lalu keluar dari kalender tim.</p>}
   </Detail>;
 }
 

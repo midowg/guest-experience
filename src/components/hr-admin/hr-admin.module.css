@@ -63,3 +63,71 @@ button.slot:hover, button.slot[aria-expanded="true"] { border-color: var(--cs-pr
 .method[data-on] { border-color: var(--cs-primary); background: var(--cs-primary-soft); }
 .method input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--cs-primary); }
 .method strong { display: block; font-size: 14px; }
+
+/*
+ * Coloured cells (21 Nov 2026, "seperti Excel"): Absen harian's status and every day of Rekap
+ * bulanan. A soft fill and a strong letter in one family per kind (text 5:1 or more on its fill),
+ * so the colour is never alone. Waiting cuti/izin: dashed and striped. A dot in the corner: still
+ * to check; a notch: masuk or pulang missing.
+ */
+.cell { --cell-bg: transparent; --cell-fg: var(--cs-muted); position: relative; display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px; background: var(--cell-bg); color: var(--cell-fg); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; box-sizing: border-box; }
+.cell[data-kind="hadir"] { --cell-bg: #ddf1e4; --cell-fg: #1e6b3e; }
+.cell[data-kind="telat"] { --cell-bg: #fde2cc; --cell-fg: #9a4a00; }
+.cell[data-kind="cuti"] { --cell-bg: #ebe3fb; --cell-fg: #5b33b5; }
+.cell[data-kind="sakit"] { --cell-bg: #fae0e7; --cell-fg: #9e2546; }
+.cell[data-kind="izin"] { --cell-bg: #fbefd0; --cell-fg: #845100; }
+.cell[data-kind="dinas"] { --cell-bg: #d9eff2; --cell-fg: #0a6670; }
+.cell[data-kind="event"] { --cell-bg: #dcebfb; --cell-fg: #1551a0; }
+.cell[data-kind="wfh"] { --cell-bg: #e3e8f7; --cell-fg: #3a4e8c; }
+.cell[data-kind="luar"] { --cell-bg: #eceef2; --cell-fg: #4b5563; }
+.cell[data-kind="ditolak"] { --cell-bg: #f8e3e7; --cell-fg: #9a273d; text-decoration: line-through; }
+.cell[data-kind="alpa"] { --cell-bg: #fbd9d6; --cell-fg: #a1281b; }
+.cell[data-kind="libur"] { --cell-bg: repeating-linear-gradient(135deg, #f1f2f4 0 4px, #e7e9ed 4px 8px); }
+.cell[data-waiting] { background: repeating-linear-gradient(135deg, #fff 0 4px, var(--cell-bg) 4px 8px); outline: 1.5px dashed var(--cell-fg); outline-offset: -1.5px; }
+.cell[data-check]::after { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #c26a00; box-shadow: 0 0 0 1.5px #fff; }
+.cell[data-incomplete]::before { content: ""; position: absolute; left: 0; bottom: 0; border-left: 7px solid #a1281b; border-top: 7px solid transparent; border-bottom-left-radius: 8px; }
+.cellWide { display: inline-flex; align-items: center; justify-content: flex-start; min-width: 96px; gap: 6px; padding: 0 10px; font-weight: 700; white-space: nowrap; }
+.cellWide b { font-weight: 800; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 13px; color: var(--cs-muted); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.legend .cell { min-width: 24px; height: 24px; font-size: 12px; }
+
+/* Absen harian as a table: one row per person, the status cell first after the name. */
+.tableWrap { overflow-x: auto; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); }
+.sheet { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.sheet th, .sheet td { padding: 8px 10px; border-bottom: 1px solid var(--cs-line); text-align: left; vertical-align: middle; white-space: nowrap; }
+.sheet thead th { position: sticky; top: 0; z-index: 2; background: var(--cs-surface-2); color: var(--cs-muted); font-size: 12px; font-weight: 700; }
+.sheet tbody tr:hover td { background: var(--cs-hover); }
+.sheet tbody tr:last-child td { border-bottom: 0; }
+.sheet .name { min-width: 180px; max-width: 260px; white-space: normal; }
+.sheet .name strong { display: block; font-size: 14px; }
+.sheet .num { font-variant-numeric: tabular-nums; font-weight: 700; }
+.rowOpen td { background: var(--cs-primary-soft); }
+.openButton { padding: 0; border: 0; background: none; color: var(--cs-primary); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.openButton:hover { text-decoration: underline; }
+.detailRow td { padding: 12px; background: var(--cs-surface-2); white-space: normal; }
+
+/* Rekap bulanan: people down, the days of the month across; name and totals stay in view while scrolling. */
+.matrix { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.matrix th, .matrix td { padding: 3px; border-bottom: 1px solid var(--cs-line); text-align: center; white-space: nowrap; }
+.matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--cs-surface-2); color: var(--cs-muted); font-weight: 700; padding: 6px 3px; }
+.matrix thead th[data-weekend] { color: #a1281b; }
+.matrix thead th[data-today] { background: var(--cs-primary); color: var(--cs-on-primary); border-radius: 8px 8px 0 0; }
+.matrix .who { position: sticky; left: 0; z-index: 1; min-width: 170px; max-width: 200px; padding: 6px 10px; text-align: left; white-space: normal; background: var(--cs-surface); box-shadow: 1px 0 0 var(--cs-line); }
+.matrix thead .who { z-index: 3; background: var(--cs-surface-2); }
+.matrix .who strong { display: block; font-size: 13px; line-height: 1.25; }
+.matrix .who span { font-size: 11px; color: var(--cs-muted); }
+.matrix .total { padding: 3px 8px; font-variant-numeric: tabular-nums; font-weight: 800; color: var(--cs-text); }
+.matrix thead .total { color: var(--cs-muted); }
+.matrix a.cell { text-decoration: none; }
+.matrix a.cell:hover, .matrix a.cell:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 1px; }
+.matrix tbody tr:hover .who { background: var(--cs-surface-2); }
+
+/* Kartu: one card per person, the totals and a strip of the month. */
+.personCards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.personCard { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); min-width: 0; }
+.strip { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; }
+.strip .cell { min-width: 0; width: 100%; height: 20px; padding: 0; border-radius: 4px; font-size: 10px; }
+.counts { display: flex; flex-wrap: wrap; gap: 6px; }
+.counts .cell { height: 26px; font-size: 12px; font-weight: 700; }

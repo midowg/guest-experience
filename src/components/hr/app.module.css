@@ -2,9 +2,9 @@
  * WG People's screens (21 Nov 2026, after the UX, accessibility and code audits): Apple HIG first.
  * Tab roots have no bar: a large title in the page, or the greeting on Beranda. Detail screens have
  * a bar: a back chevron, the title in the middle, at most one action on the right. Tasks are sheets
- * (Batal on the left, the action on the right). Second look (21 Nov 2026): pine and marigold. The
- * one action colour is marigold (a pill); green tints the current tab and the bar actions (the iOS
- * tint). Today on Beranda and the receipt are the time card (.ticket: a pine stub, a perforation, a
+ * (Batal on the left, the action on the right). Look of 21 Nov 2026 (third round): Werkudara blue and yellow. The
+ * one action colour is yellow (a pill); blue tints the current tab and the bar actions (the iOS
+ * tint). Today on Beranda and the receipt are the time card (.ticket: a blue stub, a perforation, a
  * white part); the day line (.dayLine) draws when work ran, here and in Riwayat.
  * Times in tabular figures. Status always as a word, never the colour alone. 44px targets.
  * Scales from brain/aturan/desain-ui.md: 34 large title, 28 title, 22 headline, 17 subtitle, 15–16
@@ -62,7 +62,7 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .status_ditolak { color: var(--hr-danger); }
 .status_dibatalkan, .status_kosong { color: var(--hr-muted); }
 
-/* One main button for the whole app: a marigold pill. Disabled looks inert, not faded marigold. */
+/* One main button for the whole app: a yellow pill. Disabled looks inert, not faded yellow. */
 .wide, .action { width: 100%; min-height: 56px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; letter-spacing: -.005em; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
 .wide:hover:not(:disabled), .action:hover:not(:disabled) { background: var(--hr-accent-hover); }
 .wide:active:not(:disabled), .action:active:not(:disabled) { transform: scale(.98); }
@@ -74,7 +74,7 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .quietMuted { color: var(--hr-muted); font-weight: 500; }
 
 /*
- * The time card: a pine stub over a white part, cut by a perforation with a notch on each side
+ * The time card: a blue stub over a white part, cut by a perforation with a notch on each side
  * (circles in the page colour). Beranda's today and the receipt after an absen.
  */
 .ticket { display: grid; border-radius: var(--hr-r-panel); }
@@ -96,7 +96,7 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .done { margin: 0; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: var(--hr-brand-raised); color: var(--hr-on-brand); font-weight: 700; }
 .done svg { color: var(--hr-accent); }
 .hint { margin: -4px 0 0; font-size: 13px; color: var(--hr-on-brand-muted); text-align: center; }
-/* The receipt's stamp: Sah in marigold, Perlu dicek dashed; pressed on like a rubber stamp. */
+/* The receipt's stamp: Sah in yellow, Perlu dicek dashed; pressed on like a rubber stamp. */
 .stamp { justify-self: start; margin: 0; padding: 6px 14px 6px 10px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--hr-accent); border-radius: 999px; color: var(--hr-accent); font-size: 15px; font-weight: 800; transform: rotate(-3deg); }
 .stamp[data-tone="perlu_cek"], .stamp[data-tone="ditolak"] { border-style: dashed; border-color: var(--hr-on-brand-muted); color: var(--hr-on-brand); }
 @media (prefers-reduced-motion: no-preference) { .stamp { animation: stamp 420ms var(--hr-ease) 120ms both; } }
@@ -113,8 +113,8 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .ticketPart .quiet { margin-top: -4px; }
 
 /*
- * The day line, 06.00 to 22.00: a hairline track, the work as a bar, the sun (marigold, ringed in
- * the colour under it) at the time it is now. On pine (brand) or on white (plain); thin in Riwayat.
+ * The day line, 06.00 to 22.00: a hairline track, the work as a bar, the sun (yellow, ringed in
+ * the colour under it) at the time it is now. On blue (brand) or on white (plain); thin in Riwayat.
  */
 .dayLine { display: grid; gap: 6px; width: 100%; }
 .dayTrack { position: relative; display: block; height: 10px; }
@@ -173,7 +173,7 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .empty svg { color: var(--hr-muted); opacity: .7; margin-bottom: 4px; }
 .empty strong { font-size: 17px; font-weight: 600; color: var(--hr-text); }
 
-/* Profil: the person as a staff card in pine (the same family as the time card). */
+/* Profil: the person as a staff card in blue (the same family as the time card). */
 .idCard { position: relative; display: grid; gap: 14px; padding: 20px; border-radius: var(--hr-r-panel); background: var(--hr-brand); color: var(--hr-on-brand); overflow: hidden; }
 .idBrand { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--hr-accent); }
 .idSub { margin: 0; font-size: 14px; line-height: 1.45; color: var(--hr-on-brand-muted); }
@@ -251,3 +251,47 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .toast span { flex: 1; }
 .toastClose { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: no-preference) { .toast { animation: rise 220ms var(--hr-ease) both; } }
+
+/* Ajukan apa?: the action sheet's rows, each with a line under it. */
+.pickButton { min-height: 60px; padding: 10px 20px; display: grid; justify-items: center; gap: 2px; border-top: 1px solid var(--hr-line); font-weight: 600; }
+.pickButton small { font-size: 12px; font-weight: 500; color: var(--hr-muted); }
+
+/* Beranda: today's own cuti, sakit, izin or dinas, beside "Hari ini". */
+.awayChip { margin-left: 8px; padding: 2px 10px; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font-size: 12px; font-weight: 800; }
+
+/*
+ * Cuti, sakit, izin, dinas: each its own colour, always with its word. A round initial (avatar),
+ * a dot in the calendar (full = approved, a ring = waiting).
+ */
+.teamAvatar[data-type="cuti"], .teamDot[data-type="cuti"] { --leave: var(--hr-cuti); --leave-soft: var(--hr-cuti-soft); --leave-ink: var(--hr-cuti-ink); }
+.teamAvatar[data-type="sakit"], .teamDot[data-type="sakit"] { --leave: var(--hr-sakit); --leave-soft: var(--hr-sakit-soft); --leave-ink: var(--hr-sakit-ink); }
+.teamAvatar[data-type="izin"], .teamDot[data-type="izin"] { --leave: var(--hr-izin); --leave-soft: var(--hr-izin-soft); --leave-ink: var(--hr-izin-ink); }
+.teamAvatar[data-type="dinas"], .teamDot[data-type="dinas"] { --leave: var(--hr-dinas); --leave-soft: var(--hr-dinas-soft); --leave-ink: var(--hr-dinas-ink); }
+.teamAvatar { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 14px; background: var(--leave-soft, var(--hr-surface-soft)); color: var(--leave-ink, var(--hr-text)); font-size: 14px; font-weight: 800; }
+.teamMine { color: var(--hr-muted); font-weight: 500; }
+.teamDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--leave, var(--hr-muted)); }
+.teamDot[data-waiting] { background: transparent; box-shadow: inset 0 0 0 2px var(--leave, var(--hr-muted)); }
+.teamLoading { height: 360px; border-radius: var(--hr-r-card); background: var(--hr-surface-soft); }
+@media (prefers-reduced-motion: no-preference) { .teamLoading { animation: breathe 1.2s ease-in-out infinite alternate; } }
+@keyframes breathe { from { opacity: .55; } to { opacity: 1; } }
+
+/* Tim: the month with ‹ ›, then the calendar (Monday first) or the list. */
+.monthBar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; margin: -8px 0 -8px; }
+.screen .monthName { margin: 0; text-align: center; font-size: 17px; font-weight: 800; letter-spacing: -.01em; text-transform: capitalize; }
+.monthStep { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 14px; background: transparent; color: var(--hr-primary); cursor: pointer; }
+.monthStep:hover { background: var(--hr-surface-soft); }
+.calendar { display: grid; gap: 6px; padding: 10px 8px 8px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.calendarHead, .calendarGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.calendarHead span { text-align: center; font-size: 12px; font-weight: 700; color: var(--hr-muted); }
+.calendarDay { min-height: 52px; min-width: 0; padding: 6px 0 4px; display: grid; justify-items: center; align-content: start; gap: 4px; border: 0; border-radius: 12px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
+.calendarDay:hover { background: var(--hr-surface-soft); }
+.calendarDay[aria-current="date"] .calendarNumber { color: var(--hr-primary); font-weight: 800; }
+.calendarDay[aria-pressed="true"] { background: var(--hr-primary); color: var(--hr-on-primary); }
+.calendarDay[aria-pressed="true"] .calendarNumber { color: inherit; }
+.calendarDay[aria-pressed="true"] .teamDot { box-shadow: 0 0 0 1.5px var(--hr-on-primary); }
+.calendarDay[aria-pressed="true"] .teamDot[data-waiting] { box-shadow: inset 0 0 0 2px var(--leave), 0 0 0 1.5px var(--hr-on-primary); }
+.calendarNumber { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calendarDots { min-height: 8px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px; }
+.calendarMore { font-size: 10px; font-weight: 700; line-height: 8px; }
+.calendar .groupNote { margin: 6px 4px 0; }
+@media (prefers-reduced-motion: reduce) { .calendarDay { transition: none; } }

@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ tab: stri
   return { title: isTab(tab) ? hrTabLabels[tab] : "Tidak ditemukan" };
 }
 
-/** Riwayat, Pengajuan, Profil (21 Nov 2026): the same app as Beranda, opened at that place. */
+/** Riwayat, Tim, Pengajuan, Profil (21 Nov 2026): the same app as Beranda, opened at that place. */
 export default async function HrTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const { tab } = await params;
   if (!isTab(tab)) notFound();

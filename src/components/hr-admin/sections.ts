@@ -1,12 +1,12 @@
-import { CalendarDays, FilePen, Inbox, LayoutDashboard, MapPin, ScanFace, type LucideIcon } from "lucide-react";
+import { CalendarCheck2, CalendarDays, FilePen, Inbox, LayoutDashboard, MapPin, ScanFace, Table2, type LucideIcon } from "lucide-react";
 import { hrAdminPath } from "@/lib/routes";
 
 /*
  * Admin WG People's sections (20 Nov 2026): the admin of the HR app (/hr) in Journey Admin, given
  * per person in Super admin → Akses admin ("WG People"). The menu, Ringkasan and the page titles
- * read this list. Cuti and lembur join as new sections later.
+ * read this list. Cuti & izin and Rekap bulanan joined on 21 Nov 2026; lembur comes later.
  */
-export type HrAdminSectionKey = "ringkasan" | "perlu" | "revisi" | "absen" | "wajah" | "kantor";
+export type HrAdminSectionKey = "ringkasan" | "perlu" | "revisi" | "cuti" | "absen" | "rekap" | "wajah" | "kantor";
 export type HrAdminSection = {
   key: HrAdminSectionKey;
   label: string;
@@ -24,7 +24,9 @@ export const hrAdminSections: readonly HrAdminSection[] = [
   { key: "ringkasan", label: "Ringkasan", group: "Ikhtisar", href: hrAdminPath.home, icon: LayoutDashboard, summary: "Angka hari ini dan yang masih perlu disiapkan." },
   { key: "perlu", label: "Perlu dicek", group: "Absensi", href: hrAdminPath.waiting, icon: Inbox, summary: "Absen yang menunggu keputusan: setujui atau tolak." },
   { key: "revisi", label: "Revisi", group: "Absensi", href: hrAdminPath.requests, icon: FilePen, summary: "Perbaikan absen yang diajukan karyawan: setujui (langsung diterapkan) atau tolak." },
-  { key: "absen", label: "Absen harian", group: "Absensi", href: hrAdminPath.day(), icon: CalendarDays, summary: "Masuk dan pulang semua orang per hari; catat manual." },
+  { key: "cuti", label: "Cuti & izin", group: "Absensi", href: hrAdminPath.leaves, icon: CalendarCheck2, summary: "Cuti, sakit, izin, dan dinas yang diajukan karyawan: setujui atau tolak." },
+  { key: "absen", label: "Absen harian", group: "Absensi", href: hrAdminPath.day(), icon: CalendarDays, summary: "Masuk dan pulang semua orang per hari, sebagai tabel berwarna atau kartu; catat manual." },
+  { key: "rekap", label: "Rekap bulanan", group: "Absensi", href: hrAdminPath.month(), icon: Table2, summary: "Semua orang × semua tanggal sebulan, berwarna seperti Excel: hadir, telat, cuti, dinas, dan lainnya." },
   { key: "wajah", label: "Wajah terdaftar", group: "Pengaturan", href: hrAdminPath.faces, icon: ScanFace, summary: "Wajah acuan, persetujuan, dan Proses foto impor." },
   { key: "kantor", label: "Titik kantor", group: "Pengaturan", href: hrAdminPath.offices, icon: MapPin, summary: "Lokasi kantor dan radiusnya untuk absen." },
 ];

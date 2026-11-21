@@ -106,7 +106,7 @@ type OfficeRow = { id: string; name: string; lat: number; lng: number; radius_m:
 type Office = OfficePoint & { zone: ViewerZone; active: boolean };
 const asOffice = (row: OfficeRow): Office => ({ id: row.id, name: row.name, lat: row.lat, lng: row.lng, radiusM: row.radius_m, zone: asViewerZone(row.zone), active: row.active });
 
-async function offices(all = false): Promise<Office[]> {
+export async function offices(all = false): Promise<Office[]> {
   let query = createPrivilegedClient().from("pw_offices").select("id,name,lat,lng,radius_m,zone,active,sort_order").order("sort_order").order("name");
   if (!all) query = query.eq("active", true);
   const { data, error } = await query;
@@ -169,7 +169,7 @@ const daysBefore = (date: string, days: number) => new Date(Date.parse(`${date}T
 export async function clockInState(member: Member, now = new Date()): Promise<ClockInState> {
   const zone = await viewerZone();
   const today = zoneDate(now.toISOString(), zone);
-  const empty: ClockInState = { ready: false, waiting: null, face: null, today: { workDate: today, masuk: null, pulang: null }, offices: [], recent: [], method: "gerakan", requests: [] };
+  const empty: ClockInState = { ready: false, waiting: null, face: null, today: { workDate: today, masuk: null, pulang: null }, offices: [], recent: [], method: "gerakan", requests: [], leaves: null };
   if (!praWamSecret()) return { ...empty, waiting: "Login karyawan belum disiapkan." };
   try {
     const client = createPrivilegedClient();
@@ -197,6 +197,8 @@ export async function clockInState(member: Member, now = new Date()): Promise<Cl
       recent: records,
       method,
       requests,
+      // Filled by appState (src/lib/server/hr/leave.ts), which knows whether cuti is ready.
+      leaves: null,
     };
   } catch (error) {
     if (error instanceof ServiceError && error.status === 503) return { ...empty, waiting: error.message };
@@ -372,7 +374,7 @@ export async function withdrawFace(member: Member): Promise<void> {
 // Admin
 
 /** Everyone who should clock in: active in Data karyawan with an active employee account (the one WAM and Booking use too). */
-async function clockers(): Promise<{ id: string; fullName: string; department: string }[]> {
+export async function clockers(): Promise<{ id: string; fullName: string; department: string }[]> {
   const [people, { data, error }] = await Promise.all([
     listPeople(),
     createPrivilegedClient().from("pw_accounts").select("employee_id").eq("active", true),

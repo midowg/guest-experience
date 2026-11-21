@@ -6,8 +6,8 @@ import { hrPath } from "@/lib/routes";
 import { requireHrPage } from "@/lib/server/hr/session";
 
 export const dynamic = "force-dynamic";
-/** The status bar takes the pine of the page top. */
-export const viewport: Viewport = { themeColor: "#123B2F" };
+/** The status bar takes the blue of the page top. */
+export const viewport: Viewport = { themeColor: "#1551A0" };
 export const metadata = { title: "Buat password baru" };
 
 /** After signing in with the first password: pick a new one, or skip for now. Anyone else goes straight on. */

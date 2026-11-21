@@ -1,29 +1,35 @@
 /*
- * WG People (/hr). Look of 21 Nov 2026, second round: the owner wanted new colours and a style of
- * its own. Pinus (deep pine) and marigold, on a soft warm white:
- * - Pine is the brand: the splash, the sign-in, the time card on Beranda. Marigold is the one action
- *   colour (the main button) and the sun on the day line. A readable green (--hr-primary) for links,
+ * WG People (/hr). Look of 21 Nov 2026, third round: the owner asked for blue, not green, in
+ * Werkudara's own pair: Honorable Blue #1551A0 and Sunrise Yellow #F9BC4E (the one accent the brand
+ * reads on its blue), on a cool soft white.
+ * - Blue is the brand: the splash, the sign-in, the time card on Beranda, the staff card. Yellow is
+ *   the one action colour (the main button) and the sun on the day line. The same blue tints links,
  *   bar actions and the current tab.
- * - The signature is the "kartu absen", the time card: a pine stub over a white part, cut by a
+ * - The signature is the "kartu absen", the time card: a blue stub over a white part, cut by a
  *   perforation, with the times stamped in heavy tabular figures. The day line (06.00–22.00) shows
  *   when the day's work ran, on Beranda, in Riwayat and on the receipt.
+ * - Cuti, sakit, izin and dinas each have their own colour (Tim, Pengajuan), always with the word.
  * - Flat surfaces with hairlines, one soft shadow only for what floats (the bottom menu, sheets).
  *   Plus Jakarta Sans; heavy (800) only for times and titles. Status keeps its own green, amber and
- *   red, always with a word. Light and dark.
+ *   red, always with a word. Light and dark; text contrast checked (4.5:1).
  * `.theme` gives the screens their --hr-* tokens, and recolours the shared frame classes of
  * booking.module.css (--bk-*).
  */
 .theme {
-  --hr-app: #F3F2EC; --hr-surface: #FFFFFF; --hr-surface-soft: #EAE9E2; --hr-line: #E1DFD6; --hr-line-strong: #86847B;
-  --hr-text: #14211B; --hr-muted: #5B6560;
-  --hr-brand: #123B2F; --hr-brand-raised: #1A4A3B; --hr-on-brand: #F4F1E6; --hr-on-brand-muted: #B7C9BF; --hr-brand-line: rgb(244 241 230 / .16);
-  --hr-accent: #F7C04A; --hr-accent-hover: #F2B226; --hr-on-accent: #1B1A10;
-  --hr-primary: #1D6B50; --hr-primary-hover: #155A43; --hr-primary-soft: #E1EEE7; --hr-on-primary: #FFFFFF;
-  --hr-ring: #CFE3D8;
+  --hr-app: #F3F6FA; --hr-surface: #FFFFFF; --hr-surface-soft: #E9EEF5; --hr-line: #DCE3ED; --hr-line-strong: #7F8A99;
+  --hr-text: #131C2B; --hr-muted: #556173;
+  --hr-brand: #1551A0; --hr-brand-raised: #1E5EB0; --hr-on-brand: #FFFFFF; --hr-on-brand-muted: #C3D5EE; --hr-brand-line: rgb(255 255 255 / .2);
+  --hr-accent: #F9BC4E; --hr-accent-hover: #F5AE2C; --hr-on-accent: #1B1A10;
+  --hr-primary: #1551A0; --hr-primary-hover: #0F3F80; --hr-primary-soft: #E4ECF8; --hr-on-primary: #FFFFFF;
+  --hr-ring: #C8D8F0;
   --hr-success: #237A47; --hr-success-soft: #E3F2E8;
   --hr-warning: #8F5A00; --hr-warning-soft: #FCEFD2;
   --hr-danger: #B42318; --hr-danger-soft: #FCE8E5; --hr-on-danger: #FFFFFF;
-  --hr-float: 0 10px 30px rgb(18 59 47 / .12), 0 1px 3px rgb(18 59 47 / .08);
+  --hr-cuti: #7A4FD0; --hr-cuti-soft: #EEE8FB; --hr-cuti-ink: #6537BF;
+  --hr-sakit: #C2365A; --hr-sakit-soft: #FBE6EC; --hr-sakit-ink: #A3284A;
+  --hr-izin: #A86A00; --hr-izin-soft: #FBEFD9; --hr-izin-ink: #9A5B00;
+  --hr-dinas: #0F7F8C; --hr-dinas-soft: #DDF2F3; --hr-dinas-ink: #0A6670;
+  --hr-float: 0 10px 30px rgb(21 81 160 / .12), 0 1px 3px rgb(19 28 43 / .08);
   --hr-r-card: 20px; --hr-r-panel: 28px; --hr-r-control: 14px;
   --hr-fast: 160ms; --hr-ease: cubic-bezier(.2, 0, 0, 1);
   background: var(--hr-app); color: var(--hr-text);
@@ -31,15 +37,19 @@
 }
 @media (prefers-color-scheme: dark) {
   .theme {
-    --hr-app: #0D1411; --hr-surface: #151E1A; --hr-surface-soft: #1D2924; --hr-line: #28352F; --hr-line-strong: #6F7D76;
-    --hr-text: #EEF2EE; --hr-muted: #A9B7AF;
-    --hr-brand: #17402F; --hr-brand-raised: #1F4D3B; --hr-on-brand: #F4F1E6; --hr-on-brand-muted: #B7C9BF; --hr-brand-line: rgb(244 241 230 / .14);
-    --hr-accent: #F7C04A; --hr-accent-hover: #FFD36E; --hr-on-accent: #1B1A10;
-    --hr-primary: #7FD1AE; --hr-primary-hover: #9ADDBF; --hr-primary-soft: #173328; --hr-on-primary: #0D1411;
-    --hr-ring: #1E3E31;
+    --hr-app: #0B1220; --hr-surface: #131C2E; --hr-surface-soft: #1B2539; --hr-line: #26324A; --hr-line-strong: #6E7C93;
+    --hr-text: #EDF2FA; --hr-muted: #A7B3C6;
+    --hr-brand: #1A4C94; --hr-brand-raised: #2258A4; --hr-on-brand: #FFFFFF; --hr-on-brand-muted: #C3D5EE; --hr-brand-line: rgb(255 255 255 / .18);
+    --hr-accent: #F9BC4E; --hr-accent-hover: #FFCB6B; --hr-on-accent: #1B1A10;
+    --hr-primary: #8DB8F2; --hr-primary-hover: #A9CBF6; --hr-primary-soft: #16294A; --hr-on-primary: #0B1220;
+    --hr-ring: #1F3A66;
     --hr-success: #8FD3A8; --hr-success-soft: #17301F;
     --hr-warning: #F2C46D; --hr-warning-soft: #3A2C10;
     --hr-danger: #F4A39A; --hr-danger-soft: #3D1A16; --hr-on-danger: #3D1A16;
+    --hr-cuti: #B79CF2; --hr-cuti-soft: #2A2145; --hr-cuti-ink: #B79CF2;
+    --hr-sakit: #F08DA7; --hr-sakit-soft: #3D1A26; --hr-sakit-ink: #F08DA7;
+    --hr-izin: #F2C46D; --hr-izin-soft: #3A2C10; --hr-izin-ink: #F2C46D;
+    --hr-dinas: #6FD0D9; --hr-dinas-soft: #12343A; --hr-dinas-ink: #6FD0D9;
     --hr-float: 0 10px 30px rgb(0 0 0 / .45), 0 1px 3px rgb(0 0 0 / .35);
   }
 }
@@ -73,9 +83,9 @@
 .statusCover { position: fixed; top: 0; left: 0; right: 0; z-index: 15; height: env(safe-area-inset-top); background: var(--hr-app); }
 .main { max-width: 30rem; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(112px + env(safe-area-inset-bottom)); }
 .tabbar { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 20; max-width: 28rem; margin: 0 auto; border-radius: 26px; background: color-mix(in srgb, var(--hr-surface) 94%, transparent); backdrop-filter: saturate(1.4) blur(16px); -webkit-backdrop-filter: saturate(1.4) blur(16px); border: 1px solid var(--hr-line); box-shadow: var(--hr-float); }
-.tabbarInner { padding: 6px; display: grid; grid-template-columns: repeat(4, 1fr); }
+.tabbarInner { padding: 6px; display: grid; grid-template-columns: repeat(5, 1fr); }
 .shell .tab { min-height: 56px; display: grid; justify-items: center; align-content: center; gap: 3px; border-radius: 20px; color: var(--hr-muted); font-size: 11px; font-weight: 600; letter-spacing: .01em; text-decoration: none; -webkit-tap-highlight-color: transparent; transition: color var(--hr-fast) var(--hr-ease); }
-.tabIcon { width: 52px; height: 30px; display: grid; place-items: center; border-radius: 999px; transition: background-color var(--hr-fast) var(--hr-ease); }
+.tabIcon { width: 48px; height: 30px; display: grid; place-items: center; border-radius: 999px; transition: background-color var(--hr-fast) var(--hr-ease); }
 .shell .tab[aria-current="page"] { color: var(--hr-text); font-weight: 700; }
 .shell .tab[aria-current="page"] .tabIcon { background: var(--hr-primary-soft); color: var(--hr-primary); }
 .tab:active .tabIcon svg { transform: scale(.9); }

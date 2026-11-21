@@ -801,6 +801,8 @@ export const hrPath = {
   history: `${HR_PATH}/riwayat`,
   requests: `${HR_PATH}/pengajuan`,
   profile: `${HR_PATH}/profil`,
+  /** Tim (21 Nov 2026): who is on cuti, sakit, izin or dinas, as a calendar or a list. */
+  team: `${HR_PATH}/tim`,
   enroll: `${HR_PATH}?daftar=1`,
   login: (next?: string) => `${HR_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
   forgot: `${HR_PATH}/lupa-password`,
@@ -821,6 +823,9 @@ export const hrApi = {
   /** POST: ask Admin HR to fix an absen (21 Nov 2026); with an id, DELETE withdraws a waiting request. */
   requests: `${HR_API}/revisi`,
   request: (id: string) => `${HR_API}/revisi/${id}`,
+  /** GET ?bulan=YYYY-MM: the team's cuti, sakit, izin and dinas that month (21 Nov 2026); POST asks for one; with an id, DELETE withdraws a waiting one. */
+  leaves: (month?: string) => `${HR_API}/cuti${month ? `?bulan=${month}` : ""}`,
+  leave: (id: string) => `${HR_API}/cuti/${id}`,
 };
 /** Admin WG People in Journey Admin (20 Nov 2026): one page per section (src/components/hr-admin/sections.ts). */
 export const HR_ADMIN = "/admin/hr";
@@ -838,6 +843,10 @@ export const hrAdminPath = {
   offices: `${HR_ADMIN}/kantor`,
   /** Revisi: what employees ask to fix, to approve or refuse (21 Nov 2026). */
   requests: `${HR_ADMIN}/revisi`,
+  /** Cuti & izin: cuti, sakit, izin and dinas asked for, to approve or refuse (21 Nov 2026). */
+  leaves: `${HR_ADMIN}/cuti`,
+  /** Rekap bulanan: everyone × every day of a month, coloured like a spreadsheet (`bulan`). */
+  month: (month?: string) => `${HR_ADMIN}/rekap${month ? `?bulan=${month}` : ""}`,
 };
 export const hrAdminApi = {
   /** GET ?tanggal=: everyone's masuk and pulang that day. */
@@ -868,6 +877,15 @@ export const hrAdminApi = {
   request: (id: string) => `${HR_ADMIN_API}/revisi/${id}`,
   /** PUT {method}: how everyone clocks in (gerakan or foto). */
   method: `${HR_ADMIN_API}/metode`,
+  /** PUT {time}: a masuk after this time (HH:MM, the office's zone) is Telat. */
+  lateAfter: `${HR_ADMIN_API}/jam-masuk`,
+  /** GET: the cuti/sakit/izin/dinas requests; with an id, POST {approve, note} decides one. */
+  leaves: `${HR_ADMIN_API}/cuti`,
+  leave: (id: string) => `${HR_ADMIN_API}/cuti/${id}`,
+  /** POST {note}: withdraw a waiting or approved one. */
+  leaveCancel: (id: string) => `${HR_ADMIN_API}/cuti/${id}/batal`,
+  /** GET ?bulan=YYYY-MM: Rekap bulanan's cells. */
+  month: (month: string) => `${HR_ADMIN_API}/rekap?bulan=${month}`,
 };
 
 /*

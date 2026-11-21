@@ -1,5 +1,5 @@
 /*
- * WG People's splash (21 Nov 2026): pine edge to edge, the mark in marigold in the very middle (no
+ * WG People's splash (21 Nov 2026): Werkudara blue edge to edge, the mark in sunrise yellow in the very middle (no
  * safe-area padding, so it sits where the phone's launch picture has it). While waiting the head
  * rises and settles slowly (the only motion); the cover fades out with a small lift of the mark.
  * Reduced motion: no movement, a short plain fade.
@@ -8,7 +8,7 @@
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center;
   /* Fixed colours, light and dark: the same as the launch picture and the manifest's background. */
-  background: #123B2F; color: #F7C04A;
+  background: #1551A0; color: #F9BC4E;
 }
 .mark { display: grid; place-items: center; width: 112px; height: 112px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

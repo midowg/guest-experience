@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
 };
 export function generateViewport(): Viewport {
-  return { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F3F2EC" }, { media: "(prefers-color-scheme: dark)", color: "#0D1411" }], viewportFit: "cover" };
+  return { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F3F6FA" }, { media: "(prefers-color-scheme: dark)", color: "#0B1220" }], viewportFit: "cover" };
 }
 
 export default function HrLayout({ children }: { children: ReactNode }) {

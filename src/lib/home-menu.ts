@@ -24,7 +24,7 @@ export const defaultHomeMenu: HomeMenuItem[] = [
     description: "Catat olahraga dan kebiasaan sehat, kumpulkan poin, dan naik peringkat bersama tim." },
   { app: "booking", shown: true, name: "Booking Kantor", what: "Ruang meeting", account: "Akun WAM", tone: "#0d9488",
     description: "Pesan ruang meeting kantor dan lihat jadwalnya, tanpa bentrok." },
-  { app: "hr", shown: true, name: "WG People", what: "Absensi karyawan", account: "Akun WAM", tone: "#1d6b50",
+  { app: "hr", shown: true, name: "WG People", what: "Absensi karyawan", account: "Akun WAM", tone: "#1551a0",
     description: "Absen masuk dan pulang dengan wajah dan titik kantor; nanti juga cuti dan lembur." },
   { app: "signage", shown: true, name: "Signage", what: "TV kantor", account: "Akun tim", tone: "#ea580c",
     description: "Atur tayangan di TV kantor: pengumuman, jadwal ruang, dan foto meeting." },

@@ -127,6 +127,26 @@ export function Ask({ title, message, action, danger = false, onAction, onCancel
   </Layer>;
 }
 
+/** A choice from the bottom, like an action sheet: a title, a few rows (each with a line under it), Batal. */
+export function Pick<T extends string>({ title, options, onPick, onCancel }: { title: string; options: { value: T; label: string; sub?: string }[]; onPick(value: T): void; onCancel(): void }) {
+  const first = useRef<HTMLButtonElement>(null);
+  useModal(onCancel);
+  useEffect(() => { first.current?.focus({ preventScroll: true }); }, []);
+  return <Layer>
+    <div className={styles.scrim} onClick={event => { if (event.target === event.currentTarget) onCancel(); }}>
+      <div className={styles.ask} role="dialog" aria-modal="true" aria-label={title}>
+        <div className={styles.askCard}>
+          <p className={styles.askText}><strong>{title}</strong></p>
+          {options.map((option, index) => <button key={option.value} ref={index === 0 ? first : undefined} type="button" className={`${styles.askButton} ${styles.pickButton}`} onClick={() => onPick(option.value)}>
+            <span>{option.label}</span>{option.sub && <small>{option.sub}</small>}
+          </button>)}
+        </div>
+        <button type="button" className={`${styles.askButton} ${styles.askCancel}`} onClick={onCancel}>Batal</button>
+      </div>
+    </div>
+  </Layer>;
+}
+
 /** Things said to screen readers (a sent request, a result) and the short message shown above the menu; a problem stays until closed. */
 export function Notices({ spoken, toast, onClose }: { spoken: string; toast: { text: string; problem: boolean } | null; onClose(): void }) {
   return <Layer>
@@ -224,7 +244,7 @@ export function MatchMeter({ score }: { score: number }) {
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase() || "?";
 
 /**
- * The time card, WG People's signature (21 Nov 2026): a pine stub on top, a perforation with a notch
+ * The time card, WG People's signature (21 Nov 2026): a blue stub on top, a perforation with a notch
  * on each side, and a white part below, like a stamped kartu absen. Beranda's today and the receipt.
  */
 export function Ticket({ label, stub, children }: { label: string; stub: ReactNode; children: ReactNode }) {
