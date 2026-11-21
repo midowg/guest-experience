@@ -55,7 +55,8 @@ it("clocks in inside the office: location, camera, then the answer without a rel
   expect(await screen.findByText(/Di dalam area/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Lanjut ke kamera/ }));
   fireEvent.click(await screen.findByRole("button", { name: "Kamera palsu absen" }));
-  expect(await screen.findByRole("heading", { name: "Absen masuk tercatat" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Tercatat. Selamat bekerja!" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Absen masuk, bukti" })).toBeTruthy();
   expect(api.submitClockIn).toHaveBeenCalledWith(challenge, expect.anything(), { lat: -7.8003, lng: 110.4, accuracyM: 12 }, null, null);
 });
 

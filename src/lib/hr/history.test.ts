@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DailyRecord } from "./attendance";
-import { byWeek, durationLabel, historySummary, shiftDate, weekLabel, weekOf, weekStart, workedMinutes } from "./history";
+import { byWeek, dayLinePercent, durationLabel, historySummary, minuteOfDay, minutesByDate, shiftDate, weekLabel, weekOf, weekStart, workedMinutes } from "./history";
 
 const record = (patch: Partial<DailyRecord>): DailyRecord => ({
   id: "r", kind: "masuk", at: "2026-11-20T01:52:00Z", workDate: "2026-11-20", method: "wajah", status: "sah", flags: [], officeName: "Kantor Contoh",
@@ -40,5 +40,21 @@ describe("Beranda's week and Riwayat's groups", () => {
     expect(workedMinutes("2026-11-20T01:52:00Z", "2026-11-20T10:31:00Z")).toBe(519);
     expect(durationLabel(519)).toBe("8 j 39 m");
     expect(durationLabel(45)).toBe("45 m");
+  });
+  it("places times on the day line (06.00–22.00) in the viewer's zone", () => {
+    expect(minuteOfDay("2026-11-20T01:41:00Z", "WIB")).toBe(8 * 60 + 41);
+    expect(minuteOfDay("2026-11-20T01:41:00Z", "WITA")).toBe(9 * 60 + 41);
+    expect(dayLinePercent(6 * 60)).toBe(0);
+    expect(dayLinePercent(14 * 60)).toBe(50);
+    expect(dayLinePercent(23 * 60)).toBe(100);
+    expect(dayLinePercent(2 * 60)).toBe(0);
+  });
+  it("adds up the minutes of complete days only", () => {
+    const records = [
+      record({ workDate: "2026-11-17", at: "2026-11-17T01:00:00Z" }), record({ kind: "pulang", workDate: "2026-11-17", at: "2026-11-17T10:30:00Z" }),
+      record({ workDate: "2026-11-18", at: "2026-11-18T01:00:00Z" }),
+      record({ workDate: "2026-11-19", at: "2026-11-19T01:00:00Z", status: "ditolak" }), record({ kind: "pulang", workDate: "2026-11-19", at: "2026-11-19T10:00:00Z" }),
+    ];
+    expect(minutesByDate(records, ["2026-11-17", "2026-11-18", "2026-11-19"])).toEqual({ byDate: { "2026-11-17": 570 }, total: 570 });
   });
 });

@@ -6,6 +6,7 @@ import { CalendarDays, CircleUserRound, FileText, House } from "lucide-react";
 import { HR_TABS, hrTabLabels, hrTabPaths, tabOf, type HrTab } from "@/lib/hr/tabs";
 import { hrPath } from "@/lib/routes";
 import css from "@/components/booking/booking.module.css";
+import { SplashCover } from "./Splash";
 import hr from "./hr.module.css";
 
 const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: CalendarDays, pengajuan: FileText, profil: CircleUserRound };
@@ -13,7 +14,7 @@ const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: Calenda
 /**
  * The frame of WG People (21 Nov 2026), like a phone app (Apple HIG): no bar on top (each tab root
  * has its own large title; detail screens bring their own bar), the page, and the bottom menu
- * (Beranda, Riwayat, Pengajuan, Profil). Moving between them only changes the address
+ * (Beranda, Riwayat, Pengajuan, Profil), floating above the edge. Moving between them only changes the address
  * (history.pushState, which Next.js keeps in step): nothing reloads or is fetched, the back button
  * walks back through them, and each keeps its own scroll. Tapping the tab you are on again goes back
  * to its root ("hr:tab-again"). For employees only: the admin is in Journey Admin (/admin/hr).
@@ -51,11 +52,12 @@ export function HrFrame({ children }: { children: ReactNode }) {
       {HR_TABS.map(key => {
         const Icon = tabIcons[key];
         return <a key={key} href={hrTabPaths[key]} className={hr.tab} aria-current={key === tab ? "page" : undefined} onClick={event => go(event, key)}>
-          <Icon size={24} strokeWidth={key === tab ? 2.4 : 1.8} aria-hidden />{hrTabLabels[key]}
+          <span className={hr.tabIcon}><Icon size={22} strokeWidth={key === tab ? 2.4 : 1.9} aria-hidden /></span>{hrTabLabels[key]}
         </a>;
       })}
     </div></nav>
     {/* Sheets, questions and messages are drawn here, beside the page and the menu, which go inert under them. */}
     <div id="wg-layer" />
+    <SplashCover />
   </div>;
 }

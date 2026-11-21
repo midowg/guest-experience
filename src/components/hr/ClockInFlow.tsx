@@ -2,9 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Check, Clock3, MapPin, RotateCcw, ScanFace } from "lucide-react";
+import { Check, Clock3, MapPin, RotateCcw, ScanFace, X } from "lucide-react";
 import {
-  CONSENT_VERSION, consentPoints, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels,
+  CONSENT_VERSION, consentPoints, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels, statusLabels,
   type ClockInState, type DailyKind, type DailyRecord, type FaceStatus, type ReasonKind,
 } from "@/lib/hr/attendance";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
@@ -16,8 +16,8 @@ import { useViewerZone } from "@/components/pra-wam/ViewerZone";
 import { cancelRequest, loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
 import { FaceCamera, type FaceCapture } from "./FaceCamera";
 import { RevisionSheet } from "./RevisionForm";
-import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, OfficesDetail, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
-import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Sheet } from "./ui";
+import { DayDetail, FaceDetail, HistoryScreen, HomeScreen, OfficesDetail, placeOf, ProfileScreen, RequestDetail, RequestsScreen } from "./screens";
+import { Ask, Choices, Detail, Empty, MatchMeter, Notices, Sheet, Ticket } from "./ui";
 import styles from "./absen.module.css";
 import app from "./app.module.css";
 
@@ -49,6 +49,10 @@ const SUMMARY: Step = { name: "ringkas" };
 const SLOW_MS = 20_000;
 const usable = (status: FaceStatus | undefined) => status === "aktif" || status === "menunggu" || status === "siap";
 const absenTitle = (kind: DailyKind) => `Absen ${kindLabels[kind].toLowerCase()}`;
+/** The receipt's line after a new absen: a word for the day ahead, or that Admin HR will look. */
+const warmTitle = (record: DailyRecord) => record.status !== "sah" ? "Tercatat, Admin HR akan memeriksanya"
+  : record.kind === "masuk" ? "Tercatat. Selamat bekerja!" : "Tercatat. Hati-hati di jalan!";
+const receiptDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const entry = (): Entry => (window.history.state as Entry | null) ?? {};
 const markOf = (target: DetailTarget) => (target.kind === "hari" ? `hari-${target.date}` : target.kind === "pengajuan" ? `pengajuan-${target.id}` : target.kind);
 const detailKey = (detail: ClockInDetail) => `${detail.tab}-${markOf(detail)}`;
@@ -62,13 +66,14 @@ function titleOf(step: Step): string {
   return "WG People";
 }
 /** The time now, starting from the server's (so the first paint matches) and moving every 15 seconds. */
-function useNow(initial: string): string {
+function useNow(initial: string, frozen = false): string {
   const [now, setNow] = useState(initial);
   useEffect(() => {
+    if (frozen) return;
     const timer = window.setInterval(() => setNow(new Date().toISOString()), 15_000);
     const first = window.setTimeout(() => setNow(new Date().toISOString()), 0);
     return () => { window.clearInterval(timer); window.clearTimeout(first); };
-  }, []);
+  }, [frozen]);
   return now;
 }
 
@@ -92,7 +97,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
 }) {
   const tab = tabOf(usePathname());
   const zone = useViewerZone();
-  const now = useNow(serverNow);
+  const now = useNow(serverNow, preview); // the layout check keeps its own made-up time
   const [state, setState] = useState(initial);
   const [step, setStep] = useState<Step>(() => initialStep ?? (openEnroll && initial.ready && !usable(initial.face?.status) ? { name: "persetujuan", then: "daftar" } : SUMMARY));
   const [sheetTitle, setSheetTitle] = useState(() => titleOf(step));
@@ -243,7 +248,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       if (signal.aborted) { tell(message); return; }
       const flags = data.record.flags.map(flag => flagLabels[flag]).join(", ");
       setSpoken(message);
-      setStep({ name: "hasil", title: message, record: data.record, note: data.record.status === "perlu_cek" ? `Perlu dicek Admin HR: ${flags}.` : null, then: null });
+      setStep({ name: "hasil", title: warmTitle(data.record), record: data.record, note: data.record.status === "perlu_cek" ? `Perlu dicek Admin HR: ${flags}.` : null, then: null });
     } catch (error) {
       if (signal.aborted) tell(errorText(error), true);
       else setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind: current.kind, consent: current.consent } });
@@ -365,6 +370,25 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       <div className={styles.place} data-tone="error" role="alert"><span className={styles.placeText}><strong>Belum berhasil</strong><span>{step.text}</span></span></div>
       <button type="button" className={app.wide} onClick={() => setStep(step.retry)}><RotateCcw size={18} aria-hidden /> Coba lagi</button>
     </section>;
+
+    if (step.name === "hasil" && step.record) {
+      const record = step.record;
+      return <section className={styles.result}>
+        <Ticket label={`${absenTitle(record.kind)}, bukti`} stub={<>
+          <p className={app.stubLabel}>{absenTitle(record.kind)} · {receiptDay(record.workDate)}</p>
+          <p className={app.clockLine}><span className={app.clock}>{instantLabel(record.at, zone)}</span><span className={app.zone}>{zone}</span></p>
+          <p className={app.stamp} data-tone={record.status === "sah" ? undefined : record.status}>
+            {record.status === "sah" ? <Check size={16} strokeWidth={3} aria-hidden /> : record.status === "ditolak" ? <X size={16} strokeWidth={3} aria-hidden /> : <Clock3 size={16} strokeWidth={2.6} aria-hidden />}{statusLabels[record.status]}
+          </p>
+        </>}>
+          <h3 className={app.summaryTitle}>{asTitle(step.title)}</h3>
+          <p className={app.lead}>{placeOf(record)}{record.distanceM != null && record.officeName ? ` · ${distanceLabel(record.distanceM)} dari titik kantor` : ""}</p>
+          {record.faceScore != null && <MatchMeter score={record.faceScore} />}
+          {step.note && <p className={styles.warn}>{step.note}</p>}
+        </Ticket>
+        <button type="button" className={app.wide} onClick={close}>Selesai</button>
+      </section>;
+    }
 
     if (step.name === "hasil") {
       const check = step.record && step.record.status !== "sah";

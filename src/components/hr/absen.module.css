@@ -4,36 +4,36 @@
  * the screens, lists and bars are in app.module.css.
  */
 
-/* The camera: always dark (a face reads best against it), warm like the rest. */
-.camera { display: grid; gap: 14px; justify-items: center; padding: 20px 16px 18px; border-radius: var(--hr-r-panel, 24px); background: #17120F; color: #F3EEE8; text-align: center; }
-.viewport { position: relative; width: min(100%, 18rem); aspect-ratio: 3 / 4; border-radius: 20px; background: #211B17; overflow: hidden; }
+/* The camera: always dark (a face reads best against it), a deep pine like the rest. */
+.camera { display: grid; gap: 14px; justify-items: center; padding: 20px 16px 18px; border-radius: var(--hr-r-panel, 24px); background: #0B1A15; color: #F4F1E6; text-align: center; }
+.viewport { position: relative; width: min(100%, 18rem); aspect-ratio: 3 / 4; border-radius: 20px; background: #13271F; overflow: hidden; }
 /* The person sees themselves as in a mirror; what is read and kept is the camera's own picture. */
 .viewport video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .oval { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.ovalShade { fill: rgb(23 18 15 / 0.55); }
-.ovalLine { fill: none; stroke: #A39A92; stroke-width: 3; transition: stroke 200ms ease; }
+.ovalShade { fill: rgb(11 26 21 / 0.58); }
+.ovalLine { fill: none; stroke: #8FA399; stroke-width: 3; transition: stroke 200ms ease; }
 .ovalLineOk { stroke: #8FD3A8; }
-.loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 0 16px; color: #BFB4A9; font-size: 13px; }
-.spinner { width: 28px; height: 28px; margin: 0 auto; border-radius: 50%; border: 3px solid #3A322C; border-top-color: #EE9B74; }
+.loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 0 16px; color: #B7C9BF; font-size: 13px; }
+.spinner { width: 28px; height: 28px; margin: 0 auto; border-radius: 50%; border: 3px solid #28352F; border-top-color: #F7C04A; }
 @media (prefers-reduced-motion: no-preference) { .spinner { animation: spin 900ms linear infinite; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .prompt { margin: 0; min-height: 1.4em; font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
-.hint { margin: 0; min-height: 1.3em; color: #BFB4A9; font-size: 13px; }
-/* Steps: still to come (a ring), now (clay, larger), done (green, filled). */
+.hint { margin: 0; min-height: 1.3em; color: #B7C9BF; font-size: 13px; }
+/* Steps: still to come (a ring), now (marigold, larger), done (green, filled). */
 .steps { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.step { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 2px #8C8279; transition: background 200ms ease, box-shadow 200ms ease; }
-.stepNow { width: 12px; height: 12px; background: #EE9B74; box-shadow: none; }
+.step { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 2px #6F7D76; transition: background 200ms ease, box-shadow 200ms ease; }
+.stepNow { width: 12px; height: 12px; background: #F7C04A; box-shadow: none; }
 .stepDone { background: #8FD3A8; box-shadow: none; }
 .error { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3D1A16; color: #F4A39A; font-size: 13px; font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-.primary, .ghost { min-height: 48px; padding: 0 20px; border-radius: 12px; font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: background-color 160ms ease, transform 120ms ease; }
-.primary { border: 0; background: #EE9B74; color: #2B1208; }
-.primary:hover { background: #F4B394; }
-.ghost { border: 1px solid #776C62; background: transparent; color: #F3EEE8; }
-.ghost:hover { background: #211B17; }
+.primary, .ghost { min-height: 48px; padding: 0 20px; border-radius: 999px; font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: background-color 160ms ease, transform 120ms ease; }
+.primary { border: 0; background: #F7C04A; color: #1B1A10; }
+.primary:hover { background: #FFD36E; }
+.ghost { border: 1px solid #6F7D76; background: transparent; color: #F4F1E6; }
+.ghost:hover { background: #13271F; }
 .primary:active, .ghost:active { transform: scale(.98); }
 .primary:disabled, .ghost:disabled { opacity: 0.5; cursor: default; }
-.foot { margin: 0; max-width: 18rem; color: #A39A92; font-size: 12px; line-height: 1.5; }
+.foot { margin: 0; max-width: 18rem; color: #8FA399; font-size: 12px; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .primary, .ghost, .step, .ovalLine { transition: none; } .primary:active, .ghost:active { transform: none; } }
 
 /* Calibration page (/dev-preview/wajah). */
@@ -77,8 +77,8 @@
 .waiting { min-height: 40vh; display: grid; place-content: center; justify-items: center; gap: 14px; }
 .waiting .spinner { border-color: var(--hr-line); border-top-color: var(--hr-primary); }
 /* The result: a mark that says how it went, the time, the match. */
-.result { display: grid; gap: 14px; justify-items: start; padding-top: 8px; }
-.result > button { justify-self: stretch; }
+.result { display: grid; gap: 16px; padding-top: 4px; }
+.result > .resultMark { justify-self: start; }
 .resultMark { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--hr-success-soft); color: var(--hr-success); }
 .resultMark[data-tone="cek"] { background: var(--hr-warning-soft); color: var(--hr-warning); }
 @media (prefers-reduced-motion: no-preference) { .resultMark { animation: pop 360ms var(--hr-ease) both; } }

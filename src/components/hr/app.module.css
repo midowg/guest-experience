@@ -2,8 +2,10 @@
  * WG People's screens (21 Nov 2026, after the UX, accessibility and code audits): Apple HIG first.
  * Tab roots have no bar: a large title in the page, or the greeting on Beranda. Detail screens have
  * a bar: a back chevron, the title in the middle, at most one action on the right. Tasks are sheets
- * (Batal on the left, the action on the right). Clay is rare: the main button, the current tab, and
- * the bar actions (the iOS tint). White surfaces only for grouped lists and the one status card.
+ * (Batal on the left, the action on the right). Second look (21 Nov 2026): pine and marigold. The
+ * one action colour is marigold (a pill); green tints the current tab and the bar actions (the iOS
+ * tint). Today on Beranda and the receipt are the time card (.ticket: a pine stub, a perforation, a
+ * white part); the day line (.dayLine) draws when work ran, here and in Riwayat.
  * Times in tabular figures. Status always as a word, never the colour alone. 44px targets.
  * Scales from brain/aturan/desain-ui.md: 34 large title, 28 title, 22 headline, 17 subtitle, 15–16
  * body, 13 label, 12 caption; radii from the --hr-r-* tokens.
@@ -17,7 +19,7 @@
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 0; }
 .headText { display: grid; gap: 4px; min-width: 0; }
 .eyebrow { margin: 0; font-size: 13px; font-weight: 600; color: var(--hr-muted); }
-.screen .largeTitle { margin: 0; font-size: 34px; font-weight: 700; line-height: 1.12; letter-spacing: -.028em; color: var(--hr-text); text-wrap: balance; }
+.screen .largeTitle { margin: 0; font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -.035em; color: var(--hr-text); text-wrap: balance; }
 .lead { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-muted); }
 .headAction { flex: none; min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 120ms var(--hr-ease); }
 .headAction:active { transform: scale(.96); }
@@ -60,41 +62,91 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .status_ditolak { color: var(--hr-danger); }
 .status_dibatalkan, .status_kosong { color: var(--hr-muted); }
 
-/* One main button for the whole app. Disabled looks inert, not faded clay. */
-.wide { width: 100%; min-height: 54px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: var(--hr-r-control); background: var(--hr-primary); color: var(--hr-on-primary); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
-.wide:hover:not(:disabled) { background: var(--hr-primary-hover); }
-.wide:active:not(:disabled) { transform: scale(.98); }
-.wide:disabled { background: var(--hr-surface-soft); color: var(--hr-muted); cursor: default; }
+/* One main button for the whole app: a marigold pill. Disabled looks inert, not faded marigold. */
+.wide, .action { width: 100%; min-height: 56px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; letter-spacing: -.005em; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
+.wide:hover:not(:disabled), .action:hover:not(:disabled) { background: var(--hr-accent-hover); }
+.wide:active:not(:disabled), .action:active:not(:disabled) { transform: scale(.98); }
+.wide:disabled, .action:disabled { background: var(--hr-surface-soft); color: var(--hr-muted); cursor: default; }
+.action:focus-visible { outline: 3px solid var(--hr-on-brand); outline-offset: 3px; }
 .quiet { justify-self: center; min-height: 44px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--hr-primary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-underline-offset: 3px; }
 .quiet:hover:not(:disabled) { text-decoration: underline; }
 .quiet:disabled { opacity: .5; cursor: default; }
 .quietMuted { color: var(--hr-muted); font-weight: 500; }
 
-/* Beranda: the greeting, the one status card, what needs attention, this week. */
-.today { display: grid; gap: 18px; padding: 20px; border-radius: var(--hr-r-panel); background: var(--hr-surface); border: 1px solid var(--hr-line); }
-.todayTop { display: grid; gap: 6px; }
-.clockLine { display: flex; align-items: baseline; gap: 8px; }
-.clock { margin: 0; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.zone { font-size: 13px; font-weight: 600; color: var(--hr-muted); }
-.state { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-muted); }
-.live { color: var(--hr-text); font-weight: 700; font-variant-numeric: tabular-nums; }
-.slots { margin: 0; padding: 14px 0 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--hr-line); }
+/*
+ * The time card: a pine stub over a white part, cut by a perforation with a notch on each side
+ * (circles in the page colour). Beranda's today and the receipt after an absen.
+ */
+.ticket { display: grid; border-radius: var(--hr-r-panel); }
+.ticketStub { display: grid; gap: 14px; padding: 20px 20px 22px; border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-brand); color: var(--hr-on-brand); }
+.ticketCut { position: relative; height: 2px; margin: 0 1px; background: var(--hr-surface) repeating-linear-gradient(90deg, var(--hr-line-strong) 0 6px, transparent 6px 12px) 22px 0 / calc(100% - 44px) 100% no-repeat; }
+.ticketCut::before, .ticketCut::after { content: ""; position: absolute; top: -10px; width: 22px; height: 22px; border-radius: 50%; background: var(--hr-app); }
+.ticketCut::before { left: -12px; }
+.ticketCut::after { right: -12px; }
+.ticketPart { display: grid; gap: 14px; padding: 18px 20px 20px; border-radius: 0 0 var(--hr-r-panel) var(--hr-r-panel); background: var(--hr-surface); border: 1px solid var(--hr-line); border-top: 0; }
+.sheetBody .ticketCut::before, .sheetBody .ticketCut::after { background: var(--hr-app); }
+
+/* Beranda's stub: the label, the clock now, how the day goes, the day line, the one action. */
+.stubLabel { margin: 0; font-size: 13px; font-weight: 700; color: var(--hr-on-brand-muted); }
+.clockLine { margin: -6px 0 0; display: flex; align-items: baseline; gap: 8px; }
+.clock { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.zone { font-size: 15px; font-weight: 700; color: var(--hr-accent); }
+.state { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-on-brand-muted); }
+.live { color: var(--hr-on-brand); font-weight: 800; font-variant-numeric: tabular-nums; }
+.done { margin: 0; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: var(--hr-brand-raised); color: var(--hr-on-brand); font-weight: 700; }
+.done svg { color: var(--hr-accent); }
+.hint { margin: -4px 0 0; font-size: 13px; color: var(--hr-on-brand-muted); text-align: center; }
+/* The receipt's stamp: Sah in marigold, Perlu dicek dashed; pressed on like a rubber stamp. */
+.stamp { justify-self: start; margin: 0; padding: 6px 14px 6px 10px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--hr-accent); border-radius: 999px; color: var(--hr-accent); font-size: 15px; font-weight: 800; transform: rotate(-3deg); }
+.stamp[data-tone="perlu_cek"], .stamp[data-tone="ditolak"] { border-style: dashed; border-color: var(--hr-on-brand-muted); color: var(--hr-on-brand); }
+@media (prefers-reduced-motion: no-preference) { .stamp { animation: stamp 420ms var(--hr-ease) 120ms both; } }
+@keyframes stamp { 0% { opacity: 0; transform: rotate(-3deg) scale(1.5); } 60% { opacity: 1; transform: rotate(-3deg) scale(.94); } 100% { transform: rotate(-3deg) scale(1); } }
+/* The stamped times below the perforation. */
+.slots { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .slot { display: grid; gap: 2px; align-content: start; min-width: 0; }
-.slotLabel { font-size: 13px; font-weight: 600; color: var(--hr-muted); }
-.slotTime { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.slotEmpty { font-size: 22px; font-weight: 600; color: var(--hr-muted); }
+.slot + .slot { padding-left: 14px; border-left: 1px solid var(--hr-line); }
+.slotLabel { font-size: 13px; font-weight: 700; color: var(--hr-muted); }
+.slotTime { font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.slotEmpty { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--hr-line-strong); }
 .slotWhere { font-size: 13px; color: var(--hr-muted); overflow-wrap: anywhere; }
 .slot .status { margin-top: 4px; }
-.done { margin: 0; min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--hr-r-control); background: var(--hr-success-soft); color: var(--hr-success); font-weight: 700; }
-.hint { margin: -6px 0 0; font-size: 13px; color: var(--hr-muted); text-align: center; }
-/* This week: seven days, today ringed; a mark for each, said in words in the note below. */
-.week { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
-.day { min-height: 64px; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 4px; border: 0; border-radius: 12px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
+.ticketPart .quiet { margin-top: -4px; }
+
+/*
+ * The day line, 06.00 to 22.00: a hairline track, the work as a bar, the sun (marigold, ringed in
+ * the colour under it) at the time it is now. On pine (brand) or on white (plain); thin in Riwayat.
+ */
+.dayLine { display: grid; gap: 6px; width: 100%; }
+.dayTrack { position: relative; display: block; height: 10px; }
+.dayTrack::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; border-radius: 1px; background: var(--hr-line); }
+.daySpan { position: absolute; top: 1px; height: 8px; border-radius: 999px; background: var(--hr-primary); }
+.dayPin { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--hr-primary); }
+.daySun { position: absolute; top: -4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--hr-accent); box-shadow: 0 0 0 3px var(--hr-surface); }
+.dayLabels { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--hr-muted); font-variant-numeric: tabular-nums; }
+.dayLine[data-tone="brand"] .dayTrack::before { background: var(--hr-brand-line); }
+.dayLine[data-tone="brand"] .daySpan, .dayLine[data-tone="brand"] .dayPin { background: var(--hr-on-brand); }
+.dayLine[data-tone="brand"] .daySun { box-shadow: 0 0 0 3px var(--hr-brand); }
+.dayLine[data-tone="brand"] .dayLabels { color: var(--hr-on-brand-muted); }
+.dayLine[data-thin] { margin: 6px 0 4px; max-width: 14rem; }
+.dayLine[data-thin] .dayTrack { height: 6px; }
+.dayLine[data-thin] .dayTrack::before { top: 2px; }
+.dayLine[data-thin] .daySpan { top: 0; height: 6px; }
+.dayLine[data-thin] .dayPin { width: 6px; height: 6px; margin-left: -3px; }
+@media (prefers-reduced-motion: no-preference) { .daySpan { transition: width 400ms var(--hr-ease); } }
+
+/* A group's label with a number on the right (the week's hours). */
+.groupHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-right: 16px; }
+.groupValue { font-size: 13px; font-weight: 700; color: var(--hr-text); font-variant-numeric: tabular-nums; }
+/* This week: seven days, each a bar of the hours worked (to 10 hours), today ringed; a mark for each, said in words in the note below. */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); padding: 8px 4px 6px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.day { min-height: 112px; min-width: 0; padding: 6px 0; display: grid; grid-template-rows: 1fr auto auto auto; justify-items: center; align-content: end; gap: 4px; border: 0; border-radius: 14px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
 .day:hover:not(:disabled) { background: var(--hr-surface-soft); }
 .day:disabled { cursor: default; color: var(--hr-muted); }
 .day[aria-current="date"] { box-shadow: inset 0 0 0 1.5px var(--hr-text); }
+.dayBar { position: relative; width: 10px; height: 52px; border-radius: 999px; background: var(--hr-surface-soft); overflow: hidden; }
+.dayFill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: inherit; background: var(--hr-primary); }
 .dayName { font-size: 12px; font-weight: 600; color: var(--hr-muted); }
-.dayNumber { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dayNumber { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mark { width: 8px; height: 8px; }
 .mark_lengkap { border-radius: 50%; background: var(--hr-text); }
 .mark_sebagian { border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--hr-text); }
@@ -121,10 +173,12 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .empty svg { color: var(--hr-muted); opacity: .7; margin-bottom: 4px; }
 .empty strong { font-size: 17px; font-weight: 600; color: var(--hr-text); }
 
-/* Profil */
-.person { display: flex; align-items: center; gap: 16px; padding: 8px 0 0; }
-.avatar { flex: none; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--hr-surface-soft); color: var(--hr-text); font-size: 22px; font-weight: 700; letter-spacing: .02em; }
-.screen .personName { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.15; letter-spacing: -.02em; overflow-wrap: anywhere; }
+/* Profil: the person as a staff card in pine (the same family as the time card). */
+.idCard { position: relative; display: grid; gap: 14px; padding: 20px; border-radius: var(--hr-r-panel); background: var(--hr-brand); color: var(--hr-on-brand); overflow: hidden; }
+.idBrand { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--hr-accent); }
+.idSub { margin: 0; font-size: 14px; line-height: 1.45; color: var(--hr-on-brand-muted); }
+.avatar { flex: none; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 20px; background: var(--hr-accent); color: var(--hr-on-accent); font-size: 22px; font-weight: 800; letter-spacing: .02em; }
+.screen .personName { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; color: var(--hr-on-brand); overflow-wrap: anywhere; }
 
 /* Detail screens: a bar with back, the title, one action. The bottom menu stays. */
 .detail { display: grid; gap: 24px; margin-top: calc(-12px - env(safe-area-inset-top)); }
@@ -138,7 +192,11 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .barText:disabled { color: var(--hr-muted); opacity: .6; cursor: default; }
 .barStrong { font-weight: 600; }
 .summary { display: grid; gap: 4px; padding: 0 4px; }
-.detail .summaryTitle, .sheetBody .summaryTitle { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; }
+.detail .summaryTitle, .sheetBody .summaryTitle { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.25; letter-spacing: -.02em; }
+/* One day's detail: the two times large, how long, the day line. */
+.daySummary { display: grid; gap: 4px; padding: 16px 16px 14px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.daySummaryTimes { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.daySummary .dayLine { margin-top: 10px; }
 /* A request's way: sent, then decided. */
 .steps { margin: 0; padding: 0 4px; list-style: none; display: grid; }
 .stepItem { position: relative; display: grid; gap: 2px; padding: 0 0 18px 28px; }
@@ -186,10 +244,10 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 @keyframes rise { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
 @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .wide, .headAction, button.row, label.row, .segment, .day { transition: none; } .wide:active, .headAction:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wide, .action, .headAction, button.row, label.row, .segment, .day { transition: none; } .wide:active, .action:active, .headAction:active { transform: none; } }
 
 /* A short message after an action, above the bottom menu. A problem stays until it is closed. */
-.toast { position: fixed; z-index: 70; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto; padding: 12px 8px 12px 16px; display: flex; align-items: center; gap: 8px; border-radius: var(--hr-r-card); background: var(--hr-text); color: var(--hr-app); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.toast { position: fixed; z-index: 70; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto; padding: 12px 8px 12px 16px; display: flex; align-items: center; gap: 8px; border-radius: var(--hr-r-card); background: var(--hr-text); color: var(--hr-app); font-size: 14px; font-weight: 600; line-height: 1.45; }
 .toast span { flex: 1; }
 .toastClose { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: no-preference) { .toast { animation: rise 220ms var(--hr-ease) both; } }

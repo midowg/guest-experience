@@ -47,8 +47,8 @@ export default async function DevHrPage({ searchParams }: { searchParams: Promis
   if (process.env.NODE_ENV === "production") notFound();
   const { kosong, langkah, detail } = await searchParams;
   const steps: Record<string, ClockInStep> = {
-    hasil: { name: "hasil", title: "Absen pulang tercatat.", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.47 }), note: null, then: null },
-    rendah: { name: "hasil", title: "Absen pulang tercatat.", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.33, status: "perlu_cek", flags: ["skor_rendah"] }), note: "Perlu dicek Admin HR: kecocokan wajah rendah.", then: null },
+    hasil: { name: "hasil", title: "Tercatat. Hati-hati di jalan!", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.47 }), note: null, then: null },
+    rendah: { name: "hasil", title: "Tercatat, Admin HR akan memeriksanya", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.33, status: "perlu_cek", flags: ["skor_rendah"] }), note: "Perlu dicek Admin HR: kecocokan wajah rendah.", then: null },
     lokasi: { name: "lokasi", kind: "pulang", consent: null },
     revisi: { name: "revisi", date: "2026-11-19" },
     persetujuan: { name: "persetujuan", then: "daftar" },

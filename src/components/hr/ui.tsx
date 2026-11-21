@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "
 import { createPortal } from "react-dom";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FACE_MATCH, matchPercent } from "@/lib/hr/face-match";
+import { dayLinePercent } from "@/lib/hr/history";
 import styles from "./app.module.css";
 import flow from "./absen.module.css";
 
@@ -221,3 +222,35 @@ export function MatchMeter({ score }: { score: number }) {
 
 /** "Dita Contoh" → "DC", for the round mark with the name. */
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase() || "?";
+
+/**
+ * The time card, WG People's signature (21 Nov 2026): a pine stub on top, a perforation with a notch
+ * on each side, and a white part below, like a stamped kartu absen. Beranda's today and the receipt.
+ */
+export function Ticket({ label, stub, children }: { label: string; stub: ReactNode; children: ReactNode }) {
+  return <section className={styles.ticket} aria-label={label}>
+    <div className={styles.ticketStub}>{stub}</div>
+    <div className={styles.ticketCut} aria-hidden />
+    <div className={styles.ticketPart}>{children}</div>
+  </section>;
+}
+
+/**
+ * The day line (06.00–22.00, in minutes of the day): when the work ran (masuk to pulang, or to now)
+ * as a bar, and the sun at the time it is now. Only a picture: what it shows is said in words beside it.
+ */
+export function DayLine({ start = null, end = null, now = null, tone = "plain", labels = false, thin = false }: {
+  start?: number | null; end?: number | null; now?: number | null; tone?: "brand" | "plain"; labels?: boolean; thin?: boolean;
+}) {
+  const at = (minute: number) => dayLinePercent(minute);
+  // Past midnight (a late shift) the end is on the next day: it runs to the end of the line.
+  const from = start == null ? null : at(start), to = end == null || start == null ? null : at(end < start ? end + 24 * 60 : end);
+  return <span className={styles.dayLine} data-tone={tone} data-thin={thin || undefined} aria-hidden>
+    <span className={styles.dayTrack}>
+      {from != null && to != null && <span className={styles.daySpan} style={{ left: `min(${from}%, calc(100% - 6px))`, width: `max(6px, ${Math.max(0, to - from)}%)` }} />}
+      {from != null && to == null && <span className={styles.dayPin} style={{ left: `${from}%` }} />}
+      {now != null && <span className={styles.daySun} style={{ left: `${at(now)}%` }} />}
+    </span>
+    {labels && <span className={styles.dayLabels}><span>06.00</span><span>14.00</span><span>22.00</span></span>}
+  </span>;
+}

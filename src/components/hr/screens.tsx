@@ -8,15 +8,17 @@ import {
 } from "@/lib/hr/attendance";
 import { distanceLabel } from "@/lib/hr/geo";
 import { matchPercent } from "@/lib/hr/face-match";
-import { byWeek, durationLabel, historySummary, shiftDate, weekOf, workedMinutes } from "@/lib/hr/history";
+import { byWeek, durationLabel, historySummary, minuteOfDay, minutesByDate, shiftDate, weekOf, workedMinutes } from "@/lib/hr/history";
 import { instantLabel, zoneDate, zoneSuffix, zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
-import { Detail, Empty, Group, initials, LargeHead, RowButton, RowInfo, Segmented, SrOnly, StatusWord } from "./ui";
+import { DayLine, Detail, Empty, Group, initials, LargeHead, RowButton, RowInfo, Segmented, SrOnly, StatusWord, Ticket } from "./ui";
+import { WgMark } from "./WgMark";
 import styles from "./app.module.css";
 
 /*
  * WG People's screens (21 Nov 2026): the four tab roots and the detail screens they open. They only
  * show and ask; what happens (the camera, the server, the history) is in ClockInFlow. Rows that open
- * a detail carry a `mark`, so focus finds them again on the way back.
+ * a detail carry a `mark`, so focus finds them again on the way back. Second look (same day): today
+ * on Beranda is the time card (Ticket) with the day line; Riwayat draws each day on the line too.
  */
 
 const say = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
@@ -27,12 +29,21 @@ const recordsOf = (state: ClockInState, date: string) => ({
   masuk: state.recent.find(record => record.workDate === date && record.kind === "masuk") ?? null,
   pulang: state.recent.find(record => record.workDate === date && record.kind === "pulang") ?? null,
 });
-const placeOf = (record: DailyRecord) => record.method === "manual" && !record.officeName && !record.reasonKind ? "Dicatat Admin HR"
+/** Where a record was made, in words (also the receipt after an absen). */
+export const placeOf = (record: DailyRecord) => record.method === "manual" && !record.officeName && !record.reasonKind ? "Dicatat Admin HR"
   : record.reasonKind ? reasonLabels[record.reasonKind] : record.officeName ?? "Di luar kantor";
-/** "Selamat pagi" by the hour where the person is. */
+/** "Pagi" by the hour where the person is: Beranda says "Pagi, Rina", the way people greet at the door. */
 export function greetingAt(iso: string, zone: ViewerZone): string {
   const hour = Number(zoneTime(iso, zone).slice(0, 2));
-  return hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+  return hour < 4 ? "Malam" : hour < 11 ? "Pagi" : hour < 15 ? "Siang" : hour < 18 ? "Sore" : "Malam";
+}
+/** Where a record sits on the day line, in the viewer's zone. */
+const minuteOf = (record: DailyRecord | null, zone: ViewerZone) => (record ? minuteOfDay(record.at, zone) : null);
+/** A day on the day line: masuk to pulang; masuk to now while still at work (today only); a pin when only one is there. */
+function spanOf(masuk: DailyRecord | null, pulang: DailyRecord | null, zone: ViewerZone, nowMinute: number | null) {
+  const start = minuteOf(masuk, zone) ?? minuteOf(pulang, zone);
+  const end = masuk ? minuteOf(pulang, zone) ?? nowMinute : null;
+  return { start, end };
 }
 /** The first record of a day that is not simply Sah, for its status word. */
 const notSah = (...records: (DailyRecord | null)[]) => records.find(record => record && record.status !== "sah") ?? null;
@@ -50,40 +61,50 @@ export function HomeScreen({ state, now, zone, name, onClock, onDay, onRevise }:
   const { masuk, pulang } = state.today;
   const next = nextKind(state.today);
   const today = state.today.workDate;
+  const nowMinute = minuteOfDay(now, zone);
+  const worked = masuk ? workedMinutes(masuk.at, pulang?.at ?? now) : 0;
   const line = !masuk && !pulang ? "Belum absen masuk hari ini."
-    : masuk && !pulang ? <>Sudah bekerja <span className={styles.live}>{durationLabel(workedMinutes(masuk.at, now))}</span>.</>
-      : masuk && pulang ? <>Selesai, total <span className={styles.live}>{durationLabel(workedMinutes(masuk.at, pulang.at))}</span>. Sampai jumpa besok.</>
+    : masuk && !pulang ? (worked >= 8 * 60
+      ? <>Sudah <span className={styles.live}>{durationLabel(worked)}</span>. Waktunya pulang?</>
+      : <>Sudah bekerja <span className={styles.live}>{durationLabel(worked)}</span>.</>)
+      : masuk && pulang ? <>Selesai, total <span className={styles.live}>{durationLabel(worked)}</span>. Sampai besok!</>
         : "Absen pulang sudah tercatat.";
+  const span = spanOf(masuk, pulang, zone, pulang ? null : nowMinute);
 
   // What needs the person: a recent day with masuk but no pulang (and nothing asked yet), or a refused record.
   const earlier = [...new Set(state.recent.map(record => record.workDate))].filter(date => date < today && date >= shiftDate(today, -7)).sort().reverse();
   const forgot = earlier.find(date => { const day = recordsOf(state, date); return day.masuk && !day.pulang && !waitingOn(state, date).length; });
   const refused = state.recent.find(record => record.status === "ditolak" && record.workDate >= shiftDate(today, -7));
 
+  const week = weekOf(today);
+  const hours = minutesByDate(state.recent, week);
+  const running = masuk && !pulang ? worked : 0;
+
   return <div className={styles.screen}>
     <LargeHead eyebrow={longDay(today)} title={<>{greetingAt(now, zone)}{name ? `, ${name}` : ""}</>} />
 
     {!state.ready
       ? <Empty icon={<Clock3 size={32} aria-hidden />} title="Absen harian belum dibuka">{state.waiting ?? "Admin HR sedang menyiapkannya."}</Empty>
-      : <section className={styles.today} aria-label="Absen hari ini">
-        <div className={styles.todayTop}>
-          <p className={styles.clockLine}><time className={styles.clock} dateTime={now}>{instantLabel(now, zone)}</time><span className={styles.zone}>{zone}</span></p>
-          <p className={styles.state}>{line}</p>
-        </div>
+      : <Ticket label="Absen hari ini" stub={<>
+        <p className={styles.stubLabel}>Hari ini</p>
+        <p className={styles.clockLine}><time className={styles.clock} dateTime={now}>{instantLabel(now, zone)}</time><span className={styles.zone}>{zone}</span></p>
+        <p className={styles.state}>{line}</p>
+        <DayLine tone="brand" start={span.start} end={span.end} now={pulang ? null : nowMinute} labels />
+        {next
+          ? <button type="button" className={styles.action} onClick={() => onClock(next)}><ScanFace size={22} aria-hidden /> Absen {kindLabels[next].toLowerCase()}</button>
+          : <p className={styles.done}><CheckCircle2 size={20} aria-hidden /> Absen hari ini lengkap</p>}
+        {next && !usable(state.face?.status) && <p className={styles.hint}>Pertama kali: daftar wajah dulu, sekali saja.</p>}
+      </>}>
         <ul className={styles.slots}>
-          {([["masuk", masuk], ["pulang", pulang]] as const).map(([kind, record]) => <li key={kind} className={styles.slot}>
+          {([["masuk", masuk], ["pulang", pulang]] as const).map(([kind, record]) => <li key={kind} className={styles.slot} data-empty={!record || undefined}>
             <span className={styles.slotLabel}>{kindLabels[kind]}</span>
             {record ? <span className={styles.slotTime}>{instantLabel(record.at, zone)}{zoneSuffix(zone)}</span> : <span className={styles.slotEmpty}>Belum</span>}
             {record && <span className={styles.slotWhere}>{placeOf(record)}</span>}
             {record && record.status !== "sah" && <StatusWord tone={record.status}>{statusLabels[record.status]}</StatusWord>}
           </li>)}
         </ul>
-        {next
-          ? <button type="button" className={styles.wide} onClick={() => onClock(next)}><ScanFace size={22} aria-hidden /> Absen {kindLabels[next].toLowerCase()}</button>
-          : <p className={styles.done}><CheckCircle2 size={20} aria-hidden /> Absen hari ini lengkap</p>}
-        {next && !usable(state.face?.status) && <p className={styles.hint}>Pertama kali: daftar wajah dulu, sekali saja.</p>}
         {next === "masuk" && <button type="button" className={`${styles.quiet} ${styles.quietMuted}`} onClick={() => onClock("pulang")}>Lupa absen masuk? Langsung absen pulang</button>}
-      </section>}
+      </Ticket>}
 
     {(forgot || refused) && <Group label="Perlu perhatian">
       {forgot && <RowButton title={`${shortDay(forgot)} belum ada absen pulang`} sub="Ajukan revisi supaya jam pulangmu tercatat." onClick={() => onRevise(forgot)} />}
@@ -91,18 +112,23 @@ export function HomeScreen({ state, now, zone, name, onClock, onDay, onRevise }:
     </Group>}
 
     <section className={styles.group} aria-labelledby="minggu-ini">
-      <h2 id="minggu-ini" className={styles.groupLabel}>Minggu ini</h2>
+      <div className={styles.groupHead}>
+        <h2 id="minggu-ini" className={styles.groupLabel}>Minggu ini</h2>
+        {hours.total + running > 0 && <span className={styles.groupValue}>{durationLabel(hours.total + running)}</span>}
+      </div>
       <div className={styles.week}>
-        {weekOf(today).map(date => {
+        {week.map(date => {
           const day = recordsOf(state, date);
           const check = notSah(day.masuk, day.pulang);
           const mark = check ? "cek" : day.masuk && day.pulang ? "lengkap" : day.masuk || day.pulang ? "sebagian" : "kosong";
+          const minutes = hours.byDate[date] ?? (date === today ? running : 0);
           const word = date > today ? "belum" : check ? statusLabels[check.status].toLowerCase() : { lengkap: "lengkap", sebagian: "belum lengkap", kosong: "tidak ada absen", cek: "" }[mark];
           return <button key={date} type="button" className={styles.day} disabled={date > today} aria-current={date === today ? "date" : undefined} data-mark={`hari-${date}`} onClick={() => onDay(date)}>
+            <span className={styles.dayBar} aria-hidden><span className={styles.dayFill} style={{ height: `${Math.min(100, (minutes / 600) * 100)}%` }} /></span>
             <span className={styles.dayName} aria-hidden>{say(date, { weekday: "short" })}</span>
             <span className={styles.dayNumber} aria-hidden>{Number(date.slice(8))}</span>
             <span className={`${styles.mark} ${styles[`mark_${mark}`]}`} aria-hidden />
-            <SrOnly>{longDay(date)}, {word}</SrOnly>
+            <SrOnly>{longDay(date)}, {word}{minutes ? `, ${durationLabel(minutes)}` : ""}</SrOnly>
           </button>;
         })}
       </div>
@@ -148,7 +174,10 @@ export function HistoryScreen({ state, zone, onDay }: { state: ClockInState; zon
             <SrOnly>{date === state.today.workDate ? "Hari ini, " : `${longDay(date)}, `}masuk </SrOnly>{inAt ?? <span className={styles.timesEmpty}>belum</span>}
             <span aria-hidden> → </span><SrOnly>, pulang </SrOnly>{outAt ?? <span className={styles.timesEmpty}>belum</span>}
           </span>}
-          sub={<>{date === state.today.workDate ? "Hari ini · " : ""}{first ? placeOf(first) : ""}{waiting ? " · revisi menunggu" : ""}</>}
+          sub={<>
+            <DayLine thin {...spanOf(masuk, pulang, zone, null)} />
+            {date === state.today.workDate ? "Hari ini · " : ""}{first ? placeOf(first) : ""}{waiting ? " · revisi menunggu" : ""}
+          </>}
           trailing={check ? <StatusWord tone={check.status}>{statusLabels[check.status]}</StatusWord> : masuk && !pulang && date < state.today.workDate ? <StatusWord tone="kosong">Belum pulang</StatusWord> : null} />;
       })}
     </Group>)}
@@ -184,9 +213,13 @@ export function ProfileScreen({ state, fullName, zone, onFace, onOffices, onSign
   state: ClockInState; fullName: string; zone: ViewerZone; onFace(): void; onOffices(): void; onSignOut(): void;
 }) {
   return <div className={styles.screen}>
-    <header className={styles.person}>
+    <header className={styles.idCard}>
+      <p className={styles.idBrand}><WgMark size={22} head="var(--hr-on-brand)" aria-hidden /> WG People</p>
       <span className={styles.avatar} aria-hidden>{initials(fullName)}</span>
-      <div className={styles.headText}><h1 className={styles.personName}>{fullName}</h1><p className={styles.lead}>Akun WAM</p></div>
+      <div className={styles.headText}>
+        <h1 className={styles.personName}>{fullName}</h1>
+        <p className={styles.idSub}>Akun WAM · wajah {state.face ? faceStatusLabels[state.face.status].toLowerCase() : "belum terdaftar"}</p>
+      </div>
     </header>
     <Group label="Absen" icons>
       <RowButton mark="wajah" icon={<ShieldCheck size={20} />} title="Data wajah" value={state.face ? faceStatusLabels[state.face.status] : "Belum terdaftar"} onClick={onFace} />
@@ -205,8 +238,16 @@ export function DayDetail({ state, date, zone, onBack, onRevise, onRequest }: {
 }) {
   const day = recordsOf(state, date);
   const requests = state.requests.filter(request => request.workDate === date);
+  const span = spanOf(day.masuk, day.pulang, zone, null);
   return <Detail title={shortDay(date)} onBack={onBack}
     action={revisable(state, date) ? <button type="button" className={styles.barText} onClick={() => onRevise(date)}>Revisi</button> : undefined}>
+    <div className={styles.daySummary}>
+      <p className={styles.daySummaryTimes}>
+        {clockOf(day.masuk, zone) ?? <span className={styles.timesEmpty}>belum</span>}<span aria-hidden> → </span><SrOnly> sampai </SrOnly>{clockOf(day.pulang, zone) ?? <span className={styles.timesEmpty}>belum</span>}
+      </p>
+      <p className={styles.lead}>{day.masuk && day.pulang ? `${durationLabel(workedMinutes(day.masuk.at, day.pulang.at))} bekerja` : longDay(date)}</p>
+      <DayLine {...span} labels />
+    </div>
     {(["masuk", "pulang"] as const).map(kind => {
       const record = day[kind];
       return <Group key={kind} label={kindLabels[kind]}>

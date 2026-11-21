@@ -17,8 +17,9 @@ export function GET() {
     scope: `${HR_PATH}/`,
     display: "standalone",
     orientation: "portrait",
-    background_color: "#F7F3EE",
-    theme_color: "#F7F3EE",
+    // The launch screen Android draws from these: pine with the icon, like the splash in the app; each page sets its own bar colour after.
+    background_color: "#123B2F",
+    theme_color: "#123B2F",
     icons: [
       { src: `${HR_PATH}/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
       { src: `${HR_PATH}/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },

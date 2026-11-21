@@ -38,7 +38,13 @@ export function byWeek(dates: string[], today: string): { label: string; dates: 
   return groups;
 }
 
-const minutesOf = (iso: string, zone: ViewerZone) => { const [hours, minutes] = zoneTime(iso, zone).split(":").map(Number); return hours * 60 + minutes; };
+/** Minutes since midnight of an instant in a zone: 08.41 WIB is 521. */
+export const minuteOfDay = (iso: string, zone: ViewerZone) => { const [hours, minutes] = zoneTime(iso, zone).split(":").map(Number); return hours * 60 + minutes; };
+const minutesOf = minuteOfDay;
+
+/** The day line (21 Nov 2026) runs from 06.00 to 22.00; where a minute of the day sits on it, 0–100. */
+export const DAY_LINE = { from: 6 * 60, to: 22 * 60 };
+export const dayLinePercent = (minute: number) => Math.min(100, Math.max(0, ((minute - DAY_LINE.from) / (DAY_LINE.to - DAY_LINE.from)) * 100));
 const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}.${String(minutes % 60).padStart(2, "0")}`;
 /** "8 j 39 m", "45 m". */
 export const durationLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} j ${minutes % 60} m` : `${Math.max(0, minutes)} m`);
@@ -54,4 +60,15 @@ export function historySummary(records: DailyRecord[], zone: ViewerZone): { days
     toCheck: records.filter(record => record.status === "perlu_cek").length,
     usualIn: average === null ? null : clock(average),
   };
+}
+
+/** Minutes worked on each date that has both masuk and pulang (refused records do not count), and the week's total (Beranda's week). */
+export function minutesByDate(records: DailyRecord[], dates: string[]): { byDate: Record<string, number>; total: number } {
+  const byDate: Record<string, number> = {};
+  for (const date of dates) {
+    const masuk = records.find(record => record.workDate === date && record.kind === "masuk" && record.status !== "ditolak");
+    const pulang = records.find(record => record.workDate === date && record.kind === "pulang" && record.status !== "ditolak");
+    if (masuk && pulang) byDate[date] = workedMinutes(masuk.at, pulang.at);
+  }
+  return { byDate, total: Object.values(byDate).reduce((sum, minutes) => sum + minutes, 0) };
 }

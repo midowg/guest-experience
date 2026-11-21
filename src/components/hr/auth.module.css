@@ -1,0 +1,78 @@
+/*
+ * WG People's sign-in pages (21 Nov 2026): pine on top (the brand, a short line about the app, the
+ * day line with the sun at the time it is now), then the form on a white sheet with rounded top
+ * corners. One marigold action. Phone first; on a wide screen the column sits in the middle and
+ * the sheet becomes a card. --hr-* tokens from hr.module.css (.theme on the layout).
+ */
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* The pine is fixed (light and dark) so it meets the splash and the launch picture without a seam. */
+.page { min-height: 100dvh; display: flex; flex-direction: column; background: #123B2F; color: var(--hr-text); }
+/* A clear ring on every control: green on the white sheet, cream on the pine. */
+.page :focus-visible { outline: 3px solid var(--hr-primary); outline-offset: 2px; }
+.top :focus-visible { outline-color: var(--hr-on-brand); }
+.top { width: 100%; max-width: 30rem; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top)) 24px 28px; display: grid; gap: 28px; color: var(--hr-on-brand); }
+.brand { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.brandMark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--hr-brand-raised); color: var(--hr-accent); }
+.pitch { display: grid; gap: 10px; }
+.headline { margin: 0; max-width: 16ch; font-size: 34px; font-weight: 800; line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; }
+.pitchLead { margin: 0; max-width: 32ch; font-size: 15px; line-height: 1.5; color: var(--hr-on-brand-muted); }
+.today { display: grid; gap: 8px; }
+.nowLabel { margin: 0; min-height: 1.4em; font-size: 13px; font-weight: 600; color: var(--hr-on-brand-muted); font-variant-numeric: tabular-nums; }
+.nowLabel strong { color: var(--hr-accent); font-weight: 800; }
+
+.sheet { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 24px calc(20px + env(safe-area-inset-bottom)); border-radius: var(--hr-r-panel) var(--hr-r-panel) 0 0; background: var(--hr-surface); }
+.sheetInner { width: 100%; max-width: 26rem; margin: 0 auto; display: grid; gap: 8px; }
+.foot { margin: auto 0 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--hr-muted); }
+.page .title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; color: var(--hr-text); }
+.lead { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: var(--hr-muted); }
+
+.form { display: grid; gap: 16px; margin-top: 12px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 14px; font-weight: 600; color: var(--hr-text); }
+.optional { font-weight: 500; color: var(--hr-muted); }
+.field input, .field textarea { width: 100%; min-height: 52px; padding: 0 16px; border-radius: var(--hr-r-control); border: 1px solid var(--hr-line-strong); background: var(--hr-surface); color: var(--hr-text); font: inherit; font-size: 16px; font-weight: 500; transition: border-color var(--hr-fast) var(--hr-ease), box-shadow var(--hr-fast) var(--hr-ease); }
+.field textarea { min-height: 96px; padding: 14px 16px; resize: vertical; line-height: 1.5; }
+.field input::placeholder { color: var(--hr-muted); }
+.field input:focus-visible, .field textarea:focus-visible { outline: 3px solid var(--hr-primary); outline-offset: 0; border-color: var(--hr-primary); }
+.field input[aria-invalid="true"] { border-color: var(--hr-danger); }
+.fieldError { margin: 0; font-size: 13px; font-weight: 600; color: var(--hr-danger); }
+.secret { position: relative; }
+.secret input { padding-right: 56px; }
+.eye { position: absolute; top: 4px; right: 4px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--hr-muted); cursor: pointer; }
+.eye:hover { background: var(--hr-surface-soft); color: var(--hr-text); }
+
+/* The one action: marigold, full width, a pill. Disabled reads inert, not faded marigold. */
+.action { width: 100%; min-height: 56px; margin-top: 4px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; text-decoration: none; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
+.action:hover:not(:disabled) { background: var(--hr-accent-hover); }
+.action:active:not(:disabled) { transform: scale(.98); }
+.action:disabled { background: var(--hr-surface-soft); color: var(--hr-muted); cursor: default; }
+.page .link { justify-self: center; min-height: 44px; padding: 0 8px; display: inline-flex; align-items: center; gap: 6px; color: var(--hr-primary); font-size: 15px; font-weight: 700; text-decoration: none; }
+.page .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.problem, .ok { margin: 0; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; border-radius: var(--hr-r-control); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.problem { background: var(--hr-danger-soft); color: var(--hr-danger); }
+.ok { margin: 8px 0; background: var(--hr-success-soft); color: var(--hr-text); font-weight: 500; }
+.ok svg { flex: none; color: var(--hr-success); }
+.problem svg, .ok svg { flex: none; margin-top: 1px; }
+.rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--hr-muted); }
+.rules li { display: flex; align-items: center; gap: 8px; }
+.rules li[data-ok] { color: var(--hr-success); font-weight: 600; }
+
+/* A short phone (SE, small Android): the line and the day line step aside so the form and its button fit on the first screen. */
+@media (max-height: 740px) and (max-width: 759px) {
+  .top { gap: 16px; padding-bottom: 20px; }
+  .headline { font-size: 28px; }
+  .pitchLead, .today { display: none; }
+  .sheet { padding-top: 22px; }
+}
+@media (min-width: 760px) {
+  .page { justify-content: center; padding: 40px 16px; }
+  .top { padding-top: 0; }
+  .sheet { flex: none; width: 100%; max-width: 30rem; margin: 0 auto; border-radius: var(--hr-r-panel); padding-bottom: 24px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sheet { animation: rise 320ms var(--hr-ease) both; }
+}
+@media (prefers-reduced-motion: reduce) { .action, .field input, .field textarea { transition: none; } .action:active:not(:disabled) { transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
