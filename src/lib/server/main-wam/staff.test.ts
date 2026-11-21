@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("who tests Main WAM (mode uji): the listed penguji and Panitia WAM", () => {
-  it("Pra WAM's panitia or admin who knows /wam/acara does not get in, unless listed or on Panitia WAM", async () => {
+  it("Pra WAM's panitia or admin who knows /wam2026 does not get in, unless listed or on Panitia WAM", async () => {
     const pra = member(["panitia", "admin"]);
     expect(await viewer.testsMainWam(pra)).toBe(false);
     expect(mainWamGate("uji", { tester: false })).toEqual({ kind: "tutup" });

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 /*
  * Main WAM tersembunyi (20 Nov 2026): Pra WAM (the app, its components, Admin Pra WAM) has no card
- * or link into Main WAM. The only way from /wam to /wam/acara is Pra WAM Beranda's redirectToMainWam, which
+ * or link into Main WAM. The only way from /wam to /wam2026 is Pra WAM Beranda's redirectToMainWam, which
  * never leaves Pra WAM while Main WAM is hidden (gate.test.ts).
  */
 

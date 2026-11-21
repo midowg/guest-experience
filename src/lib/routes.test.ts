@@ -83,30 +83,30 @@ describe("WAM addresses", () => {
 });
 
 describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
-  it("live under /wam/acara, with filters in the query", () => {
-    expect(mainWamPath.home).toBe("/wam/acara");
-    expect(mainWamPath.login("/wam/acara/absen/t1")).toBe("/wam/acara/masuk?next=%2Fwam%2Facara%2Fabsen%2Ft1");
-    expect(mainWamPath.agenda()).toBe("/wam/acara/agenda");
-    expect(mainWamPath.agenda(2)).toBe("/wam/acara/agenda?hari=2");
-    expect(mainWamPath.session("a b")).toBe("/wam/acara/agenda/a%20b");
-    expect(mainWamPath.travel()).toBe("/wam/acara/saya/perjalanan");
-    expect(mainWamPath.travel("pulang")).toBe("/wam/acara/saya/perjalanan?arah=pulang");
-    expect(mainWamPath.moments()).toBe("/wam/acara/momen");
-    expect(mainWamPath.moments({ sesi: "s1", foto: "p1" })).toBe("/wam/acara/momen?sesi=s1&foto=p1");
-    expect(mainWamPath.camera({ sesi: "umum" })).toBe("/wam/acara/momen/kamera?sesi=umum");
-    expect(mainWamPath.gallery({ lihat: "saya" })).toBe("/wam/acara/momen/galeri?lihat=saya");
-    expect(mainWamPath.mosaic(true)).toBe("/wam/acara/momen/mozaik?tandai=1");
-    expect(mainWamPath.committee).toBe("/wam/acara/kelola");
-    expect(mainWamPath.moderation()).toBe("/wam/acara/kelola/moderasi");
-    expect(mainWamPath.moderation("disembunyikan")).toBe("/wam/acara/kelola/moderasi?lihat=disembunyikan");
-    expect(mainWamPath.checkIn("tok_1")).toBe("/wam/acara/absen/tok_1");
-    expect(mainWamPath.silentMeeting("s1")).toBe("/wam/acara/silent-meeting?sesi=s1");
+  it("live under /wam2026, with filters in the query", () => {
+    expect(mainWamPath.home).toBe("/wam2026");
+    expect(mainWamPath.login("/wam2026/absen/t1")).toBe("/wam2026/masuk?next=%2Fwam2026%2Fabsen%2Ft1");
+    expect(mainWamPath.agenda()).toBe("/wam2026/agenda");
+    expect(mainWamPath.agenda(2)).toBe("/wam2026/agenda?hari=2");
+    expect(mainWamPath.session("a b")).toBe("/wam2026/agenda/a%20b");
+    expect(mainWamPath.travel()).toBe("/wam2026/saya/perjalanan");
+    expect(mainWamPath.travel("pulang")).toBe("/wam2026/saya/perjalanan?arah=pulang");
+    expect(mainWamPath.moments()).toBe("/wam2026/momen");
+    expect(mainWamPath.moments({ sesi: "s1", foto: "p1" })).toBe("/wam2026/momen?sesi=s1&foto=p1");
+    expect(mainWamPath.camera({ sesi: "umum" })).toBe("/wam2026/momen/kamera?sesi=umum");
+    expect(mainWamPath.gallery({ lihat: "saya" })).toBe("/wam2026/momen/galeri?lihat=saya");
+    expect(mainWamPath.mosaic(true)).toBe("/wam2026/momen/mozaik?tandai=1");
+    expect(mainWamPath.committee).toBe("/wam2026/kelola");
+    expect(mainWamPath.moderation()).toBe("/wam2026/kelola/moderasi");
+    expect(mainWamPath.moderation("disembunyikan")).toBe("/wam2026/kelola/moderasi?lihat=disembunyikan");
+    expect(mainWamPath.checkIn("tok_1")).toBe("/wam2026/absen/tok_1");
+    expect(mainWamPath.silentMeeting("s1")).toBe("/wam2026/silent-meeting?sesi=s1");
   });
 
   it("keep every page address unique", () => {
     const pages = Object.values(mainWamPath).map(value => typeof value === "function" ? (value as (arg?: never) => string)() : value);
     expect(new Set(pages).size).toBe(pages.length);
-    for (const page of pages) expect(page.startsWith("/wam/acara")).toBe(true);
+    for (const page of pages) expect(page.startsWith("/wam2026")).toBe(true);
   });
 
   it("put the APIs under /api/wam/acara and Admin WAM 2026's under /api/admin/wam2026 (20 Nov 2026: its own door)", () => {
@@ -132,8 +132,8 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
   });
 
   it("give Kuis live its game, control, admin and a public big screen outside /wam", () => {
-    expect(mainWamPath.quiz("k1")).toBe("/wam/acara/kuis/k1");
-    expect(mainWamPath.quizControl("k1")).toBe("/wam/acara/kuis/k1/kendali");
+    expect(mainWamPath.quiz("k1")).toBe("/wam2026/kuis/k1");
+    expect(mainWamPath.quizControl("k1")).toBe("/wam2026/kuis/k1/kendali");
     expect(mainWamApi.quiz("k1", "r.3.1")).toBe("/api/wam/acara/kuis/k1?v=r.3.1");
     expect(mainWamApi.quizAnswer("k1")).toBe("/api/wam/acara/kuis/k1/jawab");
     expect(mainWamAdminPath.quiz("k1")).toBe("/admin/wam2026/kuis/k1");

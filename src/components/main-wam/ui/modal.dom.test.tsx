@@ -14,7 +14,7 @@ import { QUIET_FOCUS } from "./useModal";
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => "/wam2026" }));
 
 beforeAll(() => {
   // jsdom has no modal dialogs.
@@ -30,8 +30,8 @@ const isOpen = (name: string) => !!screen.queryByRole("heading", { name });
 
 beforeEach(async () => {
   // A page entry before ours, so a leaked entry shows: one Back from "base" must reach "previous".
-  window.history.replaceState({ marker: "previous" }, "", "/wam/acara");
-  window.history.pushState({ marker: "base" }, "", "/wam/acara");
+  window.history.replaceState({ marker: "previous" }, "", "/wam2026");
+  window.history.pushState({ marker: "base" }, "", "/wam2026");
   await settle(5);
 });
 afterEach(async () => { cleanup(); await settle(); vi.useRealTimers(); });
@@ -184,7 +184,7 @@ describe("Modal history: stacked modals and Back", () => {
       return <>
         <button type="button" onClick={() => {
           // As next/link does: a new entry without our key, then the screen (and its sheet) goes.
-          window.history.pushState({ marker: "page2" }, "", "/wam/acara/agenda");
+          window.history.pushState({ marker: "page2" }, "", "/wam2026/agenda");
           setShown(false);
         }}>Agenda</button>
         {shown && <Sheet open onClose={() => {}} title="Sementara"><p>Isi</p></Sheet>}
@@ -202,7 +202,7 @@ describe("Modal history: stacked modals and Back", () => {
   });
 
   it("an entry of ours from before a reload is the page now: Back closes the sheet and stays there", async () => {
-    window.history.replaceState({ marker: "base", mwSheet: "dari-sebelum-muat-ulang" }, "", "/wam/acara");
+    window.history.replaceState({ marker: "base", mwSheet: "dari-sebelum-muat-ulang" }, "", "/wam2026");
     render(<Stacked />);
     fireEvent.click(screen.getByRole("button", { name: "Buka" }));
     act(() => { window.history.back(); });

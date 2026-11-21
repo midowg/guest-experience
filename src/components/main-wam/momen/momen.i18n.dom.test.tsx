@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/main-wam/ui";
 /* Momen in English: the labels, counts and a sheet follow the language; Indonesian stays the default. */
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam/acara/momen" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam2026/momen" }));
 vi.mock("@/components/pra-wam/api", () => ({ praWamRequest: vi.fn(), errorText: () => "Gagal." }));
 
 const { MomenStack } = await import("./MomenStack");

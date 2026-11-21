@@ -462,7 +462,8 @@ export const praWamThemeApi = "/api/admin/wam/theme";
  * screens never edit this file: a new address is a change to the contract (KONTRAK §5).
  * Areas: A peserta, B momen, C panitia/BOD, D modul, E admin; fondasi for what is shared.
  */
-export const MAIN_WAM_PATH = `${PRA_WAM_PATH}/acara`;
+/** Published address (21 Nov 2026): /wam2026. next.config.ts rewrites it to the folder src/app/wam/acara and sends the old /wam/acara here. */
+export const MAIN_WAM_PATH = "/wam2026";
 const MAIN_WAM_API = `${WAM_API}/acara`;
 /** "?a=1&b=2" from the values that are set, or "". */
 const mwQuery = (values: Record<string, string | number | undefined | null | false>) => {

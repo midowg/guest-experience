@@ -91,24 +91,24 @@ describe("the gate's cost per request (S5)", () => {
   });
 
   it("a page outside Saya: the same, no room", async () => {
-    const context = await gate.requireMainWamPage("/wam/acara/agenda");
+    const context = await gate.requireMainWamPage("/wam2026/agenda");
     expect(context.viewer.room).toBeNull();
     expect(cost().tables).not.toContain("cq_stay_members");
     expect(cost().queries).toBeLessThanOrEqual(7);
   });
 
   it("Saya, Kamar, Perjalanan read the room, once, however often they ask", async () => {
-    const context = await gate.requireMainWamPage("/wam/acara/saya/kamar");
+    const context = await gate.requireMainWamPage("/wam2026/saya/kamar");
     expect(context.viewer.room).toMatchObject({ name: "208", floor: "2", people: [{ name: "Rani", me: true }] });
     const before = fake.queries.length;
     await viewer.viewerRoom(ME);
-    await gate.requireMainWamPage("/wam/acara/saya/kamar");
+    await gate.requireMainWamPage("/wam2026/saya/kamar");
     expect(fake.queries.length).toBe(before);
     expect(fake.queries.filter(q => q.table === "cq_stay_members").length).toBe(2);
   });
 
   it("the layout and the page share one read (cache per request)", async () => {
-    await Promise.all([viewer.mainWamViewer(), gate.requireMainWamPage("/wam/acara")]);
+    await Promise.all([viewer.mainWamViewer(), gate.requireMainWamPage("/wam2026")]);
     const accounts = fake.queries.filter(q => q.table === "pw_accounts");
     expect(accounts.length).toBe(1);
   });

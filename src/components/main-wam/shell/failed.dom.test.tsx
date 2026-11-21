@@ -11,7 +11,7 @@ import { SignInFirst } from "./SignInFirst";
  * back to the exact address.
  */
 
-const nav = vi.hoisted(() => ({ pathname: "/wam/acara/momen", back: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
+const nav = vi.hoisted(() => ({ pathname: "/wam2026/momen", back: vi.fn(), refresh: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
   useRouter: () => ({ back: nav.back, refresh: nav.refresh, push: vi.fn(), replace: nav.replace, prefetch: vi.fn() }),
@@ -46,9 +46,9 @@ describe("(app)/error.tsx", () => {
 
 describe("SignInFirst", () => {
   it("sends the person to WAM's sign-in, back to the exact address (a QR's)", () => {
-    window.history.replaceState(null, "", "/wam/acara/absen/abc123?x=1");
+    window.history.replaceState(null, "", "/wam2026/absen/abc123?x=1");
     render(<SignInFirst />);
-    expect(nav.replace).toHaveBeenCalledWith(praWamPath.login("/wam/acara/absen/abc123?x=1"));
+    expect(nav.replace).toHaveBeenCalledWith(praWamPath.login("/wam2026/absen/abc123?x=1"));
     expect(document.body.textContent).toBe("");
   });
 });

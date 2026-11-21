@@ -29,7 +29,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026"); });
 afterEach(() => { cleanup(); });
 
 /** axe's WCAG 2.5.3 rule (experimental, so switched on by name) on what is rendered. */
@@ -40,7 +40,7 @@ async function labelInName(): Promise<string[]> {
 
 describe("names start with the words on screen (WCAG 2.5.3)", () => {
   it("ShortcutTile: 'Moderasi, 3 laporan', and axe finds no mismatch", async () => {
-    render(<ShortcutTile icon={<span />} label="Moderasi" badge={3} badgeLabel="laporan" href="/wam/acara/kelola/moderasi" />);
+    render(<ShortcutTile icon={<span />} label="Moderasi" badge={3} badgeLabel="laporan" href="/wam2026/kelola/moderasi" />);
     // (The hidden words are a separate box, so the computed name has a space before the comma.)
     const tile = screen.getByRole("link", { name: /^Moderasi\s*, 3 laporan$/ });
     expect(tile.getAttribute("aria-label")).toBeNull();
@@ -65,13 +65,13 @@ describe("names start with the words on screen (WCAG 2.5.3)", () => {
 
 describe("TopBar without a title (P04 'Kepala tanpa judul', T02)", () => {
   it("names the screen with a hidden h1 when given a label", () => {
-    render(<TopBar variant="back" title="" label="Detail sesi" backHref="/wam/acara/agenda" />);
+    render(<TopBar variant="back" title="" label="Detail sesi" backHref="/wam2026/agenda" />);
     const heading = screen.getByRole("heading", { level: 1, name: "Detail sesi" });
     expect(heading.className).toMatch(/srOnly/);
   });
 
   it("draws no empty h1 without one", () => {
-    render(<TopBar variant="back" title="" backHref="/wam/acara/agenda" />);
+    render(<TopBar variant="back" title="" backHref="/wam2026/agenda" />);
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getByRole("link", { name: "Kembali" })).toBeTruthy();
   });

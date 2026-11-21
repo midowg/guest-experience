@@ -212,7 +212,7 @@ describe("the MC's control", () => {
     const update = fake.queries.find(q => q.table === "mw_quiz_runs" && has(q, "update"))!;
     expect(callsOf(update, "update")[0][0]).toMatchObject({ phase: "lobi", rev: 6 });
     expect(callsOf(update, "eq")).toEqual([["id", RUN], ["rev", 5]]);
-    expect(notes.sent).toEqual([expect.objectContaining({ kind: "kuis", title: "Kuis dimulai", link: `/wam/acara/kuis/${QUIZ}`, to: { audience: { type: "semua" } } })]);
+    expect(notes.sent).toEqual([expect.objectContaining({ kind: "kuis", title: "Kuis dimulai", link: `/wam2026/kuis/${QUIZ}`, to: { audience: { type: "semua" } } })]);
     await expect(controlAct(asWamAdmin(), QUIZ, { runId: RUN, rev: 4, action: "buka-lobi" }, SAMPLE_T0)).rejects.toMatchObject({ status: 409 });
   });
 

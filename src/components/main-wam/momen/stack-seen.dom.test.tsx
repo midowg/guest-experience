@@ -12,7 +12,7 @@ import { ToastProvider } from "@/components/main-wam/ui";
  */
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam/acara/momen" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam2026/momen" }));
 vi.mock("./upload/QueueRunner", () => ({ MomenQueueRunner: () => null }));
 const request = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({ data: { items: [], next: null, total: 0, sessions: null, migrated: true }, message: "" }));
 vi.mock("@/components/pra-wam/api", () => ({ praWamRequest: (...args: unknown[]) => request(...args), errorText: () => "Gagal." }));

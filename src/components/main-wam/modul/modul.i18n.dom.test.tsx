@@ -14,7 +14,7 @@ import { SilentForm } from "./silent/SilentForm";
 /* The module screens in English (Pengaturan → Bahasa): the same screens, the same data, the words and clocks in English. */
 
 const router = vi.hoisted(() => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026" }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));

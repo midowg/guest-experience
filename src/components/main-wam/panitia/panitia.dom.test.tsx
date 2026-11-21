@@ -18,13 +18,13 @@ import { RundownLive } from "./RundownLive";
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => "/wam2026" }));
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026"); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function fakeApi(overrides: Partial<PanitiaApi> = {}): PanitiaApi {

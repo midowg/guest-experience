@@ -19,8 +19,15 @@ const config: NextConfig = {
   experimental: { staleTimes: { dynamic: 30 } },
   // Panduan ke Werkudara: the office's public guide for every visitor, a finished page served as it
   // was designed (public/panduan-ke-werkudara), not an event.
+  async rewrites() {
+    return [{ source: "/wam2026", destination: "/wam/acara" }, { source: "/wam2026/:path*", destination: "/wam/acara/:path*" }];
+  },
   async redirects() {
     return [
+      // WAM 2026 (the event app) is published as /wam2026; the folder stays src/app/wam/acara (it shares /wam's layout) and
+      // the rewrite below serves it. The old address keeps working for links already sent.
+      { source: "/wam/acara", destination: "/wam2026", permanent: true },
+      { source: "/wam/acara/:path*", destination: "/wam2026/:path*", permanent: true },
       { source: "/panduan", destination: "/your-visit", permanent: false },
       // WG People moved from /hr to /people (21 Nov 2026, the owner's ask); old links and installs keep working.
       { source: "/hr", destination: "/people", permanent: true },
@@ -73,6 +80,9 @@ const config: NextConfig = {
       { source: "/admin/:path*", headers: cameraHere },
       { source: "/wam", headers: cameraHere },
       { source: "/wam/:path*", headers: cameraHere },
+      // WAM 2026 (the event app, 21 Nov 2026): camera for Momen and Misi, location for the Misi place check.
+      { source: "/wam2026", headers: faceAndPlace },
+      { source: "/wam2026/:path*", headers: faceAndPlace },
       { source: "/people", headers: faceAndPlace },
       { source: "/people/:path*", headers: faceAndPlace },
       // Development calibration of the face check and the clock-in layout (404 in production).

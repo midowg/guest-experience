@@ -1,4 +1,3 @@
-import { PRA_WAM_PATH } from "@/lib/routes";
 
 /*
  * The person's choice of look for Main WAM, in Saya → Pengaturan → Tampilan: Terang, Gelap or Sistem
@@ -22,7 +21,7 @@ export function parseMainWamMode(value: string | null | undefined): MainWamMode 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 /** The document.cookie string that keeps a choice for a year, for WAM's pages only. */
 export function mainWamModeCookie(mode: MainWamMode, secure: boolean): string {
-  return `${MAIN_WAM_MODE_COOKIE}=${mode}; Path=${PRA_WAM_PATH}; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
+  return `${MAIN_WAM_MODE_COOKIE}=${mode}; Path=/; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
 }
 
 /*
@@ -35,5 +34,5 @@ export const MAIN_WAM_MOTION_COOKIE = "mw_motion";
 export const parseReduceMotion = (value: string | null | undefined): boolean => value === "reduce";
 /** The document.cookie string that keeps the choice for a year (or clears it when motion is back). */
 export function mainWamMotionCookie(reduce: boolean, secure: boolean): string {
-  return `${MAIN_WAM_MOTION_COOKIE}=${reduce ? "reduce" : "normal"}; Path=${PRA_WAM_PATH}; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
+  return `${MAIN_WAM_MOTION_COOKIE}=${reduce ? "reduce" : "normal"}; Path=/; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
 }

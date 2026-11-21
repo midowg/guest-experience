@@ -19,7 +19,7 @@ import { SettingsScreen } from "./saya/SettingsScreen";
 /* Jejak karbon (card and page), Kamar and Pengaturan (revisi 18 Nov) as people use them. */
 
 const router = { replace: vi.fn(), push: vi.fn(), refresh: vi.fn(), back: vi.fn() };
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026" }));
 vi.mock("@/components/main-wam/theme/font", () => ({ mainWamFontVars: "" }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
@@ -29,7 +29,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); Object.values(router).forEach(fn => fn.mockClear()); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026"); Object.values(router).forEach(fn => fn.mockClear()); });
 afterEach(() => { cleanup(); setActiveLang("id"); });
 
 const NOW = new Date("2027-01-04T21:00:00+07:00");

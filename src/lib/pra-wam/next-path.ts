@@ -4,6 +4,6 @@
  * itself (Main WAM's /wam/acara/masuk included). No server code: the frame uses it too.
  */
 export function safePraWamNext(value: string | null | undefined): string | null {
-  if (!value || !/^\/(?:wam|booking|wlm|wellbeing)(?:[/?#]|$)/.test(value) || /^\/(?:wam\/login|wam\/acara\/masuk|wlm\/masuk|wellbeing\/masuk)(?:[/?#]|$)/.test(value) || /[\\\s]/.test(value)) return null;
+  if (!value || !/^\/(?:wam|wam2026|booking|wlm|wellbeing)(?:[/?#]|$)/.test(value) || /^\/(?:wam\/login|wam\/acara\/masuk|wam2026\/masuk|wlm\/masuk|wellbeing\/masuk)(?:[/?#]|$)/.test(value) || /[\\\s]/.test(value)) return null;
   return value;
 }

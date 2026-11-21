@@ -16,7 +16,7 @@ import { PlayScreen } from "./PlayScreen";
  */
 
 const router = vi.hoisted(() => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara/kuis/x" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026/kuis/x" }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 
 beforeAll(() => {

@@ -15,14 +15,14 @@ import { LangProvider, LanguageSetting, useLang } from "./index";
 /* Choosing English changes the frame's words and a screen's, at once, and is remembered on the device. */
 
 const router = vi.hoisted(() => ({ refresh: vi.fn(), back: vi.fn(), push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
-const nav = vi.hoisted(() => ({ pathname: "/wam/acara/agenda" }));
+const nav = vi.hoisted(() => ({ pathname: "/wam2026/agenda" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname, useRouter: () => router }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
 
 beforeEach(() => { document.cookie = `${LANG_COOKIE}=; Max-Age=0; Path=/`; Object.values(router).forEach(fn => fn.mockClear()); });
-afterEach(() => { cleanup(); nav.pathname = "/wam/acara/agenda"; });
+afterEach(() => { cleanup(); nav.pathname = "/wam2026/agenda"; });
 
 const greeting = (lang: "id" | "en") => homeGreeting(new Date("2027-01-05T07:40:00+07:00"), "Rani", sampleSettings().event, undefined, lang);
 

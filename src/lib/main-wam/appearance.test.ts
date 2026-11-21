@@ -10,7 +10,7 @@ describe("Main WAM's look (Terang, Gelap, Sistem)", () => {
   it("is kept for a year, for WAM's pages only, over https with Secure", () => {
     const cookie = mainWamModeCookie("dark", true);
     expect(cookie).toContain(`${MAIN_WAM_MODE_COOKIE}=dark`);
-    expect(cookie).toContain("Path=/wam");
+    expect(cookie).toContain("Path=/;");
     expect(cookie).toContain("Max-Age=31536000");
     expect(cookie).toContain("SameSite=Lax");
     expect(cookie).toContain("Secure");

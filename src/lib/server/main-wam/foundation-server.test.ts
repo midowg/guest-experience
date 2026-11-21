@@ -223,7 +223,7 @@ describe("while Main WAM is hidden from Journey (until the super admin shows it)
       if (q.table === "pw_announcements") return { data: [{ id: id(71) }] };
       return answer(q);
     };
-    const sent = await notes.sendMainWamNote({ kind: "kuis", title: "Kuis dimulai", body: "Kuis WAM: ketuk untuk ikut.", to: { audience: { type: "semua" } }, link: "/wam/acara/kuis/x", by: null });
+    const sent = await notes.sendMainWamNote({ kind: "kuis", title: "Kuis dimulai", body: "Kuis WAM: ketuk untuk ikut.", to: { audience: { type: "semua" } }, link: "/wam2026/kuis/x", by: null });
     expect(sent).toBe(2);
     expect(inserts).toContainEqual(["pw_announcements", expect.objectContaining({ kind: "sesi", audience_label: "Penguji WAM 2026" })]);
     expect(inserts).toContainEqual(["pw_notification_receipts", [{ announcement_id: id(71), employee_id: ME }, { announcement_id: id(71), employee_id: id(5) }]]);

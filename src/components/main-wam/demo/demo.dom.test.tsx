@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/main-wam/ui";
 import { DemoSwitch } from "./DemoSwitch";
 
 const nav = vi.hoisted(() => ({ refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/wam/acara/saya", useRouter: () => ({ back: vi.fn(), refresh: nav.refresh, push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/wam2026/saya", useRouter: () => ({ back: vi.fn(), refresh: nav.refresh, push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 
 afterEach(() => { cleanup(); nav.refresh.mockReset(); document.cookie = "mw_demo_role=; Max-Age=0; Path=/"; });

@@ -14,7 +14,7 @@ import { ToastProvider } from "@/components/main-wam/ui";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 const replace = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam/acara/momen" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }), usePathname: () => "/wam2026/momen" }));
 /** The server's answer to a reaction: the photo's reactions with the person's emoji in (PUT) or out (DELETE), from sample photo 3 (24 reactions). */
 const request = vi.fn(async (...args: unknown[]) => {
   const options = (args[1] ?? {}) as { method?: string; json?: { emoji: string } };
@@ -40,7 +40,7 @@ beforeAll(() => {
   window.matchMedia = window.matchMedia ?? ((query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as never;
   HTMLCanvasElement.prototype.getContext = (() => null) as never;
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara/momen"); request.mockClear(); replace.mockClear(); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026/momen"); request.mockClear(); replace.mockClear(); });
 afterEach(() => cleanup());
 
 const now = new Date("2027-01-05T10:05:00+07:00");
@@ -90,7 +90,7 @@ describe("the stack", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam/acara/momen/galeri"], ["Foto", "/wam/acara/momen/kamera"]]);
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam2026/momen/galeri"], ["Foto", "/wam2026/momen/kamera"]]);
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();
@@ -293,15 +293,15 @@ describe("the stack", () => {
     render(<ToastProvider><MomenStack {...props} items={[]} total={0} anyPhotos={false} startIndex={0} /></ToastProvider>);
     expect(screen.getByText("Belum ada foto")).toBeTruthy();
     expect(screen.getByText("Jadilah yang pertama memotret WAM 2026.")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam/acara/momen/kamera");
+    expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam2026/momen/kamera");
   });
 
   it("says there is nothing new when every photo was seen: an invitation to the camera, a way to the gallery (and the Mozaik)", () => {
     render(<ToastProvider><MomenStack {...props} items={sampleFeedSemua.slice(0, 5)} startIndex={5} total={5} /></ToastProvider>);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
     expect(screen.getByText("Foto baru dari rekan muncul di sini. Yang sudah kamu lihat tetap ada di Galeri.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam/acara/momen/galeri");
-    expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam/acara/momen/kamera")).toBe(true);
+    expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam2026/momen/galeri");
+    expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam2026/momen/kamera")).toBe(true);
     expect(screen.getByRole("link", { name: "Lihat Mozaik" })).toBeTruthy();
   });
 
@@ -436,14 +436,14 @@ describe("fixes after the audit", () => {
     expect(screen.getByRole("heading", { name: "Belum ada foto di sesi ini" })).toBeTruthy();
     expect(document.body.textContent).toContain("Batu Night Spectacular\u00a0· 0 foto");
     fireEvent.click(screen.getByRole("button", { name: "Semua sesi" }));
-    expect(replace).toHaveBeenCalledWith("/wam/acara/momen/galeri", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/wam2026/momen/galeri", { scroll: false });
   });
 
   it("T-M02: the stack filtered to a session without photos offers every session too", () => {
     render(<ToastProvider><MomenStack mode="sesi" session={sampleSessionIds.bns} sessionTitle="Batu Night Spectacular" items={[]} next={null} total={0} startIndex={0} offset={0}
       mozaik migrated anyPhotos={false} own={null} eventName="WAM 2026" nowIso={now.toISOString()} demo={{}} /></ToastProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Semua sesi" }));
-    expect(replace).toHaveBeenCalledWith("/wam/acara/momen", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/wam2026/momen", { scroll: false });
   });
 
   it("M3: Hapus foto of a nominated photo (409) closes the dialog and says why", async () => {
@@ -504,7 +504,7 @@ describe("the Mozaik", () => {
     expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Mozaik WAM 2026, 312 dari 600 foto");
     fireEvent.click(screen.getByRole("switch"));
     expect(screen.getByRole("list", { name: "Fotomu di mozaik" }).querySelectorAll("li")).toHaveLength(4);
-    expect(screen.getByRole("link", { name: "Lihat foto" }).getAttribute("href")).toMatch(/^\/wam\/acara\/momen\?foto=/);
+    expect(screen.getByRole("link", { name: "Lihat foto" }).getAttribute("href")).toMatch(/^\/wam2026\/momen\?foto=/);
     expect(window.location.search).toBe("?tandai=1");
   });
 });

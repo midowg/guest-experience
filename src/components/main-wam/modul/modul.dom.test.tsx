@@ -13,7 +13,7 @@ import { SilentForm } from "./silent/SilentForm";
 /* Kirim masukan (T01 → T02, T01-buang, T01-ditutup) and Pilih nominasi (V02 → V01), as a person uses them. */
 
 const router = vi.hoisted(() => ({ push: vi.fn(), back: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026" }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
@@ -30,7 +30,7 @@ beforeAll(() => {
 beforeEach(() => {
   calls = [];
   window.localStorage.clear();
-  window.history.replaceState(null, "", "/wam/acara/silent-meeting");
+  window.history.replaceState(null, "", "/wam2026/silent-meeting");
   Object.values(router).forEach(fn => fn.mockReset());
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
     const call = { url, method: init.method ?? "GET", body: init.body ? JSON.parse(String(init.body)) : undefined };

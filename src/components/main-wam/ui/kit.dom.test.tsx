@@ -18,7 +18,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026"); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 function SheetHarness({ onClose, history, locked }: { onClose?: () => void; history?: boolean; locked?: boolean }) {

@@ -7,14 +7,14 @@ const at = (path: string) => mainWamScreen(path.split("?")[0]);
 describe("Main WAM's frame, from the address alone", () => {
   it("has four tabs, the same for every role", () => {
     expect(mainWamTabs.map(tab => [tab.key, tab.label, tab.href])).toEqual([
-      ["beranda", "Beranda", "/wam/acara"], ["agenda", "Agenda", "/wam/acara/agenda"], ["momen", "Momen", "/wam/acara/momen"], ["saya", "Saya", "/wam/acara/saya"],
+      ["beranda", "Beranda", "/wam2026"], ["agenda", "Agenda", "/wam2026/agenda"], ["momen", "Momen", "/wam2026/momen"], ["saya", "Saya", "/wam2026/saya"],
     ]);
   });
 
   it("adds Panitia at the right end, after Saya, only when asked (the viewer is panitia)", () => {
     expect(mainWamTabsFor(false)).toEqual(mainWamTabs);
     expect(mainWamTabsFor(true).map(tab => [tab.key, tab.label, tab.href, tab.icon])).toEqual([
-      ...mainWamTabs.map(tab => [tab.key, tab.label, tab.href, tab.icon]), ["panitia", "Panitia", "/wam/acara/kelola", "clipboard-list"],
+      ...mainWamTabs.map(tab => [tab.key, tab.label, tab.href, tab.icon]), ["panitia", "Panitia", "/wam2026/kelola", "clipboard-list"],
     ]);
   });
 
@@ -91,7 +91,7 @@ describe("Main WAM's frame, from the address alone", () => {
   it("draws no frame outside Main WAM, or on its sign-in page", () => {
     expect(mainWamScreen("/wam")).toBeNull();
     expect(mainWamScreen("/wam/agenda")).toBeNull();
-    expect(mainWamScreen("/wam/acarax")).toBeNull();
-    expect(at(mainWamPath.login("/wam/acara"))).toBeNull();
+    expect(mainWamScreen("/wam2026x")).toBeNull();
+    expect(at(mainWamPath.login("/wam2026"))).toBeNull();
   });
 });

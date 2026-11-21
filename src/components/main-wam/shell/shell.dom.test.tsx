@@ -5,7 +5,7 @@ import { BottomNav } from "./BottomNav";
 import { MainWamShell } from "./MainWamShell";
 import { ShellActions, ShellChrome } from "./ShellSlots";
 
-const nav = vi.hoisted(() => ({ pathname: "/wam/acara", back: vi.fn(), refresh: vi.fn() }));
+const nav = vi.hoisted(() => ({ pathname: "/wam2026", back: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
   useRouter: () => ({ back: nav.back, refresh: nav.refresh, push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -14,7 +14,7 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
 
-afterEach(() => { cleanup(); nav.pathname = "/wam/acara"; });
+afterEach(() => { cleanup(); nav.pathname = "/wam2026"; });
 
 const greeting = { kicker: "Selamat pagi · Sel, 5 Jan", name: "Rani", day: "Hari ke-2 dari 4" };
 

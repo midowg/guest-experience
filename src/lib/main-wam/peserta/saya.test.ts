@@ -123,7 +123,7 @@ describe("Notifikasi", () => {
   it("follows only addresses inside Main WAM", () => {
     expect(noteTarget(mainWamPath.session("abc"))).toBe(mainWamPath.session("abc"));
     expect(noteTarget(mainWamPath.home)).toBe(mainWamPath.home);
-    for (const link of [null, "", "https://evil.example", "//evil.example/wam/acara", praWamPath.home, `${mainWamPath.home}x`, `${mainWamPath.home}/a b`]) expect(noteTarget(link)).toBeNull();
+    for (const link of [null, "", "https://evil.example", "//evil.example/wam2026", praWamPath.home, `${mainWamPath.home}x`, `${mainWamPath.home}/a b`]) expect(noteTarget(link)).toBeNull();
     const fromPra: MwNotification = { ...sampleNotifications[0], fromPraWam: true };
     expect(groupNotifications([fromPra], at("2027-01-05", "11:00")).today[0].meta).toBe("Pra WAM · 10.30");
     expect(noteHash("abc")).toBe("kabar-abc");

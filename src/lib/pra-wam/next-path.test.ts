@@ -12,14 +12,14 @@ describe("the way back after signing in (17 Nov 2026)", () => {
     expect(safePraWamNext("/wlm")).toBe("/wlm");
     expect(safePraWamNext("/wlm/profil")).toBe("/wlm/profil");
     // Main WAM (17 Nov 2026), under /wam.
-    expect(safePraWamNext("/wam/acara/absen/abc")).toBe("/wam/acara/absen/abc");
+    expect(safePraWamNext("/wam2026/absen/abc")).toBe("/wam2026/absen/abc");
   });
   it("refuses sign-in pages, look-alikes and other sites", () => {
     expect(safePraWamNext("/wellbeing/masuk")).toBeNull();
     expect(safePraWamNext("/wellbeing/masuk?next=/wellbeing")).toBeNull();
     expect(safePraWamNext("/wam/login")).toBeNull();
-    expect(safePraWamNext("/wam/acara/masuk")).toBeNull();
-    expect(safePraWamNext("/wam/acara/masuk?next=/wam/acara")).toBeNull();
+    expect(safePraWamNext("/wam2026/masuk")).toBeNull();
+    expect(safePraWamNext("/wam2026/masuk?next=/wam2026")).toBeNull();
     expect(safePraWamNext("/wellbeingx")).toBeNull();
     expect(safePraWamNext("/wlm/masuk")).toBeNull();
     expect(safePraWamNext("/wlmx")).toBeNull();

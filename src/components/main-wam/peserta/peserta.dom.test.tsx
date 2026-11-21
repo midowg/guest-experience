@@ -19,7 +19,7 @@ import { SayaScreen } from "./saya/SayaScreen";
 /* Agen A's main components as people use them: what shows, what a tap does, what is sent. */
 
 const router = { replace: vi.fn(), push: vi.fn(), refresh: vi.fn(), back: vi.fn() };
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026" }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
@@ -28,7 +28,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara"); Object.values(router).forEach(fn => fn.mockClear()); localStorage.clear(); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026"); Object.values(router).forEach(fn => fn.mockClear()); localStorage.clear(); });
 afterEach(() => { cleanup(); setActiveLang("id"); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 const answer = (status: number, body: unknown) => vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
@@ -146,7 +146,7 @@ describe("Saya", () => {
     const fetch = answer(200, { ok: true, data: null });
     vi.stubGlobal("fetch", fetch);
     const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign, pathname: "/wam/acara/saya", search: "" });
+    vi.stubGlobal("location", { ...window.location, assign, pathname: "/wam2026/saya", search: "" });
     render(<SayaScreen {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "Keluar" }));
     const dialog = screen.getByRole("alertdialog", { name: "Keluar dari WAM?" });

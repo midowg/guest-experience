@@ -20,7 +20,7 @@ import { RankScreen } from "./RankScreen";
 /* Misi as people use it: Beranda's card, the page and its sheet, the Peringkat, the camera and the check-in. */
 
 const router = { replace: vi.fn(), push: vi.fn(), refresh: vi.fn(), back: vi.fn() };
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam/acara/misi" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/wam2026/misi" }));
 vi.mock("@/components/main-wam/theme/font", () => ({ mainWamFontVars: "" }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
@@ -31,7 +31,7 @@ beforeAll(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
   HTMLMediaElement.prototype.play = () => Promise.resolve();
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wam/acara/misi"); Object.values(router).forEach(fn => fn.mockClear()); });
+beforeEach(() => { window.history.replaceState(null, "", "/wam2026/misi"); Object.values(router).forEach(fn => fn.mockClear()); });
 afterEach(() => { cleanup(); setActiveLang("id"); vi.unstubAllGlobals(); });
 
 const NOW = new Date("2027-01-05T10:00:00+07:00");
