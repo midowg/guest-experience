@@ -227,7 +227,7 @@ export function sampleSettings(overrides: Partial<MainWamSettings> = {}): MainWa
   const base = defaultSettings();
   return {
     ...base, mode: "semua", migrated: true, groupsPublished: true,
-    modules: { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true },
+    modules: { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, misi: true },
     moduleConfig: { ...base.moduleConfig, survei: { formSlug: "survei-wam" } },
     event: { ...base.event, hotel: "Hotel (contoh), Kota Batu", address: "Jl. Contoh No. 1, Kota Batu", checkInAt: at(D1, "15:30"), checkOutAt: at(D4, "10:00") },
     contacts: { kamar: person("putri").id, perjalanan: person("bima").id, umum: person("dimas").id },

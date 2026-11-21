@@ -532,6 +532,12 @@ export const mainWamPath = {
   awardCategory: (id: string) => `${MAIN_WAM_PATH}/awarding/${enc(id)}`,
   /** B05 Rekap Silent Meeting (BOD). */
   silentRecap: `${MAIN_WAM_PATH}/ringkasan/silent-meeting`,
+  /** Misi (module misi): my points, the missions, and a mission's detail sheet. */
+  missions: `${MAIN_WAM_PATH}/misi`,
+  /** Peringkat: everyone ranked by points. */
+  missionRank: `${MAIN_WAM_PATH}/misi/peringkat`,
+  /** Kerjakan misi: the camera (foto) or the check-in (checkin) of one mission. */
+  missionDo: (id: string) => `${MAIN_WAM_PATH}/misi/${enc(id)}/kerjakan`,
   /** B06 Persetujuan awarding (BOD). */
   awardApproval: `${MAIN_WAM_PATH}/ringkasan/awarding`,
 };
@@ -610,6 +616,18 @@ export const mainWamApi = {
   vote: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/suara`,
   /** POST {nomineeId}: a BOD approves the winner. */
   approveAward: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/setujui`,
+  /** GET: my points, my place and the missions with my state (module misi; BOD 404). */
+  missions: `${MAIN_WAM_API}/misi`,
+  /** GET: the Peringkat (name, department, points; never an id). */
+  leaderboard: `${MAIN_WAM_API}/misi/peringkat`,
+  /** POST {position}: is this position inside the mission's area? Nothing is saved. */
+  missionCheck: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/cek`,
+  /** POST {position}: check in to a check-in mission (judged on the server). */
+  missionCheckIn: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/checkin`,
+  /** POST {clientId, position, sizes}: upload addresses for a photo mission (two JPEGs) and a token. */
+  missionPhotoStart: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/foto/unggah`,
+  /** POST {…the same, token}: the files are in storage; check them, the position, and keep the proof. */
+  missionPhotoConfirm: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/foto/simpan`,
 };
 
 /** Admin WAM → Main WAM: Pengaturan (fondasi), Isi acara (E), Modul acara (D). */
@@ -627,6 +645,8 @@ export const mainWamAdminPath = {
   /* D · modul acara */
   awards: `${MAIN_WAM_ADMIN}/awarding`,
   silent: `${MAIN_WAM_ADMIN}/silent-meeting`,
+  /** Misi: missions, completions and their proofs, manual points, the Peringkat. */
+  missions: `${MAIN_WAM_ADMIN}/misi`,
 };
 const MAIN_WAM_ADMIN_API = "/api/admin/wam/main";
 export const mainWamAdminApi = {
@@ -668,6 +688,23 @@ export const mainWamAdminApi = {
   awardNominees: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}/nominasi`,
   silentQuestions: `${MAIN_WAM_ADMIN_API}/silent-meeting`,
   silentQuestion: (id: string) => `${MAIN_WAM_ADMIN_API}/silent-meeting/${enc(id)}`,
+  /* Misi */
+  /** GET: everything the Misi page needs; POST: a new mission. */
+  missions: `${MAIN_WAM_ADMIN_API}/misi`,
+  /** PATCH: change a mission; DELETE: a mission with no completion. */
+  mission: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/${enc(id)}`,
+  /** PUT {defaultRadiusM, maxAccuracyM, leaderboardOpen}: the settings. */
+  missionSettings: `${MAIN_WAM_ADMIN_API}/misi/pengaturan`,
+  /** POST {employeeId, note}: record that a person did a mission (sesi, or a proof by hand). */
+  missionGrant: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/${enc(id)}/catat`,
+  /** PATCH {status, note}: approve or reject a proof; DELETE: take a completion back. */
+  missionCompletion: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/penyelesaian/${enc(id)}`,
+  /** GET: a proof photo (redirect to storage). */
+  missionProof: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/penyelesaian/${enc(id)}/foto`,
+  /** POST {employeeId, points, note}: points by hand. */
+  missionPoints: `${MAIN_WAM_ADMIN_API}/misi/poin`,
+  /** DELETE: take a manual entry back. */
+  missionPoint: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/poin/${enc(id)}`,
 };
 
 /*

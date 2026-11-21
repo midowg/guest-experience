@@ -51,7 +51,7 @@ const req = (method: string, body?: unknown, path = "/api/wam/acara/x") => new R
 const p = <T extends Record<string, string>>(value: T) => ({ params: Promise.resolve(value) });
 
 const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "22222222-2222-4222-8222-222222222222", name: "Rani", fullName: "Rani Contoh", department: "CoE", photo: null, roles, tester: roles.length > 0, group: null, room: null });
-const ALL_ON: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true };
+const ALL_ON: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, misi: true };
 const withModules = (modules: Partial<ModuleSwitches>) => { state.settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...defaultSettings().modules, ...modules } }; };
 
 async function routes() {

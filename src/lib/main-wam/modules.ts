@@ -17,6 +17,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   silent: { label: "Silent Meeting", hint: "Masukan tanpa nama, dibuka dan ditutup mengikuti jam sesinya.", note: "Silent Meeting dipakai di Pra WAM; nyalakan hanya bila acara WAM memang memakainya." },
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
   mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
+  misi: { label: "Misi dan poin", hint: "Kartu Misi di Beranda, halaman Misi dan Peringkat; misi foto, check-in lokasi, dan sesi bernilai poin." },
   karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya dan Ringkasan BOD, dan halaman rinciannya; angka dihitung dari data acara." },
 };
 
