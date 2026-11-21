@@ -1,0 +1,36 @@
+<svg class="ld ld-mini" viewBox="0 0 48 48" role="img" aria-label="Memuat" xmlns="http://www.w3.org/2000/svg"><style>
+.ld { --loop: 3s; display: block; width: 100%; height: 100%; }
+.ld-line { stroke: var(--h-node-line, #2C4C8E); stroke-width: 1; stroke-linecap: round; }
+.ld-dot { fill: var(--ld-dot, #A9DBFF); }
+.ld-dot2 { fill: var(--ld-dot2, #6E9EEA); }
+.ld-base { fill: none; stroke: var(--h-gold, #F5C542); stroke-opacity: .28; stroke-width: 2.4; stroke-linejoin: round; }
+.ld-pulse { fill: none; stroke: var(--h-gold, #F5C542); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 70 930; animation: ld-run var(--loop) linear infinite; }
+.ld-pulse.glow { stroke-width: 9; stroke-opacity: .22; }
+.ld-e { fill: none; stroke: var(--h-gold, #F5C542); stroke-width: 1.8; stroke-linecap: round; stroke-dasharray: 9 91; animation: ld-el var(--loop) linear infinite; animation-delay: var(--d, 0s); }
+.ld-e.cy { stroke: var(--h-node, #46D2FF); }
+.ld-core { fill: var(--h-gold, #F5C542); }
+.ld-hub { fill: var(--h-node, #46D2FF); }
+.ld-ring { fill: none; stroke: var(--h-gold, #F5C542); stroke-width: 2; transform-box: fill-box; transform-origin: center; opacity: 0; animation: ld-pop var(--loop) ease-out infinite; animation-delay: var(--d, 0s); }
+.ld-ring.cy { stroke: var(--h-node, #46D2FF); }
+.ld-lit { animation: ld-lit var(--loop) ease-out infinite; animation-delay: var(--d, 0s); }
+.ld-spin { transform-origin: 160px 160px; animation: ld-spin var(--spin-d, 36s) linear infinite; }
+.ld-orbit { transform-origin: 160px 160px; animation: ld-spin var(--loop) linear infinite; }
+.ld-comet { fill: none; stroke: var(--ld-comet, var(--h-gold, #F5C542)); stroke-width: 3.4; stroke-linecap: round; }
+.ld-spark line { stroke: var(--h-gold, #F5C542); stroke-width: 1.6; stroke-linecap: round; }
+.ld-spark { transform-box: fill-box; transform-origin: center; opacity: 0; animation: ld-pop var(--loop) ease-out infinite; animation-delay: var(--d, 0s); }
+.ld-breath { animation: ld-breath 2.4s ease-in-out infinite; }
+@keyframes ld-run { from { stroke-dashoffset: 70; } to { stroke-dashoffset: -930; } }
+@keyframes ld-el { from { stroke-dashoffset: 9; } to { stroke-dashoffset: -91; } }
+@keyframes ld-spin { to { transform: rotate(var(--spin-to, 360deg)); } }
+@keyframes ld-pop { 0% { opacity: 0; transform: scale(.5); } 4% { opacity: 1; transform: scale(.9); } 22% { opacity: 0; transform: scale(2); } 100% { opacity: 0; transform: scale(2); } }
+@keyframes ld-lit { 0% { opacity: .35; } 4% { opacity: 1; } 30% { opacity: .55; } 100% { opacity: .35; } }
+@keyframes ld-breath { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ld-pulse, .ld-e, .ld-spin, .ld-orbit { animation: none !important; }
+  .ld-pulse, .ld-e { opacity: 0; }
+  .ld-ring, .ld-spark { animation: ld-breath 2.4s ease-in-out infinite !important; transform: none; }
+  .ld-lit { animation: ld-breath 2.4s ease-in-out infinite !important; }
+  .ld-comet { stroke-opacity: .5; }
+}
+.ld-mini .ld-orbit { transform-origin: 24px 24px; } .ld-mini { --ld-comet: currentColor; --ld-node: currentColor; } .ld-mini .ld-hub { fill: currentColor; fill-opacity: .55; }
+svg.ld-mini{color:#F5C542}</style><circle class="ld-line" cx="24.0" cy="24.0" r="17" fill="none" stroke-opacity=".7"/><circle class="ld-ring" style="--d:2.874s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="41.0" cy="24.0" r="5"/><circle class="ld-hub ld-lit" style="--d:2.874s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="41.0" cy="24.0" r="2.2"/><circle class="ld-ring" style="--d:0.374s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="32.5" cy="38.7" r="5"/><circle class="ld-hub ld-lit" style="--d:0.374s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="32.5" cy="38.7" r="2.2"/><circle class="ld-ring" style="--d:0.874s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="15.5" cy="38.7" r="5"/><circle class="ld-hub ld-lit" style="--d:0.874s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="15.5" cy="38.7" r="2.2"/><circle class="ld-ring" style="--d:1.374s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="7.0" cy="24.0" r="5"/><circle class="ld-hub ld-lit" style="--d:1.374s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="7.0" cy="24.0" r="2.2"/><circle class="ld-ring" style="--d:1.874s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="15.5" cy="9.3" r="5"/><circle class="ld-hub ld-lit" style="--d:1.874s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="15.5" cy="9.3" r="2.2"/><circle class="ld-ring" style="--d:2.374s;stroke:var(--ld-comet,var(--h-gold,#F5C542))" cx="32.5" cy="9.3" r="5"/><circle class="ld-hub ld-lit" style="--d:2.374s;fill:var(--ld-node,var(--h-node,#46D2FF))" cx="32.5" cy="9.3" r="2.2"/><g class="ld-orbit"><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="1.00" style="transform-origin:24.0px 24.0px;transform:rotate(0.0deg)" stroke-width="3.40"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.89" style="transform-origin:24.0px 24.0px;transform:rotate(-13.9deg)" stroke-width="3.22"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.78" style="transform-origin:24.0px 24.0px;transform:rotate(-27.8deg)" stroke-width="3.04"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.67" style="transform-origin:24.0px 24.0px;transform:rotate(-41.7deg)" stroke-width="2.86"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.56" style="transform-origin:24.0px 24.0px;transform:rotate(-55.6deg)" stroke-width="2.68"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.44" style="transform-origin:24.0px 24.0px;transform:rotate(-69.6deg)" stroke-width="2.50"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.33" style="transform-origin:24.0px 24.0px;transform:rotate(-83.5deg)" stroke-width="2.32"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.22" style="transform-origin:24.0px 24.0px;transform:rotate(-97.4deg)" stroke-width="2.14"/><circle class="ld-comet" cx="24.0" cy="24.0" r="17" pathLength="100" stroke-dasharray="4.2 95.8" stroke-opacity="0.11" style="transform-origin:24.0px 24.0px;transform:rotate(-111.3deg)" stroke-width="1.96"/><circle cx="40" cy="28" r="2.6" style="fill:var(--ld-comet,var(--h-gold,#F5C542))"/></g></svg>
