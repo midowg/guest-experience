@@ -1,4 +1,6 @@
 import "server-only";
+import { DEMO_QUIZ_ID, demoPlay } from "@/lib/main-wam/kuis/demo";
+import { DEMO_WRITE_MESSAGE } from "@/lib/main-wam/demo";
 import { flowOf, buildPlay, needsAnswers, tallyRange } from "@/lib/main-wam/kuis/snapshot";
 import { answerOpen, snapshotVersion, soalTimes } from "@/lib/main-wam/kuis/flow";
 import { correctPoints, judgeAnswer } from "@/lib/main-wam/kuis/rules";
@@ -23,6 +25,8 @@ const db = () => createPrivilegedClient();
 
 /** The game on this phone; `version` = the one it has (unchanged: only the clock comes back). */
 export async function playState(context: MainWamContext, quizId: string, version: string | null, now = Date.now()): Promise<PlaySnapshot> {
+  // Mode demo: the sample quiz plays itself (nothing is stored).
+  if (context.settings.moduleConfig?.demo && quizId === DEMO_QUIZ_ID) return demoPlay(now, version);
   const { quiz, run, migrated } = await quizAndRun(quizId);
   if (!migrated) throw new ServiceError(503, "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.");
   if (!quiz) throw notFound();
@@ -45,6 +49,7 @@ export async function playState(context: MainWamContext, quizId: string, version
 
 /** Ikut: join the game in play as one's tokoh (or Tokoh misterius #NN). Joining twice is not an error. */
 export async function joinGame(context: MainWamContext, quizId: string, runId: string): Promise<PlaySnapshot> {
+  if (quizId === DEMO_QUIZ_ID) throw new ServiceError(403, DEMO_WRITE_MESSAGE);
   const { quiz, run, migrated } = await quizAndRun(quizId);
   if (!migrated) throw new ServiceError(503, "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.");
   if (!quiz || !run) throw notFound();
@@ -68,6 +73,7 @@ export type AnswerResult = { choice: number; value: number; ms: number };
  * the first one back (a retry after a lost reply is not an error; a different option is not taken).
  */
 export async function answerQuestion(context: MainWamContext, quizId: string, input: { runId: string; index: number; choice: number; tapAt: number }, recvAt = Date.now()): Promise<AnswerResult> {
+  if (quizId === DEMO_QUIZ_ID) throw new ServiceError(403, DEMO_WRITE_MESSAGE);
   const { run, migrated } = await quizAndRun(quizId);
   if (!migrated) throw new ServiceError(503, "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.");
   if (!run || run.id !== input.runId) throw new ServiceError(409, "Permainan ini sudah diganti.");

@@ -259,6 +259,18 @@ untuk polling ini baru dipertimbangkan bila uji beban menunjukkan perlu.
 - uji beban sekitar 120 pemain tiruan ke API;
 - uji di wifi venue saat technical meeting.
 
+## 8b. Penyesuaian penerapan prototipe final (21 Nov 2026)
+
+- **Teks soal tidak ada di HP** (keputusan pemilik): soal dibaca di layar besar, HP menulis "Baca soal di layar besar".
+  Teks pilihan A–D tetap tampil di HP. Server tidak mengirim teks soal ke HP sama sekali (`phoneQuestionView`, tes `snapshot.test.ts`);
+  layar besar dan kendali MC tetap memuatnya.
+- **Tautan ke agenda:** kuis bisa ditautkan ke item agenda "Kuis live" (Admin WAM → Kuis live → satu kuis → kartu **Agenda**,
+  kolom `mw_quizzes.session_id`, migrasi `202611270001_main_wam_kuis_agenda.sql`). Selama permainan terbuka (lobi sampai podium),
+  Detail sesi item itu menampilkan tombol **Ikut kuis**. Sebelum migrasi: tidak ada yang tertaut, Admin WAM menulis "menunggu pembaruan sistem".
+- **Mode demo:** kuis contoh tiga soal (`src/lib/main-wam/kuis/demo.ts`) memutar dirinya sendiri berulang (lobi, tiga soal, papan skor,
+  podium) menurut jam server, tanpa data tersimpan. Kartunya ada di Beranda bila tidak ada permainan sungguhan, dan item agenda berjudul
+  mengandung "kuis" membuka kuis contoh itu. Mengetuk jawaban tidak disimpan (pesan Mode demo); tokoh saya menjawab benar otomatis.
+
 ## 9. Pertanyaan terbuka
 
 1. Hadiah: apa hadiahnya, dan berapa juara yang dibuka (usulan 3)?

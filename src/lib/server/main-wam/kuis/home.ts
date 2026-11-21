@@ -1,4 +1,5 @@
 import "server-only";
+import { DEMO_QUIZ_ID, DEMO_QUIZ_TITLE, demoRun } from "@/lib/main-wam/kuis/demo";
 import type { QuizPhase } from "@/lib/main-wam/kuis/types";
 import { createPrivilegedClient } from "../../supabase/admin";
 import type { MainWamContext } from "../gate";
@@ -12,7 +13,14 @@ import type { MainWamContext } from "../gate";
 
 export type HomeQuiz = { quizId: string; title: string; phase: QuizPhase; joined: boolean; host: boolean };
 
+/** Mode demo: when no real game is on, the sample quiz (it plays itself, src/lib/main-wam/kuis/demo.ts) is on Beranda for testers. */
 export async function quizzesForHome(context: MainWamContext): Promise<HomeQuiz[]> {
+  const real = await realQuizzesForHome(context);
+  if (real.length || !context.settings.moduleConfig?.demo || !context.settings.modules.kuis) return real;
+  return [{ quizId: DEMO_QUIZ_ID, title: DEMO_QUIZ_TITLE, phase: demoRun(Date.now()).phase, joined: true, host: false }];
+}
+
+async function realQuizzesForHome(context: MainWamContext): Promise<HomeQuiz[]> {
   if (!context.settings.modules.kuis) return [];
   try {
     const db = createPrivilegedClient();
