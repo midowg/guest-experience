@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, FileText, Footprints, Images, KeyRound, LifeBuoy, LogOut, Settings, TrainFront } from "lucide-react";
+import { Camera, FileText, Images, KeyRound, Leaf, LifeBuoy, LogOut, Settings, TrainFront } from "lucide-react";
 import { mainWamPath, praWamApi } from "@/lib/routes";
 import { ScreenContent, ScreenSection, ShellActions } from "@/components/main-wam/shell";
-import { Avatar, ConfirmDialog, IconButton, List, ListRow } from "@/components/main-wam/ui";
+import { Avatar, ConfirmDialog, IconButton, SrOnly } from "@/components/main-wam/ui";
 import { DemoSwitch } from "@/components/main-wam/demo/DemoSwitch";
 import type { DemoRole } from "@/lib/main-wam/types";
 import { useT } from "@/components/main-wam/i18n";
 import { failText, mwRequest } from "../request";
 import { ProfileSheet } from "./ProfileSheet";
-import css from "../peserta.module.css";
+import { Row, RowGroup } from "./Rows";
+import css2 from "./saya.module.css";
 
 export type SayaProps = {
   /** Nama panggilan: the avatar's initial (as everywhere else in the app). */
@@ -57,27 +58,32 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
     <ShellActions>
       <IconButton variant="tonal" icon={Settings} label={t("screen.settings")} href={mainWamPath.settings} />
     </ShellActions>
-    <List>
-      <ListRow leading={<Avatar name={name} photo={photo} size={48} />} title={fullName} sub={line || undefined}
-        trailing={<Camera aria-hidden className={css.trailIcon} />} chevron={false} onClick={() => setSheet("foto")}
-        spoken={t("peserta.me.changePhoto")} aria-haspopup="dialog" />
-      {room
-        ? <ListRow icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} />
-        : <ListRow icon={<KeyRound />} title={t("screen.room")} sub={t("peserta.me.roomWaiting")} href={mainWamPath.room} />}
-    </List>
-    <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.me.eventInfo")}</h2>
-      <List>
-        <ListRow icon={<TrainFront />} title={t("screen.travel")} href={mainWamPath.travel()} />
-        <ListRow icon={<FileText />} title={t("screen.guides")} href={mainWamPath.guides} />
-        {mosaic && <ListRow icon={<Images />} title={t("peserta.me.mosaic")} href={mainWamPath.mosaic()} />}
-        {carbon && <ListRow icon={<Footprints />} title={t("peserta.me.carbon")} href={mainWamPath.carbon("saya")} />}
-      </List>
-    </ScreenSection>
-    <List>
-      <ListRow icon={<LifeBuoy />} title={t("peserta.me.help")} href={mainWamPath.help} />
-      <ListRow icon={<LogOut />} title={<span className={css.danger}>{t("peserta.me.signOut")}</span>} chevron={false} onClick={() => setSheet("keluar")} aria-haspopup="dialog" />
-    </List>
+    <div className={css2.stack}>
+      <button type="button" className={css2.profile} onClick={() => setSheet("foto")} aria-haspopup="dialog">
+        <Avatar name={name} photo={photo} size={64} />
+        <span className={css2.profileText}>
+          <span className={css2.profileName}>{fullName}</span>
+          {line && <span className={css2.profileLine}>{line}</span>}
+        </span>
+        <Camera aria-hidden className={css2.profileCam} />
+        <SrOnly>{`, ${t("peserta.me.changePhoto")}`}</SrOnly>
+      </button>
+      <RowGroup>
+        {room
+          ? <Row icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} />
+          : <Row icon={<KeyRound />} title={t("screen.room")} sub={t("peserta.me.roomWaiting")} href={mainWamPath.room} />}
+        <Row icon={<TrainFront />} title={t("screen.travel")} href={mainWamPath.travel()} />
+      </RowGroup>
+      <RowGroup label={t("peserta.me.eventInfo")}>
+        <Row icon={<FileText />} title={t("screen.guides")} href={mainWamPath.guides} />
+        {mosaic && <Row icon={<Images />} title={t("peserta.me.mosaic")} href={mainWamPath.mosaic()} />}
+        {carbon && <Row icon={<Leaf />} title={t("peserta.me.carbon")} href={mainWamPath.carbon("saya")} />}
+      </RowGroup>
+      <RowGroup>
+        <Row icon={<LifeBuoy />} title={t("peserta.me.help")} href={mainWamPath.help} />
+        <Row icon={<LogOut />} title={t("peserta.me.signOut")} danger chevron={false} onClick={() => setSheet("keluar")} aria-haspopup="dialog" />
+      </RowGroup>
+    </div>
 
     {demo && <ScreenSection><DemoSwitch role={demo} /></ScreenSection>}
 

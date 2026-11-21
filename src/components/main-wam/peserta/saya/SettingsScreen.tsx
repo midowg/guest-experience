@@ -7,14 +7,16 @@ import type { MessageKey } from "@/lib/main-wam/i18n";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { mainWamPath, praWamApi, praWamPath } from "@/lib/routes";
 import type { MainWamMode } from "@/lib/main-wam/appearance";
-import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
+import { ScreenContent } from "@/components/main-wam/shell";
 import { MainWamModeSetting, MainWamMotionSwitch } from "@/components/main-wam/theme";
-import { Banner, Button, IconBox, List, ListRow, Pill, Sheet, Spinner, SwitchRow, TextField, useToast } from "@/components/main-wam/ui";
+import { Banner, Button, EyebrowLabel, KitIcon, List, Pill, Sheet, Spinner, SwitchRow, TextField, useToast } from "@/components/main-wam/ui";
 import { LanguageSetting, useKnown, useT } from "@/components/main-wam/i18n";
 import { ContactSheet } from "../ContactSheet";
 import { InstallSteps } from "../InstallSteps";
 import { MwRequestError, failText, mwRequest } from "../request";
 import { isStandalone, pushWords, usePushDevice, type PushState } from "../usePushDevice";
+import { Row, RowGroup } from "./Rows";
+import css2 from "./saya.module.css";
 import css from "../peserta.module.css";
 
 type Panel = "notifikasi" | "pasang" | "password" | "panitia";
@@ -52,39 +54,41 @@ export function SettingsScreen({ version, mode = "system", reduceMotion = false,
   const words = pushWords[push.state];
   const close = () => setOpen(null);
   return <ScreenContent>
-    <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.settings.groupLook")}</h2>
-      <List>
-        <SettingRow icon={Sun} title={t("peserta.settings.theme")}><MainWamModeSetting initial={mode} /></SettingRow>
-        <SettingRow icon={Globe} title={t("peserta.settings.language")}><LanguageSetting inline /></SettingRow>
-        <SettingRow icon={Activity} title={t("peserta.settings.reduceMotion")}>{id => <MainWamMotionSwitch initial={reduceMotion} labelledBy={id} />}</SettingRow>
-      </List>
-      <p className={css.status}>{t("peserta.appearance.note")}</p>
-    </ScreenSection>
-    <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.settings.groupApp")}</h2>
-      <List>
-        <ListRow icon={<Bell />} title={t("peserta.settings.notifications")} sub={t("peserta.settings.notificationsSub")} onClick={() => setOpen("notifikasi")} aria-haspopup="dialog"
-          trailing={<Pill tone={words.tone} icon={push.state === "on" ? <Check /> : undefined}>{t(words.pill)}</Pill>} />
-        <ListRow icon={<SquarePlus />} title={t("peserta.settings.install")} sub={t(installed ? "peserta.settings.installed" : "peserta.settings.installSub")} onClick={() => setOpen("pasang")} aria-haspopup="dialog" />
-      </List>
-    </ScreenSection>
-    <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.settings.groupAccount")}</h2>
-      <List>
-        <ListRow icon={<KeyRound />} title={t("peserta.settings.changePassword")} sub={t("peserta.settings.passwordSub")} onClick={() => setOpen("password")} aria-haspopup="dialog" />
-      </List>
-    </ScreenSection>
-    <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.settings.groupHelp")}</h2>
-      <List>
-        <ListRow icon={<LifeBuoy />} title={t("peserta.me.help")} sub={t("peserta.settings.helpSub")} href={mainWamPath.help} />
-        {help && <ListRow icon={<MessageCircle />} title={t("peserta.settings.contact")} sub={t("peserta.settings.contactSub")} onClick={() => setOpen("panitia")} aria-haspopup="dialog" />}
-      </List>
-    </ScreenSection>
-    <div className={css.settingsFoot}>
-      <p className={css.version}>{t("peserta.settings.version", { version })}</p>
-      {mcp && <a className={css.footLink} href={`${praWamPath.settings}#mcp`}>{t("peserta.me.mcp")}<ExternalLink aria-hidden /></a>}
+    <div className={css2.settingsStack}>
+      <section className={css2.section}>
+        <EyebrowLabel as="h2">{t("peserta.settings.groupLook")}</EyebrowLabel>
+        <RowGroup>
+          <SettingRow icon={Sun} title={t("peserta.settings.theme")}><MainWamModeSetting initial={mode} /></SettingRow>
+          <SettingRow icon={Globe} title={t("peserta.settings.language")}><LanguageSetting inline /></SettingRow>
+          <SettingRow icon={Activity} title={t("peserta.settings.reduceMotion")}>{id => <MainWamMotionSwitch initial={reduceMotion} labelledBy={id} />}</SettingRow>
+        </RowGroup>
+        <p className={css2.note}>{t("peserta.appearance.note")}</p>
+      </section>
+      <section className={css2.section}>
+        <EyebrowLabel as="h2">{t("peserta.settings.groupApp")}</EyebrowLabel>
+        <RowGroup>
+          <Row icon={<Bell />} title={t("peserta.settings.notifications")} sub={t("peserta.settings.notificationsSub")} onClick={() => setOpen("notifikasi")} aria-haspopup="dialog"
+            trailing={<Pill tone={words.tone} icon={push.state === "on" ? <Check /> : undefined}>{t(words.pill)}</Pill>} />
+          <Row icon={<SquarePlus />} title={t("peserta.settings.install")} sub={t(installed ? "peserta.settings.installed" : "peserta.settings.installSub")} onClick={() => setOpen("pasang")} aria-haspopup="dialog" />
+        </RowGroup>
+      </section>
+      <section className={css2.section}>
+        <EyebrowLabel as="h2">{t("peserta.settings.groupAccount")}</EyebrowLabel>
+        <RowGroup>
+          <Row icon={<KeyRound />} title={t("peserta.settings.changePassword")} sub={t("peserta.settings.passwordSub")} onClick={() => setOpen("password")} aria-haspopup="dialog" />
+        </RowGroup>
+      </section>
+      <section className={css2.section}>
+        <EyebrowLabel as="h2">{t("peserta.settings.groupHelp")}</EyebrowLabel>
+        <RowGroup>
+          <Row icon={<LifeBuoy />} title={t("peserta.me.help")} sub={t("peserta.settings.helpSub")} href={mainWamPath.help} />
+          {help && <Row icon={<MessageCircle />} title={t("peserta.settings.contact")} sub={t("peserta.settings.contactSub")} onClick={() => setOpen("panitia")} aria-haspopup="dialog" />}
+        </RowGroup>
+      </section>
+      <div className={css2.foot}>
+        <p className={css.version}>{t("peserta.settings.version", { version })}</p>
+        {mcp && <a className={css.footLink} href={`${praWamPath.settings}#mcp`}>{t("peserta.me.mcp")}<ExternalLink aria-hidden /></a>}
+      </div>
     </div>
 
     <Sheet open={open === "notifikasi"} onClose={close} title={t("peserta.settings.notifications")} subtitle={t("peserta.settings.permission")} locked={push.busy}>
@@ -105,10 +109,10 @@ export function SettingsScreen({ version, mode = "system", reduceMotion = false,
  */
 function SettingRow({ icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode | ((titleId: string) => ReactNode) }) {
   const id = useId();
-  return <div className={css.setRow}>
-    <IconBox icon={icon} />
-    <span id={`${id}-t`} className={css.setTitle}>{title}</span>
-    <span className={css.setControl}>{typeof children === "function" ? children(`${id}-t`) : children}</span>
+  return <div className={`${css2.row} ${css2.wraps}`}>
+    <KitIcon icon={icon} className={css2.icon} />
+    <span id={`${id}-t`} className={css2.text}><span className={css2.title}>{title}</span></span>
+    <span className={css2.control}>{typeof children === "function" ? children(`${id}-t`) : children}</span>
   </div>;
 }
 
