@@ -1,0 +1,31 @@
+/*
+ * The checklist editor of the session form (agen S1). Console tokens only (--cs-*), like isi.module.css.
+ * One item = a photo column, the text fields, and the move/delete buttons; under 640 px it stacks.
+ */
+.items { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.item {
+  display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; gap: 12px; align-items: start; min-width: 0;
+  padding: 12px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface-2);
+}
+.photo { display: grid; justify-items: start; gap: 6px; min-width: 0; }
+.photoImage, .photoEmpty { display: grid; place-items: center; width: 6.5rem; aspect-ratio: 4 / 3; border-radius: 10px; object-fit: cover; background: var(--cs-surface); border: 1px dashed var(--cs-line); color: var(--cs-muted); box-sizing: border-box; }
+.photoImage { border-style: solid; }
+.photoButton {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; border-radius: 8px; color: var(--cs-primary); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.photoButton:focus-within { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.photoButton:hover { text-decoration: underline; }
+.photoRemove {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--cs-muted); font: inherit; font-size: 13px; cursor: pointer;
+}
+.photoRemove:hover { color: var(--cs-bad-fg); }
+.photoRemove:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; border-radius: 8px; }
+.fields { display: grid; gap: 6px; min-width: 0; }
+.label { font-size: 13px; font-weight: 700; color: var(--cs-text); }
+.moves { display: grid; gap: 2px; justify-items: end; }
+.addRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+@media (max-width: 639.98px) {
+  .item { grid-template-columns: minmax(0, 1fr); }
+  .photo { grid-template-columns: auto auto auto; align-items: center; justify-content: start; }
+  .moves { grid-auto-flow: column; justify-content: end; }
+}

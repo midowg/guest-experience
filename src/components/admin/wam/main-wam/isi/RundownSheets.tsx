@@ -7,8 +7,12 @@ import type { AdminPerson } from "@/lib/main-wam/admin/people";
 import {
   blankSession, inputTimes, lineupFromText, lineupToText, minutesLabel, scheduleChanges, sessionInputSchema, sessionToInput, shifted, type SessionInput,
 } from "@/lib/main-wam/admin/rundown";
-import { timeRange, wibDate, wibTime } from "@/lib/main-wam/rundown";
+import { checklistInputSchema, type ChecklistInput, type SessionChecklist } from "@/lib/main-wam/ceklis/ceklis";
+import { draftChanged, draftFromChecklist, draftToInput, type ChecklistDraft } from "@/lib/main-wam/ceklis/draft";
+import { daysBeforeEvent, isPrepDate, prepLabel, prepRange, timeRange, wibDate, wibTime } from "@/lib/main-wam/rundown";
+import { mainWamAdminApi } from "@/lib/routes";
 import { SESSION_KINDS, SESSION_MODULES, SESSION_STATUSES, type MwSession, type RundownChange, type SessionModule } from "@/lib/main-wam/types";
+import { ChecklistEditor } from "./ChecklistEditor";
 import { Choice, DaySelect, described, Field, NumberInput, PersonSelect, SwitchRow, dayOptionLabel, type Problems } from "./fields";
 import { Sheet } from "./Sheet";
 import css from "./isi.module.css";
@@ -30,16 +34,21 @@ const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short
  * place or status changes. `cancel`: opened from "Batalkan sesi" (a session that cannot be deleted),
  * with the status already Batal.
  */
-export function SessionSheet({ session, cancel = false, dates, date, people, guides, names, log, busy, nextSort, onClose, onSave }: {
-  session: MwSession | null; cancel?: boolean; dates: readonly string[]; date: string; people: readonly AdminPerson[]; guides: readonly GuideOption[]; names: Map<string, string>;
+export function SessionSheet({ session, cancel = false, dates, date, people, guides, names, log, busy, nextSort, checklistReady = false, onClose, onSave }: {
+  session: (MwSession & { checklist?: SessionChecklist | null }) | null; cancel?: boolean; dates: readonly string[]; date: string; people: readonly AdminPerson[]; guides: readonly GuideOption[]; names: Map<string, string>;
   log: readonly RundownChange[]; busy: boolean; nextSort: number;
-  onClose: () => void; onSave: (input: SessionInput, notify: boolean, changes: RundownChange["changes"]) => Promise<boolean>;
+  /** The checklist's migration has run (its section can be edited). */
+  checklistReady?: boolean;
+  onClose: () => void;
+  /** `checklist`: what to save for the agenda's checklist (null: unchanged). */
+  onSave: (input: SessionInput, notify: boolean, changes: RundownChange["changes"], checklist: ChecklistInput | null) => Promise<boolean>;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<SessionInput>(() => (session ? { ...sessionToInput(session), ...(cancel ? { status: "batal" as const } : {}) } : blankSession(date, nextSort)));
   const [lineup, setLineup] = useState(() => lineupToText(draft.lineup));
   const [problems, setProblems] = useState<Problems>({});
   const [notify, setNotify] = useState(true);
+  const [checklist, setChecklist] = useState<ChecklistDraft>(() => draftFromChecklist(session?.checklist, mainWamAdminApi.checklistPhoto));
   const set = (patch: Partial<SessionInput>) => { setDraft(current => ({ ...current, ...patch })); setProblems({}); };
   const changes = useMemo(() => {
     if (!session || !draft.date || !draft.start) return [];
@@ -56,7 +65,19 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
       setProblems(found);
       return;
     }
-    void onSave(checked.data, seen && notify && changes.length > 0, changes);
+    // The checklist rides with Simpan when it changed (and only where it can be saved).
+    let toSave: ChecklistInput | null = null;
+    if (checklistReady && draftChanged(session?.checklist, checklist)) {
+      const list = checklistInputSchema.safeParse(draftToInput(checklist));
+      if (!list.success) {
+        const found: Problems = {};
+        for (const issue of list.error.issues) found[String(issue.path[0] ?? "form")] ??= issue.message;
+        setProblems(found);
+        return;
+      }
+      toSave = list.data;
+    }
+    void onSave(checked.data, seen && notify && changes.length > 0, changes, toSave);
   }
   const text = (key: "title" | "place" | "dresscode" | "meal", label: string, max: number, extra: { optional?: boolean; hint?: string; placeholder?: string } = {}) =>
     <Field id={`${id}-${key}`} label={label} optional={extra.optional} hint={extra.hint} error={problems[key]}>
@@ -75,7 +96,7 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
       <Choice label="Jenis" name={`${id}-kind`} value={draft.kind} onChange={kind => set({ kind, ...(kind === "makan" ? { usesAttendance: false, required: false } : {}) })}
         options={SESSION_KINDS.map(value => ({ value, label: sessionKindLabels[value] }))} />
       <div className={css.trio}>
-        <Field id={`${id}-date`} label="Hari" error={problems.date}><DaySelect id={`${id}-date`} dates={dates} value={draft.date} onChange={value => set({ date: value ?? "" })} error={problems.date} /></Field>
+        <Field id={`${id}-date`} label="Hari" error={problems.date} hint={prepHint(dates, draft.date)}><SessionDay id={`${id}-date`} dates={dates} value={draft.date} onChange={value => set({ date: value })} error={problems.date} /></Field>
         <Field id={`${id}-start`} label="Mulai" error={problems.start}>
           <input className="input" type="time" step={300} {...described(`${id}-start`, problems.start)} value={draft.start} onChange={event => set({ start: event.target.value })} />
         </Field>
@@ -144,6 +165,8 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
       </div>
     </fieldset>
 
+    <ChecklistEditor draft={checklist} onChange={setChecklist} ready={checklistReady} problems={problems} />
+
     {seen && changes.length > 0 && <fieldset className={css.group}>
       <legend>Perubahan jadwal</legend>
       <p className={css.note}>{changes.map(change => `${fieldLabels[change.field]}: ${changeValue(change.field, change.from)} jadi ${changeValue(change.field, change.to)}`).join(" · ")}. Tercatat di riwayat dengan nama Anda.</p>
@@ -158,6 +181,41 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
       </li>)}</ul>
     </section>}
   </Sheet>;
+}
+
+/** "H-3: tiga hari sebelum hari pertama." for a date before the event; nothing for a day of it. */
+function prepHint(dates: readonly string[], date: string): string | undefined {
+  if (!date || dates.includes(date) || !dates[0]) return undefined;
+  const days = daysBeforeEvent(date, { startDate: dates[0] });
+  return days ? `${prepLabel(days)}: ${days} hari sebelum hari pertama acara.` : undefined;
+}
+
+/**
+ * The day of a session: a day of the event, or "Persiapan" (a date before the first day, "H-3", up to
+ * 60 days earlier: the agenda before departure, with its checklist). A date outside both is shown as it
+ * is, so an old session can still be opened and corrected.
+ */
+function SessionDay({ id, dates, value, onChange, error }: { id: string; dates: readonly string[]; value: string; onChange: (date: string) => void; error?: string }) {
+  const start = dates[0] ?? "";
+  const range = start ? prepRange({ startDate: start }) : null;
+  const prep = !!range && !dates.includes(value) && isPrepDate(value, { startDate: start });
+  const [picking, setPicking] = useState(prep);
+  const showDate = picking || prep;
+  return <>
+    <select className="select" {...described(id, error)} value={dates.includes(value) ? value : showDate ? "persiapan" : value}
+      onChange={event => {
+        const next = event.target.value;
+        if (next === "persiapan") { setPicking(true); if (range && !isPrepDate(value, { startDate: start })) onChange(range.to); return; }
+        setPicking(false);
+        onChange(next);
+      }}>
+      {!value && <option value="">Pilih hari</option>}
+      {value && !dates.includes(value) && !showDate && <option value={value}>{value} (di luar hari acara)</option>}
+      {dates.map(date => <option key={date} value={date}>{dayOptionLabel(dates, date)}</option>)}
+      {range && <option value="persiapan">Persiapan (sebelum hari pertama)</option>}
+    </select>
+    {showDate && range && <input type="date" className="input" aria-label="Tanggal persiapan" min={range.from} max={range.to} value={value} onChange={event => onChange(event.target.value)} />}
+  </>;
 }
 
 const QUICK = [-60, -30, -15, 15, 30, 60];
