@@ -1,8 +1,10 @@
 import { BerandaScreen } from "@/components/main-wam/peserta/beranda/BerandaScreen";
 import { SessionAbsen } from "@/components/main-wam/modul/SessionModule";
 import { BerandaMomen } from "@/components/main-wam/momen/BerandaMomen";
+import { BerandaMozaik } from "@/components/main-wam/momen/BerandaMozaik";
 import { BerandaCarbon } from "@/components/main-wam/peserta/karbon/BerandaCarbon";
 import { BerandaBod } from "@/components/main-wam/panitia/BerandaBod";
+import { moduleOn } from "@/lib/main-wam/modules";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
@@ -27,6 +29,7 @@ export default async function HomePage() {
     absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} /> : null,
     bod: <BerandaBod context={context} now={now} />,
     momen: <BerandaMomen context={context} now={now} />,
+    mozaik: moduleOn(context.settings.modules, "mozaik") ? <BerandaMozaik context={context} now={now} /> : null,
     carbon: <BerandaCarbon context={context} now={now} />,
   }} />;
 }

@@ -140,6 +140,8 @@ export const enMomen: Record<keyof typeof idMomen, string> = {
   "momen.mos.emptyBody": "Send a photo to All participants.",
   "momen.mos.complete": "Mosaic complete · {total} photos",
   "momen.mos.newStay": "New photos still show in Moments.",
+  "momen.moz.of": "of {total} photos",
+  "momen.moz.mine": "{n} yours",
   "momen.mos.progress": "{filled} of {total} photos",
   "momen.mos.people": "{people, plural, one {# person} other {# people}} helped build it · updated {time}",
   "momen.mos.tv": "This mosaic also shows on the venue TV. Only photos for All participants are included.",

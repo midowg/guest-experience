@@ -13,6 +13,9 @@ import { AbsenStandIn, MomenStandIn } from "../standins";
 import { CarbonCard } from "@/components/main-wam/peserta/karbon/CarbonCard";
 import { carbonView } from "@/lib/main-wam/peserta/carbon";
 import { sampleCarbon } from "@/lib/main-wam/peserta/sample";
+import { MozaikCard } from "@/components/main-wam/momen/BerandaMozaik";
+import { letterCells } from "@/lib/main-wam/momen/mosaic";
+import { number } from "@/lib/main-wam/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +24,19 @@ export const dynamic = "force-dynamic";
  * ?waktu=berangkat|pagi|pemaparan|silent|teamBuilding|bod (or ?hari=2&jam=07:10), ?peran=peserta|panitia|bod,
  * ?kartu=pengumuman|silent|voting|berangkat|survei|tanpa (force the contextual card),
  * ?status=memuat|offline|kosong|migrasi|gagal|kumpul (P02__status: a pinned "Kumpul jadi 05.30", a warning),
- * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet).
+ * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet),
+ * ?mozaik=mati (the Mozaik card: module off).
  */
+/** The Mozaik card with a sample: "WAM 2026" on 30 × 20, most letter cells already holding a photo. */
+function MozaikStandIn({ lang }: { lang: Lang }) {
+  const cells = letterCells(30, 20, "WAM 2026");
+  const letters = [...cells].map((cell, index) => (cell === "." ? -1 : index)).filter(index => index >= 0);
+  const filledCells = letters.filter((_, position) => position % 10 < 7);
+  const summary = { columns: 30, rows: 20, cells, filledCells, filled: filledCells.length, total: letters.length, mine: 8, migrated: true };
+  return <MozaikCard summary={summary} title={lang === "en" ? "Mosaic WAM 2026" : "Mozaik WAM 2026"} filled={number(lang, summary.filled)}
+    rest={`${lang === "en" ? "of" : "dari"} ${number(lang, summary.total)} ${lang === "en" ? "photos" : "foto"} · 8 ${lang === "en" ? "yours" : "fotomu"}`} />;
+}
+
 export default async function PreviewBeranda({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
@@ -39,6 +53,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
   return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang} unread={params.waktu === "berangkat" ? 0 : 3}>
     <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(new Date(now.getTime() - 2 * 60_000).toISOString(), lang)} live={false} forceOffline={params.status === "offline"}
       slots={{ absen: <AbsenStandIn />, momen: <MomenStandIn count={params.waktu === "berangkat" ? 3 : 12} />,
+        mozaik: params.mozaik === "mati" ? null : <MozaikStandIn lang={lang} />,
         carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonView(params.karbon === "belum" ? null : sampleCarbon(), now, lang)} /> }} />
   </Frame>;
 }

@@ -13,7 +13,7 @@ import { NowCard } from "./NowCard";
 /**
  * Beranda (P01/P02, revisi 16 Nov): at most four blocks, the head being the shell's: Sekarang, the
  * BOD's Ringkasan under it (agen C; panitia's tools are the Panitia tab, not a card here), one contextual card, the
- * Momen card (agen B), and after it the small Jejak karbon card while its module is on (everyone, a slot too). Other
+ * Momen card (agen B), the Mozaik card (agen B, module Mozaik), and after them the small Jejak karbon card while its module is on (everyone, a slot too). Other
  * areas come in as slots, already rendered by the page.
  */
 export function BerandaScreen({ data, serverNow, since, slots, live = true, forceOffline }: {
@@ -22,7 +22,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
   serverNow: string;
   /** "07.38": when the data was read, for the offline banner. */
   since: string;
-  slots: { absen?: ReactNode; bod?: ReactNode; momen?: ReactNode; carbon?: ReactNode };
+  slots: { absen?: ReactNode; bod?: ReactNode; momen?: ReactNode; mozaik?: ReactNode; carbon?: ReactNode };
   /** Refresh by itself when a card changes (off in previews, where time stands still). */
   live?: boolean;
   forceOffline?: boolean;
@@ -37,6 +37,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {slots.bod}
     {data.card && <HomeCard card={data.card} />}
     {slots.momen}
+    {slots.mozaik}
     {slots.carbon}
     {live && <RefreshAt at={data.refreshAt} serverNow={serverNow} />}
   </ScreenContent>;

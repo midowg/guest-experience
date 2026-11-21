@@ -139,6 +139,8 @@ export const idMomen = {
   "momen.mos.emptyBody": "Kirim foto untuk Semua peserta.",
   "momen.mos.complete": "Mozaik lengkap · {total} foto",
   "momen.mos.newStay": "Foto baru tetap tampil di Momen.",
+  "momen.moz.of": "dari {total} foto",
+  "momen.moz.mine": "{n} fotomu",
   "momen.mos.progress": "{filled} dari {total} foto",
   "momen.mos.people": "{people} orang ikut menyusun · diperbarui {time}",
   "momen.mos.tv": "Mozaik ini juga tayang di TV venue. Hanya foto untuk Semua peserta yang masuk.",
