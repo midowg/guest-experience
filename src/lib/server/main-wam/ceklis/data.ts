@@ -94,7 +94,9 @@ export function checklistView(list: SessionChecklist | undefined, checked: Reado
 
 /**
  * The checklist that stops this person's absen at `session`, or null (no gate, the module off, nothing
- * unfinished). A read that fails does not stop anyone: the gate is only as strong as what could be read.
+ * unfinished, or the migration not run yet). A read that FAILS throws a 503 ("coba lagi"): the QR check-in
+ * must not slip past a gate that could not be read. Only the QR scan goes through this gate; panitia's
+ * manual absen (Kelola absen) deliberately does not, as panitia vouch for the person present.
  */
 export async function absenBlock(session: MwSession, employeeId: string): Promise<CeklisBlock | null> {
   if (!session.usesAttendance) return null;
@@ -102,7 +104,10 @@ export async function absenBlock(session: MwSession, employeeId: string): Promis
     const [lists, sessions] = await Promise.all([readChecklists(), allSessions()]);
     if (!lists.migrated || lists.data.size === 0) return null;
     return ceklisBlock(session, sessions.data, lists.data, await myChecks(employeeId));
-  } catch { return null; }
+  } catch (error) {
+    console.error("absenBlock: the checklist could not be read", error);
+    throw new ServiceError(503, "Ceklis persiapan belum dapat diperiksa. Coba lagi sebentar.");
+  }
 }
 
 /* ── Ticking ──────────────────────────────────────────────────────────────────────────────────── */

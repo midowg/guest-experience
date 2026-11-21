@@ -41,7 +41,8 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   if (card.kind === "terlewat") return { kind: "terlewat", contact: await panitiaContact(settings, session).catch(() => null) };
   // Module Ceklis: while an agenda's checklist that asks "lengkap sebelum absen" is unfinished, the button is a lock that leads to it.
   if (card.kind === "buka" && settings.modules.ceklis) {
-    const block = await absenBlock(session, viewer.id);
+    // Only the screen's hint: when the checklist cannot be read the button stays, and the scan itself refuses (503).
+    const block = await absenBlock(session, viewer.id).catch(() => null);
     if (block) return { kind: "ceklis", block };
   }
   return card;

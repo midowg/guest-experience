@@ -130,6 +130,11 @@ describe("absenBlock", () => {
     db.answer = () => ({ data: null, error: { code: "42P01", message: "does not exist" } });
     expect(await absenBlock(first, ME)).toBeNull();
   });
+  it("refuses with a 503 (not lets through) when the checklists cannot be read", async () => {
+    db.answer = () => ({ data: null, error: { code: "XX000", message: "connection lost" } });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(absenBlock(first, ME)).rejects.toMatchObject({ status: 503 });
+  });
 });
 
 describe("saveChecklist (admin)", () => {
