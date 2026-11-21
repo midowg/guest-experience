@@ -69,6 +69,7 @@ export const enCommon: Record<keyof typeof idCommon, string> = {
   "screen.checkIn": "Check in",
   "screen.silent": "Silent Meeting",
   "screen.quiz": "Live quiz",
+  "screen.quizControl": "Quiz control",
   "screen.awarding": "Awarding",
   "screen.pickNominee": "Choose a nominee",
   "screen.fallback": "WAM",

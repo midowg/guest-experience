@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { KEEP_SAMPLES, clockOffset, pollDelay, revealJitter, type ClockSample } from "@/lib/main-wam/kuis/clock";
 import { revealInstant } from "@/lib/main-wam/kuis/flow";
 import type { QuizPhase, RunView } from "@/lib/main-wam/kuis/types";
+import { activeLang, translateKnown } from "@/lib/main-wam/i18n";
 import { mainWamPath } from "@/lib/routes";
 
 /*
@@ -70,7 +71,7 @@ export async function kuisRequest<T>(url: string, init: { method?: string; json?
   if (response.status === 401 && typeof window !== "undefined" && window.location.pathname.startsWith(mainWamPath.home)) {
     window.location.assign(mainWamPath.login(`${window.location.pathname}${window.location.search}`));
   }
-  if (!response.ok || !body.ok) throw new KuisRequestError(body.message ?? "", response.status);
+  if (!response.ok || !body.ok) throw new KuisRequestError(translateKnown(activeLang(), body.message ?? ""), response.status);
   return { data: body.data as T, sentAt, receivedAt };
 }
 

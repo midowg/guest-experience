@@ -96,4 +96,12 @@ export const idKuis = {
   "kuis.pausedSub": "Waktu dan nilai berhenti sebentar",
   "kuis.offline": "Koneksi terputus. Mencoba lagi…",
   "kuis.timerLabel": "Sisa waktu",
+
+  // What the server says (exactly as it writes it: translateKnown finds them)
+  "srv.kuis.joinFirst": "Ketuk Ikut dulu untuk bermain.",
+  "srv.kuis.questionClosed": "Soal ini sudah ditutup.",
+  "srv.kuis.questionNotOpen": "Soal belum dibuka.",
+  "srv.kuis.runChanged": "Permainan ini sudah diganti.",
+  "srv.kuis.paused": "Kuis sedang dijeda.",
+  "srv.kuis.timeUp": "Waktu habis.",
 } as const;

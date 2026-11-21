@@ -73,6 +73,7 @@ export const idCommon = {
   "screen.checkIn": "Absen",
   "screen.silent": "Silent Meeting",
   "screen.quiz": "Kuis live",
+  "screen.quizControl": "Kendali kuis",
   "screen.awarding": "Awarding",
   "screen.pickNominee": "Pilih nominasi",
   "screen.fallback": "WAM",

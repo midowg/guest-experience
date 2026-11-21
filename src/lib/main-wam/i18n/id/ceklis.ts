@@ -22,4 +22,9 @@ export const idCeklis = {
   "absen.ceklisFirst": "Selesaikan ceklis dulu",
   "absen.ceklisBody": "Ceklis di {title} ({done}/{total}) harus lengkap sebelum absen.",
   "absen.ceklisOpen": "Buka ceklis",
+
+  // What the server says (exactly as it writes it)
+  "srv.ceklis.itemNotFound": "Item tidak ditemukan. Muat ulang ceklisnya.",
+  "srv.ceklis.noChecklist": "Agenda ini tidak punya ceklis.",
+  "srv.ceklis.cannotCheck": "Ceklis persiapan belum dapat diperiksa. Coba lagi sebentar.",
 } as const;

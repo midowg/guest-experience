@@ -18,5 +18,8 @@ export const enCeklis: Record<keyof typeof idCeklis, string> = {
   "ceklis.homeReminderOpen": "Open checklist",
   "absen.ceklisFirst": "Finish the checklist first",
   "absen.ceklisBody": "The checklist in {title} ({done}/{total}) must be complete before you check in.",
+  "srv.ceklis.itemNotFound": "Item not found. Reload the checklist.",
+  "srv.ceklis.noChecklist": "This agenda has no checklist.",
+  "srv.ceklis.cannotCheck": "The preparation checklist could not be checked. Try again in a moment.",
   "absen.ceklisOpen": "Open checklist",
 };

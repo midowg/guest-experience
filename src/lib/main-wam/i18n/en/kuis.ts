@@ -94,4 +94,11 @@ export const enKuis: Record<keyof typeof idKuis, string> = {
   "kuis.pausedSub": "Time and points stop for a moment",
   "kuis.offline": "Connection lost. Trying again…",
   "kuis.timerLabel": "Time left",
+
+  "srv.kuis.joinFirst": "Tap Join first to play.",
+  "srv.kuis.questionClosed": "This question is closed.",
+  "srv.kuis.questionNotOpen": "This question is not open yet.",
+  "srv.kuis.runChanged": "This game has been replaced.",
+  "srv.kuis.paused": "The quiz is paused.",
+  "srv.kuis.timeUp": "Time is up",
 };

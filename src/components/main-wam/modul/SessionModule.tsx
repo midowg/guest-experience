@@ -7,6 +7,7 @@ import { checkInState } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
+import { serverT } from "@/lib/server/main-wam/lang";
 import { absenBlock } from "@/lib/server/main-wam/ceklis/data";
 import { myCheckIn, presentCount } from "@/lib/server/main-wam/modul/absen";
 import { awardsShown } from "@/lib/server/main-wam/modul/awards";
@@ -87,12 +88,12 @@ export async function moduleSlot({ session, context, now }: { session: MwSession
   if (!actions.action && settings.modules.kuis) {
     const quiz = await quizOfSession(session.id).catch(() => null);
     if (quiz && quiz.phase && quiz.phase !== "siap" && quiz.phase !== "selesai") {
-      actions.action = { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz(quiz.quizId), icon: "kuis", primary: true };
+      actions.action = { kind: "link", label: (await serverT())("kuis.join.title"), href: mainWamPath.quiz(quiz.quizId), icon: "kuis", primary: true };
     }
   }
   // Mode demo: the agenda's "Kuis live" opens the sample quiz that plays itself.
   if (!actions.action && settings.moduleConfig?.demo && settings.modules.kuis && /kuis/i.test(session.title)) {
-    actions.action = { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz(DEMO_QUIZ_ID), icon: "kuis", primary: true };
+    actions.action = { kind: "link", label: (await serverT())("kuis.join.title"), href: mainWamPath.quiz(DEMO_QUIZ_ID), icon: "kuis", primary: true };
   }
   return actions;
 }
