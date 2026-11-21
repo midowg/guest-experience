@@ -33,7 +33,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {data.failed && <RetryBanner>{t("peserta.live.agendaFailed")}</RetryBanner>}
     {!data.migrated
       ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
-      : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} />}
+      : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} ceklis={data.ceklis} />}
     {slots.bod}
     {data.card && <HomeCard card={data.card} />}
     {slots.momen}

@@ -49,13 +49,20 @@ describe("BottomNav", () => {
 });
 
 describe("MainWamShell", () => {
-  it("lights the tab of the address: a session's detail is under Agenda, with ‹ and its title", () => {
+  it("lights the tab of the address: a session's detail is a sheet over Agenda, so Agenda's own frame stays (no back arrow)", () => {
     nav.pathname = mainWamPath.session("s-1");
     render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.getByRole("link", { name: "Agenda" }).getAttribute("aria-current")).toBe("page");
-    expect(screen.getByRole("heading", { level: 1, name: "Detail sesi" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Kembali" }).getAttribute("href")).toBe(mainWamPath.agenda());
+    expect(screen.getByRole("heading", { level: 1, name: "Agenda" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Kembali" })).toBeNull();
     expect(screen.getByRole("main").textContent).toBe("Isi");
+  });
+
+  it("keeps ‹ and the title on a detail screen under a tab", () => {
+    nav.pathname = mainWamPath.gallery();
+    render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
+    expect(screen.getByRole("link", { name: "Momen" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "Kembali" }).getAttribute("href")).toBe(mainWamPath.moments());
   });
 
   it("lights Panitia on the hub and on every tool under it, for panitia; the bar has no Panitia tab otherwise", () => {

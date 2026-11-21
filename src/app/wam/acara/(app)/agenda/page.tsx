@@ -8,10 +8,13 @@ import { loadAgenda } from "@/lib/server/main-wam/peserta/agenda";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agenda · WAM", robots: { index: false } };
 
-/** P03 Agenda: the day in the address (?hari=1–4), else today. Owner A (peserta); the gate first. */
+/** The address of a day asked for: ?hari=2, or ?hari=h3 (Persiapan, module Ceklis); anything else is the default day. */
+const hereOf = (asked: string | undefined) => (/^h\d{1,2}$/.test(asked ?? "") ? mainWamPath.agendaPrep(Number(asked!.slice(1))) : mainWamPath.agenda(Number(asked) || undefined));
+
+/** P03 Agenda: the day in the address (?hari=1–4, or h3 for a Persiapan day), else today. Owner A (peserta); the gate first. */
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ hari?: string | string[] }> }) {
   const { hari } = await searchParams;
-  const context = await requireMainWamPage(mainWamPath.agenda(Number(Array.isArray(hari) ? hari[0] : hari) || undefined));
+  const context = await requireMainWamPage(hereOf(Array.isArray(hari) ? hari[0] : hari));
   const now = new Date();
   const data = await loadAgenda(context, hari, now);
   return <AgendaScreen {...data} since={hhmm(now.toISOString(), await readLang())} />;

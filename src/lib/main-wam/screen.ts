@@ -64,8 +64,8 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
       : { tab: "beranda", level: "detail", title: say("screen.carbon"), back: home };
     case "mulai": return { tab: null, level: "tugas", title: say("screen.notifications") };
     case "notifikasi": return { tab: "beranda", level: "detail", title: say("screen.notifications"), back: home };
-    // P04: the bar has only ‹ (revisi 16 Nov); the session's own title is the screen's headline.
-    case "agenda": return second ? { tab: "agenda", level: "detail", title: "", label: say("screen.sessionDetail"), back: agenda } : { tab: "agenda", level: "akar", title: say("screen.agenda") };
+    // P04 Detail sesi is a bottom sheet over Agenda (the sheet has its own title and close button), so the frame behind it is Agenda's own.
+    case "agenda": return { tab: "agenda", level: "akar", title: say("screen.agenda") };
     case "momen":
       if (!second) return { tab: "momen", level: "akar", title: say("screen.moments") };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: say("screen.camera"), back: momen, camera: true };

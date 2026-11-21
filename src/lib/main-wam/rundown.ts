@@ -33,7 +33,7 @@ export function byStart<T extends Pick<MwSession, "startsAt" | "sort" | "title">
 
 /* ── Days ─────────────────────────────────────────────────────────────────────────────────────── */
 
-const addDays = (date: string, days: number) => {
+export const addDays = (date: string, days: number) => {
   const day = new Date(`${date}T12:00:00Z`);
   day.setUTCDate(day.getUTCDate() + days);
   return day.toISOString().slice(0, 10);

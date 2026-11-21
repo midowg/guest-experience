@@ -4,7 +4,9 @@ import { previewLang } from "@/components/main-wam/dev/lang";
 import { Frame } from "../Frame";
 import { AgendaScreen } from "@/components/main-wam/peserta/agenda/AgendaScreen";
 import { AgendaSkeleton } from "@/components/main-wam/peserta/Skeletons";
-import { agendaDays, agendaRows, shownDay } from "@/lib/main-wam/peserta/agenda";
+import { sampleChecklistItems, sampleChecklists, samplePrepSession } from "@/lib/main-wam/ceklis/sample";
+import { agendaDays, agendaRowsOfTab, shownTab } from "@/lib/main-wam/peserta/agenda";
+import { prepDatesOf } from "@/lib/main-wam/rundown";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { sampleSessionIds, sampleSettings } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
@@ -24,10 +26,15 @@ export default async function PreviewAgenda({ searchParams }: { searchParams: Pr
   const event = sampleSettings().event;
   if (params.status === "memuat") return <Frame path={mainWamPath.agenda()} now={now} lang={lang}><AgendaSkeleton /></Frame>;
   const sessions = previewSessions(now).map(session => params.status === "batal" && session.id === sampleSessionIds.bns ? { ...session, status: "batal" as const } : session);
-  const day = shownDay(params.tab, now, event);
+  // ?ceklis=0–5: module Ceklis on, with the Persiapan tab ("H-3") and this many items ticked (the first Absen then waits for it).
+  const ceklis = params.ceklis !== undefined && /^[0-5]$/.test(params.ceklis);
+  const all = ceklis ? [...sessions, samplePrepSession] : sessions;
+  const prepDates = ceklis ? prepDatesOf(all, event) : [];
+  const tab = shownTab(params.tab, now, event, prepDates);
+  const checked = new Set(sampleChecklistItems.slice(0, Number(params.ceklis) || 0).map(item => item.id));
   const empty = params.status === "kosong" || params.status === "migrasi";
   return <Frame path={mainWamPath.agenda()} now={now} lang={lang}>
-    <AgendaScreen migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang)} day={day}
-      rows={empty ? [] : agendaRows(sessions, day, event, now, previewLog(now), lang)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
+    <AgendaScreen migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang, prepDates)} day={/^\d+$/.test(tab) ? Number(tab) : 0} tab={tab}
+      rows={empty ? [] : agendaRowsOfTab(all, tab, event, now, previewLog(now), lang, ceklis ? { lists: sampleChecklists(), checked } : undefined)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
   </Frame>;
 }

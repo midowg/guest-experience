@@ -229,6 +229,8 @@ export type HomeData = {
   serverNow: string;
   /** The rundown could not be read: the card says so, with "Coba lagi". */
   failed: boolean;
+  /** Module Ceklis: the Sekarang card's agenda has a checklist the person has not finished (one reminder line on the card). */
+  ceklis?: { done: number; total: number } | null;
 };
 
 /* ── When Beranda changes by itself ───────────────────────────────────────────────────────────── */

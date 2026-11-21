@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { MwSession } from "../types";
+import { isPrepDate, wibDate } from "../rundown";
+import type { MainWamEventInfo, MwSession } from "../types";
 
 /*
  * Ceklis persiapan (agen S1; migration 202611250001): an agenda may carry a checklist ("Persiapan
@@ -128,3 +129,11 @@ export const photoVersion = (updatedAt: unknown): string => {
 
 /** What the first chip of an agenda row says: "2/5", from a progress. */
 export const progressText = (progress: Pick<ChecklistProgress, "done" | "total">) => `${progress.done}/${progress.total}`;
+
+/**
+ * What participants see of the rundown: with module Ceklis off, the Persiapan agendas (dated before the
+ * first day) are left out, like everything else the module adds ("modul mati tidak meninggalkan jejak").
+ */
+export function visibleSessions<T extends Pick<MwSession, "startsAt">>(sessions: readonly T[], event: Pick<MainWamEventInfo, "startDate">, ceklisOn: boolean): T[] {
+  return ceklisOn ? [...sessions] : sessions.filter(session => !isPrepDate(wibDate(session.startsAt), event));
+}

@@ -1,10 +1,10 @@
 "use client";
 
-import { Bus, Check, ChevronRight, Coffee, MapPin, Presentation, Utensils, CircleX, type LucideIcon } from "lucide-react";
+import { Bus, Check, ChevronRight, Coffee, ListChecks, Lock, MapPin, Presentation, Utensils, CircleX, type LucideIcon } from "lucide-react";
 import type { AgendaKind, AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
-import { Pressable, SrOnly, StatusPill } from "@/components/main-wam/ui";
+import { Pill, Pressable, SrOnly, StatusPill } from "@/components/main-wam/ui";
 import css from "./agenda.module.css";
 
 /** The icon of each kind of entry: on the timeline and, larger, at the top of Detail sesi. */
@@ -36,11 +36,13 @@ export function AgendaTimeline({ rows, label }: { rows: AgendaRow[]; label: stri
             <span className={css.main}>
               <span className={css.title}>{row.title}</span>
               {row.place && <span className={css.place}><MapPin aria-hidden /><span>{row.place}</span></span>}
-              {(row.status === "live" || row.next || cancelled || row.changed) && <span className={css.pills}>
+              {(row.status === "live" || row.next || cancelled || row.changed || row.ceklis || row.ceklisFirst) && <span className={css.pills}>
                 {row.status === "live" && <StatusPill status="live" />}
                 {row.next && <StatusPill status="next" />}
                 {cancelled && <StatusPill status="cancelled" />}
                 {row.changed && <StatusPill status="changed" />}
+                {row.ceklis && <Pill tone={row.ceklis.complete ? "success" : "primary"} icon={<ListChecks />}>{t("ceklis.chip", { n: `${row.ceklis.done}/${row.ceklis.total}` })}</Pill>}
+                {row.ceklisFirst && <Pill tone="warning" icon={<Lock />}>{t("ceklis.chipFirst")}</Pill>}
               </span>}
               {row.status === "done" && <SrOnly>{t("pill.done")}</SrOnly>}
             </span>
