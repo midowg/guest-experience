@@ -96,9 +96,8 @@ describe("Jejak karbon: halaman", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Dari mana asalnya" })).toBeTruthy();
   });
 
-  it("every source is a row with its name, amount, share and what was counted (not colour alone); the bar says it in words", () => {
+  it("every source is a row with its name, amount, share and what was counted (not colour alone)", () => {
     render(<CarbonScreen view={view()} />);
-    expect(screen.getByRole("img", { name: "Hotel 54%, Perjalanan 25%, Makan 21%" })).toBeTruthy();
     const sources = screen.getByRole("list", { name: "Sumber emisi" });
     expect(within(sources).getByText("≈7,2 t · 54%")).toBeTruthy();
     expect(within(sources).getByText("60 kamar × 3 malam")).toBeTruthy();

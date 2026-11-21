@@ -79,7 +79,7 @@
 .offlineNote svg { width: 20px; height: 20px; flex: none; }
 
 /* ── Awarding ───────────────────────────────────────────────────────────────────────────────────── */
-.cardTitle { margin: 0; font: var(--mw-type-subtitle); color: var(--mw-text-1); }
+.cardTitle { margin: 0; font: 800 20px/24px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; color: var(--mw-text-1); }
 .cardSub { margin: var(--mw-space-4) 0 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .cardFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-12); min-height: var(--mw-touch); }
 .winner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-16); margin-top: var(--mw-space-4); }

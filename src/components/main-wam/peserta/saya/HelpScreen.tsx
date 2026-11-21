@@ -7,7 +7,7 @@ import { useT } from "@/components/main-wam/i18n";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { mainWamPath } from "@/lib/routes";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
-import { Avatar, Button, Card, IconBox, List, ListRow, TextLink } from "@/components/main-wam/ui";
+import { Avatar, Button, Card, EyebrowLabel, IconBox, List, ListRow, TextLink } from "@/components/main-wam/ui";
 import { ContactSheet } from "../ContactSheet";
 import css from "../peserta.module.css";
 
@@ -28,7 +28,7 @@ export function HelpScreen({ help }: { help: Contact | null }) {
   const [calling, setCalling] = useState(false);
   return <ScreenContent>
     <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.help.howTo")}</h2>
+      <EyebrowLabel as="h2">{t("peserta.help.howTo")}</EyebrowLabel>
       <Card>
         <ul className={css.bullets}>
           <li><IconBox icon={<House />} />{t("peserta.help.howHome")}</li>
@@ -38,7 +38,7 @@ export function HelpScreen({ help }: { help: Contact | null }) {
       </Card>
     </ScreenSection>
     <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.help.faq")}</h2>
+      <EyebrowLabel as="h2">{t("peserta.help.faq")}</EyebrowLabel>
       <Card>
         <dl className={css.faq}>
           {questions.map(item => <div key={item.id} className={css.faqItem}>
@@ -50,7 +50,7 @@ export function HelpScreen({ help }: { help: Contact | null }) {
       </Card>
     </ScreenSection>
     {help && <ScreenSection>
-      <h2 className={css.groupHead}>{t("peserta.help.stillNeed")}</h2>
+      <EyebrowLabel as="h2">{t("peserta.help.stillNeed")}</EyebrowLabel>
       <List>
         <ListRow leading={<Avatar name={help.name} photo={help.photo} />} title={help.name} sub={help.role} chevron={false}
           trailing={<Button variant="secondary" size="m" icon={<MessageCircle />} onClick={() => setCalling(true)} aria-label={t("peserta.session.contactName", { name: help.name })}>{t("peserta.session.contact")}</Button>} />

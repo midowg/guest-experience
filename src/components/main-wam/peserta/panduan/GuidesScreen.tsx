@@ -6,7 +6,8 @@ import type { MwGuide } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { EmptyState, List, ListRow } from "@/components/main-wam/ui";
+import { EmptyState } from "@/components/main-wam/ui";
+import { Row, RowGroup } from "../saya/Rows";
 import { OfflineBanner } from "../Live";
 
 const ICONS = { map: MapIcon, hotel: Hotel, shirt: Shirt, "clipboard-list": ClipboardList, "file-text": FileText } as const;
@@ -23,11 +24,11 @@ export function GuidesScreen({ migrated, guides, since, forceOffline }: { migrat
       ? <EmptyState size="s" icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("peserta.waiting.guides")}</EmptyState>
       : !guides.length
         ? <EmptyState size="s" icon={<MapIcon />} title={t("peserta.guides.none")} />
-        : <List>
+        : <RowGroup>
           {guides.map(guide => {
             const Icon = ICONS[guideIcon[guide.kind]];
-            return <ListRow key={guide.id} icon={<Icon />} title={guide.title} sub={guideLine(guide) || undefined} href={mainWamPath.guide(guide.slug)} />;
+            return <Row key={guide.id} icon={<Icon />} title={guide.title} sub={guideLine(guide) || undefined} href={mainWamPath.guide(guide.slug)} />;
           })}
-        </List>}
+        </RowGroup>}
   </ScreenContent>;
 }

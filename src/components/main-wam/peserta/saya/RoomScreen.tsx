@@ -6,7 +6,7 @@ import type { Contact } from "@/lib/main-wam/peserta/contact";
 import type { RoomPerson } from "@/lib/main-wam/types";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { Avatar, Button, Card, EmptyState } from "@/components/main-wam/ui";
+import { Avatar, BracketCard, Button, Card, EmptyState } from "@/components/main-wam/ui";
 import { ContactSheet } from "../ContactSheet";
 import css from "../peserta.module.css";
 
@@ -26,7 +26,7 @@ export function RoomScreen({ room, stay, roomHelp }: RoomProps) {
   const [calling, setCalling] = useState(false);
   return <ScreenContent>
     {room
-      ? <section className={css.room} aria-label={t("peserta.room.room", { name: room.name })}>
+      ? <BracketCard as="section" motif="konstelasi" className={css.room} aria-label={t("peserta.room.room", { name: room.name })}>
         <div className={css.roomTop}>
           <div className={css.groupHeadBlock}>
             <h2 className={css.roomTitle}>{t("peserta.room.room", { name: room.name })}</h2>
@@ -49,7 +49,7 @@ export function RoomScreen({ room, stay, roomHelp }: RoomProps) {
           </div>
         </>}
         {roomHelp && <Button variant="secondary" size="m" icon={<LifeBuoy />} className={css.roomButton} onClick={() => setCalling(true)}>{t("peserta.room.roomHelp")}</Button>}
-      </section>
+      </BracketCard>
       : <Card><EmptyState size="s" icon={<KeyRound />} title={t("peserta.room.roomWaiting")}>{t("peserta.room.waiting")}</EmptyState></Card>}
     {roomHelp && <ContactSheet contact={roomHelp} title={t("peserta.room.roomHelp")} open={calling} onClose={() => setCalling(false)} />}
   </ScreenContent>;

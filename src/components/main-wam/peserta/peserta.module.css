@@ -95,27 +95,25 @@
 /* ── Kamar (L01 x-room, x-member) ── */
 .room {
   display: flex; flex-direction: column; gap: var(--mw-space-16); padding: var(--mw-space-20); border-radius: var(--mw-radius-16);
-  background: var(--mw-accent-container); color: var(--mw-on-accent-container);
 }
 .roomTop { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--mw-space-12); }
 .roomTop > :first-child { min-width: 0; overflow-wrap: anywhere; }
-.roomTitle { margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); font-family: var(--mw-display-font, inherit); }
-.roomSub { font: var(--mw-type-body-small); color: var(--mw-on-accent-container); opacity: 0.85; }
-.roomKey { flex: none; width: 48px; height: 48px; border-radius: var(--mw-radius-full); display: flex; align-items: center; justify-content: center; background: var(--mw-surface); color: var(--mw-on-accent-container); }
+.roomTitle { margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); font-family: var(--mw-display-font, inherit); text-transform: uppercase; }
+.roomSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.roomKey { flex: none; width: 48px; height: 48px; border-radius: var(--mw-radius-full); display: flex; align-items: center; justify-content: center; background: var(--mw-gold-soft); color: var(--mw-gold-ink); }
 .roomKey > svg { width: 24px; height: 24px; }
 .roomDates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-12); }
 .roomDate { display: flex; flex-direction: column; min-width: 0; }
-.roomDateLabel { font: var(--mw-type-caption); color: var(--mw-on-accent-container); opacity: 0.85; }
-.roomDateValue { font: var(--mw-type-label-lg); }
+.roomDateLabel { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-text-2); }
+.roomDateValue { font: 800 19px/22px var(--mw-font-condensed); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
 .roomNote { margin: 0; font: var(--mw-type-body-small); }
-.roomDivider { height: 1px; border: 0; margin: 0; background: color-mix(in srgb, var(--mw-on-accent-container) 18%, transparent); }
+.roomDivider { height: 1px; border: 0; margin: 0; background: var(--mw-outline); }
 .roomButton { align-self: flex-start; }
 .members { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .member { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 52px; }
 .memberText { display: flex; flex-direction: column; min-width: 0; }
 .memberName { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
 .memberDept { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
-.room .memberDept { color: var(--mw-on-accent-container); opacity: 0.85; }
 .groupHeadBlock { display: flex; flex-direction: column; }
 .groupTitle { margin: 0; font: var(--mw-type-subtitle); }
 .groupSize { font: var(--mw-type-body-small); color: var(--mw-text-2); }

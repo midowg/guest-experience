@@ -1,0 +1,40 @@
+/*
+ * Saya, Pengaturan, Jejak karbon and their sister screens in the final prototype's language: grouped rows
+ * (.grp2/.srow: a hairline card, the icon bare in the primary blue, the label in Jakarta 600, a value and a
+ * chevron at the end), capital eyebrow labels over each group, a Barlow name on the profile card. Tokens only.
+ */
+.group { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--mw-radius-20); background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); }
+.group > * + * { border-top: 1px solid var(--mw-outline); }
+
+.row {
+  position: relative; display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 48px; padding: 13px var(--mw-space-16);
+  text-align: left; color: var(--mw-text-1); font: 600 14px/20px var(--mw-font-sans); transition: background-color var(--mw-motion-press);
+}
+a.row, button.row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+a.row:active, button.row:active { background-color: var(--mw-press); }
+@media (hover: hover) { a.row:hover, button.row:hover { background-color: var(--mw-press); } }
+.icon { flex: none; width: 20px; height: 20px; color: var(--mw-primary); }
+.text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.title { overflow-wrap: anywhere; }
+.sub { font: 500 13px/18px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.end { flex: none; margin-left: auto; display: flex; align-items: center; gap: var(--mw-space-8); color: var(--mw-text-2); font: 500 13px/18px var(--mw-font-sans); max-width: 60%; }
+.end > svg { flex: none; width: 16px; height: 16px; color: var(--mw-primary); }
+.value { min-width: 0; overflow-wrap: anywhere; text-align: right; font-variant-numeric: tabular-nums; }
+.danger { color: var(--mw-error); }
+/* A row whose control ends it (segmented choice, switch): the control flush right, level with the title. */
+.control { flex: none; margin-left: auto; display: flex; align-items: center; justify-content: flex-end; min-width: 0; max-width: 100%; }
+@media (max-width: 339.98px) { .row.wraps { flex-wrap: wrap; } .row.wraps .control { flex-basis: 100%; justify-content: flex-start; margin-left: 0; } }
+
+/* Profile card: round avatar with the gold ring, the name in Barlow capitals, the job line under it. */
+.profile { display: flex; align-items: center; gap: var(--mw-space-16); width: 100%; padding: var(--mw-space-16); text-align: left; color: var(--mw-text-1); border-radius: var(--mw-radius-22); background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) { .profile:hover { background-color: var(--mw-press); } }
+.profileText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.profileName { font: 800 24px/26px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
+.profileLine { font: 400 13px/18px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.profileCam { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
+
+.stack { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; }
+.note { margin: 0; font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); }
+.foot { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); }
+.section { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; }
+.settingsStack { display: flex; flex-direction: column; gap: var(--mw-space-16); min-width: 0; }
