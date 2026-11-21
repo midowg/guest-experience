@@ -90,7 +90,7 @@ describe("Jejak karbon: halaman", () => {
   it("follows the design's order: total with per person and time, where it comes from, how it is counted, the note", () => {
     const { container } = render(<CarbonScreen view={view()} />);
     const text = container.textContent ?? "";
-    const order = ["Emisi WAM 2026", "Perkiraan", "13,3", "±111 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Cara menghitung", "dihitung otomatis dari data acara"];
+    const order = ["Emisi WAM 2026", "Perkiraan", "13,3", "±111 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Katalog emisi", "dihitung otomatis dari data acara"];
     let at = -1;
     for (const part of order) { const next = text.indexOf(part, at + 1); expect(next, part).toBeGreaterThan(at); at = next; }
     expect(screen.getByRole("heading", { level: 2, name: "Dari mana asalnya" })).toBeTruthy();
@@ -106,24 +106,34 @@ describe("Jejak karbon: halaman", () => {
     expect(within(sources).getByText("1.440 porsi")).toBeTruthy();
   });
 
-  it("Cara menghitung is closed and opens on a tap, with the factors", () => {
+  it("Katalog emisi is closed and opens on a tap: the formula, every factor with its unit, Perlu dicek, no offsetting", () => {
     render(<CarbonScreen view={view()} />);
-    const how = screen.getByRole("button", { name: "Cara menghitung" });
+    const how = screen.getByRole("button", { name: /^Katalog emisi/ });
     expect(how.getAttribute("aria-expanded")).toBe("false");
     const formula = screen.getByText("Emisi = data kegiatan × faktor emisi.");
     expect(formula.closest("[hidden]")).not.toBeNull();
     fireEvent.click(how);
     expect(how.getAttribute("aria-expanded")).toBe("true");
     expect(formula.closest("[hidden]")).toBeNull();
-    expect(screen.getByText("Makan: 1,9 per porsi")).toBeTruthy();
+    const rows = within(how.closest("div")!).getAllByRole("listitem");
+    expect(rows).toHaveLength(8);
+    expect(rows[0].textContent).toContain("Kereta");
+    expect(rows[0].textContent).toContain("0,0164");
+    expect(rows[3].textContent).toContain("40");
+    expect(screen.getByText("Perlu dicek")).toBeTruthy();
+    expect(screen.getByText(/tanpa penebusan, pohon, atau kontribusi/)).toBeTruthy();
     fireEvent.click(how);
     expect(formula.closest("[hidden]")).not.toBeNull();
   });
 
-  it("has no tree, payment or form, only reading", () => {
+  it("has no tree, payment or form, only reading (the catalogue says so: recorded, never offset)", () => {
     const { container } = render(<CarbonScreen view={view()} howOpen />);
     expect(container.querySelector("input, textarea, select, form")).toBeNull();
-    expect(container.textContent).not.toMatch(/pohon|tebus|bayar|donasi|kontribusi/i);
+    expect(container.textContent).not.toMatch(/bayar|donasi/i);
+    expect(container.querySelector("a[href]")).toBeNull();
+    // The words about offsetting appear only to say there is none.
+    expect(container.textContent).toMatch(/tanpa penebusan, pohon, atau kontribusi/);
+    expect((container.textContent?.match(/penebusan|pohon|kontribusi/gi) ?? []).length).toBe(3);
   });
 
   it("nothing counted yet: a friendly empty state, no numbers", () => {
@@ -136,7 +146,7 @@ describe("Jejak karbon: halaman", () => {
     render(<LangProvider lang="en"><CarbonScreen view={view("en")} /></LangProvider>);
     expect(screen.getByText("Where it comes from")).toBeTruthy();
     expect(screen.getByText("±111 kg per person")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "How it is counted" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Emission catalogue/ })).toBeTruthy();
   });
 
   it("axe finds nothing to fix (card, page, empty page)", async () => {
