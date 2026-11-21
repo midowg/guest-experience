@@ -26,6 +26,7 @@ export const enKuis: Record<keyof typeof idKuis, string> = {
   "kuis.rules.none": "No answer 0",
   "kuis.lobby.kicker": "Quiz lobby",
   "kuis.lobby.as": "You play as {name}",
+  "kuis.lobby.asKicker": "You play as",
   "kuis.lobby.mystery": "You have no figure card yet, so you play as a mystery figure.",
   "kuis.lobby.hidden": "Your name is not shown; other players only see your figure.",
   "kuis.lobby.count": "{n, plural, one {# figure has joined} other {# figures have joined}}",

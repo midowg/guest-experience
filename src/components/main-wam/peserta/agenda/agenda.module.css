@@ -100,4 +100,4 @@ a.row:active .body { opacity: 0.7; }
 .tipText { margin: 0; font: var(--mw-type-body); color: var(--mw-text-1); white-space: pre-line; overflow-wrap: anywhere; }
 
 /* ── Loading ── */
-.skHead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); padding: 0 var(--mw-space-4); }
+.skHead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); padding: var(--mw-safe-top) 0 0 var(--mw-space-4); }
