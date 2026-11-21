@@ -29,7 +29,7 @@
 .main { position: relative; gap: var(--mw-space-8); padding: var(--mw-space-20, 20px); border-radius: var(--mw-radius-28); overflow: hidden; }
 .mainLeaf { position: absolute; right: -26px; top: -20px; width: 150px; height: 150px; opacity: 0.16; pointer-events: none; }
 .mainHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
-.eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--mw-radius-full); background: rgb(255 255 255 / 0.16); border: 1px solid rgb(255 255 255 / 0.4); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; min-width: 0; }
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--mw-radius-full); background: color-mix(in srgb, var(--mw-on-eco) 16%, transparent); border: 1px solid color-mix(in srgb, var(--mw-on-eco) 40%, transparent); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; min-width: 0; }
 .eyebrow > svg { flex: none; width: 14px; height: 14px; }
 .estimate { display: inline-flex; align-items: center; gap: 5px; font: 700 10px/12px var(--mw-font-condensed); letter-spacing: 0.16em; text-transform: uppercase; color: var(--mw-eco-bar); }
 .estimate i { width: 6px; height: 6px; border-radius: 50%; background: var(--mw-eco-bar); }

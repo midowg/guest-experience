@@ -11,7 +11,6 @@ import { Banner, Button, StatusPill } from "@/components/main-wam/ui";
 import { Checklist } from "../ceklis/Checklist";
 import { InfoLainnya } from "./InfoLainnya";
 import { KIND_ICONS } from "./AgendaTimeline";
-import css from "../peserta.module.css";
 import info from "./info.module.css";
 import own from "./agenda.module.css";
 

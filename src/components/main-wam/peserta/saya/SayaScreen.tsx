@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Camera, FileText, Images, KeyRound, Leaf, LifeBuoy, LogOut, Settings, TrainFront } from "lucide-react";
 import { mainWamPath, praWamApi } from "@/lib/routes";
 import { ScreenContent, ScreenSection, ShellActions } from "@/components/main-wam/shell";
-import { Avatar, ConfirmDialog, IconButton, SrOnly } from "@/components/main-wam/ui";
+import { Avatar, ConfirmDialog, EyebrowLabel, IconButton, SrOnly } from "@/components/main-wam/ui";
 import { DemoSwitch } from "@/components/main-wam/demo/DemoSwitch";
 import type { DemoRole } from "@/lib/main-wam/types";
 import { useT } from "@/components/main-wam/i18n";
@@ -74,6 +74,7 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
           : <Row icon={<KeyRound />} title={t("screen.room")} sub={t("peserta.me.roomWaiting")} href={mainWamPath.room} />}
         <Row icon={<TrainFront />} title={t("screen.travel")} href={mainWamPath.travel()} />
       </RowGroup>
+      <EyebrowLabel as="h2">{t("peserta.me.eventInfo")}</EyebrowLabel>
       <RowGroup label={t("peserta.me.eventInfo")}>
         <Row icon={<FileText />} title={t("screen.guides")} href={mainWamPath.guides} />
         {mosaic && <Row icon={<Images />} title={t("peserta.me.mosaic")} href={mainWamPath.mosaic()} />}
