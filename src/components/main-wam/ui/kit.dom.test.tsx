@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { LoadingDialog } from "./LoadingDialog";
 import { FilterChip } from "./Chip";
 import { Segmented } from "./Segmented";
 import { Sheet, useHashSheet } from "./Sheet";
@@ -469,5 +470,32 @@ describe("Kit fixes: ProgressBar label size", () => {
     expect(rule("./data.module.css", ".progressSubtitle .progressLabel")).toMatch(/var\(--mw-type-subtitle\)/);
     expect(rule("./data.module.css", ".progressSubtitle .progressValue")).toMatch(/var\(--mw-text-1\)/);
     expect(rule("./data.module.css", ".progressLabel")).toMatch(/var\(--mw-type-label\)/);
+  });
+});
+
+describe("LoadingDialog", () => {
+  const dialog = () => screen.getByTestId("loading-dialog") as HTMLDialogElement;
+
+  it("is open while the wait goes on, and Esc (cancel) is refused", () => {
+    render(<LoadingDialog open title="Sedang masuk" />);
+    expect(dialog().open).toBe(true);
+    const cancel = new Event("cancel", { cancelable: true });
+    dialog().dispatchEvent(cancel);
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(dialog().open).toBe(true);
+  });
+
+  it("opens again when the browser closed it anyway (a second Esc) while `open` is still true", () => {
+    render(<LoadingDialog open title="Sedang masuk" />);
+    dialog().removeAttribute("open");
+    fireEvent(dialog(), new Event("close"));
+    expect(dialog().open).toBe(true);
+  });
+
+  it("closes for good when `open` turns false", () => {
+    const { rerender } = render(<LoadingDialog open title="Sedang masuk" />);
+    rerender(<LoadingDialog open={false} title="Sedang masuk" />);
+    fireEvent(dialog(), new Event("close"));
+    expect(dialog().open).toBe(false);
   });
 });
