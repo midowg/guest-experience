@@ -14,9 +14,12 @@ const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sa
  * column on a laptop) is the app's own colour from the first paint. Pra WAM's layout paints body
  * too (wamBodyStyle); `html body:has(…)` outranks it while Main WAM is on screen and stops applying
  * the moment it leaves, so it never leaks. Fixed values only: the background is not a theme slot.
+ * The page's own scrollbar is hidden while Main WAM is on screen too (the rule for every scrollbar in
+ * the app, theme.module.css hides the inner ones): the screen still scrolls, by touch and wheel.
  */
 const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.light};color-scheme:light}`
   + `html body:has([data-main-wam][data-mw-mode=dark]){background:${PAGE_COLORS.dark};color-scheme:dark}`
+  + `html:has([data-main-wam]){scrollbar-width:none}html:has([data-main-wam])::-webkit-scrollbar{display:none}`
   + `@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:${PAGE_COLORS.dark};color-scheme:dark}}`;
 
 /**
