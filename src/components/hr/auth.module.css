@@ -66,6 +66,13 @@
 .rules li { display: flex; align-items: center; gap: 8px; }
 .rules li[data-ok] { color: var(--hr-success); font-weight: 600; }
 
+/* An ordinary phone (up to 900 px tall): a little tighter, so the whole page fits one screen. */
+@media (max-height: 900px) and (max-width: 759px) {
+  .top { gap: 18px; padding-bottom: 20px; }
+  .sheet { gap: 14px; padding-top: 22px; }
+  .form { gap: 14px; margin-top: 6px; }
+  .foot { display: none; }
+}
 /* A short phone (SE, small Android): the line and the day line step aside so the form and its button fit on the first screen. */
 @media (max-height: 740px) and (max-width: 759px) {
   .top { gap: 14px; padding-top: calc(14px + env(safe-area-inset-top)); padding-bottom: 18px; }
