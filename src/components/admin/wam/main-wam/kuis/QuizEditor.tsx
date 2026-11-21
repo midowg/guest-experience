@@ -11,6 +11,7 @@ import type { QuestionInput } from "@/lib/main-wam/kuis/admin";
 import type { QuizLevel } from "@/lib/main-wam/kuis/types";
 import { mainWamAdminApi, mainWamAdminPath } from "@/lib/routes";
 import type { AdminQuestion, AdminQuiz, AdminResults, AdminRun } from "@/lib/server/main-wam/kuis/admin";
+import { QuizAgenda } from "./QuizAgenda";
 import css from "./kuis-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -86,6 +87,8 @@ export function QuizEditor({ initial, moduleOn }: { initial: AdminQuiz; moduleOn
         <ConsoleButton type="submit" disabled={busy || title.trim().length < 2 || title === data.quiz.title}>Simpan judul</ConsoleButton>
       </form>
     </Card>
+
+    <QuizAgenda quizId={id} />
 
     <Card title={`Soal · ${data.questions.length}`} id="kuis-soal">
       <p className={css.note}>Dimainkan urut dari Mudah ke Sangat sulit; panah mengubah urutan di dalam satu level. Benar 300–500 (makin cepat makin besar), salah −100, tidak menjawab 0. Perubahan soal berlaku untuk permainan baru; permainan yang sudah dibuat memakai salinannya sendiri.</p>

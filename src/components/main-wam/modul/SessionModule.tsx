@@ -1,4 +1,5 @@
 import { mainWamCan } from "@/lib/main-wam/access";
+import { DEMO_QUIZ_ID } from "@/lib/main-wam/kuis/demo";
 import { absenCard } from "@/lib/main-wam/modul/absen";
 import { approvalCard, isAnnounced, shownCategories } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
@@ -9,6 +10,7 @@ import type { MainWamContext } from "@/lib/server/main-wam/gate";
 import { myCheckIn, presentCount } from "@/lib/server/main-wam/modul/absen";
 import { awardsShown } from "@/lib/server/main-wam/modul/awards";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
+import { quizOfSession } from "@/lib/server/main-wam/kuis/agenda";
 import { silentNow } from "@/lib/server/main-wam/modul/silent";
 import { surveyFor } from "@/lib/server/main-wam/survey";
 import { AbsenView, ModuleActionView, type AbsenSlot, type ModuleSlot } from "./SessionViews";
@@ -74,6 +76,17 @@ export async function moduleSlot({ session, context, now }: { session: MwSession
   // Survei (R7): the shared rule of Beranda (module on, a form, open now, not filled in yet).
   const survey = session.module === "survei" ? await surveyFor(context, [session], now, session.id).catch(() => null) : null;
   if (survey) actions.action = { kind: "link", label: "Isi survei", href: praWamPath.questionnaire(survey.formSlug), icon: "survei", primary: true };
+  // Kuis live: the quiz tied to this agenda item (Admin WAM → Kuis live → Agenda), once its lobby is open and until the game is over.
+  if (!actions.action && settings.modules.kuis) {
+    const quiz = await quizOfSession(session.id).catch(() => null);
+    if (quiz && quiz.phase && quiz.phase !== "siap" && quiz.phase !== "selesai") {
+      actions.action = { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz(quiz.quizId), icon: "kuis", primary: true };
+    }
+  }
+  // Mode demo: the agenda's "Kuis live" opens the sample quiz that plays itself.
+  if (!actions.action && settings.moduleConfig?.demo && settings.modules.kuis && /kuis/i.test(session.title)) {
+    actions.action = { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz(DEMO_QUIZ_ID), icon: "kuis", primary: true };
+  }
   return actions;
 }
 

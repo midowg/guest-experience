@@ -700,6 +700,8 @@ export const mainWamAdminApi = {
   quizHosts: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/pengendali`,
   /** DELETE: one pengendali. */
   quizHost: (id: string, employeeId: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/pengendali/${enc(employeeId)}`,
+  /** GET: the agenda item the quiz is tied to and the agenda to choose from; PUT {sessionId|null}. */
+  quizAgenda: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/agenda`,
   /** POST: a new big-screen link (shown once; the old one stops working). */
   quizScreen: (id: string) => `${MAIN_WAM_ADMIN_API}/kuis/${enc(id)}/layar`,
   /** POST: a new game (the one not over ends; its results stay). */

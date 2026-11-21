@@ -10,6 +10,8 @@ import type { Alias, QuizLevel } from "./types";
 
 /** The migration of the module (Admin WAM names it; players and admins read only "menunggu pembaruan sistem"). */
 export const KUIS_MIGRATION = "202611200601_main_wam_kuis.sql";
+/** The migration that ties a quiz to the agenda item "Kuis live". */
+export const KUIS_AGENDA_MIGRATION = "202611270001_main_wam_kuis_agenda.sql";
 export const MAX_QUESTIONS = 40;
 export const MAX_HOSTS = 20;
 
@@ -17,6 +19,9 @@ export const quizSchema = z.object({
   title: z.string().trim().min(2, "Judul minimal 2 huruf.").max(80, "Judul maksimal 80 huruf."),
 }).strict();
 export type QuizInput = z.infer<typeof quizSchema>;
+
+/** PUT: the agenda item the quiz belongs to (null: none). */
+export const agendaSchema = z.object({ sessionId: z.uuid("Pilih agendanya.").nullable() }).strict();
 
 export const questionSchema = z.object({
   level: z.number().int().min(1, "Pilih level.").max(4, "Pilih level."),
