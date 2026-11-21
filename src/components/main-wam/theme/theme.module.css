@@ -61,6 +61,18 @@
   --mw-chart-emisi-2: #15803D;
   --mw-chart-emisi-3: #1F9D4F;
 
+  /* 1.7 Kuis live: pilihan A–D (huruf + warna, teks --mw-on-kuis) dan medali podium (teks --mw-on-kuis-medal). */
+  --mw-kuis-a: #6D28D9;
+  --mw-kuis-b: #0F766E;
+  --mw-kuis-c: #B45309;
+  --mw-kuis-d: #BE185D;
+  --mw-on-kuis: #FFFFFF;
+  --mw-kuis-medal-1: #F2B24C;
+  --mw-kuis-win-container: #FFE29A;
+  --mw-kuis-medal-2: #D6DEEB;
+  --mw-kuis-medal-3: #E7A977;
+  --mw-on-kuis-medal: #2A1A00;
+
   /* 1.5 Acara (slot tema KV), inverse, media */
   --mw-accent: var(--mw-kv-accent, #1E3A5F);
   --mw-on-accent: var(--mw-kv-on-accent, #FFFFFF);
@@ -224,6 +236,16 @@
   --mw-awarding: #FDBA74;
   --mw-awarding-container: #4A2A14;
   --mw-on-awarding-container: #FFDCC4;
+  --mw-kuis-a: #A78BFA;
+  --mw-kuis-b: #2DD4BF;
+  --mw-kuis-c: #FBBF24;
+  --mw-kuis-d: #F472B6;
+  --mw-on-kuis: #0A1430;
+  --mw-kuis-medal-1: #FFD36E;
+  --mw-kuis-win-container: #FFD36E;
+  --mw-kuis-medal-2: #D6DEEB;
+  --mw-kuis-medal-3: #E7A977;
+  --mw-on-kuis-medal: #2A1A00;
   --mw-wellbeing: #8AB4F8;
   --mw-wellbeing-container: #1E3A6E;
   --mw-on-wellbeing-container: #D6E3FC;
@@ -296,6 +318,16 @@
     --mw-awarding: #FDBA74;
     --mw-awarding-container: #4A2A14;
     --mw-on-awarding-container: #FFDCC4;
+    --mw-kuis-a: #A78BFA;
+    --mw-kuis-b: #2DD4BF;
+    --mw-kuis-c: #FBBF24;
+    --mw-kuis-d: #F472B6;
+    --mw-on-kuis: #0A1430;
+    --mw-kuis-medal-1: #FFD36E;
+    --mw-kuis-win-container: #FFD36E;
+    --mw-kuis-medal-2: #D6DEEB;
+    --mw-kuis-medal-3: #E7A977;
+    --mw-on-kuis-medal: #2A1A00;
     --mw-wellbeing: #8AB4F8;
     --mw-wellbeing-container: #1E3A6E;
     --mw-on-wellbeing-container: #D6E3FC;

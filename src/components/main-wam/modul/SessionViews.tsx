@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
+import { ClipboardList, Gamepad2, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
 import type { AbsenCard } from "@/lib/main-wam/modul/absen";
@@ -26,13 +26,13 @@ export type ModuleSlot = {
   action:
     | { kind: "silent-buka"; href: string; closesAt: string | null }
     | { kind: "silent-tutup"; href: string }
-    | { kind: "link"; label: string; href: string; icon: "lock" | "trophy" | "survei"; primary?: boolean }
+    | { kind: "link"; label: string; href: string; icon: "lock" | "trophy" | "survei" | "kuis"; primary?: boolean }
     | null;
   /** Panitia: the session's QR to print or show. */
   qr: { sessionId: string } | null;
 };
 
-const ICONS = { lock: Lock, trophy: Trophy, survei: ClipboardList } as const;
+const ICONS = { lock: Lock, trophy: Trophy, survei: ClipboardList, kuis: Gamepad2 } as const;
 
 /** SessionAbsen's look (P04 + P04__status; Beranda's Sekarang card gets only the open state's button). */
 export function AbsenView({ slot }: { slot: AbsenSlot }) {

@@ -178,6 +178,7 @@ export const idPeserta = {
   "peserta.notes.kind.voting": "Awarding",
   "peserta.notes.kind.survei": "Survei",
   "peserta.notes.kind.lain": "Kabar",
+  "peserta.notes.kind.kuis": "Kuis live",
   "peserta.notes.fromPra": "Pra WAM",
   "peserta.guides.none": "Panduan belum tersedia",
   "peserta.guides.openFile": "Buka berkas",

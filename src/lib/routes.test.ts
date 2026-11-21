@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, mainWamAdminApi, mainWamAdminPath, mainWamApi, mainWamPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
+import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, kuisScreenApi, kuisScreenPath, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, mainWamAdminApi, mainWamAdminPath, mainWamApi, mainWamPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -123,7 +123,21 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
       const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
       expect(path.startsWith("/api/admin/wam/main/")).toBe(true);
     }
-    for (const value of Object.values(mainWamAdminPath)) expect(value.startsWith("/admin/wam/main/")).toBe(true);
+    for (const value of Object.values(mainWamAdminPath)) {
+      const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
+      expect(path.startsWith("/admin/wam/main/")).toBe(true);
+    }
+  });
+
+  it("give Kuis live its game, control, admin and a public big screen outside /wam", () => {
+    expect(mainWamPath.quiz("k1")).toBe("/wam/acara/kuis/k1");
+    expect(mainWamPath.quizControl("k1")).toBe("/wam/acara/kuis/k1/kendali");
+    expect(mainWamApi.quiz("k1", "r.3.1")).toBe("/api/wam/acara/kuis/k1?v=r.3.1");
+    expect(mainWamApi.quizAnswer("k1")).toBe("/api/wam/acara/kuis/k1/jawab");
+    expect(mainWamAdminPath.quiz("k1")).toBe("/admin/wam/main/kuis/k1");
+    expect(mainWamAdminApi.quizResults("k1", "r1", true)).toBe("/api/admin/wam/main/kuis/k1/hasil?permainan=r1&unduh=1");
+    expect(kuisScreenPath("kuis_abc")).toBe("/kuis/kuis_abc");
+    expect(kuisScreenApi("kuis_abc")).toBe("/api/kuis/kuis_abc");
   });
 
   it("keep Pra WAM's Beranda reachable while Main WAM is on", () => {
