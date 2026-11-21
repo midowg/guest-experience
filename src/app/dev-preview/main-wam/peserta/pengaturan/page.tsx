@@ -12,10 +12,10 @@ import { previewTime } from "../sample";
 
 export const dynamic = "force-dynamic";
 const STATES: PushState[] = ["on", "off", "denied", "ios-install", "unsupported", "not-ready", "checking"];
-const PANELS = ["notifikasi", "pasang", "tampilan", "bahasa", "password", "panitia"] as const;
+const PANELS = ["notifikasi", "pasang", "password", "panitia"] as const;
 
 /**
- * S02 Pengaturan (dev-preview): ?hp=on|off|denied|ios-install|unsupported|not-ready, ?buka=notifikasi|pasang|tampilan|bahasa|password|panitia,
+ * S02 Pengaturan (dev-preview): ?hp=on|off|denied|ios-install|unsupported|not-ready, ?buka=notifikasi|pasang|password|panitia,
  * ?terpasang=1 (opened from the home screen), ?peran=bod (Akses MCP), ?kontak=tanpa (no panitia contact).
  */
 export default async function PreviewSettings({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {

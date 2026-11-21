@@ -24,3 +24,16 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 export function mainWamModeCookie(mode: MainWamMode, secure: boolean): string {
   return `${MAIN_WAM_MODE_COOKIE}=${mode}; Path=${PRA_WAM_PATH}; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
 }
+
+/*
+ * "Kurangi gerak" (Pengaturan): the person asks the app itself to be calm, on top of the phone's own
+ * setting (prefers-reduced-motion is always honoured). Kept the same way as the mode: a cookie per device,
+ * read by the server so the first paint is already calm.
+ */
+export const MAIN_WAM_MOTION_COOKIE = "mw_motion";
+/** Only "reduce" means calm; anything else is the normal app. */
+export const parseReduceMotion = (value: string | null | undefined): boolean => value === "reduce";
+/** The document.cookie string that keeps the choice for a year (or clears it when motion is back). */
+export function mainWamMotionCookie(reduce: boolean, secure: boolean): string {
+  return `${MAIN_WAM_MOTION_COOKIE}=${reduce ? "reduce" : "normal"}; Path=${PRA_WAM_PATH}; Max-Age=${ONE_YEAR}; SameSite=Lax${secure ? "; Secure" : ""}`;
+}

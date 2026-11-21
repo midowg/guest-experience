@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { LangProvider } from "@/components/main-wam/i18n";
 import { MainWamTheme, mainWamThemeColor } from "@/components/main-wam/theme";
-import { readMainWamMode } from "@/lib/server/main-wam/appearance";
+import { readMainWamMode, readReduceMotion } from "@/lib/server/main-wam/appearance";
 import { mainWamShown } from "@/lib/server/main-wam/gate";
 import { readLang } from "@/lib/server/main-wam/lang";
 import { mainWamThemeInput } from "@/lib/server/main-wam/theme";
@@ -30,5 +30,5 @@ export default async function MainWamRootLayout({ children }: { children: ReactN
   if (!(await mainWamShown())) return children;
   const theme = await mainWamThemeInput().catch(() => null);
   const lang = await readLang();
-  return <MainWamTheme theme={theme} mode={await readMainWamMode()}><LangProvider lang={lang}>{children}</LangProvider></MainWamTheme>;
+  return <MainWamTheme theme={theme} mode={await readMainWamMode()} reduceMotion={await readReduceMotion()}><LangProvider lang={lang}>{children}</LangProvider></MainWamTheme>;
 }

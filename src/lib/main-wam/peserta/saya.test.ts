@@ -21,6 +21,8 @@ const rani = sampleViewers.peserta;
 describe("Saya", () => {
   it("the profile line and the room row, whatever the room's size", () => {
     expect(profileLine(rani)).toBe("CoE");
+    expect(profileLine({ ...rani, position: "Creative Designer" })).toBe("Creative Designer - CoE");
+    expect(profileLine({ ...rani, position: "  ", department: "" })).toBe("");
     expect(profileLine(sampleViewers.bod)).toBe("BOD");
     expect(roomRow(sampleRoom3)).toEqual({ title: "Kamar 208", sub: "3 orang · bersama Sari, Dewi" });
     expect(roomRow(sampleRoom5).sub).toBe("5 orang · bersama Gilang, Raka, dan 2 lainnya");

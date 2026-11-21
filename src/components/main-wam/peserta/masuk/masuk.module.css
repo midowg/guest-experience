@@ -85,6 +85,7 @@
 }
 @keyframes mw-flow { from { stroke-dashoffset: 9; } to { stroke-dashoffset: -91; } }
 @media (prefers-reduced-motion: reduce) { .flow { animation: none; opacity: 0; } }
+:global([data-mw-reduce]) .flow { animation: none; opacity: 0; }
 
 /* ── Splash: dark, the pegasus on top, the words low, Masuk under them ── */
 .splash {

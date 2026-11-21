@@ -25,11 +25,13 @@ const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.ligh
  * (tokens.ts). Server-safe (no hooks), so the layout renders it on the server and there is no flash.
  * Put it once around the shell; a preview may pass a theme of its own.
  */
-export function MainWamTheme({ theme, mode = "light", children, className }: {
+export function MainWamTheme({ theme, mode = "light", reduceMotion = false, children, className }: {
   /** From the theme reader (agen fondasi), or an already resolved theme. Missing = neutral. */
   theme?: MainWamThemeInput | ResolvedTheme | null;
   /** Terang, Gelap or Sistem (the phone's own); the app reads the person's pick from a cookie (lib/main-wam/appearance.ts). */
   mode?: MainWamMode;
+  /** "Kurangi gerak" from Pengaturan (a cookie): every animation and transition under the root is cut to nothing. */
+  reduceMotion?: boolean;
   children: ReactNode;
   className?: string;
 }) {
@@ -40,7 +42,7 @@ export function MainWamTheme({ theme, mode = "light", children, className }: {
   const vars: Record<string, string> = themeVars(resolved);
   const fontVar = DISPLAY_FONT_VARS[resolved.displayFont];
   if (fontVar) vars["--mw-kv-display-font"] = `var(${fontVar})`;
-  return <div data-main-wam="" data-mw-mode={mode} className={[css.root, mainWamFontVars, className].filter(Boolean).join(" ")} style={vars as CSSProperties}>
+  return <div data-main-wam="" data-mw-mode={mode} data-mw-reduce={reduceMotion ? "" : undefined} className={[css.root, mainWamFontVars, className].filter(Boolean).join(" ")} style={vars as CSSProperties}>
     <style>{PAGE_STYLE}</style>
     {children}
   </div>;
