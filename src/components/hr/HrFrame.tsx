@@ -3,9 +3,10 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { CalendarDays, CircleUserRound, FileText, House, UsersRound } from "lucide-react";
-import { HR_TABS, hrTabLabels, hrTabPaths, tabOf, type HrTab } from "@/lib/hr/tabs";
+import { HR_TABS, hrTabPaths, tabOf, type HrTab } from "@/lib/hr/tabs";
 import { hrPath } from "@/lib/routes";
 import css from "@/components/booking/booking.module.css";
+import { useCopy } from "./lang";
 import { SplashCover } from "./Splash";
 import hr from "./hr.module.css";
 
@@ -23,6 +24,7 @@ const tabIcons: Record<HrTab, typeof House> = { beranda: House, riwayat: Calenda
 export function HrFrame({ children }: { children: ReactNode }) {
   const tab = tabOf(usePathname());
   const scrolls = useRef<Partial<Record<HrTab, number>>>({});
+  const { t } = useCopy();
 
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register(`${hrPath.home}/sw.js`, { scope: `${hrPath.home}/` }).catch(() => undefined);
@@ -30,8 +32,8 @@ export function HrFrame({ children }: { children: ReactNode }) {
   // Each place comes back where it was left; the title follows (no page load sets it).
   useEffect(() => {
     window.scrollTo(0, scrolls.current[tab] ?? 0);
-    document.title = tab === "beranda" ? "WG People" : `${hrTabLabels[tab]} · WG People`;
-  }, [tab]);
+    document.title = tab === "beranda" ? "WG People" : `${t.tabs[tab]} · WG People`;
+  }, [tab, t]);
 
   const go = (event: MouseEvent<HTMLAnchorElement>, to: HrTab) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -48,11 +50,11 @@ export function HrFrame({ children }: { children: ReactNode }) {
   return <div className={`${css.app} ${hr.bk} ${hr.shell}`}>
     <div className={hr.statusCover} aria-hidden />
     <main id="wg-main" className={hr.main}>{children}</main>
-    <nav id="wg-nav" className={hr.tabbar} aria-label="Menu utama"><div className={hr.tabbarInner}>
+    <nav id="wg-nav" className={hr.tabbar} aria-label={t.menu}><div className={hr.tabbarInner}>
       {HR_TABS.map(key => {
         const Icon = tabIcons[key];
         return <a key={key} href={hrTabPaths[key]} className={hr.tab} aria-current={key === tab ? "page" : undefined} onClick={event => go(event, key)}>
-          <span className={hr.tabIcon}><Icon size={22} strokeWidth={key === tab ? 2.4 : 1.9} aria-hidden /></span>{hrTabLabels[key]}
+          <span className={hr.tabIcon}><Icon size={22} strokeWidth={key === tab ? 2.4 : 1.9} aria-hidden /></span>{t.tabs[key]}
         </a>;
       })}
     </div></nav>

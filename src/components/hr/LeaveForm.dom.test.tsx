@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderIn } from "./test-lang";
 import type { LeaveRequest, TeamLeave } from "@/lib/hr/leave";
 
 /* Ajukan cuti and Tim (21 Nov 2026) with the server replaced: made-up people. */
@@ -15,7 +16,7 @@ const mine: LeaveRequest = { id: "l1", type: "cuti", startDate: "2026-11-25", en
 it("sends a span of days with a note, with Kirim only when it can", async () => {
   api.submitLeave.mockResolvedValue("Pengajuan terkirim.");
   const done = vi.fn();
-  render(<LeaveSheet today="2026-11-20" initialType="sakit" leaves={[]} onDone={done} onCancel={() => undefined} />);
+  renderIn("id", <LeaveSheet today="2026-11-20" initialType="sakit" leaves={[]} onDone={done} onCancel={() => undefined} />);
   expect(screen.getByRole("heading", { name: "Ajukan sakit" })).toBeTruthy();
   const send = screen.getByRole("button", { name: "Kirim" }) as HTMLButtonElement;
   expect(send.disabled).toBe(true);
@@ -29,7 +30,7 @@ it("sends a span of days with a note, with Kirim only when it can", async () => 
 });
 
 it("says when the days meet another of the person's own requests, and does not send", () => {
-  render(<LeaveSheet today="2026-11-20" initialType="izin" leaves={[mine]} onDone={() => undefined} onCancel={() => undefined} />);
+  renderIn("id", <LeaveSheet today="2026-11-20" initialType="izin" leaves={[mine]} onDone={() => undefined} onCancel={() => undefined} />);
   fireEvent.change(screen.getByLabelText("Mulai"), { target: { value: "2026-11-26" } });
   fireEvent.change(screen.getByLabelText("Keterangan"), { target: { value: "Urusan keluarga" } });
   expect(screen.getByText(/bertemu dengan pengajuanmu yang lain/)).toBeTruthy();
@@ -43,7 +44,7 @@ const team: TeamLeave[] = [
 
 it("shows the team's days as a calendar and as a list, approved and waiting in words", async () => {
   api.loadTeam.mockResolvedValue({ ready: true, leaves: team });
-  render(<TeamScreen today="2026-11-20" stamp="a" />);
+  renderIn("id", <TeamScreen today="2026-11-20" stamp="a" />);
   expect(await screen.findByRole("button", { name: /Jumat, 20 November: 1 orang, Dinas/ })).toBeTruthy();
   expect(screen.getByText("Contoh Dua")).toBeTruthy();
   expect(screen.getByText("Disetujui")).toBeTruthy();
@@ -58,16 +59,16 @@ it("shows the team's days as a calendar and as a list, approved and waiting in w
 it("says plainly when cuti is not open yet", async () => {
   api.loadTeam.mockResolvedValue({ ready: false, leaves: [] });
   // A new stamp (the person's own requests changed) reads the team again instead of the kept month.
-  render(<TeamScreen today="2026-11-20" stamp="b" />);
+  renderIn("id", <TeamScreen today="2026-11-20" stamp="b" />);
   expect(await screen.findByText("Cuti dan izin belum dibuka")).toBeTruthy();
 });
 
 it("keeps a month it has read while the stamp stays the same (Tim opened again)", async () => {
   api.loadTeam.mockResolvedValue({ ready: true, leaves: team });
-  render(<TeamScreen today="2026-11-20" stamp="c" />);
+  renderIn("id", <TeamScreen today="2026-11-20" stamp="c" />);
   await screen.findByText("Contoh Dua");
   cleanup();
-  render(<TeamScreen today="2026-11-20" stamp="c" />);
+  renderIn("id", <TeamScreen today="2026-11-20" stamp="c" />);
   expect(screen.getByText("Contoh Dua")).toBeTruthy();
   expect(api.loadTeam).toHaveBeenCalledTimes(1);
 });

@@ -3,6 +3,9 @@ import { ClockInFlow, type ClockInDetail, type ClockInStep } from "@/components/
 import { HrFrame } from "@/components/hr/HrFrame";
 import { jakarta } from "@/components/hr/font";
 import hr from "@/components/hr/hr.module.css";
+import { LangProvider } from "@/components/hr/lang";
+import { copies } from "@/lib/hr/copy";
+import { asLang } from "@/lib/hr/lang";
 import type { ClockInState, DailyRecord } from "@/lib/hr/attendance";
 import type { TeamLeave } from "@/lib/hr/leave";
 
@@ -54,21 +57,24 @@ const team: TeamLeave[] = [
 /**
  * Layout check for WG People's employee screens without signing in (20 Nov 2026), with made-up
  * data; ?kosong=1 for someone without a face or a clock-in yet, ?langkah=hasil|rendah|lokasi|revisi|persetujuan|gagal|kirim
- * for one sheet step, ?detail=hari|pengajuan|wajah|bantuan for a detail screen (on Beranda). The
+ * for one sheet step, ?detail=hari|pengajuan|wajah|bantuan for a detail screen (on Beranda), ?tema=gelap,
+ * ?bahasa=id (English otherwise), ?jam=HH:MM (UTC) for another time of the made-up day. The
  * bottom menu works as in the app. Its buttons call the real API, which refuses without a session.
  */
-export default async function DevHrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; langkah?: string; detail?: string; tema?: string }> }) {
+export default async function DevHrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; langkah?: string; detail?: string; tema?: string; bahasa?: string; jam?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { kosong, langkah, detail, tema } = await searchParams;
+  const { kosong, langkah, detail, tema, bahasa, jam } = await searchParams;
   const theme = tema === "gelap" ? "gelap" : "terang";
+  const lang = asLang(bahasa), t = copies[lang];
+  const now = jam && /^\d{2}:\d{2}$/.test(jam) ? `2026-11-20T${jam}:00.000Z` : "2026-11-20T02:41:00.000Z";
   const steps: Record<string, ClockInStep> = {
-    hasil: { name: "hasil", title: "Tercatat. Hati-hati di jalan!", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.47 }), note: null, then: null },
-    rendah: { name: "hasil", title: "Tercatat, Admin HR akan memeriksanya", record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.33, status: "perlu_cek", flags: ["skor_rendah"] }), note: "Perlu dicek Admin HR: kecocokan wajah rendah.", then: null },
+    hasil: { name: "hasil", title: t.flow.warm.pulang, record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.47 }), note: null, then: null },
+    rendah: { name: "hasil", title: t.flow.warm.cek, record: record({ id: "r9", kind: "pulang", at: "2026-11-20T10:12:00Z", faceScore: 0.33, status: "perlu_cek", flags: ["skor_rendah"] }), note: t.flow.reviewNote(t.flags.skor_rendah.toLowerCase()), then: null },
     lokasi: { name: "lokasi", kind: "pulang", consent: null },
     revisi: { name: "revisi", date: "2026-11-19" },
     persetujuan: { name: "persetujuan", then: "daftar" },
-    gagal: { name: "gagal", text: "Wajah belum cocok dengan foto acuan (kecocokan 61%, perlu sekitar 76%). Cari tempat terang, lalu coba lagi.", retry: { name: "ringkas" } },
-    kirim: { name: "kirim", text: "Mengirim absen…", since: Date.parse("2026-11-20T02:41:00Z") },
+    gagal: { name: "gagal", text: t.server("Wajah belum cocok dengan foto acuan (kecocokan 61%, perlu sekitar 76%). Cari tempat terang, lihat lurus ke kamera, lalu coba lagi."), retry: { name: "ringkas" } },
+    kirim: { name: "kirim", text: t.flow.sendingRecord, since: Date.parse("2026-11-20T02:41:00Z") },
   };
   const details: Record<string, ClockInDetail> = {
     hari: { kind: "hari", date: "2026-11-18", tab: "beranda" },
@@ -77,8 +83,8 @@ export default async function DevHrPage({ searchParams }: { searchParams: Promis
     bantuan: { kind: "bantuan", tab: "beranda" },
   };
   const initial = kosong ? { ...state, face: null, today: { ...state.today, masuk: null }, recent: [], requests: [], leaves: [] } : state;
-  return <div id="wg-tema" className={`${jakarta.variable} ${hr.theme}`} data-tema={theme}><HrFrame>
-    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now="2026-11-20T02:41:00.000Z" preview previewTeam={team} theme={theme}
+  return <div id="wg-tema" className={`${jakarta.variable} ${hr.theme}`} data-tema={theme} lang={lang}><LangProvider initial={lang}><HrFrame>
+    <ClockInFlow initial={initial} name="Contoh" fullName="Contoh Satu" now={now} preview previewTeam={team} theme={theme}
       initialStep={langkah ? steps[langkah] : undefined} initialDetail={detail ? details[detail] : undefined} />
-  </HrFrame></div>;
+  </HrFrame></LangProvider></div>;
 }

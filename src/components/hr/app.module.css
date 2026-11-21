@@ -4,8 +4,9 @@
  * a bar: a back chevron, the title in the middle, at most one action on the right. Tasks are sheets
  * (Batal on the left, the action on the right). Look of 21 Nov 2026 (third round): Werkudara blue and yellow. The
  * one action colour is yellow (a pill); blue tints the current tab and the bar actions (the iOS
- * tint). Today on Beranda and the receipt are the time card (.ticket: a blue stub, a perforation, a
- * white part); the day line (.dayLine) draws when work ran, here and in Riwayat.
+ * tint). The receipt is the time card (.ticket: a blue stub, a perforation, a white part); the day
+ * line (.dayLine) draws when work ran. Beranda (fourth look, 21 Nov 2026, "status sentence"): the
+ * greeting, the day in one large sentence with its times in blue, the day line and the one action.
  * Times in tabular figures. Status always as a word, never the colour alone. 44px targets.
  * Scales from brain/aturan/desain-ui.md: 34 large title, 28 title, 22 headline, 17 subtitle, 15–16
  * body, 13 label, 12 caption; radii from the --hr-r-* tokens.
@@ -23,6 +24,27 @@
 .lead { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-muted); }
 .headAction { flex: none; min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 120ms var(--hr-ease); }
 .headAction:active { transform: scale(.96); }
+
+/* Beranda: the greeting, then the day as one sentence (its times strong, in blue). */
+.hello { display: grid; gap: 6px; padding: 8px 0 0; }
+.screen .helloTitle { margin: 0; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -.035em; color: var(--hr-text); overflow-wrap: anywhere; }
+.helloLine { margin: 2px 0 0; max-width: 22ch; font-size: 24px; font-weight: 600; line-height: 1.25; letter-spacing: -.02em; color: var(--hr-muted); text-wrap: pretty; }
+.helloLine strong { color: var(--hr-primary); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The day line and the one action under the sentence. */
+.todayAct { display: grid; gap: 18px; margin-top: -4px; }
+.todayAct .dayLine { padding: 0 2px; }
+.todayAct .dayTrack { height: 14px; }
+.todayAct .dayTrack::before { top: 6px; }
+.todayAct .daySpan { top: 3px; }
+.todayAct .dayPin { top: 2px; }
+.todayAct .daySun { top: -2px; box-shadow: 0 0 0 3px var(--hr-app); }
+.actHint { margin: -8px 0 0; font-size: 13px; color: var(--hr-muted); text-align: center; }
+.todayAct .quiet { margin-top: -10px; }
+/* Today's two records as rows: In / Out, the time, the place, a status badge when not Verified. */
+.slotKind { flex: none; width: 56px; font-size: 13px; font-weight: 700; color: var(--hr-muted); }
+.slotClock { font-size: 20px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.warnIcon { color: var(--hr-warning); }
+.dangerIcon { color: var(--hr-danger); }
 
 /* Grouped lists (inset, like Settings). Labels and notes line up with the text in the rows. */
 .group { display: grid; gap: 8px; min-width: 0; }
@@ -61,6 +83,13 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .status_perlu_cek, .status_menunggu { color: var(--hr-warning); }
 .status_ditolak { color: var(--hr-danger); }
 .status_dibatalkan, .status_kosong { color: var(--hr-muted); }
+/* The same word as a small tinted pill, under a row's text (Riwayat, Pengajuan, Tim, Beranda's today). */
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.statusBadge { padding: 3px 10px 3px 8px; border-radius: 999px; background: var(--hr-surface-soft); font-size: 12px; line-height: 1.35; }
+.statusBadge::before { width: 6px; height: 6px; }
+.statusBadge.status_sah, .statusBadge.status_disetujui { background: var(--hr-success-soft); }
+.statusBadge.status_perlu_cek, .statusBadge.status_menunggu { background: var(--hr-warning-soft); }
+.statusBadge.status_ditolak { background: var(--hr-danger-soft); }
 
 /* One main button for the whole app: a yellow pill. Disabled looks inert, not faded yellow. */
 .wide, .action { width: 100%; min-height: 56px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font: inherit; font-size: 17px; font-weight: 800; letter-spacing: -.005em; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease), transform 120ms var(--hr-ease); }
@@ -93,8 +122,7 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .zone { font-size: 15px; font-weight: 700; color: var(--hr-accent); }
 .state { margin: 0; font-size: 15px; line-height: 1.45; color: var(--hr-on-brand-muted); }
 .live { color: var(--hr-on-brand); font-weight: 800; font-variant-numeric: tabular-nums; }
-.done { margin: 0; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: var(--hr-brand-raised); color: var(--hr-on-brand); font-weight: 700; }
-.done svg { color: var(--hr-accent); }
+.done { margin: 0; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: var(--hr-success-soft); color: var(--hr-success); font-weight: 700; }
 .hint { margin: -4px 0 0; font-size: 13px; color: var(--hr-on-brand-muted); text-align: center; }
 /* The receipt's stamp: Sah in yellow, Perlu dicek dashed; pressed on like a rubber stamp. */
 .stamp { justify-self: start; margin: 0; padding: 6px 14px 6px 10px; display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--hr-accent); border-radius: 999px; color: var(--hr-accent); font-size: 15px; font-weight: 800; transform: rotate(-3deg); }
@@ -137,20 +165,26 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 /* A group's label with a number on the right (the week's hours). */
 .groupHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-right: 16px; }
 .groupValue { font-size: 13px; font-weight: 700; color: var(--hr-text); font-variant-numeric: tabular-nums; }
-/* This week: seven days, each a bar of the hours worked (to 10 hours), today ringed; a mark for each, said in words in the note below. */
-.week { display: grid; grid-template-columns: repeat(7, 1fr); padding: 8px 4px 6px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
-.day { min-height: 112px; min-width: 0; padding: 6px 0; display: grid; grid-template-rows: 1fr auto auto auto; justify-items: center; align-content: end; gap: 4px; border: 0; border-radius: 14px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
+/*
+ * This week: seven days, each a round date (filled blue = complete, a blue ring = incomplete, amber =
+ * needs review), the hours under it, today underlined; the legend below says the same in words.
+ */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 10px 4px 8px; border-radius: var(--hr-r-card); background: var(--hr-surface); border: 1px solid var(--hr-line); }
+.day { min-height: 92px; min-width: 0; padding: 4px 0; display: grid; justify-items: center; align-content: start; gap: 6px; border: 0; border-radius: 14px; background: transparent; color: var(--hr-text); font: inherit; cursor: pointer; transition: background-color var(--hr-fast) var(--hr-ease); }
 .day:hover:not(:disabled) { background: var(--hr-surface-soft); }
 .day:disabled { cursor: default; color: var(--hr-muted); }
-.day[aria-current="date"] { box-shadow: inset 0 0 0 1.5px var(--hr-text); }
-.dayBar { position: relative; width: 10px; height: 52px; border-radius: 999px; background: var(--hr-surface-soft); overflow: hidden; }
-.dayFill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: inherit; background: var(--hr-primary); }
-.dayName { font-size: 12px; font-weight: 600; color: var(--hr-muted); }
-.dayNumber { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dayName { font-size: 12px; font-weight: 700; color: var(--hr-muted); }
+.dayNumber { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.day[data-day="lengkap"] .dayNumber { background: var(--hr-primary); color: var(--hr-on-primary); }
+.day[data-day="sebagian"] .dayNumber { box-shadow: inset 0 0 0 2px var(--hr-primary); color: var(--hr-primary); }
+.day[data-day="cek"] .dayNumber { background: var(--hr-warning-soft); color: var(--hr-warning); box-shadow: inset 0 0 0 2px var(--hr-warning); }
+.day[aria-current="date"] .dayName { color: var(--hr-text); }
+.day[aria-current="date"]::after { content: ""; width: 16px; height: 3px; margin-top: -2px; border-radius: 2px; background: var(--hr-accent); }
+.dayHours { min-height: 14px; font-size: 11px; font-weight: 700; color: var(--hr-muted); font-variant-numeric: tabular-nums; }
 .mark { width: 8px; height: 8px; }
-.mark_lengkap { border-radius: 50%; background: var(--hr-text); }
-.mark_sebagian { border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--hr-text); }
-.mark_cek { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1.5px; background: var(--hr-warning); }
+.mark_lengkap { width: 10px; height: 10px; border-radius: 50%; background: var(--hr-primary); }
+.mark_sebagian { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--hr-primary); }
+.mark_cek { width: 10px; height: 10px; border-radius: 50%; background: var(--hr-warning-soft); box-shadow: inset 0 0 0 2px var(--hr-warning); }
 .mark_kosong { background: transparent; }
 .legend { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
 .legend .mark { display: inline-block; }
@@ -159,12 +193,21 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .segmented { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 2px; padding: 3px; border-radius: var(--hr-r-control); background: var(--hr-surface-soft); }
 .segment { min-height: 44px; min-width: 0; padding: 0 6px; border: 0; border-radius: 10px; background: transparent; color: var(--hr-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color var(--hr-fast) var(--hr-ease), color var(--hr-fast) var(--hr-ease); }
 .segment[aria-pressed="true"] { background: var(--hr-surface); color: var(--hr-text); font-weight: 700; box-shadow: 0 0 0 1px var(--hr-line-strong), 0 1px 2px rgb(0 0 0 / .08); }
-.segmentCount { font-variant-numeric: tabular-nums; font-weight: 500; }
+/* A count as a small round badge after its label; amber when it needs the person, quiet at zero. */
+.segment { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 4px; }
+.segmentCount { flex: none; min-width: 20px; height: 20px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--hr-line); color: var(--hr-text); font-size: 12px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.segment[aria-pressed="true"] .segmentCount { background: var(--hr-primary); color: var(--hr-on-primary); }
+.segmentCount[data-alert] { background: var(--hr-warning-soft); color: var(--hr-warning); }
+.segment[aria-pressed="true"] .segmentCount[data-alert] { background: var(--hr-warning); color: var(--hr-on-primary); }
+.segmentCount[data-zero] { background: transparent; color: var(--hr-muted); box-shadow: inset 0 0 0 1px var(--hr-line-strong); }
 
 /* Riwayat rows: the date first, then the times. */
-.date { flex: none; width: 40px; display: grid; justify-items: center; line-height: 1.1; }
-.dateName { font-size: 12px; font-weight: 600; color: var(--hr-muted); }
-.dateNumber { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* The date as a small calendar tile (a badge); today in blue. */
+.date { flex: none; align-self: flex-start; width: 46px; padding: 6px 0 7px; display: grid; justify-items: center; gap: 1px; line-height: 1.1; border-radius: 12px; background: var(--hr-surface-soft); }
+.dateName { font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--hr-muted); }
+.dateNumber { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.date[data-today] { background: var(--hr-primary); color: var(--hr-on-primary); }
+.date[data-today] .dateName { color: inherit; opacity: .8; }
 .times { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .timesEmpty { color: var(--hr-muted); font-weight: 500; }
 
@@ -256,8 +299,12 @@ button.row:active, label.row:active { background: var(--hr-surface-soft); }
 .pickButton { min-height: 60px; padding: 10px 20px; display: grid; justify-items: center; gap: 2px; border-top: 1px solid var(--hr-line); font-weight: 600; }
 .pickButton small { font-size: 12px; font-weight: 500; color: var(--hr-muted); }
 
-/* Beranda: today's own cuti, sakit, izin or dinas, beside "Hari ini". */
-.awayChip { margin-left: 8px; padding: 2px 10px; border-radius: 999px; background: var(--hr-accent); color: var(--hr-on-accent); font-size: 12px; font-weight: 800; }
+/* Beranda: today's own cuti, sakit, izin or dinas, under the sentence, in its own colour. */
+.awayChip { justify-self: start; margin: 4px 0 0; padding: 5px 12px; border-radius: 999px; background: var(--leave-soft, var(--hr-surface-soft)); color: var(--leave-ink, var(--hr-text)); font-size: 13px; font-weight: 700; }
+.awayChip[data-type="cuti"] { --leave-soft: var(--hr-cuti-soft); --leave-ink: var(--hr-cuti-ink); }
+.awayChip[data-type="sakit"] { --leave-soft: var(--hr-sakit-soft); --leave-ink: var(--hr-sakit-ink); }
+.awayChip[data-type="izin"] { --leave-soft: var(--hr-izin-soft); --leave-ink: var(--hr-izin-ink); }
+.awayChip[data-type="dinas"] { --leave-soft: var(--hr-dinas-soft); --leave-ink: var(--hr-dinas-ink); }
 
 /*
  * Cuti, sakit, izin, dinas: each its own colour, always with its word. A round initial (avatar),

@@ -2,18 +2,17 @@
 
 import { useId, useState } from "react";
 import {
-  kindLabels, REASON_KINDS, reasonLabels, REQUEST_DAYS, requestTypeLabels,
+  REASON_KINDS, REQUEST_DAYS,
   type AttendanceRequest, type DailyKind, type DailyRecord, type ReasonKind, type RequestType,
 } from "@/lib/hr/attendance";
 import { shiftDate } from "@/lib/hr/history";
-import { instantLabel, type ViewerZone } from "@/lib/pra-wam/zone";
-import { errorText } from "@/components/pra-wam/api";
+import { zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
+import { clockAt, hhmm, sayDate } from "@/lib/hr/lang";
+import { problemText, useCopy } from "./lang";
 import { submitRequest } from "./clockInApi";
 import { Choices, Segmented, Sheet } from "./ui";
 import styles from "./absen.module.css";
 import app from "./app.module.css";
-
-const dateOf = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 type Day = Record<DailyKind, DailyRecord | null>;
 /** Which slot a day starts on: the first empty one, else masuk. */
@@ -23,7 +22,7 @@ function fieldsFor(records: Day, kind: DailyKind, zone: ViewerZone) {
   const record = records[kind];
   return {
     kind, type: (record ? "ubah_jam" : "tambah") as RequestType,
-    time: record ? instantLabel(record.at, zone).replace(".", ":") : kind === "masuk" ? "08:00" : "17:00",
+    time: record ? zoneTime(record.at, zone) : kind === "masuk" ? "08:00" : "17:00",
     reasonKind: (record?.reasonKind ?? "dinas") as ReasonKind, reasonText: record?.reasonText ?? "",
   };
 }
@@ -51,6 +50,7 @@ export function RevisionSheet({ today, initialDate, recent, requests, zone, onDo
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const noteHint = useId();
+  const { t, lang } = useCopy();
   const { kind, type, time, reasonKind, reasonText } = fields;
   const record = records[kind];
   const types: RequestType[] = record ? ["ubah_jam", "ubah_alasan", "batal"] : ["tambah"];
@@ -74,39 +74,39 @@ export function RevisionSheet({ today, initialDate, recent, requests, zone, onDo
         reasonKind: type === "ubah_alasan" ? reasonKind : null, reasonText: type === "ubah_alasan" ? reasonText : "", note,
       });
       onDone(message);
-    } catch (error) { setProblem(errorText(error)); setBusy(false); }
+    } catch (error) { setProblem(problemText(t, error)); setBusy(false); }
   }
 
   const ready = !busy && !blocked && note.trim().length >= 3 && (type !== "ubah_alasan" || reasonKind !== "lainnya" || reasonText.trim().length >= 3);
-  return <Sheet title="Ajukan revisi" lead={busy ? null : { kind: "cancel", onClick: onCancel }}
-    action={<button type="button" className={`${app.barText} ${app.barStrong}`} disabled={!ready} onClick={() => void send()}>{busy ? "Mengirim…" : "Kirim"}</button>}>
+  return <Sheet title={t.revision.title} lead={busy ? null : { kind: "cancel", onClick: onCancel }}
+    action={<button type="button" className={`${app.barText} ${app.barStrong}`} disabled={!ready} onClick={() => void send()}>{busy ? t.common.sending : t.common.send}</button>}>
     <label className={styles.field}>
-      <span>Tanggal</span>
+      <span>{t.revision.date}</span>
       <input type="date" min={earliest} max={today} value={date} onChange={event => pickDate(event.target.value)} />
-      <small className={styles.fieldHint}>{dateOf(date)}{date === today ? " · hari ini" : ""}</small>
+      <small className={styles.fieldHint}>{sayDate(lang, date, t.dateLong)}{date === today ? t.revision.today : ""}</small>
     </label>
-    <Segmented label="Absen yang mana" value={kind} onChange={pickKind} options={(["masuk", "pulang"] as const).map(option => ({
-      value: option, label: `${kindLabels[option]} · ${records[option] ? instantLabel(records[option]!.at, zone) : "belum ada"}`,
+    <Segmented label={t.revision.which} value={kind} onChange={pickKind} options={(["masuk", "pulang"] as const).map(option => ({
+      value: option, label: `${t.kind[option]} · ${records[option] ? clockAt(lang, records[option]!.at, zone) : t.revision.none}`,
     }))} />
     {blocked
-      ? <p className={styles.warn}>Sudah ada revisi yang menunggu untuk absen {kindLabels[kind].toLowerCase()} ini. Batalkan dulu di Pengajuan bila ingin mengubahnya.</p>
+      ? <p className={styles.warn}>{t.revision.blocked(t.clockNoun[kind])}</p>
       : <>
-        <Choices label="Apa yang perlu diperbaiki?" name="revisi-jenis" value={type} onChange={option => set({ type: option })}
-          options={types.map(option => ({ value: option, label: option === "tambah" ? `Lupa absen ${kindLabels[kind].toLowerCase()}` : requestTypeLabels[option] }))} />
+        <Choices label={t.revision.what} name="revisi-jenis" value={type} onChange={option => set({ type: option })}
+          options={types.map(option => ({ value: option, label: option === "tambah" ? t.revision.forgot(t.clockIn[kind]) : t.requestType[option] }))} />
         {(type === "tambah" || type === "ubah_jam") && <label className={styles.field}>
-          <span>Jam yang benar ({zone})</span>
+          <span>{t.revision.rightTime(zone)}</span>
           <input type="time" value={time} onChange={event => set({ time: event.target.value })} />
-          {type === "ubah_jam" && record && <small className={styles.fieldHint}>{instantLabel(record.at, zone)} → {time.replace(":", ".")}</small>}
+          {type === "ubah_jam" && record && <small className={styles.fieldHint}>{clockAt(lang, record.at, zone)} → {hhmm(lang, time)}</small>}
         </label>}
         {type === "ubah_alasan" && <>
-          <Choices label="Alasan yang benar" name="revisi-alasan" value={reasonKind} onChange={option => set({ reasonKind: option })}
-            options={REASON_KINDS.map(option => ({ value: option, label: reasonLabels[option] }))} />
-          <label className={styles.field}><span>Keterangan{reasonKind === "lainnya" ? "" : " (boleh kosong)"}</span><input type="text" maxLength={300} value={reasonText} onChange={event => set({ reasonText: event.target.value })} placeholder="Mis. nama venue atau klien" /></label>
+          <Choices label={t.revision.rightReason} name="revisi-alasan" value={reasonKind} onChange={option => set({ reasonKind: option })}
+            options={REASON_KINDS.map(option => ({ value: option, label: t.reason[option] }))} />
+          <label className={styles.field}><span>{t.revision.note(reasonKind === "lainnya")}</span><input type="text" maxLength={300} value={reasonText} onChange={event => set({ reasonText: event.target.value })} placeholder={t.revision.notePlaceholder} /></label>
         </>}
-        {type === "batal" && <p className={styles.warn}>Absen ini akan dihapus bila Admin HR menyetujui.</p>}
+        {type === "batal" && <p className={styles.warn}>{t.revision.remove}</p>}
         <div className={styles.field}>
-          <label className={styles.field}><span>Kenapa perlu direvisi?</span><input type="text" maxLength={300} value={note} onChange={event => setNote(event.target.value)} placeholder="Mis. HP mati waktu datang" aria-describedby={noteHint} /></label>
-          <small id={noteHint} className={styles.fieldHint}>Minimal 3 huruf. Admin HR memeriksa dan memutuskan; hasilnya muncul di Pengajuan.</small>
+          <label className={styles.field}><span>{t.revision.why}</span><input type="text" maxLength={300} value={note} onChange={event => setNote(event.target.value)} placeholder={t.revision.whyPlaceholder} aria-describedby={noteHint} /></label>
+          <small id={noteHint} className={styles.fieldHint}>{t.revision.whyHint}</small>
         </div>
       </>}
     {problem && <p className={styles.problem} role="alert">{problem}</p>}

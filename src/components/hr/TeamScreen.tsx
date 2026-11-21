@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CalendarCheck2, ChevronLeft, ChevronRight, UsersRound } from "lucide-react";
-import { covers, datesOf, leaveLabels, leaveStatusLabels, monthLabel, monthSpan, spanLabel, LEAVE_TYPES, type TeamLeave } from "@/lib/hr/leave";
+import { covers, datesOf, monthLabel, monthSpan, spanLabel, LEAVE_TYPES, type TeamLeave } from "@/lib/hr/leave";
+import { sayDate } from "@/lib/hr/lang";
 import { useStoredValue } from "@/components/console/storage";
-import { errorText } from "@/components/pra-wam/api";
+import { problemText, useCopy } from "./lang";
 import { loadTeam } from "./clockInApi";
 import { Empty, Group, initials, LargeHead, RowInfo, Segmented, SrOnly, StatusWord } from "./ui";
 import styles from "./app.module.css";
@@ -23,18 +24,17 @@ type Month = { ready: boolean; leaves: TeamLeave[] } | { error: string };
 const kept = new Map<string, Month>();
 let keptStamp: string | null = null;
 type View = "kalender" | "daftar";
-const say = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-const WEEK = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 /** Monday = 0 … Sunday = 6. */
 const weekday = (date: string) => (new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7;
 
 function Person({ leave, today }: { leave: TeamLeave; today: string }) {
+  const { t, lang } = useCopy();
   const days = datesOf(leave.startDate, leave.endDate).length;
   return <RowInfo
     lead={<span className={styles.teamAvatar} data-type={leave.type} aria-hidden>{initials(leave.name)}</span>}
-    title={<>{leave.name}{leave.mine && <span className={styles.teamMine}> (kamu)</span>}</>}
-    sub={<>{leaveLabels[leave.type]} · {spanLabel(leave.startDate, leave.endDate)}{days > 1 ? ` (${days} hari)` : ""}{covers(leave, today) ? " · hari ini" : ""}</>}
-    trailing={<StatusWord tone={leave.status}>{leaveStatusLabels[leave.status]}</StatusWord>} />;
+    title={<>{leave.name}{leave.mine && <span className={styles.teamMine}> ({t.common.you})</span>}</>}
+    sub={<>{t.leave[leave.type]} · {spanLabel(leave.startDate, leave.endDate, lang)}{days > 1 ? ` (${t.common.days(days)})` : ""}{covers(leave, today) ? t.team.todayMark : ""}
+      <span className={styles.badges}><StatusWord badge tone={leave.status}>{t.requestStatus[leave.status]}</StatusWord></span></>} />;
 }
 
 export function TeamScreen({ today, stamp = "", preview = null }: { today: string; stamp?: string; preview?: TeamLeave[] | null }) {
@@ -46,6 +46,8 @@ export function TeamScreen({ today, stamp = "", preview = null }: { today: strin
   });
   const [view, setView] = useStoredValue<View>("wg-tim-tampilan", "kalender", ["kalender", "daftar"]);
   const [picked, setPicked] = useState<string | null>(null);
+  const { t, lang } = useCopy();
+  const say = (date: string, options: Intl.DateTimeFormatOptions) => sayDate(lang, date, options);
   const shown = months[month];
 
   useEffect(() => {
@@ -54,10 +56,10 @@ export function TeamScreen({ today, stamp = "", preview = null }: { today: strin
     const timer = window.setTimeout(() => {
       loadTeam(month)
         .then(data => { kept.set(month, data); if (alive) setMonths(value => ({ ...value, [month]: data })); })
-        .catch(error => { if (alive) setMonths(value => ({ ...value, [month]: { error: errorText(error) } })); });
+        .catch(error => { if (alive) setMonths(value => ({ ...value, [month]: { error: problemText(t, error) } })); });
     }, 0);
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [month, months, preview]);
+  }, [month, months, preview, t]);
 
   const span = monthSpan(month);
   const go = (to: string) => { setMonth(to); setPicked(null); };
@@ -70,20 +72,20 @@ export function TeamScreen({ today, stamp = "", preview = null }: { today: strin
   const past = leaves.filter(leave => leave.endDate < today);
 
   return <div className={styles.screen}>
-    <LargeHead title="Tim" lead="Siapa yang cuti, sakit, izin, atau dinas." />
+    <LargeHead title={t.team.title} lead={t.team.lead} />
     <div className={styles.monthBar}>
-      <button type="button" className={styles.monthStep} aria-label={`Bulan sebelumnya, ${monthLabel(span.before)}`} onClick={() => go(span.before)}><ChevronLeft size={22} aria-hidden /></button>
-      <h2 className={styles.monthName} aria-live="polite">{monthLabel(month)}</h2>
-      <button type="button" className={styles.monthStep} aria-label={`Bulan berikutnya, ${monthLabel(span.after)}`} onClick={() => go(span.after)}><ChevronRight size={22} aria-hidden /></button>
+      <button type="button" className={styles.monthStep} aria-label={t.team.before(monthLabel(span.before, lang))} onClick={() => go(span.before)}><ChevronLeft size={22} aria-hidden /></button>
+      <h2 className={styles.monthName} aria-live="polite">{monthLabel(month, lang)}</h2>
+      <button type="button" className={styles.monthStep} aria-label={t.team.after(monthLabel(span.after, lang))} onClick={() => go(span.after)}><ChevronRight size={22} aria-hidden /></button>
     </div>
-    <Segmented<View> label="Tampilan" value={view} onChange={setView} options={[{ value: "kalender", label: "Kalender" }, { value: "daftar", label: "Daftar" }]} />
+    <Segmented<View> label={t.team.view} value={view} onChange={setView} options={[{ value: "kalender", label: t.team.calendar }, { value: "daftar", label: t.team.list }]} />
 
-    {!shown ? <div className={styles.teamLoading} aria-busy="true" aria-label="Memuat" />
-      : "error" in shown ? <Empty icon={<UsersRound size={32} aria-hidden />} title="Belum bisa dimuat">{shown.error}</Empty>
-        : !shown.ready ? <Empty icon={<CalendarCheck2 size={32} aria-hidden />} title="Cuti dan izin belum dibuka">Admin HR sedang menyiapkannya.</Empty>
+    {!shown ? <div className={styles.teamLoading} aria-busy="true" aria-label={t.common.loading} />
+      : "error" in shown ? <Empty icon={<UsersRound size={32} aria-hidden />} title={t.team.failed}>{shown.error}</Empty>
+        : !shown.ready ? <Empty icon={<CalendarCheck2 size={32} aria-hidden />} title={t.team.closed}>{t.team.closedLine}</Empty>
           : view === "kalender" ? <>
-            <section className={styles.calendar} aria-label={`Kalender ${monthLabel(month)}`}>
-              <div className={styles.calendarHead} aria-hidden>{WEEK.map(name => <span key={name}>{name}</span>)}</div>
+            <section className={styles.calendar} aria-label={t.team.calendarOf(monthLabel(month, lang))}>
+              <div className={styles.calendarHead} aria-hidden>{t.team.week.map(name => <span key={name}>{name}</span>)}</div>
               <div className={styles.calendarGrid}>
                 {Array.from({ length: weekday(span.first) }, (_, index) => <span key={`kosong-${index}`} />)}
                 {dates.map(date => {
@@ -94,24 +96,24 @@ export function TeamScreen({ today, stamp = "", preview = null }: { today: strin
                       {away.slice(0, 3).map(leave => <span key={leave.id} className={styles.teamDot} data-type={leave.type} data-waiting={leave.status === "menunggu" || undefined} />)}
                       {away.length > 3 && <span className={styles.calendarMore}>+{away.length - 3}</span>}
                     </span>
-                    <SrOnly>{say(date, { weekday: "long", day: "numeric", month: "long" })}: {away.length ? `${away.length} orang, ${[...new Set(away.map(leave => leaveLabels[leave.type]))].join(", ")}` : "tidak ada yang cuti, sakit, izin, atau dinas"}</SrOnly>
+                    <SrOnly>{t.team.srDay(say(date, t.dateLong), away.length, [...new Set(away.map(leave => t.leave[leave.type]))].join(", "))}</SrOnly>
                   </button>;
                 })}
               </div>
               <p className={styles.groupNote}>
-                {LEAVE_TYPES.map(type => <span key={type} className={styles.legend}><span className={styles.teamDot} data-type={type} aria-hidden /> {leaveLabels[type]}</span>)}
-                <span className={styles.legend}><span className={styles.teamDot} data-waiting aria-hidden /> cincin = menunggu</span>
+                {LEAVE_TYPES.map(type => <span key={type} className={styles.legend}><span className={styles.teamDot} data-type={type} aria-hidden /> {t.leave[type]}</span>)}
+                <span className={styles.legend}><span className={styles.teamDot} data-waiting aria-hidden /> {t.team.ring}</span>
               </p>
             </section>
             {on(day).length
-              ? <Group label={say(day, { weekday: "long", day: "numeric", month: "long" })}>{on(day).map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>
-              : <Empty title={say(day, { weekday: "long", day: "numeric", month: "long" })}>Tidak ada yang cuti, sakit, izin, atau dinas.</Empty>}
+              ? <Group label={say(day, t.dateLong)}>{on(day).map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>
+              : <Empty title={say(day, t.dateLong)}>{t.team.nobody}</Empty>}
           </>
-            : leaves.length === 0 ? <Empty icon={<UsersRound size={32} aria-hidden />} title="Semua di kantor">Tidak ada cuti, sakit, izin, atau dinas di {monthLabel(month)}.</Empty>
+            : leaves.length === 0 ? <Empty icon={<UsersRound size={32} aria-hidden />} title={t.team.allIn}>{t.team.allInLine(monthLabel(month, lang))}</Empty>
               : <>
-                {now.length > 0 && <Group label="Hari ini">{now.map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
-                {coming.length > 0 && <Group label="Akan datang">{coming.map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
-                {past.length > 0 && <Group label="Sudah lewat">{[...past].reverse().map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
+                {now.length > 0 && <Group label={t.team.now}>{now.map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
+                {coming.length > 0 && <Group label={t.team.coming}>{coming.map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
+                {past.length > 0 && <Group label={t.team.past}>{[...past].reverse().map(leave => <Person key={leave.id} leave={leave} today={today} />)}</Group>}
               </>}
   </div>;
 }

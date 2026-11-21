@@ -1,5 +1,6 @@
 import type { DailyRecord } from "./attendance";
 import { zoneTime, type ViewerZone } from "@/lib/pra-wam/zone";
+import { sayDate, type Lang } from "./lang";
 
 /*
  * The arithmetic behind WG People's Beranda week and Riwayat (21 Nov 2026): weeks start on Monday,
@@ -15,23 +16,23 @@ export const weekStart = (date: string) => shiftDate(date, -((new Date(parse(dat
 /** The seven dates of the week the date is in, Monday first. */
 export const weekOf = (date: string) => Array.from({ length: 7 }, (_, index) => shiftDate(weekStart(date), index));
 
-const short = (date: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-/** "Minggu ini", "Minggu lalu", or the week's span: "3–9 Nov", "27 Okt – 2 Nov". */
-export function weekLabel(date: string, today: string): string {
+const dayMonth = (date: string, lang: Lang) => sayDate(lang, date, { day: "numeric", month: "short" });
+/** "Minggu ini", "Minggu lalu", or the week's span: "3–9 Nov", "27 Okt – 2 Nov" (or in English). */
+export function weekLabel(date: string, today: string, lang: Lang = "id"): string {
   const start = weekStart(date), thisWeek = weekStart(today);
-  if (start === thisWeek) return "Minggu ini";
-  if (start === shiftDate(thisWeek, -7)) return "Minggu lalu";
+  if (start === thisWeek) return lang === "id" ? "Minggu ini" : "This week";
+  if (start === shiftDate(thisWeek, -7)) return lang === "id" ? "Minggu lalu" : "Last week";
   const end = shiftDate(start, 6);
   return start.slice(5, 7) === end.slice(5, 7)
-    ? `${Number(start.slice(8))}–${short(end, { day: "numeric", month: "short" })}`
-    : `${short(start, { day: "numeric", month: "short" })} – ${short(end, { day: "numeric", month: "short" })}`;
+    ? `${Number(start.slice(8))}–${dayMonth(end, lang)}`
+    : `${dayMonth(start, lang)} – ${dayMonth(end, lang)}`;
 }
 
 /** Work dates that have a record, newest first, in groups by week. */
-export function byWeek(dates: string[], today: string): { label: string; dates: string[] }[] {
+export function byWeek(dates: string[], today: string, lang: Lang = "id"): { label: string; dates: string[] }[] {
   const groups: { label: string; dates: string[] }[] = [];
   for (const date of [...new Set(dates)].sort().reverse()) {
-    const label = weekLabel(date, today);
+    const label = weekLabel(date, today, lang);
     const last = groups.at(-1);
     if (last?.label === label) last.dates.push(date); else groups.push({ label, dates: [date] });
   }
@@ -46,8 +47,10 @@ const minutesOf = minuteOfDay;
 export const DAY_LINE = { from: 6 * 60, to: 22 * 60 };
 export const dayLinePercent = (minute: number) => Math.min(100, Math.max(0, ((minute - DAY_LINE.from) / (DAY_LINE.to - DAY_LINE.from)) * 100));
 const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}.${String(minutes % 60).padStart(2, "0")}`;
-/** "8 j 39 m", "45 m". */
-export const durationLabel = (minutes: number) => (minutes >= 60 ? `${Math.floor(minutes / 60)} j ${minutes % 60} m` : `${Math.max(0, minutes)} m`);
+/** "8 j 39 m", "45 m"; in English "8h 39m", "45m". */
+export const durationLabel = (minutes: number, lang: Lang = "id") => lang === "id"
+  ? (minutes >= 60 ? `${Math.floor(minutes / 60)} j ${minutes % 60} m` : `${Math.max(0, minutes)} m`)
+  : (minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${Math.max(0, minutes)}m`);
 /** Minutes between masuk and pulang (or now, while still at work). */
 export const workedMinutes = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 60_000));
 

@@ -4,19 +4,22 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Clock3, MapPin, RotateCcw, ScanFace, X } from "lucide-react";
 import {
-  CONSENT_VERSION, consentPoints, flagLabels, kindLabels, nextKind, REASON_KINDS, reasonLabels, statusLabels,
+  CONSENT_VERSION, nextKind, REASON_KINDS,
   type ClockInState, type DailyKind, type DailyRecord, type FaceStatus, type ReasonKind,
 } from "@/lib/hr/attendance";
+import type { Copy } from "@/lib/hr/copy";
 import { distanceLabel, locationVerdict, MAX_ACCURACY_M } from "@/lib/hr/geo";
+import { clockAt, sayDate } from "@/lib/hr/lang";
 import { tabOf, type HrTab } from "@/lib/hr/tabs";
 import { THEME_COOKIE, themeColors, type Theme } from "@/lib/hr/theme";
-import { LEAVE_TYPES, leaveHints, leaveLabels, type LeaveType, type TeamLeave } from "@/lib/hr/leave";
-import { instantLabel, zoneDate, zoneSuffix } from "@/lib/pra-wam/zone";
+import { LEAVE_TYPES, type LeaveType, type TeamLeave } from "@/lib/hr/leave";
+import { zoneDate, zoneSuffix } from "@/lib/pra-wam/zone";
 import { hrPath, praWamApi } from "@/lib/routes";
-import { errorText, praWamRequest } from "@/components/pra-wam/api";
+import { praWamRequest } from "@/components/pra-wam/api";
 import { useViewerZone } from "@/components/pra-wam/ViewerZone";
 import { cancelLeave, cancelRequest, loadState, readPlace, startClockIn, startEnroll, submitClockIn, submitEnroll, withdrawFace, type Challenge, type Place } from "./clockInApi";
 import { FaceCamera, type FaceCapture } from "./FaceCamera";
+import { problemText, useCopy } from "./lang";
 import { LeaveSheet } from "./LeaveForm";
 import { RevisionSheet } from "./RevisionForm";
 import { TeamScreen } from "./TeamScreen";
@@ -55,11 +58,8 @@ type Entry = { hrTop?: "detail" | "sheet"; hrDetails?: ClockInDetail[]; hrScroll
 const SUMMARY: Step = { name: "ringkas" };
 const SLOW_MS = 20_000;
 const usable = (status: FaceStatus | undefined) => status === "aktif" || status === "menunggu" || status === "siap";
-const absenTitle = (kind: DailyKind) => `Absen ${kindLabels[kind].toLowerCase()}`;
 /** The receipt's line after a new absen: a word for the day ahead, or that Admin HR will look. */
-const warmTitle = (record: DailyRecord) => record.status !== "sah" ? "Tercatat, Admin HR akan memeriksanya"
-  : record.kind === "masuk" ? "Tercatat. Selamat bekerja!" : "Tercatat. Hati-hati di jalan!";
-const receiptDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const warmTitle = (record: DailyRecord, t: Copy) => record.status !== "sah" ? t.flow.warm.cek : t.flow.warm[record.kind];
 const entry = (): Entry => (window.history.state as Entry | null) ?? {};
 const markOf = (target: DetailTarget) => (target.kind === "hari" ? `hari-${target.date}` : target.kind === "pengajuan" ? `pengajuan-${target.id}` : target.kind === "cuti" ? `cuti-${target.id}` : target.kind);
 const detailKey = (detail: ClockInDetail) => `${detail.tab}-${markOf(detail)}`;
@@ -67,9 +67,9 @@ const detailKey = (detail: ClockInDetail) => `${detail.tab}-${markOf(detail)}`;
 const sending = (text: string): Step => ({ name: "kirim", text, since: Date.now() });
 /** Server answers end with a full stop; a title does not. */
 const asTitle = (text: string) => text.replace(/\.\s*$/, "");
-function titleOf(step: Step): string {
-  if (step.name === "persetujuan" || step.name === "daftar") return "Daftar wajah";
-  if (step.name === "lokasi" || step.name === "kamera") return absenTitle(step.kind);
+function titleOf(step: Step, t: Copy): string {
+  if (step.name === "persetujuan" || step.name === "daftar") return t.flow.register;
+  if (step.name === "lokasi" || step.name === "kamera") return t.clockIn[step.kind];
   return "WG People";
 }
 /** The time now, starting from the server's (so the first paint matches) and moving every 15 seconds. */
@@ -108,10 +108,12 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
 }) {
   const tab = tabOf(usePathname());
   const zone = useViewerZone();
+  const { t, lang } = useCopy();
+  const fail = (error: unknown) => problemText(t, error);
   const now = useNow(serverNow, preview); // the layout check keeps its own made-up time
   const [state, setState] = useState(initial);
   const [step, setStep] = useState<Step>(() => initialStep ?? (openEnroll && initial.ready && !usable(initial.face?.status) ? { name: "persetujuan", then: "daftar" } : SUMMARY));
-  const [sheetTitle, setSheetTitle] = useState(() => titleOf(step));
+  const [sheetTitle, setSheetTitle] = useState(() => titleOf(step, t));
   const [details, setDetails] = useState<ClockInDetail[]>(initialDetail ? [initialDetail] : []);
   const [question, setQuestion] = useState<Question | null>(null);
   /** The running clock-in or enrolment; aborted when its sheet closes, so a late answer does not reopen it. */
@@ -140,7 +142,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
   const next = nextKind(state.today);
   const verdict = useMemo(() => (place ? locationVerdict(place, state.offices) : null), [place, state.offices]);
   const refresh = useCallback(async () => { try { setState(await loadState()); } catch { /* keep what is shown */ } }, []);
-  const tell = useCallback((text: string, problem = false) => { setToast({ text, problem }); setSpoken(text); }, []);
+  const tell = useCallback((text: string, problem = false) => { const shown = t.server(text); setToast({ text: shown, problem }); setSpoken(shown); }, [t]);
 
   // Fresh data without a reload: when another place is opened, when the app comes back to the front,
   // when the device's zone changes (ViewerZone, "wk:zone"), and when the day turns while it is open.
@@ -226,7 +228,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
 
   const read = async () => {
     setReading(true); setPlaceError(null);
-    try { setPlace(await readPlace()); } catch (error) { setPlaceError(errorText(error)); } finally { setReading(false); }
+    try { setPlace(await readPlace(t)); } catch (error) { setPlaceError(fail(error)); } finally { setReading(false); }
   };
   useEffect(() => {
     if (step.name !== "lokasi" || place || reading || placeError) return;
@@ -239,67 +241,67 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
     setNotice(null); setAgreed(false); setPlace(null); setPlaceError(null); setReasonPicked(false); setReason({ kind: "event", text: "" });
     if (!usable(state.face?.status)) {
       // Say why: no photo from HR (missing from GreatDay), or one that cannot be used.
-      setNotice(state.face ? "Foto acuanmu belum bisa dipakai. Daftarkan wajahmu sekali lagi." : "Akunmu belum punya foto acuan dari HR (tidak ada di data GreatDay), jadi wajahmu didaftarkan sekali di sini. Admin HR akan menyetujuinya.");
-      open({ name: "persetujuan", then: "daftar" }, "Daftar wajah");
+      setNotice(state.face ? t.flow.unusable : t.flow.noReference);
+      open({ name: "persetujuan", then: "daftar" }, t.flow.register);
     }
-    else if (state.face?.status === "siap" && !state.face.consented) open({ name: "persetujuan", then: kind }, absenTitle(kind));
-    else open({ name: "lokasi", kind, consent: null }, absenTitle(kind));
+    else if (state.face?.status === "siap" && !state.face.consented) open({ name: "persetujuan", then: kind }, t.clockIn[kind]);
+    else open({ name: "lokasi", kind, consent: null }, t.clockIn[kind]);
   };
-  const enrolFromProfile = () => { setAgreed(false); setNotice(null); open({ name: "persetujuan", then: "daftar" }, "Daftar wajah"); };
+  const enrolFromProfile = () => { setAgreed(false); setNotice(null); open({ name: "persetujuan", then: "daftar" }, t.flow.register); };
 
   const openCamera = async (kind: DailyKind, consent: string | null) => {
     if (!place) return;
     const { signal } = flow;
     const outside = verdict?.kind === "di_luar";
-    setStep(sending("Menyiapkan absen…"));
+    setStep(sending(t.flow.preparing));
     try {
       const answer = await startClockIn(kind);
       if (signal.aborted) return;
-      if (answer.kind === "daftar") { setNotice(answer.message); setSheetTitle("Daftar wajah"); setStep({ name: "persetujuan", then: "daftar" }); return; }
-      if (answer.kind === "sudah") { await refresh(); setStep({ name: "hasil", title: `${absenTitle(kind)} hari ini sudah tercatat`, record: answer.record, note: null, then: null }); return; }
+      if (answer.kind === "daftar") { setNotice(t.server(answer.message)); setSheetTitle(t.flow.register); setStep({ name: "persetujuan", then: "daftar" }); return; }
+      if (answer.kind === "sudah") { await refresh(); setStep({ name: "hasil", title: t.flow.already(t.clockIn[kind]), record: answer.record, note: null, then: null }); return; }
       setStep({ name: "kamera", kind, challenge: answer.challenge, place, reason: outside ? reason : null, consent });
     } catch (error) {
-      if (!signal.aborted) setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind, consent } });
+      if (!signal.aborted) setStep({ name: "gagal", text: fail(error), retry: { name: "lokasi", kind, consent } });
     }
   };
 
   const captured = async (current: Extract<Step, { name: "kamera" }>, capture: FaceCapture) => {
     const { signal } = flow;
-    setStep(sending("Mengirim absen…"));
+    setStep(sending(t.flow.sendingRecord));
     try {
       const { data, message } = await submitClockIn(current.challenge, capture, current.place, current.reason, current.consent);
       await refresh();
       if (signal.aborted) { tell(message); return; }
-      const flags = data.record.flags.map(flag => flagLabels[flag]).join(", ");
-      setSpoken(message);
-      setStep({ name: "hasil", title: warmTitle(data.record), record: data.record, note: data.record.status === "perlu_cek" ? `Perlu dicek Admin HR: ${flags}.` : null, then: null });
+      const flags = data.record.flags.map(flag => t.flags[flag].toLowerCase()).join(", ");
+      setSpoken(t.server(message));
+      setStep({ name: "hasil", title: warmTitle(data.record, t), record: data.record, note: data.record.status === "perlu_cek" ? t.flow.reviewNote(flags) : null, then: null });
     } catch (error) {
-      if (signal.aborted) tell(errorText(error), true);
-      else setStep({ name: "gagal", text: errorText(error), retry: { name: "lokasi", kind: current.kind, consent: current.consent } });
+      if (signal.aborted) tell(fail(error), true);
+      else setStep({ name: "gagal", text: fail(error), retry: { name: "lokasi", kind: current.kind, consent: current.consent } });
     }
   };
 
   const enroll = async (then: DailyKind | null) => {
     const { signal } = flow;
-    setStep(sending("Menyiapkan kamera…"));
+    setStep(sending(t.flow.openingCamera));
     try {
       const challenge = await startEnroll();
       if (!signal.aborted) setStep({ name: "daftar", challenge, then });
-    } catch (error) { if (!signal.aborted) setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } }); }
+    } catch (error) { if (!signal.aborted) setStep({ name: "gagal", text: fail(error), retry: { name: "persetujuan", then: "daftar" } }); }
   };
 
   const enrolled = async (current: Extract<Step, { name: "daftar" }>, capture: FaceCapture) => {
     const { signal } = flow;
-    setStep(sending("Menyimpan wajahmu…"));
+    setStep(sending(t.flow.saving));
     try {
       const { data, message } = await submitEnroll(current.challenge, capture, CONSENT_VERSION);
       await refresh();
       if (signal.aborted) { tell(message); return; }
-      setSpoken(message);
-      setStep({ name: "hasil", title: message, record: null, note: data.status === "menunggu" ? "Absenmu tetap bisa dicatat; statusnya \"Perlu dicek\" sampai Admin HR menyetujui wajahmu." : null, then: current.then ?? next });
+      setSpoken(t.server(message));
+      setStep({ name: "hasil", title: t.server(message), record: null, note: data.status === "menunggu" ? t.flow.enrolNote : null, then: current.then ?? next });
     } catch (error) {
-      if (signal.aborted) tell(errorText(error), true);
-      else setStep({ name: "gagal", text: errorText(error), retry: { name: "persetujuan", then: "daftar" } });
+      if (signal.aborted) tell(fail(error), true);
+      else setStep({ name: "gagal", text: fail(error), retry: { name: "persetujuan", then: "daftar" } });
     }
   };
 
@@ -316,7 +318,7 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       if (asked.kind === "ajukan") return;
       tell(asked.kind === "hapus-wajah" ? await withdrawFace() : asked.kind === "batal-cuti" ? await cancelLeave(asked.id) : await cancelRequest(asked.id));
       await refresh();
-    } catch (error) { tell(errorText(error), true); }
+    } catch (error) { tell(fail(error), true); }
   };
 
   /** Each step settles in as its own screen. */
@@ -325,93 +327,93 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
   function stepContent(): ReactNode {
     if (step.name === "persetujuan") return <section className={styles.stack} aria-labelledby="persetujuan-judul">
       <div className={app.summary}>
-        <h3 id="persetujuan-judul" className={app.summaryTitle}>Persetujuan data wajah</h3>
+        <h3 id="persetujuan-judul" className={app.summaryTitle}>{t.flow.consentTitle}</h3>
         {notice && <p className={app.lead}>{notice}</p>}
       </div>
-      <ul className={styles.points}>{consentPoints.map(point => <li key={point}><Check size={16} aria-hidden /><span>{point}</span></li>)}</ul>
-      <label className={styles.agree}><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /> Saya sudah membaca dan setuju.</label>
+      <ul className={styles.points}>{t.consent.map(point => <li key={point}><Check size={16} aria-hidden /><span>{point}</span></li>)}</ul>
+      <label className={styles.agree}><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /> {t.flow.agree}</label>
       <button type="button" className={app.wide} disabled={!agreed} onClick={() => (step.then === "daftar" ? void enroll(next) : setStep({ name: "lokasi", kind: step.then, consent: CONSENT_VERSION }))}>
-        {step.then === "daftar" ? "Setuju, daftarkan wajah" : "Setuju, lanjut absen"}
+        {step.then === "daftar" ? t.flow.agreeRegister : t.flow.agreeContinue}
       </button>
-      <p className={styles.small}>Tidak setuju? Tekan Batal. Absenmu tetap bisa dicatat manual oleh Admin HR.</p>
+      <p className={styles.small}>{t.flow.disagree}</p>
     </section>;
 
     if (step.name === "lokasi") {
       const outside = verdict?.kind === "di_luar";
       const reasonOk = !outside || (reasonPicked && (reason.kind !== "lainnya" || reason.text.trim().length >= 3));
       const tone = placeError ? "error" : !verdict ? "wait" : verdict.kind === "di_dalam" ? "in" : "out";
-      return <section className={styles.stack} aria-label="Lokasi">
+      return <section className={styles.stack} aria-label={t.flow.location}>
         {placeError
           ? <div key="salah" className={styles.place} data-tone="error" role="alert">
             <span className={styles.placeIcon} aria-hidden><MapPin size={22} /></span>
-            <span className={styles.placeText}><strong>Lokasi belum terbaca</strong><span>{placeError}</span></span>
+            <span className={styles.placeText}><strong>{t.flow.locationError}</strong><span>{placeError}</span></span>
           </div>
           : <div key="lokasi" className={styles.place} data-tone={tone} role="status">
             <span className={styles.placeIcon} aria-hidden>{tone === "wait" ? <span className={styles.spinner} /> : <MapPin size={22} />}</span>
             <span className={styles.placeText}>
-              {tone === "wait" && <><strong>Membaca lokasi…</strong><span>Tunggu sebentar. Nyalakan GPS bila belum.</span></>}
-              {verdict?.kind === "di_dalam" && <><strong>Di dalam area {verdict.office.name}</strong><span>{distanceLabel(verdict.distanceM)} dari titik kantor</span></>}
-              {verdict?.kind === "di_luar" && <><strong>{verdict.why === "tidak_akurat" ? "Lokasi kurang akurat" : verdict.why === "tanpa_kantor" ? "Belum ada titik kantor" : "Di luar area kantor"}</strong>
-                <span>{verdict.why === "tidak_akurat" ? `±${distanceLabel(place!.accuracyM)}, perlu ±${MAX_ACCURACY_M} m. Dekati jendela, lalu baca ulang.`
-                  : verdict.why === "tanpa_kantor" ? "Admin HR belum mengatur titik kantor."
-                    : `${distanceLabel(verdict.nearest!.distanceM)} dari ${verdict.nearest!.office.name}`}</span></>}
+              {tone === "wait" && <><strong>{t.flow.reading}</strong><span>{t.flow.readingLine}</span></>}
+              {verdict?.kind === "di_dalam" && <><strong>{t.flow.inside(verdict.office.name)}</strong><span>{t.day.fromOffice(distanceLabel(verdict.distanceM, lang))}</span></>}
+              {verdict?.kind === "di_luar" && <><strong>{verdict.why === "tidak_akurat" ? t.flow.inaccurate : verdict.why === "tanpa_kantor" ? t.flow.noOffice : t.flow.outside}</strong>
+                <span>{verdict.why === "tidak_akurat" ? t.flow.inaccurateLine(distanceLabel(place!.accuracyM, lang), MAX_ACCURACY_M)
+                  : verdict.why === "tanpa_kantor" ? t.flow.noOfficeLine
+                    : t.flow.fromOffice(distanceLabel(verdict.nearest!.distanceM, lang), verdict.nearest!.office.name)}</span></>}
             </span>
           </div>}
         {outside && <>
-          <Choices label="Kamu absen dari mana?" name="alasan" value={reasonPicked ? reason.kind : null}
+          <Choices label={t.flow.where} name="alasan" value={reasonPicked ? reason.kind : null}
             onChange={kind => { setReasonPicked(true); setReason(value => ({ ...value, kind })); }}
-            options={REASON_KINDS.map(kind => ({ value: kind, label: reasonLabels[kind] }))} />
+            options={REASON_KINDS.map(kind => ({ value: kind, label: t.reason[kind] }))} />
           <label className={styles.field}>
-            <span>Keterangan{reason.kind === "lainnya" ? "" : " (boleh kosong)"}</span>
-            <input type="text" maxLength={300} value={reason.text} placeholder="Mis. nama venue atau klien" onChange={event => setReason(value => ({ ...value, text: event.target.value }))} />
+            <span>{t.flow.note(reason.kind === "lainnya")}</span>
+            <input type="text" maxLength={300} value={reason.text} placeholder={t.flow.notePlaceholder} onChange={event => setReason(value => ({ ...value, text: event.target.value }))} />
           </label>
-          <p className={styles.small}>Absen di luar area tetap tercatat, dengan status Perlu dicek sampai Admin HR menyetujui.</p>
+          <p className={styles.small}>{t.flow.outsideNote}</p>
         </>}
         {placeError
-          ? <button type="button" className={app.wide} onClick={() => { setPlaceError(null); void read(); }}><RotateCcw size={18} aria-hidden /> Baca ulang lokasi</button>
+          ? <button type="button" className={app.wide} onClick={() => { setPlaceError(null); void read(); }}><RotateCcw size={18} aria-hidden /> {t.flow.readAgain}</button>
           : <>
-            <button type="button" className={app.wide} disabled={!place || reading || !reasonOk} onClick={() => void openCamera(step.kind, step.consent)}><ScanFace size={20} aria-hidden /> Lanjut ke kamera</button>
-            <button type="button" className={app.quiet} disabled={reading} onClick={() => { setPlace(null); setPlaceError(null); void read(); }}><RotateCcw size={14} aria-hidden /> Baca ulang lokasi</button>
+            <button type="button" className={app.wide} disabled={!place || reading || !reasonOk} onClick={() => void openCamera(step.kind, step.consent)}><ScanFace size={20} aria-hidden /> {t.flow.toCamera}</button>
+            <button type="button" className={app.quiet} disabled={reading} onClick={() => { setPlace(null); setPlaceError(null); void read(); }}><RotateCcw size={14} aria-hidden /> {t.flow.readAgain}</button>
           </>}
       </section>;
     }
 
-    if (step.name === "kamera") return <section className={styles.flowCamera} aria-label={`${absenTitle(step.kind)} · wajah`}>
+    if (step.name === "kamera") return <section className={styles.flowCamera} aria-label={t.flow.cameraLabel(t.clockIn[step.kind])}>
       <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="absen" onDone={capture => void captured(step, capture)} />
     </section>;
 
-    if (step.name === "daftar") return <section className={styles.flowCamera} aria-label="Daftar wajah">
-      <p className={styles.small}>Sekali saja. Ikuti petunjuk di bawah kamera.</p>
+    if (step.name === "daftar") return <section className={styles.flowCamera} aria-label={t.flow.register}>
+      <p className={styles.small}>{t.flow.once}</p>
       <FaceCamera key={step.challenge.nonce} steps={step.challenge.steps} purpose="daftar" onDone={capture => void enrolled(step, capture)} />
     </section>;
 
     if (step.name === "kirim") return <section className={styles.waiting}>
       <span className={styles.spinner} aria-hidden />
       <p className={styles.small}>{step.text}</p>
-      {Date.parse(now) - step.since > SLOW_MS && <p className={styles.small}>Masih menunggu jawaban. Periksa sinyal, atau tekan Batal lalu coba lagi.</p>}
+      {Date.parse(now) - step.since > SLOW_MS && <p className={styles.small}>{t.flow.slow}</p>}
     </section>;
 
     if (step.name === "gagal") return <section className={styles.stack}>
-      <div className={styles.place} data-tone="error" role="alert"><span className={styles.placeText}><strong>Belum berhasil</strong><span>{step.text}</span></span></div>
-      <button type="button" className={app.wide} onClick={() => setStep(step.retry)}><RotateCcw size={18} aria-hidden /> Coba lagi</button>
+      <div className={styles.place} data-tone="error" role="alert"><span className={styles.placeText}><strong>{t.flow.failed}</strong><span>{step.text}</span></span></div>
+      <button type="button" className={app.wide} onClick={() => setStep(step.retry)}><RotateCcw size={18} aria-hidden /> {t.common.tryAgain}</button>
     </section>;
 
     if (step.name === "hasil" && step.record) {
       const record = step.record;
       return <section className={styles.result}>
-        <Ticket label={`${absenTitle(record.kind)}, bukti`} stub={<>
-          <p className={app.stubLabel}>{absenTitle(record.kind)} · {receiptDay(record.workDate)}</p>
-          <p className={app.clockLine}><span className={app.clock}>{instantLabel(record.at, zone)}</span><span className={app.zone}>{zone}</span></p>
+        <Ticket label={t.flow.receipt(t.clockIn[record.kind])} stub={<>
+          <p className={app.stubLabel}>{t.clockIn[record.kind]} · {sayDate(lang, record.workDate, t.dateLong)}</p>
+          <p className={app.clockLine}><span className={app.clock}>{clockAt(lang, record.at, zone)}</span><span className={app.zone}>{zone}</span></p>
           <p className={app.stamp} data-tone={record.status === "sah" ? undefined : record.status}>
-            {record.status === "sah" ? <Check size={16} strokeWidth={3} aria-hidden /> : record.status === "ditolak" ? <X size={16} strokeWidth={3} aria-hidden /> : <Clock3 size={16} strokeWidth={2.6} aria-hidden />}{statusLabels[record.status]}
+            {record.status === "sah" ? <Check size={16} strokeWidth={3} aria-hidden /> : record.status === "ditolak" ? <X size={16} strokeWidth={3} aria-hidden /> : <Clock3 size={16} strokeWidth={2.6} aria-hidden />}{t.status[record.status]}
           </p>
         </>}>
           <h3 className={app.summaryTitle}>{asTitle(step.title)}</h3>
-          <p className={app.lead}>{placeOf(record)}{record.distanceM != null && record.officeName ? ` · ${distanceLabel(record.distanceM)} dari titik kantor` : ""}</p>
+          <p className={app.lead}>{placeOf(record, t)}{record.distanceM != null && record.officeName ? ` · ${t.day.fromOffice(distanceLabel(record.distanceM, lang))}` : ""}</p>
           {record.faceScore != null && <MatchMeter score={record.faceScore} />}
           {step.note && <p className={styles.warn}>{step.note}</p>}
         </Ticket>
-        <button type="button" className={app.wide} onClick={close}>Selesai</button>
+        <button type="button" className={app.wide} onClick={close}>{t.common.done}</button>
       </section>;
     }
 
@@ -420,11 +422,11 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       return <section className={styles.result}>
         <span className={styles.resultMark} data-tone={check ? "cek" : undefined} aria-hidden>{check ? <Clock3 size={32} strokeWidth={2.4} /> : <Check size={34} strokeWidth={2.6} />}</span>
         <h3 className={app.summaryTitle}>{asTitle(step.title)}</h3>
-        {step.record && <p className={app.lead}>{instantLabel(step.record.at, zone)}{zoneSuffix(zone)}{step.record.officeName ? ` · ${step.record.officeName}` : ""}</p>}
+        {step.record && <p className={app.lead}>{clockAt(lang, step.record.at, zone)}{zoneSuffix(zone)}{step.record.officeName ? ` · ${step.record.officeName}` : ""}</p>}
         {step.record?.faceScore != null && <MatchMeter score={step.record.faceScore} />}
         {step.note && <p className={styles.warn}>{step.note}</p>}
-        {step.then && <button type="button" className={app.wide} onClick={() => begin(step.then!)}>Lanjut {absenTitle(step.then).toLowerCase()}</button>}
-        <button type="button" className={step.then ? app.quiet : app.wide} onClick={close}>Selesai</button>
+        {step.then && <button type="button" className={app.wide} onClick={() => begin(step.then!)}>{t.flow.continue(t.clockIn[step.then])}</button>}
+        <button type="button" className={step.then ? app.quiet : app.wide} onClick={close}>{t.common.done}</button>
       </section>;
     }
     return null;
@@ -432,18 +434,18 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
 
   function detailScreen(detail: ClockInDetail): ReactNode {
     if (detail.kind === "hari") return <DayDetail state={state} date={detail.date} zone={zone} onBack={pop}
-      onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} onRequest={id => push({ kind: "pengajuan", id })} />;
+      onRevise={date => open({ name: "revisi", date }, t.revision.title)} onRequest={id => push({ kind: "pengajuan", id })} />;
     if (detail.kind === "pengajuan") {
       const request = state.requests.find(item => item.id === detail.id);
       return request
         ? <RequestDetail request={request} zone={zone} onBack={pop} onCancel={() => setQuestion({ kind: "batal-pengajuan", id: request.id })} />
-        : <Detail title="Revisi" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 31 hari.</Empty></Detail>;
+        : <Detail title={t.day.correction} onBack={pop}><Empty title={t.flow.notFound}>{t.flow.notFound31}</Empty></Detail>;
     }
     if (detail.kind === "cuti") {
       const leave = state.leaves?.find(item => item.id === detail.id);
       return leave
         ? <LeaveDetail leave={leave} zone={zone} onBack={pop} onCancel={() => setQuestion({ kind: "batal-cuti", id: leave.id })} />
-        : <Detail title="Pengajuan" onBack={pop}><Empty title="Pengajuan tidak ditemukan">Mungkin sudah lebih dari 120 hari.</Empty></Detail>;
+        : <Detail title={t.requests.title} onBack={pop}><Empty title={t.flow.notFound}>{t.flow.notFound120}</Empty></Detail>;
     }
     if (detail.kind === "wajah") return <FaceDetail state={state} onBack={pop} onEnroll={enrolFromProfile} onWithdraw={() => setQuestion({ kind: "hapus-wajah" })} />;
     return <HelpDetail state={state} onBack={pop} />;
@@ -456,15 +458,15 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
     if (tab === "profil") return <ProfileScreen state={state} fullName={fullName || name} zone={zone}
       theme={theme} onTheme={changeTheme} onFace={() => push({ kind: "wajah" })} onHelp={() => push({ kind: "bantuan" })} onSignOut={() => setQuestion({ kind: "keluar" })} />;
     return <HomeScreen state={state} now={now} zone={zone} name={name} onClock={begin}
-      onDay={date => push({ kind: "hari", date })} onRevise={date => open({ name: "revisi", date }, "Ajukan revisi")} />;
+      onDay={date => push({ kind: "hari", date })} onRevise={date => open({ name: "revisi", date }, t.revision.title)} />;
   }
 
   // Tim reads the team again once the person's own requests change (a new one shows there as waiting).
   const leaveStamp = (state.leaves ?? []).map(leave => `${leave.id}:${leave.status}`).join(",");
   const choose = (what: NewRequest) => {
     setQuestion(null);
-    if (what === "revisi") open({ name: "revisi" }, "Ajukan revisi");
-    else open({ name: "cuti", type: what }, `Ajukan ${leaveLabels[what].toLowerCase()}`);
+    if (what === "revisi") open({ name: "revisi" }, t.revision.title);
+    else open({ name: "cuti", type: what }, t.leaveTitle[what]);
   };
   const current = shownDetails.at(-1) ?? null;
   const slow = step.name === "kirim" && Date.parse(now) - step.since > SLOW_MS;
@@ -479,15 +481,15 @@ export function ClockInFlow({ initial, openEnroll = false, name = "", fullName =
       ? <RevisionSheet today={state.today.workDate} initialDate={step.date} recent={state.recent} requests={state.requests} zone={zone}
         onCancel={close} onDone={message => { tell(message); void refresh(); close(); }} />
       : sheetOpen && <Sheet title={sheetTitle} step={step.name} lead={(step.name === "kirim" && !slow) || step.name === "hasil" ? null : { kind: "cancel", onClick: close }}>{screen(stepContent())}</Sheet>}
-    {question?.kind === "ajukan" && <Pick<NewRequest> title="Ajukan apa?" onCancel={() => setQuestion(null)} onPick={choose}
+    {question?.kind === "ajukan" && <Pick<NewRequest> title={t.requests.pick} onCancel={() => setQuestion(null)} onPick={choose}
       options={[
-        ...(state.leaves ? LEAVE_TYPES.map(type => ({ value: type, label: leaveLabels[type], sub: leaveHints[type] })) : []),
-        { value: "revisi", label: "Revisi absen", sub: "Lupa absen, jam salah, alasan atau lokasi salah." },
+        ...(state.leaves ? LEAVE_TYPES.map(type => ({ value: type, label: t.leave[type], sub: t.leaveHint[type] })) : []),
+        { value: "revisi", label: t.requests.revision, sub: t.requests.revisionSub },
       ]} />}
     {question && question.kind !== "ajukan" && <Ask
-      title={question.kind === "keluar" ? "Keluar dari WG People?" : question.kind === "hapus-wajah" ? "Hapus data wajah?" : "Batalkan pengajuan ini?"}
-      message={question.kind === "keluar" ? "Masuk lagi dengan email dan password akun WAM-mu." : question.kind === "hapus-wajah" ? "Wajah acuan dan semua selfie absenmu dihapus. Absen berikutnya dicatat Admin HR secara manual sampai kamu daftar lagi." : question.kind === "batal-cuti" ? "Admin HR tidak akan memeriksanya lagi, dan tanggalnya hilang dari kalender tim." : "Admin HR tidak akan memeriksanya lagi."}
-      action={question.kind === "keluar" ? (leaving ? "Keluar…" : "Keluar") : question.kind === "hapus-wajah" ? "Hapus" : "Batalkan pengajuan"} danger
+      title={question.kind === "keluar" ? t.flow.signOut : question.kind === "hapus-wajah" ? t.flow.deleteFace : t.flow.withdraw}
+      message={question.kind === "keluar" ? t.flow.signOutLine : question.kind === "hapus-wajah" ? t.flow.deleteFaceLine : question.kind === "batal-cuti" ? t.flow.withdrawLeave : t.flow.withdrawLine}
+      action={question.kind === "keluar" ? (leaving ? t.flow.signingOut : t.profile.signOut) : question.kind === "hapus-wajah" ? t.flow.delete : t.decided.withdraw} danger
       onAction={() => void answer(question)} onCancel={() => setQuestion(null)} />}
     <Notices spoken={spoken} toast={toast} onClose={() => setToast(null)} />
   </>;

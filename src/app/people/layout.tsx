@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { asTheme, THEME_COOKIE, themeColors } from "@/lib/hr/theme";
+import { asLang, LANG_COOKIE } from "@/lib/hr/lang";
+import { LangProvider } from "@/components/hr/lang";
 import { HR_PATH } from "@/lib/routes";
 import { jakarta } from "@/components/hr/font";
 import hr from "@/components/hr/hr.module.css";
@@ -9,8 +11,8 @@ import hr from "@/components/hr/hr.module.css";
 /**
  * WG People (/people; /hr until 21 Nov 2026, which still redirects): the employees' HR app, apart
  * from WAM. Installable as its own app (its manifest and service worker, scope /people/). Absensi,
- * cuti and izin; lembur DW to come. Light unless the person picked dark (cookie wg_tema), drawn by
- * the server so nothing flashes.
+ * cuti and izin; lembur DW to come. Light unless the person picked dark (cookie wg_tema), English
+ * unless they picked Indonesia (cookie wg_bahasa), both drawn by the server so nothing flashes.
  */
 /** iPhone screens (CSS width, height, pixel ratio) with a launch picture in public/people (splash-<px>.png). */
 const LAUNCH: [number, number, number][] = [
@@ -38,6 +40,9 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function HrLayout({ children }: { children: ReactNode }) {
-  const theme = asTheme((await cookies()).get(THEME_COOKIE)?.value);
-  return <div id="wg-tema" className={`${jakarta.variable} ${hr.theme}`} data-tema={theme}>{children}</div>;
+  const jar = await cookies();
+  const theme = asTheme(jar.get(THEME_COOKIE)?.value), lang = asLang(jar.get(LANG_COOKIE)?.value);
+  return <div id="wg-tema" className={`${jakarta.variable} ${hr.theme}`} data-tema={theme} lang={lang}>
+    <LangProvider initial={lang}>{children}</LangProvider>
+  </div>;
 }

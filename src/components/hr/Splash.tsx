@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCopy } from "./lang";
 import { WgMark } from "./WgMark";
 import styles from "./splash.module.css";
 
@@ -38,10 +39,11 @@ function Face() {
 /** While the first screen is made: the splash, held. */
 export function SplashWait() {
   const [full] = useState(() => !covered || arriving);
+  const { t } = useCopy();
   useEffect(() => { if (full) { waited = true; arriving = false; } }, [full]);
   return <>
     <div className={`${styles.splash} ${styles.wait}`} aria-hidden>{full && <Face />}</div>
-    <p className={styles.srOnly} role="status">Memuat WG People</p>
+    <p className={styles.srOnly} role="status">{t.common.loadingApp}</p>
   </>;
 }
 

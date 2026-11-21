@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FACE_MATCH, matchPercent } from "@/lib/hr/face-match";
 import { dayLinePercent } from "@/lib/hr/history";
+import { useCopy } from "./lang";
 import styles from "./app.module.css";
 import flow from "./absen.module.css";
 
@@ -63,12 +64,13 @@ export function LargeHead({ title, eyebrow, lead, action }: { title: ReactNode; 
 
 type Lead = { kind: "back"; onClick(): void } | { kind: "close"; onClick(): void } | { kind: "cancel"; onClick(): void };
 function BarLead({ lead }: { lead: Lead | null }) {
+  const { t } = useCopy();
   if (!lead) return <span className={styles.barLead} />;
   return <span className={styles.barLead}>{lead.kind === "back"
-    ? <button type="button" className={styles.barIcon} aria-label="Kembali" onClick={lead.onClick}><ChevronLeft size={26} aria-hidden /></button>
+    ? <button type="button" className={styles.barIcon} aria-label={t.common.back} onClick={lead.onClick}><ChevronLeft size={26} aria-hidden /></button>
     : lead.kind === "close"
-      ? <button type="button" className={styles.barIcon} aria-label="Tutup" onClick={lead.onClick}><X size={22} aria-hidden /></button>
-      : <button type="button" className={styles.barText} onClick={lead.onClick}>Batal</button>}</span>;
+      ? <button type="button" className={styles.barIcon} aria-label={t.common.close} onClick={lead.onClick}><X size={22} aria-hidden /></button>
+      : <button type="button" className={styles.barText} onClick={lead.onClick}>{t.common.cancel}</button>}</span>;
 }
 
 /** A detail screen: its bar (back, title, one action) and what is in it. The bottom menu stays; focus starts at the title. */
@@ -112,6 +114,7 @@ export function Sheet({ title, lead, action, step, children }: { title: string; 
 export function Ask({ title, message, action, danger = false, onAction, onCancel }: { title: string; message?: string; action: string; danger?: boolean; onAction(): void; onCancel(): void }) {
   const cancel = useRef<HTMLButtonElement>(null);
   const messageId = useId();
+  const { t } = useCopy();
   useModal(onCancel);
   useEffect(() => { cancel.current?.focus({ preventScroll: true }); }, []);
   return <Layer>
@@ -121,7 +124,7 @@ export function Ask({ title, message, action, danger = false, onAction, onCancel
           <p className={styles.askText}><strong>{title}</strong>{message && <span id={messageId}>{message}</span>}</p>
           <button type="button" className={danger ? `${styles.askButton} ${styles.askDanger}` : styles.askButton} onClick={onAction}>{action}</button>
         </div>
-        <button ref={cancel} type="button" className={`${styles.askButton} ${styles.askCancel}`} onClick={onCancel}>Batal</button>
+        <button ref={cancel} type="button" className={`${styles.askButton} ${styles.askCancel}`} onClick={onCancel}>{t.common.cancel}</button>
       </div>
     </div>
   </Layer>;
@@ -130,6 +133,7 @@ export function Ask({ title, message, action, danger = false, onAction, onCancel
 /** A choice from the bottom, like an action sheet: a title, a few rows (each with a line under it), Batal. */
 export function Pick<T extends string>({ title, options, onPick, onCancel }: { title: string; options: { value: T; label: string; sub?: string }[]; onPick(value: T): void; onCancel(): void }) {
   const first = useRef<HTMLButtonElement>(null);
+  const { t } = useCopy();
   useModal(onCancel);
   useEffect(() => { first.current?.focus({ preventScroll: true }); }, []);
   return <Layer>
@@ -141,7 +145,7 @@ export function Pick<T extends string>({ title, options, onPick, onCancel }: { t
             <span>{option.label}</span>{option.sub && <small>{option.sub}</small>}
           </button>)}
         </div>
-        <button type="button" className={`${styles.askButton} ${styles.askCancel}`} onClick={onCancel}>Batal</button>
+        <button type="button" className={`${styles.askButton} ${styles.askCancel}`} onClick={onCancel}>{t.common.cancel}</button>
       </div>
     </div>
   </Layer>;
@@ -149,11 +153,12 @@ export function Pick<T extends string>({ title, options, onPick, onCancel }: { t
 
 /** Things said to screen readers (a sent request, a result) and the short message shown above the menu; a problem stays until closed. */
 export function Notices({ spoken, toast, onClose }: { spoken: string; toast: { text: string; problem: boolean } | null; onClose(): void }) {
+  const { t } = useCopy();
   return <Layer>
     <p className={styles.srOnly} role="status" aria-live="polite">{spoken}</p>
     {toast && <div className={styles.toast}>
       <span aria-hidden>{toast.text}</span>
-      {toast.problem && <button type="button" className={styles.toastClose} aria-label="Tutup pesan" onClick={onClose}><X size={18} aria-hidden /></button>}
+      {toast.problem && <button type="button" className={styles.toastClose} aria-label={t.common.closeMessage} onClick={onClose}><X size={18} aria-hidden /></button>}
     </div>}
   </Layer>;
 }
@@ -205,11 +210,14 @@ export function Choices<T extends string>({ label, name, options, value, onChang
   </section>;
 }
 
-/** A segmented control: two or three views of the same list. */
-export function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string; count?: number; unit?: string }[]; value: T; onChange(value: T): void }) {
+/**
+ * A segmented control: two or three views of the same list. A count sits in a small badge after its
+ * label (21 Nov 2026, the owner's ask); `alert` marks a count that needs the person (Needs review).
+ */
+export function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string; count?: number; unit?: string; alert?: boolean }[]; value: T; onChange(value: T): void }) {
   return <div className={styles.segmented} role="group" aria-label={label}>
     {options.map(option => <button key={option.value} type="button" className={styles.segment} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>
-      {option.label}{option.count != null && <> <span className={styles.segmentCount}>{option.count}</span>{option.unit && <span className={styles.srOnly}> {option.unit}</span>}</>}
+      {option.label}{option.count != null && <><span className={styles.segmentCount} data-alert={(option.alert && option.count > 0) || undefined} data-zero={option.count === 0 || undefined}>{option.count}</span>{option.unit && <span className={styles.srOnly}> {option.unit}</span>}</>}
     </button>)}
   </div>;
 }
@@ -222,21 +230,22 @@ export function Empty({ icon, title, children }: { icon?: ReactNode; title: stri
 /** Words for screen readers only. */
 export const SrOnly = ({ children }: { children: ReactNode }) => <span className={styles.srOnly}>{children}</span>;
 
-/** A status as a word with its mark. */
-export function StatusWord({ tone, children }: { tone: string; children: ReactNode }) {
-  return <span className={`${styles.status} ${styles[`status_${tone}`] ?? ""}`}>{children}</span>;
+/** A status as a word with its mark; `badge` sets it in a small tinted pill (under a row's text). */
+export function StatusWord({ tone, badge = false, children }: { tone: string; badge?: boolean; children: ReactNode }) {
+  return <span className={`${styles.status} ${styles[`status_${tone}`] ?? ""} ${badge ? styles.statusBadge : ""}`}>{children}</span>;
 }
 
 /** How close the face was to the reference, against where "cocok" starts (about 76%). */
 export function MatchMeter({ score }: { score: number }) {
+  const { t } = useCopy();
   const percent = matchPercent(score), at = matchPercent(FACE_MATCH.cocok);
   return <div className={flow.meter}>
-    <p className={flow.meterTop}><span>Kecocokan wajah</span><strong>{percent}%</strong></p>
-    <div className={flow.meterBar} role="img" aria-label={`Kecocokan wajah ${percent}%, batas cocok ${at}%`}>
+    <p className={flow.meterTop}><span>{t.meter.label}</span><strong>{percent}%</strong></p>
+    <div className={flow.meterBar} role="img" aria-label={t.meter.aria(percent, at)}>
       <div className={percent >= at ? flow.meterFill : `${flow.meterFill} ${flow.meterFillLow}`} style={{ width: `${percent}%` }} />
       <span className={flow.meterMark} style={{ left: `${at}%` }} />
     </div>
-    <p className={flow.meterNote}>Batas cocok {at}%</p>
+    <p className={flow.meterNote}>{t.meter.note(at)}</p>
   </div>;
 }
 
@@ -262,6 +271,7 @@ export function Ticket({ label, stub, children }: { label: string; stub: ReactNo
 export function DayLine({ start = null, end = null, now = null, tone = "plain", labels = false, thin = false }: {
   start?: number | null; end?: number | null; now?: number | null; tone?: "brand" | "plain"; labels?: boolean; thin?: boolean;
 }) {
+  const { t } = useCopy();
   const at = (minute: number) => dayLinePercent(minute);
   // Past midnight (a late shift) the end is on the next day: it runs to the end of the line.
   const from = start == null ? null : at(start), to = end == null || start == null ? null : at(end < start ? end + 24 * 60 : end);
@@ -271,6 +281,6 @@ export function DayLine({ start = null, end = null, now = null, tone = "plain", 
       {from != null && to == null && <span className={styles.dayPin} style={{ left: `${from}%` }} />}
       {now != null && <span className={styles.daySun} style={{ left: `${at(now)}%` }} />}
     </span>
-    {labels && <span className={styles.dayLabels}><span>06.00</span><span>14.00</span><span>22.00</span></span>}
+    {labels && <span className={styles.dayLabels}>{t.dayLabels.map(label => <span key={label}>{label}</span>)}</span>}
   </span>;
 }

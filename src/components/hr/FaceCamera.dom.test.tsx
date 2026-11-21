@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import { renderIn } from "./test-lang";
 import type { FrameSignal, LivenessStep } from "@/lib/hr/liveness";
 import type { FaceReading } from "./faceEngine";
 
@@ -60,7 +61,7 @@ it("walks a straight look, each step and a selfie, then hands back three looks",
     ...straight(4),
   ];
   const onDone = vi.fn();
-  render(<FaceCamera steps={steps} purpose="absen" onDone={onDone} />);
+  renderIn("id", <FaceCamera steps={steps} purpose="absen" onDone={onDone} />);
   await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1), { timeout: 6000 });
   const capture = onDone.mock.calls[0][0];
   expect(capture.frameEmbeddings).toHaveLength(3);
@@ -72,14 +73,14 @@ it("walks a straight look, each step and a selfie, then hands back three looks",
 
 it("asks for only one face in the picture", async () => {
   script = [{ faces: 2 }];
-  render(<FaceCamera steps={steps} purpose="absen" onDone={vi.fn()} />);
+  renderIn("id", <FaceCamera steps={steps} purpose="absen" onDone={vi.fn()} />);
   expect(await screen.findByText("Pastikan hanya kamu yang terlihat di kamera", {}, { timeout: 3000 })).toBeTruthy();
 });
 
 it("explains a refused camera and offers to try again", async () => {
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: vi.fn(async () => { throw new DOMException("no", "NotAllowedError"); }) } });
   script = [{}];
-  render(<FaceCamera steps={steps} purpose="daftar" onDone={vi.fn()} />);
+  renderIn("id", <FaceCamera steps={steps} purpose="daftar" onDone={vi.fn()} />);
   expect((await screen.findByRole("alert")).textContent).toMatch(/Akses kamera ditolak/);
   expect(screen.getByRole("button", { name: /Coba lagi/ })).toBeTruthy();
 });

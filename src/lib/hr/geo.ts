@@ -50,10 +50,10 @@ export function locationVerdict<T extends OfficePoint>(reading: Reading, offices
 }
 
 /** "35 m", "850 m", "2,3 km", "120 km". */
-export function distanceLabel(metres: number): string {
+export function distanceLabel(metres: number, lang: "en" | "id" = "id"): string {
   if (metres < 1000) return `${Math.max(0, Math.round(metres))} m`;
   const km = metres / 1000;
-  return `${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
+  return `${km < 10 ? (lang === "id" ? km.toFixed(1).replace(".", ",") : km.toFixed(1)) : Math.round(km)} km`;
 }
 
 /** Speed between two readings that would be impossible by road (km/h), for a "lokasi melompat" flag. */

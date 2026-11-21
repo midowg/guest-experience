@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderIn } from "./test-lang";
 
 /* WG People's own sign-in (21 Nov 2026) with the server replaced: a made-up email. */
 const router = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
@@ -14,7 +15,7 @@ afterEach(cleanup);
 
 it("signs in with the WAM account and goes on to WG People", async () => {
   request.mockResolvedValue({ data: { askNewPassword: false } });
-  render(<HrLogin next={null} />);
+  renderIn("id", <HrLogin next={null} />);
   expect(screen.getByRole("heading", { level: 1, name: "Masuk" })).toBeTruthy();
   expect(screen.getByText("Hari kerja dimulai di sini.")).toBeTruthy();
   const submit = screen.getByRole("button", { name: "Masuk" }) as HTMLButtonElement;
@@ -31,7 +32,7 @@ it("signs in with the WAM account and goes on to WG People", async () => {
 
 it("says why signing in failed, next to the form", async () => {
   request.mockRejectedValue(new Error("Email atau password salah."));
-  render(<HrLogin next="/people/riwayat" />);
+  renderIn("id", <HrLogin next="/people/riwayat" />);
   fireEvent.change(screen.getByLabelText("Email kantor"), { target: { value: "contoh@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "salah" } });
   fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
@@ -41,7 +42,7 @@ it("says why signing in failed, next to the form", async () => {
 
 it("sends a forgotten-password request and says what happens next", async () => {
   request.mockResolvedValue({ data: null });
-  render(<HrForgot />);
+  renderIn("id", <HrForgot />);
   fireEvent.change(screen.getByLabelText("Email kantor"), { target: { value: "contoh@example.com" } });
   fireEvent.click(screen.getByRole("button", { name: "Kirim permintaan" }));
   expect(await screen.findByRole("status")).toBeTruthy();

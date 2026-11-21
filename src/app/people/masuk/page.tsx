@@ -1,4 +1,7 @@
 import type { Viewport } from "next";
+import { cookies } from "next/headers";
+import { copies } from "@/lib/hr/copy";
+import { asLang, LANG_COOKIE } from "@/lib/hr/lang";
 import { redirect } from "next/navigation";
 import { HrLogin } from "@/components/hr/HrAuth";
 import { safePraWamNext } from "@/lib/pra-wam/session-token";
@@ -9,7 +12,9 @@ import { currentMember } from "@/lib/server/pra-wam/session";
 export const dynamic = "force-dynamic";
 /** The status bar takes the blue of the page top. */
 export const viewport: Viewport = { themeColor: "#1551A0" };
-export const metadata = { title: "Masuk" };
+export async function generateMetadata() {
+  return { title: copies[asLang((await cookies()).get(LANG_COOKIE)?.value)].auth.login };
+}
 
 /** Masuk: WG People's own sign-in page (the same employee account). Only an HR page may be the way back. */
 export default async function HrSignIn({ searchParams }: { searchParams: Promise<{ next?: string }> }) {

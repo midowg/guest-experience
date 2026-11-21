@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sayDate, type Lang } from "./lang";
 
 /*
  * Cuti, sakit, izin and dinas in WG People (decided 21 Nov 2026, migration 202611280001):
@@ -53,12 +54,12 @@ export const covers = (leave: { startDate: string; endDate: string }, date: stri
 /** Whether two spans share a day. */
 export const overlaps = (a: { startDate: string; endDate: string }, b: { startDate: string; endDate: string }) => a.startDate <= b.endDate && b.startDate <= a.endDate;
 
-const short = (date: string, withMonth = true) => new Intl.DateTimeFormat("id-ID", { day: "numeric", ...(withMonth ? { month: "short" } : {}), timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-/** "24 Nov", "24–26 Nov", "30 Nov – 2 Des". */
-export function spanLabel(startDate: string, endDate: string): string {
-  if (startDate === endDate) return short(startDate);
-  if (startDate.slice(0, 7) === endDate.slice(0, 7)) return `${short(startDate, false)}–${short(endDate)}`;
-  return `${short(startDate)} – ${short(endDate)}`;
+const short = (date: string, withMonth = true, lang: Lang = "id") => sayDate(lang, date, { day: "numeric", ...(withMonth ? { month: "short" } : {}) });
+/** "24 Nov", "24–26 Nov", "30 Nov – 2 Des" (Indonesian unless WG People's language says otherwise). */
+export function spanLabel(startDate: string, endDate: string, lang: Lang = "id"): string {
+  if (startDate === endDate) return short(startDate, true, lang);
+  if (startDate.slice(0, 7) === endDate.slice(0, 7)) return `${short(startDate, false, lang)}–${short(endDate, true, lang)}`;
+  return `${short(startDate, true, lang)} – ${short(endDate, true, lang)}`;
 }
 /** "Cuti · 24–26 Nov (3 hari)". */
 export const leaveSummary = (leave: { type: LeaveType; startDate: string; endDate: string }) =>
@@ -94,4 +95,4 @@ export function monthSpan(month: string): { first: string; last: string; before:
 }
 export const isMonth = (value: string | null | undefined): value is string => !!value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 /** "November 2026". */
-export const monthLabel = (month: string) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-15T12:00:00Z`));
+export const monthLabel = (month: string, lang: Lang = "id") => sayDate(lang, `${month}-15`, { month: "long", year: "numeric" });

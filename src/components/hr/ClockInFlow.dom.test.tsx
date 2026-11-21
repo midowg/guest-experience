@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LangProvider } from "./lang";
+import { renderIn } from "./test-lang";
 import type { ClockInState, DailyRecord } from "@/lib/hr/attendance";
 
 /* The clock-in screen with the server and the camera replaced: made-up office and person. */
@@ -44,13 +46,13 @@ afterEach(() => { cleanup(); nav.path = "/people"; });
 window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 
 it("says what it waits for before it is ready", () => {
-  render(<ClockInFlow initial={{ ...base, ready: false, waiting: "Absen harian menunggu migrasi 202611200701_pw_absen_harian.sql." }} />);
+  renderIn("id", <ClockInFlow initial={{ ...base, ready: false, waiting: "Absen harian menunggu migrasi 202611200701_pw_absen_harian.sql." }} />);
   expect(screen.getByText(/menunggu migrasi/)).toBeTruthy();
 });
 
 it("clocks in inside the office: location, camera, then the answer without a reload", async () => {
   api.readPlace.mockResolvedValue({ lat: -7.8003, lng: 110.4, accuracyM: 12 });
-  render(<ClockInFlow initial={base} />);
+  renderIn("id", <ClockInFlow initial={base} />);
   fireEvent.click(screen.getByRole("button", { name: /Absen masuk/ }));
   expect(await screen.findByText(/Di dalam area/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Lanjut ke kamera/ }));
@@ -62,7 +64,7 @@ it("clocks in inside the office: location, camera, then the answer without a rel
 
 it("asks for a reason outside every office point before the camera", async () => {
   api.readPlace.mockResolvedValue({ lat: -7.9, lng: 110.4, accuracyM: 12 });
-  render(<ClockInFlow initial={base} />);
+  renderIn("id", <ClockInFlow initial={base} />);
   fireEvent.click(screen.getByRole("button", { name: /Absen masuk/ }));
   expect(await screen.findByText(/Di luar area kantor/)).toBeTruthy();
   const next = screen.getByRole("button", { name: /Lanjut ke kamera/ }) as HTMLButtonElement;
@@ -78,7 +80,7 @@ it("asks for a reason outside every office point before the camera", async () =>
 it("asks for consent and enrols someone without a face first", async () => {
   api.startEnroll.mockResolvedValue({ ...challenge, purpose: "daftar" });
   api.submitEnroll.mockResolvedValue({ data: { status: "menunggu" }, message: "Wajahmu terdaftar. Admin akan memeriksanya; sementara itu absenmu tetap tercatat." });
-  render(<ClockInFlow initial={{ ...base, face: null }} />);
+  renderIn("id", <ClockInFlow initial={{ ...base, face: null }} />);
   fireEvent.click(screen.getByRole("button", { name: /Absen masuk/ }));
   const agree = screen.getByRole("button", { name: /Setuju, daftarkan wajah/ }) as HTMLButtonElement;
   expect(agree.disabled).toBe(true);
@@ -92,7 +94,7 @@ it("asks for consent and enrols someone without a face first", async () => {
 it("explains a refused location and lets the person read it again", async () => {
   const { PraWamApiError } = await import("@/components/pra-wam/api");
   api.readPlace.mockRejectedValueOnce(new PraWamApiError("Akses lokasi ditolak. Buka pengaturan situs di browser, izinkan Lokasi untuk WG People, lalu coba lagi."));
-  render(<ClockInFlow initial={base} />);
+  renderIn("id", <ClockInFlow initial={base} />);
   fireEvent.click(screen.getByRole("button", { name: /Absen masuk/ }));
   expect((await screen.findByRole("alert")).textContent).toMatch(/Akses lokasi ditolak/);
   api.readPlace.mockResolvedValue({ lat: -7.8, lng: 110.4, accuracyM: 8 });
@@ -102,7 +104,7 @@ it("explains a refused location and lets the person read it again", async () => 
 
 it("opens clocking in as a sheet with Batal as the one way out, which the back button also does", async () => {
   api.readPlace.mockResolvedValue({ lat: -7.8003, lng: 110.4, accuracyM: 12 });
-  render(<ClockInFlow initial={base} />);
+  renderIn("id", <ClockInFlow initial={base} />);
   fireEvent.click(screen.getByRole("button", { name: /Absen masuk/ }));
   expect(screen.getByRole("dialog", { name: "Absen masuk" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Tutup" })).toBeNull();
@@ -120,7 +122,7 @@ it("opens clocking in as a sheet with Batal as the one way out, which the back b
 it("shows each place of the bottom menu from the same data, each button once", () => {
   const today = { ...base, today: { ...base.today, masuk: record }, recent: [record], requests: [] };
   nav.path = "/people/riwayat";
-  const { rerender } = render(<ClockInFlow initial={today} name="Contoh" fullName="Contoh Satu" />);
+  const { rerender } = renderIn("id", <ClockInFlow initial={today} name="Contoh" fullName="Contoh Satu" />);
   expect(screen.getByRole("heading", { name: "Riwayat" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Hari ini, masuk/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Absen/ })).toBeNull();
@@ -138,7 +140,7 @@ it("shows each place of the bottom menu from the same data, each button once", (
 it("opens a day as a detail screen with a back button and Revisi, which opens the revision sheet on that day", () => {
   const today = { ...base, today: { ...base.today, masuk: record }, recent: [record] };
   nav.path = "/people/riwayat";
-  render(<ClockInFlow initial={today} />);
+  renderIn("id", <ClockInFlow initial={today} />);
   fireEvent.click(screen.getByRole("button", { name: /Hari ini, masuk/ }));
   expect(screen.getByRole("heading", { level: 1, name: /20 Nov/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Kembali" })).toBeTruthy();
@@ -149,9 +151,43 @@ it("opens a day as a detail screen with a back button and Revisi, which opens th
 
 it("asks before signing out", () => {
   nav.path = "/people/profil";
-  render(<ClockInFlow initial={base} fullName="Contoh Satu" />);
+  renderIn("id", <ClockInFlow initial={base} fullName="Contoh Satu" />);
   fireEvent.click(screen.getByRole("button", { name: "Keluar" }));
   expect(screen.getByRole("alertdialog", { name: "Keluar dari WG People?" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Batal" }));
   expect(screen.queryByRole("alertdialog")).toBeNull();
+});
+
+/* English is WG People's default (21 Nov 2026); Indonesian when the person picks it in Profile. */
+
+it("speaks English by default: Home's sentence, the action, the bottom menu and a server answer", async () => {
+  api.readPlace.mockResolvedValue({ lat: -7.8003, lng: 110.4, accuracyM: 12 });
+  render(<ClockInFlow initial={base} name="Rina" now="2026-11-20T01:00:00.000Z" />);
+  expect(screen.getByRole("heading", { level: 1, name: "Good morning, Rina." })).toBeTruthy();
+  expect(screen.getByText("You haven't clocked in yet.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /^Clock in$/ }));
+  expect(await screen.findByText(/Inside the Kantor Contoh area/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Continue to camera/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Kamera palsu absen" }));
+  expect(await screen.findByRole("heading", { name: "Recorded. Have a good day!" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Clock in, receipt" })).toBeTruthy();
+});
+
+it("puts History's status under each day's text and its counts in badges", () => {
+  const check = { ...record, id: "r2", workDate: "2026-11-19", at: "2026-11-19T01:30:00Z", status: "perlu_cek" as const, reasonKind: "event" as const, officeName: null };
+  nav.path = "/people/riwayat";
+  render(<ClockInFlow initial={{ ...base, recent: [check] }} />);
+  const row = screen.getByRole("button", { name: /Thursday 19 November, in/ });
+  expect(row.textContent).toContain("Needs review");
+  expect(screen.getByRole("button", { name: /To review\s*1 days/ })).toBeTruthy();
+});
+
+it("switches to Indonesian from Profile at once, without a reload", () => {
+  nav.path = "/people/profil";
+  render(<LangProvider initial="en"><ClockInFlow initial={base} fullName="Contoh Satu" /></LangProvider>);
+  expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Indonesia" }));
+  expect(screen.getByRole("heading", { level: 2, name: "Pengaturan" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Keluar" })).toBeTruthy();
+  expect(document.cookie).toContain("wg_bahasa=id");
 });

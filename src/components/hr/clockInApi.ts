@@ -1,3 +1,4 @@
+import type { Copy } from "@/lib/hr/copy";
 import type { AttendanceRequest, ClockInState, ClockMethod, DailyKind, DailyRecord, FaceStatus, ReasonKind, RequestType } from "@/lib/hr/attendance";
 import type { LeaveInput, LeaveRequest, TeamLeave } from "@/lib/hr/leave";
 import type { LivenessStep } from "@/lib/hr/liveness";
@@ -51,16 +52,14 @@ export async function submitEnroll(challenge: Challenge, capture: FaceCapture, c
   });
 }
 
-/** The phone's position, as sure as it can be within 15 seconds. */
-export function readPlace(): Promise<Place> {
+/** The phone's position, as sure as it can be within 15 seconds; a problem in the person's language. */
+export function readPlace(t: Copy): Promise<Place> {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new PraWamApiError("Browser ini tidak bisa membaca lokasi. Buka WG People di Chrome atau Safari terbaru.")); return; }
+    if (!navigator.geolocation) { reject(new PraWamApiError(t.place.unsupported)); return; }
     navigator.geolocation.getCurrentPosition(
       position => resolve({ lat: position.coords.latitude, lng: position.coords.longitude, accuracyM: Math.round(position.coords.accuracy) }),
       error => reject(new PraWamApiError(
-        error.code === error.PERMISSION_DENIED ? "Akses lokasi ditolak. Buka pengaturan situs di browser, izinkan Lokasi untuk WG People, lalu coba lagi."
-          : error.code === error.TIMEOUT ? "Lokasi belum terbaca. Nyalakan GPS, dekati jendela, lalu coba lagi."
-            : "Lokasi tidak bisa dibaca. Nyalakan GPS, lalu coba lagi.",
+        error.code === error.PERMISSION_DENIED ? t.place.denied : error.code === error.TIMEOUT ? t.place.timeout : t.place.failed,
       )),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     );
