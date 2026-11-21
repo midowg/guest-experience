@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, X } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
-import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
+import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -297,6 +297,8 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
+    {/* Making the photo ready to send (the pictures are shrunk on the phone first): a dialog, so nothing is tapped twice. */}
+    <LoadingDialog open={busy} title={t("momen.cam.sendingPhoto")} />
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
       <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
         action={<Button icon={Settings} onClick={() => setSheet("cara")}>{t("momen.cam.openSettings")}</Button>} />
