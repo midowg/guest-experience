@@ -256,10 +256,14 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   return <div className={css.screen} data-momen-camera="">
     <ShellChrome hideTopBar hideNav />
     {!demo && <MomenQueueRunner />}
-    <div className={css.bar}><IconButton variant="tonal" icon={X} label={t("momen.cam.close")} onClick={close} /></div>
+    <div className={css.bar}>
+      <IconButton variant="tonal" icon={X} label={t("momen.cam.close")} onClick={close} />
+      <div className={css.barText}><span className={css.barEyebrow}>{t("momen.cam.eyebrow")}</span><span className={css.barTitle}>{t("momen.cam.title")}</span></div>
+    </div>
 
     <div className={css.stage}><div className={css.stageInner}>
       <div className={css.view}>
+        <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
         {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
         {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")}><PhotoFill tone={5} className={css.fill} /></span>}
         {live === "hp" && (last

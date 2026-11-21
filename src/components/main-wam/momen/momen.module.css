@@ -44,7 +44,7 @@
 }
 
 .card {
-  position: absolute; inset: 0; z-index: 2; border-radius: var(--mw-radius-24); overflow: hidden; background: var(--mw-photo-bg);
+  position: absolute; inset: 0; z-index: 2; border-radius: var(--mw-radius-28); overflow: hidden; background: var(--mw-photo-bg); border: 6px solid var(--mw-media-on); box-shadow: var(--mw-elev-3);
   touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   transition: transform 260ms var(--mw-ease-standard), filter 260ms var(--mw-ease-standard), opacity 160ms linear;
 }
@@ -53,6 +53,8 @@
    straightens as it comes forward. "later" is a little lower and darker still. */
 .card[data-place="next"] { z-index: 1; transform: translate(var(--peek-x, 6px), var(--peek-y, 8px)) rotate(var(--tilt, 3deg)) scale(var(--peek-scale, 0.95)); filter: brightness(0.88); pointer-events: none; }
 .card[data-place="later"] { z-index: 0; transform: translate(calc(var(--peek-x, 10px) * 1.4), calc(var(--peek-y, 12px) * 1.4)) rotate(var(--tilt, 6deg)) scale(calc(var(--peek-scale, 0.9) - 0.03)); filter: brightness(0.76); pointer-events: none; }
+/* The front photo lies a little crooked, like a print on a table (prototipe .sc.s0); a drag takes over with its own transform. */
+.card[data-place="front"] { transform: rotate(-2deg); }
 .card[data-dragging] { transition: none; will-change: transform; cursor: grabbing; }
 .fill { position: absolute; inset: 0; }
 .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; }
@@ -61,15 +63,16 @@
 
 /* The owner's pill sits on top (the reaction pills take the bottom), the options button at the top right. */
 .info {
-  position: absolute; left: var(--mw-space-8); top: var(--mw-space-8); z-index: 3; display: flex; align-items: center; gap: var(--mw-space-8);
-  max-width: calc(100% - var(--mw-space-8) * 3 - var(--mw-touch)); padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-8) var(--mw-space-8);
-  border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); pointer-events: none;
+  position: absolute; left: var(--mw-space-12); top: var(--mw-space-12); z-index: 3; display: flex; align-items: center;
+  max-width: calc(100% - var(--mw-space-12) * 2 - var(--mw-touch)); padding: 6px 10px;
+  border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); pointer-events: none; backdrop-filter: blur(6px);
 }
-.mineTag { position: absolute; left: var(--mw-space-12); top: calc(var(--mw-space-8) * 2 + 48px); z-index: 3; pointer-events: none; }
-.options { position: absolute; top: var(--mw-space-8); right: var(--mw-space-8); z-index: 5; }
-.who { min-width: 0; display: flex; flex-direction: column; }
-.name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mineTag { position: absolute; left: var(--mw-space-12); top: 52px; z-index: 3; pointer-events: none; }
+.options { position: absolute; top: var(--mw-space-4); right: var(--mw-space-4); z-index: 5; }
+.who { min-width: 0; display: flex; align-items: baseline; font: 600 12px/16px var(--mw-font-sans); white-space: nowrap; overflow: hidden; }
+.name { overflow: hidden; text-overflow: ellipsis; }
+.meta { flex: none; }
+.meta::before { content: " · "; white-space: pre; }
 
 .burst { position: absolute; left: 50%; top: 50%; z-index: 4; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: flex; align-items: center; justify-content: center; font-size: 80px; line-height: 1; pointer-events: none; animation: burst 700ms var(--mw-ease-decelerate) forwards; }
 @keyframes burst { 0% { transform: scale(0.4); opacity: 0; } 25% { transform: scale(1.1); opacity: 0.95; } 70% { transform: scale(1); opacity: 0.95; } 100% { transform: scale(1); opacity: 0; } }

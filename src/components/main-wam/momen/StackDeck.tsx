@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Ellipsis } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
-import { Avatar, IconButton, Pill, PhotoFill } from "@/components/main-wam/ui";
+import { IconButton, Pill, PhotoFill } from "@/components/main-wam/ui";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { photoAlt, photoMeta, pileTilt, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
@@ -193,7 +193,6 @@ export function StackDeck({ items, index, onIndex, onLike, onReactors, onOptions
             return <ReactionSummary reactions={reactions} preview={photo.reactors} me={me} mine={reactions.some(entry => entry.mine)} own={photo.mine} onOpen={onReactors ? () => onReactors(photo) : undefined} />;
           })()}
           <div className={css.info} aria-hidden>
-            <Avatar name={photo.owner.name} photo={photo.owner.photo} size={32} />
             <span className={css.who}>
               <span className={css.name}>{photo.owner.name}</span>
               <span className={css.meta}>{photoMeta(photo, now, lang)}</span>

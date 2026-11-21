@@ -371,11 +371,11 @@ describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the 
     // The cards behind lie at a tilt of their own; the front one is straight; reduced motion keeps the tilt but not the move.
     expect(css).toMatch(/\.card\[data-place="next"\] \{[^}]*rotate\(var\(--tilt/);
     expect(css).toMatch(/\.card\[data-place="later"\] \{[^}]*rotate\(var\(--tilt/);
-    expect(css).not.toMatch(/\.card\[data-place="front"\] \{[^}]*rotate/);
+    expect(css).toMatch(/\.card\[data-place="front"\] \{ transform: rotate\(-2deg\); \}/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.card \{ transition: none; \}/);
-    expect(css).toMatch(/\.info \{[^}]*top: var\(--mw-space-8\)/);
+    expect(css).toMatch(/\.info \{[^}]*top: var\(--mw-space-12\)/);
     expect(css).not.toMatch(/\.info \{[^}]*bottom:/);
-    expect(css).toMatch(/\.options \{[^}]*top: var\(--mw-space-8\);[^}]*right: var\(--mw-space-8\)/);
+    expect(css).toMatch(/\.options \{[^}]*top: var\(--mw-space-4\);[^}]*right: var\(--mw-space-4\)/);
     expect(css).not.toMatch(/\.filter\b|\.camera \{|\.react \{/);
   });
 });
@@ -490,10 +490,9 @@ describe("fixes after the audit", () => {
     slot.remove();
   });
 
-  it("M06: the progress is the screen's main number (ProgressBar labelSize=subtitle)", async () => {
-    const dataCss = (await import("@/components/main-wam/ui/data.module.css")).default;
+  it("M06: the progress is a gold bar whose value is spoken", () => {
     render(<ToastProvider><Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo /></ToastProvider>);
-    expect(screen.getByRole("progressbar").parentElement!.className).toContain(dataCss.progressSubtitle);
+    const bar = screen.getByRole("progressbar"); expect(bar.getAttribute("aria-valuetext")).toMatch(/%$/);
   });
 });
 

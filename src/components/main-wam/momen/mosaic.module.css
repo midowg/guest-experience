@@ -37,3 +37,18 @@
 .meta { display: flex; align-items: flex-start; gap: var(--mw-space-4); margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .meta > svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Prototipe SC.mozaik: a line of intro, the mosaic framed in a panel, three figures, a gold bar, the mark button. */
+.intro { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.panel { padding: var(--mw-space-8); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-20); background: var(--mw-surface); box-shadow: var(--mw-elev-card); }
+.panel .box { border-radius: var(--mw-radius-8); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--mw-space-8); margin: 0; text-align: center; }
+.stats div { display: flex; flex-direction: column-reverse; }
+.stats dd { margin: 0; font: 800 34px/34px var(--mw-display-font); font-variant-numeric: tabular-nums; }
+.stats dt { font: 400 11px/16px var(--mw-font-sans); color: var(--mw-text-2); }
+.bar { display: block; height: 5px; border-radius: 5px; background: var(--mw-outline-2); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--mw-gold); border-radius: 5px; }
+.markBtn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; border: 1.5px solid var(--mw-outline-strong); border-radius: var(--mw-radius-16); background: transparent; color: var(--mw-text-1); font: 700 16px/20px var(--mw-font-sans); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.markBtn > svg { width: 18px; height: 18px; }
+.markOn { background: var(--mw-gold); border-color: var(--mw-gold); color: var(--mw-on-gold); box-shadow: var(--mw-glow); }
+.markBtn:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }

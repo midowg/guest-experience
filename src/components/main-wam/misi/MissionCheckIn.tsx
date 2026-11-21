@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Footprints, Hourglass, MapPin } from "lucide-react";
+import { CheckCircle2, Hourglass, MapPin } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { Banner, Button, EmptyState, IconBox, Text } from "@/components/main-wam/ui";
+import { Banner, Button, EmptyState, EyebrowLabel } from "@/components/main-wam/ui";
 import { DEMO_WRITE_MESSAGE } from "@/lib/main-wam/demo";
 import type { MissionItem } from "@/lib/main-wam/misi/missions";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
@@ -55,10 +55,9 @@ export function MissionCheckIn({ item, demo = false }: { item: MissionItem; demo
 
   return <ScreenContent>
     <div className={css.head}>
-      <IconBox icon={<Footprints />} tone="awarding" />
       <div className={css.headText}>
-        <Text variant="label" color="2">{t("misi.sheet.points", { points: item.points })}</Text>
-        <Text as="h2" variant="title">{item.title}</Text>
+        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+        <h2 className={css.headTitle}>{item.title}</h2>
       </div>
     </div>
     <PlaceBanner place={place} item={item} onCheck={() => void check()} />
