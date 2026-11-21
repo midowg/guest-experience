@@ -36,6 +36,8 @@
   height: 64%;
   fill: currentColor;
 }
+.card { width: calc(var(--kz-size) * 0.806); border-radius: 22px; box-shadow: 0 0 40px color-mix(in srgb, var(--mw-gold) 40%, transparent); }
+.card.persona { box-shadow: 0 0 40px color-mix(in srgb, var(--mw-gold) 40%, transparent); }
 .breathe { animation: breathe 3.4s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
 @media (prefers-reduced-motion: reduce) {

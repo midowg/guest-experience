@@ -31,6 +31,7 @@ export const idKuis = {
   "kuis.rules.none": "Tidak menjawab 0",
   "kuis.lobby.kicker": "Lobi kuis",
   "kuis.lobby.as": "Kamu ikut sebagai {name}",
+  "kuis.lobby.asKicker": "Kamu ikut sebagai",
   "kuis.lobby.mystery": "Kamu belum punya kartu tokoh, jadi tampil sebagai tokoh misterius.",
   "kuis.lobby.hidden": "Namamu tidak tampil; pemain lain hanya melihat tokohmu.",
   "kuis.lobby.count": "{n, plural, one {# tokoh sudah bergabung} other {# tokoh sudah bergabung}}",

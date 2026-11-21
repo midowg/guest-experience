@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { ArrowUp, Ban, Check, CloudOff, Flame, Gamepad2, Hourglass, Lock, Pause, Sparkles } from "lucide-react";
+import { ArrowUp, Ban, Check, CloudOff, Flame, Gamepad2, Hourglass, Info, Lock, Pause, Sparkles, Trophy, Tv, Users, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { number } from "@/lib/main-wam/i18n";
 import { PODIUM_LAND_AT, boardRequiredBefore, podiumPlaceOpen, podiumState, soalState } from "@/lib/main-wam/kuis/flow";
 import { OPTION_LETTERS, correctPoints, isPaused, levelMs } from "@/lib/main-wam/kuis/rules";
 import type { Alias, PhoneQuestionView, PlaySnapshot, RunView } from "@/lib/main-wam/kuis/types";
-import { mainWamApi } from "@/lib/routes";
+import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
-import { ScreenContent } from "@/components/main-wam/shell";
-import { Banner, Button, EmptyState, cx, useToast } from "@/components/main-wam/ui";
+import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
+import { hasTrail } from "@/components/main-wam/shell/trail";
+import { Banner, Button, EmptyState, EyebrowLabel, PulseDot, SrOnly, cx, useToast } from "@/components/main-wam/ui";
 import { Confetti } from "./confetti";
 import { LevelCard, levelClass, levelKey } from "./LevelCard";
 import { TokohAvatar } from "./TokohAvatar";
@@ -103,7 +105,7 @@ export function PlayScreen({ quizId, initial, preview }: { quizId: string; initi
     if (!run || run.phase === "siap") return <Closed over={false} />;
     if (!me) {
       if (run.phase === "podium" || run.phase === "selesai") return <Closed over />;
-      return <Join title={snap.quiz.title} joining={joining} onJoin={join} />;
+      return <Join joining={joining} onJoin={join} />;
     }
     switch (run.phase) {
       case "lobi": return <Lobby alias={me.alias} players={snap.lobby?.players ?? me.players} />;
@@ -115,14 +117,40 @@ export function PlayScreen({ quizId, initial, preview }: { quizId: string; initi
     }
   })();
 
+  // The head (prototipe .qtop): a gold label for where the game is, ✕ on the right. A question draws its own.
+  const board = run?.phase === "skor" && snap.board ? t("kuis.board.kicker", { n: run.index + 1, count: run.count }) : null;
+  const head = gone || !run || run.phase === "siap" ? null
+    : !me ? <QuizHead>{run.phase === "podium" || run.phase === "selesai" ? null : <EyebrowLabel tone="gold">{snap.quiz.title}</EyebrowLabel>}</QuizHead>
+      : run.phase === "lobi" ? <QuizHead><EyebrowLabel tone="gold"><PulseDot />{t("kuis.lobby.kicker")}</EyebrowLabel></QuizHead>
+        : run.phase === "skor" ? <QuizHead>{board && <EyebrowLabel tone="gold">{board}</EyebrowLabel>}</QuizHead>
+          : run.phase === "podium" || run.phase === "selesai" ? <QuizHead><EyebrowLabel tone="gold">{t("kuis.final.kicker")}</EyebrowLabel></QuizHead>
+            : run.phase === "bersiap" || run.phase === "batal" ? <QuizHead />
+              : null;
   return <ScreenContent>
+    <ShellChrome hideTopBar />
     {failures > 1 && !gone && <Banner tone="offline" icon={<CloudOff />}>{t("kuis.offline")}</Banner>}
-    <div className={css.play}>
+    <div className={cx(css.play, headed(run, me) && css.headed)}>
+      {head}
       {body}
       {paused && <div className={css.paused} role="status"><div className={css.pauseCard}><Pause size={36} aria-hidden /><b>{t("kuis.paused")}</b><span>{t("kuis.pausedSub")}</span></div></div>}
     </div>
     <canvas ref={canvas} className={css.fx} aria-hidden="true" />
   </ScreenContent>;
+}
+
+/** Whether a head sits above the body (the question has its own, inside). */
+const headed = (run: RunView | null, me: PlaySnapshot["me"]) => !!run && run.phase !== "siap" && !(me && run.phase === "soal");
+
+/** ✕ (prototipe .ib 38 × 38 tile): leaves the game back to where the person came from, else to Beranda. */
+function ExitButton() {
+  const t = useT();
+  const router = useRouter();
+  const leave = () => { if (hasTrail()) router.back(); else router.push(mainWamPath.home); };
+  return <button type="button" className={css.exit} onClick={leave} aria-label={t("shell.closeTask")}><X aria-hidden /></button>;
+}
+
+function QuizHead({ children }: { children?: ReactNode }) {
+  return <div className={css.qtop}><span className={css.qtopText}>{children}</span><ExitButton /></div>;
 }
 
 function Closed({ over }: { over: boolean }) {
@@ -135,11 +163,10 @@ function Rules() {
   return <div className={css.rules}><span className={css.rule}>{t("kuis.rules.correct")}</span><span className={css.rule}>{t("kuis.rules.wrong")}</span><span className={css.rule}>{t("kuis.rules.none")}</span></div>;
 }
 
-function Join({ title, joining, onJoin }: { title: string; joining: boolean; onJoin: () => void }) {
+function Join({ joining, onJoin }: { joining: boolean; onJoin: () => void }) {
   const t = useT();
   return <div className={css.center}>
     <Gamepad2 size={56} aria-hidden />
-    <span className={css.kicker}>{title}</span>
     <h2 className={css.h2}>{t("kuis.join.title")}</h2>
     <p className={css.sub}>{t("kuis.join.body")}</p>
     <Rules />
@@ -152,12 +179,12 @@ const aliasName = (alias: Alias, t: ReturnType<typeof useT>) => (alias.mystery ?
 function Lobby({ alias, players }: { alias: Alias; players: number }) {
   const t = useT();
   return <div className={css.center}>
-    <span className={css.kicker}>{t("kuis.lobby.kicker")}</span>
-    <TokohAvatar alias={alias} size={148} breathe />
-    <h2 className={css.h2}>{t("kuis.lobby.as", { name: aliasName(alias, t) })}</h2>
-    <p className={css.sub}>{alias.mystery ? t("kuis.lobby.mystery") : `${alias.persona}. ${t("kuis.lobby.hidden")}`}</p>
-    <span className={css.pill} role="status">{t("kuis.lobby.count", { n: players })}</span>
-    <span className={css.note}>{t("kuis.lobby.wait")}</span>
+    <EyebrowLabel>{t("kuis.lobby.asKicker")}</EyebrowLabel>
+    <TokohAvatar alias={alias} size={186} card breathe />
+    <h2 className={css.name}><SrOnly>{t("kuis.lobby.as", { name: aliasName(alias, t) })}</SrOnly><span aria-hidden>{aliasName(alias, t)}</span></h2>
+    <span className={css.meta} role="status"><Users aria-hidden />{t("kuis.lobby.count", { n: players })}</span>
+    <p className={css.metaNote}><Info aria-hidden /><span>{alias.mystery ? t("kuis.lobby.mystery") : `${alias.persona}. ${t("kuis.lobby.hidden")}`}</span></p>
+    <span className={css.wait}>{t("kuis.lobby.wait")}</span>
   </div>;
 }
 
@@ -284,16 +311,17 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
   const open = state.stage !== "hitung";
   return <div className={cx(css.question, hot && css.hot, mood === "bad" && !reduced && css.shake, mood === "bad" && css.wrong)}>
     <div className={css.top}>
-      <span className={cx(css.lvChip, levelClass(level))}>{t(levelKey(level))}</span>
+      <span className={cx(css.lvChip, levelClass(level))}><Trophy aria-hidden />{t(levelKey(level))}</span>
       <span className={css.qn}>{t("kuis.question", { n: run.index + 1, count: run.count })}</span>
       <span className={css.total}><TokohAvatar alias={me.alias} size={28} />{plain(total, fmt)}</span>
+      <ExitButton />
     </div>
     <div className={css.timer} role="progressbar" aria-label={t("kuis.timerLabel")} aria-valuemin={0} aria-valuemax={state.durMs / 1000} aria-valuenow={Math.round(state.leftMs / 1000)}>
       <i style={{ transform: `scaleX(${state.stage === "hitung" ? 1 : state.leftMs / state.durMs})` }} />
     </div>
     <div className={css.stage}>{stageView}</div>
     {open && question && <>
-      <p className={css.qtext}>{t("kuis.readScreen")}</p>
+      <p className={css.qhint}><Tv aria-hidden />{t("kuis.readScreen")}</p>
       <div className={css.options} ref={options}>
         {question.options.map((text, i) => {
           const picked = answer?.choice === i;
@@ -320,10 +348,9 @@ function MyBoardView({ snap, run, fmt }: { snap: PlaySnapshot; run: RunView; fmt
   const me = snap.me!;
   const moved = !!board && board.prevRank !== null && board.prevRank !== board.rank;
   const shownRank = useCountUp(board?.rank ?? 0, moved, 900, false, board?.prevRank ?? 0);
-  if (!board) return <div className={css.center}><span className={css.kicker}>{t("kuis.board.kicker", { n: run.index + 1, count: run.count })}</span></div>;
+  if (!board) return <div className={css.center} />;
   const next = run.index + 1;
   return <div className={css.board}>
-    <span className={css.kicker}>{t("kuis.board.kicker", { n: run.index + 1, count: run.count })}</span>
     <div className={css.rankBig}><small>#</small>{shownRank}</div>
     <span className={css.sub}>{t("kuis.board.of", { n: board.players })}</span>
     {board.prevRank !== null && board.prevRank !== board.rank && <span className={cx(css.move, board.prevRank > board.rank && css.up)}>
@@ -380,7 +407,6 @@ function End({ snap, run, now, fx, reduced, fmt }: { snap: PlaySnapshot; run: Ru
     </div>;
   }
   return <div className={css.center}>
-    <span className={css.kicker}>{t("kuis.final.kicker")}</span>
     <TokohAvatar alias={me.alias} size={96} />
     <div className={css.rankBig}><small>#</small>{final.rank}</div>
     <span className={css.sub}>{t("kuis.final.of", { n: final.players })}</span>

@@ -116,6 +116,8 @@ export type AgendaRow = {
   kind: AgendaKind;
   /** The first session still to come, on the day that is today (the "Berikutnya" mark). */
   next: boolean;
+  /** Module Absen: this entry has absen ("Wajib absen" when also required). */
+  absen?: "wajib" | "ada";
 };
 
 export type AgendaKind = "sesi" | "makan" | "perjalanan" | "jeda";
@@ -155,6 +157,7 @@ function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log
     changed: session.status !== "batal" && movedInRundown(session, log),
     kind: agendaKind(session),
     next: false,
+    ...(session.usesAttendance && session.status !== "batal" ? { absen: session.required ? "wajib" as const : "ada" as const } : {}),
   }));
   const next = isToday ? rows.find(row => row.status === "upcoming") : undefined;
   if (next) next.next = true;

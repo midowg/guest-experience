@@ -27,7 +27,7 @@
 /* ── Agenda ── */
 /* The day tabs stay under the compact bar while the list scrolls (P03 "tetap saat digulir"). */
 .dayBar {
-  position: sticky; top: calc(var(--mw-safe-top) + var(--mw-topbar-h)); z-index: 5;
+  position: sticky; top: var(--mw-safe-top); z-index: 5;
   margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-16)) calc(-1 * var(--mw-space-8)); padding: var(--mw-space-8) var(--mw-space-16); background: var(--mw-bg);
 }
 .daySwipe { display: flex; flex-direction: column; min-height: 50dvh; }

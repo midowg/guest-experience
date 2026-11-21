@@ -1,4 +1,4 @@
-import { ScreenContent } from "@/components/main-wam/shell";
+import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
 import { Card, List, Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import css from "./peserta.module.css";
 import own from "./agenda/agenda.module.css";
@@ -33,13 +33,14 @@ export function BerandaSkeleton() {
  */
 export function AgendaSkeleton() {
   return <ScreenContent>
+    <ShellChrome hideTopBar />
     <SkeletonGroup label="Memuat agenda" className={css.skeletonStack}>
+      <div className={own.skHead}><span className={css.skeletonBody}><Skeleton width={64} height={14} /><Skeleton width={180} height={44} /></span><Skeleton shape="circle" width={44} height={44} /></div>
       <div className={css.dayBar}>
         <div className={`${css.dayTabs} ${css.skeletonTabs}`}>
-          {[0, 1, 2, 3].map(day => <Skeleton key={day} shape="block" height={56} />)}
+          {[0, 1, 2, 3].map(day => <Skeleton key={day} shape="block" height={52} />)}
         </div>
       </div>
-      <div className={own.skHead}><Skeleton width={150} height={22} /><Skeleton width={56} height={16} /></div>
       <div className={css.skeletonSessions}>
         {[70, 55, 80, 60, 65].map((width, index) => <div key={index} className={css.skeletonSession}>
           <span className={css.skeletonTime}><Skeleton width={40} /><Skeleton width={34} height={12} /></span>
