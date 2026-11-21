@@ -51,6 +51,7 @@ export const enCommon: Record<keyof typeof idCommon, string> = {
   "shell.notFoundBack": "Back to WAM",
   "screen.home": "Home",
   "screen.agenda": "Agenda",
+  "screen.latest": "Latest",
   "screen.moments": "Moments",
   "screen.me": "Me",
   "screen.committee": "Committee",

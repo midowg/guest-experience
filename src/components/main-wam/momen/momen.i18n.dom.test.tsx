@@ -28,16 +28,14 @@ const props = {
 const view = (lang: "id" | "en", node: React.ReactNode) => render(<LangProvider lang={lang}><ToastProvider>{node}</ToastProvider></LangProvider>);
 
 describe("Momen in English", () => {
-  it("the stack's count, the quick reactions, their pills and the sheet say it in English", () => {
+  it("the stack, the eight emoji and the pill say it in English", () => {
     view("en", <MomenStack {...props} />);
-    expect(screen.getByText("3 of 24 new")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Photo 3 of 24 new/ })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Quick reactions" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "React 🔥" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "24 reactions. Tap to see who" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Photo options" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Pick another reaction" }));
-    const sheet = screen.getByRole("dialog", { name: "Pick a reaction" });
-    expect(within(sheet).getAllByRole("heading", { level: 3 }).map(heading => heading.textContent)).toEqual(["Faces", "Hands", "Hearts", "Celebration", "More"]);
+    expect(screen.queryByRole("button", { name: "Pick another reaction" })).toBeNull();
     expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 
@@ -55,7 +53,7 @@ describe("Momen in English", () => {
 
   it("the same screen in Indonesian is what it was", () => {
     view("id", <MomenStack {...props} />);
-    expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Reaksi cepat" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "24 reaksi. Ketuk untuk melihat siapa saja" })).toBeTruthy();
   });

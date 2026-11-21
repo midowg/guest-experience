@@ -46,11 +46,11 @@ describe("the stack marks photos seen the moment they are in front", () => {
     await tick(3000);
     expect(fetchMock.mock.calls[0][0]).toBe(mainWamApi.photosSeen);
     expect(sentIds()).toEqual([[A]]);
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
     await tick(3000);
     expect(sentIds()).toEqual([[A], [B, C]]);
-    fireEvent.click(screen.getByRole("button", { name: "Foto sebelumnya" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowLeft" });
     await tick(6000);
     expect(sentIds()).toHaveLength(2);
   });
@@ -79,7 +79,7 @@ describe("the stack marks photos seen the moment they are in front", () => {
     await tick(3000);
     expect(sentIds()).toEqual([[A], [A], [A]]);
     expect(window.localStorage.getItem(SEEN_KEY)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
     unmount();
     expect(sentIds().at(-1)).toEqual([B]);
     expect((fetchMock.mock.calls.at(-1)![1] as RequestInit).keepalive).toBe(true);
@@ -88,7 +88,7 @@ describe("the stack marks photos seen the moment they are in front", () => {
   it("marks left from an earlier visit (a send that never went out) keep their photos out of the stack", async () => {
     window.localStorage.setItem(SEEN_KEY, JSON.stringify([A]));
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
-    expect(screen.getByText("1 dari 2 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-1 dari 2 foto baru/ })).toBeTruthy();
     expect(screen.getByRole("group", { name: /^Foto ke-1 dari 2 foto baru/ })).toBeTruthy();
     await tick(0);
     expect(sentIds()[0]).toContain(A);
@@ -105,14 +105,14 @@ describe("after \"Kamu sudah lihat semua\"", () => {
     request.mockResolvedValueOnce({ data: { items: [{ ...sampleFeedSemua[0], seen: false }], next: null, total: 1, sessions: null, migrated: true }, message: "" });
     await tick(20_000);
     expect(screen.queryByRole("heading", { name: "Kamu sudah lihat semua" })).toBeNull();
-    expect(screen.getByText("1 dari 1 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-1 dari 1 foto baru/ })).toBeTruthy();
   });
 
   it("does not bring back a photo that was seen in this visit but is still queued", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     render(<ToastProvider><MomenStack {...props} items={props.items.slice(0, 1)} total={1} /></ToastProvider>);
     await tick(1000);
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
     request.mockResolvedValue({ data: { items: [{ ...sampleFeedSemua[0], seen: false }], next: null, total: 1, sessions: null, migrated: true }, message: "" });
     await tick(20_000);

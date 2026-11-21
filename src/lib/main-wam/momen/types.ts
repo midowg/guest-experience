@@ -31,6 +31,8 @@ export type FeedPhoto = {
   status: PhotoStatus;
   /** The reactions on it, most first, and which one is the viewer's. */
   reactions: ReactionCount[];
+  /** The last few people who reacted (at most 3, newest first, never the viewer), for the avatars on the photo; absent before the server sends them. */
+  reactors?: { id: string; name: string; photo: string | null }[];
   seen: boolean;
   mine: boolean;
   /** Short-lived storage addresses: the small copy (grid, stack under it) and the large one. */
@@ -38,7 +40,7 @@ export type FeedPhoto = {
 };
 
 /** One person's reaction to a photo, for the list "who reacted with what" (the person's own marked). */
-export type Reactor = { person: { id: string; name: string; photo: string | null }; emoji: string; mine: boolean; at: string };
+export type Reactor = { person: { id: string; name: string; photo: string | null; /** "Finance"; the app shows its short form. Absent before the server sends it. */ department?: string }; emoji: string; mine: boolean; at: string };
 
 /** One page of a view; `next` continues it (null at the end); `total` on the first page. */
 export type FeedPage = { items: FeedPhoto[]; next: string | null; total: number | null };

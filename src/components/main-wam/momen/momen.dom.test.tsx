@@ -46,7 +46,7 @@ afterEach(() => cleanup());
 const now = new Date("2027-01-05T10:05:00+07:00");
 
 describe("the stack", () => {
-  it("shows at most three cards, and one tap or an arrow key moves (WCAG 2.5.1, 2.5.7)", () => {
+  it("shows at most three cards; they are swiped, the arrow keys are the keyboard's way, and there is no next or previous button", () => {
     const onIndex = vi.fn();
     render(<StackDeck items={sampleFeedSemua} index={2} onIndex={onIndex} onLike={() => undefined} now={now} label="Momen" describe={index => `${index + 1} dari 24`} />);
     const region = screen.getByRole("region", { name: "Momen" });
@@ -59,21 +59,19 @@ describe("the stack", () => {
     expect(next.style.getPropertyValue("--tilt")).toBe(`${pileTilt(sampleFeedSemua[3].id).angle}deg`);
     expect(later.style.getPropertyValue("--tilt")).toBe(`${pileTilt(sampleFeedSemua[4].id).angle}deg`);
     expect(next.style.getPropertyValue("--tilt")).not.toBe(later.style.getPropertyValue("--tilt"));
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
-    expect(onIndex).toHaveBeenLastCalledWith(3, "tap");
-    fireEvent.click(screen.getByRole("button", { name: "Foto sebelumnya" }));
-    expect(onIndex).toHaveBeenLastCalledWith(1, "tap");
+    expect(screen.queryByRole("button", { name: "Foto berikutnya" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Foto sebelumnya" })).toBeNull();
     fireEvent.keyDown(region, { key: "ArrowRight" });
     expect(onIndex).toHaveBeenLastCalledWith(3, "key");
+    fireEvent.keyDown(region, { key: "ArrowLeft" });
+    expect(onIndex).toHaveBeenLastCalledWith(1, "key");
   });
 
-  it("at the end shows its panel, which still goes back with a tap", () => {
-    const onIndex = vi.fn();
-    render(<StackDeck items={sampleFeedSemua.slice(0, 2)} index={2} onIndex={onIndex} onLike={() => undefined} now={now} label="Momen" describe={() => "selesai"} panel={<h2>Kamu sudah lihat semua</h2>} />);
+  it("at the end shows its panel in the card's place, with no next button", () => {
+    render(<StackDeck items={sampleFeedSemua.slice(0, 2)} index={2} onIndex={() => undefined} onLike={() => undefined} now={now} label="Momen" describe={() => "selesai"} panel={<h2>Kamu sudah lihat semua</h2>} />);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Foto berikutnya" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Foto sebelumnya" }));
-    expect(onIndex).toHaveBeenCalledWith(1, "tap");
+    expect(screen.queryByRole("button", { name: "Foto sebelumnya" })).toBeNull();
   });
 
   const props = {
@@ -81,17 +79,18 @@ describe("the stack", () => {
     mozaik: true, migrated: true, anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: now.toISOString(), demo: {},
   };
 
-  /** The pills on the front photo, in order: "❤️12" and a * for the person's own; "+3" for the rest. */
+  /** The pill on the front photo (three avatars and the number of reactions): one button. */
   const pillsButton = () => screen.getByRole("button", { name: /reaksi.*Ketuk untuk melihat siapa saja/ });
-  const pillList = () => [...pillsButton().children].map(item => `${item.textContent}${item.hasAttribute("data-mine") ? "*" : ""}`);
+  /** Its number: the total of reactions. */
+  const total = () => pillsButton().querySelector('[class*="sumCount"]')!.textContent;
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
   const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
-  it("has the camera and the gallery beside the title, and no filter at all (no Semua / Kelompokku, no session chip)", () => {
+  it("has the Foto button and the gallery beside the title, and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label"), link.getAttribute("href")])).toEqual([["Ambil foto", "/wam/acara/momen/kamera"], ["Galeri", "/wam/acara/momen/galeri"]]);
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam/acara/momen/galeri"], ["Foto", "/wam/acara/momen/kamera"]]);
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();
@@ -99,41 +98,51 @@ describe("the stack", () => {
     slot.remove();
   });
 
-  it("keeps the stack swipeable: the side taps and the arrow keys still move", () => {
+  it("keeps the stack swipeable by the arrow keys, with no counter of photos on screen and no next button", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
-    expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
-    expect(screen.getByText("4 dari 24 baru")).toBeTruthy();
+    expect(screen.queryByText(/dari 24 baru/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Foto berikutnya" })).toBeNull();
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
+    // Only the screen reader hears where it is.
+    expect(screen.getByText("Foto ke-4 dari 24 foto baru").className).toMatch(/sr/);
+    expect(screen.getByRole("group", { name: /^Foto ke-4 dari 24 foto baru/ })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowLeft" });
-    expect(screen.getByText("3 dari 24 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ })).toBeTruthy();
   });
 
-  it("shows the reactions a photo got as overlapping pills inside it (one button, most given first), and the row of quick emoji under it", () => {
+  it("shows the reactions a photo got as one small pill inside it (three avatars and the number), and eight plain emoji under it", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     const front = screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ });
     const button = within(front).getByRole("button", { name: "24 reaksi. Ketuk untuk melihat siapa saja" });
     expect(button.getAttribute("aria-haspopup")).toBe("dialog");
-    // One button for all of them (the pills inside are only drawn): 12 hearts, then 5, 4 and 3.
     expect(within(button).queryAllByRole("button")).toHaveLength(0);
-    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😂3"]);
+    expect(total()).toBe("24");
+    // The server named nobody here: three round emoji stand in for the avatars.
+    expect(button.querySelectorAll('[class*="avs"] > *')).toHaveLength(3);
     const row = screen.getByRole("group", { name: "Reaksi cepat" });
-    expect(within(row).getAllByRole("button").map(item => item.getAttribute("aria-label"))).toEqual([HEART, "😂", "🔥", "👏", "😮", "🙏"].map(emoji => `Reaksi ${emoji}`).concat("Pilih reaksi lain"));
+    expect(within(row).getAllByRole("button").map(item => item.getAttribute("aria-label"))).toEqual([HEART, "😂", "🔥", "👏", "😮", "🥹", "🎉", "👍"].map(emoji => `Reaksi ${emoji}`));
+    expect(screen.queryByRole("button", { name: "Pilih reaksi lain" })).toBeNull();
     expect(row.parentElement!.className).toContain("actions");
   });
 
-  it("shows a few pills, then \"+N\", and the person's own reaction is always one of the pills", () => {
-    const many = [{ emoji: HEART, count: 12, mine: false }, { emoji: "😂", count: 6, mine: false }, { emoji: "🎉", count: 4, mine: false }, { emoji: "🔥", count: 3, mine: false }, { emoji: "👏", count: 3, mine: false }, { emoji: "🙏", count: 1, mine: true }];
-    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions: many } : photo));
-    render(<ToastProvider><MomenStack {...props} items={items} /></ToastProvider>);
-    expect(pillList()).toEqual(["❤️12", "😂6", "🎉4", "🙏1*", "+6"]);
+  it("the avatars are the people the server named, the viewer first while their reaction is on it (at most three)", () => {
+    const people = ["Sari", "Budi", "Citra", "Dewi"].map((name, index) => ({ id: `p${index}`, name, photo: null }));
+    const reactions = [{ emoji: HEART, count: 6, mine: true }, { emoji: "🔥", count: 2, mine: false }];
+    const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, reactions, reactors: people.slice(0, 3) } : photo));
+    render(<ToastProvider><MomenStack {...props} items={items} me={{ name: "Rani", photo: null }} /></ToastProvider>);
+    const avatars = [...pillsButton().querySelectorAll('[class*="avs"] > *')].map(item => item.textContent);
+    expect(avatars).toEqual(["R", "S", "B"]);
+    expect(total()).toBe("8");
   });
 
-  it("reacts at once (optimistic) with a quick emoji, the pill is the person's own, and the server is asked", async () => {
+  it("reacts at once (optimistic) with one of the eight, the number goes up, the others step back, and the server is asked", async () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     expect(mineQuick("😮")).toBe(false);
     fireEvent.click(quick("😮"));
-    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😮1*", "+3"]);
+    expect(total()).toBe("25");
     expect(mineQuick("😮")).toBe(true);
+    expect(quick("🔥").hasAttribute("data-dim")).toBe(true);
+    expect(quick("😮").hasAttribute("data-dim")).toBe(false);
     expect(document.body.textContent).toContain("Kamu bereaksi 😮");
     await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "PUT", json: { emoji: "😮" } }));
   });
@@ -142,18 +151,21 @@ describe("the stack", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick("😮"));
     fireEvent.click(quick("😮"));
-    expect(pillList()).toEqual(["❤️12", "🔥5", "👏4", "😂3"]);
+    expect(total()).toBe("24");
     expect(mineQuick("😮")).toBe(false);
+    expect(quick("🔥").hasAttribute("data-dim")).toBe(false);
     expect(document.body.textContent).toContain("Reaksimu dibatalkan");
     await waitFor(() => expect(request).toHaveBeenLastCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "DELETE" }));
   });
 
-  it("one reaction per person: another emoji replaces the first (the old count goes down, the new one goes up)", () => {
+  it("one reaction per person: another emoji replaces the first (the number does not grow, only one is chosen)", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick(HEART));
-    expect(pillList()[0]).toBe("❤️13*");
+    expect(total()).toBe("25");
     fireEvent.click(quick("🔥"));
-    expect(pillList()).toEqual(["❤️12", "🔥6*", "👏4", "😂3"]);
+    expect(total()).toBe("25");
+    expect(mineQuick("🔥")).toBe(true);
+    expect(mineQuick(HEART)).toBe(false);
     expect(screen.getAllByRole("button", { pressed: true }).filter(button => /^Reaksi /.test(button.getAttribute("aria-label") ?? ""))).toHaveLength(1);
   });
 
@@ -166,6 +178,9 @@ describe("the stack", () => {
     expect(request.mock.calls.filter(call => (call[1] as { method?: string } | undefined)?.method)).toHaveLength(0);
     const tabs = within(sheet).getByRole("group", { name: "Saring reaksi" });
     expect(within(tabs).getAllByRole("button").map(item => item.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Semua 24", "❤️ 12", "🔥 5", "👏 4", "😂 3"]);
+    // A row: the name, the department's short form under it, the emoji at the end.
+    const first = within(sheet).getAllByRole("listitem")[0];
+    expect(first.textContent).toMatch(/^[A-Za-z]+[A-Z]{2,4}/);
     expect(within(tabs).getByRole("button", { name: /^Semua/ }).getAttribute("aria-pressed")).toBe("true");
     expect(within(sheet).getAllByRole("listitem")).toHaveLength(24);
     fireEvent.click(within(tabs).getByRole("button", { name: /😂 3 reaksi/ }));
@@ -190,7 +205,8 @@ describe("the stack", () => {
     expect(within(sheet).queryByRole("button", { name: "Hapus reaksimu ❤️" })).toBeNull();
     expect(within(sheet).getAllByRole("listitem")).toHaveLength(23);
     await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "DELETE" }));
-    expect(pillList()[0]).toBe("❤️12");
+    // The server's answer (the photo's reactions without the person's) replaces the guess.
+    expect(total()).toBe("24");
   });
 
   it("the list says when it is loading, empty or could not load (and tries again)", async () => {
@@ -204,46 +220,31 @@ describe("the stack", () => {
     expect(within(sheet).getAllByRole("listitem")).toHaveLength(24);
   });
 
-  it("puts the count back and says so when the server refuses (rollback)", async () => {
+  it("puts the number back and says so when the server refuses (rollback)", async () => {
     request.mockImplementationOnce(async () => { throw new Error("Gagal."); });
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     fireEvent.click(quick("😮"));
-    expect(pillList()).toContain("😮1*");
-    await waitFor(() => expect(pillList()).not.toContain("😮1*"));
-    expect(pillList()[0]).toBe("❤️12");
+    expect(total()).toBe("25");
+    await waitFor(() => expect(total()).toBe("24"));
+    expect(mineQuick("😮")).toBe(false);
     expect(screen.getByText("Gagal.")).toBeTruthy();
   });
 
-  it("opens the sheet of every emoji from \"+\" (grouped), and a choice closes it and reacts", async () => {
+  it("has no \"+\" and no sheet of other emoji: eight, and one tap", () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
+    expect(screen.queryByRole("button", { name: "Pilih reaksi lain" })).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Pilih reaksi lain" }));
-    const sheet = screen.getByRole("dialog", { name: "Pilih reaksi" });
-    expect(within(sheet).getAllByRole("heading", { level: 3 }).map(heading => heading.textContent)).toEqual(["Wajah", "Tangan", "Hati", "Perayaan", "Lainnya"]);
-    expect(within(sheet).getAllByRole("button", { name: /^Reaksi / }).length).toBeGreaterThanOrEqual(55);
-    fireEvent.click(within(sheet).getByRole("button", { name: "Reaksi 🥳" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Pilih reaksi" })).toBeNull());
-    expect(pillList()).toContain("🥳1*");
-    await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photoReaction(sampleFeedSemua[2].id), { method: "PUT", json: { emoji: "🥳" } }));
-  });
-
-  it("marks the chosen emoji in the sheet, and choosing it again takes it back", () => {
-    render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
-    fireEvent.click(quick("🔥"));
-    fireEvent.click(screen.getByRole("button", { name: "Pilih reaksi lain" }));
-    const sheet = screen.getByRole("dialog", { name: "Pilih reaksi" });
-    expect(within(sheet).getByRole("button", { name: "Reaksi 🔥" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(within(sheet).getByRole("button", { name: "Reaksi 🔥" }));
-    expect(pillList()).toContain("🔥5");
+    expect(within(screen.getByRole("group", { name: "Reaksi cepat" })).getAllByRole("button")).toHaveLength(8);
   });
 
   it("a double tap on the photo is the red heart, once (a third tap does not take it back)", async () => {
     render(<ToastProvider><MomenStack {...props} /></ToastProvider>);
     const card = screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ });
     fireEvent.click(card); fireEvent.click(card);
-    expect(pillList()[0]).toBe("❤️13*");
+    expect(total()).toBe("25");
+    expect(mineQuick(HEART)).toBe(true);
     fireEvent.click(card); fireEvent.click(card);
-    expect(pillList()[0]).toBe("❤️13*");
+    expect(total()).toBe("25");
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   });
 
@@ -252,7 +253,7 @@ describe("the stack", () => {
     render(<ToastProvider><MomenStack {...props} items={items} total={24} startIndex={2} /></ToastProvider>);
     expect(screen.getByText("Fotomu")).toBeTruthy();
     const button = within(screen.getByRole("group", { name: /^Foto ke-3 dari 24 foto baru/ })).getByRole("button", { name: "7 reaksi pada fotomu. Ketuk untuk melihat siapa saja" });
-    expect(pillList()).toEqual(["❤️4", "😂1", "🔥1", "👏1"]);
+    expect(total()).toBe("7");
     expect(screen.queryByRole("group", { name: "Reaksi cepat" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Reaksi / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Suka/ })).toBeNull();
@@ -262,7 +263,7 @@ describe("the stack", () => {
     expect(screen.queryByText("Sudah kamu lihat")).toBeNull();
     cleanup();
     render(<ToastProvider><MomenStack {...props} items={items} total={24} startIndex={1} /></ToastProvider>);
-    expect(screen.getByText("2 dari 24 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-2 dari 24 foto baru/ })).toBeTruthy();
     expect(screen.queryByText("Fotomu")).toBeNull();
   });
 
@@ -308,7 +309,7 @@ describe("the stack", () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 1 ? { ...photo, seen: true } : photo));
     render(<ToastProvider><MomenStack {...props} items={items} total={23} startIndex={2} /></ToastProvider>);
     // Photo 2 left, so what was third is second now: "2 dari 23 baru".
-    expect(screen.getByText("2 dari 23 baru")).toBeTruthy();
+    expect(screen.getByRole("group", { name: /^Foto ke-2 dari 23 foto baru/ })).toBeTruthy();
     expect(screen.queryByText("Sudah dilihat")).toBeNull();
   });
 
@@ -316,7 +317,7 @@ describe("the stack", () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, seen: true } : photo));
     render(<ToastProvider><MomenStack {...props} mode="galeri" items={items} total={24} startIndex={2} /></ToastProvider>);
     expect(screen.getByText("Sudah dilihat")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Foto berikutnya" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "Momen" }), { key: "ArrowRight" });
     expect(screen.queryByText("Sudah dilihat")).toBeNull();
   });
 
@@ -338,15 +339,16 @@ describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the 
     expect(css).not.toMatch(/\.actions \{[^}]*margin-top: auto/);
     expect(css).toMatch(/\.pile \{[^}]*height: min\(calc\(100cqh/);
   });
-  it("the front card is centred (left margin = right margin) and the quick reactions keep 8 px between their 44 px targets on any width", () => {
+  it("the front card is centred (left margin = right margin) and the eight emoji lie 4 × 2 with even gaps, wrapping by their own width", () => {
     expect(css).toMatch(/\.pile \{[^}]*margin-left: calc\(\(100cqw - var\(--w\)\) \/ 2\)/);
     expect(css).toMatch(/\.deck\[data-panel\] \.pile \{ --w: 100cqw;/);
     expect(css).toMatch(/\.actions \{ container-type: inline-size;/);
     const reactions = readFileSync(join(process.cwd(), "src/components/main-wam/momen/reactions.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    // 7 buttons of 44 and 6 gaps of 8 = 356; each step down drops one emoji (never the "+").
-    expect(reactions).toMatch(/@container \(max-width: 355px\) \{ \.quick > :nth-child\(6\)/);
-    expect(reactions).toMatch(/@container \(max-width: 303px\) \{ \.quick > :nth-child\(5\)/);
-    expect(reactions).not.toMatch(/max-width: 359px/);
+    // Plain emoji, no card: no background of their own, 44 targets, 4 columns, then 3 and 2 when the row is narrow (room for three rows).
+    expect(reactions).toMatch(/\.quick \{[^}]*grid-template-columns: repeat\(4, 1fr\);[^}]*justify-items: center/);
+    expect(reactions).toMatch(/\.quickButton \{[^}]*width: var\(--mw-touch\);[^}]*height: var\(--mw-touch\);[^}]*background: none/);
+    expect(reactions).toMatch(/@container \(max-width: 199px\) \{ \.quick \{ grid-template-columns: repeat\(3, 1fr\); \} \}/);
+    expect(reactions).not.toMatch(/\.quickButton \{[^}]*background: var\(--mw-surface/);
   });
   it("the stack draws its cards, the line and the actions inside one stage", () => {
     const { container } = render(<ToastProvider><MomenStack {...{
@@ -358,18 +360,14 @@ describe("the stack's height (the owner's Pixel 9 Pro: no empty gap between the 
     expect(stage.querySelector('[role="region"]')).toBeTruthy();
     expect(stage.querySelector('[class*="actions"]')).toBeTruthy();
   });
-  it("the reactions sit inside the photo, bottom left, as ONE button of overlapping pills; the owner's pill moved to the top", () => {
+  it("the reactions sit inside the photo, bottom left, as ONE button: three tightly overlapped avatars and the number; the owner's pill is at the top", () => {
     const reactions = readFileSync(join(process.cwd(), "src/components/main-wam/momen/reactions.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(reactions).toMatch(/\.pills \{[^}]*position: absolute;[^}]*left: var\(--mw-space-8\);[^}]*bottom: var\(--mw-space-8\)[^}]*height: var\(--mw-touch\)/);
+    expect(reactions).toMatch(/\.sum \{[^}]*position: absolute;[^}]*left: var\(--mw-space-4\);[^}]*bottom: var\(--mw-space-4\)[^}]*height: var\(--mw-touch\)/);
     expect(reactions).not.toMatch(/wrap-reverse/);
-    // The pills overlap (each covers a little of the one before), but only inside its own padding, so the emoji and the count stay visible.
-    expect(reactions).toMatch(/\.pill \+ \.pill \{ margin-left: -6px; \}/);
-    expect(reactions).toMatch(/\.pill \{[^}]*padding: 0 var\(--mw-space-12\) 0 var\(--mw-space-8\)/);
-    expect(reactions).toMatch(/\.pill \{[^}]*color: var\(--mw-media-on\)/);
-    expect(reactions).toMatch(/\.pill:nth-child\(1\) \{ z-index: 5; \} \.pill:nth-child\(2\) \{ z-index: 4; \}/);
-    expect(reactions).toMatch(/\.pill\[data-mine\] \{[^}]*background: var\(--mw-primary\)/);
-    expect(reactions).toMatch(/\.quickButton \{[^}]*width: var\(--mw-touch\);[^}]*height: var\(--mw-touch\)/);
-    expect(reactions).toMatch(/@media \(prefers-reduced-motion: reduce\)[^]*\.pill\[data-mine\] \.pillEmoji \{ animation: none; \}/);
+    expect(reactions).toMatch(/\.avs > \* \+ \* \{ margin-left: -10px; \}/);
+    expect(reactions).toMatch(/\.sumCount \{[^}]*color: var\(--mw-media-on\)/);
+    expect(reactions).toMatch(/\.avs > :nth-child\(1\) \{ z-index: 3; \}/);
+    expect(reactions).toMatch(/@media \(prefers-reduced-motion: reduce\)[^]*\.sum, \.quickButton \{ transition: none; \}/);
     // The cards behind lie at a tilt of their own; the front one is straight; reduced motion keeps the tilt but not the move.
     expect(css).toMatch(/\.card\[data-place="next"\] \{[^}]*rotate\(var\(--tilt/);
     expect(css).toMatch(/\.card\[data-place="later"\] \{[^}]*rotate\(var\(--tilt/);

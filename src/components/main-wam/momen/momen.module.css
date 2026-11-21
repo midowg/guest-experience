@@ -12,9 +12,11 @@
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .banner { margin-top: var(--mw-space-12); }
 
-/* Galeri mode: the frame's bar is replaced by ‹ "Galeri" and "4 dari 21". */
+/* The Foto button beside the title: its word gives way (it stays the button's name for a screen reader) when the bar is too narrow for title and both buttons (zoom 200%). */
+@media (max-width: 319.98px) { .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+
+/* Galeri mode: the frame's bar is replaced by ‹ "Galeri". */
 .ownBar { padding-top: var(--mw-safe-top); }
-.ownCount { font: var(--mw-type-label); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--mw-space-8); }
 
 /* The deck takes the space between the title bar and the line under it (flex 1), at least 240 and at most
    a 9:16 card (+16 for the cards peeking behind). Short screens scroll instead of squeezing the card. */
@@ -69,13 +71,6 @@
 .name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* One tap on a side of the photo: the button alternative to swiping (WCAG 2.5.1 / 2.5.7). */
-.tap { position: absolute; top: 0; bottom: 0; z-index: 2; width: 36%; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.tap:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: -6px; border-radius: var(--mw-radius-24); }
-.tapPrev { left: 0; }
-.tapNext { right: 0; }
-.tap:disabled { cursor: default; }
-
 .burst { position: absolute; left: 50%; top: 50%; z-index: 4; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: flex; align-items: center; justify-content: center; font-size: 80px; line-height: 1; pointer-events: none; animation: burst 700ms var(--mw-ease-decelerate) forwards; }
 @keyframes burst { 0% { transform: scale(0.4); opacity: 0; } 25% { transform: scale(1.1); opacity: 0.95; } 70% { transform: scale(1); opacity: 0.95; } 100% { transform: scale(1); opacity: 0; } }
 
@@ -110,7 +105,7 @@
 }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* The panel takes swipes and side taps like a card; its own buttons stay above the tap areas. */
+/* The panel takes swipes like a card; its own buttons stay clickable. */
 .panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
 .panelInner a, .panelInner button { pointer-events: auto; }
 

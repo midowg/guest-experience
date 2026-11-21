@@ -55,6 +55,7 @@ export const idCommon = {
   "shell.notFoundBack": "Kembali ke WAM",
   "screen.home": "Beranda",
   "screen.agenda": "Agenda",
+  "screen.latest": "Terbaru",
   "screen.moments": "Momen",
   "screen.me": "Saya",
   "screen.committee": "Panitia",

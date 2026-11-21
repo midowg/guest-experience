@@ -1,7 +1,7 @@
 /*
  * Reactions to a photo in Momen (WhatsApp / Telegram style): one emoji per person per photo, chosen
  * from this fixed list (never free text: the server checks it), shown as small pills inside the photo
- * with a count. No list of who, no message. Pure; shared by the screens, the API and the tests.
+ * with a count. No message. Pure; shared by the screens, the API and the tests.
  */
 
 /** The red heart: U+2764 U+FE0F, as the database holds it (migration 202611210001 moves old hearts to it). */
@@ -9,7 +9,7 @@ export const HEART = "❤️";
 
 /** The emoji sheet, in groups (the group's name is the dictionary key `momen.react.group.<key>`). */
 export const REACTION_GROUPS = [
-  { key: "wajah", emojis: ["😀", "😂", "🤣", "😊", "😍", "🥰", "😘", "😎", "🤩", "🥳", "😮", "😢", "😭", "😡", "🤔", "😴"] },
+  { key: "wajah", emojis: ["😀", "😂", "🤣", "😊", "😍", "🥰", "😘", "😎", "🤩", "🥳", "😮", "🥹", "😢", "😭", "😡", "🤔", "😴"] },
   { key: "tangan", emojis: ["👍", "👏", "🙌", "🙏", "💪", "🤝", "👌", "🤞", "🤟", "👋"] },
   { key: "hati", emojis: [HEART, "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💖", "💕"] },
   { key: "perayaan", emojis: ["🎉", "🎊", "🏆", "🥇", "🎂", "🍾", "🎈", "✨", "🌟", "🎁"] },
@@ -22,8 +22,8 @@ export const REACTION_EMOJIS: readonly string[] = REACTION_GROUPS.flatMap(group 
 const ALLOWED = new Set(REACTION_EMOJIS);
 export const isReactionEmoji = (value: unknown): value is string => typeof value === "string" && ALLOWED.has(value);
 
-/** The quick row under a photo (the sheet behind "+" has the rest). */
-export const QUICK_REACTIONS: readonly string[] = [HEART, "😂", "🔥", "👏", "😮", "🙏"];
+/** The row of emoji under a photo: eight, laid out 4 × 2 (final prototype). One pick per person; the same one again takes it back. */
+export const QUICK_REACTIONS: readonly string[] = [HEART, "😂", "🔥", "👏", "😮", "🥹", "🎉", "👍"];
 
 /** How many reactions one person may send per 10 minutes (an attack is not a reaction; changing one's mind counts). */
 export const REACTIONS_PER_10_MINUTES = 200;
@@ -65,4 +65,17 @@ export function withReaction(list: readonly ReactionCount[], emoji: string | nul
     else next.push({ emoji, count: 1, mine: true });
   }
   return next.map((entry, index) => ({ entry, index })).sort((a, b) => b.entry.count - a.entry.count || a.index - b.index).map(({ entry }) => entry);
+}
+
+const SKIP_WORDS = new Set(["&", "dan", "and", "of", "the"]);
+/**
+ * A department's short form for the list of who reacted ("Art & Creative Support" → "ACS", "Finance" → "FIN", "CoE" → "COE"):
+ * the initials of its words (at most four, "&" and "dan" left out); one word of up to four letters stays whole, a longer
+ * one is cut to three. Capitals. "" for nothing.
+ */
+export function departmentAbbr(department: string | null | undefined): string {
+  const words = (department ?? "").split(/[\s/,-]+/).map(word => word.replace(/[^\p{L}\p{N}]/gu, "")).filter(word => word && !SKIP_WORDS.has(word.toLowerCase()));
+  if (!words.length) return "";
+  if (words.length === 1) return (words[0].length <= 4 ? words[0] : words[0].slice(0, 3)).toUpperCase();
+  return words.slice(0, 4).map(word => [...word][0]).join("").toUpperCase();
 }

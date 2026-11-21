@@ -116,7 +116,7 @@ export function sampleReactors(reactions: readonly ReactionCount[], mine: string
       // One reaction per person: when the sample people run out, more colleagues are made up.
       const taken = cursor++;
       const person = isMine ? samplePeople.rani : taken < keys.length ? samplePeople[keys[taken]] : { id: uid(2000 + taken), name: EXTRA[(taken - keys.length) % EXTRA.length] };
-      out.push({ person: { id: person.id, name: person.name, photo: null }, emoji: entry.emoji, mine: isMine && (mine === null || mine === entry.emoji), at: new Date(base - out.length * 60_000).toISOString() });
+      out.push({ person: { id: person.id, name: person.name, photo: null, department: "department" in person ? person.department : "" }, emoji: entry.emoji, mine: isMine && (mine === null || mine === entry.emoji), at: new Date(base - out.length * 60_000).toISOString() });
     }
   }
   return out;

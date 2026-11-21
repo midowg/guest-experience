@@ -42,6 +42,8 @@ export type StackScreen = {
   anyPhotos: boolean;
   own: { id: string; status: PhotoStatus; reason: string } | null;
   eventName: string;
+  /** The viewer, for their avatar on the reactions pill. */
+  me: { name: string; photo: string | null };
   nowIso: string;
 };
 
@@ -54,7 +56,7 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
   const [sessions, counts] = await Promise.all([publishedSessions(), sessionCounts(context, view)]);
   const base = {
     session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
-    mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, nowIso: now.toISOString(),
+    mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, me: { name: viewer.name, photo: viewer.photo }, nowIso: now.toISOString(),
   };
 
   // Opened at one photo (Galeri, Mozaik, a note about one's own photo).

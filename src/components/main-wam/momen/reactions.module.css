@@ -1,68 +1,42 @@
 /*
- * Reactions (Momen): the pills inside the photo, the quick row under it, the sheet of every emoji.
- * Tokens only. What sits on a photo (the pills) uses the fixed media colours on a scrim, so it reads on a
- * light photo too; the person's own is filled with the primary colour.
+ * Reactions (Momen): the pill inside the photo, the plain emoji under it, the sheet of who reacted.
+ * Tokens only. What sits on a photo (the pill) uses the fixed media colours on a scrim, so it reads on a light photo too.
  */
 
-/* Inside the card, bottom left, above the tap areas (z 2) and under the options button. ONE button: the pills lie side by side
-   and overlap like a group of avatars (each one covers the left edge of the one after it by 6 px, which is only its padding, so every
-   emoji and count stays readable; the first, the most given, is in front). A pill is opaque where it overlaps (the scrim alone would show
-   the one under it through), and a thin light ring parts them. The button is at least 44 high to tap. */
-.pills {
-  position: absolute; left: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 4; max-width: calc(100% - var(--mw-space-16));
-  display: inline-flex; align-items: center; height: var(--mw-touch); margin: 0; padding: 0 var(--mw-space-8) 0 0; border: 0; background: none; color: var(--mw-media-on);
-  font: var(--mw-type-label); cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: var(--mw-radius-full);
-  transition: transform var(--mw-motion-press);
+/* Inside the card, bottom left, under the options button: three avatars lying tightly over one another, then the number of reactions.
+   ONE button (a tap opens the list), at least 44 high to tap; the drawn pill is smaller inside it. */
+.sum {
+  position: absolute; left: var(--mw-space-4); bottom: var(--mw-space-4); z-index: 4; max-width: calc(100% - var(--mw-space-8)); box-sizing: border-box;
+  display: inline-flex; align-items: center; height: var(--mw-touch); margin: 0; padding: 0 var(--mw-space-4); border: 0; background: none; color: var(--mw-media-on);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: var(--mw-radius-full); transition: transform var(--mw-motion-press);
 }
-.pills[data-static] { pointer-events: none; cursor: default; }
-.pills:active { transform: scale(0.97); }
-.pills:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
-.pill {
-  position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-space-32); padding: 0 var(--mw-space-12) 0 var(--mw-space-8);
-  border-radius: var(--mw-radius-full); color: var(--mw-media-on); font: var(--mw-type-label); font-variant-numeric: tabular-nums;
-  background: var(--mw-media-scrim);
-  box-shadow: 0 0 0 2px var(--mw-media-on-2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-media-on) 34%, transparent);
-}
-/* Overlap: from the second pill on, six pixels under the one before it (the first has the highest z-index). */
-.pill + .pill { margin-left: -6px; }
-.pill:nth-child(1) { z-index: 5; } .pill:nth-child(2) { z-index: 4; } .pill:nth-child(3) { z-index: 3; } .pill:nth-child(4) { z-index: 2; } .pill:nth-child(5) { z-index: 1; }
-.pill[data-mine] { background: var(--mw-primary); color: var(--mw-on-primary); }
-.pillRest { padding: 0 var(--mw-space-8) 0 var(--mw-space-12); }
-.pillEmoji { font-size: 16px; line-height: 1; }
-.pillCount { line-height: 1; }
-/* A reaction that was just chosen pops in. */
-.pill[data-mine] .pillEmoji { animation: pop 260ms var(--mw-ease-decelerate); }
-@keyframes pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.sum[data-static] { pointer-events: none; cursor: default; }
+.sum:active { transform: scale(0.97); }
+.sum:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
+/* The drawn pill: the scrim behind avatars and number (the button around it is the touch target). */
+.avs { display: inline-flex; align-items: center; padding: var(--mw-space-4) var(--mw-space-4) var(--mw-space-4) var(--mw-space-4); border-radius: var(--mw-radius-full) 0 0 var(--mw-radius-full); background: var(--mw-media-scrim); }
+.sumCount { display: inline-flex; align-items: center; height: 32px; padding: 0 var(--mw-space-12) 0 var(--mw-space-8); border-radius: 0 var(--mw-radius-full) var(--mw-radius-full) 0; background: var(--mw-media-scrim); font: var(--mw-type-label); font-variant-numeric: tabular-nums; line-height: 1; color: var(--mw-media-on); }
+/* Tight overlap: each avatar lies 10 px over the one before, parted by a thin ring; the first is in front. */
+.avs > * { position: relative; flex: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-media-on) 40%, transparent); }
+.avs > * + * { margin-left: -10px; }
+.avs > :nth-child(1) { z-index: 3; } .avs > :nth-child(2) { z-index: 2; } .avs > :nth-child(3) { z-index: 1; }
+/* A round emoji stands in for a person the server did not name. */
+.avEmoji { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--mw-surface-2); font-size: 14px; line-height: 1; }
 
-/* The quick row: 44 round buttons; "+" last. On a very narrow screen the sixth emoji gives way (7 × 44 would not fit 320). */
-.quick { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 360px; margin: 0 auto; }
+/* The plain emoji under the photo: no card, no frame, 4 × 2 in the middle with even gaps. Each is a 44 target; the row wraps by its own
+   width (the container is .actions): 4 columns from 200 px up, 3 below (three rows, the stage gives them room), 2 when extremely narrow. */
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; align-items: center; gap: var(--mw-space-8) 0; width: 100%; max-width: 288px; margin: 0 auto; }
 .quickButton {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--mw-touch); height: var(--mw-touch); padding: 0;
-  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-surface-2); color: var(--mw-text-1); font-size: 22px; line-height: 1; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: transform var(--mw-motion-press), background-color var(--mw-motion-press);
+  display: inline-flex; align-items: center; justify-content: center; width: var(--mw-touch); height: var(--mw-touch); padding: 0; border: 0; background: none;
+  font-size: 30px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform var(--mw-motion-press), opacity var(--mw-motion-press);
 }
-.quickButton > svg { width: 24px; height: 24px; }
-.quickButton:active { transform: scale(0.88); }
-.quickButton[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
-.quickButton:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
-/* Seven 44 targets need 8 between them (356); the row gives way by its own width, not the screen's: the sixth emoji first, then the fifth. */
-@container (max-width: 355px) { .quick > :nth-child(6) { display: none; } }
-@container (max-width: 303px) { .quick > :nth-child(5) { display: none; } }
-@container (max-width: 251px) { .quick > :nth-child(4) { display: none; } }
-@container (max-width: 199px) { .quick > :nth-child(3) { display: none; } }
-
-/* The sheet: groups under small heads, a grid of 44 targets. */
-.groups { display: flex; flex-direction: column; gap: var(--mw-space-16); padding-bottom: var(--mw-space-8); }
-.group { display: flex; flex-direction: column; gap: var(--mw-space-4); }
-.groupHead { margin: 0; font: var(--mw-type-label); color: var(--mw-text-2); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mw-touch), 1fr)); gap: var(--mw-space-8); }
-.cell {
-  display: inline-flex; align-items: center; justify-content: center; height: var(--mw-touch); min-width: var(--mw-touch); padding: 0; border: 0;
-  border-radius: var(--mw-radius-12); background: transparent; color: var(--mw-text-1); font-size: 26px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.cell:active { background: var(--mw-surface-2); }
-.cell[aria-pressed="true"] { background: var(--mw-primary-container); box-shadow: inset 0 0 0 2px var(--mw-primary); }
-.cell:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: -3px; }
+.quickButton:active { transform: scale(0.85); }
+/* The one chosen is bigger; the others step back (never the only sign of the state: aria-pressed says it too). */
+.quickButton[aria-pressed="true"] { transform: scale(1.3); }
+.quickButton[data-dim] { opacity: 0.55; }
+.quickButton:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; border-radius: var(--mw-radius-full); }
+@container (max-width: 199px) { .quick { grid-template-columns: repeat(3, 1fr); } }
+@container (max-width: 143px) { .quick { grid-template-columns: repeat(2, 1fr); } }
 
 /* Who reacted (the sheet behind the pills): tabs, then one row per person (avatar, nama panggilan, emoji). */
 .whoTabs { flex: none; display: flex; gap: var(--mw-space-8); overflow-x: auto; margin: 0 calc(var(--mw-space-16) * -1) var(--mw-space-8); padding: 0 var(--mw-space-16) var(--mw-space-4); scrollbar-width: none; }
@@ -90,7 +64,6 @@ button.whoRow:focus-visible { outline: 3px solid var(--mw-focus); outline-offset
 .whoMessage { display: flex; flex-direction: column; align-items: flex-start; gap: var(--mw-space-12); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pills, .quickButton { transition: none; }
-  .pills:active, .quickButton:active { transform: none; }
-  .pill[data-mine] .pillEmoji { animation: none; }
+  .sum, .quickButton { transition: none; }
+  .sum:active, .quickButton:active { transform: none; }
 }

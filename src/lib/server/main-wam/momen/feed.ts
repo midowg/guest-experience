@@ -38,10 +38,28 @@ export type FeedRow = {
   taken_at: string; visible_at: string; status: string; file_key: string; thumb_key: string | null; reactions: unknown; seen: boolean; total: number | string;
 };
 
+/**
+ * The last three people who reacted to each of these photos (never the viewer: the screen adds them itself), for the
+ * avatars on a photo. One narrow query for the page; any trouble (the reactions table not there yet) is an empty answer.
+ */
+async function reactorPreviews(ids: string[], viewerId: string): Promise<Map<string, string[]>> {
+  const found = new Map<string, string[]>();
+  try {
+    const { data, error } = await db().from("mw_photo_reactions").select("photo_id,employee_id,created_at").in("photo_id", ids).neq("employee_id", viewerId)
+      .order("created_at", { ascending: false }).limit(ids.length * 12);
+    if (error) return found;
+    for (const row of (data ?? []) as { photo_id: string; employee_id: string }[]) {
+      const list = found.get(row.photo_id) ?? [];
+      if (list.length < 3) { list.push(row.employee_id); found.set(row.photo_id, list); }
+    }
+  } catch { /* no avatars, the count still shows */ }
+  return found;
+}
+
 /** Rows of the feed as the app shows them: nama panggilan, view addresses. */
 export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now = Date.now()): Promise<FeedPhoto[]> {
   if (!rows.length) return [];
-  const people = await mainWamPeople();
+  const [people, previews] = await Promise.all([mainWamPeople(), reactorPreviews(rows.map(row => row.id), context.viewer.id)]);
   return Promise.all(rows.map(async row => {
     const person = people.get(row.owner_id);
     // The small copy keeps its address for the hour (the grid stays cached); the large one closes within 15 minutes (audit L5).
@@ -50,7 +68,9 @@ export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now =
       id: row.id, owner: { id: row.owner_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null },
       audience: oneOf(PHOTO_AUDIENCES, row.audience, "semua"), sessionId: row.session_id, width: row.width, height: row.height,
       takenAt: row.taken_at, visibleAt: row.visible_at, status: oneOf(PHOTO_STATUSES, row.status, "tampil"),
-      reactions: parseReactions(row.reactions), seen: !!row.seen, mine: row.owner_id === context.viewer.id, src: { kecil, besar },
+      reactions: parseReactions(row.reactions),
+      reactors: (previews.get(row.id) ?? []).map(id => ({ id, name: people.get(id)?.name ?? "Rekan", photo: people.get(id)?.photo ?? null })),
+      seen: !!row.seen, mine: row.owner_id === context.viewer.id, src: { kecil, besar },
     } satisfies FeedPhoto;
   }));
 }
@@ -168,7 +188,7 @@ export async function photoReactors(viewer: MainWamViewer, id: string): Promise<
   for (const row of (data ?? []) as { employee_id: string; emoji: string; created_at: string }[]) {
     if (!isReactionEmoji(row.emoji) || reactors.length >= REACTORS_MAX) continue;
     const person = people.get(row.employee_id);
-    reactors.push({ person: { id: row.employee_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null }, emoji: row.emoji, mine: row.employee_id === viewer.id, at: row.created_at });
+    reactors.push({ person: { id: row.employee_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null, department: person?.department ?? "" }, emoji: row.emoji, mine: row.employee_id === viewer.id, at: row.created_at });
   }
   return { reactors };
 }
