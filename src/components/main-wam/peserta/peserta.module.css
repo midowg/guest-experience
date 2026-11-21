@@ -174,12 +174,8 @@
 .sheetMeta { margin: 0; font: var(--mw-type-caption); color: var(--mw-text-2); }
 
 /* ── Masuk (O02) ── */
-.login { display: flex; flex-direction: column; gap: var(--mw-space-24); min-height: 100dvh; width: 100%; max-width: var(--mw-column); margin: 0 auto; padding: calc(var(--mw-safe-top) + var(--mw-space-48)) var(--mw-space-16) calc(var(--mw-safe-bottom) + var(--mw-space-24)); background: var(--mw-bg); color: var(--mw-text-1); }
-.wordmark { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); font-family: var(--mw-display-font, inherit); font-weight: 800; color: var(--mw-primary-strong); }
 .pageTitle { margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); font-family: var(--mw-display-font, inherit); }
 .form { display: flex; flex-direction: column; gap: var(--mw-space-16); }
-.forgot { align-self: flex-end; margin: calc(-1 * var(--mw-space-4)) calc(-1 * var(--mw-space-12)) 0 0; }
-.loginNote { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); text-align: center; }
 .eye {
   flex: none; width: 44px; height: 44px; margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-12)) calc(-1 * var(--mw-space-8)) 0;
   display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--mw-radius-full); background: none; color: var(--mw-text-2); cursor: pointer;
@@ -191,25 +187,6 @@
 .ruleOk { color: var(--mw-success); }
 .ruleBad { color: var(--mw-error); }
 
-/* ── Splash (O01, x-splash): event colour, wordmark in the middle, the dates low. Gone by 1.2 s
-   from CSS alone (the component lifts it sooner); reduced motion: no fade. ── */
-.splash {
-  position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: var(--mw-safe-top) calc(var(--mw-safe-right) + var(--mw-space-24)) calc(var(--mw-safe-bottom) + var(--mw-space-48)) calc(var(--mw-safe-left) + var(--mw-space-24));
-  background: var(--mw-accent); color: var(--mw-on-accent); text-align: center;
-  animation: mw-splash-out 240ms ease-out 960ms forwards;
-}
-.splashImage { background: var(--mw-accent) var(--mw-image-splash) center / cover no-repeat; }
-.splashHold { animation: none; }
-.splashMark { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-8); max-width: 100%; overflow-wrap: anywhere; }
-.splashTitle { font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); font-family: var(--mw-display-font, inherit); font-weight: 800; color: var(--mw-on-accent); }
-.splashSub { font: var(--mw-type-body); color: var(--mw-on-accent-2); }
-.splashFoot {
-  position: absolute; left: var(--mw-space-16); right: var(--mw-space-16); bottom: calc(var(--mw-safe-bottom) + var(--mw-space-32));
-  margin: 0; font: var(--mw-type-label); color: var(--mw-on-accent);
-}
-@keyframes mw-splash-out { to { opacity: 0; visibility: hidden; } }
-@keyframes mw-splash-gone { to { visibility: hidden; } }
 
 /* ── Izin notifikasi (O03) ── */
 .onboard { display: flex; flex-direction: column; gap: var(--mw-space-24); padding: calc(var(--mw-safe-top) + var(--mw-space-16)) var(--mw-space-16) var(--mw-space-24); }
@@ -255,8 +232,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .disclosureChevron { transition: none; }
-  .splash { animation: mw-splash-gone 0s linear 1.2s forwards; }
-  .splashHold { animation: none; }
 }
 
 .skeletonCarbon { flex-direction: row; align-items: center; gap: var(--mw-space-12); }

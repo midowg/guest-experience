@@ -19,6 +19,7 @@ const EXCEPTIONS: Record<string, string> = {
   "theme/tokens.ts": "the neutral default theme and the page colours (the tokens' twin in code)",
   "momen/MosaicCanvas.tsx": "canvas cannot take color-mix(): rgba() is built from the value of a token it has just read",
   "momen/upload/compress.ts": "the white a photo is flattened onto before it becomes a JPEG (data, not interface)",
+  "peserta/masuk/masuk.module.css": "Splash and Masuk keep the prototype's own brand palette (pegasus art, gold, blue-black), the only screens that do",
   "ui/sheet.module.css": "::backdrop does not inherit the theme root's custom properties in every browser: a fallback behind var(--mw-overlay-scrim)",
 };
 

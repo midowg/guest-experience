@@ -8,6 +8,7 @@ export const idCommon = {
   "ui.cancel": "Batal",
   "ui.back": "Kembali",
   "ui.loading": "Memuat",
+  "ui.pleaseWait": "Mohon tunggu sebentar",
   "ui.notices": "Pemberitahuan",
   "ui.eventDays": "Hari acara",
   "ui.todaySr": ", hari ini",

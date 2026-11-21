@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { LoginScreen } from "@/components/main-wam/peserta/masuk/LoginScreen";
+import { barlow } from "@/components/main-wam/peserta/masuk/font";
 import { Splash } from "@/components/main-wam/peserta/masuk/Splash";
 import { eventDateRange, splashSubtitle } from "@/lib/main-wam/peserta/splash";
 import { themeInputOf } from "@/lib/main-wam/theme-image";
@@ -27,8 +28,8 @@ export default async function MainWamLoginPage({ searchParams }: { searchParams:
   if (settings.mode !== "semua") redirect(praWamPath.login(next));
   const { event } = settings;
   const lang = await readLang();
-  return <>
-    <Splash title={event.name} subtitle={splashSubtitle(event.name)} dates={eventDateRange(event.startDate, event.endDate, lang)} image={!!themeInputOf(settings.theme).images?.splash} />
+  return <div className={barlow.variable}>
+    <Splash title={event.name} subtitle={splashSubtitle(event.name)} dates={eventDateRange(event.startDate, event.endDate, lang)} venue={event.venue} image={!!themeInputOf(settings.theme).images?.splash} />
     <LoginScreen next={next} eventName={event.name} />
-  </>;
+  </div>;
 }

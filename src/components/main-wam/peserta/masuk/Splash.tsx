@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { SPLASH_KEY, splashWait } from "@/lib/main-wam/peserta/splash";
-import css from "../peserta.module.css";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ChevronRight } from "lucide-react";
+import { SPLASH_KEY } from "@/lib/main-wam/peserta/splash";
+import { useT } from "@/components/main-wam/i18n";
+import { quietFocus } from "@/components/main-wam/ui/useModal";
+import { PegasusArt } from "./PegasusArt";
+import css from "./masuk.module.css";
 
 /** Whether this page load shows the splash: decided once per load (StrictMode runs effects twice). */
 let showThisLoad: boolean | undefined;
@@ -18,43 +22,53 @@ function firstTimeThisSession(): boolean {
 const noSubscription = () => () => undefined;
 
 /**
- * O01 Splash, over Masuk while the page opens (mode semua): the event's colour with "WAM 2026",
- * its long name and dates, or Admin WAM's splash image (the theme's `splash` slot) when there is
- * one. It never holds sign-in up: Masuk is ready under it, a tap or a key lifts it, and it goes
- * after 0.7 s (at most 1.2 s, by CSS alone too, so a page without JavaScript is not stuck). Once
- * per browser session; not after an in-app navigation (it opens the app, not a page). Reduced
- * motion: no fade, it simply goes. Hidden from screen readers: Masuk is what they get at once.
+ * O01 Splash, over Masuk when the app opens (mode semua): always dark, the pegasus of dots with its
+ * gold path, a pill with the event's name, dates and place, "Shaping for tomorrow" (the last word in
+ * gold), "Werkudara Annual Meeting" and the Masuk button, which lifts it onto the sign-in beneath
+ * (that is already there and ready). Or Admin WAM's splash image (the theme's `splash` slot) in place
+ * of the art and words, with the same button. Once per browser session; not after an in-app
+ * navigation (it opens the app, not a page). It is a labelled region with a real button (focus starts
+ * on it), so a screen reader meets Masuk at once.
  */
-export function Splash({ title, subtitle, dates, image, hold }: {
+export function Splash({ title, subtitle, dates, venue, image, hold }: {
   title: string;
+  /** "Werkudara Annual Meeting 2026" (null: the words alone). */
   subtitle: string | null;
   dates: string;
-  /** The theme has a splash image (drawn from --mw-image-splash, in place of the words). */
+  /** "Kota Batu"; "" = none. */
+  venue?: string;
+  /** The theme has a splash image (drawn from --mw-image-splash, in place of the art and words). */
   image: boolean;
-  /** Previews: stays, without the fade. */
+  /** Previews: stays even without a tap target being needed (the same as the page). */
   hold?: boolean;
 }) {
+  const t = useT();
   // True while hydrating the server's page (getServerSnapshot), false when first drawn on the client.
   const hydrating = useSyncExternalStore(noSubscription, () => false, () => true);
   const [opening] = useState(hydrating);
   const [gone, setGone] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (hold || !opening) return;
-    const timer = window.setTimeout(() => setGone(true), firstTimeThisSession() ? splashWait(performance.now()) : 0);
-    const lift = () => setGone(true);
-    window.addEventListener("keydown", lift, { once: true });
-    return () => { window.clearTimeout(timer); window.removeEventListener("keydown", lift); };
+    // Not the first page of this browser session: straight to Masuk, nothing to hold.
+    if (!firstTimeThisSession()) { setGone(true); return; } // eslint-disable-line react-hooks/set-state-in-effect -- read from the browser after the first paint
   }, [hold, opening]);
+  useEffect(() => { if (button.current && (hold || opening)) quietFocus(button.current); }, [hold, opening]);
 
   if ((!opening && !hold) || gone) return null;
-  return <div className={`${css.splash} ${image ? css.splashImage : ""} ${hold ? css.splashHold : ""}`} aria-hidden data-testid="splash" onPointerDown={() => setGone(true)}>
-    {!image && <>
-      <div className={css.splashMark}>
-        <span className={css.splashTitle}>{title}</span>
-        {subtitle && <span className={css.splashSub}>{subtitle}</span>}
-      </div>
-      {dates && <p className={css.splashFoot}>{dates}</p>}
-    </>}
-  </div>;
+  const words = t("peserta.splash.tagline").split(" ");
+  const last = words.pop();
+  const line = [title, dates, venue].filter(Boolean).join(" · ");
+  return <section className={`${css.splash} ${image ? css.splashImage : ""}`} data-testid="splash" aria-label={title}>
+    {!image && <PegasusArt className={css.splashPeg} />}
+    <div className={css.splashBody}>
+      {!image && <>
+        {line && <span className={css.splashPill}>{line}</span>}
+        <h1 className={css.splashTitle}>{words.join(" ")} <span className={css.splashGold}>{last}</span></h1>
+        <p className={css.splashCap}>{subtitle ?? t("peserta.splash.caption")}</p>
+      </>}
+      <button ref={button} type="button" className={css.goldButton} onClick={() => setGone(true)}>{t("peserta.login.title")}<ChevronRight aria-hidden /></button>
+    </div>
+  </section>;
 }

@@ -5,6 +5,7 @@ export const enCommon: Record<keyof typeof idCommon, string> = {
   "ui.cancel": "Cancel",
   "ui.back": "Back",
   "ui.loading": "Loading",
+  "ui.pleaseWait": "Please wait a moment",
   "ui.notices": "Notices",
   "ui.eventDays": "Event days",
   "ui.todaySr": ", today",
