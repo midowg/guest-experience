@@ -12,6 +12,7 @@ import { databaseError } from "../../http";
 import { sessionQrPdf } from "../../pra-wam/qr-pdf";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { demoRundown } from "../demo";
+import { absenBlock } from "../ceklis/data";
 import { mwFail, mwMissing } from "../errors";
 import { mainWamAttendees } from "../people";
 import { allSessions, attendanceOf } from "../read";
@@ -44,7 +45,7 @@ export async function myCheckIn(sessionId: string, employeeId: string): Promise<
 }
 
 /** A scan of a session's QR: records the check-in while the window is open, else says why not. */
-export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "id" | "roles">, options: { now: Date; scannedAt?: string | null }): Promise<CheckInOutcome> {
+export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "id" | "roles">, options: { now: Date; scannedAt?: string | null; ceklis?: boolean }): Promise<CheckInOutcome> {
   if (!mainWamCan(viewer, "absen")) return { kind: "bod" };
   const session = await sessionByQr(token);
   if (!session) return { kind: "tidak-dikenal" };
@@ -54,6 +55,9 @@ export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "
   const at = acceptedScanTime(options.scannedAt, options.now, session);
   const refused = windowOutcome(session, at);
   if (refused) return refused;
+  // Module Ceklis: a checklist that asks "lengkap sebelum absen" and is not finished stops the check-in (the scan is not recorded).
+  const block = options.ceklis ? await absenBlock(session, viewer.id) : null;
+  if (block) return { kind: "ceklis", session: named(session), block };
   const { data, error } = await db().from("mw_attendance")
     .upsert({ session_id: session.id, employee_id: viewer.id, method: "qr", checked_in_at: at.toISOString() }, { onConflict: "session_id,employee_id", ignoreDuplicates: true })
     .select("checked_in_at");

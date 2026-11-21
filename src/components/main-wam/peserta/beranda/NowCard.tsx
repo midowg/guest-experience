@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CalendarCheck, CalendarDays, ChevronRight, Clock, MapPin } from "lucide-react";
+import { CalendarCheck, CalendarDays, ChevronRight, Clock, ListChecks, MapPin } from "lucide-react";
 import type { NowView } from "@/lib/main-wam/peserta/home";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
@@ -16,7 +16,7 @@ import css from "../peserta.module.css";
  * ini selesai" with tomorrow's first session. The session part opens Detail sesi; the Absen button
  * sits beside that link, never inside it.
  */
-export function NowCard({ view, absen, serverNow }: { view: NowView; absen?: ReactNode; serverNow: string }) {
+export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; absen?: ReactNode; serverNow: string; /** Module Ceklis: this agenda has a checklist that is not finished (one reminder line). */ ceklis?: { done: number; total: number } | null }) {
   const t = useT();
   if (view.kind === "kosong") {
     return <Card as="article">
@@ -44,6 +44,7 @@ export function NowCard({ view, absen, serverNow }: { view: NowView; absen?: Rea
       <span className={css.meta}>
         <span className={css.metaItem}><Clock aria-hidden /><span>{view.time}</span></span>
         {view.place && <span className={css.metaItem}><MapPin aria-hidden /><span>{view.place}</span></span>}
+        {ceklis && <span className={css.metaItem}><ListChecks aria-hidden /><span>{t("ceklis.homeReminder", { done: ceklis.done, total: ceklis.total })}</span></span>}
       </span>
     </Link>
     {view.absen && absen}

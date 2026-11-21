@@ -45,8 +45,6 @@ describe("Main WAM's frame, from the address alone", () => {
 
   it("keeps the bottom bar on detail screens, with the tab they belong to and a way back", () => {
     const cases: [string, string, string, string][] = [
-      // P04: a bar without a title (revisi 16 Nov); its name for screen readers is the label.
-      [mainWamPath.session("s1"), "agenda", "", mainWamPath.agenda()],
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
       [mainWamPath.gallery(), "momen", "Galeri", mainWamPath.moments()],
       [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
@@ -76,8 +74,9 @@ describe("Main WAM's frame, from the address alone", () => {
     }
   });
 
-  it("names a screen whose bar has no title (P04 Detail sesi)", () => {
-    expect(at(mainWamPath.session("s1"))).toMatchObject({ title: "", label: "Detail sesi" });
+  it("draws Agenda's own frame behind Detail sesi, which is a sheet over it (P04)", () => {
+    expect(at(mainWamPath.session("s1"))).toMatchObject({ tab: "agenda", level: "akar", title: "Agenda" });
+    expect(at(mainWamPath.agendaPrep(3))).toMatchObject({ tab: "agenda", level: "akar" });
   });
 
   it("drops the bottom bar on task screens (camera, scan, forms)", () => {

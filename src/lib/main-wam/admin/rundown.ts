@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SessionChecklist } from "../ceklis/ceklis";
 import { byStart, timeRange, wibDate, wibInstant, wibTime } from "../rundown";
 import { SESSION_KINDS, SESSION_MODULES, SESSION_STATUSES, type LineupItem, type MwSession, type RundownChange, type SessionKind, type SessionModule } from "../types";
 import { sessionKindLabels, sessionModuleLabels, sessionStatusLabels } from "./labels";
@@ -59,7 +60,11 @@ export type SessionUsage = { attendance: number; photos: number; silent: boolean
  * every change), so a save never overwrites a change made in Rundown live in the meantime; and
  * what it already has (null when that is not known yet), so Hapus is offered only where it works.
  */
-export type AdminSession = MwSession & { version: string | null; usage: SessionUsage | null };
+export type AdminSession = MwSession & {
+  version: string | null; usage: SessionUsage | null;
+  /** The agenda's checklist (agen S1): empty when it has none, null while its migration has not run (the editor then says so). */
+  checklist?: SessionChecklist | null;
+};
 
 /* ── Hapus atau Batalkan (audit M4) ───────────────────────────────────────────────────────────── */
 

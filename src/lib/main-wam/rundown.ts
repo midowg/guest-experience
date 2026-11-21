@@ -33,7 +33,7 @@ export function byStart<T extends Pick<MwSession, "startsAt" | "sort" | "title">
 
 /* ── Days ─────────────────────────────────────────────────────────────────────────────────────── */
 
-const addDays = (date: string, days: number) => {
+export const addDays = (date: string, days: number) => {
   const day = new Date(`${date}T12:00:00Z`);
   day.setUTCDate(day.getUTCDate() + days);
   return day.toISOString().slice(0, 10);
@@ -44,6 +44,40 @@ export function eventDates(event: Pick<MainWamEventInfo, "startDate" | "endDate"
   const dates: string[] = [];
   for (let date = event.startDate; date <= event.endDate && dates.length < 31; date = addDays(date, 1)) dates.push(date);
   return dates;
+}
+
+/* ── Persiapan (H-n) ──────────────────────────────────────────────────────────────────────────── */
+
+/** How many days before the first day an agenda ("H-3", Persiapan) may be dated. */
+export const PREP_WINDOW_DAYS = 60;
+
+/** Whole days from `from` to `to` (both "YYYY-MM-DD"). */
+export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+
+/** How many days before the event's first day a date is (3 for "H-3"); null on or after the first day, or earlier than the window. */
+export function daysBeforeEvent(date: string, event: Pick<MainWamEventInfo, "startDate">): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const days = daysBetween(date, event.startDate);
+  return days >= 1 && days <= PREP_WINDOW_DAYS ? days : null;
+}
+
+/** A date before the first day and inside the window: an agenda of the "H-n" kind (Persiapan). */
+export const isPrepDate = (date: string, event: Pick<MainWamEventInfo, "startDate">) => daysBeforeEvent(date, event) !== null;
+
+/** A date a session may be given: a day of the event, or a Persiapan day before it. */
+export const isSessionDate = (date: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">) => eventDates(event).includes(date) || isPrepDate(date, event);
+
+/** The earliest and latest date a Persiapan agenda may have ("2026-11-05" … "2027-01-03"). */
+export function prepRange(event: Pick<MainWamEventInfo, "startDate">): { from: string; to: string } {
+  return { from: addDays(event.startDate, -PREP_WINDOW_DAYS), to: addDays(event.startDate, -1) };
+}
+
+/** "H-3". */
+export const prepLabel = (days: number) => `H-${days}`;
+
+/** The Persiapan dates the sessions occupy, earliest first. */
+export function prepDatesOf(sessions: readonly Pick<MwSession, "startsAt">[], event: Pick<MainWamEventInfo, "startDate">): string[] {
+  return [...new Set(sessions.map(session => wibDate(session.startsAt)).filter(date => isPrepDate(date, event)))].sort();
 }
 
 /** "Hari ke-2 dari 4": the day number of a date (1-based) and the total; null outside the event. */

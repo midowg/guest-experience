@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, Gamepad2, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
+import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
+import type { CeklisBlock } from "@/lib/main-wam/ceklis/ceklis";
 import type { AbsenCard } from "@/lib/main-wam/modul/absen";
 import { presentLabel } from "@/lib/main-wam/modul/absen";
 import type { PanitiaContact } from "@/lib/main-wam/modul/contact";
@@ -19,7 +20,9 @@ import css from "./modul.module.css";
 export type AbsenSlot =
   | Exclude<AbsenCard, { kind: "terlewat" }>
   | { kind: "terlewat"; contact: PanitiaContact | null }
-  | { kind: "bod"; present: number; expected: number };
+  | { kind: "bod"; present: number; expected: number }
+  /** Module Ceklis: absen is open but a checklist that must be finished first is not (the lock and the way to it). */
+  | { kind: "ceklis"; block: CeklisBlock };
 
 /** What SessionModuleAction draws. */
 export type ModuleSlot = {
@@ -44,6 +47,12 @@ export function AbsenView({ slot }: { slot: AbsenSlot }) {
     case "buka": return <>
       <AbsenQueue />
       <Button block icon={<QrCode />} href={mainWamPath.scan}>{t("absen.button")}</Button>
+    </>;
+    case "ceklis": return <>
+      <Button block icon={<Lock />} disabled>{t("absen.ceklisFirst")}</Button>
+      <Banner tone="info" icon={<ListChecks />} title={t("absen.ceklisOpen")} href={mainWamPath.session(slot.block.sessionId)}>
+        {t("absen.ceklisBody", { title: slot.block.title, done: slot.block.done, total: slot.block.total })}
+      </Banner>
     </>;
     case "hadir": return <div className={css.pills}><StatusPill status="present">{presentLabel(slot.at, lang)}</StatusPill></div>;
     case "terlewat": return <>

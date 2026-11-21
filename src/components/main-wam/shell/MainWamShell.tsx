@@ -12,6 +12,7 @@ import { ToastProvider } from "../ui/Toast";
 import { TopBar } from "../ui/TopBar";
 import { BottomNav, type TabBadges } from "./BottomNav";
 import { ActionsSlotContext } from "./ShellSlots";
+import { setTrailDepth } from "./trail";
 import css from "./shell.module.css";
 
 /** Back in the app after this long away (another app, a locked phone): fetch the frame's counts again. */
@@ -74,6 +75,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
     const list = trail.current;
     if (list.length >= 2 && list[list.length - 2] === here) list.pop();
     else if (list[list.length - 1] !== here) list.push(here);
+    setTrailDepth(list.length);
   }, [pathname]);
 
   useEffect(() => {

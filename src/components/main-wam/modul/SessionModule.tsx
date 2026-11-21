@@ -7,6 +7,7 @@ import { checkInState } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
+import { absenBlock } from "@/lib/server/main-wam/ceklis/data";
 import { myCheckIn, presentCount } from "@/lib/server/main-wam/modul/absen";
 import { awardsShown } from "@/lib/server/main-wam/modul/awards";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
@@ -38,6 +39,11 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   }
   const card = absenCard(session, await myCheckIn(session.id, viewer.id), now);
   if (card.kind === "terlewat") return { kind: "terlewat", contact: await panitiaContact(settings, session).catch(() => null) };
+  // Module Ceklis: while an agenda's checklist that asks "lengkap sebelum absen" is unfinished, the button is a lock that leads to it.
+  if (card.kind === "buka" && settings.modules.ceklis) {
+    const block = await absenBlock(session, viewer.id);
+    if (block) return { kind: "ceklis", block };
+  }
   return card;
 }
 

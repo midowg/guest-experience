@@ -1,3 +1,4 @@
+import { enCeklis } from "./en/ceklis";
 import { enCommon } from "./en/common";
 import { enDemo } from "./en/demo";
 import { enKuis } from "./en/kuis";
@@ -12,4 +13,4 @@ import type { MessageKey } from "./id";
  * Group; Check in; Mosaic; Silent Meeting; Awarding. Texts that admins write (session titles,
  * announcements, guides) are never in here.
  */
-export const en: Record<MessageKey, string> = { ...enCommon, ...enPeserta, ...enMomen, ...enModul, ...enDemo, ...enKuis };
+export const en: Record<MessageKey, string> = { ...enCommon, ...enPeserta, ...enMomen, ...enModul, ...enDemo, ...enKuis, ...enCeklis };

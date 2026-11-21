@@ -10,6 +10,7 @@ import type {
   MwActivityGroup, MwAttendance, MwAwardApproval, MwAwardCategory, MwGroup, MwGuide, MwPhoto, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, RundownChange, TripDirection,
 } from "@/lib/main-wam/types";
 import { MAIN_WAM_MODULES_MIGRATION, MAIN_WAM_MOMEN_MIGRATION } from "@/lib/main-wam/settings";
+import { samplePrepSession } from "@/lib/main-wam/ceklis/sample";
 import { demoSample, samplePresence } from "@/lib/main-wam/demo-sample";
 import { sampleActivityGroups, sampleAttendance, sampleAwards, sampleGroups, sampleGuides, samplePeople, sampleRundownLog, sampleSeats, sampleSessionIds, sampleSessions, sampleTrips } from "@/lib/main-wam/sample";
 import { isSupabaseConfigured } from "../config";
@@ -64,7 +65,7 @@ export const allSessionsReal = cache(realSessions);
 async function allSessionsUncached(): Promise<Read<MwSession[]>> {
   const real = await allSessionsReal();
   // Mode demo: no published session yet (drafts do not count), so the sample rundown.
-  return sampleOr(real, !real.data.some(session => session.status !== "draf"), () => sampleSessions, demoRundown);
+  return sampleOr(real, !real.data.some(session => session.status !== "draf"), () => [...sampleSessions, samplePrepSession].sort(byStart), demoRundown);
 }
 export const allSessions = cache(allSessionsUncached);
 

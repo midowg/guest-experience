@@ -4,8 +4,10 @@ import {
   announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
   type HomeCandidate, type HomeData,
 } from "@/lib/main-wam/peserta/home";
+import { checklistProgress, visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
 import { wibDate } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
+import { myChecks, readChecklists } from "../ceklis/data";
 import { pinnedForMe } from "../notes";
 import { attendanceOf, awardCategories, listTrips, seatsOf, shownSessions, silentQuestions, votedCategories } from "../read";
 import type { MainWamContext } from "../gate";
@@ -22,6 +24,16 @@ import { surveyFor } from "../survey";
 export type { HomeData };
 
 const none = <T>(value: T) => () => value;
+
+/** The Sekarang card's agenda has a checklist this person has not finished: how far they are. A read that fails says nothing. */
+async function unfinishedChecklist(sessionId: string, employeeId: string): Promise<{ done: number; total: number } | null> {
+  try {
+    const [lists, checked] = await Promise.all([readChecklists(), myChecks(employeeId)]);
+    const items = lists.data.get(sessionId)?.items ?? [];
+    const progress = checklistProgress(items, checked);
+    return progress.total > 0 && !progress.complete ? { done: progress.done, total: progress.total } : null;
+  } catch { return null; }
+}
 
 export async function loadHome(context: MainWamContext, now: Date): Promise<HomeData> {
   const { viewer, settings } = context;
@@ -41,12 +53,14 @@ export async function loadHome(context: MainWamContext, now: Date): Promise<Home
     travelDay ? listTrips().then(read => read.data).catch(none([])) : Promise.resolve([]),
     travelDay ? seatsOf(viewer.id).then(read => read.data).catch(none([])) : Promise.resolve([]),
   ]);
-  const sessions = sessionsRead.data;
+  // Module Ceklis off: the Persiapan agendas (before the first day) do not exist for participants.
+  const sessions = visibleSessions(sessionsRead.data, settings.event, modules.ceklis);
   const checkedIn = new Map(attendance.map(row => [row.sessionId, row.checkedInAt]));
   const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, lang });
   // Survei reads the questionnaire only once its session has started (surveyFor, audit R7).
   const survey = await surveyFor(context, sessions, now).catch(() => null);
   const session = view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null;
+  const ceklis = session && modules.ceklis ? await unfinishedChecklist(session.id, viewer.id) : null;
 
   const candidates: HomeCandidate[] = [
     ...announcementCandidates(pinned, now),
@@ -56,5 +70,5 @@ export async function loadHome(context: MainWamContext, now: Date): Promise<Home
   ];
   const picked = pickCard(candidates, modules, now);
   const refreshAt = nextChangeAt(sessions, now, [...pinned.map(note => note.pinnedUntil), ...candidates.map(card => card.until)]);
-  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now, lang) : null, refreshAt, serverNow: now.toISOString(), failed: sessionsRead.failed };
+  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now, lang) : null, refreshAt, serverNow: now.toISOString(), failed: sessionsRead.failed, ceklis };
 }

@@ -1,4 +1,5 @@
-import { agendaDay, eventDates, hasEnded, isRunning, sessionsOfDay, timeRange, wibDate } from "../rundown";
+import { checklistProgress, ceklisBlock, type ChecklistProgress, type SessionChecklist } from "../ceklis/ceklis";
+import { addDays, agendaDay, byStart, daysBeforeEvent, eventDates, hasEnded, isRunning, prepLabel, timeRange, wibDate } from "../rundown";
 import type { MainWamEventInfo, MwSession, RundownChange } from "../types";
 import { t, type Lang } from "../i18n";
 import { dateLabel, hhmm } from "./format";
@@ -10,11 +11,52 @@ import { placeLine } from "./home";
  * cancelled sessions (cancelled struck through), never drafts. Pure.
  */
 
-export type AgendaDayTab = { key: string; day: string; date: string; today: boolean; number: number };
+/** `prep`: a Persiapan tab before the first day ("H-3", key "h3", number 0; module Ceklis). */
+export type AgendaDayTab = { key: string; day: string; date: string; today: boolean; number: number; prep?: boolean };
 
-/** The four day tabs: "Hari 2" · "Sel, 5 Jan", today marked. */
-export function agendaDays(event: Pick<MainWamEventInfo, "startDate" | "endDate">, today: string, lang: Lang = "id"): AgendaDayTab[] {
-  return eventDates(event).map((date, index) => ({ key: String(index + 1), number: index + 1, day: t(lang, "fmt.dayN", { n: index + 1 }), date: dateLabel(date, lang), today: date === today }));
+/**
+ * The day tabs: "Hari 2" · "Sel, 5 Jan", today marked. `prepDates` (the dates before the first day that
+ * have published agendas, module Ceklis) come first as "H-3" · "Sab, 1 Jan".
+ */
+export function agendaDays(event: Pick<MainWamEventInfo, "startDate" | "endDate">, today: string, lang: Lang = "id", prepDates: readonly string[] = []): AgendaDayTab[] {
+  const prep = prepDates.flatMap((date): AgendaDayTab[] => {
+    const days = daysBeforeEvent(date, event);
+    return days ? [{ key: `h${days}`, number: 0, prep: true, day: prepLabel(days), date: dateLabel(date, lang), today: date === today }] : [];
+  }).sort((a, b) => Number(b.key.slice(1)) - Number(a.key.slice(1)));
+  return [...prep, ...eventDates(event).map((date, index) => ({ key: String(index + 1), number: index + 1, day: t(lang, "fmt.dayN", { n: index + 1 }), date: dateLabel(date, lang), today: date === today }))];
+}
+
+/** The date a tab key stands for: "2" is the event's second day, "h3" three days before the first. Null when there is no such tab. */
+export function tabDate(tab: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">): string | null {
+  const prep = /^h(\d{1,2})$/.exec(tab);
+  if (prep) return daysBeforeEvent(addDays(event.startDate, -Number(prep[1])), event) ? addDays(event.startDate, -Number(prep[1])) : null;
+  return eventDates(event)[Number(tab) - 1] ?? null;
+}
+
+/** The tab key an address or a session's date belongs to ("2", or "h3" for a Persiapan date); undefined for a date outside both. */
+export function tabOfDate(date: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">): string | undefined {
+  const index = eventDates(event).indexOf(date);
+  if (index >= 0) return String(index + 1);
+  const days = daysBeforeEvent(date, event);
+  return days ? `h${days}` : undefined;
+}
+
+/**
+ * The tab Agenda opens on: the asked one ("3", or "h3") when it exists, else today's during the event,
+ * else (before it) today's Persiapan day or the latest one passed, else the first day; after the event the last.
+ */
+export function shownTab(asked: string | string[] | undefined, now: Date, event: Pick<MainWamEventInfo, "startDate" | "endDate">, prepDates: readonly string[] = []): string {
+  const want = Array.isArray(asked) ? asked[0] : asked;
+  const prepKeys = new Set(prepDates.map(date => tabOfDate(date, event)).filter((key): key is string => !!key));
+  if (want && prepKeys.has(want)) return want;
+  if (want && /^\d{1,2}$/.test(want) && Number(want) >= 1 && Number(want) <= eventDates(event).length) return want;
+  const today = wibDate(now.toISOString());
+  if (prepDates.length && today < event.startDate) {
+    const reached = [...prepDates].sort().filter(date => date <= today).at(-1) ?? [...prepDates].sort()[0];
+    const key = tabOfDate(reached, event);
+    if (key) return key;
+  }
+  return String(shownDay(undefined, now, event));
 }
 
 /** The day Agenda shows: the asked one (?hari=), else today during the event (fondasi's agendaDay). */
@@ -57,6 +99,10 @@ export function timeChange(session: Pick<MwSession, "id" | "startsAt" | "endsAt"
 /* ── Rows ─────────────────────────────────────────────────────────────────────────────────────── */
 
 export type AgendaRow = {
+  /** Module Ceklis: this agenda has a checklist ("Ceklis 2/5"). */
+  ceklis?: ChecklistProgress | null;
+  /** Module Ceklis: absen here waits for another agenda's checklist ("Ceklis dulu"). */
+  ceklisFirst?: boolean;
   id: string;
   start: string;
   /** Empty for a moment without an end ("14.30 Shuttle"). */
@@ -80,11 +126,26 @@ const BREAK = /(rehat|istirahat|jeda|break|coffee|tenongan)/i;
 export const agendaKind = (session: Pick<MwSession, "kind" | "title">): AgendaKind =>
   session.kind === "makan" ? "makan" : session.kind === "perjalanan" ? "perjalanan" : BREAK.test(session.title) ? "jeda" : "sesi";
 
+/** The checklists and what this person ticked (module Ceklis): rows then carry their chips. */
+export type AgendaCeklis = { lists: ReadonlyMap<string, SessionChecklist>; checked: ReadonlySet<string> };
+
 /** One day of the agenda, in order: the running one lit, past ones dimmed, cancelled struck through. */
-export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id"): AgendaRow[] {
+export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis): AgendaRow[] {
+  const date = eventDates(event)[day - 1];
+  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis) : [];
+}
+
+/** The same for a tab key ("2", or "h3" for a Persiapan day). */
+export function agendaRowsOfTab(sessions: readonly MwSession[], tab: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis): AgendaRow[] {
+  const date = tabDate(tab, event);
+  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis) : [];
+}
+
+function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log: readonly RundownChange[], lang: Lang, ceklis?: AgendaCeklis): AgendaRow[] {
   const shown = sessions.filter(session => session.status !== "draf");
-  const isToday = eventDates(event)[day - 1] === wibDate(now.toISOString());
-  const rows: AgendaRow[] = sessionsOfDay(shown, day, event).map(session => ({
+  const isToday = date === wibDate(now.toISOString());
+  const rows: AgendaRow[] = shown.filter(session => wibDate(session.startsAt) === date).sort(byStart).map(session => ({
+    ...(ceklis ? ceklisOf(session, shown, ceklis, now) : {}),
     id: session.id,
     start: hhmm(session.startsAt, lang),
     end: session.endsAt ? hhmm(session.endsAt, lang) : "",
@@ -107,4 +168,11 @@ export function agendaRows(sessions: readonly MwSession[], day: number, event: P
 export function movedInRundown(session: Pick<MwSession, "id" | "startsAt" | "endsAt" | "changedAt">, log: readonly RundownChange[]): boolean {
   if (timeChange(session, log)) return true;
   return !!session.changedAt && !log.some(entry => entry.sessionId === session.id);
+}
+
+/** What a row says about checklists: its own progress, and whether absen here waits for another agenda's checklist. */
+function ceklisOf(session: MwSession, all: readonly MwSession[], { lists, checked }: AgendaCeklis, now: Date): Pick<AgendaRow, "ceklis" | "ceklisFirst"> {
+  const own = lists.get(session.id);
+  const ahead = session.status === "terbit" && session.usesAttendance && !hasEnded(session, now) && ceklisBlock(session, all, lists, checked) !== null;
+  return { ceklis: own?.items.length ? checklistProgress(own.items, checked) : null, ceklisFirst: ahead };
 }

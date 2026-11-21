@@ -17,7 +17,7 @@ export const mainWamModeLabels: Record<MainWamMode, string> = { pra: "Pra WAM", 
 
 /** The modules an admin switches on; a module that is off leaves no trace in the app. */
 /** kuis: Kuis live (docs/rancangan-kuis-wam.md), off by default like every module. */
-export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon", "kuis"] as const;
+export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon", "kuis", "ceklis"] as const;
 export type MainWamModule = (typeof MAIN_WAM_MODULES)[number];
 export type ModuleSwitches = Record<MainWamModule, boolean>;
 
