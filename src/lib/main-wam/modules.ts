@@ -18,6 +18,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
   mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
   karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya dan Ringkasan BOD, dan halaman rinciannya; angka dihitung dari data acara." },
+  ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan syarat ceklis lengkap sebelum absen." },
 };
 
 export const moduleOn = (modules: ModuleSwitches, key: MainWamModule) => modules[key] === true;

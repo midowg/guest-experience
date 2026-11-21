@@ -4,7 +4,7 @@ import {
   changeNote, deleteRefusal, IN_USE_REFUSAL, scheduleChanges, sessionRow, shiftConflict, shifted, shiftNote, type AdminSession, type SessionInput, type SessionUsage,
 } from "@/lib/main-wam/admin/rundown";
 import { SESSION_COLUMNS, sessionFromRow } from "@/lib/main-wam/rows";
-import { byStart, eventDates, eventDay, wibDate } from "@/lib/main-wam/rundown";
+import { byStart, eventDates, eventDay, isSessionDate, PREP_WINDOW_DAYS, wibDate } from "@/lib/main-wam/rundown";
 import type { RundownChange } from "@/lib/main-wam/types";
 import { newQrToken } from "@/lib/pra-wam/attendance";
 import { mainWamPath } from "@/lib/routes";
@@ -12,6 +12,7 @@ import { isSupabaseConfigured, ServiceError } from "../../config";
 import { mwMissing, type Read } from "../errors";
 import { trySendMainWamNote } from "../notes";
 import { mainWamSettingsState } from "../settings";
+import { adminChecklists } from "./ceklis";
 import { adminFail, adminWaiting, assertPeople, db, functionMissing } from "./common";
 
 /*
@@ -48,15 +49,18 @@ async function usageOf(ids?: readonly string[]): Promise<Map<string, SessionUsag
  */
 export async function adminSessions({ usage: withUsage = true }: { usage?: boolean } = {}): Promise<Read<AdminSession[]>> {
   if (!isSupabaseConfigured()) return { data: [], migrated: false };
-  const [{ data, error }, usage] = await Promise.all([
+  const [{ data, error }, usage, checklists] = await Promise.all([
     db().from("mw_sessions").select(`${SESSION_COLUMNS},updated_at`).order("starts_at").order("sort").limit(500),
     withUsage ? usageOf() : null,
+    // Only the Rundown page edits checklists; a failed read leaves them out (null), never the rundown.
+    withUsage ? adminChecklists().catch(() => null) : null,
   ]);
   if (error) { if (mwMissing(error)) return { data: [], migrated: false }; adminFail(error); }
   return {
     data: ((data ?? []) as Record<string, unknown>[]).map(row => {
       const session = sessionFromRow(row);
-      return { ...session, version: typeof row.updated_at === "string" ? row.updated_at : null, usage: usage?.get(session.id) ?? null };
+      const base = { ...session, version: typeof row.updated_at === "string" ? row.updated_at : null, usage: usage?.get(session.id) ?? null };
+      return withUsage ? { ...base, checklist: checklists ? checklists.get(session.id) ?? { required: false, items: [] } : null } : base;
     }).sort(byStart),
     migrated: true,
   };
@@ -72,8 +76,9 @@ async function checkInputs(inputs: readonly SessionInput[]): Promise<void> {
   const settings = await mainWamSettingsState();
   if (!settings.migrated) throw adminWaiting();
   const dates = eventDates(settings.event);
-  const outside = inputs.find(input => !dates.includes(input.date));
-  if (outside) throw new ServiceError(422, `Hari ${outside.date} di luar tanggal acara (${dates[0]} sampai ${dates.at(-1)}).`, { date: ["Pilih hari acara."] });
+  // A day of the event, or a Persiapan day before it ("H-3", up to PREP_WINDOW_DAYS before the first day).
+  const outside = inputs.find(input => !isSessionDate(input.date, settings.event));
+  if (outside) throw new ServiceError(422, `Hari ${outside.date} di luar tanggal acara (${dates[0]} sampai ${dates.at(-1)}) dan di luar masa persiapan (${PREP_WINDOW_DAYS} hari sebelumnya).`, { date: ["Pilih hari acara atau hari persiapan."] });
   const guides = [...new Set(inputs.map(input => input.mapGuideId).filter((id): id is string => !!id))];
   if (guides.length) {
     const { data, error } = await db().from("mw_guides").select("id").in("id", guides);
@@ -167,7 +172,7 @@ export async function copySession(id: string, date: string | null): Promise<{ se
   const settings = await mainWamSettingsState();
   const from = wibDate(source.startsAt);
   const to = date ?? from;
-  if (!eventDates(settings.event).includes(to)) throw new ServiceError(422, "Pilih hari acara.", { date: ["Pilih hari acara."] });
+  if (!isSessionDate(to, settings.event)) throw new ServiceError(422, "Pilih hari acara atau hari persiapan.", { date: ["Pilih hari acara atau hari persiapan."] });
   const days = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
   const moved = shifted(source, days * 24 * 60);
   const { data, error } = await db().from("mw_sessions").insert({

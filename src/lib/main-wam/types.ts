@@ -16,7 +16,7 @@ export type MainWamMode = (typeof MAIN_WAM_MODES)[number];
 export const mainWamModeLabels: Record<MainWamMode, string> = { pra: "Pra WAM", uji: "Main WAM (uji)", semua: "Main WAM (semua)" };
 
 /** The modules an admin switches on; a module that is off leaves no trace in the app. */
-export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon"] as const;
+export const MAIN_WAM_MODULES = ["absen", "voting", "silent", "survei", "mozaik", "karbon", "ceklis"] as const;
 export type MainWamModule = (typeof MAIN_WAM_MODULES)[number];
 export type ModuleSwitches = Record<MainWamModule, boolean>;
 

@@ -477,6 +477,8 @@ export const mainWamPath = {
   notifications: `${MAIN_WAM_PATH}/notifikasi`,
   /** P03 Agenda, on a day of the event (1–4; none = today, or day 1 before the event). */
   agenda: (day?: number) => `${MAIN_WAM_PATH}/agenda${mwQuery({ hari: day })}`,
+  /** P03 Agenda on a Persiapan day before the first day ("H-3": `daysBefore` 3; module ceklis). */
+  agendaPrep: (daysBefore: number) => `${MAIN_WAM_PATH}/agenda${mwQuery({ hari: `h${daysBefore}` })}`,
   /** P04 Detail sesi. */
   session: (id: string) => `${MAIN_WAM_PATH}/agenda/${enc(id)}`,
   /** P05 Saya (BOD: P05B with Akses MCP). */
@@ -547,6 +549,10 @@ export const mainWamApi = {
   agenda: `${MAIN_WAM_API}/agenda`,
   /** GET: one session's detail (P04). */
   session: (id: string) => `${MAIN_WAM_API}/agenda/${enc(id)}`,
+  /** POST {itemId, checked} or {all: true}: tick an item of an agenda's checklist, or all of them (module ceklis). */
+  checklist: (sessionId: string) => `${MAIN_WAM_API}/ceklis/${enc(sessionId)}`,
+  /** GET: an item's photo, a redirect to storage (module ceklis). */
+  checklistPhoto: (itemId: string, version?: string) => `${MAIN_WAM_API}/ceklis/foto/${enc(itemId)}${mwQuery({ v: version })}`,
   /** GET: my notifications; POST {id?}: mark one, or all, read. */
   notifications: `${MAIN_WAM_API}/notifikasi`,
   /** GET: a guide's file (Denah, PDF), a redirect to storage. */
@@ -646,6 +652,14 @@ export const mainWamAdminApi = {
   /* E · isi acara */
   sessions: `${MAIN_WAM_ADMIN_API}/sesi`,
   session: (id: string) => `${MAIN_WAM_ADMIN_API}/sesi/${enc(id)}`,
+  /** PUT {required, items}: an agenda's checklist (the list replaces the old one) and its "wajib lengkap sebelum absen" switch. */
+  sessionChecklist: (id: string) => `${MAIN_WAM_ADMIN_API}/sesi/${enc(id)}/ceklis`,
+  /** POST {mime, size}: an upload address for one checklist photo. */
+  checklistPhotoStart: `${MAIN_WAM_ADMIN_API}/ceklis/unggah`,
+  /** POST {key, token, mime, size}: the photo is uploaded; check it. */
+  checklistPhotoConfirm: `${MAIN_WAM_ADMIN_API}/ceklis/simpan`,
+  /** GET: a checklist item's photo, for the admin (a redirect to storage). */
+  checklistPhoto: (itemId: string, version?: string) => `${MAIN_WAM_ADMIN_API}/ceklis/foto/${enc(itemId)}${mwQuery({ v: version })}`,
   groups: `${MAIN_WAM_ADMIN_API}/kelompok`,
   group: (id: string) => `${MAIN_WAM_ADMIN_API}/kelompok/${enc(id)}`,
   groupMembers: (id: string) => `${MAIN_WAM_ADMIN_API}/kelompok/${enc(id)}/anggota`,
