@@ -6,7 +6,8 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
 
 - Galeri hidup: `/dev-preview/wam2026/kit` (semua komponen dan statusnya; `?mode=dark`, `?aksen=%23B45309`).
 - Kerangka: `/dev-preview/wam2026/kit/shell?layar=beranda|agenda|momen|saya|detail|tugas|kamera`.
-- Sumber desain: `DESIGN_SYSTEM.md`, `prototipe/wam.css`, `PANDUAN_PROTO.md` §6 dan §9–§10.7, `komponen.html`.
+- Sumber desain (gelombang 1, 22 Nov): **prototipe final** `events/2027-01-werkudara-wam/aplikasi/prototipe/prototipe-wam.html` (kelas `.ph`) dan potretnya. `DESIGN_SYSTEM.md`/`wam.css` adalah prototipe lama; nilai token kit sudah diganti ke yang final, nama tokennya tetap.
+- Bahasa visual final dirangkum di bagian 2.1 (emas, Barlow Condensed kapital, siku + motif, bilah bawah datar).
 
 | Folder | Isi | Impor |
 | --- | --- | --- |
@@ -83,7 +84,7 @@ Nama token = nama prototipe dengan awalan `--mw-`:
 | `--motion-*`, `--ease-*` | `--mw-motion-*`, `--mw-ease-*` | `transition: background-color var(--mw-motion-press)` |
 | (baru) | `--mw-media-on`, `--mw-media-on-2`, `--mw-media-scrim` | teks di atas foto (pil nama, tombol ⋯, pil reaksi) dan di atas gambar langsung kamera/pemindai: putih tetap di kedua mode |
 | (baru) | `--mw-photo-bg`, `--mw-ph-1…6`, `--mw-ph-glow`, `--mw-ph-shade` | latar foto yang belum termuat dan placeholder netral (punya nilai gelap sendiri) |
-| (baru) | `--mw-safe-top/bottom/left/right`, `--mw-nav-h`, `--mw-touch`, `--mw-column` | area aman iPhone, bilah bawah 64, sentuh 44, kolom 480 |
+| (baru) | `--mw-safe-top/bottom/left/right`, `--mw-nav-h`, `--mw-touch`, `--mw-column` | area aman iPhone, bilah bawah 68, sentuh 44, kolom 480 |
 
 CSS module fitur cukup memakai `var(--mw-…)`; tidak perlu impor apa pun.
 
@@ -93,7 +94,7 @@ CSS module fitur cukup memakai `var(--mw-…)`; tidak perlu impor apa pun.
 | --- | --- | --- |
 | `accent`, `onAccent`, `onAccent2`, `accentContainer`, `onAccentContainer` | `--mw-accent*` | `#1E3A5F` … |
 | `primary`, `primaryStrong`, `onPrimary`, `primaryContainer`, `onPrimaryContainer` | `--mw-primary*` | `#2F6FEB`, `#1D4ED8` … |
-| `displayFont` | `--mw-display-font` (dipakai Display, Title, Headline) | Plus Jakarta Sans |
+| `displayFont` | `--mw-display-font` (dipakai Display, Title, Headline, Stat) | Barlow Condensed |
 | `images.splash`, `.homeHeader`, `.pattern`, `.mosaic` | `--mw-image-splash`, `--mw-image-home-header`, `--mw-image-pattern`, `--mw-image-mosaic` (`url("…")` atau `none`) | `none` |
 | `images.icon` | tidak ke CSS (manifest) | – |
 
@@ -121,9 +122,53 @@ dan teks bantuan semuanya lewat token tema. Hanya isi jendela bidik (video langs
 bilahnya sendiri, kerangka tidak menggambar bilah atas dan bawah". Sheet dan konfirmasi mengikuti tema. Blok `[data-mw-mode="dark"]` dan blok Sistem di `theme.module.css` harus sama
 (dijaga `colors.test.ts`). Pratinjau: `?mode=dark` pada galeri kit, atau ubah `data-mw-mode` di akar.
 
-**Font**: Plus Jakarta Sans lewat `next/font/google` (`theme/font.ts`), variable font satu berkas,
-di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender `MainWamTheme` perlu
+**Font**: Barlow Condensed 600/700/800 (tampilan) dan Plus Jakarta Sans (isi) lewat `next/font/google`
+(`theme/font.ts`), di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Variabel: `--mw-font-barlow`,
+`--mw-font-jakarta`. Tes yang merender `MainWamTheme` perlu
 `vi.mock("./font", () => ({ mainWamFontVars: "" }))` (path relatif ke berkas tes).
+
+### 2.1 Bahasa visual prototipe final (token baru, dipakai layar)
+
+Ringkas: latar biru-es (`#EEF3FB`) / biru-hitam (`#050914`); kartu putih / kaca biru tua dengan garis tipis;
+**emas** untuk aksi dan keadaan "sekarang"; biru `--mw-primary` (prototipe `--cy`) untuk ikon, tautan, simpul garis;
+angka dan judul **Barlow Condensed 800 kapital**; label kecil kapital berjarak huruf lebar (`.cap`);
+isi **Plus Jakarta Sans**. Sudut kartu 22 (kartu sesi 28), tombol 16, pil penuh.
+
+| Token baru | Terang | Gelap | Pakai untuk |
+| --- | --- | --- | --- |
+| `--mw-gold`, `--mw-on-gold` | `#E0A200`, `#0B1638` | `#F5C542`, `#0B1638` | tombol primary, titik live, tab aktif, batang progres, lencana |
+| `--mw-gold-ink` | `#7A5200` | `#F5C542` | **teks/ikon emas di atas permukaan** (kontras ≥ 4,5:1); jangan pakai `--mw-gold` untuk teks |
+| `--mw-gold-soft`, `--mw-gold-line` | emas 16 % / 55 % transparan | sama | latar dan garis lembut berwarna emas |
+| `--mw-glow` | tanpa | cahaya emas | bayangan tombol/titik emas di mode gelap |
+| `--mw-surface-raised` | putih | `#0A1330` | kartu emas, sheet, dialog |
+| `--mw-select-bg/fg`, `--mw-seg-on-bg/fg` | tinta / putih | emas / tinta | chip terpilih, segmen terpilih |
+| `--mw-eco-grad-1/2`, `--mw-on-eco`, `--mw-eco-bar` | hijau tua | hijau tua | kartu Jejak karbon |
+| `--mw-motif-{konstelasi,kontur,sirkuit,radar,matriks,orbit,busur}` | `url(/wam/kit/…-terang.svg)` | `…-gelap.svg` | motif sudut Kit Visual (aset di `public/wam/kit`) |
+| `--mw-elev-card`, `--mw-elev-hero` | bayangan tipis | cahaya biru/emas | kartu biasa dan kartu emas |
+| `--mw-radius-20/22/28` | 20/22/28 | sama | daftar, kartu, kartu emas dan sheet |
+| `--mw-type-cap`, `--mw-type-cap-lg`, `--mw-type-hero` + `--mw-ls-cap`, `--mw-ls-cap-tight` | Barlow 700 12/14 px, 76 px | sama | label kapital (selalu bersama `text-transform: uppercase`) dan angka hero |
+
+Gelar lama tetap: `--mw-type-display/title/headline/stat-*` sekarang Barlow Condensed (judul kapital lewat
+`<Text>`, TopBar, SectionHeader, Sheet). `--mw-nav-h` jadi 68. Slot tema admin tidak berubah: `primary` mengatur
+biru (ikon, tautan, fokus), `accent` kartu acara; **emas tetap** (identitas WAM), bukan slot. `displayFont` baru:
+`barlow-condensed` (bawaan) atau `plus-jakarta-sans`.
+
+**Komponen baru** (`ui/Brand.tsx`, `ui/Card.tsx`; ada di galeri bagian "Prototipe"):
+
+- `<EyebrowLabel tone="muted|gold|ink" large icon>`: label kapital kecil ("SELAMAT PAGI", "SEDANG BERLANGSUNG").
+- `<PulseDot />`: titik emas berdenyut (diam saat Kurangi gerak).
+- `<BracketCard motif="konstelasi">` atau `<Card variant="gold" bracket motif>`: kartu emas dengan dua siku biru dan motif sudut, untuk "yang sedang terjadi" (sesi di Beranda). `Card motif="matriks|kontur|…"` memberi motif tanpa siku; `Card variant="eco"` kartu hijau Jejak karbon.
+- `<NetworkMotif name place="bottom|top|fill" fade />`: motif jaringan sebagai latar blok/layar (dekoratif).
+- `<SegmentDots total current done label fill />`: segmen hari (header Beranda) dan progres misi (`fill`).
+- `<BigNumber value unit size="hero|xl|l|m" tone="gold" />`: angka Barlow dengan satuan kapital ("340 POIN").
+- `<KeyValue label value />` + `<KeyValueRow>`: petak label-nilai (.kv/.tele).
+- `<TopBar title eyebrow>` (judul tab besar dengan label di atasnya) dan `<TopBar variant="home" dayDots={{ total, current, label }}>`; shell meneruskan `greeting.dayDots`.
+- `Pill tone="gold"`, `IconBox tone="gold"`, `Text variant="hero|cap|cap-lg"`, `Text color="gold"`.
+
+Perubahan perilaku komponen lama (API tetap): Button primary = emas berteks gelap, tinggi 52; `tonal` = garis emas;
+`secondary` = garis; `text` = teks emas. FilterChip terpilih = tinta (terang) / emas (gelap). Pill = huruf kapital kecil;
+`StatusPill live` = emas. Badge = emas. Banner `info` = panel bertepi emas. Switch aktif = emas. Segmented terpilih = putih / emas.
+SessionRow: jam Barlow, simpul biru, baris live emas. IconBox netral = biru 14 %. Bilah bawah datar tanpa pil: tab aktif tinta + titik emas.
 
 ## 3. Kerangka (shell)
 
