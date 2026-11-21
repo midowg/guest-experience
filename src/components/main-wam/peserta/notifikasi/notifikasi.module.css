@@ -1,0 +1,21 @@
+/*
+ * Notifikasi (N01, prototipe .nrow): a flat list, no card: a tinted icon box, the news in bold, one line
+ * of body, the time, and a gold dot on the right while it is unread; a thin line between rows. Tokens only.
+ */
+.group { display: flex; flex-direction: column; }
+.head { margin: 0; padding: var(--mw-space-8) 0; font: var(--mw-type-cap-lg); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.row {
+  position: relative; display: flex; align-items: flex-start; gap: var(--mw-space-12); width: 100%; min-height: 56px;
+  padding: 14px 0; border: 0; border-top: 1px solid var(--mw-outline); background: none; text-align: left; color: var(--mw-text-1); text-decoration: none; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.list > :first-child { border-top: 0; }
+.row:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
+@media (hover: hover) { .row:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
+.row:focus-visible { outline-offset: -4px; }
+.text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.title { font: var(--mw-type-label-lg); font-size: 14px; line-height: 18px; overflow-wrap: anywhere; }
+.body { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.time { font: var(--mw-type-body-small); color: var(--mw-text-2); margin-top: 2px; }
+.dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: var(--mw-radius-full); background: var(--mw-gold); box-shadow: var(--mw-glow); }

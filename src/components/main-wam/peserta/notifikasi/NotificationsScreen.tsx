@@ -8,11 +8,13 @@ import { noteHash, type NotificationRow } from "@/lib/main-wam/peserta/notificat
 import type { NoteKind } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
-import { Banner, EmptyState, IconBox, List, Sheet, type IconBoxTone } from "@/components/main-wam/ui";
+import { Banner, EmptyState, IconBox, Sheet, type IconBoxTone } from "@/components/main-wam/ui";
 import { useT } from "@/components/main-wam/i18n";
 import { mwRequest } from "../request";
 import { usePushDevice, type PushState } from "../usePushDevice";
 import css from "../peserta.module.css";
+import own from "./notifikasi.module.css";
+import { PegasusMark } from "../PegasusMark";
 
 const ICON: Record<NoteKind, LucideIcon> = {
   pengumuman: Megaphone, jadwal: CalendarClock, absen: CircleCheck, momen: Heart, kamar: KeyRound, silent: Lock, voting: Trophy, survei: ClipboardList, lain: Bell, kuis: Gamepad2,
@@ -65,24 +67,30 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
 
   const pushOff = push.state === "off" || push.state === "denied" || push.state === "ios-install";
   const group = (title: string, rows: NotificationRow[]) => rows.length > 0 && <ScreenSection key={title}>
-    <h2 className={css.groupHead}>{title}</h2>
-    <List>
-      {rows.map(row => {
-        const Icon = ICON[row.kind];
-        const inner = <>
-          {row.unread && <span className={css.notifDot} role="img" aria-label={t("peserta.notes.unread")} />}
-          <IconBox icon={<Icon />} tone={TONE[row.kind]} smallIcon />
-          <span className={css.notifText}><span className={css.notifTitle}>{row.line}</span><span className={css.notifTime}>{row.time}</span></span>
-        </>;
-        const className = `${css.notifRow} ${row.unread ? css.notifUnread : ""}`;
-        return row.href
-          ? <Link key={row.id} href={row.href} className={className}>{inner}</Link>
-          : <button key={row.id} type="button" className={className} onClick={() => show(row.id)} aria-haspopup="dialog">{inner}</button>;
-      })}
-    </List>
+    <div className={own.group}>
+      <h2 className={own.head}>{title}</h2>
+      <div className={own.list}>
+        {rows.map(row => {
+          const Icon = ICON[row.kind];
+          const inner = <>
+            <IconBox icon={<Icon />} tone={TONE[row.kind]} smallIcon />
+            <span className={own.text}>
+              <span className={own.title}>{row.line}</span>
+              {row.body && row.body.replace(/[.]$/, "") !== row.line && <span className={own.body}>{row.body}</span>}
+              <span className={own.time}>{row.time}</span>
+            </span>
+            {row.unread && <span className={own.dot} role="img" aria-label={t("peserta.notes.unread")} />}
+          </>;
+          return row.href
+            ? <Link key={row.id} href={row.href} className={own.row}>{inner}</Link>
+            : <button key={row.id} type="button" className={own.row} onClick={() => show(row.id)} aria-haspopup="dialog">{inner}</button>;
+        })}
+      </div>
+    </div>
   </ScreenSection>;
 
   return <ScreenContent>
+    <PegasusMark />
     {pushOff && <Banner tone="warning" icon={<BellOff />} title={t("peserta.notes.pushOff")} action={{ label: t("peserta.notes.turnOn"), onClick: () => router.push(mainWamPath.settings) }} />}
     {!migrated && !all.length
       ? <EmptyState size="s" icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("peserta.waiting.notes")}</EmptyState>

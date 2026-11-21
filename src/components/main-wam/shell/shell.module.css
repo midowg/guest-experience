@@ -21,6 +21,8 @@
   opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter);
 }
 .app:has([data-mw-hide-nav]) .column::before { bottom: 0; }
+/* A screen that draws the pegasus watermark (PegasusMark) takes the place of the konstelasi art. */
+.app:has([data-mw-pegasus]) .column::before { display: none; }
 @media (min-width: 600px) {
   .app { background: var(--mw-surface-2); }
   .column { box-shadow: 1px 0 0 var(--mw-outline), -1px 0 0 var(--mw-outline); }
