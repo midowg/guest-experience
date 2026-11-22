@@ -13,6 +13,10 @@
 a.row, button.row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 a.row:active, button.row:active { background-color: var(--mw-press); }
 @media (hover: hover) { a.row:hover, button.row:hover { background-color: var(--mw-press); } }
+/* A row with a value: when the label is too long to share the line with it, the value drops under the label (nothing is cut or crowded). */
+.row.hasValue { flex-wrap: wrap; row-gap: var(--mw-space-4); }
+.row.hasValue .text { flex: 1 1 auto; }
+.row.hasValue .end { flex: 0 1 auto; max-width: 100%; }
 .icon { flex: none; width: 20px; height: 20px; color: var(--mw-primary); }
 .text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .title { overflow-wrap: anywhere; }
@@ -32,6 +36,12 @@ a.row:active, button.row:active { background-color: var(--mw-press); }
 .profileName { font: 800 24px/26px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
 .profileLine { font: 400 13px/18px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .profileCam { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
+
+/* Tokoh card (the questionnaire card's tokoh): the card's two colours as a small portrait, the name in Barlow capitals, the type under it. */
+.figure { display: flex; align-items: center; gap: var(--mw-space-16); padding: var(--mw-space-16); border-radius: var(--mw-radius-20); background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); }
+.figureArt { flex: none; width: 54px; height: 66px; border-radius: 12px; }
+.figureText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.figureName { font: 800 22px/24px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
 
 .stack { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; }
 .note { margin: 0; font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); }

@@ -136,6 +136,18 @@ describe("Saya", () => {
     expect(screen.getByRole("link", { name: /Jejak karbon/ }).getAttribute("href")).toBe(mainWamPath.carbon("saya"));
   });
 
+  it("shows the call name on the card, and the tokoh and Misi rows only when their data is there", () => {
+    const { unmount } = render(<SayaScreen {...props} />);
+    expect(screen.queryByText("Tokoh WAM-mu")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Misi dan poin/ })).toBeNull();
+    unmount();
+    render(<SayaScreen {...props} figure={{ name: "Marie Curie", persona: "Pemikir", colors: ["#111111", "#222222"] }} points={340} />);
+    expect(screen.getByText("Rani", { selector: "span" })).toBeTruthy();
+    expect(screen.getByText("Tokoh WAM-mu")).toBeTruthy();
+    expect(screen.getByText("Tipe Pemikir · dipakai di kuis")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Misi dan poin.*340 poin/ }).getAttribute("href")).toBe(mainWamPath.missions);
+  });
+
   it("Bantuan is a page of its own (a link, not a sheet)", () => {
     render(<SayaScreen {...props} />);
     expect(screen.getByRole("link", { name: "Bantuan" }).getAttribute("href")).toBe(mainWamPath.help);

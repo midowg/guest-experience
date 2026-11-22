@@ -26,7 +26,7 @@ export function Row({ icon, title, sub, value, trailing, chevron, spoken, danger
 }) {
   const pressable = !!(href || onClick);
   const showChevron = chevron ?? pressable;
-  return <Pressable href={href} external={external} onClick={onClick} className={cx(css.row, className)} {...aria}>
+  return <Pressable href={href} external={external} onClick={onClick} className={cx(css.row, (!!value || !!trailing) && css.hasValue, className)} {...aria}>
     <KitIcon icon={icon} className={css.icon} />
     <span className={css.text}><span className={cx(css.title, danger && css.danger)}>{title}</span>{sub && <span className={css.sub}>{sub}</span>}</span>
     {(value || trailing || showChevron) && <span className={css.end}>
