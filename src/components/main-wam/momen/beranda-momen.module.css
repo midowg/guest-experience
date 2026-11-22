@@ -13,3 +13,5 @@
 .photo:nth-child(2) { transform: rotate(2deg); }
 .photo:nth-child(3) { transform: rotate(7deg); }
 .line { font: var(--mw-type-caption-strong); color: var(--mw-text-1); opacity: 0.85; overflow-wrap: anywhere; }
+/* The link over the photos and words (the camera button below it is its own control, not inside the link). */
+.open { display: flex; flex-direction: column; flex: 1 1 auto; justify-content: space-between; gap: var(--mw-space-8); min-width: 0; color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }

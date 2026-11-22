@@ -95,3 +95,18 @@ export function newPhotosText(unseen: number, total: number, lang: Lang = "id"):
   if (unseen > 0) return t(lang, "momen.newPhotos", { n: unseen });
   return t(lang, total > 0 ? "momen.seenAll" : "momen.noneYet");
 }
+
+/** "baru saja", "2 mnt lalu", "3 jam lalu", "2 hari lalu": how long ago a photo came. */
+export function agoText(at: string, now: Date, lang: Lang = "id"): string {
+  const minutes = Math.max(0, Math.floor((now.getTime() - Date.parse(at)) / 60_000));
+  if (minutes < 1) return t(lang, "momen.ago.now");
+  if (minutes < 60) return t(lang, "momen.ago.min", { n: minutes });
+  if (minutes < 24 * 60) return t(lang, "momen.ago.hour", { n: Math.floor(minutes / 60) });
+  return t(lang, "momen.ago.day", { n: Math.floor(minutes / (24 * 60)) });
+}
+
+/** "Sari mengunggah di Aula Utama · 2 mnt lalu" on Beranda's tile; without a place: "Sari mengunggah · 2 mnt lalu". */
+export function uploadedByText(name: string, place: string | null, at: string, now: Date, lang: Lang = "id"): string {
+  const ago = agoText(at, now, lang);
+  return place ? t(lang, "momen.card.by", { name, place, ago }) : t(lang, "momen.card.byBare", { name, ago });
+}

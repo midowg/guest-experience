@@ -10,6 +10,7 @@ import { BerandaSkeleton } from "@/components/main-wam/peserta/Skeletons";
 import { announcementCandidates, homeCardView } from "@/lib/main-wam/peserta/home";
 import { previewHome, previewTime, previewViewer, type PreviewCard } from "../sample";
 import { AbsenStandIn } from "../standins";
+import { uploadedByText } from "@/lib/main-wam/momen/stack";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CarbonCard } from "@/components/main-wam/peserta/karbon/CarbonCard";
 import { carbonView } from "@/lib/main-wam/peserta/carbon";
@@ -68,7 +69,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
   return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang} unread={params.waktu === "berangkat" ? 0 : 3}>
     <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(new Date(now.getTime() - 2 * 60_000).toISOString(), lang)} live={false} forceOffline={params.status === "offline"}
       slots={{ absen: <AbsenStandIn home />, misi: misiStandIn(now, params.misi),
-        kuis: params.kuis === "buka" ? <KuisLiveCard lang={lang} title={lang === "en" ? "WAM live quiz" : "Kuis live WAM"} joined={false} href={mainWamPath.quiz("contoh")} /> : null, momen: <MomenCard photos={[null, null, null]} unseen={params.waktu === "berangkat" ? 3 : 12} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
+        kuis: params.kuis === "buka" ? <KuisLiveCard lang={lang} title={lang === "en" ? "WAM live quiz" : "Kuis live WAM"} joined={false} href={mainWamPath.quiz("contoh")} /> : null, momen: <MomenCard photos={[null, null, null]} unseen={params.waktu === "berangkat" ? 3 : 12} by={uploadedByText("Sari", "Aula Utama", new Date(now.getTime() - 2 * 60_000).toISOString(), now, lang)} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
         mozaik: params.mozaik === "mati" ? null : <MozaikStandIn lang={lang} />,
         carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonView(params.karbon === "belum" ? null : sampleCarbon(), now, lang)} /> }} />
   </Frame>;
