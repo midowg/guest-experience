@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { previewLang } from "@/components/main-wam/dev/lang";
 // The frame (theme) first, so its reset comes before the screen's styles, as the app's layout does.
 import { Frame } from "../Frame";
-import { AbsenView } from "@/components/main-wam/modul/SessionViews";
+import { AbsenView, ModuleActionView } from "@/components/main-wam/modul/SessionViews";
 import { SessionScreen } from "@/components/main-wam/peserta/agenda/SessionScreen";
 import { SessionSheet } from "@/components/main-wam/peserta/agenda/SessionSheet";
 import { ceklisBlock } from "@/lib/main-wam/ceklis/ceklis";
@@ -45,6 +45,7 @@ export default async function PreviewSession({ searchParams }: { searchParams: P
   const block = !prep && ticked !== null ? ceklisBlock(session, [samplePrepSession, session], sampleChecklists(), checked) : null;
   const slots = {
     absen: block ? <AbsenView slot={{ kind: "ceklis", block }} /> : params.status === "absen" || (key === "pemaparan" && params.status !== "tanpa-absen") ? <AbsenStandIn /> : null,
+    action: params.kuis === "1" ? <ModuleActionView slot={{ action: { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz("demo"), icon: "kuis", primary: true }, qr: null }} /> : null,
     photos: photos && started ? <SessionPhotosStandIn sessionId={session.id} count={photos} /> : null,
   };
   if (params.tampil === "sheet") {

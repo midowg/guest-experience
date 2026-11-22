@@ -106,6 +106,8 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.agenda.eyebrow": "Agenda",
   "peserta.agenda.absenRequired": "Check-in required",
   "peserta.agenda.absen": "Check-in",
+  "peserta.agenda.kuis": "Live quiz",
+  "peserta.agenda.misi": "Mission +{n}",
   "peserta.session.kind.sesi": "Session",
   "peserta.session.kind.makan": "Meal",
   "peserta.session.kind.perjalanan": "Travel",

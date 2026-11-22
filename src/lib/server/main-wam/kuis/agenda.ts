@@ -66,3 +66,10 @@ export async function quizOfSession(sessionId: string): Promise<{ quizId: string
   const latest = [...(row.mw_quiz_runs ?? [])].sort((a, b) => b.number - a.number)[0];
   return { quizId: row.id, title: row.title, phase: latest?.phase ?? null };
 }
+
+/** The agenda items that have a quiz tied to them (the "Kuis live" tag of Agenda); empty before the migration. */
+export async function quizSessionIds(): Promise<Set<string>> {
+  const { data, error } = await db().from("mw_quizzes").select("session_id").not("session_id", "is", null).limit(200);
+  if (error || !data) return new Set();
+  return new Set((data as { session_id: string | null }[]).flatMap(row => (row.session_id ? [row.session_id] : [])));
+}

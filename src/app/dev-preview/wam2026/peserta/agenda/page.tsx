@@ -32,9 +32,11 @@ export default async function PreviewAgenda({ searchParams }: { searchParams: Pr
   const prepDates = ceklis ? prepDatesOf(all, event) : [];
   const tab = shownTab(params.tab, now, event, prepDates);
   const checked = new Set(sampleChecklistItems.slice(0, Number(params.ceklis) || 0).map(item => item.id));
+  // ?kuis=1: a quiz tied to Pemaparan and a mission to Team building (the "Kuis live" and "Misi +N" tags).
+  const links = params.kuis === "1" ? { quizSessions: new Set([sampleSessionIds.pemaparan]), missionPoints: new Map([[sampleSessionIds["team-building"], 50]]) } : undefined;
   const empty = params.status === "kosong" || params.status === "migrasi";
   return <Frame path={mainWamPath.agenda()} now={now} lang={lang}>
     <AgendaScreen unread={3} migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang, prepDates)} day={/^\d+$/.test(tab) ? Number(tab) : 0} tab={tab}
-      rows={empty ? [] : agendaRowsOfTab(all, tab, event, now, previewLog(now), lang, ceklis ? { lists: sampleChecklists(), checked } : undefined)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
+      rows={empty ? [] : agendaRowsOfTab(all, tab, event, now, previewLog(now), lang, ceklis ? { lists: sampleChecklists(), checked } : undefined, links)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
   </Frame>;
 }

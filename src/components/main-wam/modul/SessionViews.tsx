@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, Trophy, UserCheck } from "lucide-react";
+import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, Timer, Trophy, UserCheck, Users } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
 import type { CeklisBlock } from "@/lib/main-wam/ceklis/ceklis";
@@ -86,6 +86,13 @@ export function ModuleActionView({ slot }: { slot: ModuleSlot }) {
     {action?.kind === "silent-tutup" && <Button block variant="secondary" href={action.href}>{t("silent.closed")}</Button>}
     {action?.kind === "link" && (() => {
       const Icon = ICONS[action.icon];
+      // Kuis live (prototipe qBox): a card that says how it plays, then the button.
+      if (action.icon === "kuis") return <div className={css.quizBox}>
+        <span className={css.quizTag}><Trophy aria-hidden />{t("peserta.agenda.kuis")}</span>
+        <p className={css.quizInfo}><Users aria-hidden /><span>{t("kuis.join.body")}</span></p>
+        <p className={css.quizInfo}><Timer aria-hidden /><span>{t("kuis.join.rules")}</span></p>
+        <Button block icon={<Icon />} href={action.href}>{known(action.label)}</Button>
+      </div>;
       return <Button block variant={action.primary ? "primary" : "secondary"} icon={<Icon />} href={action.href}>{known(action.label)}</Button>;
     })()}
     {qr && <PanitiaQr sessionId={qr.sessionId} />}

@@ -118,7 +118,14 @@ export type AgendaRow = {
   next: boolean;
   /** Module Absen: this entry has absen ("Wajib absen" when also required). */
   absen?: "wajib" | "ada";
+  /** Module Kuis live: a quiz is tied to this entry ("Kuis live" tag). */
+  kuis?: boolean;
+  /** Module Misi: points of the missions tied to this entry ("Misi +50" tag); absent when none. */
+  misi?: number;
 };
+
+/** What the other modules tie to agenda items: sessions that have a quiz, and the points of the missions tied to each session. */
+export type AgendaLinks = { quizSessions?: ReadonlySet<string>; missionPoints?: ReadonlyMap<string, number> };
 
 export type AgendaKind = "sesi" | "makan" | "perjalanan" | "jeda";
 
@@ -132,18 +139,18 @@ export const agendaKind = (session: Pick<MwSession, "kind" | "title">): AgendaKi
 export type AgendaCeklis = { lists: ReadonlyMap<string, SessionChecklist>; checked: ReadonlySet<string> };
 
 /** One day of the agenda, in order: the running one lit, past ones dimmed, cancelled struck through. */
-export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis): AgendaRow[] {
+export function agendaRows(sessions: readonly MwSession[], day: number, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis, links?: AgendaLinks): AgendaRow[] {
   const date = eventDates(event)[day - 1];
-  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis) : [];
+  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis, links) : [];
 }
 
 /** The same for a tab key ("2", or "h3" for a Persiapan day). */
-export function agendaRowsOfTab(sessions: readonly MwSession[], tab: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis): AgendaRow[] {
+export function agendaRowsOfTab(sessions: readonly MwSession[], tab: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">, now: Date, log: readonly RundownChange[], lang: Lang = "id", ceklis?: AgendaCeklis, links?: AgendaLinks): AgendaRow[] {
   const date = tabDate(tab, event);
-  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis) : [];
+  return date ? rowsOfDate(sessions, date, now, log, lang, ceklis, links) : [];
 }
 
-function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log: readonly RundownChange[], lang: Lang, ceklis?: AgendaCeklis): AgendaRow[] {
+function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log: readonly RundownChange[], lang: Lang, ceklis?: AgendaCeklis, links?: AgendaLinks): AgendaRow[] {
   const shown = sessions.filter(session => session.status !== "draf");
   const isToday = date === wibDate(now.toISOString());
   const rows: AgendaRow[] = shown.filter(session => wibDate(session.startsAt) === date).sort(byStart).map(session => ({
@@ -158,6 +165,8 @@ function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log
     kind: agendaKind(session),
     next: false,
     ...(session.usesAttendance && session.status !== "batal" ? { absen: session.required ? "wajib" as const : "ada" as const } : {}),
+    ...(session.status !== "batal" && links?.quizSessions?.has(session.id) ? { kuis: true } : {}),
+    ...(session.status !== "batal" && links?.missionPoints?.get(session.id) ? { misi: links.missionPoints.get(session.id) } : {}),
   }));
   const next = isToday ? rows.find(row => row.status === "upcoming") : undefined;
   if (next) next.next = true;
