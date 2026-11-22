@@ -26,6 +26,14 @@ import css from "./play.module.css";
  * one wins). Phones are silent: they buzz and move ("kurangi gerak" respected).
  */
 
+/** The four answer shapes (prototipe qA..qD: triangle, diamond, circle, square). Decoration next to the letter, so colour is never the only cue. */
+function OptionShape({ index }: { index: number }) {
+  const d = ["M12 3 22 20H2Z", "M12 2 22 12 12 22 2 12Z", "", "M4 4h16v16H4Z"][index];
+  return <svg className={css.shape} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    {index === 2 ? <circle cx="12" cy="12" r="10" fill="currentColor" /> : <path d={d} fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />}
+  </svg>;
+}
+
 type Lock = { runId: string; index: number; choice: number; value: number };
 /** For previews: a fixed moment, no asking. */
 export type PlayPreview = { now: number; lock?: { choice: number; value: number } };
@@ -331,7 +339,7 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
           return <button key={i} type="button" className={cx(css.option, css[`opt${i}`], picked && css.picked, !lit && answer && !picked && css.dim, ok && css.ok, no && css.no)}
             disabled={!canTap} aria-pressed={picked} onClick={() => onTap(i)} style={{ "--kz-fill": fill } as CSSProperties}>
             <span className={css.bar} aria-hidden="true" />
-            <span className={css.letter} aria-hidden={ok ? undefined : "true"}>{ok ? <Check size={24} aria-label={t("kuis.right")} /> : OPTION_LETTERS[i]}</span>
+            <span className={css.letter} aria-hidden={ok ? undefined : "true"}>{ok ? <Check size={24} aria-label={t("kuis.right")} /> : <><OptionShape index={i} /><span className={css.letterChar}>{OPTION_LETTERS[i]}</span></>}</span>
             <span className={css.optionText}>{text}{picked && showBars && <span className={css.tag}>{t("kuis.yourPick")}</span>}</span>
             {showBars && <span className={css.pct}>{spread!.percents[i]}%</span>}
           </button>;
