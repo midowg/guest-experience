@@ -157,12 +157,12 @@ describe("CSS for 320 px, zoom 200 % and desktop (the rules that hold the layout
     expect(text).toMatch(/\.item \{[^}]*flex: 1 1 auto/);
     expect(text).not.toMatch(/text-overflow: ellipsis/);
     expect(text).toMatch(/\.track \{[^}]*min-height: 44px/);
-    expect(text).toMatch(/\.itemLabel \{[^}]*overflow-wrap: anywhere/);
+    expect(text).toMatch(/\.itemLabel \{[^}]*overflow-wrap: break-word/);
   });
 
-  it("SessionRow under 300 px: time on its own line, no rail, full-width title; a pill may wrap", () => {
+  it("SessionRow under 340 px: time on its own line, no rail, full-width title; a pill may wrap", () => {
     const text = css("./data.module.css");
-    expect(text).toMatch(/@media \(max-width: 299\.98px\) \{[\s\S]*\.session \{ flex-wrap: wrap;[\s\S]*\.rail \{ display: none; \}[\s\S]*\.sessionBody \{ order: 2; flex: 1 1 100%; \}/);
+    expect(text).toMatch(/@media \(max-width: 339.98px\) \{[\s\S]*\.session \{ flex-wrap: wrap;[\s\S]*\.rail \{ display: none; \}[\s\S]*\.sessionBody \{ order: 2; flex: 1 1 100%; \}/);
     expect(css("./status.module.css")).toMatch(/\.pill \{[^}]*min-height: 26px; max-width: 100%/);
   });
 

@@ -1,10 +1,10 @@
 /* ProgressBar (.wam-progress), SessionRow (.wam-session), ShortcutTile (.wam-tile--row), StackPreview (.wam-stackpeek). Tokens only. */
 
 .progressBox { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; }
-.progressHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mw-space-8); }
-.progressLabel { display: flex; align-items: center; gap: var(--mw-space-4); min-width: 0; font: var(--mw-type-label); color: var(--mw-text-1); }
+.progressHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--mw-space-4) var(--mw-space-8); }
+.progressLabel { display: flex; align-items: center; gap: var(--mw-space-4); min-width: 0; flex: 1 1 140px; overflow-wrap: anywhere; font: var(--mw-type-label); color: var(--mw-text-1); }
 .progressLabel > svg { flex: none; width: 16px; height: 16px; color: var(--mw-text-2); }
-.progressValue { font: var(--mw-type-body-small); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.progressValue { font: var(--mw-type-body-small); color: var(--mw-text-2); font-variant-numeric: tabular-nums; margin-left: auto; text-align: right; overflow-wrap: anywhere; }
 /* labelSize="subtitle": the progress is the screen's main number (M06 Mozaik "312 dari 600 foto · 52%"). */
 .progressSubtitle .progressLabel, .progressSubtitle .progressValue { font: var(--mw-type-subtitle); color: var(--mw-text-1); }
 .progressSubtitle .progressLabel > svg { width: 20px; height: 20px; }
@@ -58,11 +58,11 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 .cancelled .sessionTitle { color: var(--mw-text-2); text-decoration: line-through; }
 .cancelled .start { color: var(--mw-text-3); }
 /*
- * Under 300 px (a phone at zoom 200 %): the time goes on a line of its own ("08.00–12.00", the
+ * Under 340 px (a 320 phone, or zoom 200 %): the time goes on a line of its own ("08.00–12.00", the
  * chevron at its end), the title and place get the full width under it, the rail steps aside,
  * and a pill may wrap (T-P03).
  */
-@media (max-width: 299.98px) {
+@media (max-width: 339.98px) {
   .session { flex-wrap: wrap; column-gap: var(--mw-space-8); row-gap: var(--mw-space-4); padding: var(--mw-space-12); }
   .time { order: 0; flex: 1 1 auto; width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; }
   .end::before { content: "–" / ""; }
@@ -82,14 +82,14 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 /* On a narrow phone (320, 360) two tiles side by side cut "Pengumuman" and "Moderasi": one per row instead, nothing clipped. */
 @media (max-width: 379.98px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
 .tile {
-  position: relative; min-width: 0; height: 64px; display: flex; align-items: center; gap: var(--mw-space-8);
+  position: relative; min-width: 0; min-height: 64px; display: flex; align-items: center; gap: var(--mw-space-8);
   padding: var(--mw-space-12) var(--mw-space-8) var(--mw-space-12) var(--mw-space-12); border-radius: 18px;
   background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline), var(--mw-elev-card); color: var(--mw-text-1); text-align: left;
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-press);
 }
 .tile:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 @media (hover: hover) { .tile:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
-.tileLabel { flex: 1 1 auto; min-width: 0; font: var(--mw-type-label); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tileLabel { flex: 1 1 auto; min-width: 0; font: var(--mw-type-label); overflow-wrap: anywhere; }
 .tileBadge { flex: none; margin-right: var(--mw-space-4); }
 
 /* StackPreview: three small tilted photos, the words, a tonal "Lihat". */
@@ -102,12 +102,12 @@ a.peek, button.peek { cursor: pointer; -webkit-tap-highlight-color: transparent;
 .fanPhoto:nth-child(2) { z-index: 1; transform: translateY(var(--mw-space-4)); }
 .fanPhoto:nth-child(3) { transform: translateX(var(--mw-space-16)) rotate(10deg); }
 .peekText { flex: 1 1 96px; min-width: 0; display: flex; flex-direction: column; }
-.peekTitle { font: var(--mw-type-body-strong); }
-.peekSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.peekTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.peekSub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 /* Looks like a tonal M button; the whole row is the link, so this is not a second control. */
 .peekCta {
-  flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 var(--mw-space-16); border-radius: var(--mw-radius-12);
-  background: var(--mw-primary-container); color: var(--mw-on-primary-container); font: var(--mw-type-label-lg); white-space: nowrap;
+  flex: none; max-width: 100%; display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--mw-space-16); border-radius: var(--mw-radius-12);
+  background: var(--mw-primary-container); color: var(--mw-on-primary-container); font: var(--mw-type-label-lg); text-align: center;
 }
 a.peek:active .peekCta, button.peek:active .peekCta { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 
@@ -143,8 +143,8 @@ a.peek:active .peekCta, button.peek:active .peekCta { background-image: linear-g
 .c-media { color: var(--mw-media-on); }
 .c-inverse-2 { color: var(--mw-inverse-on-surface-2); }
 .c-media-2 { color: var(--mw-media-on-2); }
-.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ellipsis { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* `clamp` and `ellipsis` stay as props so old calls compile, but they no longer cut: a meaningful text wraps (KIT.md rule 15). */
+.clamp2, .ellipsis { overflow-wrap: anywhere; min-width: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .bar, a.session, button.session, .tile { transition: none; }

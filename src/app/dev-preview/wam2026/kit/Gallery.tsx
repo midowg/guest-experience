@@ -68,7 +68,7 @@ export function KitGallery() {
     </header>
     <nav className={css.toc} aria-label="Isi galeri">
       {[["prototipe", "Prototipe"], ["warna", "Warna"], ["teks", "Teks"], ["tombol", "Tombol"], ["chip", "Chip"], ["status", "Status"], ["isian", "Isian"], ["kartu", "Kartu"], ["sesi", "Sesi"],
-        ["umpan", "Umpan balik"], ["overlay", "Sheet"], ["bilah", "Bilah"]].map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
+        ["umpan", "Umpan balik"], ["overlay", "Sheet"], ["bilah", "Bilah"], ["panjang", "Teks panjang"]].map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
     </nav>
 
     <Col id="prototipe" title="Bahasa prototipe" sub="Kartu emas bersiku, motif jaringan, label kapital, angka besar, segmen hari. Dipakai lewat kit, tanpa hex.">
@@ -394,7 +394,115 @@ export function KitGallery() {
       </Group>
     </Col>
 
-    <Sheet open={sheet} onClose={() => setSheet(false)} title="Ubah jam" subtitle="Team building · Sel, 5 Jan"
+    <Col id="panjang" title="Teks panjang" sub="Aturan 15: teks bermakna tidak dipotong. Judul dan keterangan membungkus; nilai atau aksi di kanan turun ke bawah bila sempit; dua tombol sejajar jadi satu kolom. Periksa di lebar 320, 360, 390.">
+      <Group label="ListRow · judul panjang + nilai, tombol, chevron">
+        <List>
+          <ListRow icon={MapPin} title="Ruang pertemuan utama lantai dua sayap timur, dekat lobi" sub="Tempat sesi pleno sesudah makan siang bersama seluruh peserta dari semua kota" value="Penuh" />
+          <ListRow icon={Users} title="Kelompok Garuda Nusantara dan rekan lintas divisi" sub="Anggota: Rani, Sari, Dimas, Contoh Satu, Contoh Dua" trailing={<Button size="m" variant="secondary">Hubungi ketua kelompok</Button>} chevron={false} />
+          <ListRow icon={Globe} title="Registration and welcome desk opens at the main entrance hall" sub="Please bring your confirmation message and a valid identity card" value="Belum dibuka untuk umum" />
+          <ListRow icon={Trophy} title="Hadiah utama pemenang kuis akhir tahun" href="#panjang" />
+        </List>
+      </Group>
+      <Group label="StatRow · nilai besar + status panjang">
+        <List>
+          <StatRow icon={Leaf} title="Jejak karbon perjalanan pulang pergi seluruh rombongan" sub="Dihitung dari moda transportasi yang dipilih peserta" value="1.240" unit="kg CO₂" status={<Pill tone="warning">Menunggu verifikasi panitia</Pill>} />
+          <StatRow icon={Trophy} title="Poin tim" value="340" unit="poin" href="#panjang" />
+        </List>
+      </Group>
+      <Group label="Card + CardHead · judul dan aksi panjang">
+        <Card>
+          <CardHead title="Pengumuman penting dari panitia tentang perubahan jadwal bus" sub="Diperbarui 5 Jan pukul 06.30 oleh tim lapangan" end={<Pill tone="active" dot>Sedang berlangsung hari ini</Pill>} />
+          <Text color="2">Bus menuju lokasi acara berangkat lebih awal dari lobi hotel; harap sudah berkumpul sepuluh menit sebelumnya.</Text>
+        </Card>
+      </Group>
+      <Group label="Pill, Chip, StatusPill, Badge · label panjang">
+        <div className={css.row}>
+          <Pill tone="success" icon={Check}>Sudah absen dan terverifikasi oleh panitia lapangan</Pill>
+          <Pill tone="error">Foto ditolak karena terlalu gelap dan buram</Pill>
+          <Chip icon={MapPin}>Aula Utama lantai 1 sayap barat</Chip>
+          <StatusPill status="live">Sedang berlangsung di Aula Utama</StatusPill>
+          <Pill tone="gold">Wajib hadir semua peserta</Pill>
+        </div>
+      </Group>
+      <Group label="FilterChip, TagChip · label panjang (baris membungkus)">
+        <ChipRow>
+          <FilterChip selected onClick={() => {}} icon={Images}>Foto dari seluruh kelompok peserta</FilterChip>
+          <FilterChip selected={false} onClick={() => {}}>Hanya foto saya yang belum dibagikan</FilterChip>
+          <FilterChip menu name="Sesi" active onClick={() => {}}>Pemaparan departemen dan diskusi panel</FilterChip>
+        </ChipRow>
+        <TagChipRow>
+          <TagChip label="Untuk" value="Seluruh peserta dari semua kota dan divisi" onClick={() => {}} />
+          <TagChip label="Sesi" value="Team building di tepi pantai" onClear={() => {}} clearLabel="Hapus sesi" />
+        </TagChipRow>
+      </Group>
+      <Group label="Button · label panjang, dua tombol sejajar sempit jadi kolom">
+        <Card>
+          <Text color="2">Ubah jam mulai sesi dan kabari seluruh peserta.</Text>
+          <div className={css.row}>
+            <Button variant="secondary">Simpan sebagai draf dulu</Button>
+            <Button>Kirim kabar ke semua peserta</Button>
+          </div>
+        </Card>
+        <Button block variant="tonal" icon={<Camera />}>Ambil ulang foto dengan kamera belakang</Button>
+        <div className={css.row}><IconButton icon={Share} label="Bagikan foto ini kepada semua anggota kelompok" /><TextLink href="#panjang">Lihat semua pengumuman dan jadwal terbaru</TextLink></div>
+      </Group>
+      <Group label="SectionHeader · tautan aksi panjang">
+        <SectionHeader title="Jadwal hari ini dan pengumuman terbaru" sub="Diurutkan menurut jam mulai" action={{ label: "Lihat semua jadwal", href: "#panjang" }} />
+        <SectionHeader title="Misi" action={{ label: "Lihat semua misi yang tersedia untuk kelompokmu", href: "#panjang" }} />
+      </Group>
+      <Group label="Banner · aksi, judul panjang">
+        <Banner tone="warning" title="Koneksi terputus, perubahanmu belum tersimpan" action={{ label: "Coba kirim lagi", onClick: () => {} }}>Kamu masih bisa melihat jadwal yang tersimpan di perangkat ini.</Banner>
+        <Banner tone="info" title="Bus berangkat pukul 06.30 dari lobi hotel utama" href="#panjang">Harap berkumpul sepuluh menit sebelumnya.</Banner>
+      </Group>
+      <Group label="EmptyState">
+        <Card><EmptyState size="s" icon={Images} title="Belum ada foto dari kelompokmu hari ini" action={<Button variant="secondary">Ambil foto pertama kelompok</Button>}>Foto yang kamu dan temanmu bagikan akan muncul di sini setelah panitia memeriksanya.</EmptyState></Card>
+      </Group>
+      <Group label="Segmented · label panjang">
+        <Segmented label="Tampilan" value={audience} onChange={setAudience} options={[{ value: "kelompok", label: "Hanya foto kelompokku" }, { value: "semua", label: "Semua foto peserta acara" }]} />
+        <Segmented label="Urutan" value={segment} onChange={setSegment} options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku yang aktif" }]} />
+      </Group>
+      <Group label="SwitchRow · judul dan keterangan panjang">
+        <Card><SwitchRow title="Kabari seluruh peserta setiap ada perubahan jadwal sesi" sub="Notifikasi dikirim ke semua peserta yang terdaftar di sesi ini, termasuk yang belum absen" checked={notify} onChange={setNotify} /></Card>
+      </Group>
+      <Group label="SessionRow · judul, tempat, pill panjang">
+        <SessionList>
+          <SessionRow start="08.00" end="12.00" status="live" title="Pemaparan departemen keuangan, SDM, dan operasional" place="Aula Utama lantai 1 sayap barat, dekat pintu masuk" extra={<Pill tone="active" dot>Sedang berlangsung</Pill>} href="#panjang" />
+          <SessionRow start="13.30" end="15.00" title="Team building di tepi pantai bersama semua kelompok" place="Pantai Selatan, kumpul di tenda panitia" extra={<Pill>Wajib hadir semua peserta</Pill>} href="#panjang" />
+        </SessionList>
+      </Group>
+      <Group label="ShortcutTile · label panjang">
+        <ShortcutGrid label="Pintasan">
+          <ShortcutTile icon={Megaphone} label="Pengumuman untuk semua peserta" badge={3} onClick={() => {}} />
+          <ShortcutTile icon={ShieldAlert} label="Moderasi foto yang dilaporkan" onClick={() => {}} />
+        </ShortcutGrid>
+      </Group>
+      <Group label="KeyValue · label dan nilai panjang">
+        <KeyValueRow>
+          <KeyValue label="Tempat berkumpul" value="Lobi hotel utama lantai dasar" />
+          <KeyValue label="Waktu keberangkatan" value="06.30 WIB tepat" />
+        </KeyValueRow>
+      </Group>
+      <Group label="Toast · teks dan aksi panjang">
+        <div className={css.toastBox}>
+          <ToastPreview text="Jam Team building diubah jadi 13.30 sampai 15.00 dan peserta sudah dikabari" tone="success" actionLabel="Urungkan perubahan" />
+          <ToastPreview text="Foto gagal terkirim karena koneksi terputus" tone="error" actionLabel="Coba lagi" secondaryLabel="Simpan di perangkat" />
+        </div>
+      </Group>
+      <Group label="TopBar · judul panjang (besar, kembali, Beranda)">
+        <div className={css.barDemo}><TopBar title="Ringkasan keputusan rapat panitia hari pertama" eyebrow="Agenda lengkap seluruh kegiatan" actions={<IconButton icon={Bell} label="Notifikasi" variant="tonal" badge="dot" />} /></div>
+        <div className={css.barDemo}><TopBar variant="back" title="Detail sesi pemaparan departemen keuangan dan operasional" backHref="#panjang" actions={<IconButton icon={Share} label="Bagikan" />} /></div>
+        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi, selamat datang kembali" name="Rani Kusumawardhani" dayDots={{ total: 4, current: 2, label: "Hari ke-2 dari 4" }} actions={<IconButton icon={Bell} label="Notifikasi" badge={3} href="#panjang" />} /></div>
+      </Group>
+      <Group label="ActionBar · dua tombol panjang, ConfirmDialog (tombol bawah)">
+        <div className={css.bleed}><ActionBar note="Absen dibuka 30 menit sebelum sesi dimulai dan ditutup saat sesi berakhir."><div><Button block>Absen sekarang di sesi ini</Button></div></ActionBar></div>
+        <div className={css.row}>
+          <Button variant="secondary" onClick={() => setSheet(true)}>Sheet judul panjang</Button>
+          <Button variant="secondary" onClick={() => setDialog("primary")}>Dialog judul panjang</Button>
+        </div>
+      </Group>
+    </Col>
+
+    <Sheet open={sheet} onClose={() => setSheet(false)} title="Ubah jam mulai dan selesai sesi Team building" subtitle="Team building di tepi pantai bersama semua kelompok · Sel, 5 Jan"
       footer={<Button block onClick={() => { setSheet(false); toast.show({ text: "Jam disimpan · peserta dikabari", tone: "success" }); }}>Simpan</Button>}>
       <Text color="2">Jam baru langsung tampil di Agenda semua peserta.</Text>
       <List inset={16}><ListRow title="Mulai" value="13.30" /><ListRow title="Selesai" value="15.00" /></List>
@@ -412,7 +520,7 @@ export function KitGallery() {
     <ConfirmDialog open={dialog === "danger"} tone="danger" title="Hapus foto ini?" body="Foto hilang dari Momen dan Mozaik." confirmLabel="Hapus foto"
       busy={busy} busyLabel="Menghapus…" onCancel={() => setDialog(null)}
       onConfirm={() => { setBusy(true); window.setTimeout(() => { setBusy(false); setDialog(null); toast.show({ text: "Foto dihapus", tone: "success" }); }, 1200); }} />
-    <ConfirmDialog open={dialog === "primary"} title="Kirim kabar ke 120 peserta?" body="Jam Team building berubah jadi 13.30–15.00." confirmLabel="Kirim kabar"
+    <ConfirmDialog open={dialog === "primary"} title="Kirim kabar perubahan jam ke 120 peserta?" body="Jam Team building berubah jadi 13.30–15.00 dan peserta di semua kota menerima notifikasi." confirmLabel="Kirim kabar ke semua peserta"
       onCancel={() => setDialog(null)} onConfirm={() => { setDialog(null); toast.show({ text: "Kabar terkirim", tone: "success" }); }} />
   </div>;
 }

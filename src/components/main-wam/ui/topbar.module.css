@@ -6,12 +6,12 @@
 /* Prototipe .hdr h1: Barlow Condensed 800, 30/32, capitals, a small capital label above (eyebrow). */
 .large { min-height: var(--mw-topbar-large-h); padding: 12px 6px 16px 20px; }
 .largeText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.largeTitle { min-width: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.eyebrow { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.largeTitle { min-width: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; overflow-wrap: anywhere; }
+.eyebrow { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); overflow-wrap: anywhere; }
 
 /* Back: the title starts after the back button (x 52), left-aligned (PM 14 Nov). */
 .back { min-height: var(--mw-topbar-h); padding: 0 6px; display: grid; grid-template-columns: minmax(44px, auto) minmax(0, 1fr) auto; column-gap: 2px; }
-.backTitle { grid-column: 2; min-width: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.backTitle { grid-column: 2; min-width: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; text-align: left; padding: var(--mw-space-8) 0; }
 .start { grid-column: 1; justify-self: start; display: flex; align-items: center; }
 .end { display: flex; align-items: center; gap: var(--mw-space-8); flex: none; min-width: 0; }
 .back .end { grid-column: 3; justify-self: end; }
@@ -19,9 +19,9 @@
 /* Beranda (prototipe): "SELAMAT PAGI" as a small capital label, the name in big Barlow capitals, the day's segments and the bell on the right (the only bell in the app). */
 .home { min-height: 84px; padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-12) var(--mw-space-20); gap: var(--mw-space-8); align-items: flex-start; }
 .homeText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.kicker { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.name { font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day { margin-top: 2px; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-gold-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kicker { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); overflow-wrap: anywhere; }
+.name { font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; overflow-wrap: anywhere; }
+.day { margin-top: 2px; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-gold-ink); overflow-wrap: anywhere; }
 .homeEnd { flex: none; display: flex; align-items: center; gap: var(--mw-space-12); padding-top: var(--mw-space-4); }
 .homeEnd .end { gap: var(--mw-space-8); }
 
@@ -33,11 +33,8 @@
 }
 .actionbar > :not(.actionRow):not(.actionNote) { width: 100%; }
 .actionNote { font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.actionRow { display: flex; gap: var(--mw-space-12); }
-.actionRow > * { flex: 1 1 0; min-width: 0; }
+.actionRow { display: flex; flex-wrap: wrap; gap: var(--mw-space-8) var(--mw-space-12); }
+/* Two buttons side by side only when each keeps 150 px; narrower, they become one column, each full width. */
+.actionRow > * { flex: 1 1 150px; min-width: 0; }
 
-/* Zoom 200 % (under 300 px): a title wraps and the bar grows instead of cutting it ("Rundown live"). */
-@media (max-width: 299.98px) {
-  .largeTitle, .backTitle, .kicker, .name, .day { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
-  .back { padding-block: var(--mw-space-4); }
-}
+/* A long title wraps and the bar grows; it is never cut (KIT.md rule 15). */
