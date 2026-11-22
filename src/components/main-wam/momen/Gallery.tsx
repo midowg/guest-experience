@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Hourglass, Images, LayoutGrid, RotateCcw, Trash2 } from "lucide-react";
-import { Button, Chip, ConfirmDialog, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
+import { Button, ConfirmDialog, IconButton, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
-import { ScreenContent, Stack } from "@/components/main-wam/shell";
+import { ScreenContent, ShellActions, Stack } from "@/components/main-wam/shell";
 import { errorText, praWamRequest } from "@/components/pra-wam/api";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -165,6 +165,7 @@ export function Gallery(props: GalleryProps) {
 
   return <ScreenContent>
     <MomenQueueRunner />
+    {props.mozaik && <ShellActions><IconButton variant="tonal" icon={LayoutGrid} label={t("momen.mosaic")} href={mainWamPath.mosaic()} /></ShellActions>}
     <Stack>
       <Segmented label={t("momen.gal.filterLabel")} value={view} onChange={value => filterTo(value, session)}
         options={[{ value: "semua", label: t("momen.all") }, { value: "saya", label: t("momen.myPhotos") }]} />
@@ -175,7 +176,6 @@ export function Gallery(props: GalleryProps) {
         {/* With a session chosen the count shows even at 0 ("Batu Night Spectacular · 0 foto", audit T-M02). */}
         {props.migrated && (total > 0 || !!session) && <span className={css.caption}>{caption}</span>}
       </div>
-      {props.mozaik && <div className={css.mosaicLink}><Chip icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.mosaic")}</Chip></div>}
       {body}
     </Stack>
 
