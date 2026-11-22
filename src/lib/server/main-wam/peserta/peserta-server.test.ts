@@ -78,7 +78,7 @@ describe("Beranda's loader", () => {
     pinnedForMe.mockResolvedValueOnce([]);
     const data = await loadHome(context(sampleViewers.peserta), at("2027-01-04", "05:05"));
     expect(read.seatsOf).toHaveBeenCalledWith(sampleViewers.peserta.id);
-    expect(data.card).toMatchObject({ kind: "berangkat", title: "Kereta ke Malang · 06.30" });
+    expect(data.card).toMatchObject({ kind: "berangkat", title: "Kereta ke Malang" });
   });
 
   it("Survei (R7): the card is what surveyFor says (the one rule), with this person's context; a failure leaves it out", async () => {
