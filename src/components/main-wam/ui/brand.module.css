@@ -40,7 +40,7 @@
 .dots > i[data-done] { background: var(--mw-primary); }
 
 /* Big number (prototipe .pts, .cd, .big): Barlow figure, small capital unit after it. */
-.num { display: inline-flex; align-items: baseline; gap: var(--mw-space-8); font-variant-numeric: tabular-nums; }
+.num { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--mw-space-8); font-variant-numeric: tabular-nums; }
 .numValue { font: var(--mw-type-stat-xl); letter-spacing: var(--mw-ls-stat-xl); }
 .numL .numValue { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); }
 .numM .numValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); }
@@ -50,7 +50,8 @@
 
 /* Key-value tile (prototipe .kv, .tele): a small capital label over a Barlow value. */
 .kv { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; padding: var(--mw-space-8) var(--mw-space-12); border-radius: var(--mw-radius-12); border: 1px solid var(--mw-outline); background: color-mix(in srgb, var(--mw-bg) 55%, transparent); }
-.kvLabel { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.kvLabel { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); overflow-wrap: anywhere; }
 .kvValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); color: var(--mw-text-1); overflow-wrap: anywhere; }
-.kvRow { display: flex; gap: var(--mw-space-8); }
-.kvRow > * { flex: 1 1 0; }
+.kvRow { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+/* Tiles side by side only while each keeps 128 px; narrower they stack. */
+.kvRow > * { flex: 1 1 128px; }

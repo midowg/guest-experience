@@ -24,8 +24,8 @@
 .row:has(.rowSub) { align-items: flex-start; }
 .row:has(.rowSub) > .switch { margin-top: -5px; }
 .rowText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.rowTitle { font: var(--mw-type-body); color: var(--mw-text-1); }
-.rowSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.rowTitle { font: var(--mw-type-body); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.rowSub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .rowDisabled { cursor: default; }
 .rowDisabled .rowTitle, .rowDisabled .rowSub { color: var(--mw-disabled-fg); }
 

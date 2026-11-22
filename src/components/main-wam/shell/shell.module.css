@@ -56,7 +56,7 @@
   opacity: 0; pointer-events: none; transition: transform var(--mw-motion-base), opacity var(--mw-motion-base);
 }
 .compact[data-shown] { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
-.compactTitle { display: flex; align-items: center; justify-content: center; height: var(--mw-topbar-h); padding: 0 var(--mw-space-48); font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compactTitle { display: flex; align-items: center; justify-content: center; min-height: var(--mw-topbar-h); padding: var(--mw-space-8) var(--mw-space-48); font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; text-align: center; overflow-wrap: anywhere; }
 .actions { display: contents; }
 
 /* Hidden by the screen itself (<ShellChrome hideTopBar />, the camera, the QR scanner): CSS only, so no flash. */

@@ -40,7 +40,7 @@
 
 /* A field that opens a sheet of choices: looks like an input, ends with ▾. */
 .select { text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.selectValue { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selectValue { flex: 1 1 auto; min-width: 0; padding: var(--mw-space-12) 0; font: var(--mw-type-body); overflow-wrap: anywhere; }
 .placeholder { color: var(--mw-text-3); }
 .select > svg:last-child { color: var(--mw-text-2); }
 

@@ -1,19 +1,19 @@
 /* Banner (.wam-banner), EmptyState (.wam-empty), Skeleton (.wam-skel), Spinner. Tokens only. */
 .banner {
-  display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-12) var(--mw-space-16); border-radius: 18px;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mw-space-8) var(--mw-space-12); padding: var(--mw-space-12) var(--mw-space-16); border-radius: 18px;
   background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); border-left: 3px solid var(--mw-gold); text-align: left; width: 100%;
 }
 .banner > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
 a.banner, button.banner { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 a.banner:active, button.banner:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
 @media (hover: hover) { a.banner:hover, button.banner:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
-.bannerText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.bannerText { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .bannerTitle { font: var(--mw-type-body-strong); color: var(--mw-text-1); }
 .bannerBody { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .bannerTitle + .bannerBody { margin-top: 2px; }
 .bannerAction {
-  flex: none; align-self: center; display: inline-flex; align-items: center; justify-content: center; min-height: var(--mw-touch); min-width: var(--mw-touch);
-  margin: -12px -8px; padding: 0 var(--mw-space-8); border-radius: var(--mw-radius-8); font: var(--mw-type-label); color: inherit; white-space: nowrap; cursor: pointer;
+  flex: none; align-self: center; max-width: 100%; display: inline-flex; align-items: center; justify-content: center; min-height: var(--mw-touch); min-width: var(--mw-touch);
+  margin: -12px -8px -12px auto; padding: 0 var(--mw-space-8); border-radius: var(--mw-radius-8); font: var(--mw-type-label); color: inherit; text-align: right; overflow-wrap: anywhere; cursor: pointer;
 }
 .bannerAction:active { background: var(--mw-press); }
 .bannerChevron { flex: none; align-self: center; width: 20px; height: 20px; color: var(--mw-text-3); }
@@ -47,9 +47,4 @@ a.banner:active, button.banner:active { background-image: linear-gradient(var(--
 .spinner { flex: none; width: 24px; height: 24px; color: var(--mw-gold-ink); }
 .spinnerSm { width: 20px; height: 20px; }
 
-/* Zoom 200 % (under 300 px): the banner's action goes under its text instead of squeezing it to a few letters. */
-@media (max-width: 299.98px) {
-  .banner { flex-wrap: wrap; }
-  .bannerText { flex: 1 1 calc(100% - 32px - var(--mw-space-12)); }
-  .bannerAction { margin: 0 -8px -12px; margin-left: auto; align-self: flex-end; }
-}
+/* The banner's action keeps beside the text only while the text keeps 160 px; otherwise it drops under it, at the end. */

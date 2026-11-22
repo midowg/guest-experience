@@ -41,13 +41,13 @@
 .pressable:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); transform: scale(0.98); }
 @media (hover: hover) { .pressable:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
 
-.head { display: flex; align-items: center; gap: var(--mw-space-12); min-width: 0; }
-.headText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.headTitle { font: var(--mw-type-body-strong); }
-.headSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.headEnd { flex: none; display: flex; align-items: center; gap: var(--mw-space-4); }
-.title { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; }
-.body { font: var(--mw-type-body); color: var(--mw-text-2); }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-8) var(--mw-space-12); min-width: 0; }
+.headText { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
+.headTitle { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.headSub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.headEnd { flex: none; max-width: 100%; margin-left: auto; display: flex; align-items: center; gap: var(--mw-space-4); }
+.title { font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; }
+.body { font: var(--mw-type-body); color: var(--mw-text-2); overflow-wrap: anywhere; }
 
 /* IconBox: 40 r12 on surface-2 (neutral in lists and tiles; category colour only on module cards). */
 .box { flex: none; width: 40px; height: 40px; border-radius: var(--mw-radius-12); display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--mw-primary) 14%, transparent); color: var(--mw-primary); }
@@ -70,14 +70,14 @@
 .boxAwarding { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
 
 /* SectionHeader (prototipe .sec .cap): a small letter-spaced capital label and a gold text link, 44 tall. */
-.section { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: var(--mw-touch); }
-.sectionText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.section { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--mw-space-8); min-height: var(--mw-touch); }
+.sectionText { flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; }
 .sectionTitle { font: var(--mw-type-cap-lg); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
-.sectionSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.sectionSub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .link {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-4);
-  min-height: var(--mw-touch); min-width: var(--mw-touch); padding: 0 var(--mw-space-4); margin: 0 calc(-1 * var(--mw-space-4));
-  font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-gold-ink); white-space: nowrap; border-radius: var(--mw-radius-8);
+  flex: none; max-width: 100%; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-4);
+  min-height: var(--mw-touch); min-width: var(--mw-touch); padding: 0 var(--mw-space-4); margin-right: calc(-1 * var(--mw-space-4)); text-align: right;
+  font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap-tight); text-transform: uppercase; color: var(--mw-gold-ink); overflow-wrap: anywhere; border-radius: var(--mw-radius-8);
 }
 .link > svg { width: 16px; height: 16px; }
 @media (hover: hover) { .link:hover { text-decoration: underline; text-underline-offset: 0.2em; } }

@@ -5,7 +5,7 @@
   display: flex; flex-direction: column; gap: var(--mw-space-8); pointer-events: none;
 }
 .toast {
-  position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: var(--mw-space-12); min-height: 48px; padding: var(--mw-space-12) var(--mw-space-16);
+  position: relative; overflow: hidden; width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-12); min-height: 48px; padding: var(--mw-space-12) var(--mw-space-16);
   border-radius: var(--mw-radius-12); background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface); box-shadow: var(--mw-elev-2);
   pointer-events: auto;
 }
@@ -14,18 +14,18 @@
 .error > svg { color: var(--mw-inverse-error); }
 .thumb { flex: none; position: relative; width: var(--mw-space-32); height: 40px; border-radius: var(--mw-radius-4); overflow: hidden; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
-.text { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body); }
+.text { flex: 1 1 140px; min-width: 0; font: var(--mw-type-body); overflow-wrap: anywhere; }
 .sub { display: block; font: var(--mw-type-body-small); color: var(--mw-inverse-on-surface-2); }
 .action {
   flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: var(--mw-touch); min-width: var(--mw-touch);
-  margin: -10px -8px -10px 0; padding: 0 var(--mw-space-8); border-radius: var(--mw-radius-8);
-  font: var(--mw-type-label-lg); color: var(--mw-inverse-primary); white-space: nowrap; cursor: pointer;
+  margin: -10px -8px -10px auto; padding: 0 var(--mw-space-8); border-radius: var(--mw-radius-8);
+  font: var(--mw-type-label-lg); color: var(--mw-inverse-primary); text-align: right; overflow-wrap: anywhere; cursor: pointer;
 }
 /* Two actions: the text on top, the actions under it at the end (a narrow phone has no room for both beside the text). */
-.actions { flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-8); }
+.actions { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: var(--mw-space-8); }
 .actions .action { margin: -10px 0; }
 .actions .action:last-child { margin-right: -8px; }
-.two { flex-wrap: wrap; row-gap: 0; }
+.two { row-gap: 0; }
 .two .text { flex: 1 1 calc(100% - 60px); }
 .two .actions { margin-left: auto; margin-top: calc(-1 * var(--mw-space-4)); margin-bottom: calc(-1 * var(--mw-space-4)); }
 .action:active { background: color-mix(in srgb, var(--mw-inverse-on-surface) 10%, transparent); }
@@ -47,9 +47,4 @@
 }
 @keyframes mw-toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-/* Zoom 200 % (under 300 px): the text takes the full width and the action goes under it, so the words are not squeezed. */
-@media (max-width: 299.98px) {
-  .toast { flex-wrap: wrap; row-gap: var(--mw-space-4); }
-  .toast .text { flex: 1 1 calc(100% - 32px); }
-  .toast .action { margin: calc(-1 * var(--mw-space-4)) -8px -4px auto; }
-}
+/* The action keeps beside the text while the text keeps 140 px; otherwise it drops under it at the end. */

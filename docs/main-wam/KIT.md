@@ -58,11 +58,18 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
     fokus lewat skrip yang bukan kontrol (judul sheet, `<main>`) diberi `tabIndex={-1}` dan tanpa cincin
     (aturan tema untuk `h1`–`h6`/`main[tabindex="-1"]`). Fokus lewat skrip setelah ketukan pakai
     `quietFocus(el)` (`ui/useModal.ts`): tanpa cincin sampai ada tombol keyboard ditekan.
-15. **Teks tidak pernah dipotong diam-diam (QA UI/UX, 320 sampai 195 px).** Judul dan keterangan baris
-    (`ListRow`, `StatRow`, `SessionRow`, kartu Sekarang, baris kamar) membungkus dengan `overflow-wrap: anywhere`;
-    tidak ada `line-clamp` atau `text-overflow: ellipsis` pada isi yang hanya ada di situ. Pengecualian yang
-    disengaja: judul notifikasi (2 baris, isi penuh ada di sheet saat diketuk), judul bilah atas, kicker/nama sapaan.
-    Baris yang ujungnya tombol (`ListRow trailing={<Button>}`) menurunkan tombol ke baris bawah di bawah 300 px.
+15. **Teks bermakna tidak boleh terpotong, dan susunan menjadi kolom saat sempit (QA UI/UX; aturan pemilik 22 Nov).**
+    Tidak ada `text-overflow: ellipsis`, `-webkit-line-clamp`, atau `white-space: nowrap` pada teks bermakna di kit dan shell;
+    judul, keterangan, label chip/pil/tombol/tab membungkus (`overflow-wrap: anywhere`) dan wadahnya meninggi
+    (chip, pil, TagChip, tombol: `min-height`, bukan `height`). Jangan memaksakan kalimat panjang dalam susunan baris
+    kiri-kanan: teks diberi dasar lebar minimum (`flex: 1 1 120px` pada ListRow/StatRow/CardHead/Banner/Toast/SectionHeader), dan
+    nilai atau aksi di kanan (tombol, tautan, nilai panjang, pil status) **turun ke bawah teks, rata kanan**, bila tidak muat.
+    Dua tombol sejajar (ActionBar, kartu) jadi satu kolom penuh di bawah 150 px per tombol; KeyValueRow menumpuk di bawah 128 px per kotak;
+    Segmented membungkus ke baris kedua bila label tidak muat; SessionRow menaruh jam di baris sendiri di bawah 340 px.
+    Props `clamp` dan `ellipsis` pada `Text` tetap ada demi kompatibilitas tetapi tidak lagi memotong.
+    Yang boleh satu baris (pendek dan pasti muat): angka dan satuan (`statValue`, penghitung, jam), label bilah bawah (satu kata;
+    di bawah 240 px hanya ikon), teks sr-only. Pengecualian di layar (bukan kit): judul notifikasi (2 baris, isi penuh di sheet).
+    Galeri `/dev-preview/wam2026/kit#panjang` memuat contoh teks panjang untuk tiap komponen; periksa di 320, 360, 390, terang dan gelap.
     `DayTabs` membungkus jadi 2 x 2 bila empat hari tidak muat (tiap tab minimal 44).
 16. **Nama aksesibel** sebuah tautan/kartu memakai kata yang tampil (jangan `aria-label` yang menyusun ulang);
     keterangan tambahan lewat `spoken` atau `<SrOnly>` (kartu Sekarang, baris profil di Saya).
