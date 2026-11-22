@@ -139,7 +139,13 @@ export function DayTabs({ days, current, onSelect, label, className }: {
   return <nav aria-label={label ?? t("ui.eventDays")} className={cx(css.tabs, className)}>
     {days.map(day => {
       const chosen = day.key === current;
-      const body = <><span className={css.tabDay}>{day.day}</span><span className={css.tabDate}>{day.date}</span>{day.today && <span className={shared.srOnly}><Words k="ui.todaySr" /></span>}</>;
+      // "Sen, 4 Jan" splits into the weekday (small, over) and "4 Jan" (big); a date that does not read that way stays whole. The spoken name keeps "Hari 1, Sen, 4 Jan".
+      const match = /^(\S+?),?\s+(\d{1,2}\s+\S+)$/.exec(day.date.trim());
+      const body = <>
+        <span className={css.tabDay} aria-hidden>{match ? match[1] : day.day}</span>
+        <span className={css.tabDate} aria-hidden>{match ? match[2] : day.date}</span>
+        <span className={shared.srOnly}>{day.day}, {day.date}{day.today && <Words k="ui.todaySr" />}</span>
+      </>;
       const tabClass = cx(css.tab, day.today && css.today);
       return day.href
         ? <Link key={day.key} href={day.href} className={tabClass} aria-current={chosen ? "page" : undefined}>{body}</Link>

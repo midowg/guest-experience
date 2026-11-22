@@ -22,6 +22,7 @@ export const enKuis: Record<keyof typeof idKuis, string> = {
   "kuis.over.body": "Thank you. The winners were revealed on the big screen.",
   "kuis.join.title": "Join the quiz",
   "kuis.join.body": "You play as the figure on your card. Your name is not shown; other players only see your figure.",
+  "kuis.join.rules": "The value falls from 500 to 300 along the time bar. Right earns that value, wrong costs 100, no answer is 0.",
   "kuis.join.button": "Join",
   "kuis.join.joining": "Joining…",
   "kuis.rules.correct": "Right 300–500",

@@ -108,6 +108,8 @@ export const idPeserta = {
   "peserta.agenda.eyebrow": "Agenda",
   "peserta.agenda.absenRequired": "Wajib absen",
   "peserta.agenda.absen": "Absen",
+  "peserta.agenda.kuis": "Kuis live",
+  "peserta.agenda.misi": "Misi +{n}",
   "peserta.session.kind.sesi": "Sesi",
   "peserta.session.kind.makan": "Makan",
   "peserta.session.kind.perjalanan": "Perjalanan",

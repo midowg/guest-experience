@@ -99,3 +99,14 @@ describe("Detail sesi", () => {
     expect(sessionView(session("checkin"), at("2027-01-04", "15:00"), [], false).infoSub).toBe("Konsumsi");
   });
 });
+
+describe("Agenda rows: ties to quiz and missions", () => {
+  it("tags a session with a quiz and one with missions, and nothing otherwise", () => {
+    const links = { quizSessions: new Set([sampleSessionIds.pemaparan]), missionPoints: new Map([[sampleSessionIds["team-building"], 50]]) };
+    const rows = agendaRows(sampleSessions, 2, event, at("2027-01-05", "07:40"), [], "id", undefined, links);
+    expect(rows.find(row => row.title === "Pemaparan departemen")).toMatchObject({ kuis: true });
+    expect(rows.find(row => row.title === "Team building")).toMatchObject({ misi: 50 });
+    expect(rows.find(row => row.title === "Makan siang")).not.toHaveProperty("kuis");
+    expect(agendaRows(sampleSessions, 2, event, at("2027-01-05", "07:40"), [])[0]).not.toHaveProperty("misi");
+  });
+});

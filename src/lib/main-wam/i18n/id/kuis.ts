@@ -24,6 +24,7 @@ export const idKuis = {
   "kuis.over.body": "Terima kasih. Juaranya sudah dibuka di layar besar.",
   "kuis.join.title": "Ikut kuis",
   "kuis.join.body": "Kamu bermain sebagai tokoh kartumu. Namamu tidak tampil; pemain lain hanya melihat tokohmu.",
+  "kuis.join.rules": "Nilai 500 turun ke 300 mengikuti garis waktu. Benar dapat nilai itu, salah −100, tidak menjawab 0.",
   "kuis.join.button": "Ikut",
   "kuis.join.joining": "Bergabung…",
   "kuis.rules.correct": "Benar 300–500",

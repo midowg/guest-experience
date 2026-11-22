@@ -1,5 +1,6 @@
 import "server-only";
 import { visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
+import type { AgendaLinks } from "@/lib/main-wam/peserta/agenda";
 import { agendaDays, agendaRowsOfTab, shownTab, tabOfDate, type AgendaDayTab, type AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { denahFor } from "@/lib/main-wam/peserta/guides";
@@ -11,6 +12,8 @@ import type { MainWamContext } from "../gate";
 import { t } from "@/lib/main-wam/i18n";
 import { checklistView, myChecks, readChecklists } from "../ceklis/data";
 import { readLang } from "../lang";
+import { quizSessionIds } from "../kuis/agenda";
+import { allMissions } from "../misi/read";
 import { contactOf } from "./contacts";
 
 /*
@@ -26,12 +29,24 @@ export type AgendaData = { migrated: boolean; days: AgendaDayTab[]; day: number;
 
 const log = (sessionId?: string) => rundownLog(sessionId, 500).then(read => read.data).catch(() => [] as RundownChange[]);
 
+/** The quiz and mission ties of the rows, only for the modules that are on (a failed read just leaves the tags out). */
+async function agendaLinks(modules: MainWamContext["settings"]["modules"]): Promise<AgendaLinks> {
+  const [quizSessions, missions] = await Promise.all([
+    modules.kuis ? quizSessionIds().catch(() => undefined) : undefined,
+    modules.misi ? allMissions().then(read => read.data).catch(() => []) : [],
+  ]);
+  const missionPoints = new Map<string, number>();
+  for (const mission of missions) if (mission.active && mission.sessionId) missionPoints.set(mission.sessionId, (missionPoints.get(mission.sessionId) ?? 0) + mission.points);
+  return { quizSessions, missionPoints };
+}
+
 export async function loadAgenda({ viewer, settings }: MainWamContext, asked: string | string[] | undefined, now: Date): Promise<AgendaData> {
   const ceklisOn = settings.modules.ceklis;
-  const [read, changes, lang, lists, checked] = await Promise.all([
+  const [read, changes, lang, lists, checked, links] = await Promise.all([
     shownSessions(), log(), readLang(),
     ceklisOn ? readChecklists().then(result => result.data).catch(() => null) : null,
     ceklisOn ? myChecks(viewer.id).catch(() => null) : null,
+    agendaLinks(settings.modules),
   ]);
   const sessions = visibleSessions(read.data, settings.event, ceklisOn);
   const prepDates = ceklisOn ? prepDatesOf(sessions.filter(session => session.status !== "draf"), settings.event) : [];
@@ -41,7 +56,7 @@ export async function loadAgenda({ viewer, settings }: MainWamContext, asked: st
     days: agendaDays(settings.event, wibDate(now.toISOString()), lang, prepDates),
     day: /^\d+$/.test(tab) ? Number(tab) : 0,
     tab,
-    rows: agendaRowsOfTab(sessions, tab, settings.event, now, changes, lang, lists && checked ? { lists, checked } : undefined),
+    rows: agendaRowsOfTab(sessions, tab, settings.event, now, changes, lang, lists && checked ? { lists, checked } : undefined, links),
     anyPublished: sessions.some(session => session.status === "terbit"),
   };
 }

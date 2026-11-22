@@ -1,6 +1,6 @@
 "use client";
 
-import { Bus, CalendarDays, ListChecks, Lock, QrCode, Sparkles, Utensils, type LucideIcon } from "lucide-react";
+import { Bus, CalendarDays, ListChecks, Lock, QrCode, Sparkles, Trophy, Utensils, type LucideIcon } from "lucide-react";
 import type { AgendaKind, AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
@@ -40,8 +40,10 @@ export function AgendaTimeline({ rows, label }: { rows: AgendaRow[]; label: stri
               {cancelled && <StatusPill status="cancelled" className={css.status} />}
               {row.changed && <StatusPill status="changed" className={css.status} />}
               <span className={css.kt}><KindIcon aria-hidden />{t(`peserta.session.kind.${row.kind}`)}</span>
+              {row.kuis && <span className={cx(css.kt, css.ktQuiz)}><Trophy aria-hidden />{t("peserta.agenda.kuis")}</span>}
               {row.absen && <span className={cx(css.kt, row.absen === "wajib" && css.ktGold)}><QrCode aria-hidden />{t(row.absen === "wajib" ? "peserta.agenda.absenRequired" : "peserta.agenda.absen")}</span>}
               {row.ceklis && <span className={cx(css.kt, css.ktGold)}><ListChecks aria-hidden />{t("ceklis.chip", { n: `${row.ceklis.done}/${row.ceklis.total}` })}</span>}
+              {row.misi ? <span className={cx(css.kt, css.ktGold)}><Trophy aria-hidden />{t("peserta.agenda.misi", { n: row.misi })}</span> : null}
               {row.ceklisFirst && <span className={css.kt}><Lock aria-hidden />{t("ceklis.chipFirst")}</span>}
             </span>
             {row.status === "done" && <SrOnly>{t("pill.done")}</SrOnly>}
