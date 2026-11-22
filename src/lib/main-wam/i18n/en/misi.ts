@@ -88,7 +88,7 @@ export const enMisi: Record<keyof typeof idMisi, string> = {
   "misi.sheet.rejectedNote": "Committee note: {note}",
   "misi.sheet.rejectedAgain": "Send it again once it meets the rules.",
 
-  "misi.rank.summary": "You are ranked {rank} of {total} participants · {points} points",
+  "misi.rank.summary": "You are ranked **{rank}** of {total} participants · **{points}** points",
   "misi.rank.summaryNone": "You are not on the leaderboard yet.",
   "misi.rank.me": "You",
   "misi.rank.list": "Leaderboard list",
