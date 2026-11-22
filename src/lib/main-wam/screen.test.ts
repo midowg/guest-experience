@@ -5,6 +5,11 @@ import { mainWamScreen, mainWamTabs, mainWamTabsFor, showsBell, showsBottomBar }
 const at = (path: string) => mainWamScreen(path.split("?")[0]);
 
 describe("Main WAM's frame, from the address alone", () => {
+  it("Momen's root titles Terbaru under a small Momen label (eyebrow); other tab roots have none", () => {
+    expect(at(mainWamPath.moments())).toMatchObject({ title: "Terbaru", eyebrow: "Momen" });
+    expect(at(mainWamPath.agenda())?.eyebrow).toBeUndefined();
+  });
+
   it("has four tabs, the same for every role", () => {
     expect(mainWamTabs.map(tab => [tab.key, tab.label, tab.href])).toEqual([
       ["beranda", "Beranda", "/wam2026"], ["agenda", "Agenda", "/wam2026/agenda"], ["momen", "Momen", "/wam2026/momen"], ["saya", "Saya", "/wam2026/saya"],

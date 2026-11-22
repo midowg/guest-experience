@@ -20,7 +20,7 @@ export const MAIN_WAM_TABS = ["beranda", "agenda", "momen", "saya", "panitia"] a
 export type MainWamTab = (typeof MAIN_WAM_TABS)[number];
 export type MainWamLevel = "akar" | "detail" | "tugas";
 /** `title` "" = a bar without a title (revisi 16 Nov "Kepala tanpa judul"); `label` then names the screen for screen readers. */
-export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; label?: string; back?: { href: string; title: string }; camera?: boolean };
+export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; /** A small capital label over a tab-root title ("MOMEN" over "TERBARU"). */ eyebrow?: string; label?: string; back?: { href: string; title: string }; camera?: boolean };
 
 type TabIcon = "house" | "calendar-days" | "images" | "user-round" | "clipboard-list";
 type TabDef = { key: MainWamTab; label: string; href: string; icon: TabIcon };
@@ -71,7 +71,7 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
     // P04 Detail sesi is a bottom sheet over Agenda (the sheet has its own title and close button), so the frame behind it is Agenda's own.
     case "agenda": return { tab: "agenda", level: "akar", title: say("screen.agenda") };
     case "momen":
-      if (!second) return { tab: "momen", level: "akar", title: say("screen.latest") };
+      if (!second) return { tab: "momen", level: "akar", title: say("screen.latest"), eyebrow: say("screen.moments") };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: say("screen.camera"), back: momen, camera: true };
       if (second === "galeri") return { tab: "momen", level: "detail", title: say("screen.gallery"), back: momen };
       if (second === "mozaik") return { tab: "momen", level: "detail", title: say("screen.mosaic"), back: momen };
