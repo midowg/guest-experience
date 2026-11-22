@@ -48,6 +48,7 @@
   font: 700 10px/1 var(--mw-display-font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--mw-text-2);
 }
 .kt > svg { flex: none; width: 10px; height: 10px; }
+.ktQuiz { border-color: transparent; background: var(--mw-kuis-d); color: var(--mw-on-kuis); }
 .ktGold { border-color: var(--mw-gold-line); color: var(--mw-gold-ink); }
 .status { margin-top: 4px; }
 
@@ -85,9 +86,9 @@ a.row:active .body { opacity: 0.7; }
 .kind > svg { flex: none; width: 10px; height: 10px; }
 .dh { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
 .infos { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; }
-.info { display: flex; align-items: flex-start; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.info { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .info > svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--mw-primary); }
-.info > span { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.info > span { flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; }
 .info b { font-weight: 700; color: var(--mw-text-1); }
 .infoAction { flex: none; margin: calc(-1 * var(--mw-space-12)) calc(-1 * var(--mw-space-12)) calc(-1 * var(--mw-space-12)) auto; }
 .lead { white-space: pre-line; }
