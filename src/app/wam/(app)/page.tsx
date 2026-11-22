@@ -3,6 +3,7 @@ import { Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
+import { FaceCheckIn } from "@/components/pra-wam/FaceCheckIn";
 import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaCarousel } from "@/components/pra-wam/AgendaCarousel";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
@@ -162,11 +163,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now, { zone }).title}</p>
                   : heroStatus.kind === "buka"
                     ? <>
-                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString(), zone)} Scan QR yang ditempel di ruang.</p>
-                      <div className={sc.heroRow}><a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a></div>
+                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString(), zone)} {attendance?.faceReady ? "Pakai wajah atau scan QR di ruang." : "Scan QR yang ditempel di ruang."}</p>
+                      {/* 22 Nov 2026: one Absen button, then the choice (wajah or QR). */}
+                      <div className={sc.heroRow}>{attendance?.faceReady
+                        ? <FaceCheckIn sessionId={item.sessionId} canTap buttonClass={sc.heroHadir} />
+                        : <a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>}</div>
                     </>
                     // Not open yet (or closed): one quiet line with how to check in, no button that cannot be pressed.
-                    : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString(), zone).replace(/^Absen dibuka/, "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString(), zone)}</span></p>}
+                    : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString(), zone).replace(/^Absen dibuka/, attendance?.faceReady ? "Absen pakai wajah atau Scan QR, dibuka" : "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString(), zone)}</span></p>}
               </div>
             : item.checkedInAt
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>

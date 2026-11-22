@@ -66,7 +66,7 @@ export function SessionDetail(props: Props) {
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
   const { view: { session, documents, storage, requests, rooms, viewer, attendance, minutes }, now, showTitle, zone = "WIB" } = props;
-  const { live, timed, status, canAsk, canUpload, byButton, upload } = rights(props);
+  const { live, timed, status, canAsk, canUpload, byButton, upload, face } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
     <div className={rows.detailHead}>
@@ -78,7 +78,7 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
       </div>
       {status && (attendance.selfReady && byButton
         ? <SelfCheckIn sessionId={session.id} status={status} now={now.toISOString()} selfReady />
-        : <CheckInBlock status={status} now={now} zone={zone} />)}
+        : <CheckInBlock status={status} now={now} zone={zone} face={face} />)}
     </div>
 
     {session.status === "batal" && <Notice tone="warning">Sesi ini dibatalkan.</Notice>}
@@ -130,7 +130,7 @@ export function sessionDetailActions(props: Props, bare = false) {
   const { timed, scan, selfCheckIn, face, status, reschedule, attendanceLink } = rights(props);
   // Unggah materi sits under the participants now (12 Nov 2026), not in this bar.
   if (!scan && !reschedule && !attendanceLink && !viewer.manage) return null;
-  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn || face} upload={false} reschedule={reschedule} bare={bare}
+  return <SessionActions scanHref={scan && !face ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={false} reschedule={reschedule} bare={bare}
     lead={face ? <FaceCheckIn sessionId={session.id} canTap={status?.kind === "buka"} /> : null}>
     {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> {viewer.manage ? "Absen: lihat dan ubah" : "Daftar hadir"}</a>}
     {viewer.manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}><Pencil size={18} aria-hidden /> {timed ? "Ubah sesi" : "Atur jadwal"}</a>}
