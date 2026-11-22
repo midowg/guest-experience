@@ -40,7 +40,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
       ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
       : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} ceklis={data.ceklis} />}
     {slots.bod}
-    {data.card && <HomeCard card={data.card} />}
+    {data.card && <HomeCard card={data.card} serverNow={serverNow} />}
     {slots.misi}
     {/* Prototipe .pair2: Jejak karbon (green) and Momen side by side; one alone fills the row. */}
     <div className={css.pair}>{slots.carbon}{slots.momen}</div>

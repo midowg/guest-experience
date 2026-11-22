@@ -21,19 +21,19 @@
 .bar > i { display: block; height: 100%; border-radius: inherit; background: var(--mw-gold); box-shadow: var(--mw-glow); }
 
 /* "WAJIB ABSEN · Tutup 08.30" and the gold Absen button (prototipe .foot). */
-.foot { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
-.footText { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
+.footText { display: flex; flex-direction: column; gap: var(--mw-space-4); flex: 1 1 120px; min-width: 0; }
 .footSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.absen { flex: 1 1 auto; min-width: 0; max-width: 62%; display: flex; flex-direction: column; align-items: stretch; gap: var(--mw-space-8); }
+.absen { flex: 1 1 190px; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: var(--mw-space-8); }
 .absen > button, .absen > a { width: 100%; }
 
 /* "12.00 Makan siang · BERIKUTNYA" (prototipe .hl). */
-.next { display: flex; align-items: center; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
+.next { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-12); margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
 .nextTime { flex: none; min-width: 54px; font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
 .nextText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .nextText > b { font: var(--mw-type-label); font-weight: 700; overflow-wrap: anywhere; }
 .nextText > small { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
-.nextTag { flex: none; text-align: right; }
+.nextTag { flex: none; margin-left: auto; text-align: right; }
 
 /* The pair of tiles under Misi: Jejak karbon and Momen side by side (prototipe .pair2); one alone fills the row. */
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--mw-space-12); }
@@ -49,3 +49,18 @@
 .ctxAction { margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }
 .labelIcon { display: inline-flex; align-items: center; gap: var(--mw-space-8); white-space: nowrap; }
 .labelIcon > svg { flex: none; width: 20px; height: 20px; }
+
+/* The train on the travel card (prototipe .rt, .rtl, .cd, .kv): route dots, both stations, the big countdown, the tiles. */
+.route { display: flex; align-items: center; margin: var(--mw-space-4) 2px 0; }
+.dot, .dotOn { flex: none; width: 10px; height: 10px; border-radius: var(--mw-radius-full); border: 2px solid var(--mw-primary); background: var(--mw-bg); }
+.dotOn { background: var(--mw-gold); border-color: var(--mw-gold); box-shadow: 0 0 0 5px var(--mw-gold-soft); }
+.route u { flex: 1; height: 0; border-top: 2px dotted var(--mw-primary); text-decoration: none; }
+.train { display: flex; margin: 0 6px; color: var(--mw-gold-ink); }
+.train > svg { width: 18px; height: 18px; }
+.routeLabels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--mw-space-4) var(--mw-space-12); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.routeLabels > span { min-width: 0; overflow-wrap: anywhere; }
+.count { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
+.countFigure { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.countFor { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.tiles { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+.tiles > * { flex: 1 1 84px; }

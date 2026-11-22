@@ -107,7 +107,7 @@ describe("the contextual card", () => {
     const now = sampleTime("berangkat");
     const seats = sampleSeats.filter(seat => seat.employeeId === rani);
     const card = travelCandidate(sampleTrips, seats, now)!;
-    expect(homeCardView(card, now)).toEqual({ kind: "berangkat", title: "Kereta ke Malang · 06.30", sub: "Gerbong 3 · Kursi 12A", action: "Lihat tiket", target: { direction: "berangkat" } });
+    expect(homeCardView(card, now)).toMatchObject({ kind: "berangkat", title: "Kereta ke Malang", sub: "", action: "Lihat tiket", target: { direction: "berangkat" }, trip: { from: "Yogyakarta", to: "Malang", depart: "06.30", arrive: "14.00", count: "25 menit lagi", countFor: "kumpul 05.30", tiles: [{ label: "Gerbong", value: "3" }, { label: "Kursi", value: "12A" }] } });
     // Kam 08.10: the way back starts 12.30, so not yet (the survey shows); 10.00: the train home.
     expect(travelCandidate(sampleTrips, seats, at("2027-01-07", "08:10"))).toBeNull();
     expect(travelCandidate(sampleTrips, seats, at("2027-01-07", "10:00"))).toMatchObject({ direction: "pulang", title: "Kereta ke Yogyakarta", seat: "Gerbong 5 · Kursi 8C" });

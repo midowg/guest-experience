@@ -5,6 +5,7 @@ import { silentClosesAt, silentState, votingState } from "../module-state";
 import { checkInWindow, dayWord, eventDay, hasEnded, isLive, isRunning, nowCard, sessionEnd, timeRange, wibDate, type NowCard } from "../rundown";
 import type { MainWamEventInfo, ModuleSwitches, MwAwardCategory, MwNotification, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, NoteTone } from "../types";
 import { hhmm, untilLabel } from "./format";
+import { ticketOf } from "./travel";
 import type { SurveyOpen } from "./survey";
 
 /*
@@ -117,7 +118,25 @@ export const placeLine = (session: Pick<MwSession, "place" | "optional">, lang: 
 /* ── The contextual card ──────────────────────────────────────────────────────────────────────── */
 
 /** A candidate with the instant its sub line counts to ("sampai 15.00"), and a survey's minutes ("5 menit"). */
-export type HomeCandidate = HomeCardCandidate & { until?: string | null; minutes?: number | null };
+export type HomeCandidate = HomeCardCandidate & { until?: string | null; minutes?: number | null; trip?: TripCardInfo | null };
+
+/**
+ * What the travel card shows beyond its title (prototipe skenario kereta): the route with both
+ * times, the instant the big countdown counts to, and the small tiles (Peron, Gerbong, Kursi), each
+ * only when the data holds it. Null for a step that is no train (a bus has its vehicle, nothing else).
+ */
+export type TripCardInfo = {
+  from: string; to: string; depart: string; arrive: string;
+  /** The instant the countdown counts to (the gathering while it is ahead, else the departure); null when it has passed. */
+  countAt: string | null;
+  /** "kumpul 06.15" / "berangkat 06.30": what the countdown is to. */
+  countFor: string;
+  tiles: { label: string; value: string }[];
+};
+
+export type TripCardView = TripCardInfo & { count: string | null };
+
+const PLATFORM = /perons*([w-]+)/i;
 
 /**
  * Pengumuman penting still pinned (newest first, as the server reads them), with their tone
@@ -156,6 +175,28 @@ export function tripTitle(trip: Pick<MwTrip, "title" | "place">, lang: Lang = "i
   return to ? t(lang, "peserta.home.tripTo", { title: trip.title, to }) : trip.title;
 }
 
+/** The route, countdown and tiles of a train step; a bus gives none. Nothing is invented: a tile shows only when the data names it. */
+function tripCardInfo(trip: MwTrip, seat: MwTripSeat | undefined, ofToday: readonly MwTrip[], now: Date, lang: Lang): TripCardInfo | null {
+  const ticket = ticketOf(trip, seat, lang);
+  if (!ticket) return null;
+  const gather = ofToday.filter(step => step.kind === "kumpul" && step.startsAt).sort((a, b) => a.sort - b.sort)[0];
+  const platform = [gather, trip].flatMap(step => step ? [step.place, step.detail, step.note] : []).map(text => PLATFORM.exec(text)?.[1]).find(Boolean);
+  const gatherAhead = gather?.startsAt && Date.parse(gather.startsAt) > now.getTime() ? gather.startsAt : null;
+  const departAhead = trip.startsAt && Date.parse(trip.startsAt) > now.getTime() ? trip.startsAt : null;
+  const countAt = gatherAhead ?? departAhead;
+  const column = (key: "peserta.travel.coach" | "peserta.travel.seat") => ticket.cols.find(col => col.label === t(lang, key))?.value ?? "";
+  const tiles = [
+    { label: t(lang, "peserta.home.platform"), value: platform ?? "" },
+    { label: t(lang, "peserta.travel.coach"), value: column("peserta.travel.coach") },
+    { label: t(lang, "peserta.travel.seat"), value: column("peserta.travel.seat") },
+  ].filter(tile => tile.value);
+  return {
+    from: ticket.from, to: ticket.to, depart: ticket.depart, arrive: ticket.arrive, countAt,
+    countFor: countAt ? t(lang, gatherAhead ? "peserta.home.countGather" : "peserta.home.countDepart", { time: hhmm(countAt, lang) }) : "",
+    tiles,
+  };
+}
+
 /**
  * The travel day's card (P02): on the day of the way there (or back), from three hours before its
  * first step, the train (else the bus) not yet arrived, with the person's seat. The gathering is already the Sekarang card, so it is not
@@ -176,7 +217,7 @@ export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTrip
       const trip = legs.find(leg => leg.kind === kind);
       if (!trip) continue;
       const seat = seatOf.get(trip.id);
-      return { kind: "berangkat", direction, tripId: trip.id, title: tripTitle(trip, lang), startsAt: trip.startsAt, seat: seat?.seat || seat?.vehicle || trip.detail };
+      return { kind: "berangkat", direction, tripId: trip.id, title: tripTitle(trip, lang), startsAt: trip.startsAt, seat: seat?.seat || seat?.vehicle || trip.detail, trip: tripCardInfo(trip, seat, ofToday, now, lang) };
     }
   }
   return null;
@@ -197,7 +238,9 @@ export const pickCard = (candidates: readonly HomeCandidate[], modules: ModuleSw
 
 export type HomeCardView =
   | { kind: "pengumuman"; id: string; title: string; body: string; tone: NoteTone }
-  | { kind: "silent" | "voting" | "berangkat" | "survei"; title: string; sub: string; action: string; target: { silentSession?: string; survey?: string; direction?: "berangkat" | "pulang" } };
+  | { kind: "silent" | "voting" | "berangkat" | "survei"; title: string; sub: string; action: string; target: { silentSession?: string; survey?: string; direction?: "berangkat" | "pulang" };
+    /** Berangkat only: the route, countdown and tiles of a train (null for a bus); `count` is the countdown's words on the server's clock. */
+    trip?: TripCardView | null };
 
 /** "sampai 15.00", or with the day when it closes on another day. */
 function untilWords(now: Date, iso: string | null | undefined, lang: Lang): string | null {
@@ -218,8 +261,11 @@ export function homeCardView(card: HomeCandidate, now: Date, lang: Lang = "id"):
       const until = untilWords(now, card.until, lang);
       return { kind: "voting", title: t(lang, "peserta.home.votingTitle"), sub: until ? capital(until) : t(lang, "peserta.home.votingSub"), action: t(lang, "peserta.home.votingAction"), target: {} };
     }
-    case "berangkat":
-      return { kind: "berangkat", title: card.startsAt ? `${card.title} · ${hhmm(card.startsAt, lang)}` : card.title, sub: card.seat, action: t(lang, "peserta.home.travelAction"), target: { direction: card.direction } };
+    case "berangkat": {
+      const trip = card.trip ? { ...card.trip, count: card.trip.countAt ? untilLabel(now, card.trip.countAt, lang) : null } : null;
+      // With the route on the card, the time and the seat live in its tiles; without it (a bus), they stay in the words.
+      return { kind: "berangkat", title: card.startsAt && !trip ? `${card.title} · ${hhmm(card.startsAt, lang)}` : card.title, sub: trip ? "" : card.seat, action: t(lang, "peserta.home.travelAction"), target: { direction: card.direction }, trip };
+    }
     case "survei": {
       const until = untilWords(now, card.until, lang);
       const sub = [card.minutes ? t(lang, "peserta.home.minutes", { n: card.minutes }) : "", until ?? ""].filter(Boolean).join(" · ");
