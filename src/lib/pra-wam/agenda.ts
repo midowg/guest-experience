@@ -131,7 +131,7 @@ export type AgendaBooking = { room: string; bookedBy: Person; mine: boolean; par
  * The person's own check-in for a session: whether attendance exists at all (202611040005),
  * whether "Saya hadir" does (202611050003), and when and how they were signed in.
  */
-export type MyAttendance = { ready: boolean; checkedInAt: string | null; method?: AttendanceMethod | null; selfReady?: boolean };
+export type MyAttendance = { ready: boolean; checkedInAt: string | null; method?: AttendanceMethod | null; selfReady?: boolean; /** Absen pakai wajah can be stored (migration 202611290001). */ faceReady?: boolean };
 
 export type SessionView =
   | {

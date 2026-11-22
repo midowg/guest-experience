@@ -39,8 +39,10 @@ export function useSessionIntent(intent: SessionIntent, onAsk: () => void, enabl
 type Props = {
   /** The in-app scanner, when the person can check in now or soon. */
   scanHref: string | null;
-  /** "Saya hadir" is the main way to check in (in the content): the QR button steps back. */
+  /** "Saya hadir" or the face is the main way to check in: the QR button steps back. */
   scanSecondary?: boolean;
+  /** Before the QR button: "Absen pakai wajah" (22 Nov 2026). */
+  lead?: ReactNode;
   upload: boolean;
   reschedule: boolean;
   /** Panitia's links (QR and attendance, change the session). */
@@ -60,9 +62,10 @@ export function UploadMaterialButton() {
   }}><Upload size={18} aria-hidden /> Unggah materi</button>;
 }
 
-export function SessionActions({ scanHref, scanSecondary, upload, reschedule, children, bare }: Props) {
-  if (!scanHref && !upload && !reschedule && !children) return null;
+export function SessionActions({ scanHref, scanSecondary, lead, upload, reschedule, children, bare }: Props) {
+  if (!scanHref && !lead && !upload && !reschedule && !children) return null;
   return <div className={`${rows.actionBar} ${bare ? rows.actionBarBare : ""}`}>
+    {lead}
     {scanHref && <a className={`button ${scanSecondary ? "button--secondary" : "button--primary"}`} href={scanHref}><QrCode size={20} aria-hidden /> Scan QR untuk absen</a>}
     {(upload || reschedule || children) && <div className={rows.actionPair}>
       {upload && <button type="button" className="button button--secondary" onClick={() => askSessionIntent("unggah-materi")}><Upload size={18} aria-hidden /> Unggah materi</button>}

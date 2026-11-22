@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  asMethod, checkInWindow, isOwnProofKey, newQrToken, proofKeyFor, SELF_CHECK_IN_MIGRATION, selfCheckInRefusal, windowState,
+  asFaceStatus, asMethod, checkInWindow, FACE_CHECK_IN_MIGRATION, isOwnProofKey, newQrToken, proofKeyFor, SELF_CHECK_IN_MIGRATION, selfCheckInRefusal, windowState,
   type AttendanceRow, type CheckInResult, type Proof, type ProofStart, type SelfCheckIn, type SelfCheckInAnswer,
 } from "@/lib/pra-wam/attendance";
 import { photoMagicMatches } from "@/lib/pra-wam/photo";
@@ -115,17 +115,17 @@ type SessionRow = { id: string; status: string; starts_at: string | null; ends_a
  * session while the window is open and not signed in yet ("tercatat" means: go ahead). Otherwise
  * the refusal, or "sudah" with the check-in that is already there.
  */
-async function selfCheckInGate(sessionId: string, member: Member, now: Date): Promise<{ result: CheckInResult; method: SelfCheckInAnswer["method"] }> {
+export async function selfCheckInGate(sessionId: string, member: Member, now: Date, way: "tombol" | "wajah" = "tombol"): Promise<{ result: CheckInResult; method: SelfCheckInAnswer["method"] }> {
   const client = createPrivilegedClient();
   const { data, error } = await withBookingLink(withLink => client.from("pw_sessions").select(withLink ? "id,status,starts_at,ends_at,booking_id" : "id,status,starts_at,ends_at").eq("id", sessionId).maybeSingle());
   if (error) fail(error);
   const session = data as (SessionRow & { booking_id?: string | null }) | null;
   if (!session) return { result: { kind: "tidak-dikenal" }, method: null };
   if (session.status !== "terbit" || !session.starts_at || !session.ends_at) return { result: { kind: "belum-terbit" }, method: null };
-  // A panitia's session takes its QR only.
-  if (!session.booking_id) return { result: { kind: "pakai-qr" }, method: null };
+  // A panitia's session takes its QR only, or a face (22 Nov 2026).
+  if (!session.booking_id && way === "tombol") return { result: { kind: "pakai-qr" }, method: null };
   // A booking outside WAM asks for no check-in (13 Nov 2026).
-  const { data: purpose } = await client.from("pw_room_bookings").select("purpose").eq("id", session.booking_id).maybeSingle();
+  const { data: purpose } = !session.booking_id ? { data: null } : await client.from("pw_room_bookings").select("purpose").eq("id", session.booking_id).maybeSingle();
   if ((purpose as { purpose?: string } | null)?.purpose === "lain") return { result: { kind: "tanpa-absen" }, method: null };
   const { data: participant, error: participantError } = await client.from("pw_session_participants").select("employee_id").eq("session_id", session.id).eq("employee_id", member.id).maybeSingle();
   if (participantError) fail(participantError);
@@ -140,7 +140,7 @@ async function selfCheckInGate(sessionId: string, member: Member, now: Date): Pr
 
 const clock = (iso: string) => clockLabel(wibTime(iso));
 /** A gate that does not let the person in, as a clear error. "sudah" and "tercatat" pass. */
-function refuse(result: CheckInResult): void {
+export function refuse(result: CheckInResult): void {
   const text = selfCheckInRefusal(result, clock);
   if (!text) return;
   const status = result.kind === "tidak-dikenal" ? 404 : result.kind === "bukan-peserta" ? 403 : 409;
@@ -242,14 +242,18 @@ export async function myCheckIn(sessionId: string, member: Member): Promise<stri
   return data?.checked_in_at ?? null;
 }
 
-type PresentRow = { employee_id: string; checked_in_at: string; method: string; proof_key?: string | null };
+type PresentRow = { employee_id: string; checked_in_at: string; method: string; proof_key?: string | null; face_score?: number | null; face_status?: string | null };
+/** The face columns of migration 202611290001 are not there. */
+export const faceColumnsMissing = (error: DbError) => ["42703", "PGRST204"].includes(error.code ?? "") && /face_s(core|tatus)/.test(error.message ?? "");
 
 /** Every participant with their check-in, how it was made, and whether a screenshot is kept (panitia and BOD). */
 export async function attendance(sessionId: string, viewer: Member): Promise<AttendanceRow[]> {
   if (!seesAllSessions(viewer)) throw new ServiceError(403, "Hanya panitia dan BOD yang bisa melihat daftar hadir.");
   const session = await getSession(sessionId, viewer);
   const read = (columns: string) => createPrivilegedClient().from("pw_attendance").select(columns).eq("session_id", sessionId);
-  let { data, error } = await read("employee_id,checked_in_at,method,proof_key");
+  let { data, error } = await read("employee_id,checked_in_at,method,proof_key,face_score,face_status");
+  // Before migration 202611290001 there are no face columns.
+  if (error && faceColumnsMissing(error)) ({ data, error } = await read("employee_id,checked_in_at,method,proof_key"));
   // Before migration 202611050003 there is no proof column (and no online check-in).
   if (error && proofColumnMissing(error)) ({ data, error } = await read("employee_id,checked_in_at,method"));
   if (error) fail(error);
@@ -257,15 +261,27 @@ export async function attendance(sessionId: string, viewer: Member): Promise<Att
   const people = await listPeople();
   const rows: AttendanceRow[] = (session.participants ?? []).map(person => {
     const row = present.find(item => item.employee_id === person.id);
-    return { employeeId: person.id, name: person.name, department: person.department, checkedInAt: row?.checked_in_at ?? null, method: asMethod(row?.method), hasProof: !!row?.proof_key };
+    return { employeeId: person.id, name: person.name, department: person.department, checkedInAt: row?.checked_in_at ?? null, method: asMethod(row?.method), hasProof: !!row?.proof_key, ...faceOf(row) };
   });
   // Someone marked present by hand who is not (or no longer) on the list still counts.
   for (const row of present) {
     if (rows.some(item => item.employeeId === row.employee_id)) continue;
     const person = people.find(item => item.id === row.employee_id);
-    rows.push({ employeeId: row.employee_id, name: person?.name ?? "Tanpa nama", department: person?.department ?? "", checkedInAt: row.checked_in_at, method: asMethod(row.method), hasProof: !!row.proof_key });
+    rows.push({ employeeId: row.employee_id, name: person?.name ?? "Tanpa nama", department: person?.department ?? "", checkedInAt: row.checked_in_at, method: asMethod(row.method), hasProof: !!row.proof_key, ...faceOf(row) });
   }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const faceOf = (row: PresentRow | undefined) => row?.method === "wajah" ? { faceScore: row.face_score ?? null, faceStatus: asFaceStatus(row.face_status) } : {};
+
+/** Panitia looked at a face check-in that needed a look and agrees it is this person. */
+export async function approveFace(sessionId: string, employeeId: string, viewer: Member): Promise<AttendanceRow[]> {
+  requireManager(viewer);
+  await getSession(sessionId, viewer);
+  const { error } = await createPrivilegedClient().from("pw_attendance").update({ face_status: "disahkan", face_checked_by: viewer.id })
+    .eq("session_id", sessionId).eq("employee_id", employeeId).eq("method", "wajah").eq("face_status", "perlu_cek");
+  if (error) { if (faceColumnsMissing(error)) throw new ServiceError(503, `Absen wajah menunggu migrasi ${FACE_CHECK_IN_MIGRATION}.`); fail(error); }
+  return attendance(sessionId, viewer);
 }
 
 /**

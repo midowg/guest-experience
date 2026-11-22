@@ -120,11 +120,21 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 ## 7. Absen
 
 - **Satu cara per sesi.** Sesi dari booking: hanya tombol "Saya hadir" (scan QR ditolak). Sesi buatan
-  panitia: hanya scan QR ("Saya hadir" ditolak server).
+  panitia: scan QR, atau **absen pakai wajah** (22 Nov 2026; "Saya hadir" ditolak server).
+- **Absen pakai wajah** (migrasi `202611290001`): di Detail sesi panitia, tombol utama "Absen pakai
+  wajah", "Scan QR" di sebelahnya. Kamera biasa tanpa bingkai oval, orangnya sendiri menekan
+  "Ambil foto" (tidak memotret sendiri). Wajah dicocokkan dengan data wajah WG People
+  (`pw_face_profiles`, model dan ambang sama): **cocok** (±76% ke atas) langsung hadir; **perlu cek**
+  tercatat hadir dan panitia melihat fotonya lalu Sahkan atau Hapus tanda; **tidak cocok** tidak
+  tercatat (Ambil ulang atau Scan QR). Hasil menampilkan persen kemiripan, garis batas cocok, foto
+  absen di samping foto awal. Belum punya wajah di WG People → diarahkan ke scan QR. Foto awal impor
+  GreatDay yang belum disetujui meminta persetujuan WG People sekali (centang), lalu jadi aktif.
+  Foto absen disimpan seperti tangkapan layar Zoom (Lihat foto, panitia dan BOD). Jendela waktu
+  sama dengan QR. Sebelum migrasi jalan, tombol wajah tidak muncul.
 - Jendela absen: 30 menit sebelum mulai sampai 30 menit setelah selesai.
 - "Saya hadir · di kantor" langsung tercatat; "Saya hadir · online" wajib unggah tangkapan layar Zoom.
 - BOD tidak absen. Daftar hadir diberi label cara absen: Scan QR, Saya hadir · di kantor,
-  Saya hadir · online, Dicatat panitia.
+  Saya hadir · online, Wajah (dengan persen kemiripan dan tanda Perlu cek), Dicatat panitia.
 
 ## 7b. Notulen (MoM)
 

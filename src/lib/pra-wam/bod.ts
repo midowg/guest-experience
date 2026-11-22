@@ -145,8 +145,9 @@ export function roomUse(uses: Use[], rooms: { id: string; name: string }[], days
 export type CheckInWay = AttendanceMethod;
 /** How the check-ins were made, in a fixed order (the colours follow the way, never the rank). */
 export function checkInMix(methods: (string | null)[]): { way: CheckInWay; count: number }[] {
-  const ways: CheckInWay[] = ["qr", "offline", "online", "manual"];
-  return ways.map(way => ({ way, count: methods.filter(method => (method ?? "qr") === way).length }));
+  const ways: CheckInWay[] = ["qr", "offline", "online", "manual", "wajah"];
+  // Wajah (22 Nov 2026) only once someone used it.
+  return ways.map(way => ({ way, count: methods.filter(method => (method ?? "qr") === way).length })).filter(item => item.way !== "wajah" || item.count > 0);
 }
 
 export type Adoption = { name: string; people: number; accounts: number; signedIn: number };

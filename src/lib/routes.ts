@@ -262,6 +262,12 @@ export const praWamApi = {
   selfCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in`,
   /** POST {mime, size}: an upload address for the Zoom screenshot of an online check-in. */
   selfCheckInProof: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/proof`,
+  /** POST: absen pakai wajah, step one; …/foto {token, mime, size} where the photo goes; …/kirim the face. */
+  faceCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah`,
+  faceCheckInPhoto: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/foto`,
+  faceCheckInSubmit: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/kirim`,
+  /** POST (panitia): agree to a face check-in marked perlu cek. */
+  attendanceFaceApprove: (sessionId: string, employeeId: string) => `${WAM_API}/sessions/${sessionId}/attendance/${employeeId}/wajah`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
   roomUses: (date: string) => `${WAM_API}/rooms?date=${date}`,
   /** What the booking form needs (the booking sheet over Timeline and Agenda): ?date= or ?edit=. */

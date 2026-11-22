@@ -7,6 +7,7 @@ import { bookingSessionLabel, sessionKindLabels, sessionStatusLabels, sessionWhe
 import { praWamPath } from "@/lib/routes";
 import { CheckInBlock } from "./CheckInStatus";
 import { DocumentList } from "./DocumentList";
+import { FaceCheckIn } from "./FaceCheckIn";
 import { MinutesPanel } from "./MinutesPanel";
 import { RequestChange } from "./ScheduleRequests";
 import { SelfCheckIn } from "./SelfCheckIn";
@@ -35,6 +36,8 @@ function rights({ view: { session, attendance, requests, viewer, storage }, now 
   const scan = open && !byButton;
   return {
     live, timed, status, canAsk, canUpload, scan, byButton,
+    // Absen pakai wajah (22 Nov 2026): a panitia's session, beside its QR, once migration 202611290001 is there.
+    face: scan && session.isParticipant && !!attendance.faceReady,
     selfCheckIn: open && byButton && !!attendance.selfReady,
     upload: canUpload && storage,
     reschedule: canAsk && !requests.some(request => request.status === "diajukan"),
@@ -124,10 +127,11 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
  */
 export function sessionDetailActions(props: Props, bare = false) {
   const { view: { session, viewer } } = props;
-  const { timed, scan, selfCheckIn, reschedule, attendanceLink } = rights(props);
+  const { timed, scan, selfCheckIn, face, status, reschedule, attendanceLink } = rights(props);
   // Unggah materi sits under the participants now (12 Nov 2026), not in this bar.
   if (!scan && !reschedule && !attendanceLink && !viewer.manage) return null;
-  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={false} reschedule={reschedule} bare={bare}>
+  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn || face} upload={false} reschedule={reschedule} bare={bare}
+    lead={face ? <FaceCheckIn sessionId={session.id} canTap={status?.kind === "buka"} /> : null}>
     {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> {viewer.manage ? "Absen: lihat dan ubah" : "Daftar hadir"}</a>}
     {viewer.manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}><Pencil size={18} aria-hidden /> {timed ? "Ubah sesi" : "Atur jadwal"}</a>}
   </SessionActions>;

@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, Clock, ImageIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, ImageIcon } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { methodCounts, methodLabels, type AttendanceRow } from "@/lib/pra-wam/attendance";
+import { faceToCheck, methodCounts, methodLabels, type AttendanceRow } from "@/lib/pra-wam/attendance";
+import { matchPercent } from "@/lib/hr/face-match";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { useConfirm } from "./ConfirmDialog";
@@ -13,8 +14,10 @@ import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
 /**
- * Who is present and how (di kantor, online, QR, manual), with the Zoom screenshot of an online
- * check-in; a hand correction for panitia; and replacing the QR when a sheet is lost. BOD reads it.
+ * Who is present and how (di kantor, online, QR, wajah, manual), with the Zoom screenshot of an
+ * online check-in or the photo of a face check-in; a hand correction for panitia; and replacing the
+ * QR when a sheet is lost. BOD reads it. A face check-in that was only fairly alike says "perlu cek":
+ * panitia looks at the photo and agrees (Sahkan) or removes it (22 Nov 2026).
  */
 export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { sessionId: string; initial: AttendanceRow[]; canEdit: boolean; /** The session takes its printed QR (not a booking's session). */ qr?: boolean }) {
   const router = useRouter();
@@ -25,7 +28,8 @@ export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { se
   const [confirm, confirmDialog] = useConfirm();
   const present = rows.filter(row => row.checkedInAt).length;
   const counts = methodCounts(rows);
-  const byMethod = (["offline", "online", "qr", "manual"] as const).filter(method => counts[method] > 0).map(method => `${counts[method]} ${methodLabels[method]}`);
+  const toCheck = faceToCheck(rows);
+  const byMethod = (["offline", "online", "qr", "wajah", "manual"] as const).filter(method => counts[method] > 0).map(method => `${counts[method]} ${methodLabels[method]}`);
   const shown = rows.filter(row => filter === "semua" || (filter === "hadir") === !!row.checkedInAt);
 
   async function mark(row: AttendanceRow, value: boolean) {
@@ -34,6 +38,12 @@ export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { se
       const result = await praWamRequest<AttendanceRow[]>(praWamApi.sessionAttendance(sessionId), { method: "POST", json: { employeeId: row.employeeId, present: value } });
       setRows(result.data);
     } catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
+    finally { setBusy(null); }
+  }
+  async function approve(row: AttendanceRow) {
+    setBusy(row.employeeId); setNotice(null);
+    try { setRows((await praWamRequest<AttendanceRow[]>(praWamApi.attendanceFaceApprove(sessionId, row.employeeId), { method: "POST" })).data); }
+    catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
     finally { setBusy(null); }
   }
   async function renew() {
@@ -53,6 +63,7 @@ export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { se
     {confirmDialog}
     {notice && <div role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
     {byMethod.length > 0 && <p className={styles.meta}>Hadir {present}: {byMethod.join(" · ")}</p>}
+    {toCheck > 0 && <Notice tone="warning">{toCheck} absen wajah perlu dicek: wajahnya agak berbeda dari foto awal. Buka fotonya, lalu Sahkan atau Hapus tanda.</Notice>}
     <div className={styles.dates} role="group" aria-label="Saring">
       {(["semua", "hadir", "belum"] as const).map(value => <button key={value} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === value} onClick={() => setFilter(value)}>
         {value === "semua" ? `Semua (${rows.length})` : value === "hadir" ? `Hadir (${present})` : `Belum (${rows.length - present})`}
@@ -66,10 +77,14 @@ export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { se
           <td>{row.checkedInAt
             ? <span className={panel.proofCell}>
               <span className={`${panel.statusPill} ${panel.done}`}><CheckCircle2 aria-hidden />Hadir {clockLabel(wibTime(row.checkedInAt))}{row.method ? ` · ${methodLabels[row.method]}` : ""}</span>
-              {row.hasProof && <a className={panel.proofLink} href={praWamApi.attendanceProof(sessionId, row.employeeId)} target="_blank" rel="noopener noreferrer"><ImageIcon aria-hidden />Lihat bukti</a>}
+              {row.method === "wajah" && row.faceStatus === "perlu_cek" && <span className={`${panel.statusPill} ${panel.warn}`}><AlertTriangle aria-hidden />Perlu cek</span>}
+              {row.method === "wajah" && typeof row.faceScore === "number" && <small>Kemiripan {matchPercent(row.faceScore)}%{row.faceStatus === "disahkan" ? " · disahkan panitia" : ""}</small>}
+              {row.hasProof && <a className={panel.proofLink} href={praWamApi.attendanceProof(sessionId, row.employeeId)} target="_blank" rel="noopener noreferrer"><ImageIcon aria-hidden />{row.method === "wajah" ? "Lihat foto" : "Lihat bukti"}</a>}
             </span>
             : <span className={`${panel.statusPill} ${panel.soon}`}><Clock aria-hidden />Belum</span>}</td>
-          {canEdit && <td><button type="button" className="button button--quiet" disabled={!!busy} onClick={() => mark(row, !row.checkedInAt)}>
+          {canEdit && <td>
+            {row.method === "wajah" && row.faceStatus === "perlu_cek" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => approve(row)}>Sahkan</button>}
+            <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => mark(row, !row.checkedInAt)}>
             {busy === row.employeeId ? "Menyimpan…" : row.checkedInAt ? "Hapus tanda" : "Tandai hadir"}</button></td>}
         </tr>)}</tbody>
       </table>
