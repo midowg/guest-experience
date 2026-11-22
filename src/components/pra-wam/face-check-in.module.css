@@ -1,8 +1,6 @@
 /* FaceCheckIn.tsx: absen pakai wajah. Full screen on a phone, a card on a computer. --pw-* tokens only. */
 .open { min-height: 48px; }
 .open:disabled { cursor: not-allowed; }
-/* "Scan QR" in the Absen choice is a link that looks like the other choices. */
-.choiceLink { text-decoration: none; }
 
 .sheet { box-sizing: border-box; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--pw-surface); color: var(--pw-text); overflow-y: auto; }
 .sheet::backdrop { background: rgba(11, 21, 38, .55); }

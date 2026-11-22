@@ -130,7 +130,7 @@ export function sessionDetailActions(props: Props, bare = false) {
   const { timed, scan, selfCheckIn, face, status, reschedule, attendanceLink } = rights(props);
   // Unggah materi sits under the participants now (12 Nov 2026), not in this bar.
   if (!scan && !reschedule && !attendanceLink && !viewer.manage) return null;
-  return <SessionActions scanHref={scan && !face ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={false} reschedule={reschedule} bare={bare}
+  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn || face} upload={false} reschedule={reschedule} bare={bare}
     lead={face ? <FaceCheckIn sessionId={session.id} canTap={status?.kind === "buka"} /> : null}>
     {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> {viewer.manage ? "Absen: lihat dan ubah" : "Daftar hadir"}</a>}
     {viewer.manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}><Pencil size={18} aria-hidden /> {timed ? "Ubah sesi" : "Atur jadwal"}</a>}

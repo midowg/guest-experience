@@ -3,7 +3,6 @@ import { Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
-import { FaceCheckIn } from "@/components/pra-wam/FaceCheckIn";
 import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaCarousel } from "@/components/pra-wam/AgendaCarousel";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
@@ -143,17 +142,21 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section> : <AgendaCarousel start={startAt} labels={items.map(item => item.title)}>
           {items.map(item => {
             const current = item.key === next?.key;
+            // A panitia's session open for check-in (22 Nov 2026): "Absen" opens its sheet, where the
+            // ways are (Absen pakai wajah, Scan QR); the title is then plain text, not a second way in.
+            const absenHere = current && item.kind === "sesi" && !!item.sessionId && heroStatus?.kind === "buka" && checkInWay(item) === "qr";
             const ended = new Date(item.endsAt) <= now;
             const label = current ? (going ? "Sedang berlangsung" : "Berikutnya") : ended ? "Selesai" : "Nanti";
             return <section key={item.key} className={`${base.hero} ${ended && !current ? own.heroPast : ""}`} aria-label={`${label}: ${item.title}`}>
               <div className={base.heroTop}><span>{label} · {item.tag}</span><span>{ended ? dayWord(wibDate(item.startsAt)) : untilLabel(item, now, today) || dayWord(wibDate(item.startsAt))}</span></div>
-              <h2><a href={open(item)} {...opens(item)}>{item.title}</a></h2>
+              <h2>{absenHere ? item.title : <a href={open(item)} {...opens(item)}>{item.title}</a>}</h2>
               <span className={base.heroLine}><Clock aria-hidden />{wibDate(item.startsAt) === today ? "" : `${spanLabel(item.startsAt, item.endsAt).split(" · ")[0]} · `}{zoneSpan(item.startsAt, item.endsAt, zone)}</span>
               <span className={base.heroLine}><MapPin aria-hidden />{item.where}</span>
               {current ? <>
           {/*
             Absen right here, one way per session: a booking's session "Saya hadir", a panitia's
-            session "Scan QR absen"; with when it opens or until when, or "Hadir 09.42 · ..." once done.
+            session "Absen", which opens its sheet with Absen pakai wajah and Scan QR; with when it opens
+            or until when, or "Hadir 09.42 · ..." once done.
           */}
           {item.kind === "sesi" && (heroStatus && item.sessionId
             ? checkInWay(item) === "tombol"
@@ -163,11 +166,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now, { zone }).title}</p>
                   : heroStatus.kind === "buka"
                     ? <>
-                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString(), zone)} {attendance?.faceReady ? "Pakai wajah atau scan QR di ruang." : "Scan QR yang ditempel di ruang."}</p>
-                      {/* 22 Nov 2026: one Absen button, then the choice (wajah or QR). */}
-                      <div className={sc.heroRow}>{attendance?.faceReady
-                        ? <FaceCheckIn sessionId={item.sessionId} canTap buttonClass={sc.heroHadir} />
-                        : <a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>}</div>
+                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString(), zone)} {attendance?.faceReady ? "Absen pakai wajah atau scan QR di ruang." : "Scan QR yang ditempel di ruang."}</p>
+                      <div className={sc.heroRow}><a className={sc.heroHadir} href={open(item)} {...opens(item)}><CheckCircle2 size={20} aria-hidden />Absen</a></div>
                     </>
                     // Not open yet (or closed): one quiet line with how to check in, no button that cannot be pressed.
                     : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString(), zone).replace(/^Absen dibuka/, attendance?.faceReady ? "Absen pakai wajah atau Scan QR, dibuka" : "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString(), zone)}</span></p>}

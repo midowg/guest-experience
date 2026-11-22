@@ -14,13 +14,9 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import { putFile, putProblem } from "./photoUpload";
 import css from "./face-check-in.module.css";
-import pick from "./avatar.module.css";
-import own from "./self-check-in.module.css";
 
 /*
- * Absen pakai wajah (22 Nov 2026), for a panitia's session, in Detail sesi and on Beranda's card.
- * One "Absen" button opens a small choice (like "Kamu hadir di mana?"): "Pakai wajah" or "Scan QR"
- * (the printed QR, the scanner page). Pakai wajah opens a plain
+ * Absen pakai wajah (22 Nov 2026), in Detail sesi of a panitia's session, beside "Scan QR". A plain
  * camera (no oval, nothing taken by itself): the person presses "Ambil foto". The frames around the
  * press become SFace's numbers on this phone, the photo goes to private storage, and the server
  * compares the numbers with the person's WG People face. Then the result: how alike, in percent
@@ -51,8 +47,7 @@ type Props = {
   sessionId: string;
   /** The check-in window is open now. */
   canTap: boolean;
-  /** The "Absen" button's look; Detail sesi's primary button by default (Beranda: the white hero button). */
-  buttonClass?: string;
+  className?: string;
   /** /dev-preview only: answers without the server. */
   client?: FaceClient;
 };
@@ -170,11 +165,9 @@ export function FaceResult({ answer, photoUrl, referenceUrl, onRetry, onDone }: 
   </div>;
 }
 
-export function FaceCheckIn({ sessionId, canTap, buttonClass, client = serverFaceClient }: Props) {
+export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceClient }: Props) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const choice = useRef<HTMLDialogElement>(null);
-  const choiceTitle = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const titleId = useId();
@@ -303,23 +296,9 @@ export function FaceCheckIn({ sessionId, canTap, buttonClass, client = serverFac
   const consentNeeded = phase.kind === "kamera" && phase.needsConsent;
 
   return <>
-    <button ref={trigger} type="button" className={buttonClass ?? `button button--primary ${css.open}`} disabled={!canTap} aria-haspopup="dialog" onClick={() => choice.current?.showModal()}>
-      <CheckCircle2 size={20} aria-hidden /> Absen
+    <button ref={trigger} type="button" className={`button button--primary ${css.open} ${className ?? ""}`} disabled={!canTap} aria-haspopup="dialog" onClick={() => void begin()}>
+      <ScanFace size={20} aria-hidden /> Absen pakai wajah
     </button>
-    <dialog ref={choice} className={pick.chooser} aria-labelledby={choiceTitle}
-      onClick={event => { if (event.target === choice.current) choice.current?.close(); }}>
-      <h2 id={choiceTitle}>Absen pakai apa?</h2>
-      <p>Pilih salah satu, hasilnya sama.</p>
-      <div className={pick.actions}>
-        <button type="button" className={`${pick.action} ${own.choice}`} onClick={() => { choice.current?.close(); void begin(); }}>
-          <ScanFace aria-hidden /><span className={own.choiceText}>Pakai wajah<small>Foto wajah, dicocokkan dengan WG People</small></span>
-        </button>
-        <a className={`${pick.action} ${own.choice} ${css.choiceLink}`} href={praWamPath.scan}>
-          <QrCode aria-hidden /><span className={own.choiceText}>Scan QR<small>QR yang ditempel di ruang</small></span>
-        </a>
-        <button type="button" className={`${pick.action} ${pick.actionCancel}`} onClick={() => choice.current?.close()}>Batal</button>
-      </div>
-    </dialog>
     <dialog ref={dialog} className={css.sheet} aria-labelledby={titleId} aria-busy={phase.kind === "proses" || undefined}
       onCancel={event => { event.preventDefault(); close(); }}>
       <header className={css.head}>

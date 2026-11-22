@@ -48,7 +48,7 @@ export function checkInText(status: CheckInStatus, now: Date, { self = false, fa
     case "hadir": return status.method
       ? { title: `Hadir ${at(status.at)}${zoneSuffix(zone)} · ${ownMethodLabels[status.method]}`, body: "Kehadiranmu sudah tercatat." }
       : { title: "Hadir", body: `Absen tercatat ${at(status.at)}${zoneSuffix(zone)}.` };
-    case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : face ? "Ketuk Absen, lalu pilih pakai wajah atau scan QR." : "Scan QR yang ditempel di ruang memakai ponselmu." };
+    case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : face ? "Ketuk Absen pakai wajah, atau scan QR yang ditempel di ruang." : "Scan QR yang ditempel di ruang memakai ponselmu." };
     case "belum": {
       const day = wibDate(status.opens) === wibDate(now.toISOString()) ? "" : `${short(status.opens)}, `;
       if (self) return { title: "Terdaftar · absen belum dibuka", body: `Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai (${day}${at(status.opens)}${zoneSuffix(zone)}).` };

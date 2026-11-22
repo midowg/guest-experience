@@ -36,12 +36,10 @@ it("says perlu cek, and for no match offers Ambil ulang and Scan QR", () => {
   expect(screen.getByRole("link", { name: "Scan QR saja" }).getAttribute("href")).toBe("/wam/check-in");
 });
 
-it("opens a choice of wajah or QR; someone without a WG People face to the QR, before any camera", async () => {
+it("sends someone without a WG People face to the QR, before any camera", async () => {
   const client: FaceClient = { start: vi.fn(async () => ({ kind: "tanpa-wajah" as const, message: "Wajahmu belum terdaftar di WG People." })), send: vi.fn() };
   render(<FaceCheckIn sessionId="s1" canTap client={client} />);
-  fireEvent.click(screen.getByRole("button", { name: "Absen" }));
-  expect(screen.getByRole("link", { name: /Scan QR/ }).getAttribute("href")).toBe("/wam/check-in");
-  fireEvent.click(screen.getByRole("button", { name: /Pakai wajah/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Absen pakai wajah" }));
   await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("Wajahmu belum terdaftar di WG People."));
   expect(screen.getByRole("link", { name: "Scan QR saja" })).toBeTruthy();
   expect(client.send).not.toHaveBeenCalled();
@@ -49,5 +47,5 @@ it("opens a choice of wajah or QR; someone without a WG People face to the QR, b
 
 it("cannot be pressed while the check-in is closed", () => {
   render(<FaceCheckIn sessionId="s1" canTap={false} client={{ start: vi.fn(), send: vi.fn() }} />);
-  expect((screen.getByRole("button", { name: "Absen" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Absen pakai wajah" }) as HTMLButtonElement).disabled).toBe(true);
 });
