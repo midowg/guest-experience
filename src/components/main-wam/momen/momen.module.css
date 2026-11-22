@@ -12,7 +12,9 @@
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .banner { margin-top: var(--mw-space-12); }
 
-/* The Foto button beside the title: its word gives way (it stays the button's name for a screen reader) when the bar is too narrow for title and both buttons (zoom 200%). */
+/* The Foto button, alone beside the title: 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons); its word gives way
+   (it stays the button's name for a screen reader) when the bar is too narrow (zoom 200%). The way to Galeri is a text button under the reactions. */
+.photoBtn { margin-right: var(--mw-space-8); }
 @media (max-width: 319.98px) { .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 
 /* Galeri mode: the frame's bar is replaced by ‹ "Galeri". */
@@ -95,7 +97,7 @@
 .count > svg { width: 16px; height: 16px; }
 
 /* The row under the photo: the quick reactions (nothing on one's own photo, but its height stays, so the card does not jump). */
-.actions { container-type: inline-size; display: flex; align-items: center; justify-content: center; min-height: var(--mw-touch); padding: var(--mw-space-12) 0; }
+.actions { container-type: inline-size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-4); min-height: var(--mw-touch); padding: var(--mw-space-12) 0; }
 
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

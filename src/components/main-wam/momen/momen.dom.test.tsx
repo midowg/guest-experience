@@ -86,11 +86,12 @@ describe("the stack", () => {
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
   const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
-  it("has the Foto button and the gallery beside the title, and no filter at all (no Semua / Kelompokku, no session chip)", () => {
+  it("has just the Foto button beside the title (the way to Galeri is a text button under the reactions, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam2026/momen/galeri"], ["Foto", "/wam2026/momen/kamera"]]);
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Foto", "/wam2026/momen/kamera"]]);
+    expect(screen.getByRole("link", { name: "Galeri" }).getAttribute("href")).toBe("/wam2026/momen/galeri");
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();
@@ -302,7 +303,7 @@ describe("the stack", () => {
     expect(screen.getByText("Foto baru dari rekan muncul di sini. Yang sudah kamu lihat tetap ada di Galeri.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam2026/momen/galeri");
     expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam2026/momen/kamera")).toBe(true);
-    expect(screen.getByRole("link", { name: "Lihat Mozaik" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Lihat Mozaik" })).toBeNull(); // Mozaik is not a button of the stack or its empty state
   });
 
   it("a photo the server still sends as seen is not in the stack (an older database), and the start follows the photos left", () => {
@@ -407,6 +408,21 @@ describe("the camera", () => {
     expect(screen.queryByRole("button", { name: /Sesi|Hapus tag sesi|Untuk:/ })).toBeNull();
     expect(document.body.textContent).not.toMatch(/Sesi:|Kelompokku|Untuk:|Tag sesi/);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers the small filters under the viewfinder: Asli is chosen every time, one tap picks another, the viewfinder follows; none without a live picture", () => {
+    const { unmount, container } = render(camera({ phase: "kamera", live: "contoh" }));
+    const group = screen.getByRole("radiogroup", { name: "Filter foto" });
+    const names = within(group).getAllByRole("radio").map(radio => radio.textContent);
+    expect(names).toEqual(["Asli", "Emas", "Biru", "Fajar", "Hijau", "Mono"]);
+    expect(within(group).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(within(group).getByRole("radio", { name: "Mono" }));
+    expect(within(group).getByRole("radio", { name: "Mono" }).getAttribute("aria-checked")).toBe("true");
+    expect(within(group).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("false");
+    expect((container.querySelector("[role=img]") as HTMLElement).style.filter).toContain("grayscale(1)");
+    unmount();
+    render(camera({ phase: "kamera", live: "hp" }));
+    expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 
   it("without permission: the shutter waits, the gallery still works, Izinkan asks again (U05)", () => {

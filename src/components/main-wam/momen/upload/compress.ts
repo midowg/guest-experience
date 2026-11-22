@@ -1,5 +1,6 @@
 import { centerCrop, fitSide, halvingSteps, LARGE_RULE, squareCrop, THUMB_RULE, TILE_RULE, type Rect } from "@/lib/main-wam/momen/image";
 import { activeLang, t } from "@/lib/main-wam/i18n";
+import { applyFilterToPixels, cssFilter, DEFAULT_CAMERA_FILTER, type CameraFilterId } from "@/lib/main-wam/momen/camera-filters";
 import { MAX_LARGE_BYTES } from "@/lib/main-wam/momen/filters";
 import { sourceProblem } from "@/lib/pra-wam/photo";
 
@@ -37,9 +38,26 @@ export async function decodeFile(file: File): Promise<Picture> {
 }
 
 /** The frame the live viewfinder shows now (getUserMedia path). */
-export async function grabFrame(video: HTMLVideoElement): Promise<Picture> {
+export async function grabFrame(video: HTMLVideoElement, filter: CameraFilterId = DEFAULT_CAMERA_FILTER): Promise<Picture> {
   const width = video.videoWidth, height = video.videoHeight;
   if (!width || !height) throw new PhotoProblem(t(activeLang(), "srv.momen.cameraNotReady"));
+  if (filter !== DEFAULT_CAMERA_FILTER) {
+    // The viewfinder's filter, drawn into the frame that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
+    const canvas = document.createElement("canvas");
+    canvas.width = width; canvas.height = height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (context) {
+      const native = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
+      if (native) context.filter = cssFilter(filter);
+      context.drawImage(video, 0, 0, width, height);
+      if (!native) {
+        const pixels = context.getImageData(0, 0, width, height);
+        applyFilterToPixels(pixels.data, filter);
+        context.putImageData(pixels, 0, 0);
+      }
+      return { source: canvas, width, height, close: () => { canvas.width = 0; canvas.height = 0; } };
+    }
+  }
   try {
     const bitmap = await createImageBitmap(video);
     return { source: bitmap, width, height, close: () => bitmap.close() };

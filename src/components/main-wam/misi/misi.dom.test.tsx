@@ -193,6 +193,8 @@ describe("Peringkat", () => {
     expect(mine.textContent).toContain("Kamu");
     expect(mine.textContent).toContain("340");
     expect(container.textContent).toContain("Kamu di peringkat 7 dari 118 peserta · 340 poin");
+    // The rank and the points are bold (prototype), the dictionary marks them with **.
+    expect([...container.querySelectorAll("p b")].map(node => node.textContent)).toEqual(["peringkat 7", "340"]);
     expect(await violations()).toEqual([]);
   });
 

@@ -6,6 +6,7 @@ import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCod
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
+import { CAMERA_FILTER_IDS, cssFilter, DEFAULT_CAMERA_FILTER, type CameraFilterId } from "@/lib/main-wam/momen/camera-filters";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -78,6 +79,9 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
+  // Always Asli when the camera opens.
+  const [filter, setFilter] = useState<CameraFilterId>(DEFAULT_CAMERA_FILTER);
+  const swipe = useRef<number | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const shutterInput = useRef<HTMLInputElement>(null);
@@ -220,7 +224,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
   async function shutter() {
     if (busy) return;
-    if (live === "menyala" && video.current && stream.current) { await send([() => grabFrame(video.current!)], false); return; }
+    if (live === "menyala" && video.current && stream.current) { await send([() => grabFrame(video.current!, filter)], false); return; }
     shutterInput.current?.click();
   }
   function onShot(event: ChangeEvent<HTMLInputElement>) {
@@ -239,6 +243,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     setFacing(side);
     if (live === "menyala") await start(side, false);
   }
+  const stepFilter = (by: number) => setFilter(now => CAMERA_FILTER_IDS[Math.min(CAMERA_FILTER_IDS.length - 1, Math.max(0, CAMERA_FILTER_IDS.indexOf(now) + by))]);
   function close() {
     stop();
     if (window.history.length > 1) router.back(); else router.push(mainWamPath.moments());
@@ -262,10 +267,12 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div>
 
     <div className={css.stage}><div className={css.stageInner}>
-      <div className={css.view}>
+      <div className={css.view} onPointerDown={event => { swipe.current = event.clientX; }}
+        onPointerUp={event => { const from = swipe.current; swipe.current = null; if (live === "menyala" && from !== null && Math.abs(event.clientX - from) > 50) stepFilter(event.clientX < from ? 1 : -1); }}
+        onPointerCancel={() => { swipe.current = null; }}>
         <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
-        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
-        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")}><PhotoFill tone={5} className={css.fill} /></span>}
+        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} style={{ filter: cssFilter(filter) }} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
+        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")} style={{ filter: cssFilter(filter) }}><PhotoFill tone={5} className={css.fill} /></span>}
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
           ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
@@ -287,6 +294,9 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div></div>
 
     <div className={css.dock}>
+      {live === "menyala" && <div className={css.filters} role="radiogroup" aria-label={t("momen.cam.filters")}>
+        {CAMERA_FILTER_IDS.map(id => <button key={id} type="button" role="radio" aria-checked={filter === id} className={css.filter} onClick={() => setFilter(id)}>{t(`momen.cam.filter.${id}`)}</button>)}
+      </div>}
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
           {last

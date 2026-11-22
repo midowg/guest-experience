@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Hourglass, Images, LayoutGrid, MoveHorizontal } from "lucide-react";
+import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Hourglass, Images, MoveHorizontal } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ShellActions, ShellChrome } from "@/components/main-wam/shell";
 import { Banner, Button, IconBox, IconButton, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
@@ -302,7 +302,6 @@ export function MomenStack(props: MomenStackProps) {
       <div className={css.panelActions}>
         <Button block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
         <Button block variant="secondary" icon={Grid3x3} href={galeriHref}>{t("momen.stack.openGallery")}</Button>
-        {mozaik && <Button block variant="secondary" icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.stack.seeMosaic")}</Button>}
       </div></>;
   }
 
@@ -322,8 +321,7 @@ export function MomenStack(props: MomenStackProps) {
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }} />
       </div>
     </> : <ShellActions>
-      <IconButton variant="tonal" icon={Grid3x3} label={t("momen.gallery")} href={galeriHref} />
-      <Button size="m" icon={<Camera />} href={mainWamPath.camera()}><span className={css.photoLabel}>{t("momen.photoShort")}</span></Button>
+      <Button size="m" icon={<Camera />} href={mainWamPath.camera()} className={css.photoBtn}><span className={css.photoLabel}>{t("momen.photoShort")}</span></Button>
     </ShellActions>}
 
     <div className={css.view}>
@@ -339,6 +337,7 @@ export function MomenStack(props: MomenStackProps) {
 
       <div className={css.actions}>
         {photoActions && !current!.mine && <QuickReactions chosen={chosen} onPick={emoji => void react(current!, emoji)} />}
+        {mode === "baru" && !noCard && <Button variant="text" size="m" icon={<Grid3x3 />} href={galeriHref}>{t("momen.gallery")}</Button>}
         {ownHiddenOptions && <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} />}
       </div>
       </div>

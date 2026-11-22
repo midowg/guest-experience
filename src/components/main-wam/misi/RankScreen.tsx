@@ -8,6 +8,11 @@ import { medalOf, myPlace, type RankRow } from "@/lib/main-wam/misi/rank";
 import { mainWamPath } from "@/lib/routes";
 import css from "./misi.module.css";
 
+/** A sentence with **bold** parts (the dictionary marks them with double asterisks), as nodes. */
+function bold(text: string) {
+  return text.split("**").map((part, index) => (index % 2 ? <b key={index}>{part}</b> : part));
+}
+
 /**
  * Peringkat (prototipe SC.rank): everyone of the event ranked by points, flat rows. A row is the rank
  * (a medal for 1 to 3), the nama panggilan, the department's short form and the points; the asker's
@@ -20,7 +25,7 @@ export function RankScreen({ migrated, open, rows }: { migrated: boolean; open: 
   if (!migrated) return <ScreenContent><EmptyState icon={<Hourglass />} title={t("peserta.waiting.title")}>{t("misi.waiting")}</EmptyState></ScreenContent>;
   if (!open) return <ScreenContent><EmptyState icon={<Trophy />} title={t("misi.rank.closedTitle")} action={<Button variant="secondary" href={mainWamPath.missions}>{t("misi.rank.back")}</Button>}>{t("misi.rank.closedBody")}</EmptyState></ScreenContent>;
   return <ScreenContent>
-    <p className={css.rankSummary}><Medal aria-hidden /><span>{place ? t("misi.rank.summary", { rank: place.rank, total: place.of, points: place.points }) : t("misi.rank.summaryNone")}</span></p>
+    <p className={css.rankSummary}><Medal aria-hidden /><span>{place ? bold(t("misi.rank.summary", { rank: place.rank, total: place.of, points: place.points })) : t("misi.rank.summaryNone")}</span></p>
     <section>
       <ol className={css.rank} aria-label={t("misi.rank.list")}>
         {rows.map((row, index) => {

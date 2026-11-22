@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, FileText, Images, KeyRound, Leaf, LifeBuoy, LogOut, Settings, TrainFront } from "lucide-react";
+import { Camera, FileText, Images, KeyRound, Leaf, LifeBuoy, LogOut, Settings, Trophy, TrainFront } from "lucide-react";
 import { mainWamPath, praWamApi } from "@/lib/routes";
 import { ScreenContent, ScreenSection, ShellActions } from "@/components/main-wam/shell";
 import { Avatar, ConfirmDialog, EyebrowLabel, IconButton, SrOnly } from "@/components/main-wam/ui";
@@ -23,10 +23,14 @@ export type SayaProps = {
   photo: string | null;
   /** "Kamar 208" · "3 orang · bersama Sari, Dewi"; null before HR publishes the rooms. */
   room: { title: string; sub: string } | null;
-  /** Module Jejak karbon is on: its row under Info acara. */
-  carbon?: boolean;
+  /** The tokoh of the person's questionnaire card ("Marie Curie", persona "Pemikir"); null/absent while there is no card: no tokoh card then. */
+  figure?: { name: string; persona: string; colors: [string, string] } | null;
+  /** Module Misi is on for this person and the points are read: the "Misi dan poin" row with its total. Null/absent: no row. */
+  points?: number | null;
   /** Module Mozaik is on: its row ("Mozaik 2026") under Info acara, opening the Mozaik page. */
   mosaic?: boolean;
+  /** Module Jejak karbon is on: its row under Info acara. */
+  carbon?: boolean;
   /** Mode demo, for a penguji: the role drawn now; shows "Lihat sebagai" (Peserta, Panitia, BOD). Null/absent = no switch. */
   demo?: DemoRole | null;
   /** Previews: a sheet or the dialog open. */
@@ -39,7 +43,7 @@ export type SayaProps = {
  * Keluar (a dialog). Pengaturan is the gear at the top right of the bar, only there (final prototype). Akses MCP (BOD with
  * access) is at the foot of Pengaturan.
  */
-export function SayaScreen({ name, fullName, line, photo, room, carbon = false, mosaic = false, demo = null, open = null }: SayaProps) {
+export function SayaScreen({ name, fullName, line, photo, room, carbon = false, mosaic = false, figure = null, points = null, demo = null, open = null }: SayaProps) {
   const t = useT();
   const [sheet, setSheet] = useState<"foto" | "keluar" | null>(open);
   const [leaving, setLeaving] = useState(false);
@@ -62,12 +66,21 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
       <button type="button" className={css2.profile} onClick={() => setSheet("foto")} aria-haspopup="dialog">
         <Avatar name={name} photo={photo} size={64} />
         <span className={css2.profileText}>
-          <span className={css2.profileName}>{fullName}</span>
+          <span className={css2.profileName}>{name}</span>
           {line && <span className={css2.profileLine}>{line}</span>}
         </span>
         <Camera aria-hidden className={css2.profileCam} />
+        {fullName !== name && <SrOnly>{`, ${fullName}`}</SrOnly>}
         <SrOnly>{`, ${t("peserta.me.changePhoto")}`}</SrOnly>
       </button>
+      {figure && <div className={css2.figure}>
+        <span className={css2.figureArt} style={{ backgroundImage: `linear-gradient(160deg, ${figure.colors[0]}, ${figure.colors[1]})` }} aria-hidden />
+        <span className={css2.figureText}>
+          <EyebrowLabel>{t("peserta.me.figure")}</EyebrowLabel>
+          <b className={css2.figureName}>{figure.name}</b>
+          <span className={css2.profileLine}>{t("peserta.me.figureSub", { persona: figure.persona })}</span>
+        </span>
+      </div>}
       <RowGroup>
         {room
           ? <Row icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} />
@@ -78,6 +91,7 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
       <RowGroup label={t("peserta.me.eventInfo")}>
         <Row icon={<FileText />} title={t("screen.guides")} href={mainWamPath.guides} />
         {mosaic && <Row icon={<Images />} title={t("peserta.me.mosaic")} href={mainWamPath.mosaic()} />}
+        {points !== null && <Row icon={<Trophy />} title={t("peserta.me.missions")} value={t("peserta.me.points", { n: points })} href={mainWamPath.missions} />}
         {carbon && <Row icon={<Leaf />} title={t("peserta.me.carbon")} href={mainWamPath.carbon("saya")} />}
       </RowGroup>
       <RowGroup>

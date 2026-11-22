@@ -97,7 +97,7 @@ export const idMisi = {
   "misi.sheet.rejectedAgain": "Kirim ulang bila sudah sesuai syarat.",
 
   // The Peringkat page
-  "misi.rank.summary": "Kamu di peringkat {rank} dari {total} peserta · {points} poin",
+  "misi.rank.summary": "Kamu di **peringkat {rank}** dari {total} peserta · **{points}** poin",
   "misi.rank.summaryNone": "Kamu belum masuk daftar peringkat.",
   "misi.rank.me": "Kamu",
   "misi.rank.list": "Daftar peringkat",

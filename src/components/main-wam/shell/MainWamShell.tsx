@@ -123,7 +123,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
       top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} dayDots={greeting.dayDots} actions={<>{actions}{bell}</>} /></div>;
     } else if (screen.level === "akar") {
       top = <>
-        <div ref={largeRef} className={css.top}><TopBar title={screen.title} actions={actions} /></div>
+        <div ref={largeRef} className={css.top}><TopBar title={screen.title} eyebrow={screen.eyebrow} actions={actions} /></div>
         <div className={css.compact} data-shown={(large && compact) || undefined} aria-hidden><div className={css.compactTitle}>{screen.title}</div></div>
       </>;
     } else {
