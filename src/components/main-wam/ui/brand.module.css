@@ -19,7 +19,7 @@
 }
 
 /* Network motif (prototipe .mot): a corner art of the Kit Visual in the empty part of a screen or card, behind the content. */
-.motif { position: absolute; z-index: 0; pointer-events: none; background: var(--mw-motif-image) right bottom / 100% auto no-repeat; opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter); }
+.motif { position: absolute; z-index: 0; pointer-events: none; background: var(--mw-motif-image) right bottom / 100% auto no-repeat; opacity: var(--mw-motif-opacity-card); filter: var(--mw-motif-filter); }
 .motifKonstelasi { --mw-motif-image: var(--mw-motif-konstelasi); }
 .motifKontur { --mw-motif-image: var(--mw-motif-kontur); }
 .motifSirkuit { --mw-motif-image: var(--mw-motif-sirkuit); }

@@ -18,7 +18,7 @@
 .deco { overflow: hidden; }
 .hasMotif::after {
   content: ""; position: absolute; right: -4px; bottom: -4px; z-index: -1; width: 64%; height: 64%; pointer-events: none;
-  background: var(--mw-card-motif) right bottom / contain no-repeat; opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter);
+  background: var(--mw-card-motif) right bottom / contain no-repeat; opacity: var(--mw-motif-opacity-card); filter: var(--mw-motif-filter);
   -webkit-mask-image: linear-gradient(to top left, black 25%, transparent 80%); mask-image: linear-gradient(to top left, black 25%, transparent 80%);
 }
 .motifKonstelasi { --mw-card-motif: var(--mw-motif-konstelasi); }
