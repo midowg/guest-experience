@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BedDouble, Bus, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, MapPin, PencilLine, TrainFront, Utensils, type LucideIcon } from "lucide-react";
+import { BedDouble, Bus, Check, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, MapPin, PencilLine, TrainFront, Utensils, type LucideIcon } from "lucide-react";
 import { CARBON_REFERENCES, OTHER_ROUTE, carbonFactorRows, modeLabel, type CarbonRoute, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView } from "@/lib/pra-wam/carbon";
 import { Sheet } from "../Sheet";
 import { CarbonTravelForm } from "./CarbonTravelForm";
@@ -18,54 +18,79 @@ const TIPS: { icon: LucideIcon; text: string }[] = [
   { icon: Lightbulb, text: "Matikan AC saat keluar kamar" },
 ];
 
-/** The participant's own part: the panitia's routes, their answer, and whether they may still answer. */
-export type CarbonFormProps = { routes: CarbonRoute[]; travel: CarbonTravel | null; open: boolean; onSave: (travel: CarbonTravel) => void };
+/** The participant's own part: the panitia's routes, their answer, whether they may still answer, and the figure for an answer. */
+export type CarbonFormProps = { routes: CarbonRoute[]; travel: CarbonTravel | null; open: boolean; onSave: (travel: CarbonTravel) => void; estimate?: (travel: CarbonTravel) => CarbonView };
+
+const PART_ICON: Record<CarbonSource, LucideIcon> = SOURCE_ICON;
+const PART_ORDER: CarbonSource[] = ["perjalanan", "kamar", "makan"];
 
 /**
- * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026): the one deep-green card in the
- * app, its chip "For Tomorrow" after WAM's theme "Shaping for Tomorrow".
- * Before they answer: one call to action, "Isi perjalananmu", which opens their form (a sheet: pick a
- * route the panitia listed, same way back or not, shuttle or not; never a distance). Once answered:
- * the figure with "Perkiraan selama Pra WAM", a thin bar, the three parts in columns (name and share,
- * so the bar never stands on colour alone), and a foot line with "Rincian". The detail (a sheet; the
- * total only in its subtitle, so the card is not repeated): their answer with "Ubah" while the form is
- * open, where it comes from, how it is counted (the sources as small links at its very bottom), and
- * small habits. The form closed and no answer: say so and who to ask.
+ * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026), a small green app in a card
+ * ("Organic Biophilic": rounded, a leaf, earth green with sky and sun accents): a leaf badge, the
+ * title and the "For Tomorrow" chip. Before they answer: the three parts as tiles, Kamar and Makan
+ * already ticked (they come from the event), Perjalanan waiting, and "Isi perjalananmu" (a step-by-step
+ * sheet, CarbonTravelForm). Once answered: the figure beside a ring of the three parts, then the parts
+ * as tiles with their kilograms (so nothing stands on colour alone), and "Rincian". Closed and not
+ * answered: one line to ask the panitia.
  */
 export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonFormProps }) {
   const [sheet, setSheet] = useState<"detail" | "form" | null>(null);
   const close = () => setSheet(null);
   const formSheet = form && sheet === "form" && <Sheet open onClose={close} title="Perjalananmu">
-    <CarbonTravelForm routes={form.routes} value={form.travel} onSave={travel => { form.onSave(travel); close(); }} />
+    <CarbonTravelForm routes={form.routes} value={form.travel} estimate={form.estimate} onSave={travel => { form.onSave(travel); close(); }} />
   </Sheet>;
   if (view.kind === "belum") {
+    const parts = <span className={css.parts}>
+      {PART_ORDER.map(key => {
+        const Icon = PART_ICON[key];
+        const ready = key !== "perjalanan";
+        return <span key={key} className={`${css.part} ${ready ? "" : css.partTodo}`}>
+          <span className={css.partTop}><Icon aria-hidden />{ready ? <Check aria-label="siap" className={css.partOk} /> : null}</span>
+          <span className={css.partName}>{TITLES[key]}</span>
+          <span className={css.partState}>{ready ? "Otomatis" : "Isi kamu"}</span>
+        </span>;
+      })}
+    </span>;
     if (form?.open) return <>
-      <button type="button" className={css.card} onClick={() => setSheet("form")} aria-haspopup="dialog">
+      <button type="button" className={css.card} onClick={() => setSheet("form")} aria-haspopup="dialog" aria-label="Jejak karbon perjalananmu. Kamar dan makan sudah otomatis. Isi perjalananmu">
         <Motif />
         <CardHead />
-        <span className={css.cta}><MapPin aria-hidden />Isi perjalananmu<ChevronRight aria-hidden /></span>
+        <span className={css.lead}>Tinggal 1 langkah</span>
+        {parts}
+        <span className={css.cta}>Isi perjalananmu<ChevronRight aria-hidden /></span>
       </button>
       {formSheet}
     </>;
     return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon perjalananmu">
       <Motif />
       <CardHead />
+      {parts}
       <p className={css.waiting}>{form ? "Pengisian sudah ditutup. Hubungi panitia." : "Angkamu belum tersedia."}</p>
     </section>;
   }
+  const byKey = new Map(view.sources.map(source => [source.key, source]));
   return <>
-    <button type="button" className={css.card} onClick={() => setSheet("detail")} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM. ${view.barLabel}. Buka rincian`}>
+    <button type="button" className={css.card} onClick={() => setSheet("detail")} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>
       <Motif />
       <CardHead />
-      <span className={css.figureBlock}>
-        <span className={css.figure}><span className={css.number}>{view.total.value}</span><span className={css.unit}>{view.total.unit}</span></span>
-        <span className={css.caption}>Perkiraan</span>
+      <span className={css.hero}>
+        <span className={css.figureBlock}>
+          <span className={css.number}>{view.total.value}</span>
+          <span className={css.unit}>{view.total.unit} · perkiraan</span>
+        </span>
+        <Ring sources={view.sources} />
       </span>
-      <Bar sources={view.sources} />
-      <span className={css.legend}>{view.sources.map(source => <span key={source.key} className={css.legendItem}>
-        <span className={css.legendName}><i className={swatch(source.swatch)} aria-hidden />{source.title}</span>
-        <span className={css.legendValue}>{source.percent}%</span>
-      </span>)}</span>
+      <span className={css.parts}>
+        {PART_ORDER.map(key => {
+          const Icon = PART_ICON[key];
+          const source = byKey.get(key);
+          return <span key={key} className={css.part}>
+            <span className={css.partTop}><Icon aria-hidden />{source && <i className={swatch(source.swatch)} aria-hidden />}</span>
+            <span className={css.partValue}>{source ? source.amount : "–"}</span>
+            <span className={css.partName}>{TITLES[key]}</span>
+          </span>;
+        })}
+      </span>
       <span className={css.foot}><span className={css.more}>Rincian <ChevronRight aria-hidden /></span></span>
     </button>
     {sheet === "detail" && <Sheet open onClose={close} title="Jejak karbon perjalananmu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit}`}>
@@ -74,6 +99,8 @@ export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonForm
     {formSheet}
   </>;
 }
+
+const TITLES: Record<CarbonSource, string> = { perjalanan: "Perjalanan", kamar: "Kamar", makan: "Makan" };
 
 /** "Jakarta · Kereta · pulang-pergi · shuttle". */
 function answerText(form: CarbonFormProps): string {
@@ -84,15 +111,26 @@ function answerText(form: CarbonFormProps): string {
 }
 
 function CardHead() {
-  return <span className={css.head}>
-    <span className={css.chip}><Leaf aria-hidden />For Tomorrow</span>
-    <span className={css.title}>Jejak karbon perjalananmu</span>
+  return <span className={css.top}>
+    <span className={css.badge}><Leaf aria-hidden /></span>
+    <span className={css.title}>Jejak karbon</span>
+    <span className={css.chip}>For Tomorrow</span>
   </span>;
 }
 
-function Bar({ sources }: { sources: CarbonSourceView[] }) {
-  return <span className={css.bar} aria-hidden>
-    {sources.map(source => <i key={source.key} className={swatch(source.swatch)} style={{ flexGrow: Math.max(source.percent, 3) }} />)}
+/** The three parts as a ring, a leaf in the middle (decoration: the tiles below say the same in words). */
+function Ring({ sources }: { sources: CarbonSourceView[] }) {
+  const r = 38, length = 2 * Math.PI * r, gap = sources.length > 1 ? 5 : 0;
+  const starts = sources.map((_, index) => sources.slice(0, index).reduce((sum, item) => sum + (item.percent / 100) * length, 0));
+  return <span className={css.ring} aria-hidden>
+    <svg viewBox="0 0 96 96" focusable="false">
+      <circle cx="48" cy="48" r={r} className={css.ringTrack} />
+      {sources.map((source, index) => {
+        const size = Math.max((source.percent / 100) * length - gap, 2);
+        return <circle key={source.key} cx="48" cy="48" r={r} className={`${css.ringSeg} ${swatch(source.swatch)}`} strokeDasharray={`${size} ${length - size}`} strokeDashoffset={-starts[index]} />;
+      })}
+    </svg>
+    <span className={css.ringLeaf}><Leaf /></span>
   </span>;
 }
 

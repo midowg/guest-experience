@@ -160,7 +160,7 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
             </div>
             <div className={css.phone}>
               {preview && <CarbonCard key={preview.id} view={carbonView(personCarbonInput(setup, preview.travel, preview.occupants))}
-                form={{ routes: setup.routes, travel: preview.travel, open: setup.formOpen, onSave: () => say("Hanya pratinjau: jawaban diisi peserta sendiri.") }} />}
+                form={{ routes: setup.routes, travel: preview.travel, open: setup.formOpen, estimate: travel => carbonView(personCarbonInput(setup, travel, preview.occupants)), onSave: () => say("Hanya pratinjau: jawaban diisi peserta sendiri.") }} />}
             </div>
           </section>
         </div>

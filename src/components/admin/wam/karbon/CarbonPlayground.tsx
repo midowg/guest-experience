@@ -26,6 +26,6 @@ export function CarbonPlayground({ setup: initialSetup, people: initialPeople, s
       </select>
     </label>
     {me && <CarbonCard key={me.id} view={carbonView(personCarbonInput(setup, me.travel, me.occupants))}
-      form={{ routes: setup.routes, travel: me.travel, open: setup.formOpen, onSave: travel => setPeople(list => list.map(person => person.id === me.id ? { ...person, travel } : person)) }} />}
+      form={{ routes: setup.routes, travel: me.travel, open: setup.formOpen, estimate: travel => carbonView(personCarbonInput(setup, travel, me.occupants)), onSave: travel => setPeople(list => list.map(person => person.id === me.id ? { ...person, travel } : person)) }} />}
   </div>;
 }
