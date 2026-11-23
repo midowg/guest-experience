@@ -4,7 +4,6 @@ import { BerandaMisi } from "@/components/main-wam/misi/BerandaMisi";
 import { BerandaMomen } from "@/components/main-wam/momen/BerandaMomen";
 import { BerandaMozaik } from "@/components/main-wam/momen/BerandaMozaik";
 import { BerandaCarbon } from "@/components/main-wam/peserta/karbon/BerandaCarbon";
-import { BerandaBod } from "@/components/main-wam/panitia/BerandaBod";
 import { BerandaKuis } from "@/components/main-wam/kuis/BerandaKuis";
 import { moduleOn } from "@/lib/main-wam/modules";
 import { hhmm } from "@/lib/main-wam/peserta/format";
@@ -17,9 +16,9 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Beranda · WAM", robots: { index: false } };
 
 /**
- * P01/P02 Beranda (BOD B01 adds its card; panitia's tools are the Panitia tab, K01). Owner A (peserta), see
+ * P01/P02 Beranda (panitia's tools are the Panitia tab, K01). Owner A (peserta), see
  * docs/main-wam/KONTRAK.md §6: the gate first, then Sekarang and the contextual card (agen A),
- * BerandaBod (C) under Sekarang (panitia have no card here: their tools are the Panitia tab), BerandaMomen (B) after the contextual card, then Jejak karbon's card (module karbon, everyone).
+ * BerandaMomen (B) after the contextual card, then Jejak karbon's card (module karbon, everyone).
  * The Sekarang card holds D's SessionAbsen while its absen is open. The greeting and the bell are
  * the frame's.
  */
@@ -29,7 +28,6 @@ export default async function HomePage() {
   const data = await loadHome(context, now);
   return <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(now.toISOString(), await readLang())} slots={{
     absen: data.session ? <SessionAbsen session={data.session} context={context} now={now} home /> : null,
-    bod: <BerandaBod context={context} now={now} />,
     momen: <BerandaMomen context={context} now={now} />,
     misi: <BerandaMisi context={context} now={now} />,
     mozaik: moduleOn(context.settings.modules, "mozaik") ? <BerandaMozaik context={context} now={now} /> : null,

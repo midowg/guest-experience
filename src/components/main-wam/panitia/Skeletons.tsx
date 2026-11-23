@@ -50,12 +50,6 @@ export function ModerationSkeleton() {
   </div></SkeletonGroup></ScreenContent>;
 }
 
-export function KehadiranSkeleton() {
-  return <ScreenContent><SkeletonGroup label="Memuat kehadiran"><div style={{ display: "flex", flexDirection: "column", gap: "var(--mw-space-24)" }}>
-    <Days /><div className={css.avg}><Skeleton shape="title" width="60%" height={36} /><Skeleton shape="line" width="35%" /></div><Rows count={5} tall={76} />
-  </div></SkeletonGroup></ScreenContent>;
-}
-
 export function PanitiaSkeleton() {
   return <ScreenContent><SkeletonGroup label="Memuat halaman panitia"><div style={{ display: "flex", flexDirection: "column", gap: "var(--mw-space-12)" }}>
     <Card><Skeleton shape="title" width="30%" /><div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--mw-space-8)", marginTop: 12 }}>

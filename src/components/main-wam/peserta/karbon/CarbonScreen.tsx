@@ -12,7 +12,7 @@ import css from "./karbon.module.css";
 const CATALOG_ICON: Record<CatalogKey, LucideIcon> = { kereta: TrainFront, bus: Bus, makan: Utensils, hotel: BedDouble, listrik: Zap, air: Droplet, lpg: Flame, sampah: Trash2 };
 
 /**
- * Jejak karbon (E01, revisi 18 Nov; opened from Beranda or Saya, BOD from Ringkasan): the total as an
+ * Jejak karbon (E01, revisi 18 Nov; opened from Beranda or Saya): the total as an
  * estimate with "±N kg per orang" and when it was counted, "Dari mana asalnya" (a bar, then a row
  * per source with its share and what was counted), "Katalog emisi" (closed until opened: the formula, every
  * factor with its unit marked "Perlu dicek", and that emissions are only recorded, never offset), and the

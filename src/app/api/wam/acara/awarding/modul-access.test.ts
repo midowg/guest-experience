@@ -6,7 +6,7 @@ import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-
  * Who reaches agen D's APIs (KONTRAK §3), through the real gate: nobody signed in → 401; anyone it
  * is not for → 404, one answer (audit L10, KONTRAK §9 #4): a module that is off, and a role that may
  * not (BOD do not vote, send or open Silent Meeting feedback; participants do not open or close it,
- * read the recap, approve, or open a session's QR). Admin WAM 2026's module APIs need the admin session.
+ * approve, or open a session's QR). Admin WAM 2026's module APIs need the admin session.
  * The work itself is mocked.
  */
 
@@ -30,7 +30,6 @@ vi.mock("@/lib/server/main-wam/modul/absen", () => ({
 vi.mock("@/lib/server/main-wam/modul/silent", () => ({
   silentNow: record("silentNow", { view: null, migrated: true }), sendsLeft: () => 10, recordOpener: record("opener"),
   sendSilentFeedback: record("feedback", { remaining: 9 }), controlSilent: record("control", { view: null, count: null }),
-  silentRecap: record("recap", { recap: null, migrated: true }),
 }));
 vi.mock("@/lib/server/main-wam/modul/awards", () => ({
   awardsShown: record("awards", { categories: [], approvals: new Map(), migrated: true }), myVotes: record("myVotes", new Map()),
@@ -55,9 +54,9 @@ const ALL_ON: ModuleSwitches = { absen: true, voting: true, silent: true, survei
 const withModules = (modules: Partial<ModuleSwitches>) => { state.settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...defaultSettings().modules, ...modules } }; };
 
 async function routes() {
-  const [absen, qr, silent, feedback, control, recap, awards, vote, approve] = await Promise.all([
+  const [absen, qr, silent, feedback, control, awards, vote, approve] = await Promise.all([
     import("../absen/[token]/route"), import("../kelola/qr/[sesiId]/route"), import("../silent-meeting/route"), import("../silent-meeting/masukan/route"),
-    import("../silent-meeting/[id]/kontrol/route"), import("../silent-meeting/rekap/route"), import("./route"), import("./[id]/suara/route"), import("./[id]/setujui/route"),
+    import("../silent-meeting/[id]/kontrol/route"), import("./route"), import("./[id]/suara/route"), import("./[id]/setujui/route"),
   ]);
   return {
     absen: () => absen.POST(req("POST", {}), p({ token: TOKEN })),
@@ -67,7 +66,6 @@ async function routes() {
     opened: () => silent.POST(req("POST", { questionId: ID })),
     feedback: () => feedback.POST(req("POST", { questionId: ID, topic: "", body: "Rapat terlalu panjang." })),
     control: () => control.POST(req("POST", { action: "buka" }), p({ id: ID })),
-    recap: () => recap.GET(),
     awards: () => awards.GET(),
     vote: () => vote.PUT(req("PUT", { nomineeId: ID }), p({ id: ID })),
     approve: () => approve.POST(req("POST", { nomineeId: ID }), p({ id: ID })),
@@ -107,19 +105,19 @@ describe("agen D's participant APIs", () => {
   });
 
   it("let a participant check in, send feedback and vote; panitia's and BOD's endpoints do not exist for them (404, not 403)", async () => {
-    expect(await statuses()).toEqual({ absen: 200, qrGet: 404, qrNew: 404, silent: 200, opened: 200, feedback: 200, control: 404, recap: 404, awards: 200, vote: 200, approve: 404 });
+    expect(await statuses()).toEqual({ absen: 200, qrGet: 404, qrNew: 404, silent: 200, opened: 200, feedback: 200, control: 404, awards: 200, vote: 200, approve: 404 });
   });
 
   it("let Panitia WAM open or close Silent Meeting and handle the session's QR (not Pra WAM's admin role, 20 Nov 2026)", async () => {
     state.viewer = person(["panitia"]);
-    expect(await statuses(["control", "qrGet", "qrNew", "recap", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, recap: 404, approve: 404 });
+    expect(await statuses(["control", "qrGet", "qrNew", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, approve: 404 });
     state.viewer = person(["admin"]);
     expect(await statuses(["control", "qrGet"])).toEqual({ control: 404, qrGet: 404 });
   });
 
-  it("let the BOD read the recap and approve, but not vote, send feedback or count as an opener", async () => {
+  it("let the BOD approve, but not vote, send feedback or count as an opener", async () => {
     state.viewer = person(["bod"]);
-    expect(await statuses(["recap", "approve", "vote", "feedback", "opened", "control", "qrGet"])).toEqual({ recap: 200, approve: 200, vote: 404, feedback: 404, opened: 404, control: 404, qrGet: 404 });
+    expect(await statuses(["approve", "vote", "feedback", "opened", "control", "qrGet"])).toEqual({ approve: 200, vote: 404, feedback: 404, opened: 404, control: 404, qrGet: 404 });
     state.calls = [];
     // A BOD's scan is answered ("tidak perlu absen"), never refused with an error.
     expect((await (await routes()).absen()).status).toBe(200);

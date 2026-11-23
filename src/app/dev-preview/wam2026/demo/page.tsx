@@ -30,7 +30,7 @@ export default async function PreviewDemo({ searchParams }: { searchParams: Prom
   const layar = params.layar ?? "saya";
   if (layar === "beranda") {
     return <DevFrame path={mainWamPath.home} peran={role} waktu={role === "panitia" ? "panitia" : role === "bod" ? "bod" : "pemaparan"} lang={lang} demo>
-      <BerandaScreen data={previewHome(now, viewer)} serverNow={now.toISOString()} since={clock(now.toISOString())} live={false} slots={{ absen: <AbsenStandIn />, bod: null, momen: <MomenStandIn /> }} />
+      <BerandaScreen data={previewHome(now, viewer)} serverNow={now.toISOString()} since={clock(now.toISOString())} live={false} slots={{ absen: <AbsenStandIn />, momen: <MomenStandIn /> }} />
     </DevFrame>;
   }
   if (layar === "panitia") {

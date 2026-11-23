@@ -83,7 +83,6 @@ export const enModul: Record<keyof typeof idModul, string> = {
   "silent.copyFailed": "Could not copy",
   "silent.copyFailedSub": "Your text stays saved on this phone.",
   "silent.collected": "{n, plural, one {# piece of feedback collected.} other {# pieces of feedback collected.}}",
-  "silent.recapToBod": "The recap goes to the BOD.",
   "silent.notYet": "Not open yet",
   "silent.opensAt": "Opens {when}.",
   "silent.noneTitle": "No Silent Meeting yet",

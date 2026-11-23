@@ -88,7 +88,6 @@ export const idModul = {
   "silent.copyFailed": "Belum bisa menyalin",
   "silent.copyFailedSub": "Tulisanmu tetap tersimpan di HP ini.",
   "silent.collected": "{n} masukan terkumpul.",
-  "silent.recapToBod": "Rekap dikirim ke BOD.",
   "silent.notYet": "Belum dibuka",
   "silent.opensAt": "Dibuka {when}.",
   "silent.noneTitle": "Belum ada Silent Meeting",

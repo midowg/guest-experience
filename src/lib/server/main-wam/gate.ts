@@ -97,7 +97,7 @@ export async function requireModuleApi(module: MainWamModule): Promise<MainWamCo
   return context;
 }
 
-/** An action's page (panitia tools, BOD's Ringkasan, a module's action): not found for anyone it is not for. */
+/** An action's page (panitia tools, a module's action): not found for anyone it is not for. */
 export async function requireActionPage(action: MainWamAction, here: string): Promise<MainWamContext> {
   const context = await requireMainWamPage(here);
   if (!moduleAllows(context.viewer, action, context.settings.modules)) notFound();

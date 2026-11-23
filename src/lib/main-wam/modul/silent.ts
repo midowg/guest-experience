@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { clock as clockOf, t, type Lang } from "../i18n";
-import { silentClosesAt, silentRecapReady, silentState, type SilentResult, type SilentState } from "../module-state";
-import { sessionEnd, timeRange, wibDate, wibTime } from "../rundown";
+import { silentClosesAt, silentState, type SilentState } from "../module-state";
+import { sessionEnd, wibTime } from "../rundown";
 import type { MwSession, MwSilentQuestion } from "../types";
 
 /*
@@ -104,38 +104,6 @@ export const opensAt = (view: Pick<SilentView, "session">) => view.session.start
 /** When it closes: when panitia closed it, else its session's end. */
 export const endsAt = (view: Pick<SilentView, "session" | "question">) => view.question.closedAt ?? sessionEnd(view.session);
 
-/** "Sel, 5 Jan · 13.30–15.00" (B05's kicker). */
-export function sessionWhenLabel(session: Pick<MwSession, "startsAt" | "endsAt">): string {
-  const day = new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${wibDate(session.startsAt)}T12:00:00Z`));
-  return `${day} · ${timeRange(session)}`;
-}
-
-/** B05: the recap can be read (closed for good, ≥ 5 feedbacks, ≥ 5 different people who opened it). */
-export function recapReady(view: Pick<SilentView, "state">, result: SilentResult | null | undefined): boolean {
-  return view.state === "tutup" && !!result && silentRecapReady(result.feedback) && result.openers >= SILENT_MIN_PEOPLE;
-}
-
-/** Fisher–Yates: a new order every time it is shown, so nobody reads a sender from the order. */
-export function shuffle<T>(items: readonly T[], random: () => number = Math.random): T[] {
-  const out = [...items];
-  for (let index = out.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(random() * (index + 1));
-    [out[index], out[other]] = [out[other], out[index]];
-  }
-  return out;
-}
-
-export const NO_TOPIC = "Tanpa topik";
-/** "Per topik": the question's topics in their order (zeros too), then any other, then Tanpa topik. */
-export function topicCounts(feedback: readonly { topic: string }[], topics: readonly string[]): { topic: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const item of feedback) counts.set(item.topic || NO_TOPIC, (counts.get(item.topic || NO_TOPIC) ?? 0) + 1);
-  const order = [...topics, ...[...counts.keys()].filter(topic => !topics.includes(topic) && topic !== NO_TOPIC).sort(), NO_TOPIC];
-  return order.filter((topic, index) => order.indexOf(topic) === index)
-    .map(topic => ({ topic, count: counts.get(topic) ?? 0 }))
-    .filter(row => row.count > 0 || topics.includes(row.topic));
-}
-
 /** A local draft (T01 "Tulisanmu tetap di sini"), per question, on this phone only. */
 export const draftKey = (questionId: string) => `mw-silent-draf:${questionId}`;
 export const silentDraftSchema = z.object({ topic: z.string().max(40).default(""), body: z.string().max(SILENT_BODY_MAX * 2).default("") });
@@ -143,16 +111,3 @@ export function readDraft(raw: string | null): { topic: string; body: string } {
   if (!raw) return { topic: "", body: "" };
   try { const parsed = silentDraftSchema.safeParse(JSON.parse(raw)); return parsed.success ? parsed.data : { topic: "", body: "" }; } catch { return { topic: "", body: "" }; }
 }
-
-/**
- * B05's data: the question and its state; only when ready (closed for good, 5 feedbacks of 5
- * people) how many, per topic, and the feedback shuffled, without time. Never a count before.
- */
-export type SilentRecap = {
-  view: SilentView;
-  ready: boolean;
-  /** Null unless ready. */
-  count: number | null;
-  topics: { topic: string; count: number }[];
-  items: { id: string; topic: string; body: string }[];
-};

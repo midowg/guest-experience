@@ -2,15 +2,12 @@ import type { AttendeeRow } from "@/lib/main-wam/panitia/attendance";
 import { attentionItems, kelolaTiles, runningSessions } from "@/lib/main-wam/panitia/attention";
 import type { ModerationCard } from "@/lib/main-wam/panitia/moderation";
 import { liveOfDay, type LiveSession } from "@/lib/main-wam/panitia/rundown";
-import { summaryRows, type SummaryInput } from "@/lib/main-wam/panitia/summary";
 import { timeRange, wibDate } from "@/lib/main-wam/rundown";
 import { sampleNotifications, samplePeople, sampleSession, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings, sampleSilentQuestion } from "@/lib/main-wam/sample";
 import type { MwSession } from "@/lib/main-wam/types";
-import { mainWamPath } from "@/lib/routes";
 import type { AnnounceData } from "@/lib/server/main-wam/panitia/announce";
 import type { AttendanceData } from "@/lib/server/main-wam/panitia/attendance";
 import type { RundownHistory } from "@/lib/server/main-wam/panitia/rundown";
-import type { AttendanceDay } from "@/lib/server/main-wam/panitia/summary";
 
 /*
  * Area C's sample data for dev-preview (no sign-in, 404 in production), from the prototype (SPEC
@@ -111,38 +108,13 @@ export const moderationHidden: ModerationCard[] = [
   card("nina", 11, at(D2, "08:30"), { status: "disembunyikan", reports: 2, reasons: ["Tidak pantas atau menyinggung · 2"], hiddenBy: "Dimas", hiddenAt: at(D2, "09:05"), hiddenReason: "Tidak pantas" }),
 ];
 
-/* ── K01 and B01 ──────────────────────────────────────────────────────────────────────────────── */
+/* ── K01 ──────────────────────────────────────────────────────────────────────────────── */
 
 export const panitiaHome = {
   // The hub as the app draws it by default: Silent Meeting is off (Pra WAM's), so no row about it.
   tiles: kelolaTiles(modules, 3),
   running: runningSessions(sampleSessions, new Date(at(D2, "10:15"))),
   attention: attentionItems({ modules: { ...modules, silent: false }, reported: 3, required: [{ session: sampleSession("pemaparan"), present: 112, expected: 120 }], silent: [{ session: sampleSession("silent"), day: 2 }] }),
-};
-
-const summaryBase: SummaryInput = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbonKg: 13_640 };
-export const bodRows = {
-  biasa: summaryRows(summaryBase),
-  kosong: summaryRows({ ...summaryBase, attendance: { percent: 96, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }),
-  beres: summaryRows({ ...summaryBase, awards: { pending: 0, approved: 3 } }).filter(row => row.key === "awarding"),
-  modulMati: summaryRows({ ...summaryBase, modules: { ...modules, voting: false, karbon: false } }),
-  /** A small total (a trial run, before trips and rooms are in): kilograms, never "0,0 t" (audit R16). */
-  karbonKecil: summaryRows({ ...summaryBase, carbonKg: 45.6 }).filter(row => row.key === "karbon"),
-};
-
-/* ── B02 Kehadiran ────────────────────────────────────────────────────────────────────────────── */
-
-export const attendanceDaySample: AttendanceDay = {
-  migrated: true, day: 3, expected: 120, average: 93, firstStart: null,
-  days: sampleDays(3, mainWamPath.attendanceSummary),
-  sessions: [
-    { key: "trekking", percent: 90, state: "done" as const }, { key: "sharing-hospitality", percent: 93, state: "done" as const }, { key: "komitmen", percent: 96, state: "done" as const },
-    { key: "refleksi", percent: 87, state: "live" as const }, { key: "gala", percent: null, state: "upcoming" as const },
-  ].map(item => {
-    const session = sampleSession(item.key);
-    return { id: session.id, title: session.title, time: timeRange({ startsAt: session.startsAt, endsAt: null }), percent: item.percent, state: item.state, href: mainWamPath.session(session.id) };
-  }),
-  departments: [["Sales & Marketing", 96], ["CoE", 95], ["HRGA", 94], ["Finance", 92], ["Art & Creative Support", 88]].map(([department, percent]) => ({ department: department as string, percent: percent as number })),
 };
 
 export const D3_BOD = at(D3, "16:00");

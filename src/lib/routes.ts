@@ -531,8 +531,6 @@ export const mainWamPath = {
   announce: `${MAIN_WAM_PATH}/kelola/pengumuman`,
   /** K08 Moderasi Momen: Dilaporkan (default) or Disembunyikan. */
   moderation: (tab?: "dilaporkan" | "disembunyikan") => `${MAIN_WAM_PATH}/kelola/moderasi${mwQuery({ lihat: tab === "disembunyikan" ? tab : undefined })}`,
-  /** B02 Kehadiran (BOD), on a day (1–4). */
-  attendanceSummary: (day?: number) => `${MAIN_WAM_PATH}/ringkasan/kehadiran${mwQuery({ hari: day })}`,
 
   /* D · modul */
   /** A01 Scan QR absen in the app. */
@@ -545,16 +543,12 @@ export const mainWamPath = {
   awards: `${MAIN_WAM_PATH}/awarding`,
   /** V02 Pilih nominasi in one category. */
   awardCategory: (id: string) => `${MAIN_WAM_PATH}/awarding/${enc(id)}`,
-  /** B05 Rekap Silent Meeting (BOD). */
-  silentRecap: `${MAIN_WAM_PATH}/ringkasan/silent-meeting`,
   /** Misi (module misi): my points, the missions, and a mission's detail sheet. */
   missions: `${MAIN_WAM_PATH}/misi`,
   /** Peringkat: everyone ranked by points. */
   missionRank: `${MAIN_WAM_PATH}/misi/peringkat`,
   /** Kerjakan misi: the camera (foto) or the check-in (checkin) of one mission. */
   missionDo: (id: string) => `${MAIN_WAM_PATH}/misi/${enc(id)}/kerjakan`,
-  /** B06 Persetujuan awarding (BOD). */
-  awardApproval: `${MAIN_WAM_PATH}/ringkasan/awarding`,
   /* F · kuis (Kuis live, module kuis; docs/rancangan-kuis-wam.md) */
   /** A player's game: join, answer, see the result (Beranda's card "Kuis dimulai · Ikut"). */
   quiz: (quizId: string) => `${MAIN_WAM_PATH}/kuis/${enc(quizId)}`,
@@ -618,8 +612,6 @@ export const mainWamApi = {
   moderation: `${MAIN_WAM_API}/kelola/moderasi`,
   /** POST {action: "sembunyikan" | "tampilkan" | "hapus", from}: keputusan moderasi (K08), panitia; hapus hanya foto yang sudah disembunyikan. */
   moderatePhoto: (id: string) => `${MAIN_WAM_API}/kelola/moderasi/${enc(id)}`,
-  /** GET: BOD's Ringkasan (at most 4 rows). */
-  summary: `${MAIN_WAM_API}/ringkasan`,
 
   /* D · modul */
   /** POST: check in with a session's QR token (A01 → A02/A03/A04). */
@@ -632,8 +624,6 @@ export const mainWamApi = {
   silentFeedback: `${MAIN_WAM_API}/silent-meeting/masukan`,
   /** POST {action: "buka" | "tutup"}: panitia opens it early or closes it for good (K02 row); once closed it never opens again. */
   silentControl: (questionId: string) => `${MAIN_WAM_API}/silent-meeting/${enc(questionId)}/kontrol`,
-  /** GET: the anonymous recap (BOD, from 5 feedbacks). */
-  silentRecap: `${MAIN_WAM_API}/silent-meeting/rekap`,
   /** GET: categories, nominees, my votes (and for BOD the counts). */
   awards: `${MAIN_WAM_API}/awarding`,
   /** PUT {nomineeId}: my vote in one category (changeable until it closes). */

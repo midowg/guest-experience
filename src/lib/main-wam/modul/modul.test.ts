@@ -10,7 +10,7 @@ import {
   approvalCard, approvalRefusal, closedCounts, closedTally, isAnnounced, nextAnnouncement, rankTally, shownCategories, topTied, totalVotes, voteCard, voteRefusal, votableNominees, waitingCount,
 } from "./awards";
 import {
-  controlRefusal, NO_TOPIC, openBanner, openerMessage, openPill, pickSilent, readDraft, recapReady, shuffle, silentControlSchema, silentFeedbackSchema, silentOpenSchema, topicCounts,
+  controlRefusal, openBanner, openerMessage, openPill, pickSilent, readDraft, silentControlSchema, silentFeedbackSchema, silentOpenSchema,
 } from "./silent";
 
 /* Status jendela waktu (absen, Silent Meeting, voting) and the rules the screens and APIs share. */
@@ -138,14 +138,6 @@ describe("Silent Meeting", () => {
     expect(openBanner({ closesAt: null })).toBe("Dibuka");
   });
 
-  it("shows the recap only once closed, from 5 feedbacks and 5 people who opened it", () => {
-    expect(recapReady({ state: "tutup" }, { feedback: 5, openers: 5 })).toBe(true);
-    expect(recapReady({ state: "tutup" }, { feedback: 12, openers: 4 })).toBe(false);
-    expect(recapReady({ state: "tutup" }, { feedback: 4, openers: 40 })).toBe(false);
-    expect(recapReady({ state: "tutup" }, null)).toBe(false);
-    expect(recapReady({ state: "buka" }, { feedback: 47, openers: 40 })).toBe(false);
-  });
-
   it("lets panitia open it only before it opens and close it only while open: a closed one never opens again (audit H2)", () => {
     expect(controlRefusal("belum", "buka")).toBeNull();
     expect(controlRefusal("buka", "tutup")).toBeNull();
@@ -170,13 +162,7 @@ describe("Silent Meeting", () => {
     expect(openerMessage("q", "e")).toBe("mw-silent-open\0q\0e");
   });
 
-  it("shuffles without losing anything and counts per topic", () => {
-    const items = Array.from({ length: 30 }, (_, index) => index);
-    const mixed = shuffle(items, () => 0.3);
-    expect([...mixed].sort((a, b) => a - b)).toEqual(items);
-    expect(mixed).not.toEqual(items);
-    expect(topicCounts([{ topic: "Komunikasi" }, { topic: "Cara kerja" }, { topic: "" }, { topic: "Cara kerja" }], ["Cara kerja", "Komunikasi", "Lainnya"]))
-      .toEqual([{ topic: "Cara kerja", count: 2 }, { topic: "Komunikasi", count: 1 }, { topic: "Lainnya", count: 0 }, { topic: NO_TOPIC, count: 1 }]);
+  it("keeps a local draft and ignores a broken one", () => {
     expect(readDraft(JSON.stringify({ topic: "Cara kerja", body: "Draf" }))).toEqual({ topic: "Cara kerja", body: "Draf" });
     expect(readDraft("rusak")).toEqual({ topic: "", body: "" });
   });

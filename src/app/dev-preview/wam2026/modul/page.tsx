@@ -8,16 +8,14 @@ import { CheckInResultView, OfflineSaved } from "@/components/main-wam/modul/abs
 import { Scanner } from "@/components/main-wam/modul/absen/Scanner";
 import { AwardList } from "@/components/main-wam/modul/awards/AwardList";
 import { NomineePicker } from "@/components/main-wam/modul/awards/NomineePicker";
-import { AwardApproval } from "@/components/main-wam/modul/bod/AwardApproval";
-import { SilentRecapView } from "@/components/main-wam/modul/bod/SilentRecapView";
 import { AbsenView, ModuleActionView } from "@/components/main-wam/modul/SessionViews";
 import { SilentForm } from "@/components/main-wam/modul/silent/SilentForm";
 import { SilentClosed, SilentForBod, SilentNotYet } from "@/components/main-wam/modul/silent/SilentStates";
 import { Waiting } from "@/components/main-wam/modul/Waiting";
 import type { CheckInOutcome } from "@/lib/main-wam/modul/absen";
-import { closedCounts, voteCard } from "@/lib/main-wam/modul/awards";
-import { at, sampleApprovals, sampleContact, sampleCounts, sampleNominees, sampleRecap, sampleSilentView } from "@/lib/main-wam/modul/sample";
-import { sampleAwards, samplePeople, sampleSession } from "@/lib/main-wam/sample";
+import { voteCard } from "@/lib/main-wam/modul/awards";
+import { at, sampleApprovals, sampleContact, sampleNominees, sampleSilentView } from "@/lib/main-wam/modul/sample";
+import { sampleAwards, sampleSession } from "@/lib/main-wam/sample";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
@@ -34,15 +32,6 @@ function awardCards(now: Date, withWinner: boolean) {
     const card = voteCard(category, voted.has(category.id), approvals[category.id], now);
     return { id: category.id, title: category.title, method: category.method, card, winner: card.kind === "diumumkan" ? nominees[card.nomineeId] : null };
   });
-}
-
-/** As the server sends it: counts of closed voting only (audit M1). */
-function approvalData(withSuportif: boolean, now = at("2027-01-06", "16:00")) {
-  const counts = new Map(Object.entries(sampleCounts()).map(([id, map]) => [id, new Map(Object.entries(map))]));
-  return {
-    categories: sampleAwards, counts: closedCounts(sampleAwards, counts, now), nominees: sampleNominees(), approvals: sampleApprovals(withSuportif),
-    names: { [samplePeople.wulan.id]: "Wulan", [samplePeople.arman.id]: "Arman" }, me: samplePeople.arman.id,
-  };
 }
 
 /** Every screen and state of agen D, in the real frame: ?layar=<ID>. */
@@ -78,13 +67,6 @@ const SCREENS: Record<string, { path: string; peran?: string; render: () => Reac
   V02: { path: mainWamPath.awardCategory(sampleAwards[0].id), render: () => <NomineePicker now={at("2027-01-06", "10:01")} current={null} preview={{ choice: sampleAwards[0].nominees[0].id }}
     nominees={sampleAwards[0].nominees.map(nominee => sampleNominees()[nominee.id])}
     category={{ id: sampleAwards[0].id, title: sampleAwards[0].title, description: "Siapa yang paling banyak membantu orang lain tahun ini?", closesAt: sampleAwards[0].closesAt! }} /> },
-  B05: { path: mainWamPath.silentRecap, peran: "bod", render: () => <SilentRecapView recap={sampleRecap(true)} /> },
-  "B05-kurang": { path: mainWamPath.silentRecap, peran: "bod", render: () => <SilentRecapView recap={sampleRecap(false)} /> },
-  "B05-buka": { path: mainWamPath.silentRecap, peran: "bod", render: () => <SilentRecapView recap={sampleRecap("buka")} /> },
-  B06: { path: mainWamPath.awardApproval, peran: "bod", render: () => <AwardApproval now={at("2027-01-06", "16:00").toISOString()} data={approvalData(false)} /> },
-  "B06-setujui": { path: mainWamPath.awardApproval, peran: "bod", render: () => <AwardApproval now={at("2027-01-06", "16:02").toISOString()} data={approvalData(false)} preview={{ confirm: sampleAwards[0].id }} /> },
-  "B06-disetujui": { path: mainWamPath.awardApproval, peran: "bod", render: () => <AwardApproval now={at("2027-01-06", "16:02").toISOString()} data={approvalData(true)} /> },
-  "B06-buka": { path: mainWamPath.awardApproval, peran: "bod", render: () => <AwardApproval now={at("2027-01-06", "10:00").toISOString()} data={approvalData(false, at("2027-01-06", "10:00"))} /> },
   P04: { path: mainWamPath.session(pemaparan.id), peran: "panitia", render: () => <ScreenContent>
     <ScreenSection label="Absen dibuka"><SectionHeader title="Absen dibuka" /><AbsenView slot={{ kind: "buka", closes: at("2027-01-05", "12:30").toISOString() }} /></ScreenSection>
     <ScreenSection label="Sudah absen"><SectionHeader title="Sudah absen" /><AbsenView slot={{ kind: "hadir", at: at("2027-01-05", "07:52").toISOString() }} /></ScreenSection>
@@ -102,8 +84,7 @@ const SCREENS: Record<string, { path: string; peran?: string; render: () => Reac
 /**
  * Agen D's screens with sample data, no sign-in, 404 in production: ?layar=A01|A01-offline|A01-bukan|
  * A02|A02-sudah|A02-offline|A03|A04|A04-kontak|A04-lain|A05|T01|T01-kosong|T01-mengirim|T01-offline|
- * T01-buang|T01-ditutup|T02|T03|T03-kurang|T03-belum|T03-bod|V01|V01-diumumkan|V01-kosong|V02|B05|
- * B05-kurang|B05-buka|B06|B06-buka|B06-setujui|B06-disetujui|P04|tunggu.
+ * T01-buang|T01-ditutup|T02|T03|T03-kurang|T03-belum|T03-bod|V01|V01-diumumkan|V01-kosong|V02|P04|tunggu.
  */
 export default async function DevMainWamModul({ searchParams }: { searchParams: Promise<{ layar?: string; lang?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();

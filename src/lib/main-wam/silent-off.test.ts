@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { pickHomeCard } from "./home-card";
 import { moduleInfo, activeModules, activeModulesLabel } from "./modules";
 import { attentionItems } from "./panitia/attention";
-import { summaryRows } from "./panitia/summary";
 import { onboardingNews } from "./peserta/onboarding";
 import { sampleSession, sampleSettings } from "./sample";
 import { defaultSettings, parseModules } from "./settings";
@@ -10,7 +9,7 @@ import { defaultSettings, parseModules } from "./settings";
 /*
  * Silent Meeting is Pra WAM's, not Main WAM's (decision of the owner, 18 Nov 2026): its module is off by
  * default and, off, leaves no trace anywhere the module could show: Beranda's card, Detail sesi's action,
- * the panitia hub's attention list, BOD's Ringkasan, onboarding's example. (Detail sesi, Rundown live and
+ * the panitia hub's attention list, onboarding's example. (Detail sesi, Rundown live and
  * the pages and APIs are checked where their server code is tested.)
  */
 
@@ -36,8 +35,7 @@ describe("Silent Meeting, module off", () => {
     expect(pickHomeCard([open], { ...off, silent: true }, new Date("2027-01-05T08:00:00Z"))?.kind).toBe("silent");
   });
 
-  it("has no row in BOD's Ringkasan and no line in the panitia hub's Perlu perhatian", () => {
-    expect(summaryRows({ modules: off, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, silentOpen: true, carbonKg: 13_640 }).map(row => row.key)).not.toContain("silent");
+  it("has no line in the panitia hub's Perlu perhatian", () => {
     expect(attentionItems({ modules: { ...off, absen: false }, reported: 0, required: [], silent: [{ session: sampleSession("silent"), day: 2 }] })).toEqual([]);
   });
 

@@ -90,13 +90,13 @@ describe("what each role may do", () => {
     expect(mainWamRole({ roles: ["panitia", "admin"] })).toBe("panitia");
   });
 
-  it("lets everyone but BOD check in, send to Silent Meeting and vote; BOD approves and reads the recap", () => {
+  it("lets everyone but BOD check in, send to Silent Meeting and vote; BOD approves", () => {
     for (const action of ["absen", "silent-kirim", "voting"] as const) {
       expect(mainWamCan(peserta, action)).toBe(true);
       expect(mainWamCan(panitia, action)).toBe(true);
       expect(mainWamCan(bod, action)).toBe(false);
     }
-    for (const action of ["ringkasan", "awarding-setujui", "silent-rekap"] as const) {
+    for (const action of ["awarding-setujui"] as const) {
       expect(mainWamCan(bod, action)).toBe(true);
       expect(mainWamCan(peserta, action)).toBe(false);
       expect(mainWamCan(panitia, action)).toBe(false);
@@ -120,7 +120,6 @@ describe("what each role may do", () => {
     expect(moduleAllows(bod, "awarding-setujui", { ...DEFAULT_MODULES, voting: true })).toBe(true);
     // Core actions need no module.
     expect(moduleAllows(panitia, "kelola", DEFAULT_MODULES)).toBe(true);
-    expect(moduleAllows(bod, "ringkasan", DEFAULT_MODULES)).toBe(true);
   });
 
   it("answers for every action it lists", () => {
@@ -151,7 +150,6 @@ describe("Silent Meeting is off by default (Pra WAM's, not Main WAM's)", () => {
     expect(DEFAULT_MODULES.silent).toBe(false);
     expect(moduleAllows({ roles: [] }, "silent-kirim", DEFAULT_MODULES)).toBe(false);
     expect(moduleAllows({ roles: ["panitia"] }, "silent-kontrol", DEFAULT_MODULES)).toBe(false);
-    expect(moduleAllows({ roles: ["bod"] }, "silent-rekap", DEFAULT_MODULES)).toBe(false);
     expect(moduleAllows({ roles: [] }, "silent-kirim", { ...DEFAULT_MODULES, silent: true })).toBe(true);
   });
 });

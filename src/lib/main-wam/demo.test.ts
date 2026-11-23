@@ -65,7 +65,7 @@ describe("the role drawn (Lihat sebagai)", () => {
     expect(showsCommitteeTab({ roles })).toBe(true);
     expect(mainWamCan({ roles }, "kelola")).toBe(true);
     expect(mainWamRole({ roles: demoRoles("bod") })).toBe("bod");
-    expect(mainWamCan({ roles: demoRoles("bod") }, "ringkasan")).toBe(true);
+    expect(mainWamCan({ roles: demoRoles("bod") }, "awarding-setujui")).toBe(true);
     expect(mainWamCan({ roles: demoRoles("peserta") }, "kelola")).toBe(false);
   });
 
@@ -91,7 +91,7 @@ describe("the role drawn (Lihat sebagai)", () => {
     expect(sampleOnlyFor(drawn(["panitia"], "panitia"), "kelola")).toBe(false);
     // 20 Nov 2026: Pra WAM's admin role gives nothing in Main WAM (its roles never carry it; mainWamRolesOf).
     expect(sampleOnlyFor(drawn(["admin"], "panitia"), "kelola")).toBe(true);
-    expect(sampleOnlyFor(drawn(["panitia"], "bod"), "ringkasan")).toBe(true);
+    expect(sampleOnlyFor(drawn(["panitia"], "bod"), "awarding-setujui")).toBe(true);
     // Without the demo there is nothing to ask: nothing changes.
     expect(sampleOnlyFor({}, "kelola")).toBe(false);
     expect(isSimulated({})).toBe(false);

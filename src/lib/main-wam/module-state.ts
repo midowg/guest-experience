@@ -3,7 +3,7 @@ import type { MwAwardCategory, MwSession, MwSilentQuestion } from "./types";
 
 /*
  * When a module's moment is open (shared by Beranda's card, the session's action, panitia's
- * Rundown live row and BOD's Ringkasan). Pure.
+ * Rundown live row). Pure.
  */
 
 export type SilentState = "belum" | "buka" | "tutup";

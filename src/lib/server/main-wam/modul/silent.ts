@@ -3,8 +3,8 @@ import { createHmac, hkdfSync } from "node:crypto";
 import { silentShownCount, type SilentResult } from "@/lib/main-wam/module-state";
 import { MODUL_MIGRATION } from "@/lib/main-wam/modul/absen";
 import {
-  controlRefusal, openerMessage, pickSilent, recapReady, shuffle, SILENT_KEY_INFO, SILENT_SEND_LIMIT, SILENT_SEND_WINDOW_MS, topicCounts,
-  type SilentAction, type SilentFeedbackInput, type SilentRecap, type SilentView,
+  controlRefusal, openerMessage, pickSilent, SILENT_KEY_INFO, SILENT_SEND_LIMIT, SILENT_SEND_WINDOW_MS,
+  type SilentAction, type SilentFeedbackInput, type SilentView,
 } from "@/lib/main-wam/modul/silent";
 import type { MainWamViewer } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
@@ -153,26 +153,4 @@ export async function controlSilent(questionId: string, action: SilentAction, vi
     });
   }
   return { view: after, count: data === "closed" ? await silentShownCountOf(after) : null };
-}
-
-export type { SilentRecap };
-
-/**
- * B05 for the BOD: the last closed Silent Meeting (or the open one, waiting). Its feedback, shuffled
- * and without time, and its count only once closed for good with 5 feedbacks of 5 people.
- */
-export async function silentRecap(now: Date): Promise<{ recap: SilentRecap | null; migrated: boolean }> {
-  const [questions, sessions] = await Promise.all([silentQuestions(), allSessions()]);
-  const views = questions.data.map(question => pickSilent([question], sessions.data, now, question.sessionId)).filter((view): view is SilentView => !!view && view.state !== "belum");
-  const closedViews = views.filter(view => view.state === "tutup").sort((a, b) => Date.parse(b.session.startsAt) - Date.parse(a.session.startsAt));
-  const view = closedViews[0] ?? views.find(item => item.state === "buka") ?? null;
-  if (!view) return { recap: null, migrated: questions.migrated };
-  const waiting: SilentRecap = { view, ready: false, count: null, topics: [], items: [] };
-  if (view.state !== "tutup") return { recap: waiting, migrated: true };
-  const result = await resultOf(view.question.id);
-  if (!result || !recapReady(view, result)) return { recap: waiting, migrated: true };
-  const { data, error } = await db().from("mw_silent_feedback").select("id,topic,body").eq("question_id", view.question.id).limit(2000);
-  if (error) failed(error);
-  const items = shuffle((data ?? []) as { id: string; topic: string; body: string }[]);
-  return { recap: { view, ready: true, count: result.feedback, topics: topicCounts(items, view.question.topics), items }, migrated: true };
 }

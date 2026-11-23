@@ -14,7 +14,7 @@ import css from "./beranda.module.css";
 
 /**
  * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: Kuis live's card first while a game is on, Sekarang (the gold
- * bracket card), the BOD's Ringkasan under it (agen C; panitia's tools are the Panitia tab, not a card here), one contextual
+ * bracket card), one contextual
  * card, Misi, the pair Jejak karbon (green, while its module is on) and Momen side by side, and the Mozaik card
  * (module Mozaik). Other areas come in as slots, already rendered by the page. The pegasus watermark sits behind.
  */
@@ -24,7 +24,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
   serverNow: string;
   /** "07.38": when the data was read, for the offline banner. */
   since: string;
-  slots: { absen?: ReactNode; bod?: ReactNode; momen?: ReactNode; carbon?: ReactNode; kuis?: ReactNode; misi?: ReactNode; mozaik?: ReactNode };
+  slots: { absen?: ReactNode; momen?: ReactNode; carbon?: ReactNode; kuis?: ReactNode; misi?: ReactNode; mozaik?: ReactNode };
   /** Refresh by itself when a card changes (off in previews, where time stands still). */
   live?: boolean;
   forceOffline?: boolean;
@@ -39,7 +39,6 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {!data.migrated
       ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
       : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} ceklis={data.ceklis} />}
-    {slots.bod}
     {data.card && <HomeCard card={data.card} serverNow={serverNow} />}
     {slots.misi}
     {/* Prototipe .pair2: Jejak karbon (green) and Momen side by side; one alone fills the row. */}

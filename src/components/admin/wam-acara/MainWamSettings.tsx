@@ -141,7 +141,7 @@ function ModulesCard({ id, settings, forms, locked, busy, onSave }: { id: string
   const [formSlug, setFormSlug] = useState(settings.moduleConfig.survei.formSlug);
   const changed = JSON.stringify(modules) !== JSON.stringify(settings.modules) || formSlug !== settings.moduleConfig.survei.formSlug;
   return <Card title="Modul" id={id}>
-    <p className={css.note}>Modul yang mati tidak meninggalkan jejak di aplikasi: tanpa kartu di Beranda, aksi di sesi, atau baris di Ringkasan BOD.</p>
+    <p className={css.note}>Modul yang mati tidak meninggalkan jejak di aplikasi: tanpa kartu di Beranda, aksi di sesi, atau aksi lain di aplikasi.</p>
     <ul className={css.rows}>
       {MAIN_WAM_MODULES.map(key => <li key={key} className={css.row}>
         <span className={css.rowText}><span>{moduleInfo[key].label}</span><span>{moduleInfo[key].hint}</span>{moduleInfo[key].note && <span>{moduleInfo[key].note}</span>}</span>

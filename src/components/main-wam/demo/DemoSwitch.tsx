@@ -12,7 +12,7 @@ import css from "./demo.module.css";
 /**
  * "Lihat sebagai: Peserta | Panitia | BOD" in Saya, for a penguji while Mode demo is on (Admin WAM → Main WAM →
  * Pengaturan). The pick is kept on this device (a cookie) and the screens are drawn again for that role: the
- * Panitia tab, Beranda and Ringkasan follow it. The server still goes by the account's real roles and refuses
+ * Panitia tab and Beranda follow it. The server still goes by the account's real roles and refuses
  * writes made as another role; this only changes what is drawn.
  */
 export function DemoSwitch({ role }: { role: DemoRole }) {

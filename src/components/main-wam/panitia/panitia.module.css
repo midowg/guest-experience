@@ -106,27 +106,9 @@
 .actions > [class] { padding-left: var(--mw-space-8); padding-right: var(--mw-space-8); }
 .viewer { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: var(--mw-radius-12); background: var(--mw-surface-2); }
 
-/* BOD: "Belum ada" in a Ringkasan row; the skeleton's value. */
-.none { font: var(--mw-type-body); letter-spacing: 0; color: var(--mw-text-3); white-space: nowrap; }
 .skelRow { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 84px; padding: var(--mw-space-16); }
 .skelText { flex: 1 1 auto; min-width: 0; }
 
-/* Kehadiran (B02). */
-.avg { display: flex; flex-direction: column; gap: var(--mw-space-4); }
-.att { display: flex; flex-direction: column; gap: var(--mw-space-8); padding: var(--mw-space-12) var(--mw-space-16) var(--mw-space-16); color: var(--mw-text-1); text-decoration: none; -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-press); }
-a.att:active { background-color: var(--mw-press); }
-@media (hover: hover) { a.att:hover { background-color: var(--mw-press); } }
-.attNoBar { padding-bottom: var(--mw-space-12); }
-.attTop { display: flex; align-items: center; gap: var(--mw-space-12); }
-.attText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.attTitle { font: var(--mw-type-body-strong); }
-.attMeta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-8); font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.attEnd { flex: none; display: flex; align-items: center; gap: var(--mw-space-4); color: var(--mw-text-3); }
-.attEnd > svg { width: 20px; height: 20px; }
-.attValue { font: var(--mw-type-body); color: var(--mw-text-2); font-variant-numeric: tabular-nums; }
-.depts[class] { gap: var(--mw-space-16); }
-.lockNote { display: flex; align-items: flex-start; gap: var(--mw-space-4); font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.lockNote > svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .check, .barFill, .att, .checkBox::before { transition: none; }

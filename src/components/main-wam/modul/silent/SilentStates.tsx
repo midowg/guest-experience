@@ -3,23 +3,22 @@
 import { Lock, MessageSquareDashed } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { ActionBar, Button, EmptyState } from "@/components/main-wam/ui";
+import { EmptyState } from "@/components/main-wam/ui";
 import { when } from "@/lib/main-wam/modul/awards";
 import type { SilentView } from "@/lib/main-wam/modul/silent";
 import { number } from "@/lib/main-wam/i18n";
-import { mainWamPath } from "@/lib/routes";
 import { Result } from "../Result";
 import css from "../modul.module.css";
 
 const counted = (count: number) => `${count.toLocaleString("id-ID")} masukan terkumpul.`;
 
-/** T03 Silent Meeting ditutup: how many came in (only from 5 feedbacks of 5 people), and where they go. */
+/** T03 Silent Meeting ditutup: how many came in (only from 5 feedbacks of 5 people). */
 export function SilentClosed({ count }: { count: number | null }) {
   const t = useT();
   const { lang } = useLang();
   return <div className={css.fill}>
     <ScreenContent className={css.grow}>
-      <Result center headline icon={<Lock />} title={t("silent.closed")} body={count !== null ? <>{t("silent.collected", { n: number(lang, count) })}<br />{t("silent.recapToBod")}</> : t("silent.recapToBod")} />
+      <Result center headline icon={<Lock />} title={t("silent.closed")} body={count !== null ? t("silent.collected", { n: number(lang, count) }) : undefined} />
     </ScreenContent>
   </div>;
 }
@@ -35,15 +34,14 @@ export function SilentNotYet({ view, now }: { view: SilentView; now: Date }) {
   </div>;
 }
 
-/** The BOD do not send: they read the recap once it is closed. Never a count while open. */
+/** The BOD do not send: they see only whether it is closed. Never a count while open. */
 export function SilentForBod({ view, count }: { view: SilentView; count: number | null }) {
   const closed = view.state === "tutup";
   return <div className={css.fill}>
     <ScreenContent className={css.grow}>
       <Result center headline icon={<Lock />} title={closed ? "Sudah ditutup" : "Untuk peserta"}
-        body={closed ? (count !== null ? counted(count) : undefined) : "Peserta mengirim masukan tanpa nama. Rekap tampil setelah ditutup."} />
+        body={closed ? (count !== null ? counted(count) : undefined) : "Peserta mengirim masukan tanpa nama."} />
     </ScreenContent>
-    {closed && <ActionBar><Button block href={mainWamPath.silentRecap}>Lihat rekap</Button></ActionBar>}
   </div>;
 }
 

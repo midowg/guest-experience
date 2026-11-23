@@ -4,9 +4,8 @@ import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-
 
 /*
  * Who may open area C (tes wajib): the panitia tools (K02–K08) only Panitia WAM (20 Nov 2026: Main WAM's
- * "panitia" role, from pw_event_staff; Pra WAM's panitia or admin role is not enough), BOD's
- * Ringkasan and Kehadiran (B01–B02) only BOD; everyone else gets "not found", on the pages and in
- * the APIs. A tool of a module that is off (Absen, Kehadiran) does not exist either. The data
+ * "panitia" role, from pw_event_staff; Pra WAM's panitia or admin role is not enough), BOD
+ * and everyone else get "not found", on the pages and in the APIs. A tool of a module that is off (Absen) does not exist either. The data
  * readers are stubbed: only the gates are under test.
  */
 
@@ -46,7 +45,6 @@ const announceRoute = await import("@/app/api/wam/acara/kelola/pengumuman/route"
 const announcementRoute = await import("@/app/api/wam/acara/kelola/pengumuman/[id]/route");
 const moderationRoute = await import("@/app/api/wam/acara/kelola/moderasi/route");
 const moderateRoute = await import("@/app/api/wam/acara/kelola/moderasi/[id]/route");
-const summaryRoute = await import("@/app/api/wam/acara/ringkasan/route");
 
 /** Every panitia API, called as a well-formed request. */
 const panitiaCalls: [string, () => Promise<Response>][] = [
@@ -66,7 +64,7 @@ beforeEach(() => { withModules(); viewer = null; });
 
 describe("area C's APIs", () => {
   it("answer 401 without a session", async () => {
-    for (const [name, call] of [...panitiaCalls, ["GET ringkasan", () => summaryRoute.GET()] as const]) expect((await call()).status, name).toBe(401);
+    for (const [name, call] of panitiaCalls) expect((await call()).status, name).toBe(401);
   });
 
   it("do not exist for peserta, BOD and Pra WAM's admin role (panitia tools), and work for Panitia WAM", async () => {
@@ -76,12 +74,6 @@ describe("area C's APIs", () => {
     }
     viewer = PEOPLE.panitia;
     for (const [name, call] of panitiaCalls) expect((await call()).status, `panitia ${name}`).toBe(200);
-  });
-
-  it("Ringkasan exists for BOD only", async () => {
-    for (const who of ["peserta", "panitia", "admin"] as const) { viewer = PEOPLE[who]; expect((await summaryRoute.GET()).status, who).toBe(404); }
-    viewer = PEOPLE.bod;
-    expect((await summaryRoute.GET()).status).toBe(200);
   });
 
   it("Absen manual does not exist while module Absen QR is off", async () => {
@@ -109,7 +101,6 @@ describe("area C's pages", () => {
     pengumuman: async () => (await import("@/app/wam/acara/(app)/kelola/pengumuman/page")).default(),
     moderasi: async () => (await import("@/app/wam/acara/(app)/kelola/moderasi/page")).default(search()),
   };
-  const kehadiran = async () => (await import("@/app/wam/acara/(app)/ringkasan/kehadiran/page")).default(search({ hari: "3" }));
   const outcome = (promise: Promise<unknown>) => promise.then(() => "OK", (error: Error) => error.message);
 
   it("send someone not signed in to sign in, coming back", async () => {
@@ -129,26 +120,9 @@ describe("area C's pages", () => {
     }
   });
 
-  it("Kehadiran: BOD only, and not while Absen QR is off; Absen sesi not while it is off", async () => {
-    for (const who of ["peserta", "panitia", "admin"] as const) { viewer = PEOPLE[who]; expect(await outcome(kehadiran()), who).toBe("NOT_FOUND"); }
-    viewer = PEOPLE.bod;
-    expect(await outcome(kehadiran())).toBe("OK");
+  it("Absen sesi is not found while Absen QR is off", async () => {
     withModules({ absen: false });
-    expect(await outcome(kehadiran())).toBe("NOT_FOUND");
     viewer = PEOPLE.panitia;
     expect(await outcome(pages.absen())).toBe("NOT_FOUND");
-  });
-});
-
-describe("Beranda slots", () => {
-  it("draw nothing for someone the card is not for", async () => {
-    const { BerandaBod } = await import("@/components/main-wam/panitia/BerandaBod");
-    const now = new Date("2027-01-05T10:15:00+07:00");
-    viewer = PEOPLE.peserta;
-    expect(await BerandaBod({ context: { viewer: PEOPLE.peserta, settings }, now })).toBeNull();
-    expect(await BerandaBod({ context: { viewer: PEOPLE.panitia, settings }, now })).toBeNull();
-    expect(await BerandaBod({ context: { viewer: PEOPLE.bod, settings }, now })).not.toBeNull();
-    // Every module off: BOD's card has no row left, so no card.
-    expect(await BerandaBod({ context: { viewer: PEOPLE.bod, settings: { ...settings, modules: { ...allOn, absen: false, voting: false, silent: false, karbon: false } } }, now })).toBeNull();
   });
 });

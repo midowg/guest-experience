@@ -68,7 +68,7 @@ describe("the real rights stay the server's", () => {
     viewer = { ...base, roles: [], tester: false, demo: { canSwitch: false, role: "peserta", simulated: false, realRoles: [] } };
     await expect(gate.requireActionPage("kelola", mainWamPath.committee)).rejects.toThrow("NOT_FOUND");
     expect(await status(gate.requireActionApi("kelola"))).toBe(404);
-    expect(await status(gate.requireActionApi("ringkasan"))).toBe(404);
+    expect(await status(gate.requireActionApi("awarding-setujui"))).toBe(404);
   });
 
   it("without the demo, a viewer with no demo part is gated exactly as before", async () => {

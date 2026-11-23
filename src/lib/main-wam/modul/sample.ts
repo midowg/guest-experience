@@ -1,8 +1,8 @@
-import { samplePeople, samplePhotos, sampleAwards, sampleSessions, sampleSilentFeedback, sampleSilentQuestion } from "../sample";
+import { samplePeople, samplePhotos, sampleAwards, sampleSessions, sampleSilentQuestion } from "../sample";
 import type { MwAwardApproval, MwSilentQuestion } from "../types";
 import type { NomineeView } from "./awards";
 import type { PanitiaContact } from "./contact";
-import { pickSilent, topicCounts, type SilentRecap, type SilentView } from "./silent";
+import { pickSilent, type SilentView } from "./silent";
 
 /*
  * Sample data of agen D's screens for dev-preview and tests, from the prototype (SPEC A01–A05,
@@ -19,27 +19,6 @@ export function sampleSilentView(moment: "belum" | "buka" | "tutup", question: P
   const sessions = sampleSessions.map(session => (session.id === sampleSilentQuestion.sessionId ? { ...session, startsAt: "2027-01-05T13:30:00+07:00", endsAt: "2027-01-05T15:00:00+07:00" } : session));
   const now = moment === "belum" ? at("2027-01-05", "10:05") : moment === "buka" ? at("2027-01-05", "13:45") : at("2027-01-05", "15:10");
   return pickSilent([{ ...sampleSilentQuestion, ...question }], sessions, now)!;
-}
-
-/** B05: 47 feedbacks from 41 people (19 · 14 · 9 · 5); "kurang" closed below 5 of 5; "buka" still open (no count either way). */
-export function sampleRecap(ready: boolean | "buka" = true): SilentRecap {
-  const view = sampleSilentView(ready === "buka" ? "buka" : "tutup");
-  if (ready !== true) return { view, ready: false, count: null, topics: [], items: [] };
-  const extra = [
-    { topic: "Cara kerja", body: "Dokumen proyek tersebar di banyak tempat. Satu folder bersama saja." },
-    { topic: "Komunikasi", body: "Keputusan rapat sering tidak sampai ke tim lapangan." },
-    { topic: "Kesejahteraan", body: "Jadwal cuti setelah event besar perlu dipastikan." },
-    { topic: "Lainnya", body: "Ruang istirahat di kantor perlu diperluas." },
-  ];
-  const plan = { "Cara kerja": 19, Komunikasi: 14, Kesejahteraan: 9, Lainnya: 5 } as Record<string, number>;
-  const items: SilentRecap["items"] = [];
-  for (const [topic, count] of Object.entries(plan)) {
-    const pool = [...sampleSilentFeedback, ...extra].filter(item => item.topic === topic);
-    for (let index = 0; index < count; index += 1) items.push({ id: `${topic}-${index}`, topic, body: pool[index % pool.length].body });
-  }
-  // The prototype's three first, as drawn; the rest after.
-  const first = sampleSilentFeedback.map((item, index) => ({ id: `contoh-${index}`, ...item }));
-  return { view, ready: true, count: 47, topics: topicCounts(items, view.question.topics), items: [...first, ...items.slice(3)] };
 }
 
 /** Every nominee of the sample categories as the screens show them. */

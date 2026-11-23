@@ -190,39 +190,6 @@ describe("Silent Meeting: panitia's hand (audit H2)", () => {
   });
 });
 
-describe("Silent Meeting: the BOD's recap", () => {
-  const feedback = Array.from({ length: 6 }, (_, index) => ({ id: `f${index}`, topic: index % 2 ? "Cara kerja" : "", body: `Masukan ${index}` }));
-  const recapAt = (when: Date) => silent.silentRecap(when);
-
-  it("while open: its state only, no count and no text", async () => {
-    const { recap } = await recapAt(OPEN);
-    expect(recap).toMatchObject({ ready: false, count: null, items: [], topics: [] });
-    expect(state.from).toEqual([]);
-  });
-
-  it("once closed: nothing below 5 feedbacks or below 5 people who opened it", async () => {
-    const after = at("2027-01-05", "15:00");
-    for (const result of [{ feedback: 4, openers: 30 }, { feedback: 30, openers: 4 }]) {
-      state.results = new Map([[question.id, result]]);
-      const { recap } = await recapAt(after);
-      expect(recap).toMatchObject({ ready: false, count: null, items: [] });
-    }
-    state.results = new Map();
-    expect((await recapAt(after)).recap).toMatchObject({ ready: false, count: null });
-    expect(state.from).toEqual([]);
-  });
-
-  it("from 5 of 5: the feedback shuffled, without time, with its count and topics", async () => {
-    state.results = new Map([[question.id, { feedback: 6, openers: 5 }]]);
-    state.fromAnswer = () => ({ data: feedback, error: null });
-    const { recap } = await recapAt(at("2027-01-05", "15:00"));
-    expect(recap).toMatchObject({ ready: true, count: 6 });
-    expect([...recap!.items].sort((a, b) => a.id.localeCompare(b.id))).toEqual(feedback);
-    expect(recap!.topics.find(row => row.topic === "Cara kerja")?.count).toBe(3);
-    expect(state.from[0].ops[0]).toEqual(["select", ["id,topic,body"]]);
-  });
-});
-
 describe("Absen QR on the server", () => {
   const pemaparan = sampleSession("pemaparan"); // Sel, 5 Jan 08.00–12.00, absen 07.30–12.30
   const row = (session: MwSession) => ({

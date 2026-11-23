@@ -88,12 +88,8 @@ export const MAIN_WAM_ACTIONS = [
   "kelola",
   /** Open or close a Silent Meeting by hand. */
   "silent-kontrol",
-  /** BOD's Ringkasan: Kehadiran, Awarding, Silent Meeting recap, Jejak karbon. */
-  "ringkasan",
   /** Approve an award's winner. */
   "awarding-setujui",
-  /** Read the Silent Meeting recap. */
-  "silent-rekap",
 ] as const;
 export type MainWamAction = (typeof MAIN_WAM_ACTIONS)[number];
 
@@ -105,13 +101,13 @@ export function mainWamCan(who: WithRoles, action: MainWamAction): boolean {
     case "absen": case "silent-kirim": case "voting": case "misi": return !bod;
     case "foto": return true;
     case "kelola": case "silent-kontrol": return manages;
-    case "ringkasan": case "awarding-setujui": case "silent-rekap": return bod;
+    case "awarding-setujui": return bod;
   }
 }
 
 /** The module an action belongs to; it is refused (and hidden) while that module is off. */
 export const actionModule: Partial<Record<MainWamAction, MainWamModule>> = {
-  absen: "absen", "silent-kirim": "silent", "silent-kontrol": "silent", "silent-rekap": "silent", voting: "voting", "awarding-setujui": "voting", misi: "misi",
+  absen: "absen", "silent-kirim": "silent", "silent-kontrol": "silent", voting: "voting", "awarding-setujui": "voting", misi: "misi",
 };
 
 /** The action is allowed for the person and its module (if any) is on. */

@@ -67,8 +67,9 @@ describe("a Main WAM page", () => {
     await expect(gate.requireActionPage("kelola", mainWamPath.rundownLive())).rejects.toThrow("NOT_FOUND");
     viewer = person(["panitia"], true);
     await expect(gate.requireActionPage("kelola", mainWamPath.rundownLive())).resolves.toBeTruthy();
+    withMode("semua", { voting: true });
     viewer = person(["bod"], false);
-    await expect(gate.requireActionPage("ringkasan", mainWamPath.attendanceSummary())).resolves.toBeTruthy();
+    await expect(gate.requireActionPage("awarding-setujui", mainWamPath.awards)).resolves.toBeTruthy();
   });
 });
 
@@ -131,9 +132,6 @@ describe("a Main WAM API", () => {
     expect(await status(gate.requireActionApi("silent-kirim"))).toBe(404);
     viewer = person([], false);
     expect(await status(gate.requireActionApi("silent-kontrol"))).toBe(404);
-    expect(await status(gate.requireActionApi("silent-rekap"))).toBe(404);
-    viewer = person(["bod"], false);
-    expect(await status(gate.requireActionApi("silent-rekap"))).toBe(200);
     viewer = person([], false);
     expect(await status(gate.requireActionApi("silent-kirim"))).toBe(200);
     withMode("semua");

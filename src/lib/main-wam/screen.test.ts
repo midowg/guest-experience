@@ -64,10 +64,6 @@ describe("Main WAM's frame, from the address alone", () => {
       [mainWamPath.rundownLive(2), "panitia", "Rundown live", mainWamPath.committee],
       [mainWamPath.attendanceManual("s1"), "panitia", "Absen sesi", mainWamPath.committee],
       [mainWamPath.moderation("disembunyikan"), "panitia", "Moderasi Momen", mainWamPath.committee],
-      [mainWamPath.attendanceSummary(), "beranda", "Kehadiran", mainWamPath.home],
-      [mainWamPath.silentRecap, "beranda", "Rekap Silent Meeting", mainWamPath.home],
-      // B06 (revisi 16 Nov, T-K05): "Awarding".
-      [mainWamPath.awardApproval, "beranda", "Awarding", mainWamPath.home],
       [mainWamPath.awards, "beranda", "Awarding", mainWamPath.home],
     ];
     for (const [path, tab, title, back] of cases) {

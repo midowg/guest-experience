@@ -90,10 +90,6 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
       const titles: Record<string, string> = { rundown: "Rundown live", absen: "Absen sesi", moderasi: "Moderasi Momen" };
       return { tab: "panitia", level: "detail", title: titles[second] ?? say("screen.committee"), back: hub };
     }
-    case "ringkasan": {
-      const titles: Record<string, string> = { kehadiran: "Kehadiran", "silent-meeting": "Rekap Silent Meeting", awarding: "Awarding" };
-      return { tab: "beranda", level: "detail", title: titles[second] ?? "Ringkasan", back: home };
-    }
     case "absen": return { tab: "agenda", level: "tugas", title: say("screen.checkIn"), back: agenda };
     case "silent-meeting": return { tab: "agenda", level: "tugas", title: say("screen.silent"), back: agenda };
     // Kuis live: the game and the MC's control are tasks (no bottom bar: the game takes the screen).

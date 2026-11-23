@@ -2,7 +2,7 @@ import { MAIN_WAM_MODULES, type MainWamModule, type ModuleSwitches } from "./typ
 
 /*
  * The modules an admin switches on (Admin WAM → Main WAM → Pengaturan). A module that is off leaves
- * no trace: no Beranda card, no action in a session, no row in BOD's Ringkasan, its pages 404 and
+ * no trace: no Beranda card, no action in a session, its pages 404 and
  * its APIs refuse (gate.ts requireModule). Pure.
  */
 
@@ -18,7 +18,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
   mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
   misi: { label: "Misi dan poin", hint: "Kartu Misi di Beranda, halaman Misi dan Peringkat; misi foto, check-in lokasi, dan sesi bernilai poin." },
-  karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya dan Ringkasan BOD, dan halaman rinciannya; angka dihitung dari data acara." },
+  karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya, dan halaman rinciannya; angka dihitung dari data acara." },
   kuis: { label: "Kuis live", hint: "Kuis pilihan ganda bersama: soal di layar besar dan HP, peserta menjawab sebagai tokohnya. Kartu Beranda saat lobi dibuka; soal dan pengendali di Modul acara → Kuis." },
   ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan syarat ceklis lengkap sebelum absen." },
 };

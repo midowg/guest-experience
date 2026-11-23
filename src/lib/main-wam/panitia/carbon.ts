@@ -1,7 +1,7 @@
 import type { CarbonInputs, MwSession, MwTrip } from "../types";
 
 /*
- * Jejak karbon of the event, for one line on BOD's Ringkasan (ANALISA_FITUR_16NOV §3, SPEC K09 and
+ * Jejak karbon of the event, for Jejak karbon's page (ANALISA_FITUR_16NOV §3, SPEC K09 and
  * Penpot "00b Detail emisi & contoh"). Nobody fills a form for it: it is counted from what Admin WAM
  * already holds (people, HR's room pairing, the trips, the rundown's meals) and, after the event,
  * the hotel's bills. Pure: the server gathers the data (src/lib/server/main-wam/panitia/carbon.ts).

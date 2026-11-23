@@ -2,11 +2,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/components/main-wam/ui";
 import { draftKey } from "@/lib/main-wam/modul/silent";
-import { at, sampleNominees, sampleRecap, sampleSilentView } from "@/lib/main-wam/modul/sample";
+import { at, sampleNominees, sampleSilentView } from "@/lib/main-wam/modul/sample";
 import { sampleAwards } from "@/lib/main-wam/sample";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { NomineePicker } from "./awards/NomineePicker";
-import { SilentRecapView } from "./bod/SilentRecapView";
 import { AbsenView, ModuleActionView } from "./SessionViews";
 import { SilentForm } from "./silent/SilentForm";
 
@@ -169,26 +168,3 @@ describe("Detail sesi slots", () => {
   });
 });
 
-describe("Rekap Silent Meeting (B05)", () => {
-  it("shows no number while open, nor once closed below 5 of 5 (audit H2)", () => {
-    const { rerender } = render(<SilentRecapView recap={sampleRecap("buka")} />);
-    expect(screen.getByText("Rekap tampil setelah ditutup")).toBeTruthy();
-    expect(screen.queryByText(/^\d+ masukan$/)).toBeNull();
-    rerender(<SilentRecapView recap={sampleRecap(false)} />);
-    expect(screen.getByText("Masukan belum cukup untuk rekap")).toBeTruthy();
-    expect(screen.queryByText(/^\d+ masukan$/)).toBeNull();
-  });
-
-  it("shows 20 at a time with Tampilkan lagi, and the topic filter on top (UX T-K02)", () => {
-    render(<SilentRecapView recap={sampleRecap(true)} />);
-    expect(screen.getByText("47 masukan")).toBeTruthy();
-    expect(screen.getAllByRole("article")).toHaveLength(20);
-    fireEvent.click(screen.getByRole("button", { name: "Tampilkan lagi (27)" }));
-    expect(screen.getAllByRole("article")).toHaveLength(40);
-    fireEvent.click(screen.getByRole("button", { name: "Tampilkan lagi (7)" }));
-    expect(screen.getAllByRole("article")).toHaveLength(47);
-    expect(screen.queryByRole("button", { name: /Tampilkan lagi/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Lainnya" }));
-    expect(screen.getAllByRole("article")).toHaveLength(5);
-  });
-});

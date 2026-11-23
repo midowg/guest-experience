@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { mainWamPath } from "@/lib/routes";
-import { sampleAwards, sampleSession, sampleSessionIds, sampleSessions, sampleSettings } from "../sample";
-import type { MwAwardApproval } from "../types";
+import { sampleSession, sampleSessionIds, sampleSessions, sampleSettings } from "../sample";
 import { attentionItems, kelolaTiles, requiredOpen, runningSessions, silentWaitingToday } from "./attention";
 import { attendeeLine, mayRecord, mayUndo, pickAttendanceSession, presentLine, searchAttendees, splitAttendance, windowCaption, type AttendeeRow } from "./attendance";
 import { clock, dayClock, editedLabel, parseClock, signedDuration } from "./format";
 import { allowedActions, hiddenLine, moderationReason, ownerLine, reasonLines, reportNotes, waitingPhotos, type ModerationReport } from "./moderation";
 import { announceSchema, moderateSchema, presentSchema, rundownChangeSchema } from "./schemas";
-import { awardStatus, dayAverage, departmentStats, sessionStats, summaryRows } from "./summary";
 
 const at = (time: string, date = "2027-01-05") => new Date(`${date}T${time}:00+07:00`);
 const modules = sampleSettings().modules;
@@ -101,73 +99,6 @@ describe("Moderasi Momen (K08)", () => {
     const hidden = { hiddenBy: "Dimas", hiddenAt: at("09:05").toISOString(), hiddenReason: "Tidak pantas" };
     expect(hiddenLine(hidden, at("10:15"))).toBe("Disembunyikan Dimas · 09.05 · Tidak pantas");
     expect(hiddenLine({ ...hidden, hiddenBy: null, hiddenReason: "" }, at("10:15"))).toBe("Disembunyikan · 09.05");
-  });
-});
-
-describe("Kehadiran (B02) and Ringkasan (B01)", () => {
-  const day3 = ["trekking", "sharing-hospitality", "komitmen", "refleksi", "gala"].map(key => sampleSession(key));
-  const expected = Array.from({ length: 120 }, (_, index) => `p${index}`);
-  const presentOf = (n: number) => new Set(expected.slice(0, n));
-  const present = new Map([[sampleSessionIds.trekking, presentOf(108)], [sampleSessionIds["sharing-hospitality"], presentOf(112)], [sampleSessionIds.komitmen, presentOf(115)], [sampleSessionIds.refleksi, new Set([...presentOf(104), "bukan-peserta"])]]);
-  const now = at("16:00", "2027-01-06");
-
-  it("counts each session among the expected, and averages the sessions that are over (prototype B02: 93%)", () => {
-    const stats = sessionStats(day3, present, expected, now);
-    expect(stats.map(stat => [stat.title, stat.present, stat.state])).toEqual([
-      ["Trekking Coban Rondo", 108, "done"], ["Sharing session: Hospitality", 112, "done"], ["Penetapan komitmen", 115, "done"],
-      ["Refleksi & arah bersama", 104, "live"], ["Gala Dinner & Awarding", 0, "upcoming"],
-    ]);
-    expect(dayAverage(stats)).toBe(93);
-    expect(dayAverage(sessionStats(day3, present, expected, at("06:30", "2027-01-06")))).toBe(90);
-    expect(dayAverage(sessionStats(day3, present, expected, at("05:00", "2027-01-06")))).toBeNull();
-  });
-
-  it("shows departments of 5 or more only, small ones together as Departemen lain", () => {
-    const people = expected.map((id, index) => ({ id, department: index < 60 ? "CoE" : index < 117 ? "Finance" : "HRGA" }));
-    const stats = sessionStats(day3, present, expected, now);
-    const rows = departmentStats(stats, present, people);
-    expect(rows.map(row => row.department)).toEqual(["CoE", "Finance"]);
-    expect(rows[0].percent).toBe(100);
-    const withSmall = departmentStats(stats, present, [...people.slice(0, 115), ...["a", "b", "c", "d", "e"].map((id, index) => ({ id, department: index < 3 ? "Legal" : "IT" }))]);
-    expect(withSmall.at(-1)?.department).toBe("Departemen lain");
-  });
-
-  it("knows which awards wait for a BOD", () => {
-    const [voting, foto, juri] = sampleAwards;
-    expect(awardStatus(sampleAwards, [], at("16:00", "2027-01-06"))).toEqual({ pending: 3, approved: 0 });
-    expect(awardStatus(sampleAwards, [], at("10:00", "2027-01-06"))).toEqual({ pending: 1, approved: 0 });
-    expect(awardStatus(sampleAwards, [], at("10:00", "2027-01-05"))).toEqual({ pending: 0, approved: 0 });
-    const approvals: MwAwardApproval[] = [voting, foto, juri].map(category => ({ categoryId: category.id, nomineeId: category.nominees[0].id, approvedBy: "x", approvedAt: at("18:00", "2027-01-06").toISOString() }));
-    expect(awardStatus(sampleAwards, approvals, at("18:30", "2027-01-06"))).toEqual({ pending: 0, approved: 3 });
-  });
-
-  it("builds at most four rows in order, and no row for a module that is off (prototype B01, B01__status)", () => {
-    const input = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbonKg: 13_640 };
-    const rows = summaryRows(input);
-    expect(rows.map(row => [row.title, row.value])).toEqual([
-      ["Kehadiran hari ini", { kind: "angka", value: "93%" }],
-      ["Awarding perlu persetujuan", { kind: "pill", tone: "warning", text: "2" }],
-      ["Silent Meeting", { kind: "angka", value: "47", unit: "masukan" }],
-      ["Jejak karbon", { kind: "angka", value: "13,6", unit: "t CO₂e" }],
-    ]);
-    expect(rows.map(row => row.href)).toEqual([mainWamPath.attendanceSummary(3), mainWamPath.awardApproval, mainWamPath.silentRecap, mainWamPath.carbon()]);
-    expect(summaryRows({ ...input, modules: { ...modules, voting: false, karbon: false } }).map(row => row.key)).toEqual(["kehadiran", "silent"]);
-    expect(summaryRows({ ...input, attendance: { percent: null, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }).map(row => row.value.kind)).toEqual(["kosong", "kosong", "kosong", "kosong"]);
-    // While a Silent Meeting is open its row says Dibuka, never a count (audit H2).
-    expect(summaryRows({ ...input, silentOpen: true }).find(row => row.key === "silent")).toMatchObject({ value: { kind: "pill", text: "Dibuka" } });
-    expect(summaryRows({ ...input, awards: { pending: 0, approved: 3 } })[1].value).toEqual({ kind: "pill", tone: "success", text: "Beres" });
-  });
-
-  it("writes a small Jejak karbon in kilograms, never 0,0 t (audit R16)", () => {
-    const input = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47 };
-    const karbon = (carbonKg: number) => summaryRows({ ...input, carbonKg }).find(row => row.key === "karbon")!;
-    expect(karbon(45.6).value).toEqual({ kind: "angka", value: "46", unit: "kg CO₂e" });
-    expect(karbon(0.3).value).toEqual({ kind: "angka", value: "<1", unit: "kg CO₂e" });
-    expect(karbon(99.4).value).toEqual({ kind: "angka", value: "99", unit: "kg CO₂e" });
-    // From 0,1 t on: tonnes with one decimal.
-    expect(karbon(99.6).value).toEqual({ kind: "angka", value: "0,1", unit: "t CO₂e" });
-    expect(karbon(13_640).value).toEqual({ kind: "angka", value: "13,6", unit: "t CO₂e" });
-    expect(karbon(1_240_000).value).toEqual({ kind: "angka", value: "1.240,0", unit: "t CO₂e" });
   });
 });
 

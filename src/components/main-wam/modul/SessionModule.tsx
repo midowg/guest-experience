@@ -1,7 +1,7 @@
 import { mainWamCan } from "@/lib/main-wam/access";
 import { DEMO_QUIZ_ID } from "@/lib/main-wam/kuis/demo";
 import { absenCard } from "@/lib/main-wam/modul/absen";
-import { approvalCard, isAnnounced, shownCategories } from "@/lib/main-wam/modul/awards";
+import { isAnnounced, shownCategories } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
 import { checkInState } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
@@ -34,7 +34,7 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   const { viewer, settings } = context;
   if (!settings.modules.absen || session.status !== "terbit" || !session.usesAttendance) return { kind: "none" };
   if (!mainWamCan(viewer, "absen")) {
-    if (!mainWamCan(viewer, "ringkasan") || checkInState(session, now) === "belum") return { kind: "none" };
+    if (checkInState(session, now) === "belum") return { kind: "none" };
     const count = await presentCount(session.id);
     return count ? { kind: "bod", ...count } : { kind: "none" };
   }
@@ -63,11 +63,7 @@ export async function moduleSlot({ session, context, now }: { session: MwSession
   if (session.module === "silent" && settings.modules.silent) {
     const { view } = await silentNow(now, session.id);
     if (view?.state === "buka" && mainWamCan(viewer, "silent-kirim")) actions.action = { kind: "silent-buka", href: mainWamPath.silentMeeting(session.id), closesAt: view.closesAt };
-    else if (view?.state === "tutup") {
-      actions.action = mainWamCan(viewer, "silent-rekap")
-        ? { kind: "link", label: "Lihat rekap", href: mainWamPath.silentRecap, icon: "lock" }
-        : { kind: "silent-tutup", href: mainWamPath.silentMeeting(session.id) };
-    }
+    else if (view?.state === "tutup") actions.action = { kind: "silent-tutup", href: mainWamPath.silentMeeting(session.id) };
   }
   if (session.module === "voting" && settings.modules.voting) {
     const { categories, approvals } = await awardsShown();
@@ -75,8 +71,6 @@ export async function moduleSlot({ session, context, now }: { session: MwSession
     const list = own.length ? own : shownCategories(categories).filter(category => !category.sessionId);
     if (mainWamCan(viewer, "voting") && list.some(category => votingState(category, now) === "buka")) {
       actions.action = { kind: "link", label: "Pilih nominasi", href: mainWamPath.awards, icon: "trophy", primary: true };
-    } else if (mainWamCan(viewer, "awarding-setujui") && list.some(category => approvalCard(category, approvals.get(category.id), now).kind === "perlu")) {
-      actions.action = { kind: "link", label: "Persetujuan awarding", href: mainWamPath.awardApproval, icon: "trophy", primary: true };
     } else if (list.some(category => isAnnounced(category, approvals.get(category.id), now))) {
       actions.action = { kind: "link", label: "Lihat pemenang", href: mainWamPath.awards, icon: "trophy" };
     }

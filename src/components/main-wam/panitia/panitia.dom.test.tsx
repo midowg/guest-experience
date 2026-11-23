@@ -4,11 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { ToastProvider } from "@/components/main-wam/ui";
 import { mainWamPath } from "@/lib/routes";
 import { sampleSessionIds } from "@/lib/main-wam/sample";
-import { announceSample, attendanceData, bodRows, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays } from "@/app/dev-preview/wam2026/panitia/sample";
+import { announceSample, attendanceData, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays } from "@/app/dev-preview/wam2026/panitia/sample";
 import { PanitiaApiContext, PanitiaError, type PanitiaApi } from "./api";
 import { AbsenManual } from "./AbsenManual";
 import { AnnounceForm } from "./AnnounceForm";
-import { RingkasanCard } from "./BerandaCards";
 import { PanitiaHub } from "./PanitiaHub";
 import { Moderation } from "./Moderation";
 import { RundownLive } from "./RundownLive";
@@ -354,7 +353,7 @@ describe("Moderasi Momen (K08)", () => {
   });
 });
 
-describe("Panitia hub (K01) and Beranda card (B01)", () => {
+describe("Panitia hub (K01)", () => {
   it("draws what is running, Kelola and Perlu perhatian as links, with the reports said in words", () => {
     render(<PanitiaHub tiles={panitiaHome.tiles} attention={panitiaHome.attention} running={panitiaHome.running} />);
     expect(screen.getByRole("heading", { name: "Sedang berjalan" })).toBeTruthy();
@@ -365,23 +364,5 @@ describe("Panitia hub (K01) and Beranda card (B01)", () => {
     render(<PanitiaHub tiles={panitiaHome.tiles} attention={[]} />);
     expect(screen.queryByText("Perlu perhatian")).toBeNull();
     expect(screen.queryByText("Sedang berjalan")).toBeNull();
-  });
-
-  it("draws Ringkasan's rows; Jejak karbon opens its page", () => {
-    render(<RingkasanCard rows={bodRows.biasa} />);
-    // A row's name is its visible text, no separate label (WCAG 2.5.3, audit T-S05).
-    expect(screen.getByRole("link", { name: /^Kehadiran hari ini\s*93%$/ }).getAttribute("aria-label")).toBeNull();
-    expect(screen.getByRole("link", { name: /^Awarding perlu persetujuan\s*2$/ }).getAttribute("href")).toBe(mainWamPath.awardApproval);
-    expect(screen.getByText("13,6")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Jejak karbon/ }).getAttribute("href")).toBe(mainWamPath.carbon());
-    cleanup();
-    render(<RingkasanCard rows={bodRows.kosong} />);
-    expect(screen.getAllByText("Belum ada").length).toBe(3);
-    cleanup();
-    // A small Jejak karbon is in kilograms, never "0,0 t" (audit R16).
-    render(<RingkasanCard rows={bodRows.karbonKecil} />);
-    expect(screen.getByText("46")).toBeTruthy();
-    expect(screen.getByText("kg CO₂e")).toBeTruthy();
-    expect(screen.queryByText("0,0")).toBeNull();
   });
 });
