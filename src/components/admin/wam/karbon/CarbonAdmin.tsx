@@ -1,72 +1,78 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, BedDouble, Check, ClipboardPaste, Home, Info, Leaf, LogOut, Search, TrainFront, Utensils } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, BedDouble, Bell, Check, Home, Info, Leaf, LogOut, Plus, RotateCcw, Search, Settings2, Trash2, TrainFront, UserRound, Utensils, Workflow } from "lucide-react";
 import {
-  CARBON_REFERENCES, TRAVEL_MODES, carbonFactorRows, carbonFigure, carbonParts, carbonView, parsePastedTravel, personCarbonInput, splitPercent, travelComplete,
-  type CarbonEventSettings, type CarbonPerson, type CarbonTravel, type TravelMode,
+  CARBON_REFERENCES, OTHER_ROUTE, TRAVEL_MODES, carbonFactorRows, carbonFigure, carbonParts, carbonView, personCarbonInput, routeLabel, routeUse, routeValid, splitPercent, travelAnswered,
+  type CarbonEventSettings, type CarbonPerson, type CarbonRoute, type CarbonSetup,
 } from "@/lib/pra-wam/carbon";
 import { CarbonCard } from "@/components/pra-wam/carbon/CarbonCard";
-import { Sheet } from "@/components/pra-wam/Sheet";
 import css from "./carbon-admin.module.css";
 
-export type { CarbonPerson };
+type Tab = "ringkasan" | "jawaban" | "pengaturan";
+type Filter = "semua" | "belum" | "sudah";
 
-type Tab = "ringkasan" | "perjalanan" | "pengaturan";
-type Filter = "semua" | "belum" | "lengkap";
-
-const EMPTY_TRAVEL: CarbonTravel = { from: "", mode: null, km: 0, roundTrip: true, shuttle: true };
 const clock = (date: Date) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(date);
+const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 const kg = (value: number) => { const figure = carbonFigure(value); return `${figure.value} ${figure.unit.replace(" CO₂e", "")}`; };
 
 /**
- * Admin Pra WAM → Jejak karbon (prototype, 23 Nov 2026; docs/standar-admin.md): the page head with
- * one action, three tabs. Ringkasan: the event's total, the average, how many rows are complete, where
- * it comes from, and the participant's real card for anyone picked. Perjalanan peserta: one row per
- * person (kota asal, moda as chips, km one way, pulang-pergi, shuttle), filter chips with counts,
- * search, and "Tempel dari Excel". Pengaturan acara: nights, meals, the shuttle, the factors and their
- * sources. Rooms come from Misi Perjalanan's list, never typed here. Saves on its own with the
- * status always in view (here only in the page's memory: nothing is sent).
+ * Admin Pra WAM → Jejak karbon (prototype, 23 Nov 2026; docs/standar-admin.md). One owner for every
+ * piece, so nothing is typed twice: the panitia set the event here (routes with their km, nights,
+ * meals, shuttle, people per bus, and whether the participants' form is open); each participant
+ * answers for themself on Beranda (route, back the same way, shuttle); rooms come from Misi
+ * Perjalanan. "Jawaban peserta" only shows the answers: the panitia remind, or ask for an answer again
+ * (which clears it, after a confirmation), but never type it. Controlled: the page that holds the
+ * data passes it in (the prototype shares it with the participant's card).
  */
-export function CarbonAdmin({ people: initialPeople, settings: initialSettings }: { people: CarbonPerson[]; settings: CarbonEventSettings }) {
-  const [people, setPeople] = useState(initialPeople);
-  const [settings, setSettings] = useState(initialSettings);
+export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
+  setup: CarbonSetup; people: CarbonPerson[];
+  onSetup: (setup: CarbonSetup) => void; onPeople: (people: CarbonPerson[]) => void;
+}) {
   const [tab, setTab] = useState<Tab>("ringkasan");
   const [filter, setFilter] = useState<Filter>("semua");
   const [query, setQuery] = useState("");
-  const [paste, setPaste] = useState(false);
-  const [previewId, setPreviewId] = useState(initialPeople[0]?.id ?? "");
+  const [asking, setAsking] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
+  const [previewId, setPreviewId] = useState(people[0]?.id ?? "");
   const [save, setSave] = useState<{ state: "saved" | "saving"; at: Date }>({ state: "saved", at: new Date() });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const touched = () => {
     setSave(current => ({ ...current, state: "saving" }));
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setSave({ state: "saved", at: new Date() }), 700);
   };
-  const setTravel = (id: string, change: Partial<CarbonTravel>) => {
-    setPeople(list => list.map(person => person.id === id ? { ...person, travel: { ...(person.travel ?? EMPTY_TRAVEL), ...change } } : person));
-    touched();
-  };
-  const setSetting = (key: keyof CarbonEventSettings, value: number) => { setSettings(current => ({ ...current, [key]: value })); touched(); };
+  const say = (text: string) => { setToast(text); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(""), 2600); };
+  const setSetting = (key: keyof CarbonEventSettings, value: number) => { onSetup({ ...setup, settings: { ...setup.settings, [key]: value } }); touched(); };
+  const setRoutes = (routes: CarbonRoute[]) => { onSetup({ ...setup, routes }); touched(); };
 
-  const rows = useMemo(() => people.map(person => {
-    const input = personCarbonInput(settings, person.travel, person.occupants);
+  const rows = people.map(person => {
+    const answered = travelAnswered(person.travel, setup.routes);
+    const input = answered ? personCarbonInput(setup, person.travel, person.occupants) : null;
     const parts = input ? carbonParts(input) : null;
-    return { person, input, total: parts ? parts.perjalanan + parts.kamar + parts.makan : 0, parts, complete: travelComplete(person.travel) };
-  }), [people, settings]);
-  const complete = rows.filter(row => row.complete);
-  const missing = rows.length - complete.length;
-  const sum = complete.reduce((acc, row) => ({ perjalanan: acc.perjalanan + row.parts!.perjalanan, kamar: acc.kamar + row.parts!.kamar, makan: acc.makan + row.parts!.makan }), { perjalanan: 0, kamar: 0, makan: 0 });
+    return { person, answered, total: parts ? parts.perjalanan + parts.kamar + parts.makan : 0, parts };
+  });
+  const done = rows.filter(row => row.answered);
+  const missing = rows.length - done.length;
+  const sum = done.reduce((acc, row) => ({ perjalanan: acc.perjalanan + row.parts!.perjalanan, kamar: acc.kamar + row.parts!.kamar, makan: acc.makan + row.parts!.makan }), { perjalanan: 0, kamar: 0, makan: 0 });
   const total = sum.perjalanan + sum.kamar + sum.makan;
   const shares = splitPercent([sum.kamar, sum.perjalanan, sum.makan]);
   const rooms = new Set(people.map(person => person.room)).size;
+  const use = routeUse(people);
+  const others = done.filter(row => row.person.travel?.routeId === OTHER_ROUTE).length;
 
-  const shown = rows.filter(row => (filter === "semua" || (filter === "lengkap") === row.complete)
-    && (!query.trim() || `${row.person.name} ${row.person.dept} ${row.person.travel?.from ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())));
+  const shown = rows.filter(row => (filter === "semua" || (filter === "sudah") === row.answered)
+    && (!query.trim() || `${row.person.name} ${row.person.dept}`.toLowerCase().includes(query.trim().toLowerCase())));
   const preview = people.find(person => person.id === previewId) ?? people[0];
   const status = save.state === "saving" ? "Menyimpan…" : `Tersimpan ${clock(save.at)}`;
+  const answerOf = (person: CarbonPerson) => {
+    if (!person.travel) return "";
+    const route = setup.routes.find(item => item.id === person.travel!.routeId);
+    return route ? routeLabel(route) : "Rute lain (belum dihitung)";
+  };
 
   return <div className={css.page}>
     <header className={css.topbar}>
@@ -84,37 +90,60 @@ export function CarbonAdmin({ people: initialPeople, settings: initialSettings }
         <span className={css.headIcon}><Leaf aria-hidden /></span>
         <span className={css.headText}>
           <h1>Jejak karbon</h1>
-          <span className={css.headLine}>Pra WAM · {complete.length} dari {people.length} peserta lengkap · <span aria-live="polite" className={save.state === "saving" ? css.saving : css.saved}>{save.state === "saved" && <Check aria-hidden />}{status}</span></span>
+          <span className={css.headLine}>
+            Pra WAM · {done.length} dari {people.length} peserta sudah mengisi · Formulir {setup.formOpen ? "dibuka" : "ditutup"} ·{" "}
+            <span aria-live="polite" className={save.state === "saving" ? css.saving : css.saved}>{save.state === "saved" && <Check aria-hidden />}{status}</span>
+          </span>
         </span>
         <button type="button" className={css.primary} onClick={() => setSave({ state: "saved", at: new Date() })}>Simpan</button>
       </div>
 
       <div className={css.tabs} role="tablist" aria-label="Bagian">
-        {([["ringkasan", "Ringkasan"], ["perjalanan", "Perjalanan peserta"], ["pengaturan", "Pengaturan acara"]] as [Tab, string][]).map(([key, label]) =>
+        {([["ringkasan", "Ringkasan"], ["jawaban", "Jawaban peserta"], ["pengaturan", "Pengaturan acara"]] as [Tab, string][]).map(([key, label]) =>
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={css.tab} onClick={() => setTab(key)}>
-            {label}{key === "perjalanan" && missing > 0 && <span className={css.badge}>{missing} belum</span>}
+            {label}{key === "jawaban" && missing > 0 && <span className={css.badge}>{missing} belum</span>}
           </button>)}
       </div>
 
       {tab === "ringkasan" && <div className={css.summary}>
+        <section className={css.card} aria-labelledby="siapa">
+          <h2 id="siapa" className={css.h2}>Siapa mengisi apa</h2>
+          <div className={css.owners}>
+            <div className={css.owner}>
+              <span className={css.ownerHead}><Settings2 aria-hidden /><strong>Panitia</strong><span>di halaman ini</span></span>
+              <p>Rute dan jaraknya, jumlah malam, porsi makan, shuttle, dan penumpang per bus.</p>
+              <button type="button" className={css.textLink} onClick={() => setTab("pengaturan")}>Buka Pengaturan acara</button>
+            </div>
+            <div className={css.owner}>
+              <span className={css.ownerHead}><UserRound aria-hidden /><strong>Peserta</strong><span>dari kartu di Beranda</span></span>
+              <p>Rute yang dipakai, pulang lewat jalan yang sama atau tidak, dan ikut shuttle atau tidak. Peserta hanya memilih, tidak mengetik jarak.</p>
+              <button type="button" className={css.textLink} onClick={() => setTab("jawaban")}>Lihat Jawaban peserta</button>
+            </div>
+            <div className={css.owner}>
+              <span className={css.ownerHead}><Workflow aria-hidden /><strong>Otomatis</strong><span>tidak perlu diisi</span></span>
+              <p>Kamar dan teman sekamar, dari daftar kamar Misi Perjalanan ({rooms} kamar).</p>
+            </div>
+          </div>
+        </section>
+
         <div className={css.stats}>
           <section className={css.stat}>
             <span className={css.statLabel}>Total perkiraan</span>
             <span className={css.statValue}>{carbonFigure(total).value}<small>{carbonFigure(total).unit}</small></span>
-            <span className={css.statNote}>Dari {complete.length} peserta yang datanya lengkap</span>
+            <span className={css.statNote}>Dari {done.length} peserta yang sudah mengisi</span>
           </section>
           <section className={css.stat}>
             <span className={css.statLabel}>Rata-rata per peserta</span>
-            <span className={css.statValue}>{complete.length ? carbonFigure(total / complete.length).value : "–"}<small>kg CO₂e</small></span>
+            <span className={css.statValue}>{done.length ? carbonFigure(total / done.length).value : "–"}<small>kg CO₂e</small></span>
             <span className={css.statNote}>Tiap peserta melihat angkanya sendiri</span>
           </section>
           <section className={css.stat}>
-            <span className={css.statLabel}>Data perjalanan</span>
-            <span className={css.statValue}>{complete.length}<small>dari {people.length}</small></span>
-            <span className={css.progress} aria-hidden><i style={{ width: `${people.length ? (complete.length / people.length) * 100 : 0}%` }} /></span>
+            <span className={css.statLabel}>Sudah mengisi</span>
+            <span className={css.statValue}>{done.length}<small>dari {people.length}</small></span>
+            <span className={css.progress} aria-hidden><i style={{ width: `${people.length ? (done.length / people.length) * 100 : 0}%` }} /></span>
             {missing > 0
-              ? <button type="button" className={css.textLink} onClick={() => { setTab("perjalanan"); setFilter("belum"); }}>Lengkapi {missing} peserta</button>
-              : <span className={css.statNote}>Semua sudah lengkap</span>}
+              ? <button type="button" className={css.textLink} onClick={() => { setTab("jawaban"); setFilter("belum"); }}>Lihat {missing} yang belum</button>
+              : <span className={css.statNote}>Semua sudah mengisi</span>}
           </section>
         </div>
 
@@ -122,9 +151,9 @@ export function CarbonAdmin({ people: initialPeople, settings: initialSettings }
           <section className={css.card}>
             <h2 className={css.h2}>Dari mana asalnya</h2>
             <ul className={css.sources}>
-              {([["kamar", "Kamar", BedDouble, sum.kamar, shares[0], `${settings.nights} malam · ${rooms} kamar dari Misi Perjalanan`],
-                ["perjalanan", "Perjalanan", TrainFront, sum.perjalanan, shares[1], "Kota asal ke venue, dan shuttle"],
-                ["makan", "Makan", Utensils, sum.makan, shares[2], `${settings.mealsPerPerson} porsi per peserta`]] as const).map(([key, title, Icon, value, share, note]) =>
+              {([["kamar", "Kamar", BedDouble, sum.kamar, shares[0], `${setup.settings.nights} malam · ${rooms} kamar dari Misi Perjalanan`],
+                ["perjalanan", "Perjalanan", TrainFront, sum.perjalanan, shares[1], others ? `Rute dan shuttle · ${others} peserta memilih rute lain, belum dihitung` : "Rute dan shuttle yang dipilih peserta"],
+                ["makan", "Makan", Utensils, sum.makan, shares[2], `${setup.settings.mealsPerPerson} porsi per peserta`]] as const).map(([key, title, Icon, value, share, note]) =>
                 <li key={key}>
                   <span className={css.srcIcon}><Icon aria-hidden /></span>
                   <span className={css.srcText}>
@@ -142,86 +171,117 @@ export function CarbonAdmin({ people: initialPeople, settings: initialSettings }
               <label className={css.field}>
                 <span className={css.label}>Lihat sebagai</span>
                 <select className={css.input} value={preview?.id} onChange={event => setPreviewId(event.target.value)}>
-                  {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+                  {people.map(person => <option key={person.id} value={person.id}>{person.name}{travelAnswered(person.travel, setup.routes) ? "" : " (belum mengisi)"}</option>)}
                 </select>
               </label>
             </div>
             <div className={css.phone}>
-              {preview && <CarbonCard view={carbonView(personCarbonInput(settings, preview.travel, preview.occupants))} />}
+              {preview && <CarbonCard key={preview.id} view={carbonView(personCarbonInput(setup, preview.travel, preview.occupants))}
+                form={{ routes: setup.routes, travel: preview.travel, open: setup.formOpen, onSave: () => say("Hanya pratinjau: jawaban diisi peserta sendiri.") }} />}
             </div>
           </section>
         </div>
       </div>}
 
-      {tab === "perjalanan" && <section className={css.card}>
+      {tab === "jawaban" && <section className={css.card}>
+        <p className={css.lead}><Info aria-hidden /><span>Jawaban diisi peserta sendiri dari kartu Jejak karbon di Beranda. Panitia tidak mengetik jawaban, supaya tidak ada data ganda. Bila ada yang keliru, minta peserta mengisi ulang.</span></p>
         <div className={css.toolbar}>
           <div className={css.chips} role="radiogroup" aria-label="Saring peserta">
-            {([["semua", "Semua", people.length], ["belum", "Belum lengkap", missing], ["lengkap", "Lengkap", complete.length]] as [Filter, string, number][]).map(([key, label, count]) =>
+            {([["semua", "Semua", people.length], ["belum", "Belum mengisi", missing], ["sudah", "Sudah mengisi", done.length]] as [Filter, string, number][]).map(([key, label, count]) =>
               <button key={key} type="button" role="radio" aria-checked={filter === key} className={css.chip} onClick={() => setFilter(key)}>{label} <span>{count}</span></button>)}
           </div>
           <label className={css.search}>
             <Search aria-hidden />
-            <input type="search" placeholder="Cari nama, departemen, atau kota" aria-label="Cari peserta" value={query} onChange={event => setQuery(event.target.value)} />
+            <input type="search" placeholder="Cari nama atau departemen" aria-label="Cari peserta" value={query} onChange={event => setQuery(event.target.value)} />
           </label>
-          <button type="button" className={css.secondary} onClick={() => setPaste(true)}><ClipboardPaste aria-hidden />Tempel dari Excel</button>
+          <button type="button" className={css.secondary} disabled={!missing || !setup.formOpen} onClick={() => say(`Pengingat dikirim ke ${missing} peserta yang belum mengisi.`)}><Bell aria-hidden />Ingatkan yang belum ({missing})</button>
         </div>
-        <p className={css.hint}><Info aria-hidden />Isi cara tiap peserta berangkat ke venue. Kamar dan teman sekamar terisi otomatis dari daftar kamar Misi Perjalanan.</p>
+        {!setup.formOpen && <p className={css.warnLine}><AlertCircle aria-hidden />Formulir peserta sedang ditutup. Buka lagi di Pengaturan acara supaya peserta bisa mengisi.</p>}
 
         {shown.length === 0
-          ? <p className={css.empty}>{filter === "belum" ? "Semua peserta sudah lengkap." : "Tidak ada peserta yang cocok."}</p>
+          ? <p className={css.empty}>{filter === "belum" ? "Semua peserta sudah mengisi." : "Tidak ada peserta yang cocok."}</p>
           : <table className={css.table}>
-            <thead><tr><th>Peserta</th><th>Kota asal</th><th>Moda</th><th>Jarak sekali jalan</th><th>Pilihan</th><th className={css.num}>Perkiraan</th></tr></thead>
+            <thead><tr><th>Peserta</th><th>Kamar (otomatis)</th><th>Jawaban peserta</th><th className={css.num}>Perkiraan</th><th><span className={css.srOnly}>Aksi</span></th></tr></thead>
             <tbody>
-              {shown.map(({ person, total: personTotal, complete: done }) => {
-                const travel = person.travel ?? EMPTY_TRAVEL;
-                return <tr key={person.id}>
-                  <td data-label="Peserta">
-                    <span className={css.person}><strong>{person.name}</strong><span>{person.dept} · Kamar {person.room}{person.occupants > 1 ? `, ${person.occupants} orang` : ", sendiri"}</span></span>
-                  </td>
-                  <td data-label="Kota asal"><input className={css.input} aria-label={`Kota asal ${person.name}`} placeholder="Contoh: Jakarta" value={travel.from} onChange={event => setTravel(person.id, { from: event.target.value })} /></td>
-                  <td data-label="Moda">
-                    <span className={css.modes} role="radiogroup" aria-label={`Moda ${person.name}`}>
-                      {TRAVEL_MODES.map(mode => <button key={mode.key} type="button" role="radio" aria-checked={travel.mode === mode.key} className={css.mode} onClick={() => setTravel(person.id, { mode: mode.key as TravelMode })}>{mode.label}</button>)}
-                    </span>
-                  </td>
-                  <td data-label="Jarak sekali jalan">
-                    <span className={css.unitInput}>
-                      <input className={css.input} type="number" inputMode="numeric" min={0} aria-label={`Jarak sekali jalan ${person.name}, km`} placeholder="0" disabled={travel.mode === "lainnya"}
-                        value={travel.km || ""} onChange={event => setTravel(person.id, { km: Number(event.target.value) || 0 })} />
-                      <span>km</span>
-                    </span>
-                  </td>
-                  <td data-label="Pilihan">
-                    <span className={css.checks}>
-                      <label><input type="checkbox" checked={travel.roundTrip} onChange={event => setTravel(person.id, { roundTrip: event.target.checked })} />Pulang-pergi</label>
-                      <label><input type="checkbox" checked={travel.shuttle} onChange={event => setTravel(person.id, { shuttle: event.target.checked })} />Ikut shuttle</label>
-                    </span>
-                  </td>
-                  <td data-label="Perkiraan" className={css.num}>
-                    {done ? <span className={css.done}><Check aria-hidden />{kg(personTotal)}</span> : <span className={css.todo}><AlertCircle aria-hidden />Belum lengkap</span>}
-                  </td>
-                </tr>;
-              })}
+              {shown.map(({ person, answered, total: personTotal }) => <tr key={person.id}>
+                <td data-label="Peserta"><span className={css.person}><strong>{person.name}</strong><span>{person.dept}</span></span></td>
+                <td data-label="Kamar (otomatis)"><span className={css.cellMuted}>{person.room} · {person.occupants > 1 ? `${person.occupants} orang` : "sendiri"}</span></td>
+                <td data-label="Jawaban peserta">
+                  {answered
+                    ? <span className={css.answer}><strong>{answerOf(person)}</strong><span>{person.travel!.roundTrip ? "Pulang-pergi" : "Pergi saja"} · {person.travel!.shuttle ? "ikut shuttle" : "tanpa shuttle"} · diisi {when(person.travel!.answeredAt)}</span></span>
+                    : <span className={css.todo}><AlertCircle aria-hidden />Belum mengisi</span>}
+                </td>
+                <td data-label="Perkiraan" className={css.num}>{answered ? <span className={css.done}>{kg(personTotal)}</span> : <span className={css.cellMuted}>–</span>}</td>
+                <td className={css.actions}>
+                  {!answered
+                    ? <button type="button" className={css.small} disabled={!setup.formOpen} onClick={() => say(`Pengingat dikirim ke ${person.name}.`)}><Bell aria-hidden />Ingatkan</button>
+                    : asking === person.id
+                      ? <span className={css.confirm}>
+                        <span>Kosongkan jawaban {person.name}?</span>
+                        <button type="button" className={css.small} onClick={() => setAsking(null)}>Batal</button>
+                        <button type="button" className={`${css.small} ${css.danger}`} onClick={() => { onPeople(people.map(item => item.id === person.id ? { ...item, travel: null } : item)); setAsking(null); touched(); say(`Jawaban ${person.name} dikosongkan. Peserta diminta mengisi ulang.`); }}>Ya, minta isi ulang</button>
+                      </span>
+                      : <button type="button" className={css.small} disabled={!setup.formOpen} onClick={() => setAsking(person.id)}><RotateCcw aria-hidden />Minta isi ulang</button>}
+                </td>
+              </tr>)}
             </tbody>
           </table>}
       </section>}
 
       {tab === "pengaturan" && <div className={css.settings}>
         <section className={css.card}>
-          <h2 className={css.h2}>Menginap</h2>
-          <NumberField label="Jumlah malam" hint="Sama untuk semua peserta." value={settings.nights} unit="malam" onChange={value => setSetting("nights", value)} />
+          <h2 className={css.h2}>Formulir peserta</h2>
+          <div className={css.segmented} role="radiogroup" aria-label="Formulir peserta">
+            <button type="button" role="radio" aria-checked={setup.formOpen} onClick={() => { onSetup({ ...setup, formOpen: true }); touched(); }}>Dibuka</button>
+            <button type="button" role="radio" aria-checked={!setup.formOpen} onClick={() => { onSetup({ ...setup, formOpen: false }); touched(); }}>Ditutup</button>
+          </div>
+          <p className={css.fieldHint}>{setup.formOpen ? "Peserta bisa mengisi dan mengubah jawabannya dari kartu di Beranda." : "Jawaban yang sudah masuk tetap dihitung. Peserta yang belum mengisi melihat pesan untuk menghubungi panitia."}</p>
+        </section>
+
+        <section className={css.card}>
+          <h2 className={css.h2}>Rute keberangkatan</h2>
+          <p className={css.muted}>Peserta memilih dari daftar ini. Jarak hanya diisi di sini, sekali jalan ke stasiun atau titik bus terdekat dari venue.</p>
+          <ul className={css.routes}>
+            {setup.routes.map(route => {
+              const used = use.get(route.id) ?? 0;
+              const valid = routeValid(route);
+              const update = (change: Partial<CarbonRoute>) => setRoutes(setup.routes.map(item => item.id === route.id ? { ...item, ...change } : item));
+              return <li key={route.id} className={css.route}>
+                <div className={css.routeFields}>
+                  <label className={css.field}><span className={css.label}>Kota asal</span>
+                    <input className={css.input} value={route.from} placeholder="Contoh: Jakarta" aria-invalid={!route.from.trim() || undefined} onChange={event => update({ from: event.target.value })} /></label>
+                  <div className={css.field}><span className={css.label} id={`moda-${route.id}`}>Moda</span>
+                    <span className={css.modes} role="radiogroup" aria-labelledby={`moda-${route.id}`}>
+                      {TRAVEL_MODES.map(mode => <button key={mode.key} type="button" role="radio" aria-checked={route.mode === mode.key} className={css.mode} onClick={() => update({ mode: mode.key })}>{mode.label}</button>)}
+                    </span></div>
+                  <label className={css.field}><span className={css.label}>Jarak sekali jalan</span>
+                    <span className={css.unitInput}><input className={css.input} type="number" inputMode="numeric" min={0} placeholder="0" aria-invalid={!(route.km > 0) || undefined} value={route.km || ""} onChange={event => update({ km: Number(event.target.value) || 0 })} /><span>km</span></span></label>
+                </div>
+                <div className={css.routeFoot}>
+                  <span className={valid ? css.cellMuted : css.fieldError}>{valid ? (used ? `Dipilih ${used} peserta` : "Belum dipilih peserta") : "Isi kota asal dan jarak di atas 0 km."}</span>
+                  <button type="button" className={css.small} disabled={used > 0} title={used ? "Rute yang sudah dipilih peserta tidak bisa dihapus" : undefined}
+                    onClick={() => setRoutes(setup.routes.filter(item => item.id !== route.id))}><Trash2 aria-hidden />{used ? "Dipakai, tidak bisa dihapus" : "Hapus rute"}</button>
+                </div>
+              </li>;
+            })}
+          </ul>
+          <button type="button" className={css.secondary} onClick={() => setRoutes([...setup.routes, { id: `r${Date.now()}`, from: "", mode: "kereta", km: 0 }])}><Plus aria-hidden />Tambah rute</button>
+        </section>
+
+        <section className={css.card}>
+          <h2 className={css.h2}>Menginap dan makan</h2>
+          <NumberField label="Jumlah malam" hint="Sama untuk semua peserta." value={setup.settings.nights} unit="malam" onChange={value => setSetting("nights", value)} />
+          <NumberField label="Porsi makan per peserta" hint="Contoh: 2 hari × 3 kali makan = 6 porsi." value={setup.settings.mealsPerPerson} unit="porsi" onChange={value => setSetting("mealsPerPerson", value)} />
           <p className={css.auto}><BedDouble aria-hidden /><span><strong>{rooms} kamar, {people.length} orang</strong> terisi otomatis dari daftar kamar Misi Perjalanan. Emisi kamar dibagi rata ke penghuninya.</span></p>
         </section>
-        <section className={css.card}>
-          <h2 className={css.h2}>Makan</h2>
-          <NumberField label="Porsi makan per peserta" hint="Contoh: 2 hari × 3 kali makan = 6 porsi." value={settings.mealsPerPerson} unit="porsi" onChange={value => setSetting("mealsPerPerson", value)} />
-        </section>
+
         <section className={css.card}>
           <h2 className={css.h2}>Bus dan shuttle</h2>
-          <NumberField label="Jarak shuttle, stasiun ke venue" hint="Sekali jalan. Untuk peserta yang dicentang Ikut shuttle." value={settings.shuttleKm} unit="km" onChange={value => setSetting("shuttleKm", value)} />
-          <NumberField label="Penumpang per shuttle" hint="Emisi satu bus dibagi rata ke penumpangnya." value={settings.shuttlePerBus} unit="orang" onChange={value => setSetting("shuttlePerBus", value)} />
-          <NumberField label="Penumpang per bus rombongan" hint="Untuk peserta dengan moda Bus (rombongan dari kota asal)." value={settings.groupBusPerBus} unit="orang" onChange={value => setSetting("groupBusPerBus", value)} />
+          <NumberField label="Jarak shuttle, stasiun ke venue" hint="Sekali jalan. Untuk peserta yang menjawab ikut shuttle." value={setup.settings.shuttleKm} unit="km" onChange={value => setSetting("shuttleKm", value)} />
+          <NumberField label="Penumpang per shuttle" hint="Emisi satu bus dibagi rata ke penumpangnya." value={setup.settings.shuttlePerBus} unit="orang" onChange={value => setSetting("shuttlePerBus", value)} />
+          <NumberField label="Penumpang per bus rombongan" hint="Untuk rute dengan moda Bus rombongan." value={setup.settings.groupBusPerBus} unit="orang" onChange={value => setSetting("groupBusPerBus", value)} />
         </section>
+
         <section className={css.card}>
           <h2 className={css.h2}>Faktor emisi</h2>
           <p className={css.muted}>Sama dengan WAM 2026. Diubah lewat tim produk, bukan di sini.</p>
@@ -232,14 +292,7 @@ export function CarbonAdmin({ people: initialPeople, settings: initialSettings }
         </section>
       </div>}
     </div>
-
-    {paste && <PasteSheet names={people.map(person => person.name)} onClose={() => setPaste(false)} onApply={applied => {
-      setPeople(list => list.map(person => {
-        const row = applied.find(item => item.match === person.name);
-        return row ? { ...person, travel: { ...(person.travel ?? EMPTY_TRAVEL), from: row.from, mode: row.mode ?? person.travel?.mode ?? null, km: row.km } } : person;
-      }));
-      touched(); setPaste(false); setTab("perjalanan"); setFilter("semua");
-    }} />}
+    <div className={css.toast} role="status" aria-live="polite">{toast && <span><Check aria-hidden />{toast}</span>}</div>
   </div>;
 }
 
@@ -249,24 +302,4 @@ function NumberField({ label, hint, value, unit, onChange }: { label: string; hi
     <span className={css.unitInput}><input className={css.input} type="number" inputMode="numeric" min={0} value={value || ""} placeholder="0" onChange={event => onChange(Number(event.target.value) || 0)} /><span>{unit}</span></span>
     <span className={css.fieldHint}>{hint}</span>
   </label>;
-}
-
-function PasteSheet({ names, onClose, onApply }: { names: string[]; onClose: () => void; onApply: (rows: ReturnType<typeof parsePastedTravel>["rows"]) => void }) {
-  const [text, setText] = useState("");
-  const result = parsePastedTravel(text, names);
-  return <Sheet open onClose={onClose} title="Tempel dari Excel" subtitle="Salin kolom Nama, Kota asal, Moda, Km sekali jalan"
-    footer={<button type="button" className={css.primary} disabled={!result.rows.length} onClick={() => onApply(result.rows)}>{result.rows.length ? `Terapkan ${result.rows.length} baris` : "Terapkan"}</button>}>
-    <div className={css.paste}>
-      <label className={css.field}>
-        <span className={css.label}>Tempel di sini</span>
-        <textarea className={css.textarea} rows={7} value={text} onChange={event => setText(event.target.value)} placeholder={"Nama\tKota asal\tModa\tKm\nRani Contoh\tJakarta\tKereta\t513"} />
-        <span className={css.fieldHint}>Moda: Kereta, Bus, atau Lainnya. Baris judul boleh ikut.</span>
-      </label>
-      {text.trim() && <ul className={css.pasteResult}>
-        <li className={css.ok}><Check aria-hidden />{result.rows.length} baris cocok dengan nama peserta</li>
-        {result.unknown.length > 0 && <li className={css.warn}><AlertCircle aria-hidden />{result.unknown.length} nama tidak ditemukan: {result.unknown.map(row => row.name).join(", ")}</li>}
-        {result.bad.length > 0 && <li className={css.warn}><AlertCircle aria-hidden />Baris {result.bad.join(", ")} tidak terbaca. Periksa kolom Km, harus angka.</li>}
-      </ul>}
-    </div>
-  </Sheet>;
 }

@@ -1,28 +1,16 @@
 import { notFound } from "next/navigation";
-import { CarbonCard } from "@/components/pra-wam/carbon/CarbonCard";
-import { carbonView, type CarbonInput } from "@/lib/pra-wam/carbon";
+import { CarbonPlayground } from "@/components/admin/wam/karbon/CarbonPlayground";
+import { SAMPLE_CARBON_PEOPLE, SAMPLE_CARBON_SETUP } from "@/lib/pra-wam/carbon-sample";
 import styles from "@/components/pra-wam/pra-wam.module.css";
 
 export const dynamic = "force-dynamic";
 
 /*
- * Layout check for Pra WAM's Jejak karbon card (23 Nov 2026) with a made-up trip: the card as on
- * Beranda; tapping it opens the detail. ?kosong=1 for the card before anything is counted.
+ * Layout check for Pra WAM's Jejak karbon card (23 Nov 2026) with made-up people: pick who you are,
+ * answer on the card, open the detail. ?tutup=1 for the card once the panitia closed the form.
  */
-const SAMPLE_CARBON: CarbonInput = {
-  legs: [
-    { mode: "kereta", label: "Jakarta → Yogyakarta", km: 513 },
-    { mode: "kereta", label: "Yogyakarta → Jakarta", km: 513 },
-    { mode: "bus", label: "Stasiun → venue", km: 27, sharedBy: 30 },
-    { mode: "bus", label: "Venue → stasiun", km: 27, sharedBy: 30 },
-  ],
-  nights: 2, roomOccupants: 3, meals: 6,
-};
-
-export default async function DevCarbonPage({ searchParams }: { searchParams: Promise<{ kosong?: string }> }) {
+export default async function DevCarbonPage({ searchParams }: { searchParams: Promise<{ tutup?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const view = carbonView((await searchParams).kosong ? null : SAMPLE_CARBON);
-  return <div className={styles.app} style={{ padding: 16, minHeight: "100vh", background: "var(--pw-page)" }}>
-    <div style={{ maxWidth: 440, margin: "0 auto" }}><CarbonCard view={view} /></div>
-  </div>;
+  const setup = (await searchParams).tutup ? { ...SAMPLE_CARBON_SETUP, formOpen: false } : SAMPLE_CARBON_SETUP;
+  return <div className={styles.app} style={{ minHeight: "100vh", background: "var(--pw-page)" }}><CarbonPlayground setup={setup} people={SAMPLE_CARBON_PEOPLE} side="peserta" /></div>;
 }

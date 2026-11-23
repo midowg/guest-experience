@@ -105,8 +105,9 @@ export function carbonParts(input: CarbonInput): Record<CarbonSource, number> {
 function noteOf(key: CarbonSource, input: CarbonInput): string {
   switch (key) {
     case "perjalanan": {
-      const km = (mode: CarbonLeg["mode"]) => input.legs.filter(leg => leg.mode === mode).reduce((sum, leg) => sum + positive(leg.km), 0);
-      return [km("kereta") > 0 ? `Kereta ${id(km("kereta"))} km` : "", km("bus") > 0 ? `bus ${id(km("bus"))} km` : ""].filter(Boolean).join(" · ");
+      const km = (test: (leg: CarbonLeg) => boolean) => input.legs.filter(test).reduce((sum, leg) => sum + positive(leg.km), 0);
+      const train = km(leg => leg.mode === "kereta"), bus = km(leg => leg.mode === "bus" && leg.label !== SHUTTLE), shuttle = km(leg => leg.label === SHUTTLE);
+      return [train > 0 ? `Kereta ${id(train)} km` : "", bus > 0 ? `bus ${id(bus)} km` : "", shuttle > 0 ? `shuttle ${id(shuttle)} km` : ""].filter(Boolean).join(" · ");
     }
     case "kamar": {
       const nights = `${id(positive(input.nights))} malam`;
@@ -117,6 +118,9 @@ function noteOf(key: CarbonSource, input: CarbonInput): string {
     case "makan": return `${id(positive(input.meals))} porsi selama acara`;
   }
 }
+
+/** The label of the station–venue legs. */
+const SHUTTLE = "Shuttle";
 
 const TITLE: Record<CarbonSource, string> = { perjalanan: "Perjalanan", kamar: "Kamar", makan: "Makan" };
 
@@ -147,11 +151,14 @@ export function carbonFactorRows(): { key: "kereta" | "bus" | "kamar" | "makan";
 }
 
 /*
- * What the panitia fill in Admin Pra WAM → Jejak karbon (prototype, 23 Nov 2026). Once for the
- * event: nights, meals per person, and the shuttle between the station and the venue. Per person:
- * where they leave from, how (kereta or bus, or "lainnya", not counted yet), the one-way km, and
- * whether they ride the shuttle. Rooms and roommates are not filled here: they come from Misi
- * Perjalanan's room list.
+ * Who fills what (23 Nov 2026), one owner per piece so nothing is typed twice or guessed:
+ *   Panitia (Admin Pra WAM → Jejak karbon), once for the event: nights, meals per person, the shuttle,
+ *     people per bus, and the list of routes (kota asal, moda, km one way). Km is only ever typed here.
+ *   Peserta (the card on Beranda), once for themself: which route they take, whether they come back
+ *     the same way, and whether they ride the shuttle. They pick, they never type a distance.
+ *   Otomatis: the room and who shares it, from Misi Perjalanan's room list.
+ * The panitia see each answer but do not change it; they can remind, or ask for it again (which
+ * clears it). After the form closes, answers stay as they are.
  */
 export type CarbonEventSettings = {
   nights: number;
@@ -160,71 +167,59 @@ export type CarbonEventSettings = {
   shuttleKm: number;
   /** People per shuttle bus. */
   shuttlePerBus: number;
-  /** People per bus for a group bus from a city. */
+  /** People per bus on a group bus from a city. */
   groupBusPerBus: number;
 };
 
-export type TravelMode = "kereta" | "bus" | "lainnya";
-export type CarbonTravel = {
-  from: string;
-  mode: TravelMode | null;
-  /** One way. */
-  km: number;
-  roundTrip: boolean;
-  shuttle: boolean;
-};
+export type TravelMode = "kereta" | "bus";
+export const TRAVEL_MODES: { key: TravelMode; label: string }[] = [{ key: "kereta", label: "Kereta" }, { key: "bus", label: "Bus rombongan" }];
+export const modeLabel = (mode: TravelMode) => TRAVEL_MODES.find(item => item.key === mode)!.label;
 
-export const TRAVEL_MODES: { key: TravelMode; label: string }[] = [
-  { key: "kereta", label: "Kereta" }, { key: "bus", label: "Bus" }, { key: "lainnya", label: "Lainnya" },
-];
+/** A way to the venue the panitia list; the only place a distance is typed. */
+export type CarbonRoute = { id: string; from: string; mode: TravelMode; /** One way. */ km: number };
 
-/** A person's row is complete once it says how they come (and how far, unless "lainnya"). */
-export const travelComplete = (travel: CarbonTravel | null | undefined): boolean =>
-  !!travel && !!travel.mode && (travel.mode === "lainnya" || positive(travel.km) > 0);
+/** "Lainnya": a way not on the list (own car, plane…). Kamar and makan still count; the trip does not, yet. */
+export const OTHER_ROUTE = "lain";
 
-/** One person's input from the event's settings, their travel and their room; null while their travel is not complete. */
-export function personCarbonInput(settings: CarbonEventSettings, travel: CarbonTravel | null | undefined, roomOccupants: number): CarbonInput | null {
-  if (!travelComplete(travel)) return null;
+/** What a participant answers about themself. */
+export type CarbonTravel = { routeId: string; roundTrip: boolean; shuttle: boolean; /** ISO time of the last answer. */ answeredAt: string };
+
+/** Everything the panitia set for the event. */
+export type CarbonSetup = { settings: CarbonEventSettings; routes: CarbonRoute[]; /** Peserta may answer (or change their answer). */ formOpen: boolean };
+
+/** "Jakarta · Kereta · 513 km". */
+export const routeLabel = (route: CarbonRoute) => `${route.from} · ${modeLabel(route.mode)} · ${id(route.km)} km`;
+
+/** A route the panitia can save: a city and a distance above 0. */
+export const routeValid = (route: Pick<CarbonRoute, "from" | "km">) => route.from.trim().length > 0 && positive(route.km) > 0;
+
+/** An answer counts when its route still exists (or is "Lainnya"). */
+export const travelAnswered = (travel: CarbonTravel | null | undefined, routes: readonly CarbonRoute[]): boolean =>
+  !!travel && (travel.routeId === OTHER_ROUTE || routes.some(route => route.id === travel.routeId));
+
+/** One person's input from the panitia's setup, their answer and their room; null while they have not answered. */
+export function personCarbonInput(setup: Pick<CarbonSetup, "settings" | "routes">, travel: CarbonTravel | null | undefined, roomOccupants: number): CarbonInput | null {
+  if (!travelAnswered(travel, setup.routes)) return null;
+  const { settings } = setup;
   const t = travel!;
   const times = t.roundTrip ? 2 : 1;
+  const route = setup.routes.find(item => item.id === t.routeId);
   const legs: CarbonLeg[] = [];
-  if (t.mode === "kereta" || t.mode === "bus") {
-    for (let i = 0; i < times; i++) legs.push({ mode: t.mode, label: t.from, km: positive(t.km), sharedBy: t.mode === "bus" ? Math.max(1, positive(settings.groupBusPerBus)) : undefined });
+  if (route) {
+    for (let i = 0; i < times; i++) legs.push({ mode: route.mode, label: route.from, km: positive(route.km), sharedBy: route.mode === "bus" ? Math.max(1, positive(settings.groupBusPerBus)) : undefined });
   }
   if (t.shuttle && positive(settings.shuttleKm) > 0) {
-    for (let i = 0; i < times; i++) legs.push({ mode: "bus", label: "Shuttle", km: positive(settings.shuttleKm), sharedBy: Math.max(1, positive(settings.shuttlePerBus)) });
+    for (let i = 0; i < times; i++) legs.push({ mode: "bus", label: SHUTTLE, km: positive(settings.shuttleKm), sharedBy: Math.max(1, positive(settings.shuttlePerBus)) });
   }
   return { legs, nights: positive(settings.nights), roomOccupants: Math.max(1, positive(roomOccupants)), meals: positive(settings.mealsPerPerson) };
 }
 
-export type PastedRow = { line: number; name: string; from: string; mode: TravelMode | null; km: number };
-
-const MODE_WORDS: [RegExp, TravelMode][] = [[/^(ka|kereta|train)/i, "kereta"], [/^(bus|bis)/i, "bus"], [/./, "lainnya"]];
-
-/**
- * Rows pasted from Excel (tab- or semicolon-separated): Nama, Kota asal, Moda, Km sekali jalan.
- * A header row is skipped; a row is matched to a person by name (letters only, case ignored).
- */
-export function parsePastedTravel(text: string, names: readonly string[]): { rows: (PastedRow & { match: string })[]; unknown: PastedRow[]; bad: number[] } {
-  const key = (name: string) => name.toLowerCase().replace(/[^a-z]/g, "");
-  const byKey = new Map(names.map(name => [key(name), name]));
-  const rows: (PastedRow & { match: string })[] = [];
-  const unknown: PastedRow[] = [];
-  const bad: number[] = [];
-  text.split(/\r?\n/).forEach((raw, index) => {
-    const cells = raw.split(/\t|;/).map(cell => cell.trim());
-    if (!cells[0] || /^nama$/i.test(cells[0])) return;
-    const kmText = (cells[3] ?? "").replace(/\./g, "").replace(",", ".");
-    const km = Number(kmText);
-    const modeText = cells[2] ?? "";
-    const mode = modeText ? MODE_WORDS.find(([pattern]) => pattern.test(modeText))![1] : null;
-    if (cells.length < 2 || (kmText !== "" && !Number.isFinite(km))) { bad.push(index + 1); return; }
-    const row: PastedRow = { line: index + 1, name: cells[0], from: cells[1] ?? "", mode, km: Number.isFinite(km) ? km : 0 };
-    const match = byKey.get(key(cells[0]));
-    if (match) rows.push({ ...row, match }); else unknown.push(row);
-  });
-  return { rows, unknown, bad };
+/** How many answers use each route: a route in use cannot be deleted. */
+export function routeUse(people: readonly Pick<CarbonPerson, "travel">[]): Map<string, number> {
+  const use = new Map<string, number>();
+  for (const person of people) if (person.travel) use.set(person.travel.routeId, (use.get(person.travel.routeId) ?? 0) + 1);
+  return use;
 }
 
-/** One row of the admin page: the person, their room (from Misi Perjalanan's list) and their travel. */
+/** One row of the admin page: the person, their room (automatic, from Misi Perjalanan) and their own answer. */
 export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BedDouble, Bus, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, Recycle, TrainFront, Utensils, type LucideIcon } from "lucide-react";
-import { CARBON_REFERENCES, carbonFactorRows, type CarbonSource, type CarbonSourceView, type CarbonView } from "@/lib/pra-wam/carbon";
+import { BedDouble, Bus, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, MapPin, PencilLine, Recycle, TrainFront, Utensils, type LucideIcon } from "lucide-react";
+import { CARBON_REFERENCES, OTHER_ROUTE, carbonFactorRows, routeLabel, type CarbonRoute, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView } from "@/lib/pra-wam/carbon";
 import { Sheet } from "../Sheet";
+import { CarbonTravelForm } from "./CarbonTravelForm";
 import css from "./carbon.module.css";
 
 const SOURCE_ICON: Record<CarbonSource, LucideIcon> = { perjalanan: TrainFront, kamar: BedDouble, makan: Utensils };
@@ -18,24 +19,44 @@ const TIPS: { icon: LucideIcon; text: string }[] = [
   { icon: Recycle, text: "Pisahkan sampah organik dan plastik di tempat yang disediakan." },
 ];
 
+/** The participant's own part: the panitia's routes, their answer, and whether they may still answer. */
+export type CarbonFormProps = { routes: CarbonRoute[]; travel: CarbonTravel | null; open: boolean; onSave: (travel: CarbonTravel) => void };
+
 /**
  * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026): the one deep-green card in the
- * app, its chip "For Tomorrow" after WAM's theme "Shaping for Tomorrow". Top to bottom: the chip,
- * "Jejak karbon perjalananmu", the figure in big Poppins with "Perkiraan selama Pra WAM", a thin bar,
- * the three parts in columns (name and share, so the bar never stands on colour alone), and a foot
- * line with "Rincian". The whole card opens the detail (a sheet; the total is only its subtitle, so
- * the card is not repeated): where it comes from, how it is counted (the sources as small links at
- * its very bottom), and small habits.
+ * app, its chip "For Tomorrow" after WAM's theme "Shaping for Tomorrow".
+ * Before they answer: one call to action, "Isi perjalananmu", which opens their form (a sheet: pick a
+ * route the panitia listed, same way back or not, shuttle or not; never a distance). Once answered:
+ * the figure with "Perkiraan selama Pra WAM", a thin bar, the three parts in columns (name and share,
+ * so the bar never stands on colour alone), and a foot line with "Rincian". The detail (a sheet; the
+ * total only in its subtitle, so the card is not repeated): their answer with "Ubah" while the form is
+ * open, where it comes from, how it is counted (the sources as small links at its very bottom), and
+ * small habits. The form closed and no answer: say so and who to ask.
  */
-export function CarbonCard({ view }: { view: CarbonView }) {
-  const [open, setOpen] = useState(false);
-  if (view.kind === "belum") return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon perjalananmu">
-    <Motif />
-    <CardHead />
-    <p className={css.waiting}>Angkamu muncul setelah panitia mengisi perjalanan dan kamarmu.</p>
-  </section>;
+export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonFormProps }) {
+  const [sheet, setSheet] = useState<"detail" | "form" | null>(null);
+  const close = () => setSheet(null);
+  const formSheet = form && sheet === "form" && <Sheet open onClose={close} title="Perjalananmu ke Pra WAM" subtitle="Sekali isi, bisa diubah selama formulir dibuka">
+    <CarbonTravelForm routes={form.routes} value={form.travel} onSave={travel => { form.onSave(travel); close(); }} />
+  </Sheet>;
+  if (view.kind === "belum") {
+    if (form?.open) return <>
+      <button type="button" className={css.card} onClick={() => setSheet("form")} aria-haspopup="dialog">
+        <Motif />
+        <CardHead />
+        <span className={css.ask}>Isi perjalananmu sekali saja, cukup memilih dari daftar. Angkamu langsung muncul di sini.</span>
+        <span className={css.cta}><MapPin aria-hidden />Isi perjalananmu<ChevronRight aria-hidden /></span>
+      </button>
+      {formSheet}
+    </>;
+    return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon perjalananmu">
+      <Motif />
+      <CardHead />
+      <p className={css.waiting}>{form ? "Pengisian perjalanan sudah ditutup. Hubungi panitia bila perjalananmu belum tercatat." : "Angkamu muncul setelah data perjalanan dan kamarmu lengkap."}</p>
+    </section>;
+  }
   return <>
-    <button type="button" className={css.card} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM. ${view.barLabel}. Buka rincian`}>
+    <button type="button" className={css.card} onClick={() => setSheet("detail")} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM. ${view.barLabel}. Buka rincian`}>
       <Motif />
       <CardHead />
       <span className={css.figureBlock}>
@@ -49,10 +70,19 @@ export function CarbonCard({ view }: { view: CarbonView }) {
       </span>)}</span>
       <span className={css.foot}><span>Dihitung dari data acaramu</span><span className={css.more}>Rincian <ChevronRight aria-hidden /></span></span>
     </button>
-    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon perjalananmu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM`}>
-      <CarbonDetail view={view} />
+    {sheet === "detail" && <Sheet open onClose={close} title="Jejak karbon perjalananmu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM`}>
+      <CarbonDetail view={view} form={form} onEdit={() => setSheet("form")} />
     </Sheet>}
+    {formSheet}
   </>;
+}
+
+/** "Jakarta · Kereta · 513 km, pulang-pergi, dengan shuttle", or the other way. */
+function answerText(form: CarbonFormProps): string {
+  const travel = form.travel!;
+  const route = form.routes.find(item => item.id === travel.routeId);
+  const way = route ? routeLabel(route) : "Rute lain, perjalanan belum dihitung";
+  return [way, travel.roundTrip ? "pulang-pergi" : "pergi saja", travel.shuttle ? "dengan shuttle" : "tanpa shuttle"].join(", ");
 }
 
 function CardHead() {
@@ -77,9 +107,15 @@ function Motif() {
 }
 
 /** The sheet's content (also the prototype's). */
-export function CarbonDetail({ view }: { view: Extract<CarbonView, { kind: "ada" }> }) {
+export function CarbonDetail({ view, form, onEdit }: { view: Extract<CarbonView, { kind: "ada" }>; form?: CarbonFormProps; onEdit?: () => void }) {
   const [how, setHow] = useState(false);
   return <div className={css.detail}>
+    {form?.travel && <section className={css.mine} aria-label="Jawabanmu">
+      <span className={css.rowIcon}><MapPin aria-hidden /></span>
+      <span className={css.mineText}><strong>Perjalananmu</strong><span>{answerText(form)}</span></span>
+      {form.open && onEdit && <button type="button" className={css.edit} onClick={onEdit}><PencilLine aria-hidden />Ubah</button>}
+    </section>}
+    {form?.travel?.routeId === OTHER_ROUTE && <p className={css.note}><Info aria-hidden />Kamu memilih rute lain, jadi perjalananmu belum ikut dihitung. Kamar dan makan tetap dihitung.</p>}
     <section aria-labelledby="karbon-asal">
       <h3 id="karbon-asal" className={css.h}>Dari mana asalnya</h3>
       <ul className={css.rows}>

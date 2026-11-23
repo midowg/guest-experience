@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carbonFigure, carbonParts, carbonView, parsePastedTravel, personCarbonInput, splitPercent, travelComplete, type CarbonInput } from "./carbon";
+import { OTHER_ROUTE, carbonFigure, carbonParts, carbonView, personCarbonInput, routeLabel, routeUse, routeValid, splitPercent, travelAnswered, type CarbonInput } from "./carbon";
 
 const trip: CarbonInput = {
   legs: [{ mode: "kereta", label: "pergi", km: 500 }, { mode: "bus", label: "shuttle", km: 30, sharedBy: 30 }],
@@ -36,35 +36,43 @@ describe("Pra WAM jejak karbon", () => {
   });
 });
 
+describe("who fills what", () => {
+  const settings = { nights: 2, mealsPerPerson: 6, shuttleKm: 27, shuttlePerBus: 30, groupBusPerBus: 40 };
+  const routes = [{ id: "r1", from: "Jakarta", mode: "kereta" as const, km: 513 }, { id: "r2", from: "Solo", mode: "bus" as const, km: 60 }];
+  const at = "2026-11-23T10:00:00Z";
+
+  it("makes a person's input from the panitia's route, their answer and their room", () => {
+    const input = personCarbonInput({ settings, routes }, { routeId: "r1", roundTrip: true, shuttle: true, answeredAt: at }, 3);
+    expect(input?.legs.map(leg => [leg.mode, leg.km, leg.sharedBy])).toEqual([["kereta", 513, undefined], ["kereta", 513, undefined], ["bus", 27, 30], ["bus", 27, 30]]);
+    expect(input).toMatchObject({ nights: 2, roomOccupants: 3, meals: 6 });
+    expect(personCarbonInput({ settings, routes }, { routeId: "r2", roundTrip: false, shuttle: false, answeredAt: at }, 2)?.legs).toEqual([{ mode: "bus", label: "Solo", km: 60, sharedBy: 40 }]);
+  });
+
+  it("counts kamar and makan for Lainnya, and waits for an answer", () => {
+    const other = personCarbonInput({ settings, routes }, { routeId: OTHER_ROUTE, roundTrip: true, shuttle: false, answeredAt: at }, 2);
+    expect(other?.legs).toEqual([]);
+    expect(carbonView(other).kind).toBe("ada");
+    expect(personCarbonInput({ settings, routes }, null, 2)).toBeNull();
+  });
+
+  it("drops an answer whose route was removed, and knows which routes are in use", () => {
+    expect(travelAnswered({ routeId: "gone", roundTrip: true, shuttle: true, answeredAt: at }, routes)).toBe(false);
+    const use = routeUse([{ travel: { routeId: "r1", roundTrip: true, shuttle: true, answeredAt: at } }, { travel: null }, { travel: { routeId: "r1", roundTrip: false, shuttle: true, answeredAt: at } }]);
+    expect(use.get("r1")).toBe(2);
+    expect(routeValid({ from: "Bandung", km: 380 })).toBe(true);
+    expect(routeValid({ from: " ", km: 380 })).toBe(false);
+    expect(routeValid({ from: "Bandung", km: 0 })).toBe(false);
+  });
+
+  it("names a route the way the participant picks it", () => {
+    expect(routeLabel(routes[0])).toBe("Jakarta · Kereta · 513 km");
+  });
+});
+
 describe("Pra WAM and WAM 2026 count with the same factors", async () => {
   const { CARBON_FACTORS: wam } = await import("@/lib/main-wam/panitia/carbon");
   const { CARBON_FACTORS: pra } = await import("./carbon");
   it("keeps every shared factor equal", () => {
     expect(pra).toEqual({ keretaPerPenumpangKm: wam.keretaPerPenumpangKm, busPerBusKm: wam.busPerBusKm, makanPerPorsi: wam.makanPerPorsi, hotelPerKamarMalam: wam.hotelPerKamarMalam });
-  });
-});
-
-describe("what the panitia fill", () => {
-  const settings = { nights: 2, mealsPerPerson: 6, shuttleKm: 27, shuttlePerBus: 30, groupBusPerBus: 40 };
-
-  it("makes a person's input from the event, their travel and their room", () => {
-    const input = personCarbonInput(settings, { from: "Jakarta", mode: "kereta", km: 513, roundTrip: true, shuttle: true }, 3);
-    expect(input?.legs.map(leg => [leg.mode, leg.km, leg.sharedBy])).toEqual([["kereta", 513, undefined], ["kereta", 513, undefined], ["bus", 27, 30], ["bus", 27, 30]]);
-    expect(input).toMatchObject({ nights: 2, roomOccupants: 3, meals: 6 });
-    expect(personCarbonInput(settings, { from: "Solo", mode: "bus", km: 60, roundTrip: false, shuttle: false }, 2)?.legs).toEqual([{ mode: "bus", label: "Solo", km: 60, sharedBy: 40 }]);
-  });
-
-  it("waits for how a person comes, and how far", () => {
-    expect(personCarbonInput(settings, null, 2)).toBeNull();
-    expect(travelComplete({ from: "", mode: "kereta", km: 0, roundTrip: true, shuttle: true })).toBe(false);
-    expect(travelComplete({ from: "", mode: "lainnya", km: 0, roundTrip: true, shuttle: false })).toBe(true);
-  });
-
-  it("reads rows pasted from Excel and matches them by name", () => {
-    const pasted = "Nama\tKota asal\tModa\tKm\nrani contoh\tJakarta\tKereta\t513\nOrang Lain\tBandung\tBus\t400\nBima Contoh;Semarang;bis;1.120\nCici\tx\tKereta\tdua";
-    const result = parsePastedTravel(pasted, ["Rani Contoh", "Bima Contoh", "Cici"]);
-    expect(result.rows.map(row => [row.match, row.from, row.mode, row.km])).toEqual([["Rani Contoh", "Jakarta", "kereta", 513], ["Bima Contoh", "Semarang", "bus", 1120]]);
-    expect(result.unknown.map(row => row.name)).toEqual(["Orang Lain"]);
-    expect(result.bad).toEqual([5]);
   });
 });
