@@ -180,3 +180,37 @@
 .choiceMark { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: var(--pw-primary); white-space: nowrap; }
 .choiceMark svg { width: 18px; height: 18px; }
 .quizMissed { border-color: var(--pw-line); }
+
+/* The small trip bar (27 Nov 2026): like a music player's, the bus as the progress thumb. */
+.mini { position: fixed; left: 50%; top: 8px; z-index: 30; display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; width: min(560px, calc(100% - 24px)); padding: 10px 14px; border-radius: 18px; border: 1px solid var(--pw-line); background: var(--pw-surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .14); transform: translate(-50%, -140%); opacity: 0; pointer-events: none; transition: transform .3s ease, opacity .3s ease; }
+.miniShown { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.miniIcon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--pw-primary); color: var(--pw-on-primary); }
+.miniIcon svg { width: 24px; height: 24px; }
+.miniText { display: grid; gap: 6px; min-width: 0; }
+.miniText b { overflow: hidden; font-size: 15px; white-space: nowrap; text-overflow: ellipsis; }
+.miniText small { display: flex; justify-content: space-between; font-size: 13px; color: var(--pw-muted); }
+.miniTrack { position: relative; height: 6px; margin: 6px 0; border-radius: 6px; background: var(--pw-line); }
+.miniFill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--pw-primary); transition: width .9s ease; }
+.miniBus { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--pw-primary); color: var(--pw-on-primary); transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--pw-surface); transition: left .9s ease; }
+.miniBus svg { width: 15px; height: 15px; }
+
+/* The mystery roommate (27 Nov 2026): a person whose face is a question mark. */
+.mysteryIcon { display: block; flex: none; }
+.mysteryBg { fill: var(--pw-primary-soft); stroke: var(--pw-primary); stroke-width: 2; stroke-dasharray: 4 3; }
+.mysteryHead { fill: color-mix(in srgb, var(--pw-primary) 55%, var(--pw-surface)); }
+.mysteryMark { fill: var(--pw-on-primary); font: 700 18px var(--pw-display); }
+.guess { display: flex; flex-direction: column; gap: 12px; padding: 20px 18px; border-radius: 20px; border: 2px solid var(--pw-primary); background: linear-gradient(180deg, var(--pw-primary-soft), transparent 70%), var(--pw-surface); }
+.guessPeople { display: flex; gap: 12px; }
+
+/* The quiz sheet: one roommate at a time. */
+.quizDots { display: flex; justify-content: center; gap: 8px; }
+.dot, .dotOn, .dotDone { width: 10px; height: 10px; border-radius: 50%; background: var(--pw-line); }
+.dotOn { width: 26px; border-radius: 6px; background: var(--pw-primary); }
+.dotDone { background: color-mix(in srgb, var(--pw-primary) 45%, var(--pw-surface)); }
+.quizHero { display: flex; justify-content: center; }
+.pick small { color: var(--pw-muted); font-size: 14px; font-weight: 500; }
+.pick i svg { width: 22px; height: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mini, .miniFill, .miniBus { transition: none; }
+}

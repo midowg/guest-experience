@@ -1,4 +1,5 @@
 import { missionStops, ROAD, ROAD_PATH, roadPoint } from "@/lib/pra-wam/mission";
+import { tripStatus } from "./MissionBits";
 import css from "./mission.module.css";
 
 /*
@@ -10,10 +11,7 @@ import css from "./mission.module.css";
 export function MissionRoad({ percent, missions, done, arrived, launched }: { percent: number; missions: number; done: number; arrived: boolean; launched: boolean }) {
   const bus = roadPoint(percent);
   const stops = missionStops(missions);
-  const status = arrived ? "Sudah tiba di Villa Cangkringan"
-    : !launched ? "Bus siap berangkat pukul 14.30"
-    : done >= missions ? "Semua misi selesai · hampir sampai"
-    : `Di perjalanan · ${done} dari ${missions} misi selesai`;
+  const status = launched ? tripStatus({ done, missions, arrived }) : "Bus siap berangkat pukul 14.30";
   const flip = Math.abs(bus.angle) > 90;
   return <div className={`${css.road} ${arrived ? css.roadArrived : ""}`}>
     <p className={css.roadStatus} aria-live="polite">{status}</p>
