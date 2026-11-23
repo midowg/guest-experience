@@ -10,7 +10,7 @@ import { createPrivilegedClient } from "../supabase/admin";
 import { listRooms, myBookings } from "./appraisal";
 import { listDocuments } from "./documents";
 import { minutesView } from "./minutes";
-import { proofColumnMissing } from "./attendance";
+import { faceColumnsMissing, proofColumnMissing } from "./attendance";
 import { myRequests } from "./requests";
 import type { Member } from "./session";
 import { getSession, listSessions } from "./sessions";
@@ -89,11 +89,14 @@ export async function agendaItems(member: Member, today: string): Promise<{ item
 export async function myAttendance(sessionId: string, member: Member): Promise<MyAttendance> {
   const read = (columns: string) => createPrivilegedClient().from("pw_attendance").select(columns).eq("session_id", sessionId).eq("employee_id", member.id).maybeSingle();
   let selfReady = true;
-  let { data, error } = await read("checked_in_at,method,proof_key");
-  if (error && proofColumnMissing(error)) { selfReady = false; ({ data, error } = await read("checked_in_at,method")); }
-  if (error) { if (attendanceMissing(error)) return { ready: false, checkedInAt: null, method: null, selfReady: false }; databaseError(error); }
+  let faceReady = true;
+  let { data, error } = await read("checked_in_at,method,proof_key,face_score");
+  // Before migration 202611290001 there is no absen pakai wajah.
+  if (error && faceColumnsMissing(error)) { faceReady = false; ({ data, error } = await read("checked_in_at,method,proof_key")); }
+  if (error && proofColumnMissing(error)) { selfReady = false; faceReady = false; ({ data, error } = await read("checked_in_at,method")); }
+  if (error) { if (attendanceMissing(error)) return { ready: false, checkedInAt: null, method: null, selfReady: false, faceReady: false }; databaseError(error); }
   const row = data as { checked_in_at: string; method: string } | null;
-  return { ready: true, checkedInAt: row?.checked_in_at ?? null, method: asMethod(row?.method), selfReady };
+  return { ready: true, checkedInAt: row?.checked_in_at ?? null, method: asMethod(row?.method), selfReady, faceReady };
 }
 
 /**

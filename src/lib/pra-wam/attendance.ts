@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { CONSENT_VERSION, MAX_SELFIE_BYTES } from "@/lib/hr/attendance";
+import { EMBEDDING_SIZE } from "@/lib/hr/face-match";
+import { LIVENESS } from "@/lib/hr/liveness";
 
 /*
  * When a session's QR signs people in: from 30 minutes before the start to 30 minutes after the
@@ -49,27 +52,30 @@ export type CheckInResult =
 /**
  * How someone was signed in: qr (scanned the printed QR), manual (panitia marked them), offline
  * ("Saya hadir" at the office) and online ("Saya hadir" through Zoom, with a screenshot). The last
- * two need migration 202611050003.
+ * two need migration 202611050003. wajah: one photo compared with the WG People face (202611290001).
  */
-export type AttendanceMethod = "qr" | "manual" | "offline" | "online";
-export const attendanceMethods = ["qr", "manual", "offline", "online"] as const satisfies readonly AttendanceMethod[];
+export type AttendanceMethod = "qr" | "manual" | "offline" | "online" | "wajah";
+export const attendanceMethods = ["qr", "manual", "offline", "online", "wajah"] as const satisfies readonly AttendanceMethod[];
 
 /** For panitia and BOD, next to the time in Daftar hadir: always which way, so QR and "Saya hadir" read apart. */
-export const methodLabels: Record<AttendanceMethod, string> = { offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia/notulis" };
+export const methodLabels: Record<AttendanceMethod, string> = { offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia/notulis", wajah: "Wajah" };
 /** For the participant, after "Hadir 09.42 · ". */
-export const ownMethodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online (Zoom)", qr: "scan QR", manual: "dicatat panitia/notulis" };
+export const ownMethodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online (Zoom)", qr: "scan QR", manual: "dicatat panitia/notulis", wajah: "pakai wajah" };
 
 export const asMethod = (value: unknown): AttendanceMethod | null => attendanceMethods.includes(value as AttendanceMethod) ? value as AttendanceMethod : null;
 
 export type AttendanceRow = {
   employeeId: string; name: string; department: string; checkedInAt: string | null; method: AttendanceMethod | null;
-  /** An online check-in's Zoom screenshot is kept (panitia and BOD may open it). */
+  /** An online check-in's Zoom screenshot, or a face check-in's photo, is kept (panitia and BOD may open it). */
   hasProof: boolean;
+  /** A face check-in: how close to the WG People face (cosine), and whether panitia should look. */
+  faceScore?: number | null;
+  faceStatus?: FaceCheckStatus | null;
 };
 
 /** How many are present by each way, for the head of Daftar hadir. */
 export function methodCounts(rows: Pick<AttendanceRow, "checkedInAt" | "method">[]): Record<AttendanceMethod, number> {
-  const counts: Record<AttendanceMethod, number> = { offline: 0, online: 0, qr: 0, manual: 0 };
+  const counts: Record<AttendanceMethod, number> = { offline: 0, online: 0, qr: 0, manual: 0, wajah: 0 };
   for (const row of rows) if (row.checkedInAt && row.method) counts[row.method] += 1;
   return counts;
 }
@@ -161,3 +167,65 @@ export async function encodeProof(encode: (mime: ProofMime, quality: number) => 
   }
   throw new Error("Gambar belum dapat diperkecil sampai 1,5 MB. Coba tangkapan layar lain.");
 }
+
+/*
+ * Absen pakai wajah (migration 202611290001, decided 22 Nov 2026): besides a panitia session's QR.
+ * The participant presses one button for one photo (no oval, nothing taken by itself); the phone
+ * reads a few frames around the press into SFace's 128 numbers, and the server compares them with
+ * the person's WG People face (pw_face_profiles), which never leaves the server. Cocok is recorded,
+ * perlu cek is recorded for panitia to look at, tidak cocok is not recorded (try again or scan the
+ * QR). The photo stays as proof in the same folder as a Zoom screenshot. Same window as the QR.
+ */
+
+export const FACE_CHECK_IN_MIGRATION = "202611290001_pra_wam_absen_wajah.sql";
+/** cocok and perlu_cek from the score; disahkan once panitia looked at a perlu_cek. */
+export type FaceCheckStatus = "cocok" | "perlu_cek" | "disahkan";
+export const faceCheckStatuses = ["cocok", "perlu_cek", "disahkan"] as const satisfies readonly FaceCheckStatus[];
+export const asFaceStatus = (value: unknown): FaceCheckStatus | null => faceCheckStatuses.includes(value as FaceCheckStatus) ? value as FaceCheckStatus : null;
+
+/** How many face check-ins panitia should still look at. */
+export const faceToCheck = (rows: Pick<AttendanceRow, "checkedInAt" | "method" | "faceStatus">[]) =>
+  rows.filter(row => row.checkedInAt && row.method === "wajah" && row.faceStatus === "perlu_cek").length;
+
+const faceToken = z.string().regex(/^\d{10,13}\.[A-Za-z0-9_-]{16,64}\.[0-9a-f]{64}$/, "Sesi absen tidak dikenali. Ulangi dari awal.");
+const faceUploadToken = z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Ulangi dari awal.");
+const faceNumber = (min: number, max: number) => z.number().finite().min(min).max(max);
+const faceEmbedding = z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE, "Data wajah tidak lengkap. Ulangi dari awal.");
+const faceSignal = z.object({ t: faceNumber(0, 1e13), blinkLeft: faceNumber(0, 1), blinkRight: faceNumber(0, 1), smileLeft: faceNumber(0, 1), smileRight: faceNumber(0, 1), yaw: faceNumber(-90, 90) });
+
+/** Step two: where the photo goes (WebP or JPEG, at most 120 KB like WG People's selfie). */
+export const faceUploadSchema = z.object({
+  token: faceToken,
+  mime: z.enum(proofMimes, { message: "Foto harus WebP atau JPEG." }),
+  size: z.number().int().min(1, "Berkas kosong.").max(MAX_SELFIE_BYTES, "Foto lebih dari 120 KB."),
+});
+export type FaceUpload = z.infer<typeof faceUploadSchema>;
+
+/** Step three: the face numbers, the frames around the press, and the uploaded photo. */
+export const faceCheckInSchema = z.object({
+  token: faceToken,
+  embedding: faceEmbedding,
+  frameEmbeddings: z.array(faceEmbedding).min(2).max(6),
+  signals: z.array(faceSignal).min(1).max(LIVENESS.maxFrames),
+  photo: z.object({
+    key: z.string().regex(proofKeyPattern, "Unggahan tidak dikenali. Ulangi dari awal."),
+    mime: z.enum(proofMimes),
+    size: z.number().int().min(1).max(MAX_SELFIE_BYTES),
+    token: faceUploadToken,
+  }),
+  /** The WG People consent, the first time an imported face is used. */
+  consent: z.literal(CONSENT_VERSION).optional(),
+});
+export type FaceCheckIn = z.infer<typeof faceCheckInSchema>;
+
+/** Step one: go ahead (with the reference photo to show beside the result), already in, or no face to compare with. */
+export type FaceStartAnswer =
+  | { kind: "mulai"; token: string; expiresAt: string; needsConsent: boolean; referenceUrl: string | null }
+  | { kind: "sudah"; checkedInAt: string; method: AttendanceMethod | null }
+  | { kind: "tanpa-wajah"; message: string };
+
+/** The result screen: the score as a percentage, and whether it was recorded. */
+export type FaceCheckInAnswer =
+  | { kind: "tercatat"; checkedInAt: string; method: "wajah"; percent: number; status: "cocok" | "perlu_cek" }
+  | { kind: "sudah"; checkedInAt: string; method: AttendanceMethod | null; percent: number | null }
+  | { kind: "tidak-cocok"; percent: number };

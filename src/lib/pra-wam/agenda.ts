@@ -42,13 +42,13 @@ const short = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "shor
  * The block's words: a short title and a line that says what to do. With `self` ("Saya hadir" is
  * there, migration 202611050003) the words point to the button as well as the QR.
  */
-export function checkInText(status: CheckInStatus, now: Date, { self = false, zone = "WIB" }: { self?: boolean; zone?: ViewerZone } = {}): { title: string; body: string } {
+export function checkInText(status: CheckInStatus, now: Date, { self = false, face = false, zone = "WIB" }: { self?: boolean; /** Absen pakai wajah is there (22 Nov 2026). */ face?: boolean; zone?: ViewerZone } = {}): { title: string; body: string } {
   const at = (iso: string) => instantLabel(iso, zone);
   switch (status.kind) {
     case "hadir": return status.method
       ? { title: `Hadir ${at(status.at)}${zoneSuffix(zone)} · ${ownMethodLabels[status.method]}`, body: "Kehadiranmu sudah tercatat." }
       : { title: "Hadir", body: `Absen tercatat ${at(status.at)}${zoneSuffix(zone)}.` };
-    case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : "Scan QR yang ditempel di ruang memakai ponselmu." };
+    case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : face ? "Ketuk Absen pakai wajah, atau scan QR yang ditempel di ruang." : "Scan QR yang ditempel di ruang memakai ponselmu." };
     case "belum": {
       const day = wibDate(status.opens) === wibDate(now.toISOString()) ? "" : `${short(status.opens)}, `;
       if (self) return { title: "Terdaftar · absen belum dibuka", body: `Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai (${day}${at(status.opens)}${zoneSuffix(zone)}).` };
@@ -131,7 +131,7 @@ export type AgendaBooking = { room: string; bookedBy: Person; mine: boolean; par
  * The person's own check-in for a session: whether attendance exists at all (202611040005),
  * whether "Saya hadir" does (202611050003), and when and how they were signed in.
  */
-export type MyAttendance = { ready: boolean; checkedInAt: string | null; method?: AttendanceMethod | null; selfReady?: boolean };
+export type MyAttendance = { ready: boolean; checkedInAt: string | null; method?: AttendanceMethod | null; selfReady?: boolean; /** Absen pakai wajah can be stored (migration 202611290001). */ faceReady?: boolean };
 
 export type SessionView =
   | {

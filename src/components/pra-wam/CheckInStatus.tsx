@@ -16,8 +16,8 @@ const icon: Record<CheckInStatus["kind"], React.ReactNode> = {
  * not open yet with its hours, or closed.
  * The words carry the meaning, so colour is never the only signal.
  */
-export function CheckInBlock({ status, now, wide, self, id, zone = "WIB" }: { status: CheckInStatus; now: Date; wide?: boolean; self?: boolean; id?: string; zone?: ViewerZone }) {
-  const text = checkInText(status, now, { self, zone });
+export function CheckInBlock({ status, now, wide, self, face, id, zone = "WIB" }: { status: CheckInStatus; now: Date; wide?: boolean; self?: boolean; face?: boolean; id?: string; zone?: ViewerZone }) {
+  const text = checkInText(status, now, { self, face, zone });
   return <p id={id} className={`${rows.check} ${tone[status.kind]} ${wide ? rows.checkWide : ""}`}>
     {icon[status.kind]}<span><strong>{text.title}</strong>{wide ? ". " : <br />}{text.body}</span>
   </p>;

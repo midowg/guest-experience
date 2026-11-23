@@ -6,11 +6,11 @@
  */
 
 .page {
-  --bod-c1: #006ec1; --bod-c2: #00b576; --bod-c3: #fb6900; --bod-c4: #ec007f;
+  --bod-c1: #006ec1; --bod-c2: #00b576; --bod-c3: #fb6900; --bod-c4: #ec007f; --bod-c5: #7a4dd8;
   display: grid; gap: 16px; min-width: 0;
 }
-:global([data-wam-theme="dark"]) .page { --bod-c1: #3a98dd; --bod-c2: #00a368; --bod-c3: #e45f00; --bod-c4: #ec007f; }
-@media (prefers-color-scheme: dark) { :global([data-wam-theme="system"]) .page { --bod-c1: #3a98dd; --bod-c2: #00a368; --bod-c3: #e45f00; --bod-c4: #ec007f; } }
+:global([data-wam-theme="dark"]) .page { --bod-c1: #3a98dd; --bod-c2: #00a368; --bod-c3: #e45f00; --bod-c4: #ec007f; --bod-c5: #9b7bea; }
+@media (prefers-color-scheme: dark) { :global([data-wam-theme="system"]) .page { --bod-c1: #3a98dd; --bod-c2: #00a368; --bod-c3: #e45f00; --bod-c4: #ec007f; --bod-c5: #9b7bea; } }
 
 /* Links keep their own colours over ".app a" (pra-wam.module.css). */
 .page a { color: inherit; text-decoration: none; }

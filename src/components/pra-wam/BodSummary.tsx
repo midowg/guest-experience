@@ -2,7 +2,7 @@ import { instantLabel, type ViewerZone } from "@/lib/pra-wam/zone";
 import type { CSSProperties, ReactNode } from "react";
 import {
   AlertTriangle, ArrowLeftRight, BarChart3, CalendarClock, CalendarDays, CheckCircle2, ChevronRight, Clock, DoorOpen,
-  FileText, ListChecks, MapPin, Megaphone, UserCheck, UserX, Users, Video,
+  FileText, ListChecks, MapPin, Megaphone, ScanFace, UserCheck, UserX, Users, Video,
 } from "lucide-react";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { methodLabels as checkInWayLabels } from "@/lib/pra-wam/attendance";
@@ -327,8 +327,8 @@ function Adoption({ insights }: { insights: BodInsights }) {
   </li>)}</ul>;
 }
 
-const wayColor = { qr: "var(--bod-c1)", offline: "var(--bod-c2)", online: "var(--bod-c3)", manual: "var(--bod-c4)" } as const;
-const wayIcon = { qr: <UserCheck aria-hidden />, offline: <DoorOpen aria-hidden />, online: <Video aria-hidden />, manual: <ListChecks aria-hidden /> } as const;
+const wayColor = { qr: "var(--bod-c1)", offline: "var(--bod-c2)", online: "var(--bod-c3)", manual: "var(--bod-c4)", wajah: "var(--bod-c5)" } as const;
+const wayIcon = { qr: <UserCheck aria-hidden />, offline: <DoorOpen aria-hidden />, online: <Video aria-hidden />, manual: <ListChecks aria-hidden />, wajah: <ScanFace aria-hidden /> } as const;
 
 /** One stacked bar of how the check-ins were made, with every way named and counted below it. */
 function CheckInMix({ insights }: { insights: BodInsights }) {
