@@ -15,7 +15,8 @@
 export const MISSION_SESSION_ID = "2eeaabc9-3f16-426c-aced-dfaff545a478";
 export const MISSION_SETTING_KEY = "mission_journey";
 
-export type MissionRole = "HoD" | "BoD" | "CoS";
+/** A CoS is a HoD here (27 Nov 2026): same room, quiz and room card. */
+export type MissionRole = "HoD" | "BoD";
 export type QuizChoice = { id: string; name: string; nick: string };
 /**
  * A roommate. `questions` (27 Nov 2026): one per hint, each "who is this?" with three names, the

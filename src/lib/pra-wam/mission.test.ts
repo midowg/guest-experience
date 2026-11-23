@@ -32,7 +32,7 @@ describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
   it("gives missions by role: no message for BoD, no sentence without one", () => {
     expect(missionsOf({ role: "HoD", sentences: [6, 12] })).toEqual(["kal", "sig"]);
     expect(missionsOf({ role: "BoD", sentences: [1] })).toEqual(["kal", "sig"]);
-    expect(missionsOf({ role: "CoS", sentences: [] })).toEqual(["sig"]);
+    expect(missionsOf({ role: "HoD", sentences: [] })).toEqual(["sig"]);
   });
 
   it("shares the three room hints out over the missions, all once every mission is done", () => {

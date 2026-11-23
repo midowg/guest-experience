@@ -36,7 +36,8 @@ export async function missionFor(member: Member): Promise<MissionView | null> {
   const cos = isCos(member);
   const hod = person ? true : await hodStanding(member).then(standing => standing.isHod).catch(() => false);
   if (!person && !isBod && !cos && !hod) return null;
-  const role: MissionRole = cos ? "CoS" : isBod ? "BoD" : "HoD";
+  // A CoS takes part as a HoD (27 Nov 2026): their room, quiz and room card when they are in the list.
+  const role: MissionRole = isBod && !cos ? "BoD" : "HoD";
   const nick = person?.nick || member.nickname || member.name.split(" ")[0];
   // A quiz per roommate (25 Nov 2026): them and two people from outside this room, of the same
   // rooms' group (the men's rooms are C…). Names only: never anyone else's room.

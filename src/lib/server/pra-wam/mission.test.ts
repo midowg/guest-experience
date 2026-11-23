@@ -33,8 +33,14 @@ describe("missionFor", () => {
 
   it("lets BoD (the CEO with Mode CEO) and CoS in without a room", async () => {
     expect(await missionFor(member("Ceo Utama"))).toMatchObject({ role: "BoD", ceo: true, sentences: [1], room: null });
-    expect(await missionFor(member("Cici Staf", { position: "Chief of Staff" }))).toMatchObject({ role: "CoS", room: null, sentences: [] });
+    expect(await missionFor(member("Cici Staf", { position: "Chief of Staff" }))).toMatchObject({ role: "HoD", room: null, sentences: [] });
     expect(await missionFor(member("Bod Lain", { roles: ["bod"] }))).toMatchObject({ role: "BoD", ceo: false });
+  });
+
+  it("treats a CoS in the list as a HoD: their own room and quiz", async () => {
+    const view = await missionFor(member("Budi Tiga", { position: "Chief of Staff" }));
+    expect(view).toMatchObject({ role: "HoD", room: { code: "B3" } });
+    expect(view?.room?.mates.map(mate => mate.name)).toEqual(["Cici Empat"]);
   });
 
   it("lets another HoD in without a room, and nobody else", async () => {

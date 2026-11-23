@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /*
  * Layout check for Misi Perjalanan without signing in, with made-up people only (the real room
- * list stays in pw_settings). ?peran=bod for a BoD who is the CEO, ?peran=cos for a CoS without a room.
+ * list stays in pw_settings). ?peran=bod for a BoD who is the CEO (a CoS takes part as a HoD).
  */
 const choice = (name: string) => ({ id: name.toUpperCase(), name, nick: name.split(" ")[1] ?? "" });
 const mate = (name: string, nick: string, dept: string, decoys: string[]) => ({ name, nick, dept, sleep: "22.00–24.00", wake: "05.00–06.30",
@@ -26,7 +26,6 @@ export default async function DevMissionPage({ searchParams }: { searchParams: P
     },
   };
   const view: MissionView = role === "bod" ? { employeeId: "dev-bod", name: "Bima Contoh", nick: "Bima", role: "BoD", ceo: true, sentences: [1], room: null }
-    : role === "cos" ? { employeeId: "dev-cos", name: "Citra Contoh", nick: "Citra", role: "CoS", ceo: false, sentences: [], room: null }
     : hod;
   return <div className={styles.app} style={{ padding: 16 }}><MissionJourney view={view} detailHref="#" /></div>;
 }
