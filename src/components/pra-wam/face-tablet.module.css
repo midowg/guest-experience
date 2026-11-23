@@ -98,7 +98,14 @@
 .idle { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 999px; background: var(--t-glass); border: 1px solid var(--t-glass-line); font-size: 18px; font-weight: 500; backdrop-filter: blur(10px); }
 .idle svg { width: 24px; height: 24px; color: var(--t-read); }
 .banner { --c: var(--t-ok); display: flex; align-items: center; gap: 16px; width: min(100%, 40rem); box-sizing: border-box; padding: 18px 24px 18px 18px; border-radius: 24px; background: rgba(10, 16, 28, .86); border: 2px solid var(--c); box-shadow: 0 18px 50px rgba(0, 0, 0, .4); backdrop-filter: blur(14px); animation: tablet-rise .28s cubic-bezier(.2, .9, .3, 1.2); }
+.banners { display: grid; gap: 10px; width: min(100%, 40rem); margin: 0; padding: 0; list-style: none; }
 .banner.warn { --c: var(--t-warn); }
+/* Several people at once: smaller, stacked, newest last. */
+.banner.compact { gap: 12px; padding: 10px 18px 10px 12px; border-radius: 18px; }
+.banner.compact .bannerIcon { width: 40px; height: 40px; }
+.banner.compact .bannerIcon svg { width: 24px; height: 24px; }
+.banner.compact strong { font-size: clamp(18px, 2.4vw, 22px); }
+.banner.compact > span:last-child > span { font-size: 14px; }
 .banner.bad { --c: var(--t-bad); }
 .bannerIcon { display: grid; flex: none; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--c); color: #0b1526; }
 .bannerIcon svg { width: 32px; height: 32px; }

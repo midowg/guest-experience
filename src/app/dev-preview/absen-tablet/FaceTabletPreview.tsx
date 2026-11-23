@@ -22,12 +22,22 @@ const box = (tone: TabletDemo["faces"][number]["tone"], label: string | null) =>
 ];
 const states: Record<string, TabletDemo | null> = {
   mulai: null,
-  cari: { faces: box("lacak", "Tahan sebentar…"), banner: null, confirm: null, recent, present: 23 },
-  baca: { faces: box("baca", "Membaca wajah…"), banner: null, confirm: null, recent, present: 23 },
-  cocok: { faces: box("good", "Budi Santoso"), banner: { tone: "good", title: "Budi Santoso", text: "Tercatat hadir 09.42" }, confirm: null, recent, present: 24 },
-  "belum dikenali": { faces: box("bad", "Belum dikenali"), banner: { tone: "bad", title: "Wajah belum dikenali", text: "Scan QR di ruang, atau lapor panitia." }, confirm: null, recent, present: 23 },
-  "belum setuju": { faces: box("warn", "Sari Wulandari"), banner: { tone: "warn", title: "Sari Wulandari belum bisa absen wajah", text: "Setujui dulu sekali lewat Absen pakai wajah di HP, atau scan QR." }, confirm: null, recent, present: 23 },
-  konfirmasi: { faces: box("baca", "Membaca wajah…"), banner: null, confirm: { photoUrl: SAMPLE, candidates: [candidate("a", "Budi Santoso", "Finance", 71), candidate("b", "Bayu Saputra", "IT", 68)] }, recent, present: 23 },
+  cari: { faces: box("lacak", "Tahan sebentar…"), banners: [], confirm: null, recent, present: 23 },
+  baca: { faces: box("baca", "Membaca wajah…"), banners: [], confirm: null, recent, present: 23 },
+  cocok: { faces: box("good", "Budi Santoso"), banners: [{ tone: "good", title: "Budi Santoso", text: "Tercatat hadir 09.42" }], confirm: null, recent, present: 24 },
+  "belum dikenali": { faces: box("bad", "Belum dikenali"), banners: [{ tone: "bad", title: "Wajah belum dikenali", text: "Scan QR di ruang, atau lapor panitia." }], confirm: null, recent, present: 23 },
+  "belum setuju": { faces: box("warn", "Sari Wulandari"), banners: [{ tone: "warn", title: "Sari Wulandari belum bisa absen wajah", text: "Setujui dulu sekali lewat Absen pakai wajah di HP, atau scan QR." }], confirm: null, recent, present: 23 },
+  "tiga sekaligus": {
+    faces: [
+      { id: 1, left: 250, top: 190, width: 190, height: 230, tone: "good", label: "Budi Santoso", main: true },
+      { id: 2, left: 560, top: 160, width: 210, height: 250, tone: "baca", label: "Membaca wajah…", main: true },
+      { id: 3, left: 860, top: 230, width: 150, height: 180, tone: "good", label: "Dewi Anggraini", main: true },
+      { id: 4, left: 80, top: 300, width: 90, height: 110, tone: "lacak", label: "Mendekat sedikit", main: false },
+    ],
+    banners: [{ tone: "good", title: "Budi Santoso", text: "Tercatat hadir 09.42" }, { tone: "good", title: "Dewi Anggraini", text: "Tercatat hadir 09.42" }],
+    confirm: null, recent, present: 25,
+  },
+  konfirmasi: { faces: box("baca", "Membaca wajah…"), banners: [], confirm: { photoUrl: SAMPLE, candidates: [candidate("a", "Budi Santoso", "Finance", 71), candidate("b", "Bayu Saputra", "IT", 68)] }, recent, present: 23 },
 };
 
 export function FaceTabletPreview() {

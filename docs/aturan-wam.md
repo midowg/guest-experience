@@ -145,6 +145,12 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   tablet (setujui dulu lewat Absen pakai wajah di HP, atau scan QR). Wajah yang baru dijawab tidak
   dikirim lagi selama 20 detik. Tercatat sebagai cara **Wajah**, sama dengan dari HP; foto absen
   disimpan sama. Hanya panitia/admin, jendela waktu sama.
+  **Beberapa orang sekaligus** (23 Nov 2026, setelah uji pertama): tablet mengikuti sampai **5 wajah**
+  dan membaca sampai **3 sekaligus**; tiap wajah punya kotak dan jawabannya sendiri, pesan di bawah
+  bertumpuk (paling banyak 3). Jawaban menempel pada wajah yang dibaca: wajah di kotak dicek ulang
+  tiap ±0,6 detik, jadi orang baru yang masuk ke tempat yang sama di tengah pembacaan mendapat kotak
+  baru dan dibaca sendiri, bukan diberi nama orang sebelumnya. Wajah yang baru dijawab hanya dipakai
+  ulang tanpa ke server bila jelas orang yang sama (kemiripan ≥ 0,5).
 - Jendela absen: 30 menit sebelum mulai sampai 30 menit setelah selesai.
 - "Saya hadir · di kantor" langsung tercatat; "Saya hadir · online" wajib unggah tangkapan layar Zoom.
 - BOD tidak absen. Daftar hadir diberi label cara absen: Scan QR, Saya hadir · di kantor,
