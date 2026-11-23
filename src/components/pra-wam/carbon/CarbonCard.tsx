@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BedDouble, Bike, Bus, Car, ChevronDown, ChevronRight, CupSoda, Droplets, Info, Laptop, Leaf, Lightbulb, Smartphone, TrainFront, Utensils, type LucideIcon } from "lucide-react";
-import { CARBON_REFERENCES, carbonFactorRows, type CarbonInput, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView, type GroupTrip, type Swatch } from "@/lib/pra-wam/carbon";
+import { CARBON_REFERENCES, carbonFactorRows, tileKg, type CarbonInput, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView, type GroupTrip, type Swatch } from "@/lib/pra-wam/carbon";
 import { Sheet } from "../Sheet";
 import { CarbonCalculator } from "./CarbonCalculator";
 import css from "./carbon.module.css";
@@ -60,7 +60,7 @@ export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonForm
           const source = byKey.get(key);
           return <span key={key} className={css.part}>
             <span className={css.partTop}><Icon aria-hidden />{source && <i className={swatch(source.swatch)} aria-hidden />}</span>
-            <span className={css.partValue}>{source ? source.amount : "0 kg"}</span>
+            <span className={css.partValue}>{tileKg(source?.kg ?? 0)}</span>
             <span className={css.partName}>{TITLES[key]}</span>
           </span>;
         })}

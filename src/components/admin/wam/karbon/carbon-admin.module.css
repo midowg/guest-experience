@@ -80,7 +80,7 @@
 .previewHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
 .previewHead .h2 { margin: 0; }
 .previewHead .field { flex: 0 1 220px; }
-.phone { max-width: 390px; margin: 0 auto; padding: 16px; border-radius: 28px; background: var(--pw-page); border: 1px solid var(--pw-line); }
+.phone { max-width: 390px; margin: 0 auto; padding: 12px; min-width: 0; border-radius: 28px; background: var(--pw-page); border: 1px solid var(--pw-line); }
 
 /* Fields */
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -184,7 +184,7 @@
 .toast svg { width: 18px; height: 18px; }
 
 @media (max-width: 900px) {
-  .twoCol { grid-template-columns: 1fr; }
+  .twoCol { grid-template-columns: minmax(0, 1fr); }
   /* The table becomes a list: one card per person, a label over each field. */
   .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
   .table thead { display: none; }
@@ -220,3 +220,8 @@
 .card > .field { margin-bottom: 16px; }
 .check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font: 500 15px/20px var(--pw-body); cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--pw-primary); }
+
+/* Inside Admin Pra WAM: the console draws the page; the body keeps the Pra WAM tokens. */
+.embedded { padding: 4px 16px 16px; border-radius: 20px; background: var(--pw-app); color: var(--pw-text); font: 400 16px/24px var(--pw-body); }
+.embedded .tabs { margin-top: 4px; }
+.unsaved { margin: 0; font: 500 14px/20px var(--pw-body, inherit); color: #b04a00; }

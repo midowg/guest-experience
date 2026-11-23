@@ -334,6 +334,8 @@ export const wamAdminPath = {
   rooms: `${WAM_ADMIN}/ruang`,
   events: `${WAM_ADMIN}/acara`,
   about: `${WAM_ADMIN}/apa-itu-wam`,
+  /** Jejak karbon: the group trip, nights and meals, and who travels on their own (24 Nov 2026). */
+  carbon: `${WAM_ADMIN}/jejak-karbon`,
   /** The app's theme for everyone: Dream Out Loud or Werkudara, each light and dark. */
   theme: `${WAM_ADMIN}/tema`,
   /** TV Announcement: the office TVs, their pictures, and how long each stays. */
@@ -460,6 +462,8 @@ export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eve
 export const praWamMinutesRuleApi = "/api/admin/wam/minutes-rule";
 /** Admin WAM: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
 export const praWamAboutApi = "/api/admin/wam/about";
+/** Admin WAM → Jejak karbon: PUT the setup, POST {id} sends someone back to the group trip. */
+export const praWamCarbonApi = "/api/admin/wam/jejak-karbon";
 /** Admin WAM: PUT the app settings, e.g. whether Book shows the floor plan. */
 export const praWamSettingsApi = "/api/admin/wam/settings";
 /** Admin WAM → Tema aplikasi (any admin). */

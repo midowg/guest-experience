@@ -174,7 +174,7 @@
 .ctileHead { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ctileIcon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--pw-success); background: var(--pw-success-soft); }
 .ctileIcon > svg { width: 18px; height: 18px; }
-.ctileLabel { flex: 1 1 auto; min-width: 0; font: 600 15px/20px var(--pw-body); color: var(--pw-text); overflow-wrap: anywhere; }
+.ctileLabel { flex: 1 1 auto; min-width: 0; font: 600 15px/20px var(--pw-body); color: var(--pw-text); overflow-wrap: break-word; hyphens: manual; }
 .lockedNote { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/16px var(--pw-body); color: var(--pw-muted); }
 .lockedNote > svg { width: 12px; height: 12px; }
 .ctileBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -183,7 +183,7 @@
 .tileSub { font: 400 13px/18px var(--pw-body); color: var(--pw-muted); overflow-wrap: anywhere; }
 .ctileFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--pw-line); }
 .ctileKg { font: 700 15px/20px var(--pw-display); font-variant-numeric: tabular-nums; color: var(--pw-success); }
-.tileLink { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--pw-primary); font: 600 13px/18px var(--pw-body); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tileLink { text-align: left; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--pw-primary); font: 600 13px/18px var(--pw-body); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .tileLink > svg { width: 14px; height: 14px; }
 .unitField { position: relative; display: block; }
 .unitField input { width: 100%; min-height: 48px; padding: 10px 52px 10px 14px; border-radius: 14px; border: 1.5px solid var(--pw-line); background: var(--pw-app); color: var(--pw-text); font: 700 20px/26px var(--pw-display); font-variant-numeric: tabular-nums; }
@@ -202,3 +202,10 @@
 .miniChips button[aria-checked="true"] { border-color: var(--eco); background: var(--eco); color: #fff; }
 .miniCheck { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font: 500 15px/20px var(--pw-body); color: var(--pw-text); }
 .miniCheck input { width: 20px; height: 20px; accent-color: var(--eco); }
+
+/* Narrow phones (≤ 360px): the icon over the label, so no word is cut ("Perjalanan" stays whole). */
+@media (max-width: 360px) {
+  .ctile { padding: 12px; }
+  .ctileHead { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .calcTotalText strong { font-size: 30px; line-height: 34px; }
+}

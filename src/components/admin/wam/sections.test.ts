@@ -13,7 +13,7 @@ describe("Admin Pra WAM sections", () => {
   });
 
   it("leave units and positions to Data karyawan", () => {
-    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv", "tema", "mcp"]);
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "karbon", "tv", "tema", "mcp"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 

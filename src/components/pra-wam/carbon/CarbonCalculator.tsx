@@ -62,7 +62,7 @@ export function CarbonCalculator({ trip, nights, occupants, meals, travel, open,
                 {OWN_MODES.map(mode => <button key={mode.key} type="button" role="radio" aria-checked={own.mode === mode.key} disabled={!open} onClick={() => setOwnTrip({ mode: mode.key as OwnMode })}>{mode.label}</button>)}
               </span></div>
             {own.mode !== "lainnya" && <label className={css.miniField}><span>Jarak sekali jalan</span>
-              <span className={css.unitField}><input type="number" inputMode="numeric" min={1} value={own.km || ""} placeholder="0" aria-invalid={(tried && !(own.km > 0 && own.km <= 3000)) || undefined} disabled={!open} onChange={event => setOwnTrip({ km: Number(event.target.value) || 0 })} /><b>km</b></span></label>}
+              <span className={css.unitField}><input type="number" inputMode="numeric" min={1} value={own.km || ""} placeholder="0" aria-invalid={(tried && !(own.km > 0 && own.km <= 3000)) || undefined} disabled={!open} onChange={event => setOwnTrip({ km: Math.max(0, Number(event.target.value) || 0) })} /><b>km</b></span></label>}
             <label className={css.miniCheck}><input type="checkbox" checked={own.roundTrip} disabled={!open} onChange={event => setOwnTrip({ roundTrip: event.target.checked })} />Pulang-pergi</label>
             {tried && ownBad && <em className={css.tileError}>Isi asal dan jarak 1–3.000 km.</em>}
           </div>

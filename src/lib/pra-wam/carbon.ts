@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /*
  * Jejak karbon for one person in Pra WAM (23 Nov 2026): their own trip to the venue, their share of
  * the room (the room's nights split by who sleeps in it) and their meals. The factors are the ones
@@ -269,3 +271,70 @@ export function calculatorTiles(input: CarbonInput) {
 
 /** One row of the admin page: the person, their room (automatic, from Misi Perjalanan) and their own trip if any. */
 export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };
+
+/*
+ * Storage (Admin Pra WAM → Jejak karbon, 24 Nov 2026): two rows of pw_settings, no new table. The
+ * panitia's setup, and later the participants' answers keyed by personKey(name), the same key as
+ * Misi Perjalanan's room list (where the people and their rooms come from).
+ */
+export const CARBON_SETTING_KEY = "carbon_setup";
+export const CARBON_ANSWERS_KEY = "carbon_answers";
+
+/** Nothing set yet: no trip, so every card waits ("Angkamu muncul setelah panitia mengisi perjalanan"). */
+export const EMPTY_CARBON_SETUP: CarbonSetup = {
+  settings: { nights: 0, mealsPerPerson: 0 },
+  trip: { from: "", to: "", mode: "mobil", km: 0, perVehicle: 0, roundTrip: true },
+  formOpen: true,
+};
+
+const place = (label: string) => z.string().trim().max(80, `${label} paling panjang 80 huruf.`);
+/** What the panitia may save: places up to 80 letters, sensible numbers. */
+export const carbonSetupSchema = z.object({
+  settings: z.object({
+    nights: z.number().int("Jumlah malam harus bilangan bulat.").min(0).max(30, "Paling banyak 30 malam."),
+    mealsPerPerson: z.number().int("Porsi harus bilangan bulat.").min(0).max(100, "Paling banyak 100 porsi."),
+  }),
+  trip: z.object({
+    from: place("Tempat berangkat"), to: place("Tujuan"),
+    mode: z.enum(["mobil", "bus", "kereta"]),
+    km: z.number().min(0).max(3000, "Paling jauh 3.000 km."),
+    perVehicle: z.number().int("Jumlah orang harus bilangan bulat.").min(0).max(80, "Paling banyak 80 orang."),
+    roundTrip: z.boolean(),
+  }),
+  formOpen: z.boolean(),
+});
+
+/** A stored setup, or the empty one when there is none or it cannot be read. */
+export function asCarbonSetup(value: unknown): CarbonSetup {
+  const parsed = carbonSetupSchema.safeParse(value);
+  return parsed.success ? parsed.data : EMPTY_CARBON_SETUP;
+}
+
+const answerSchema = z.object({
+  own: z.object({ from: z.string().max(80), mode: z.enum(["mobil", "motor", "kereta", "lainnya"]), km: z.number().min(0).max(3000), roundTrip: z.boolean() }).nullable(),
+  bottles: z.number().min(0).max(50), laptopHours: z.number().min(0).max(72), phoneCharges: z.number().min(0).max(20),
+  answeredAt: z.string(),
+});
+
+/** The stored answers by person key; a malformed one is left out rather than counted wrong. */
+export function asCarbonAnswers(value: unknown): Record<string, CarbonTravel> {
+  if (!value || typeof value !== "object") return {};
+  const answers: Record<string, CarbonTravel> = {};
+  for (const [key, answer] of Object.entries(value as Record<string, unknown>)) {
+    const parsed = answerSchema.safeParse(answer);
+    if (parsed.success) answers[key] = parsed.data;
+  }
+  return answers;
+}
+
+/** The people for the admin page from Misi Perjalanan's sheet: their room's code and how many share it. */
+export function carbonPeopleFrom(sheet: { rooms?: Record<string, string>; people?: { name: string; dept?: string; room: string }[] } | null, answers: Record<string, CarbonTravel>, key: (name: string) => string): CarbonPerson[] {
+  const people = sheet?.people ?? [];
+  const count = new Map<string, number>();
+  for (const person of people) count.set(person.room, (count.get(person.room) ?? 0) + 1);
+  return people.map(person => ({
+    id: key(person.name), name: person.name, dept: person.dept ?? "",
+    room: sheet?.rooms?.[person.room] ?? person.room, occupants: count.get(person.room) ?? 1,
+    travel: answers[key(person.name)] ?? null,
+  }));
+}

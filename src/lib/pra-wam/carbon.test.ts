@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculatorTiles, carbonFigure, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tileKg, tripLabel, tripValid, type CarbonInput } from "./carbon";
+import { EMPTY_CARBON_SETUP, asCarbonSetup, calculatorTiles, carbonFigure, carbonSetupSchema, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tileKg, tripLabel, tripValid, type CarbonInput } from "./carbon";
 
 const trip: CarbonInput = {
   legs: [{ mode: "kereta", label: "pergi", km: 500 }, { mode: "bus", label: "shuttle", km: 30, sharedBy: 30 }],
@@ -104,5 +104,17 @@ describe("Pra WAM and WAM 2026 count with the same factors", async () => {
   it("keeps every shared factor equal", () => {
     const shared = ["keretaPerPenumpangKm", "busPerBusKm", "makanPerPorsi", "hotelPerKamarMalam", "listrikPerKwh"] as const;
     for (const key of shared) expect(pra[key]).toBe(wam[key]);
+  });
+});
+
+describe("what Admin Pra WAM saves", () => {
+  it("accepts a sensible setup and refuses nonsense", () => {
+    const good = { settings: { nights: 2, mealsPerPerson: 6 }, trip: { from: "Kantor", to: "Venue", mode: "mobil", km: 25, perVehicle: 6, roundTrip: true }, formOpen: true };
+    expect(carbonSetupSchema.safeParse(good).success).toBe(true);
+    expect(carbonSetupSchema.safeParse({ ...good, trip: { ...good.trip, km: 5000 } }).success).toBe(false);
+    expect(carbonSetupSchema.safeParse({ ...good, settings: { ...good.settings, nights: 1.5 } }).success).toBe(false);
+    expect(carbonSetupSchema.safeParse({ ...good, trip: { ...good.trip, mode: "pesawat" } }).success).toBe(false);
+    expect(asCarbonSetup({ nope: true })).toEqual(EMPTY_CARBON_SETUP);
+    expect(personCarbonInput(EMPTY_CARBON_SETUP, null, 2)).toBeNull();
   });
 });
