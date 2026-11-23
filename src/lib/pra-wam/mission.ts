@@ -53,15 +53,14 @@ export const sentenceRight = (answer: readonly number[], sentence: number) =>
 export const sentenceLabel = (sentence: number) => String(sentence).padStart(2, "0");
 
 /** Future Signal: a bank of questions; each person gets two (by a pair that follows their id). */
+// 24 Nov 2026: questions the questionnaire already asks are left out (what makes meetings tiresome:
+// E5; departments to work with: E1 and 23; one new habit for 2027: 31). Three remain.
 export const SIGNALS = [
   { q: "Satu kata untuk Werkudara di 2030?", o: ["Global", "Berani", "Kolaboratif", "Inovatif", "Berkelanjutan", "Terpercaya"] },
   { q: "Prioritas utama 2027 menurutmu?", o: ["Efisiensi biaya", "Ekspansi pasar", "Inovasi layanan", "Penguatan SDM", "Sistem & data"] },
-  { q: "Hal yang paling ingin dihapus dari meeting kita?", o: ["Molor dari jadwal", "Bahasan melebar", "Sibuk HP/laptop", "Tidak ada keputusan", "Terlalu banyak slide"] },
-  { q: "Departemen yang ingin lebih sering kamu ajak kolaborasi di 2027?", o: ["Sales & Marketing", "Accounting", "CFC", "HRGA", "Strategic Sourcing", "CoE", "BAS", "Takshaka"] },
   { q: "Seberapa siap timmu menyambut 2027?", o: ["1 · Baru mulai", "2", "3", "4", "5 · Sangat siap"] },
-  { q: "Satu kebiasaan baru untuk tim di 2027?", o: ["Rapat lebih singkat", "Data satu versi", "Apresiasi rutin", "Belajar bersama", "Eksperimen kecil"] },
 ] as const;
-const SIGNAL_PAIRS: [number, number][] = [[0, 1], [2, 3], [4, 5], [1, 2], [3, 4], [5, 0]];
+const SIGNAL_PAIRS: [number, number][] = [[0, 1], [1, 2], [2, 0]];
 /** The two questions of a person, steady for their id. */
 export function signalPair(id: string): [number, number] {
   let sum = 0;
@@ -69,12 +68,18 @@ export function signalPair(id: string): [number, number] {
   return SIGNAL_PAIRS[sum % SIGNAL_PAIRS.length];
 }
 
-export type MissionKey = "kal" | "sig" | "pes";
-/** The missions of a person: a sentence when they hold one; the message to BoD for everyone but BoD. */
+// 24 Nov 2026: Pesan untuk 2027 left out, the questionnaire's question 31 already asks for it.
+export type MissionKey = "kal" | "sig";
+/** The missions of a person: their sentence when they hold one, then Future Signal. */
 export function missionsOf(view: Pick<MissionView, "sentences" | "role">): MissionKey[] {
-  return [...(view.sentences.length ? ["kal" as const] : []), "sig" as const, ...(view.role !== "BoD" ? ["pes" as const] : [])];
+  return [...(view.sentences.length ? ["kal" as const] : []), "sig" as const];
 }
 export const HINT_COUNT = 3;
+/** The room hints open after `done` of `missions` missions: shared out evenly, all once every mission is done. */
+export function hintsOpen(done: number, missions: number): number {
+  if (missions <= 0 || done <= 0) return 0;
+  return done >= missions ? HINT_COUNT : Math.min(HINT_COUNT, Math.round(done * HINT_COUNT / missions));
+}
 
 /** The rundown of the Meeting HOD BOD (Ishoma left out); sessions with an id take questions. */
 export type AgendaItem = { id?: string; t: string; end?: string; title: string; desc: string };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENDA, agendaSession, byVotes, initials, journeyPercent, missionsOf, missionStops, ROAD, roadPoint, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
+import { AGENDA, agendaSession, byVotes, hintsOpen, initials, journeyPercent, missionsOf, missionStops, ROAD, roadPoint, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
 
 describe("the road from the office to the villa (24 Nov 2026)", () => {
   it("puts the bus at the office, along the road, and at the villa", () => {
@@ -30,9 +30,15 @@ describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
   });
 
   it("gives missions by role: no message for BoD, no sentence without one", () => {
-    expect(missionsOf({ role: "HoD", sentences: [6, 12] })).toEqual(["kal", "sig", "pes"]);
+    expect(missionsOf({ role: "HoD", sentences: [6, 12] })).toEqual(["kal", "sig"]);
     expect(missionsOf({ role: "BoD", sentences: [1] })).toEqual(["kal", "sig"]);
-    expect(missionsOf({ role: "CoS", sentences: [] })).toEqual(["sig", "pes"]);
+    expect(missionsOf({ role: "CoS", sentences: [] })).toEqual(["sig"]);
+  });
+
+  it("shares the three room hints out over the missions, all once every mission is done", () => {
+    expect([0, 1, 2].map(done => hintsOpen(done, 2))).toEqual([0, 2, 3]);
+    expect([0, 1].map(done => hintsOpen(done, 1))).toEqual([0, 3]);
+    expect(hintsOpen(3, 3)).toBe(3);
   });
 
   it("gives each person two different Future Signal questions, the same every time", () => {
