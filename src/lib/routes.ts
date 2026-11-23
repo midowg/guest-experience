@@ -202,6 +202,8 @@ export const praWamPath = {
   editSession: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}`,
   /** Panitia: a session's QR to print, and who is present. */
   sessionAttendance: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}/attendance`,
+  /** Mode tablet (23 Nov 2026): panitia's tablet recognises faces at the door. */
+  sessionFaceTablet: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}/tablet`,
   /** What a session's printed QR holds: scanning it signs the person in. */
   checkIn: (token: string) => `${PRA_WAM_PATH}/check-in/${enc(token)}`,
   /** The in-app scanner, for phones whose camera app does not open links. */
@@ -266,6 +268,8 @@ export const praWamApi = {
   faceCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah`,
   faceCheckInPhoto: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/foto`,
   faceCheckInSubmit: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/kirim`,
+  faceTablet: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet`,
+  faceTabletRecord: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet/catat`,
   /** POST (panitia): agree to a face check-in marked perlu cek. */
   attendanceFaceApprove: (sessionId: string, employeeId: string) => `${WAM_API}/sessions/${sessionId}/attendance/${employeeId}/wajah`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */

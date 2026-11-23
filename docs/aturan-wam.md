@@ -132,6 +132,19 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   GreatDay yang belum disetujui meminta persetujuan WG People sekali (centang), lalu jadi aktif.
   Foto absen disimpan seperti tangkapan layar Zoom (Lihat foto, panitia dan BOD). Jendela waktu
   sama dengan QR. Sebelum migrasi jalan, tombol wajah tidak muncul.
+- **Mode tablet** (23 Nov 2026, tanpa migrasi baru): alternatif seperti gerbang stasiun KAI. Panitia
+  membuka Daftar hadir → **Mode tablet** di tablet (dipegang panitia: kamera belakang; ditaruh di
+  pintu: kamera depan). Kamera menyala terus, setiap wajah diberi kotak yang mengikutinya; wajah
+  terdekat yang menghadap tablet dan cukup dekat dibaca sendiri (tanpa tombol), lalu server mencari
+  siapa dia di antara **peserta sesi itu** yang punya wajah di WG People. Jawaban tampil besar di
+  kamera ±3 detik, lalu orang berikutnya: **cocok jelas** (±76% ke atas dan tidak ada peserta lain
+  yang selisihnya kurang dari 0,06) langsung tercatat; **mirip dua orang atau kurang yakin** → panitia
+  memilih di tablet ("Benar ini Budi?", foto di depan tablet di samping foto WG People), Ya tercatat
+  sebagai disahkan oleh panitia itu, Bukan tidak dicatat; **belum dikenali** → scan QR atau lapor
+  panitia; **sudah hadir** cukup diberi tahu. Wajah impor yang belum disetujui tidak dicatat dari
+  tablet (setujui dulu lewat Absen pakai wajah di HP, atau scan QR). Wajah yang baru dijawab tidak
+  dikirim lagi selama 20 detik. Tercatat sebagai cara **Wajah**, sama dengan dari HP; foto absen
+  disimpan sama. Hanya panitia/admin, jendela waktu sama.
 - Jendela absen: 30 menit sebelum mulai sampai 30 menit setelah selesai.
 - "Saya hadir · di kantor" langsung tercatat; "Saya hadir · online" wajib unggah tangkapan layar Zoom.
 - BOD tidak absen. Daftar hadir diberi label cara absen: Scan QR, Saya hadir · di kantor,

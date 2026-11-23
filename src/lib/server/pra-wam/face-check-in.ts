@@ -28,7 +28,7 @@ import type { Member } from "./session";
  * Tidak cocok writes nothing and deletes the photo; so does anything refused.
  */
 
-const faceWaiting = () => new ServiceError(503, `Absen wajah menunggu migrasi ${FACE_CHECK_IN_MIGRATION}. Sementara itu scan QR di ruang.`);
+export const faceWaiting = () => new ServiceError(503, `Absen wajah menunggu migrasi ${FACE_CHECK_IN_MIGRATION}. Sementara itu scan QR di ruang.`);
 const storageNotReady = () => new ServiceError(503, "Penyimpanan foto belum disiapkan. Pakai scan QR dulu.");
 const unknownUpload = () => new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
 const unknownToken = () => new ServiceError(403, "Sesi absen tidak dikenali. Ulangi dari awal.");
@@ -61,14 +61,14 @@ const uploadSignature = (key: string, mime: string, size: number, sessionId: str
   sign("wam-wajah-foto", key, mime, size, sessionId, member.id, nonce, expires);
 
 /** Whether a face check-in can be stored: the columns of 202611290001 are there. */
-async function faceReady(): Promise<boolean> {
+export async function faceReady(): Promise<boolean> {
   const { error } = await createPrivilegedClient().from("pw_attendance").select("face_score").limit(1);
   if (!error) return true;
   if (faceColumnsMissing(error)) return false;
   databaseError(error);
 }
 
-type Profile = { embedding: number[] | null; model_version: string | null; photo_key: string | null; status: FaceStatus };
+export type Profile = { embedding: number[] | null; model_version: string | null; photo_key: string | null; status: FaceStatus };
 async function profileOf(employeeId: string): Promise<Profile | null> {
   const { data, error } = await createPrivilegedClient().from("pw_face_profiles").select("embedding,model_version,photo_key,status").eq("employee_id", employeeId).maybeSingle();
   if (error) {
@@ -78,7 +78,7 @@ async function profileOf(employeeId: string): Promise<Profile | null> {
   }
   return (data as Profile | null) ?? null;
 }
-const comparable = (profile: Profile | null): profile is Profile & { embedding: number[] } =>
+export const comparable = (profile: Profile | null): profile is Profile & { embedding: number[] } =>
   !!profile && usableFace(profile.status) && profile.model_version === FACE_MODEL_VERSION && isEmbedding(profile.embedding);
 
 const NO_FACE = "Wajahmu belum terdaftar di WG People, jadi belum bisa dicocokkan. Absen dengan scan QR di ruang, atau daftarkan wajah di WG People dulu.";

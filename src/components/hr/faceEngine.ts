@@ -46,6 +46,8 @@ export const imageProblemLabels: Record<Exclude<ImageCheck, { ok: true }>["reaso
 export type FaceEngine = {
   /** A video frame; `t` must grow from frame to frame (performance.now()). */
   read(video: HTMLVideoElement, t: number): FaceReading;
+  /** Every face in a video frame (up to the engine's `faces`), each read on its own; `faces` is the count. */
+  readAll(video: HTMLVideoElement, t: number): FaceReading[];
   /** The face at `points` in `source` as SFace's embedding (length 1). */
   embed(source: CanvasImageSource, points: Points5): Promise<Embedded>;
   /** A still photo (a GreatDay base photo, a picked file): one sharp face, or why not. */
@@ -55,23 +57,36 @@ export type FaceEngine = {
 };
 
 type Ort = typeof import("onnxruntime-web/wasm");
-let engine: Promise<FaceEngine> | null = null;
+const engines = new Map<number, Promise<FaceEngine>>();
 
-/** The engine, loaded once per page; a failed load is tried again on the next call. */
-export function loadFaceEngine(): Promise<FaceEngine> {
-  engine ??= create().catch(error => { engine = null; throw error; });
+/**
+ * The engine, loaded once per page; a failed load is tried again on the next call. `faces`: how
+ * many faces it looks for at once (2 to notice a second person; the WAM tablet, 23 Nov 2026, more).
+ */
+export function loadFaceEngine({ faces = 2 }: { faces?: number } = {}): Promise<FaceEngine> {
+  let engine = engines.get(faces);
+  if (!engine) {
+    engine = create(faces).catch(error => { engines.delete(faces); throw error; });
+    engines.set(faces, engine);
+  }
   return engine;
 }
 
-function score(result: FaceLandmarkerResult, name: string): number {
-  const value = result.faceBlendshapes?.[0]?.categories.find(category => category.categoryName === name)?.score ?? 0;
+function score(result: FaceLandmarkerResult, name: string, index = 0): number {
+  const value = result.faceBlendshapes?.[index]?.categories.find(category => category.categoryName === name)?.score ?? 0;
   return Math.max(0, Math.min(1, value));
 }
 
 function reading(result: FaceLandmarkerResult, width: number, height: number, t: number): FaceReading {
   const faces = result.faceLandmarks?.length ?? 0;
   if (faces !== 1) return { faces, signal: null, points: null, box: null, closeness: 0 };
-  const mesh = result.faceLandmarks[0];
+  return readingAt(result, width, height, t, 0);
+}
+
+/** The face at `index` of a result, whatever else is in the picture. */
+function readingAt(result: FaceLandmarkerResult, width: number, height: number, t: number, index: number): FaceReading {
+  const faces = result.faceLandmarks?.length ?? 0;
+  const mesh = result.faceLandmarks[index];
   let left = 1, top = 1, right = 0, bottom = 0;
   for (const point of mesh) {
     if (point.x < left) left = point.x; if (point.x > right) right = point.x;
@@ -80,7 +95,7 @@ function reading(result: FaceLandmarkerResult, width: number, height: number, t:
   const points = points5FromMesh(mesh, width, height);
   return {
     faces,
-    signal: { t, blinkLeft: score(result, "eyeBlinkLeft"), blinkRight: score(result, "eyeBlinkRight"), smileLeft: score(result, "mouthSmileLeft"), smileRight: score(result, "mouthSmileRight"), yaw: yawFromMesh(mesh) },
+    signal: { t, blinkLeft: score(result, "eyeBlinkLeft", index), blinkRight: score(result, "eyeBlinkRight", index), smileLeft: score(result, "mouthSmileLeft", index), smileRight: score(result, "mouthSmileRight", index), yaw: yawFromMesh(mesh) },
     points,
     box: { x: left, y: top, width: right - left, height: bottom - top },
     closeness: eyeDistance(points) / Math.max(1, Math.min(width, height)),
@@ -93,7 +108,7 @@ const sizeOf = (source: CanvasImageSource): { width: number; height: number } =>
   return { width: Number(sized.width) || 0, height: Number(sized.height) || 0 };
 };
 
-async function create(): Promise<FaceEngine> {
+async function create(numFaces: number): Promise<FaceEngine> {
   const started = performance.now();
   const [{ FilesetResolver, FaceLandmarker: Landmarker }, ort] = await Promise.all([
     import("@mediapipe/tasks-vision"),
@@ -107,8 +122,8 @@ async function create(): Promise<FaceEngine> {
   const options = (runningMode: "VIDEO" | "IMAGE") => ({
     baseOptions: { modelAssetPath: LANDMARKER_MODEL },
     runningMode,
-    // Two, so a second person in the picture is noticed rather than ignored.
-    numFaces: 2,
+    // At least two, so a second person in the picture is noticed rather than ignored.
+    numFaces,
     outputFaceBlendshapes: true,
     minFaceDetectionConfidence: 0.6,
     minFacePresenceConfidence: 0.6,
@@ -169,6 +184,12 @@ async function create(): Promise<FaceEngine> {
       const { width, height } = sizeOf(source);
       if (!width || !height) return { faces: 0, signal: null, points: null, box: null, closeness: 0 };
       return reading(video.detectForVideo(source, t), width, height, t);
+    },
+    readAll(source, t) {
+      const { width, height } = sizeOf(source);
+      if (!width || !height) return [];
+      const result = video.detectForVideo(source, t);
+      return (result.faceLandmarks ?? []).map((_, index) => readingAt(result, width, height, t, index));
     },
     embed,
     analyzeImage,
