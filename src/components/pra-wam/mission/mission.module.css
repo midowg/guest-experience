@@ -175,3 +175,8 @@
 .quizSolved { border-color: var(--pw-success); }
 .quizSolved .clues { border-left-color: var(--pw-success); }
 .verdict { display: inline-flex; align-items: center; gap: 8px; color: var(--pw-success); }
+/* A kept guess (26 Nov 2026): marked, not judged, until the venue. */
+.choice[aria-pressed="true"] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); }
+.choiceMark { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: var(--pw-primary); white-space: nowrap; }
+.choiceMark svg { width: 18px; height: 18px; }
+.quizMissed { border-color: var(--pw-line); }

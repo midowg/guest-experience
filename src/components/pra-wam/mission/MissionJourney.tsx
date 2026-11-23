@@ -27,8 +27,6 @@ type State = {
   signal: Record<number, string>;
   /** The name picked for each roommate (their key → the picked person's key). */
   guess: Record<string, string>;
-  /** Names already tried and wrong, per roommate. */
-  missed: Record<string, string[]>;
   arrived: boolean; change: string;
   session: string; questions: Record<string, Question[]>; presenting: string | null; seq: number;
 };
@@ -44,7 +42,7 @@ function fresh(view: MissionView): State {
   return {
     done: { kal: false, sig: false },
     kalIdx: 0, pool: view.sentences.length ? scrambled(view.sentences[0]) : [], answer: [],
-    signal: {}, guess: {}, missed: {}, arrived: false, change: "",
+    signal: {}, guess: {}, arrived: false, change: "",
     session: "s1", questions, presenting: null, seq,
   };
 }
@@ -71,7 +69,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     if (typeof window === "undefined") return fresh(view);
     try { const saved = localStorage.getItem(storage); if (!saved) return fresh(view);
       const loaded = { ...fresh(view), ...JSON.parse(saved) as State };
-      return { ...loaded, guess: Array.isArray(loaded.guess) ? {} : loaded.guess, missed: loaded.missed ?? {} }; } catch { return fresh(view); }
+      return { ...loaded, guess: Array.isArray(loaded.guess) ? {} : loaded.guess }; } catch { return fresh(view); }
   });
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [toast, setToast] = useState("");
@@ -114,32 +112,27 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     const shown = full ? HINT_COUNT : hints;
     return <section className={css.stack} aria-labelledby="kamar-judul">
       <h2 id="kamar-judul" className={css.sectionTitle}>{full ? "Teman sekamarmu" : "Tebak teman sekamarmu"}</h2>
-      {!full && <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Tebak siapa mereka dari petunjuknya; jawabannya terungkap saat tiba di venue.</p>}
+      {!full && <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Tebak siapa mereka dari petunjuknya. Semua jawaban dibuka bersamaan saat tiba di venue.</p>}
       {mates.map((mate, index) => {
+        // 26 Nov 2026: a guess is only kept (and may change) on the way; every answer opens at the venue.
         const key = keyOf(mate.name);
-        const solved = s.guess[key] === key;
-        const missed = s.missed[key] ?? [];
-        const pick = (id: string) => {
-          if (id === key) { update(current => ({ guess: { ...current.guess, [key]: id } })); setToast(`Benar! ${mate.name}`); return; }
-          update(current => ({ missed: { ...current.missed, [key]: [...(current.missed[key] ?? []), id] } }));
-        };
-        return <article key={mate.name} className={`${css.quiz} ${solved ? css.quizSolved : ""}`} aria-labelledby={`teman-${index}`}>
-          <h3 id={`teman-${index}`} className={css.quizTitle}>{full || solved ? mate.name : `Teman sekamar ${mates.length > 1 ? index + 1 : ""}`.trim()}</h3>
-          {(full || solved) && <p className={css.note}>{mate.dept}</p>}
+        const picked = s.guess[key];
+        const right = picked === key;
+        return <article key={mate.name} className={`${css.quiz} ${full && picked ? (right ? css.quizSolved : css.quizMissed) : ""}`} aria-labelledby={`teman-${index}`}>
+          <h3 id={`teman-${index}`} className={css.quizTitle}>{full ? mate.name : `Teman sekamar ${mates.length > 1 ? index + 1 : ""}`.trim()}</h3>
+          {full && <p className={css.note}>{mate.dept}</p>}
           {shown > 0 ? <ul className={css.clues}>{mate.hints.slice(0, shown).map(hint => <li key={hint}>{hint}</li>)}</ul>
-            : !solved && <p className={css.note}>Petunjuk pertama terbuka setelah satu misi selesai.</p>}
-          {solved ? <p className={css.verdict}><Check aria-hidden className={css.btnIcon} /> Benar, ini teman sekamarmu.</p>
-            : full ? null
+            : <p className={css.note}>Petunjuk pertama terbuka setelah satu misi selesai.</p>}
+          {full
+            ? <p className={picked ? (right ? css.verdict : css.verdictMiss) : css.note}>{!picked ? "Kamu tidak menebak." : right ? "Tebakanmu benar!" : `Tebakanmu: ${mate.choices.find(choice => choice.id === picked)?.name ?? "-"}`}</p>
             : <div className={css.choices} role="group" aria-labelledby={`siapa-${index}`}>
                 <p id={`siapa-${index}`} className={css.choicesTitle}>Menurutmu siapa?</p>
-                {mate.choices.map(choice => {
-                  const wrong = missed.includes(choice.id);
-                  return <button key={choice.id} type="button" className={`${css.choice} ${wrong ? css.choiceWrong : ""}`} disabled={wrong} onClick={() => pick(choice.id)}>
-                    <span><b>{choice.name}</b>{choice.nick ? <small> · {choice.nick}</small> : null}</span>
-                    {wrong && <span className={css.choiceNote}>Bukan dia</span>}
-                  </button>;
-                })}
-                {missed.length > 0 && <p className={css.note} role="status">Belum tepat. Coba nama lain.</p>}
+                {mate.choices.map(choice => <button key={choice.id} type="button" className={css.choice} aria-pressed={picked === choice.id}
+                  onClick={() => update(current => ({ guess: { ...current.guess, [key]: choice.id } }))}>
+                  <span><b>{choice.name}</b>{choice.nick ? <small> · {choice.nick}</small> : null}</span>
+                  {picked === choice.id && <span className={css.choiceMark}><Check aria-hidden /> Pilihanmu</span>}
+                </button>)}
+                {picked && <p className={css.note} role="status">Tersimpan. Masih bisa diganti; jawabannya dibuka saat tiba di venue.</p>}
               </div>}
         </article>;
       })}
