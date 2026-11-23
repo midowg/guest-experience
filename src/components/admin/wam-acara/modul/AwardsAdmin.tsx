@@ -64,7 +64,7 @@ export function AwardsAdmin({ initial, now: nowIso }: { initial: AdminAwards; /*
           <Pill tone={category.published ? "ok" : "neutral"}>{category.published ? "Terbit" : "Draf"}</Pill>
           <Pill tone="blue">{methodLabel(category)}</Pill>
           {state && <Pill tone={state === "buka" ? "ok" : "neutral"}>{state === "buka" ? "Voting dibuka" : state === "belum" ? "Belum dibuka" : "Ditutup"}</Pill>}
-          {approval && <Pill tone="brass">{approval.approvedBy ? "Disetujui BOD" : "Disetujui"}</Pill>}
+          {approval && <Pill tone="brass">Disetujui</Pill>}
         </div>
         <p className={css.meta}>
           {category.method === "voting" && <span>Voting {adminRange(category.opensAt, category.closesAt)}</span>}
