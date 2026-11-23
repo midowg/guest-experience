@@ -105,6 +105,7 @@ export const idPeserta = {
   "peserta.agenda.sessions": "Sesi",
   "peserta.agenda.count": "{n} sesi",
   "peserta.agenda.title": "Hari ke-{n}",
+  "peserta.session.loading": "Memuat detail sesi",
   "peserta.agenda.eyebrow": "Agenda",
   "peserta.agenda.absenRequired": "Wajib absen",
   "peserta.agenda.absen": "Absen",

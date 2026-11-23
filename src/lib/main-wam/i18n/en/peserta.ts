@@ -106,6 +106,7 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.agenda.sessions": "Sessions",
   "peserta.agenda.count": "{n, plural, one {# session} other {# sessions}}",
   "peserta.agenda.title": "Day {n}",
+  "peserta.session.loading": "Loading session details",
   "peserta.agenda.eyebrow": "Agenda",
   "peserta.agenda.absenRequired": "Check-in required",
   "peserta.agenda.absen": "Check-in",

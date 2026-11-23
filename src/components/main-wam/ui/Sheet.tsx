@@ -18,7 +18,7 @@ import css from "./sheet.module.css";
  * Control it with `open`/`onClose`. For a sheet with its own address (a link can open it, as
  * Pengaturan#notifikasi in Pra WAM), use useHashSheet and pass `history={false}`.
  */
-export function Sheet({ open, onClose, title, kicker, hideTitle, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel, flush, className }: {
+export function Sheet({ open, onClose, title, kicker, hideTitle, subtitle, children, footer, history = true, locked = false, initialFocus, closeLabel, flush, className, instant }: {
   open: boolean;
   onClose: () => void;
   /** Heading and spoken name. */
@@ -42,6 +42,8 @@ export function Sheet({ open, onClose, title, kicker, hideTitle, subtitle, child
   /** Body without side padding (a List that runs edge to edge). */
   flush?: boolean;
   className?: string;
+  /** Opens without the entrance animation (a sheet that replaces its own loading twin). */
+  instant?: boolean;
 }) {
   const t = useT();
   const { dialogRef, titleRef, onKeyDown, onCancel, onBackdropClick } = useModal({ open, onClose, history, locked, initialFocus });
@@ -82,7 +84,7 @@ export function Sheet({ open, onClose, title, kicker, hideTitle, subtitle, child
   }
   const dragProps = { onPointerDown: dragStart, onPointerMove: dragMove, onPointerUp: dragEnd, onPointerCancel: dragEnd };
 
-  return <dialog ref={dialogRef} className={cx(css.sheet, className)} aria-labelledby={`${id}-title`} aria-describedby={subtitle ? `${id}-sub` : undefined}
+  return <dialog ref={dialogRef} className={cx(css.sheet, instant && css.instant, className)} aria-labelledby={`${id}-title`} aria-describedby={subtitle ? `${id}-sub` : undefined}
     aria-busy={locked || undefined} onKeyDown={onKeyDown} onCancel={onCancel} onClick={onBackdropClick}>
     {open && <div ref={inner} className={css.inner}>
       <div className={css.handle} aria-hidden {...dragProps}><span /></div>
