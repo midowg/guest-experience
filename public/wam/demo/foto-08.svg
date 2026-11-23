@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto contoh 8">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7A4A21"/><stop offset="1" stop-color="#F2C46D"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFF3D6" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3D6" stop-opacity="0"/></radialGradient>
+<filter id="n"><feGaussianBlur stdDeviation="14"/></filter></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="400" cy="640" rx="440" ry="260" fill="#F2C46D"/>
+<circle cx="194" cy="599" r="54" fill="#FFF3D6"/><circle cx="194" cy="599" r="33" fill="#7A4A21" opacity=".5"/>
+<circle cx="284" cy="641" r="66" fill="#FFF3D6"/><circle cx="284" cy="641" r="31" fill="#7A4A21" opacity=".5"/>
+<circle cx="401" cy="614" r="55" fill="#FFF3D6"/><circle cx="401" cy="614" r="27" fill="#7A4A21" opacity=".5"/>
+<circle cx="506" cy="582" r="56" fill="#FFF3D6"/><circle cx="506" cy="582" r="33" fill="#7A4A21" opacity=".5"/>
+<circle cx="622" cy="550" r="50" fill="#FFF3D6"/><circle cx="622" cy="550" r="29" fill="#7A4A21" opacity=".5"/>
+<ellipse cx="400" cy="300" rx="380" ry="200" fill="url(#l)"/>
+<rect width="800" height="1000" fill="#000" opacity=".05"/></svg>

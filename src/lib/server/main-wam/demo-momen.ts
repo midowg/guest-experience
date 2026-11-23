@@ -12,6 +12,9 @@ import { demoOn } from "./demo";
  * Mosaic. Used only while Admin has the demo on and there is no real photo; made-up names only.
  */
 
+/** The sample pictures (public/wam/demo/foto-01..12.svg): made-up scenes, local files, no outside address. */
+const demoPicture = (index: number) => `/wam/demo/foto-${String((index % 12) + 1).padStart(2, "0")}.svg`;
+
 /** A count spread over the quick reactions (most on the first), none of them the viewer's. */
 function spread(total: number): ReactionCount[] {
   const shares = [0.5, 0.25, 0.15, 0.1];
@@ -23,12 +26,12 @@ function spread(total: number): ReactionCount[] {
 /** The sample photos as feed photos, newest first; the sample's Rani is the viewer (so "Fotoku" has photos). */
 function samplePhotoList(context: MainWamContext): FeedPhoto[] {
   const me = context.viewer;
-  return demoSample(samplePhotos).map(photo => {
+  return demoSample(samplePhotos).map((photo, index) => {
     const mine = photo.ownerId === samplePeople.rani.id;
     return {
       id: photo.id, owner: mine ? { id: me.id, name: me.name, photo: me.photo } : { id: photo.owner.id, name: photo.owner.name, photo: null },
       audience: "semua", sessionId: photo.sessionId, width: photo.width, height: photo.height, takenAt: photo.takenAt, visibleAt: photo.visibleAt, status: "tampil",
-      reactions: spread(photo.reactions), seen: mine, mine, src: { kecil: null, besar: null },
+      reactions: spread(photo.reactions), seen: mine, mine, src: { kecil: demoPicture(index), besar: demoPicture(index) },
     } satisfies FeedPhoto;
   }).sort((a, b) => Date.parse(b.visibleAt) - Date.parse(a.visibleAt));
 }
@@ -62,7 +65,7 @@ export async function demoMosaic(empty: MosaicManifest): Promise<MosaicManifest 
     if (cell === ".") return;
     // A fixed pattern, so the picture does not change between polls.
     if ((index * 7 + Math.floor(index / empty.columns) * 3) % 10 >= 7) return;
-    tiles.push({ cell: index, id: `00000000-0000-4000-8800-${String(index).padStart(12, "0")}`, src: null, mine: index % 23 === 0 });
+    tiles.push({ cell: index, id: `00000000-0000-4000-8800-${String(index).padStart(12, "0")}`, src: demoPicture(index), mine: index % 23 === 0 });
   });
   return {
     ...empty, version: `demo-${tiles.length}`, tiles, filled: tiles.length, people: Math.min(18, Math.ceil(tiles.length / 3)),

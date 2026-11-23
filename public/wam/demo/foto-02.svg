@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto contoh 2">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1638"/><stop offset="1" stop-color="#2F6FEB"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#F5C542" stop-opacity=".9"/><stop offset="1" stop-color="#F5C542" stop-opacity="0"/></radialGradient>
+<filter id="n"><feGaussianBlur stdDeviation="14"/></filter></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="400" cy="380" rx="520" ry="360" fill="url(#l)"/>
+<polygon points="100,0 40,620 160,620" fill="#F5C542" opacity=".10"/>
+<polygon points="250,0 190,620 310,620" fill="#F5C542" opacity=".10"/>
+<polygon points="400,0 340,620 460,620" fill="#F5C542" opacity=".10"/>
+<polygon points="550,0 490,620 610,620" fill="#F5C542" opacity=".10"/>
+<polygon points="700,0 640,620 760,620" fill="#F5C542" opacity=".10"/>
+<rect x="0" y="720" width="800" height="280" fill="#0B1638" opacity=".85"/>
+<rect x="120" y="650" width="560" height="70" rx="10" fill="#2F6FEB" opacity=".9"/>
+<circle cx="54" cy="780.2" r="33" fill="#0B1638"/><rect x="20" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="135" cy="781.0" r="31" fill="#0B1638"/><rect x="101" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="223" cy="779.6" r="27" fill="#0B1638"/><rect x="189" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="307" cy="784.6" r="27" fill="#0B1638"/><rect x="273" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="384" cy="782.8" r="26" fill="#0B1638"/><rect x="350" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="470" cy="783.4" r="31" fill="#0B1638"/><rect x="436" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="537" cy="782.2" r="29" fill="#0B1638"/><rect x="503" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="615" cy="784.2" r="29" fill="#0B1638"/><rect x="581" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<circle cx="701" cy="781.4" r="32" fill="#0B1638"/><rect x="667" y="820" width="68" height="200" rx="30" fill="#0B1638"/>
+<rect width="800" height="1000" fill="#000" opacity=".05"/></svg>

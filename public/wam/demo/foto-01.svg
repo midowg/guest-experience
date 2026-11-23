@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto contoh 1">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B2A6B"/><stop offset="1" stop-color="#F2994A"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFD27A" stop-opacity=".9"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0"/></radialGradient>
+<filter id="n"><feGaussianBlur stdDeviation="14"/></filter></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<circle cx="371" cy="469" r="118" fill="#FFD27A" opacity=".95"/>
+<ellipse cx="400" cy="420" rx="420" ry="260" fill="url(#l)"/>
+<path d="M0 640 Q 200 570 400 640 T 800 640 V1000 H0Z" fill="#1B2A6B" opacity="0.35"/>
+<path d="M0 730 Q 200 645 400 730 T 800 730 V1000 H0Z" fill="#1B2A6B" opacity="0.55"/>
+<path d="M0 820 Q 200 720 400 820 T 800 820 V1000 H0Z" fill="#1B2A6B" opacity="0.75"/>
+<rect width="800" height="1000" fill="#000" opacity=".05"/></svg>

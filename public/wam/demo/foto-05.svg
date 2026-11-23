@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto contoh 5">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F3B3A"/><stop offset="1" stop-color="#4ADE80"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#F5C542" stop-opacity=".9"/><stop offset="1" stop-color="#F5C542" stop-opacity="0"/></radialGradient>
+<filter id="n"><feGaussianBlur stdDeviation="14"/></filter></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<rect x="60" y="180" width="680" height="560" rx="50" fill="#0A1A18" opacity=".85"/>
+<rect x="90" y="210" width="620" height="420" rx="30" fill="url(#g)"/>
+<rect x="110" y="331" width="60" height="161" fill="#4ADE80" opacity=".35"/>
+<rect x="210" y="345" width="60" height="221" fill="#4ADE80" opacity=".35"/>
+<rect x="310" y="315" width="60" height="225" fill="#4ADE80" opacity=".35"/>
+<rect x="410" y="357" width="60" height="158" fill="#4ADE80" opacity=".35"/>
+<rect x="510" y="310" width="60" height="257" fill="#4ADE80" opacity=".35"/>
+<rect x="610" y="331" width="60" height="144" fill="#4ADE80" opacity=".35"/>
+<rect x="0" y="780" width="800" height="220" fill="#0A1A18"/>
+<rect x="40" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="135" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="230" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="325" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="420" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="515" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="610" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect x="705" y="800" width="60" height="14" rx="7" fill="#F5C542"/>
+<rect width="800" height="1000" fill="#000" opacity=".05"/></svg>

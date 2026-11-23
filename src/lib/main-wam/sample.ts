@@ -191,7 +191,7 @@ export const samplePhotos: SamplePhoto[] = OWNERS.map((key, index) => {
   return {
     id: uid(10, index + 1), ownerId: person(key).id, audience: kelompok ? "kelompok" : "semua", groupId: kelompok ? sampleGroup4.id : null,
     sessionId: index < 8 ? sampleSessionIds.pemaparan : null, width: 1600, height: 2000, takenAt: created, createdAt: created, visibleAt: created, status: "tampil",
-    src: `https://picsum.photos/seed/main-wam-${index + 1}/800/1000`, owner: { id: person(key).id, name: person(key).name, department: person(key).department, photo: null },
+    src: `/wam/demo/foto-${String((index % 12) + 1).padStart(2, "0")}.svg`, owner: { id: person(key).id, name: person(key).name, department: person(key).department, photo: null },
     reactions: [24, 10, 7, 3, 12, 5, 0, 2, 9, 1, 4, 6][index],
   };
 });
