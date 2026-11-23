@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import { MissionJourney } from "@/components/pra-wam/mission/MissionJourney";
 import { SessionDetail, WaitingSession } from "@/components/pra-wam/SessionDetail";
+import { MISSION_SESSION_ID } from "@/lib/pra-wam/mission";
 import { praWamPath } from "@/lib/routes";
 import { sessionView } from "@/lib/server/pra-wam/agenda";
+import { missionFor } from "@/lib/server/pra-wam/mission";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { viewerZone } from "@/lib/server/pra-wam/zone";
 
@@ -16,11 +19,17 @@ export const metadata = { title: "Sesi · WAM", robots: { index: false } };
  * instead of "not found". Attendance may not be migrated yet; the page then has no QR check-in.
  * The panitia's tools (Ubah sesi, QR dan daftar hadir, materi) show only when it is opened from
  * Kelola acara (?dari=kelola, 9 Nov 2026); from the app panitia see it as participants do.
+ * 23 Nov 2026: the forum "CSM & prioritas CAPEX" opens Misi Perjalanan (prototype) for HoD, BoD
+ * and CoS from the app; ?detail=1 and Kelola acara still show the usual detail.
  */
-export default async function SessionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ dari?: string }> }) {
-  const [{ id }, { dari }] = await Promise.all([params, searchParams]);
+export default async function SessionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ dari?: string; detail?: string }> }) {
+  const [{ id }, { dari, detail }] = await Promise.all([params, searchParams]);
   const member = await requireMemberPage(praWamPath.session(id));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
+  if (id === MISSION_SESSION_ID && dari !== "kelola" && detail !== "1") {
+    const mission = await missionFor(member);
+    if (mission) return <MissionJourney view={mission} detailHref={`${praWamPath.session(id)}?detail=1`} />;
+  }
   const view = await sessionView(id, member, dari === "kelola" ? "kelola" : "app");
   if (!view) notFound();
   if (view.kind === "menunggu") {
