@@ -155,13 +155,18 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     const steps = quizSteps();
     const total = mates.reduce((sum, mate) => sum + mate.questions.length, 0);
     const answered = steps.filter(step => s.guess[step.key]).length;
-    const label = steps.length === 0 ? "Selesaikan satu misi dulu" : answered === 0 ? "Ayo tebak teman sekamarmu" : answered < steps.length ? "Lanjut menebak" : "Lihat atau ubah tebakan";
+    // Before any mission (27 Nov 2026) the button is never dead: it opens the first mission, which unlocks the questions.
+    const firstMission = missions.find(key => !s.done[key]);
+    const locked = steps.length === 0;
+    const label = locked ? "Mulai misi untuk membuka pertanyaan" : answered === 0 ? "Ayo tebak teman sekamarmu" : answered < steps.length ? "Lanjut menebak" : "Lihat atau ubah tebakan";
     return <section className={css.guess} aria-labelledby="tebak-judul">
       <div className={css.guessPeople}>{mates.map(mate => <MysteryPerson key={mate.name} size={64} />)}</div>
       <h2 id="tebak-judul" className={css.cardTitle}>Siapa teman sekamarmu?</h2>
       <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Ada {total} pertanyaan dari profil mereka; nama yang cocok dengan semua petunjuk adalah teman sekamarmu. Jawabannya dibuka saat tiba di venue.</p>
-      <p className={css.note}>{steps.length === 0 ? "Pertanyaan pertama terbuka setelah satu misi selesai." : `Terjawab ${answered} dari ${steps.length} pertanyaan terbuka${steps.length < total ? ` · ${total - steps.length} lagi terbuka dari misi berikutnya` : ""}`}</p>
-      <button type="button" className={`${css.btn} ${css.primary}`} disabled={steps.length === 0} onClick={() => { const next = steps.findIndex(step => !s.guess[step.key]); setQuizAt(next < 0 ? 0 : next); setSheet("quiz"); }}>{label}</button>
+      <p className={css.note}>{locked ? "Pertanyaan terbuka bertahap: selesaikan satu misi, pertanyaan pertama untuk setiap teman sekamar langsung terbuka." : `Terjawab ${answered} dari ${steps.length} pertanyaan terbuka${steps.length < total ? ` · ${total - steps.length} lagi terbuka dari misi berikutnya` : ""}`}</p>
+      <button type="button" className={`${css.btn} ${css.primary}`} onClick={() => {
+        if (locked) { if (firstMission) setSheet(firstMission); return; }
+        const next = steps.findIndex(step => !s.guess[step.key]); setQuizAt(next < 0 ? 0 : next); setSheet("quiz"); }}>{label}</button>
     </section>;
   }
 
