@@ -166,3 +166,14 @@
   .busMove, .roadTrail { transition: none; }
   .busBob { animation: none; }
 }
+
+/* The reworked flow (24 Nov 2026): one main screen, sheets, a dock at the bottom. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btnIcon { width: 18px; height: 18px; flex: none; }
+.chev { width: 20px; height: 20px; color: var(--pw-muted); }
+.sheetStack { display: flex; flex-direction: column; gap: 14px; }
+.missNote { margin: 0; font-size: 14px; font-weight: 600; color: var(--pw-danger); }
+.verdict { margin: 0; font-weight: 700; color: var(--pw-brass); }
+.welcome { border-color: var(--pw-brass); }
+.cardTitle { font-family: var(--pw-display); font-size: 20px; line-height: 1.3; }
+.dock { position: sticky; bottom: 0; z-index: 20; margin: 8px -4px 0; padding: 12px 4px calc(12px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--pw-app, var(--pw-surface)) 70%, transparent); }
