@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, BedDouble, Check, Home, Info, Leaf, LogOut, RotateCcw, Settings2, TrainFront, UserRound, Utensils, Workflow } from "lucide-react";
+import { AlertCircle, ArrowLeft, BedDouble, Check, Home, Info, Laptop, Leaf, LogOut, RotateCcw, Settings2, TrainFront, UserRound, Utensils, Workflow } from "lucide-react";
 import {
   CARBON_REFERENCES, GROUP_MODES, carbonFactorRows, carbonFigure, carbonParts, carbonView, ownModeLabel, personCarbonInput, splitPercent, tripLabel, tripValid,
   type CarbonEventSettings, type CarbonPerson, type CarbonSetup, type GroupTrip,
@@ -49,13 +49,14 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
   const rows = people.map(person => {
     const input = personCarbonInput(setup, person.travel, person.occupants);
     const parts = input ? carbonParts(input) : null;
-    return { person, total: parts ? parts.perjalanan + parts.kamar + parts.makan : 0, parts };
+    return { person, total: parts ? parts.perjalanan + parts.kamar + parts.makan + parts.perangkat : 0, parts };
   });
   const counted = rows.filter(row => row.parts);
-  const own = rows.filter(row => row.person.travel);
-  const sum = counted.reduce((acc, row) => ({ perjalanan: acc.perjalanan + row.parts!.perjalanan, kamar: acc.kamar + row.parts!.kamar, makan: acc.makan + row.parts!.makan }), { perjalanan: 0, kamar: 0, makan: 0 });
-  const total = sum.perjalanan + sum.kamar + sum.makan;
-  const shares = splitPercent([sum.kamar, sum.perjalanan, sum.makan]);
+  const own = rows.filter(row => row.person.travel?.own);
+  const answered = rows.filter(row => row.person.travel).length;
+  const sum = counted.reduce((acc, row) => ({ perjalanan: acc.perjalanan + row.parts!.perjalanan, kamar: acc.kamar + row.parts!.kamar, makan: acc.makan + row.parts!.makan, perangkat: acc.perangkat + row.parts!.perangkat }), { perjalanan: 0, kamar: 0, makan: 0, perangkat: 0 });
+  const total = sum.perjalanan + sum.kamar + sum.makan + sum.perangkat;
+  const shares = splitPercent([sum.kamar, sum.perjalanan, sum.makan, sum.perangkat]);
   const rooms = new Set(people.map(person => person.room)).size;
   const preview = people.find(person => person.id === previewId) ?? people[0];
   const status = save.state === "saving" ? "Menyimpan…" : `Tersimpan ${clock(save.at)}`;
@@ -95,7 +96,7 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
       {tab === "ringkasan" && <div className={css.summary}>
         <ul className={css.owners} aria-label="Siapa mengisi apa">
           <li><Settings2 aria-hidden /><strong>Panitia</strong><span>Perjalanan, malam, makan</span></li>
-          <li><UserRound aria-hidden /><strong>Peserta</strong><span>Hanya yang berangkat sendiri</span></li>
+          <li><UserRound aria-hidden /><strong>Peserta</strong><span>Botol, laptop, HP, berangkat sendiri</span></li>
           <li><Workflow aria-hidden /><strong>Otomatis</strong><span>Kamar</span></li>
         </ul>
 
@@ -124,7 +125,8 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
             <ul className={css.sources}>
               {([["kamar", "Kamar", BedDouble, sum.kamar, shares[0], `${setup.settings.nights} malam · ${rooms} kamar`],
                 ["perjalanan", "Perjalanan", TrainFront, sum.perjalanan, shares[1], ready ? tripLabel(setup.trip) : "Belum diisi"],
-                ["makan", "Makan", Utensils, sum.makan, shares[2], `${setup.settings.mealsPerPerson} porsi per orang`]] as const).map(([key, title, Icon, value, share, note]) =>
+                ["makan", "Makan & minum", Utensils, sum.makan, shares[2], `${setup.settings.mealsPerPerson} porsi per orang, dan botol plastik`],
+                ["perangkat", "Perangkat", Laptop, sum.perangkat, shares[3], `Laptop dan HP · ${answered} peserta sudah mengisi`]] as const).map(([key, title, Icon, value, share, note]) =>
                 <li key={key}>
                   <span className={css.srcIcon}><Icon aria-hidden /></span>
                   <span className={css.srcText}>
@@ -148,7 +150,8 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
             </div>
             <div className={css.phone}>
               {preview && <CarbonCard key={preview.id} view={carbonView(personCarbonInput(setup, preview.travel, preview.occupants))}
-                form={{ trip: setup.trip, travel: preview.travel, open: setup.formOpen, estimate: travel => carbonView(personCarbonInput(setup, travel, preview.occupants)), onSave: () => say("Hanya pratinjau: diisi peserta sendiri.") }} />}
+                form={{ trip: setup.trip, nights: setup.settings.nights, occupants: preview.occupants, meals: setup.settings.mealsPerPerson, travel: preview.travel, open: setup.formOpen,
+                  inputFor: travel => personCarbonInput(setup, travel, preview.occupants), onSave: () => say("Hanya pratinjau: diisi peserta sendiri.") }} />}
             </div>
           </section>
         </div>
@@ -162,7 +165,7 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
             <thead><tr><th>Peserta</th><th>Kamar</th><th>Perjalanan</th><th className={css.num}>Perkiraan</th><th><span className={css.srOnly}>Aksi</span></th></tr></thead>
             <tbody>
               {own.map(({ person, total: personTotal }) => {
-                const trip = person.travel!.own;
+                const trip = person.travel!.own!;
                 return <tr key={person.id}>
                   <td data-label="Peserta"><span className={css.person}><strong>{person.name}</strong><span>{person.dept}</span></span></td>
                   <td data-label="Kamar"><span className={css.cellMuted}>{person.room} · {person.occupants > 1 ? `${person.occupants} orang` : "sendiri"}</span></td>
@@ -173,7 +176,7 @@ export function CarbonAdmin({ setup, people, onSetup, onPeople }: {
                       ? <span className={css.confirm}>
                         <span>Kembalikan ke rombongan?</span>
                         <button type="button" className={css.small} onClick={() => setAsking(null)}>Batal</button>
-                        <button type="button" className={`${css.small} ${css.danger}`} onClick={() => { onPeople(people.map(item => item.id === person.id ? { ...item, travel: null } : item)); setAsking(null); touched(); say(`${person.name} kembali ikut rombongan.`); }}>Ya</button>
+                        <button type="button" className={`${css.small} ${css.danger}`} onClick={() => { onPeople(people.map(item => item.id === person.id && item.travel ? { ...item, travel: { ...item.travel, own: null } } : item)); setAsking(null); touched(); say(`${person.name} kembali ikut rombongan.`); }}>Ya</button>
                       </span>
                       : <button type="button" className={css.small} onClick={() => setAsking(person.id)}><RotateCcw aria-hidden />Ke rombongan</button>}
                   </td>

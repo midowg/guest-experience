@@ -22,11 +22,12 @@ export function CarbonPlayground({ setup: initialSetup, people: initialPeople, s
     <label className={css.field}>
       <span className={css.label}>Masuk sebagai</span>
       <select className={css.input} value={me?.id} onChange={event => setMeId(event.target.value)}>
-        {people.map(person => <option key={person.id} value={person.id}>{person.name}{person.travel ? " (berangkat sendiri)" : ""}</option>)}
+        {people.map(person => <option key={person.id} value={person.id}>{person.name}{person.travel?.own ? " (berangkat sendiri)" : ""}</option>)}
       </select>
     </label>
     {me && <CarbonCard key={me.id} view={carbonView(personCarbonInput(setup, me.travel, me.occupants))}
-      form={{ trip: setup.trip, travel: me.travel, open: setup.formOpen, estimate: travel => carbonView(personCarbonInput(setup, travel, me.occupants)),
+      form={{ trip: setup.trip, nights: setup.settings.nights, occupants: me.occupants, meals: setup.settings.mealsPerPerson, travel: me.travel, open: setup.formOpen,
+        inputFor: travel => personCarbonInput(setup, travel, me.occupants),
         onSave: travel => setPeople(list => list.map(person => person.id === me.id ? { ...person, travel } : person)) }} />}
   </div>;
 }

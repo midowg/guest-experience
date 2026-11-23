@@ -74,6 +74,7 @@
 .srcBar i { display: block; height: 100%; border-radius: 6px; background: var(--pw-success); }
 .srcBar i[data-key="perjalanan"] { background: var(--pw-accent-cyan); }
 .srcBar i[data-key="makan"] { background: var(--pw-brass); }
+.srcBar i[data-key="perangkat"] { background: var(--pw-accent-sky); }
 .srcNote { font: 400 14px/20px var(--pw-body); color: var(--pw-muted); }
 
 .previewHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }

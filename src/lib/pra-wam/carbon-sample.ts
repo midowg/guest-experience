@@ -1,4 +1,4 @@
-import type { CarbonPerson, CarbonSetup, CarbonTravel } from "./carbon";
+import type { CarbonPerson, CarbonSetup, CarbonTravel, OwnMode } from "./carbon";
 
 /*
  * Made-up data for the Jejak karbon previews (no real names or rooms). The trip's km and people per
@@ -10,7 +10,7 @@ export const SAMPLE_CARBON_SETUP: CarbonSetup = {
   formOpen: true,
 };
 
-const own = (from: string, mode: CarbonTravel["own"]["mode"], km: number): CarbonTravel => ({ own: { from, mode, km, roundTrip: true }, answeredAt: "2026-11-23T03:15:00Z" });
+const own = (from: string, mode: OwnMode, km: number): CarbonTravel => ({ own: { from, mode, km, roundTrip: true }, bottles: 2, laptopHours: 6, phoneCharges: 2, answeredAt: "2026-11-23T03:15:00Z" });
 
 export const SAMPLE_CARBON_PEOPLE: CarbonPerson[] = [
   { id: "p1", name: "Rani Contoh", dept: "Departemen Contoh", room: "A3", occupants: 3, travel: null },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carbonFigure, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tripLabel, tripValid, type CarbonInput } from "./carbon";
+import { calculatorTiles, carbonFigure, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tileKg, tripLabel, tripValid, type CarbonInput } from "./carbon";
 
 const trip: CarbonInput = {
   legs: [{ mode: "kereta", label: "pergi", km: 500 }, { mode: "bus", label: "shuttle", km: 30, sharedBy: 30 }],
@@ -50,9 +50,9 @@ describe("who fills what", () => {
   });
 
   it("counts a participant's own trip instead, alone in their vehicle", () => {
-    const own = personCarbonInput({ settings, trip }, { own: { from: "Magelang", mode: "motor", km: 40, roundTrip: false }, answeredAt: at }, 2);
+    const own = personCarbonInput({ settings, trip }, { own: { from: "Magelang", mode: "motor", km: 40, roundTrip: false }, bottles: 0, laptopHours: 0, phoneCharges: 0, answeredAt: at }, 2);
     expect(own?.legs).toEqual([{ mode: "motor", label: "Magelang", km: 40, sharedBy: 1 }]);
-    const other = personCarbonInput({ settings, trip }, { own: { from: "Solo", mode: "lainnya", km: 0, roundTrip: true }, answeredAt: at }, 2);
+    const other = personCarbonInput({ settings, trip }, { own: { from: "Solo", mode: "lainnya", km: 0, roundTrip: true }, bottles: 0, laptopHours: 0, phoneCharges: 0, answeredAt: at }, 2);
     expect(other?.legs).toEqual([]);
     expect(carbonView(other).kind).toBe("ada");
   });
@@ -75,11 +75,34 @@ describe("who fills what", () => {
   });
 });
 
+describe("the participant's calculator", () => {
+  const setup = { settings: { nights: 2, mealsPerPerson: 6 }, trip: { from: "Kantor", to: "Venue", mode: "mobil" as const, km: 25, perVehicle: 5, roundTrip: true } };
+  const travel = { own: null, bottles: 3, laptopHours: 10, phoneCharges: 2, answeredAt: "2026-11-24T01:00:00Z" };
+
+  it("adds bottles to makan and laptop and phone to perangkat, on the group trip", () => {
+    const input = personCarbonInput(setup, travel, 2)!;
+    expect(input.legs).toHaveLength(2);
+    const parts = carbonParts(input);
+    expect(parts.makan).toBeCloseTo(6 * 1.9 + 3 * 0.1, 6);
+    expect(parts.perangkat).toBeCloseTo((10 * 0.032 + 2 * 0.019) * 0.87, 6);
+  });
+
+  it("gives each tile its kilograms, and they add up to the total", () => {
+    const input = personCarbonInput(setup, travel, 2)!;
+    const tiles = calculatorTiles(input);
+    const parts = carbonParts(input);
+    expect(tiles.botol + tiles.laptop + tiles.hp + tiles.makan + tiles.kamar + tiles.perjalanan).toBeCloseTo(parts.perjalanan + parts.kamar + parts.makan + parts.perangkat, 6);
+    expect(tileKg(tiles.laptop)).toBe("0,3 kg");
+    expect(tileKg(0)).toBe("0 kg");
+    expect(tileKg(62.7)).toBe("63 kg");
+  });
+});
+
 describe("Pra WAM and WAM 2026 count with the same factors", async () => {
   const { CARBON_FACTORS: wam } = await import("@/lib/main-wam/panitia/carbon");
   const { CARBON_FACTORS: pra } = await import("./carbon");
   it("keeps every shared factor equal", () => {
-    const shared = ["keretaPerPenumpangKm", "busPerBusKm", "makanPerPorsi", "hotelPerKamarMalam"] as const;
+    const shared = ["keretaPerPenumpangKm", "busPerBusKm", "makanPerPorsi", "hotelPerKamarMalam", "listrikPerKwh"] as const;
     for (const key of shared) expect(pra[key]).toBe(wam[key]);
   });
 });
