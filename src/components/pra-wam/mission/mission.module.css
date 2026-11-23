@@ -162,7 +162,7 @@
 .choice:has(input:checked) { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); }
 .choice:has(input:focus-visible) { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
 .verdictMiss { margin: 0; font-size: 17px; font-weight: 600; color: var(--pw-muted); }
-.roomCode { margin: 0; font-family: var(--pw-display); font-size: 30px; font-weight: 600; color: var(--pw-primary); }
+.roomCode { margin: 0; font-family: var(--pw-display); font-size: 44px; font-weight: 700; line-height: 1; color: var(--pw-primary); letter-spacing: -0.01em; }
 
 /* The quiz answers at once (26 Nov 2026): each name is a button; a wrong one stays crossed out. */
 .choicesTitle { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
@@ -223,3 +223,20 @@
 .answers small { font-size: 15px; font-weight: 700; }
 .answerRight { color: var(--pw-success); }
 .answerWrong { color: var(--pw-muted); }
+
+/* The room card at the venue (27 Nov 2026). */
+.roomCard { gap: 16px; border-color: var(--pw-primary); }
+.roomHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.roomTitle { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pw-muted); }
+.roomKey { display: flex; align-items: center; justify-content: center; flex: none; width: 56px; height: 56px; border-radius: 16px; background: var(--pw-primary-soft); color: var(--pw-primary); }
+.roomPeople { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--pw-line); }
+.roomPeople li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--pw-line); }
+.roomPeople .ava { width: 48px; height: 48px; flex: none; font-size: 18px; }
+.avaYou { background: var(--pw-primary); color: var(--pw-on-primary); }
+.personText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.personText b { font-size: 17px; font-weight: 600; }
+.personText small { font-size: 15px; color: var(--pw-muted); }
+.keyNote { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 17px; }
+.keyNote svg { flex: none; color: var(--pw-primary); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { BarChart3, CalendarDays, Check, ChevronRight, MapPin, Puzzle, ThumbsUp } from "lucide-react";
+import { BarChart3, CalendarDays, Check, ChevronRight, KeyRound, MapPin, Puzzle, ThumbsUp } from "lucide-react";
 import {
   AGENDA, agendaSession, answerKey, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
@@ -173,10 +173,27 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     const { mates, self, code } = view.room;
     const rhythm = (nick: string, sleep: string | null, wake: string | null, you = false) => <div key={nick}><span>{nick}{you ? " (kamu)" : ""}</span><span>Tidur {sleep ?? "–"}</span><span>Bangun {wake ?? "–"}</span></div>;
     return <>
-      <section className={`${css.card} ${css.welcome}`}>
-        <h2 className={css.roomCode}>Kamar {code}</h2>
-        <div className={css.mates}>{mates.map(mate => <div key={mate.name} className={css.mate}><span className={css.ava} aria-hidden>{initials(mate.name)}</span>{mate.nick}</div>)}</div>
-        <p className={css.lead}>Ambil kunci kamar {code} di meja panitia.</p>
+      {/* The room (27 Nov 2026): its number, who is in it with full names, and where the key is. */}
+      <section className={`${css.card} ${css.roomCard}`} aria-labelledby="kamar-kode">
+        <div className={css.roomHead}>
+          <div className={css.roomTitle}>
+            <span className={css.eyebrow}>Kamarmu</span>
+            <h2 id="kamar-kode" className={css.roomCode}><span className={css.srOnly}>Kamar </span>{code}</h2>
+            <span className={css.note}>Villa Cangkringan</span>
+          </div>
+          <span className={css.roomKey} aria-hidden><KeyRound size={30} strokeWidth={2} /></span>
+        </div>
+        <ul className={css.roomPeople} aria-label={`Penghuni kamar ${code}`}>
+          {mates.map(mate => <li key={mate.name}>
+            <span className={css.ava} aria-hidden>{initials(mate.name)}</span>
+            <span className={css.personText}><b>{mate.name}</b><small>{[mate.nick, mate.dept].filter(Boolean).join(" · ")}</small></span>
+          </li>)}
+          <li>
+            <span className={`${css.ava} ${css.avaYou}`} aria-hidden>{initials(view.name)}</span>
+            <span className={css.personText}><b>{view.name}</b><small>Kamu</small></span>
+          </li>
+        </ul>
+        <p className={css.keyNote}><KeyRound size={20} aria-hidden /><span>Ambil kunci kamar <b>{code}</b> di meja panitia.</span></p>
       </section>
       {roommates()}
       <section className={css.card}><h2 className={css.cardTitle}>Jam tidur di kamarmu</h2><div className={css.rhythm}>{rhythm(view.nick, self.sleep, self.wake, true)}{mates.map(mate => rhythm(mate.nick, mate.sleep, mate.wake))}</div></section>
