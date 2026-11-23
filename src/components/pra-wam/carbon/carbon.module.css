@@ -41,7 +41,7 @@
 .legendName { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--pw-body); color: var(--on-eco-2); overflow-wrap: anywhere; }
 .legendName > i { flex: none; width: 10px; height: 10px; border-radius: 3px; }
 .legendValue { font: 700 20px/24px var(--pw-display); font-variant-numeric: tabular-nums; }
-.foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--on-eco) 22%, transparent); font: 400 14px/20px var(--pw-body); color: var(--on-eco-2); }
+.foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--on-eco) 22%, transparent); font: 400 14px/20px var(--pw-body); color: var(--on-eco-2); }
 .more { flex: none; display: inline-flex; align-items: center; gap: 2px; min-height: 24px; font: 600 16px/20px var(--pw-body); color: var(--on-eco); }
 .more > svg { width: 18px; height: 18px; }
 
