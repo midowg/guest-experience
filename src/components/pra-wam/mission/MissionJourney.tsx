@@ -6,6 +6,7 @@ import {
   AGENDA, agendaSession, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
 } from "@/lib/pra-wam/mission";
+import { useConfirm } from "../ConfirmDialog";
 import { Sheet } from "../Sheet";
 import { MissionRoad } from "./MissionRoad";
 import css from "./mission.module.css";
@@ -74,6 +75,14 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   const [toast, setToast] = useState("");
   const [miss, setMiss] = useState(false);
   const [ask, setAsk] = useState({ text: "", cat: null as string | null, anon: false });
+  // The app's own question (26 Nov 2026): the browser's confirm() is blocked without a word in an
+  // installed app and in some in-app browsers, so "Ulangi" seemed to do nothing.
+  const [confirm, confirmDialog] = useConfirm();
+  async function restart() {
+    const ok = await confirm({ title: "Ulangi dari awal?", body: "Misi, tebakan teman sekamar, dan pertanyaanmu di HP ini dihapus. HP lain tidak berubah.", confirmLabel: "Ya, ulangi" });
+    if (!ok) return;
+    setS(fresh(view)); close(); window.scrollTo({ top: 0 }); setToast("Diulang dari awal");
+  }
   const hod = view.role === "HoD" && !!view.room;
   const missions = useMemo(() => missionsOf(view), [view]);
   const doneCount = missions.filter(item => s.done[item]).length;
@@ -297,13 +306,14 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     <footer className={css.foot}>
       <span>Prototipe</span>
       <a href={detailHref}>Detail sesi</a>
-      <button type="button" onClick={() => { if (window.confirm("Ulangi dari awal? Progres di HP ini dihapus.")) { setS(fresh(view)); close(); setToast("Diulang dari awal"); } }}>Ulangi</button>
+      <button type="button" onClick={() => { void restart(); }}>Ulangi dari awal</button>
     </footer>
 
     {!s.arrived && <div className={css.dock}>
       <button type="button" className={`${css.btn} ${css.primary}`} onClick={() => setSheet("arrive")}><MapPin aria-hidden className={css.btnIcon} /> Sudah tiba di venue</button>
     </div>}
 
+    {confirmDialog}
     {open && <Sheet open onClose={close} title={open.title} subtitle={open.subtitle} footer={open.footer}>{open.body}</Sheet>}
     <div className={`${css.toast} ${toast ? css.toastShow : ""}`} role="status">{toast}</div>
   </div>;
