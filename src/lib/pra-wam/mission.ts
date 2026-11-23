@@ -16,8 +16,13 @@ export const MISSION_SESSION_ID = "2eeaabc9-3f16-426c-aced-dfaff545a478";
 export const MISSION_SETTING_KEY = "mission_journey";
 
 export type MissionRole = "HoD" | "BoD" | "CoS";
-/** A roommate; `choices` (25 Nov 2026) are the three names of their quiz, them among two others, in a steady order. */
-export type Mate = { name: string; nick: string; dept: string; hints: string[]; sleep: string | null; wake: string | null; choices: { id: string; name: string; nick: string }[] };
+export type QuizChoice = { id: string; name: string; nick: string };
+/**
+ * A roommate. `questions` (27 Nov 2026): one per hint, each "who is this?" with three names, the
+ * roommate among two others that change from question to question, so the answer is the name that
+ * fits every hint.
+ */
+export type Mate = { name: string; nick: string; dept: string; hints: string[]; sleep: string | null; wake: string | null; questions: { choices: QuizChoice[] }[] };
 /** What one person receives: their own part only. */
 export type MissionView = {
   employeeId: string;
@@ -168,12 +173,15 @@ export const personKey = (name: string) => name.trim().replace(/\s+/g, " ").toUp
  * preferring people of the same rooms' group (the women's rooms or the men's), in an order that is
  * the same every time but does not always put the answer first.
  */
-export function quizChoices<T extends { name: string }>(mate: T, pool: readonly T[], sameGroup: (person: T) => boolean): T[] {
+export function quizChoices<T extends { name: string }>(mate: T, pool: readonly T[], sameGroup: (person: T) => boolean, salt = ""): T[] {
   const score = (text: string) => { let sum = 7; for (const char of text) sum = (sum * 31 + char.charCodeAt(0)) % 1_000_003; return sum; };
-  const byMate = (person: T) => score(`${mate.name}|${person.name}`);
+  const byMate = (person: T) => score(`${mate.name}|${person.name}|${salt}`);
   const others = [...pool].sort((a, b) => Number(sameGroup(b)) - Number(sameGroup(a)) || byMate(a) - byMate(b)).slice(0, 2);
   return [mate, ...others].sort((a, b) => byMate(a) - byMate(b));
 }
+
+/** The key of one quiz answer: the roommate and the question's number. */
+export const answerKey = (mateKey: string, question: number) => `${mateKey}#${question}`;
 
 /** Initials for an avatar: "Linda Susanto" → "LS". */
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();

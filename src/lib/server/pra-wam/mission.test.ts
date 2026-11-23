@@ -23,7 +23,8 @@ describe("missionFor", () => {
     expect(view?.room?.code).toBe("A3");
     expect(view?.room?.mates.map(mate => mate.name)).toEqual(["Ina Dua"]);
     // The quiz: the roommate and people from outside the room only, never this person.
-    const names = view?.room?.mates[0].choices.map(choice => choice.name) ?? [];
+    expect(view?.room?.mates[0].questions).toHaveLength(3);
+    const names = view?.room?.mates[0].questions.flatMap(question => question.choices.map(choice => choice.name)) ?? [];
     expect(names).toContain("Ina Dua");
     expect(names).not.toContain("Ani Satu");
     expect(names.filter(name => name !== "Ina Dua").every(name => ["Budi Tiga", "Cici Empat"].includes(name))).toBe(true);

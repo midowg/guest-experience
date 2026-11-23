@@ -49,6 +49,8 @@ describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
     expect(choices).toContain(mate);
     expect(choices.filter(choice => choice !== mate).every(choice => choice.men)).toBe(true);
     expect(quizChoices(mate, pool, person => person.men)).toEqual(choices);
+    // Another question (salt) may bring other names, never without the roommate.
+    expect(quizChoices(mate, pool, person => person.men, "q1")).toContain(mate);
   });
 
   it("gives each person two different Future Signal questions, the same every time", () => {

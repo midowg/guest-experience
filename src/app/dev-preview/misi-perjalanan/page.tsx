@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 const choice = (name: string) => ({ id: name.toUpperCase(), name, nick: name.split(" ")[1] ?? "" });
 const mate = (name: string, nick: string, dept: string, decoys: string[]) => ({ name, nick, dept, sleep: "22.00–24.00", wake: "05.00–06.30",
   hints: [`Petunjuk pertama tentang ${nick} (contoh).`, `Petunjuk kedua tentang ${nick} (contoh).`, `Petunjuk ketiga tentang ${nick} (contoh).`],
-  choices: [decoys[0], name, decoys[1]].map(choice) });
+  // A question per hint, the other names changing (as the server makes them).
+  questions: [[decoys[0], name, decoys[1]], [name, decoys[1], decoys[2]], [decoys[2], decoys[0], name]].map(names => ({ choices: names.map(choice) })) });
 
 export default async function DevMissionPage({ searchParams }: { searchParams: Promise<{ peran?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -20,7 +21,7 @@ export default async function DevMissionPage({ searchParams }: { searchParams: P
   const hod: MissionView = {
     employeeId: "dev-hod", name: "Rani Contoh", nick: "Rani", role: "HoD", ceo: false, sentences: [6, 12],
     room: {
-      code: "A3", mates: [mate("Contoh Satu", "Satu", "Departemen Contoh", ["Contoh Tiga", "Contoh Empat"]), mate("Contoh Dua", "Dua", "Departemen Lain", ["Contoh Lima", "Contoh Enam"])],
+      code: "A3", mates: [mate("Contoh Satu", "Satu", "Departemen Contoh", ["Contoh Tiga", "Contoh Empat", "Contoh Lima"]), mate("Contoh Dua", "Dua", "Departemen Lain", ["Contoh Enam", "Contoh Tiga", "Contoh Empat"])],
       self: { sleep: "Sebelum 22.00", wake: "Sebelum 05.00" },
     },
   };

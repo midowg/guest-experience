@@ -214,3 +214,12 @@
 @media (prefers-reduced-motion: reduce) {
   .mini, .miniFill, .miniBus { transition: none; }
 }
+
+/* A question per hint (27 Nov 2026). */
+.clueLabel { font-size: 15px; font-weight: 700; color: var(--pw-primary); }
+.clue { margin: 0; font-family: var(--pw-display); font-size: 19px; line-height: 1.45; }
+.answers { display: grid; gap: 10px; margin: 0; padding-left: 22px; font-size: 16px; }
+.answers li { display: grid; gap: 2px; }
+.answers small { font-size: 15px; font-weight: 700; }
+.answerRight { color: var(--pw-success); }
+.answerWrong { color: var(--pw-muted); }

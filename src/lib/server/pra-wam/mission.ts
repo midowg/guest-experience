@@ -47,7 +47,10 @@ export async function missionFor(member: Member): Promise<MissionView | null> {
     mates: sheet.people.filter(item => item.room === person.room && key(item.name) !== me)
       .map((item): Mate => ({
         name: item.name, nick: item.nick, dept: item.dept, hints: item.hints.slice(0, 3), sleep: item.sleep, wake: item.wake,
-        choices: quizChoices(item, outside, other => group(other.room) === group(person.room)).map(choice => ({ id: personKey(choice.name), name: choice.name, nick: choice.nick })),
+        // A question per hint (27 Nov 2026), each with its own two other names.
+        questions: item.hints.slice(0, 3).map((_, at) => ({
+          choices: quizChoices(item, outside, other => group(other.room) === group(person.room), `q${at}`).map(choice => ({ id: personKey(choice.name), name: choice.name, nick: choice.nick })),
+        })),
       })),
     self: { sleep: person.sleep, wake: person.wake },
   } : null;

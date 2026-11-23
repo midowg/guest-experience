@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { BarChart3, CalendarDays, Check, ChevronRight, MapPin, Puzzle, ThumbsUp } from "lucide-react";
 import {
-  AGENDA, agendaSession, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
+  AGENDA, agendaSession, answerKey, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
 } from "@/lib/pra-wam/mission";
 import { useConfirm } from "../ConfirmDialog";
@@ -115,7 +115,13 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   }
   const openSession = (id: string) => { update({ session: id }); setSheet("session"); };
 
-  /** The roommates revealed at the venue: name, department, the hints, and how the guess went. */
+  /** The open questions, in order (27 Nov 2026): roommate 1's, then roommate 2's; each opens with its hint. */
+  function quizSteps() {
+    const mates = view.room?.mates ?? [];
+    return mates.flatMap((mate, m) => mate.questions.slice(0, hints).map((question, q) => ({ m, q, mate, question, key: answerKey(keyOf(mate.name), q) })));
+  }
+
+  /** The roommates revealed at the venue: name, department, and each question with the answer given. */
   function roommates() {
     if (!view.room) return null;
     const { mates } = view.room;
@@ -123,13 +129,20 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
       <h2 id="kamar-judul" className={css.sectionTitle}>Teman sekamarmu</h2>
       {mates.map((mate, index) => {
         const key = keyOf(mate.name);
-        const picked = s.guess[key];
-        const right = picked === key;
-        return <article key={mate.name} className={`${css.quiz} ${picked ? (right ? css.quizSolved : css.quizMissed) : ""}`} aria-labelledby={`teman-${index}`}>
+        const answers = mate.questions.map((question, q) => {
+          const picked = s.guess[answerKey(key, q)];
+          return { hint: mate.hints[q], picked, name: question.choices.find(choice => choice.id === picked)?.name, right: picked === key };
+        });
+        const right = answers.filter(answer => answer.right).length;
+        const all = right === answers.length;
+        return <article key={mate.name} className={`${css.quiz} ${all ? css.quizSolved : css.quizMissed}`} aria-labelledby={`teman-${index}`}>
           <h3 id={`teman-${index}`} className={css.quizTitle}>{mate.name}</h3>
           <p className={css.note}>{mate.dept}</p>
-          <ul className={css.clues}>{mate.hints.slice(0, HINT_COUNT).map(hint => <li key={hint}>{hint}</li>)}</ul>
-          <p className={picked ? (right ? css.verdict : css.verdictMiss) : css.note}>{!picked ? "Kamu tidak menebak." : right ? "Tebakanmu benar!" : `Tebakanmu: ${mate.choices.find(choice => choice.id === picked)?.name ?? "-"}`}</p>
+          <p className={all ? css.verdict : css.verdictMiss}>{all ? `Semua tebakanmu benar (${right} dari ${answers.length})` : `${right} dari ${answers.length} tebakanmu benar`}</p>
+          <ol className={css.answers}>{answers.map((answer, q) => <li key={q}>
+            <span>{answer.hint}</span>
+            <small className={answer.right ? css.answerRight : css.answerWrong}>{!answer.picked ? "Tidak dijawab" : answer.right ? "✓ Benar" : `✗ Kamu memilih ${answer.name}`}</small>
+          </li>)}</ol>
         </article>;
       })}
     </section>;
@@ -139,14 +152,16 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   function guessCard() {
     if (!view.room) return null;
     const { mates } = view.room;
-    const guessed = mates.filter(mate => s.guess[keyOf(mate.name)]).length;
-    const label = guessed === 0 ? "Ayo tebak teman sekamarmu" : guessed < mates.length ? "Lanjut menebak" : "Lihat atau ubah tebakan";
+    const steps = quizSteps();
+    const total = mates.reduce((sum, mate) => sum + mate.questions.length, 0);
+    const answered = steps.filter(step => s.guess[step.key]).length;
+    const label = steps.length === 0 ? "Selesaikan satu misi dulu" : answered === 0 ? "Ayo tebak teman sekamarmu" : answered < steps.length ? "Lanjut menebak" : "Lihat atau ubah tebakan";
     return <section className={css.guess} aria-labelledby="tebak-judul">
       <div className={css.guessPeople}>{mates.map(mate => <MysteryPerson key={mate.name} size={64} />)}</div>
       <h2 id="tebak-judul" className={css.cardTitle}>Siapa teman sekamarmu?</h2>
-      <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Tebak dari petunjuk profil mereka; semua jawaban dibuka saat tiba di venue.</p>
-      <p className={css.note}>{hints > 0 ? `${hints} dari ${HINT_COUNT} petunjuk terbuka` : "Petunjuk terbuka dari misi di bawah"} · sudah ditebak {guessed} dari {mates.length}</p>
-      <button type="button" className={`${css.btn} ${css.primary}`} onClick={() => { const next = mates.findIndex(mate => !s.guess[keyOf(mate.name)]); setQuizAt(next < 0 ? 0 : next); setSheet("quiz"); }}>{label}</button>
+      <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Ada {total} pertanyaan dari profil mereka; nama yang cocok dengan semua petunjuk adalah teman sekamarmu. Jawabannya dibuka saat tiba di venue.</p>
+      <p className={css.note}>{steps.length === 0 ? "Pertanyaan pertama terbuka setelah satu misi selesai." : `Terjawab ${answered} dari ${steps.length} pertanyaan terbuka${steps.length < total ? ` · ${total - steps.length} lagi terbuka dari misi berikutnya` : ""}`}</p>
+      <button type="button" className={`${css.btn} ${css.primary}`} disabled={steps.length === 0} onClick={() => { const next = steps.findIndex(step => !s.guess[step.key]); setQuizAt(next < 0 ? 0 : next); setSheet("quiz"); }}>{label}</button>
     </section>;
   }
 
@@ -222,34 +237,34 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         footer: <button type="button" className={`${css.btn} ${css.primary}`} disabled={!s.signal[0] || !s.signal[1]} onClick={() => complete("sig", "Future Signal")}>Kirim jawaban</button>,
       };
       case "quiz": {
-        if (!view.room) return null;
-        const { mates } = view.room;
-        const at = Math.min(quizAt, mates.length - 1);
-        const mate = mates[at];
-        const key = keyOf(mate.name);
+        const steps = quizSteps();
+        if (!view.room || steps.length === 0) return null;
+        const at = Math.min(quizAt, steps.length - 1);
+        const { m, q, mate, question, key } = steps[at];
         const picked = s.guess[key];
-        const last = at === mates.length - 1;
+        const last = at === steps.length - 1;
+        const total = view.room.mates.reduce((sum, item) => sum + item.questions.length, 0);
         return {
-          title: `Teman sekamar ${at + 1}`, subtitle: `${at + 1} dari ${mates.length} · jawaban dibuka saat tiba`,
+          title: `Teman sekamar ${view.room.mates.length > 1 ? m + 1 : ""}`.trim(), subtitle: `Pertanyaan ${q + 1} dari ${mate.questions.length} · jawaban dibuka saat tiba`,
           body: <div className={css.sheetStack}>
-            <div className={css.quizDots} aria-hidden>{mates.map((item, index) => <span key={item.name} className={index === at ? css.dotOn : s.guess[keyOf(item.name)] ? css.dotDone : css.dot} />)}</div>
-            <div className={css.quizHero}><MysteryPerson size={88} label={`Teman sekamar ${at + 1}, masih rahasia`} /></div>
+            <div className={css.quizDots} aria-hidden>{steps.map((step, index) => <span key={step.key} className={index === at ? css.dotOn : s.guess[step.key] ? css.dotDone : css.dot} />)}</div>
+            <div className={css.quizHero}><MysteryPerson size={80} label={`Teman sekamar ${m + 1}, masih rahasia`} /></div>
             <section className={css.card}>
-              <b className={css.question}>Petunjuk tentang dia</b>
-              {hints > 0 ? <ul className={css.clues}>{mate.hints.slice(0, hints).map(hint => <li key={hint}>{hint}</li>)}</ul>
-                : <p className={css.note}>Belum ada petunjuk. Selesaikan misi untuk membukanya, atau tebak sekarang.</p>}
+              <span className={css.clueLabel}>Petunjuk {q + 1}</span>
+              <p className={css.clue}>{mate.hints[q]}</p>
             </section>
-            <b className={css.question}>Menurutmu siapa?</b>
-            <div className={css.picks}>{mate.choices.map(choice => <button key={choice.id} type="button" className={css.pick} aria-pressed={picked === choice.id}
+            <b className={css.question}>Siapa dia?</b>
+            <div className={css.picks}>{question.choices.map(choice => <button key={choice.id} type="button" className={css.pick} aria-pressed={picked === choice.id}
               onClick={() => update(current => ({ guess: { ...current.guess, [key]: choice.id } }))}>
               <i aria-hidden>{picked === choice.id ? <Check /> : initials(choice.name)}</i>{choice.name}{choice.nick ? <small>{choice.nick}</small> : null}
             </button>)}</div>
+            {q > 0 && <p className={css.note}>Ingat petunjuk sebelumnya: nama yang cocok dengan semua petunjuk adalah teman sekamarmu.</p>}
           </div>,
           footer: <div className={css.row}>
             {at > 0 && <button type="button" className={css.btn} onClick={() => setQuizAt(at - 1)}>Sebelumnya</button>}
             <button type="button" className={`${css.btn} ${css.primary}`} disabled={!picked} onClick={() => {
               if (!last) { setQuizAt(at + 1); return; }
-              close(); setToast("Tebakan disimpan · jawabannya dibuka saat tiba");
+              close(); setToast(steps.length < total ? "Tersimpan · sisanya terbuka dari misi" : "Tersimpan · dibuka saat tiba");
             }}>{last ? "Selesai" : "Lanjut"}</button>
           </div>,
         };
