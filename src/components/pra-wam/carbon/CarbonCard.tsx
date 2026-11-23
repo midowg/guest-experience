@@ -19,28 +19,37 @@ const TIPS: { icon: LucideIcon; text: string }[] = [
 ];
 
 /**
- * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026): a deep green card (the one
- * place the app goes green, so it reads as green, under WAM's theme "Shaping for Tomorrow"), "Jejak karbon kamu" with a leaf, the figure in
- * big Poppins, "perkiraan" and the sources in words, and a thin bar. The whole card opens the detail
- * (a sheet, the total in its subtitle so the card is not repeated): where it comes from, how it is
- * counted (the sources as small links at its very bottom), and small habits. The bar never stands on colour alone: every part is also a row with its name and share.
+ * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026): the one deep-green card in the
+ * app, its chip "For Tomorrow" after WAM's theme "Shaping for Tomorrow". Top to bottom: the chip,
+ * "Jejak karbon perjalananmu", the figure in big Poppins with "Perkiraan selama Pra WAM", a thin bar,
+ * the three parts in columns (name and share, so the bar never stands on colour alone), and a foot
+ * line with "Rincian". The whole card opens the detail (a sheet; the total is only its subtitle, so
+ * the card is not repeated): where it comes from, how it is counted (the sources as small links at
+ * its very bottom), and small habits.
  */
 export function CarbonCard({ view }: { view: CarbonView }) {
   const [open, setOpen] = useState(false);
-  if (view.kind === "belum") return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon kamu">
+  if (view.kind === "belum") return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon perjalananmu">
+    <Motif />
     <CardHead />
-    <p className={css.waiting}>Perkiraan muncul setelah perjalanan dan kamarmu diisi panitia.</p>
+    <p className={css.waiting}>Angkamu muncul setelah panitia mengisi perjalanan dan kamarmu.</p>
   </section>;
   return <>
-    <button type="button" className={css.card} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Jejak karbon kamu, perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>
+    <button type="button" className={css.card} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM. ${view.barLabel}. Buka rincian`}>
       <Motif />
       <CardHead />
-      <span className={css.figure}><span className={css.number}>{view.total.value}</span><span className={css.unit}>{view.total.unit}</span></span>
+      <span className={css.figureBlock}>
+        <span className={css.figure}><span className={css.number}>{view.total.value}</span><span className={css.unit}>{view.total.unit}</span></span>
+        <span className={css.caption}>Perkiraan selama Pra WAM</span>
+      </span>
       <Bar sources={view.sources} />
-      <span className={css.legend}>{view.sources.map(source => <span key={source.key} className={css.legendItem}><i className={swatch(source.swatch)} aria-hidden />{source.title} {source.percent}%</span>)}</span>
-      <span className={css.more}>Lihat rincian <ChevronRight aria-hidden /></span>
+      <span className={css.legend}>{view.sources.map(source => <span key={source.key} className={css.legendItem}>
+        <span className={css.legendName}><i className={swatch(source.swatch)} aria-hidden />{source.title}</span>
+        <span className={css.legendValue}>{source.percent}%</span>
+      </span>)}</span>
+      <span className={css.foot}><span>Dihitung dari data acaramu</span><span className={css.more}>Rincian <ChevronRight aria-hidden /></span></span>
     </button>
-    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon kamu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit} untuk perjalanan Pra WAM`}>
+    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon perjalananmu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit} selama Pra WAM`}>
       <CarbonDetail view={view} />
     </Sheet>}
   </>;
@@ -49,8 +58,7 @@ export function CarbonCard({ view }: { view: CarbonView }) {
 function CardHead() {
   return <span className={css.head}>
     <span className={css.chip}><Leaf aria-hidden />For Tomorrow</span>
-    <span className={css.title}>Jejak karbon kamu</span>
-    <span className={css.estimate}><i aria-hidden />Perkiraan</span>
+    <span className={css.title}>Jejak karbon perjalananmu</span>
   </span>;
 }
 
@@ -92,11 +100,11 @@ export function CarbonDetail({ view }: { view: Extract<CarbonView, { kind: "ada"
     <section className={css.how}>
       <button type="button" className={css.howRow} aria-expanded={how} aria-controls="karbon-cara" onClick={() => setHow(!how)}>
         <span className={css.rowIcon}><Info aria-hidden /></span>
-        <span className={css.howText}><strong>Cara menghitung</strong><span>Data kegiatan × faktor emisi</span></span>
+        <span className={css.howText}><strong>Cara menghitung</strong><span>Data perjalananmu × faktor emisi</span></span>
         <ChevronDown aria-hidden className={css.chevron} data-open={how || undefined} />
       </button>
       <div id="karbon-cara" className={css.howBody} hidden={!how}>
-        <p>Perjalanan, kamar, dan jumlah makan diambil dari data acaramu. Bus dibagi jumlah penumpang, kamar dibagi jumlah penghuni.</p>
+        <p>Perjalanan, kamar, dan porsi makan diambil dari data acaramu yang diisi panitia. Emisi bus dibagi rata ke penumpangnya, emisi kamar dibagi rata ke penghuninya.</p>
         <ul className={css.factors}>
           {carbonFactorRows().map(row => {
             const Icon = FACTOR_ICON[row.key];

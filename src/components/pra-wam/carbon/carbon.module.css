@@ -20,13 +20,13 @@
 
 .motif { position: absolute; right: -18px; top: -14px; width: 132px; height: 132px; z-index: -1; pointer-events: none; fill: color-mix(in srgb, var(--on-eco) 9%, transparent); stroke: color-mix(in srgb, var(--on-eco) 22%, transparent); stroke-width: 2; stroke-linecap: round; }
 
-.head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font: 700 12px/16px var(--pw-body); letter-spacing: .06em; text-transform: uppercase; color: var(--eco-deep); background: var(--eco-seg-2); }
 .chip > svg { width: 14px; height: 14px; }
-.title { font: 600 17px/22px var(--pw-display); }
-.estimate { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font: 600 13px/16px var(--pw-body); color: var(--on-eco-2); }
-.estimate i { width: 7px; height: 7px; border-radius: 50%; background: var(--eco-seg-2); }
+.title { font: 600 18px/24px var(--pw-display); }
 
+.figureBlock { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.caption { font: 500 15px/20px var(--pw-body); color: var(--on-eco-2); }
 .figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
 .number { font: 700 52px/52px var(--pw-display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .unit { font: 600 16px/20px var(--pw-body); color: var(--on-eco-2); }
@@ -36,10 +36,13 @@
 .card .seg1 { background: var(--eco-seg-1); }
 .card .seg2 { background: var(--eco-seg-2); }
 .card .seg3 { background: var(--eco-seg-3); }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 500 15px/20px var(--pw-body); color: var(--on-eco); }
-.legendItem { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.legendItem > i { width: 10px; height: 10px; border-radius: 3px; }
-.more { display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; min-height: 28px; font: 600 15px/20px var(--pw-body); color: var(--on-eco); }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px 12px; }
+.legendItem { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.legendName { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/20px var(--pw-body); color: var(--on-eco-2); overflow-wrap: anywhere; }
+.legendName > i { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.legendValue { font: 700 20px/24px var(--pw-display); font-variant-numeric: tabular-nums; }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--on-eco) 22%, transparent); font: 400 14px/20px var(--pw-body); color: var(--on-eco-2); }
+.more { flex: none; display: inline-flex; align-items: center; gap: 2px; min-height: 24px; font: 600 16px/20px var(--pw-body); color: var(--on-eco); }
 .more > svg { width: 18px; height: 18px; }
 
 /* The detail (in the sheet). */

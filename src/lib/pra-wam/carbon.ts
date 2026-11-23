@@ -106,12 +106,13 @@ function noteOf(key: CarbonSource, input: CarbonInput): string {
   switch (key) {
     case "perjalanan": {
       const km = (mode: CarbonLeg["mode"]) => input.legs.filter(leg => leg.mode === mode).reduce((sum, leg) => sum + positive(leg.km), 0);
-      return [km("kereta") > 0 ? `Kereta ${id(km("kereta"))} km` : "", km("bus") > 0 ? `shuttle ${id(km("bus"))} km` : ""].filter(Boolean).join(", ");
+      return [km("kereta") > 0 ? `Kereta ${id(km("kereta"))} km` : "", km("bus") > 0 ? `bus ${id(km("bus"))} km` : ""].filter(Boolean).join(" · ");
     }
     case "kamar": {
       const nights = `${id(positive(input.nights))} malam`;
       const people = Math.max(1, positive(input.roomOccupants));
-      return people > 1 ? `${nights}, dibagi ${id(people)} orang sekamar` : `${nights}, sendiri`;
+      const together = people === 2 ? "berdua" : people === 3 ? "bertiga" : `${id(people)} orang`;
+      return people > 1 ? `${nights}, sekamar ${together}` : `${nights}, sendiri`;
     }
     case "makan": return `${id(positive(input.meals))} porsi selama acara`;
   }
@@ -144,3 +145,86 @@ export function carbonFactorRows(): { key: "kereta" | "bus" | "kamar" | "makan";
     { key: "makan", name: "Makan", unit: "kg per porsi", value: id(f.makanPerPorsi, 1) },
   ];
 }
+
+/*
+ * What the panitia fill in Admin Pra WAM → Jejak karbon (prototype, 23 Nov 2026). Once for the
+ * event: nights, meals per person, and the shuttle between the station and the venue. Per person:
+ * where they leave from, how (kereta or bus, or "lainnya", not counted yet), the one-way km, and
+ * whether they ride the shuttle. Rooms and roommates are not filled here: they come from Misi
+ * Perjalanan's room list.
+ */
+export type CarbonEventSettings = {
+  nights: number;
+  mealsPerPerson: number;
+  /** Station → venue, one way. */
+  shuttleKm: number;
+  /** People per shuttle bus. */
+  shuttlePerBus: number;
+  /** People per bus for a group bus from a city. */
+  groupBusPerBus: number;
+};
+
+export type TravelMode = "kereta" | "bus" | "lainnya";
+export type CarbonTravel = {
+  from: string;
+  mode: TravelMode | null;
+  /** One way. */
+  km: number;
+  roundTrip: boolean;
+  shuttle: boolean;
+};
+
+export const TRAVEL_MODES: { key: TravelMode; label: string }[] = [
+  { key: "kereta", label: "Kereta" }, { key: "bus", label: "Bus" }, { key: "lainnya", label: "Lainnya" },
+];
+
+/** A person's row is complete once it says how they come (and how far, unless "lainnya"). */
+export const travelComplete = (travel: CarbonTravel | null | undefined): boolean =>
+  !!travel && !!travel.mode && (travel.mode === "lainnya" || positive(travel.km) > 0);
+
+/** One person's input from the event's settings, their travel and their room; null while their travel is not complete. */
+export function personCarbonInput(settings: CarbonEventSettings, travel: CarbonTravel | null | undefined, roomOccupants: number): CarbonInput | null {
+  if (!travelComplete(travel)) return null;
+  const t = travel!;
+  const times = t.roundTrip ? 2 : 1;
+  const legs: CarbonLeg[] = [];
+  if (t.mode === "kereta" || t.mode === "bus") {
+    for (let i = 0; i < times; i++) legs.push({ mode: t.mode, label: t.from, km: positive(t.km), sharedBy: t.mode === "bus" ? Math.max(1, positive(settings.groupBusPerBus)) : undefined });
+  }
+  if (t.shuttle && positive(settings.shuttleKm) > 0) {
+    for (let i = 0; i < times; i++) legs.push({ mode: "bus", label: "Shuttle", km: positive(settings.shuttleKm), sharedBy: Math.max(1, positive(settings.shuttlePerBus)) });
+  }
+  return { legs, nights: positive(settings.nights), roomOccupants: Math.max(1, positive(roomOccupants)), meals: positive(settings.mealsPerPerson) };
+}
+
+export type PastedRow = { line: number; name: string; from: string; mode: TravelMode | null; km: number };
+
+const MODE_WORDS: [RegExp, TravelMode][] = [[/^(ka|kereta|train)/i, "kereta"], [/^(bus|bis)/i, "bus"], [/./, "lainnya"]];
+
+/**
+ * Rows pasted from Excel (tab- or semicolon-separated): Nama, Kota asal, Moda, Km sekali jalan.
+ * A header row is skipped; a row is matched to a person by name (letters only, case ignored).
+ */
+export function parsePastedTravel(text: string, names: readonly string[]): { rows: (PastedRow & { match: string })[]; unknown: PastedRow[]; bad: number[] } {
+  const key = (name: string) => name.toLowerCase().replace(/[^a-z]/g, "");
+  const byKey = new Map(names.map(name => [key(name), name]));
+  const rows: (PastedRow & { match: string })[] = [];
+  const unknown: PastedRow[] = [];
+  const bad: number[] = [];
+  text.split(/\r?\n/).forEach((raw, index) => {
+    const cells = raw.split(/\t|;/).map(cell => cell.trim());
+    if (!cells[0] || /^nama$/i.test(cells[0])) return;
+    const kmText = (cells[3] ?? "").replace(/\./g, "").replace(",", ".");
+    const km = Number(kmText);
+    const modeText = cells[2] ?? "";
+    const mode = modeText ? MODE_WORDS.find(([pattern]) => pattern.test(modeText))![1] : null;
+    if (cells.length < 2 || (kmText !== "" && !Number.isFinite(km))) { bad.push(index + 1); return; }
+    const row: PastedRow = { line: index + 1, name: cells[0], from: cells[1] ?? "", mode, km: Number.isFinite(km) ? km : 0 };
+    const match = byKey.get(key(cells[0]));
+    if (match) rows.push({ ...row, match }); else unknown.push(row);
+  });
+  return { rows, unknown, bad };
+}
+
+/** One row of the admin page: the person, their room (from Misi Perjalanan's list) and their travel. */
+export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };
