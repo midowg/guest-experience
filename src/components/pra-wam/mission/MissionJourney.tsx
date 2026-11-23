@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { BarChart3, CalendarDays, Check, ChevronRight, HelpCircle, MapPin, Puzzle, ThumbsUp } from "lucide-react";
+import { BarChart3, CalendarDays, Check, ChevronRight, MapPin, Puzzle, ThumbsUp } from "lucide-react";
 import {
   AGENDA, agendaSession, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
@@ -19,11 +19,13 @@ import css from "./mission.module.css";
  * Future Signal questions left out). Pra WAM's own colours. A demo: kept on this device.
  */
 
-type SheetKey = MissionKey | "guess" | "arrive" | "agenda" | "session" | "ceo";
+type SheetKey = MissionKey | "arrive" | "agenda" | "session" | "ceo";
 type State = {
   done: Record<MissionKey, boolean>;
   kalIdx: number; pool: number[]; answer: number[];
-  signal: Record<number, string>; guess: string[]; guessSaved: boolean;
+  signal: Record<number, string>;
+  /** The name picked for each roommate (their key → the picked person's key). */
+  guess: Record<string, string>;
   arrived: boolean; change: string;
   session: string; questions: Record<string, Question[]>; presenting: string | null; seq: number;
 };
@@ -39,7 +41,7 @@ function fresh(view: MissionView): State {
   return {
     done: { kal: false, sig: false },
     kalIdx: 0, pool: view.sentences.length ? scrambled(view.sentences[0]) : [], answer: [],
-    signal: {}, guess: [], guessSaved: false, arrived: false, change: "",
+    signal: {}, guess: {}, arrived: false, change: "",
     session: "s1", questions, presenting: null, seq,
   };
 }
@@ -64,7 +66,9 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   const inBrowser = useSyncExternalStore(noop, () => true, () => false);
   const [s, setS] = useState<State>(() => {
     if (typeof window === "undefined") return fresh(view);
-    try { const saved = localStorage.getItem(storage); return saved ? { ...fresh(view), ...JSON.parse(saved) as State } : fresh(view); } catch { return fresh(view); }
+    try { const saved = localStorage.getItem(storage); if (!saved) return fresh(view);
+      const loaded = { ...fresh(view), ...JSON.parse(saved) as State };
+      return Array.isArray(loaded.guess) ? { ...loaded, guess: {} } : loaded; } catch { return fresh(view); }
   });
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [toast, setToast] = useState("");
@@ -88,21 +92,37 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     setToast(`${label} selesai${hod ? " · petunjuk baru terbuka" : ""}`);
   }
   const openSession = (id: string) => { update({ session: id }); setSheet("session"); };
-  const guessRight = !!view.room && s.guessSaved && view.room.mates.every(mate => s.guess.includes(keyOf(mate.name)));
 
-  /* ---- the room mystery (before check-in), or the room itself (after) ---- */
-  function mystery(full: boolean) {
+  /*
+   * The roommates as a quiz (25 Nov 2026): one card per roommate with the hints opened so far and
+   * "Menurutmu siapa?" with three names. The answer shows after check-in, right or wrong per card.
+   */
+  function roommates(full: boolean) {
     if (!view.room) return null;
-    const { mates, code } = view.room;
+    const { mates } = view.room;
     const shown = full ? HINT_COUNT : hints;
-    return <section className={css.mystery} aria-label={full ? `Kamar ${code}` : "Misteri Kamar"}>
-      <h2 className={css.cardTitle}>{full ? `Kamarmu: ${code}` : "Siapa teman sekamarmu?"}</h2>
-      <div className={css.mates}>{mates.map(mate => <div key={mate.name} className={css.mate}><span className={css.ava} aria-hidden>{full ? initials(mate.name) : "?"}</span>{full ? mate.nick : "Rahasia"}</div>)}</div>
-      {shown > 0 && <div className={css.hints}>{Array.from({ length: shown }, (_, at) =>
-        <div key={at} className={css.hint}><b>Petunjuk {at + 1}</b>{mates.map((mate, index) => <span key={mate.name}>{mates.length > 1 ? `Teman ${index + 1}: ` : ""}{mate.hints[at]}</span>)}</div>)}</div>}
-      {shown === 0 && <p className={css.lead}>Selesaikan misi di bawah. Setiap misi membuka petunjuk tentang teman sekamarmu.</p>}
-      {!full && <button type="button" className={css.btn} onClick={() => setSheet("guess")}>
-        <HelpCircle aria-hidden className={css.btnIcon} /> {s.guessSaved ? "Ubah tebakan" : "Tebak teman sekamar"}</button>}
+    return <section className={css.stack} aria-labelledby="kamar-judul">
+      <h2 id="kamar-judul" className={css.sectionTitle}>{full ? "Teman sekamarmu" : "Tebak teman sekamarmu"}</h2>
+      {!full && <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Tebak siapa mereka dari petunjuknya; jawabannya terungkap saat tiba di venue.</p>}
+      {mates.map((mate, index) => {
+        const picked = s.guess[keyOf(mate.name)];
+        const right = picked === keyOf(mate.name);
+        return <article key={mate.name} className={css.quiz} aria-labelledby={`teman-${index}`}>
+          <h3 id={`teman-${index}`} className={css.quizTitle}>{full ? mate.name : `Teman sekamar ${mates.length > 1 ? index + 1 : ""}`.trim()}</h3>
+          {full && <p className={css.note}>{mate.dept}</p>}
+          {shown > 0 ? <ul className={css.clues}>{mate.hints.slice(0, shown).map(hint => <li key={hint}>{hint}</li>)}</ul>
+            : <p className={css.note}>Petunjuk pertama terbuka setelah satu misi selesai.</p>}
+          {full
+            ? picked ? <p className={right ? css.verdict : css.verdictMiss}>{right ? "Tebakanmu benar!" : `Tebakanmu: ${mate.choices.find(choice => choice.id === picked)?.name ?? "-"}`}</p> : null
+            : <fieldset className={css.choices}>
+                <legend>Menurutmu siapa?</legend>
+                {mate.choices.map(choice => <label key={choice.id} className={css.choice}>
+                  <input type="radio" name={`tebak-${index}`} checked={picked === choice.id} onChange={() => update(current => ({ guess: { ...current.guess, [keyOf(mate.name)]: choice.id } }))} />
+                  <span><b>{choice.name}</b>{choice.nick ? <small> · {choice.nick}</small> : null}</span>
+                </label>)}
+              </fieldset>}
+        </article>;
+      })}
     </section>;
   }
 
@@ -111,16 +131,15 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     if (!hod || !view.room) return <section className={`${css.card} ${css.welcome}`}>
       <h2 className={css.cardTitle}>Selamat datang di Villa Cangkringan</h2>
       <p className={css.lead}>Sesi pertama mulai pukul 16.00.</p></section>;
-    const { mates, self } = view.room;
+    const { mates, self, code } = view.room;
     const rhythm = (nick: string, sleep: string | null, wake: string | null, you = false) => <div key={nick}><span>{nick}{you ? " (kamu)" : ""}</span><span>Tidur {sleep ?? "–"}</span><span>Bangun {wake ?? "–"}</span></div>;
     return <>
-      {mystery(true)}
-      <section className={css.card}>
-        <h2 className={css.cardTitle}>Teman sekamarmu</h2>
-        {mates.map(mate => <div key={mate.name}><b>{mate.name}</b><div className={css.note}>{mate.dept}</div></div>)}
-        {s.guessSaved && <p className={css.verdict}>{guessRight ? "Tebakanmu benar!" : "Tebakanmu belum tepat. Selamat berkenalan!"}</p>}
-        <p className={css.lead}>Ambil kunci kamar {view.room.code} di meja panitia.</p>
+      <section className={`${css.card} ${css.welcome}`}>
+        <h2 className={css.roomCode}>Kamar {code}</h2>
+        <div className={css.mates}>{mates.map(mate => <div key={mate.name} className={css.mate}><span className={css.ava} aria-hidden>{initials(mate.name)}</span>{mate.nick}</div>)}</div>
+        <p className={css.lead}>Ambil kunci kamar {code} di meja panitia.</p>
       </section>
+      {roommates(true)}
       <section className={css.card}><h2 className={css.cardTitle}>Jam tidur di kamarmu</h2><div className={css.rhythm}>{rhythm(view.nick, self.sleep, self.wake, true)}{mates.map(mate => rhythm(mate.nick, mate.sleep, mate.wake))}</div></section>
     </>;
   }
@@ -178,22 +197,6 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         </div>,
         footer: <button type="button" className={`${css.btn} ${css.primary}`} disabled={!s.signal[0] || !s.signal[1]} onClick={() => complete("sig", "Future Signal")}>Kirim jawaban</button>,
       };
-      case "guess": {
-        if (!view.room) return null;
-        const need = view.room.mates.length;
-        return {
-          title: "Tebak teman sekamar", subtitle: `Pilih ${need} orang. Bisa diubah sampai tiba.`,
-          body: <div className={css.sheetStack}>
-            {hints > 0 && <div className={css.hints}>{Array.from({ length: hints }, (_, at) => <div key={at} className={css.hint}><b>Petunjuk {at + 1}</b>
-              {view.room!.mates.map((mate, index) => <span key={mate.name}>{need > 1 ? `Teman ${index + 1}: ` : ""}{mate.hints[at]}</span>)}</div>)}</div>}
-            <div className={css.picks}>{view.room.others.map(person => <button key={person.id} type="button" className={css.pick} aria-pressed={s.guess.includes(person.id)} onClick={() => {
-              if (s.guess.includes(person.id)) update(current => ({ guess: current.guess.filter(id => id !== person.id) }));
-              else if (s.guess.length < need) update(current => ({ guess: current.guess.length < need ? [...current.guess, person.id] : current.guess }));
-            }}><i aria-hidden>{initials(person.name)}</i>{person.name}</button>)}</div>
-          </div>,
-          footer: <button type="button" className={`${css.btn} ${css.primary}`} disabled={s.guess.length !== need} onClick={() => { update({ guessSaved: true }); close(); setToast("Tebakan disimpan"); }}>Simpan tebakan</button>,
-        };
-      }
       case "arrive": return {
         title: "Sudah tiba?", subtitle: "Villa Cangkringan",
         body: <div className={css.sheetStack}>
@@ -277,7 +280,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
 
     <main className={css.screen}>
       {arrivedCard()}
-      {!s.arrived && hod && mystery(false)}
+      {!s.arrived && hod && roommates(false)}
 
       <section className={css.stack} aria-labelledby="misi-judul">
         <h2 id="misi-judul" className={css.sectionTitle}>Misi di perjalanan</h2>

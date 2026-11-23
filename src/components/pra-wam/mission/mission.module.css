@@ -148,3 +148,18 @@
 /* The support button (25 Nov 2026): a thumb and how many support it, not "+1" over a number. */
 .vote { justify-content: center; gap: 2px; }
 .vote svg { width: 20px; height: 20px; }
+
+/* Tebak teman sekamarmu (25 Nov 2026): a quiz card per roommate. */
+.quiz { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; border: 2px solid var(--pw-primary); background: var(--pw-surface); }
+.quizTitle { margin: 0; font-family: var(--pw-display); font-size: 19px; font-weight: 600; }
+.clues { margin: 0; padding: 0 0 0 14px; border-left: 3px solid var(--pw-primary); list-style: none; display: grid; gap: 8px; font-size: 17px; }
+.choices { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.choices legend { margin-bottom: 8px; padding: 0; font-size: 17px; font-weight: 700; }
+.choice { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--pw-line); cursor: pointer; }
+.choice input { width: 22px; height: 22px; flex: none; accent-color: var(--pw-primary); }
+.choice b { font-size: 17px; font-weight: 600; }
+.choice small { color: var(--pw-muted); font-size: 15px; }
+.choice:has(input:checked) { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); }
+.choice:has(input:focus-visible) { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
+.verdictMiss { margin: 0; font-size: 17px; font-weight: 600; color: var(--pw-muted); }
+.roomCode { margin: 0; font-family: var(--pw-display); font-size: 30px; font-weight: 600; color: var(--pw-primary); }

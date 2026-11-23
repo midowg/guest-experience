@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENDA, agendaSession, byVotes, hintsOpen, initials, journeyPercent, missionsOf, missionStops, ROAD, roadPoint, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
+import { AGENDA, agendaSession, byVotes, hintsOpen, initials, quizChoices, journeyPercent, missionsOf, missionStops, ROAD, roadPoint, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
 
 describe("the road from the office to the villa (24 Nov 2026)", () => {
   it("puts the bus at the office, along the road, and at the villa", () => {
@@ -39,6 +39,16 @@ describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
     expect([0, 1, 2].map(done => hintsOpen(done, 2))).toEqual([0, 2, 3]);
     expect([0, 1].map(done => hintsOpen(done, 1))).toEqual([0, 3]);
     expect(hintsOpen(3, 3)).toBe(3);
+  });
+
+  it("builds a roommate's quiz: them and two others of the same rooms' group, always in the same order", () => {
+    const pool = [{ name: "Laki Satu", men: true }, { name: "Laki Dua", men: true }, { name: "Perempuan Satu", men: false }, { name: "Perempuan Dua", men: false }];
+    const mate = { name: "Laki Kamar", men: true };
+    const choices = quizChoices(mate, pool, person => person.men);
+    expect(choices).toHaveLength(3);
+    expect(choices).toContain(mate);
+    expect(choices.filter(choice => choice !== mate).every(choice => choice.men)).toBe(true);
+    expect(quizChoices(mate, pool, person => person.men)).toEqual(choices);
   });
 
   it("gives each person two different Future Signal questions, the same every time", () => {

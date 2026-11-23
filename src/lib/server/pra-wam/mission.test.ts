@@ -13,7 +13,7 @@ const member = (name: string, patch: Record<string, unknown> = {}) => ({ id: `id
 
 beforeEach(() => {
   fake.hod = false;
-  fake.sheet = { rooms: { A: "A3", B: "B3" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A"), person("Budi Tiga", "B")], bod: [{ name: "Ceo Utama", sents: [1], ceo: true }] };
+  fake.sheet = { rooms: { A: "A3", B: "B3" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A"), person("Budi Tiga", "B"), person("Cici Empat", "B")], bod: [{ name: "Ceo Utama", sents: [1], ceo: true }] };
 });
 
 describe("missionFor", () => {
@@ -22,7 +22,11 @@ describe("missionFor", () => {
     expect(view?.role).toBe("HoD");
     expect(view?.room?.code).toBe("A3");
     expect(view?.room?.mates.map(mate => mate.name)).toEqual(["Ina Dua"]);
-    expect(view?.room?.others.map(other => other.name)).toEqual(["Ina Dua", "Budi Tiga"]);
+    // The quiz: the roommate and people from outside the room only, never this person.
+    const names = view?.room?.mates[0].choices.map(choice => choice.name) ?? [];
+    expect(names).toContain("Ina Dua");
+    expect(names).not.toContain("Ani Satu");
+    expect(names.filter(name => name !== "Ina Dua").every(name => ["Budi Tiga", "Cici Empat"].includes(name))).toBe(true);
     expect(JSON.stringify(view)).not.toContain("B3");
   });
 

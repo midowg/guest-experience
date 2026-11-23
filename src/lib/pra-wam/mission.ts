@@ -16,7 +16,8 @@ export const MISSION_SESSION_ID = "2eeaabc9-3f16-426c-aced-dfaff545a478";
 export const MISSION_SETTING_KEY = "mission_journey";
 
 export type MissionRole = "HoD" | "BoD" | "CoS";
-export type Mate = { name: string; nick: string; dept: string; hints: string[]; sleep: string | null; wake: string | null };
+/** A roommate; `choices` (25 Nov 2026) are the three names of their quiz, them among two others, in a steady order. */
+export type Mate = { name: string; nick: string; dept: string; hints: string[]; sleep: string | null; wake: string | null; choices: { id: string; name: string; nick: string }[] };
 /** What one person receives: their own part only. */
 export type MissionView = {
   employeeId: string;
@@ -25,8 +26,8 @@ export type MissionView = {
   /** The CEO also gets Mode CEO. */
   ceo: boolean;
   sentences: number[];
-  /** Only for a HoD in the room list: the room code, the roommates, own sleeping hours, and the others to guess from. */
-  room: { code: string; mates: Mate[]; self: { sleep: string | null; wake: string | null }; others: { id: string; name: string }[] } | null;
+  /** Only for a HoD in the room list: the room code, the roommates (each with their quiz) and own sleeping hours. */
+  room: { code: string; mates: Mate[]; self: { sleep: string | null; wake: string | null } } | null;
 };
 
 /** Unscramble the Future: each sentence cut into phrases, in order. */
@@ -156,6 +157,21 @@ export function journeyPercent(input: { launched: boolean; done: number; mission
 }
 /** Where each mission's stop stands on the road (the share reached when it is done). */
 export const missionStops = (missions: number) => Array.from({ length: missions }, (_, at) => journeyPercent({ launched: true, done: at + 1, missions, arrived: false }));
+
+/** The key a person is known by in the quiz: their full name, spaces tidied, in capitals. */
+export const personKey = (name: string) => name.trim().replace(/\s+/g, " ").toUpperCase();
+
+/**
+ * The quiz of one roommate (25 Nov 2026): them and two others from outside the viewer's room,
+ * preferring people of the same rooms' group (the women's rooms or the men's), in an order that is
+ * the same every time but does not always put the answer first.
+ */
+export function quizChoices<T extends { name: string }>(mate: T, pool: readonly T[], sameGroup: (person: T) => boolean): T[] {
+  const score = (text: string) => { let sum = 7; for (const char of text) sum = (sum * 31 + char.charCodeAt(0)) % 1_000_003; return sum; };
+  const byMate = (person: T) => score(`${mate.name}|${person.name}`);
+  const others = [...pool].sort((a, b) => Number(sameGroup(b)) - Number(sameGroup(a)) || byMate(a) - byMate(b)).slice(0, 2);
+  return [mate, ...others].sort((a, b) => byMate(a) - byMate(b));
+}
 
 /** Initials for an avatar: "Linda Susanto" → "LS". */
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();
