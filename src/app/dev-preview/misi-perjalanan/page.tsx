@@ -18,14 +18,14 @@ export default async function DevMissionPage({ searchParams }: { searchParams: P
   if (process.env.NODE_ENV === "production") notFound();
   const role = (await searchParams).peran;
   const hod: MissionView = {
-    employeeId: "dev-hod", nick: "Rani", role: "HoD", ceo: false, sentences: [6, 12],
+    employeeId: "dev-hod", name: "Rani Contoh", nick: "Rani", role: "HoD", ceo: false, sentences: [6, 12],
     room: {
       code: "A3", mates: [mate("Contoh Satu", "Satu", "Departemen Contoh", ["Contoh Tiga", "Contoh Empat"]), mate("Contoh Dua", "Dua", "Departemen Lain", ["Contoh Lima", "Contoh Enam"])],
       self: { sleep: "Sebelum 22.00", wake: "Sebelum 05.00" },
     },
   };
-  const view: MissionView = role === "bod" ? { employeeId: "dev-bod", nick: "Bima", role: "BoD", ceo: true, sentences: [1], room: null }
-    : role === "cos" ? { employeeId: "dev-cos", nick: "Citra", role: "CoS", ceo: false, sentences: [], room: null }
+  const view: MissionView = role === "bod" ? { employeeId: "dev-bod", name: "Bima Contoh", nick: "Bima", role: "BoD", ceo: true, sentences: [1], room: null }
+    : role === "cos" ? { employeeId: "dev-cos", name: "Citra Contoh", nick: "Citra", role: "CoS", ceo: false, sentences: [], room: null }
     : hod;
   return <div className={styles.app} style={{ padding: 16 }}><MissionJourney view={view} detailHref="#" /></div>;
 }

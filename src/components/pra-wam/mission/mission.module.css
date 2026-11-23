@@ -163,3 +163,15 @@
 .choice:has(input:focus-visible) { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
 .verdictMiss { margin: 0; font-size: 17px; font-weight: 600; color: var(--pw-muted); }
 .roomCode { margin: 0; font-family: var(--pw-display); font-size: 30px; font-weight: 600; color: var(--pw-primary); }
+
+/* The quiz answers at once (26 Nov 2026): each name is a button; a wrong one stays crossed out. */
+.choicesTitle { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+.choice { width: 100%; justify-content: space-between; background: var(--pw-surface); color: var(--pw-text); font: inherit; text-align: left; }
+.choice:hover:not(:disabled) { border-color: var(--pw-primary); }
+.choice:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
+.choiceWrong { cursor: default; opacity: .6; }
+.choiceWrong b { text-decoration: line-through; }
+.choiceNote { font-size: 15px; font-weight: 700; color: var(--pw-danger); white-space: nowrap; }
+.quizSolved { border-color: var(--pw-success); }
+.quizSolved .clues { border-left-color: var(--pw-success); }
+.verdict { display: inline-flex; align-items: center; gap: 8px; color: var(--pw-success); }

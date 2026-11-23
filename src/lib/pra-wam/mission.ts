@@ -21,6 +21,8 @@ export type Mate = { name: string; nick: string; dept: string; hints: string[]; 
 /** What one person receives: their own part only. */
 export type MissionView = {
   employeeId: string;
+  /** The account's full name: a question to the CEO is sent under it (26 Nov 2026). */
+  name: string;
   nick: string;
   role: MissionRole;
   /** The CEO also gets Mode CEO. */

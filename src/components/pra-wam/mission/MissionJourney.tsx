@@ -27,6 +27,8 @@ type State = {
   signal: Record<number, string>;
   /** The name picked for each roommate (their key → the picked person's key). */
   guess: Record<string, string>;
+  /** Names already tried and wrong, per roommate. */
+  missed: Record<string, string[]>;
   arrived: boolean; change: string;
   session: string; questions: Record<string, Question[]>; presenting: string | null; seq: number;
 };
@@ -42,7 +44,7 @@ function fresh(view: MissionView): State {
   return {
     done: { kal: false, sig: false },
     kalIdx: 0, pool: view.sentences.length ? scrambled(view.sentences[0]) : [], answer: [],
-    signal: {}, guess: {}, arrived: false, change: "",
+    signal: {}, guess: {}, missed: {}, arrived: false, change: "",
     session: "s1", questions, presenting: null, seq,
   };
 }
@@ -69,12 +71,12 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     if (typeof window === "undefined") return fresh(view);
     try { const saved = localStorage.getItem(storage); if (!saved) return fresh(view);
       const loaded = { ...fresh(view), ...JSON.parse(saved) as State };
-      return Array.isArray(loaded.guess) ? { ...loaded, guess: {} } : loaded; } catch { return fresh(view); }
+      return { ...loaded, guess: Array.isArray(loaded.guess) ? {} : loaded.guess, missed: loaded.missed ?? {} }; } catch { return fresh(view); }
   });
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [toast, setToast] = useState("");
   const [miss, setMiss] = useState(false);
-  const [ask, setAsk] = useState({ text: "", cat: null as string | null, anon: false });
+  const [ask, setAsk] = useState({ text: "", cat: null as string | null });
   // The app's own question (26 Nov 2026): the browser's confirm() is blocked without a word in an
   // installed app and in some in-app browsers, so "Ulangi" seemed to do nothing.
   const [confirm, confirmDialog] = useConfirm();
@@ -114,22 +116,31 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
       <h2 id="kamar-judul" className={css.sectionTitle}>{full ? "Teman sekamarmu" : "Tebak teman sekamarmu"}</h2>
       {!full && <p className={css.lead}>Kamu sekamar dengan {mates.length} orang. Tebak siapa mereka dari petunjuknya; jawabannya terungkap saat tiba di venue.</p>}
       {mates.map((mate, index) => {
-        const picked = s.guess[keyOf(mate.name)];
-        const right = picked === keyOf(mate.name);
-        return <article key={mate.name} className={css.quiz} aria-labelledby={`teman-${index}`}>
-          <h3 id={`teman-${index}`} className={css.quizTitle}>{full ? mate.name : `Teman sekamar ${mates.length > 1 ? index + 1 : ""}`.trim()}</h3>
-          {full && <p className={css.note}>{mate.dept}</p>}
+        const key = keyOf(mate.name);
+        const solved = s.guess[key] === key;
+        const missed = s.missed[key] ?? [];
+        const pick = (id: string) => {
+          if (id === key) { update(current => ({ guess: { ...current.guess, [key]: id } })); setToast(`Benar! ${mate.name}`); return; }
+          update(current => ({ missed: { ...current.missed, [key]: [...(current.missed[key] ?? []), id] } }));
+        };
+        return <article key={mate.name} className={`${css.quiz} ${solved ? css.quizSolved : ""}`} aria-labelledby={`teman-${index}`}>
+          <h3 id={`teman-${index}`} className={css.quizTitle}>{full || solved ? mate.name : `Teman sekamar ${mates.length > 1 ? index + 1 : ""}`.trim()}</h3>
+          {(full || solved) && <p className={css.note}>{mate.dept}</p>}
           {shown > 0 ? <ul className={css.clues}>{mate.hints.slice(0, shown).map(hint => <li key={hint}>{hint}</li>)}</ul>
-            : <p className={css.note}>Petunjuk pertama terbuka setelah satu misi selesai.</p>}
-          {full
-            ? picked ? <p className={right ? css.verdict : css.verdictMiss}>{right ? "Tebakanmu benar!" : `Tebakanmu: ${mate.choices.find(choice => choice.id === picked)?.name ?? "-"}`}</p> : null
-            : <fieldset className={css.choices}>
-                <legend>Menurutmu siapa?</legend>
-                {mate.choices.map(choice => <label key={choice.id} className={css.choice}>
-                  <input type="radio" name={`tebak-${index}`} checked={picked === choice.id} onChange={() => update(current => ({ guess: { ...current.guess, [keyOf(mate.name)]: choice.id } }))} />
-                  <span><b>{choice.name}</b>{choice.nick ? <small> · {choice.nick}</small> : null}</span>
-                </label>)}
-              </fieldset>}
+            : !solved && <p className={css.note}>Petunjuk pertama terbuka setelah satu misi selesai.</p>}
+          {solved ? <p className={css.verdict}><Check aria-hidden className={css.btnIcon} /> Benar, ini teman sekamarmu.</p>
+            : full ? null
+            : <div className={css.choices} role="group" aria-labelledby={`siapa-${index}`}>
+                <p id={`siapa-${index}`} className={css.choicesTitle}>Menurutmu siapa?</p>
+                {mate.choices.map(choice => {
+                  const wrong = missed.includes(choice.id);
+                  return <button key={choice.id} type="button" className={`${css.choice} ${wrong ? css.choiceWrong : ""}`} disabled={wrong} onClick={() => pick(choice.id)}>
+                    <span><b>{choice.name}</b>{choice.nick ? <small> · {choice.nick}</small> : null}</span>
+                    {wrong && <span className={css.choiceNote}>Bukan dia</span>}
+                  </button>;
+                })}
+                {missed.length > 0 && <p className={css.note} role="status">Belum tepat. Coba nama lain.</p>}
+              </div>}
         </article>;
       })}
     </section>;
@@ -235,17 +246,17 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             <section className={css.card}>
               <label className={css.field}>Pertanyaanmu<textarea maxLength={200} value={ask.text} placeholder="Tulis pertanyaan untuk CEO" onChange={event => setAsk({ ...ask, text: event.target.value })} /></label>
               <div className={css.chips} role="group" aria-label="Topik (boleh dilewati)">{QUESTION_CATEGORIES.map(cat => <button key={cat} type="button" className={css.chip} aria-pressed={ask.cat === cat} onClick={() => setAsk({ ...ask, cat: ask.cat === cat ? null : cat })}>{cat}</button>)}</div>
-              <label className={css.switch}>Kirim tanpa nama<input type="checkbox" checked={ask.anon} onChange={event => setAsk({ ...ask, anon: event.target.checked })} /></label>
+              <p className={css.note}>Dikirim atas nama {view.name}.</p>
               <button type="button" className={`${css.btn} ${css.primary}`} disabled={!ask.text.trim()} onClick={() => {
-                const question: Question = { id: `q${s.seq + 1}`, text: ask.text.trim(), by: view.nick, anon: ask.anon, votes: 0, cat: ask.cat ?? "Lainnya", voted: false, mine: true, status: "baru" };
+                const question: Question = { id: `q${s.seq + 1}`, text: ask.text.trim(), by: view.name, anon: false, votes: 0, cat: ask.cat ?? "Lainnya", voted: false, mine: true, status: "baru" };
                 update(current => ({ seq: current.seq + 1, questions: { ...current.questions, [current.session]: [...(current.questions[current.session] ?? []), question] } }));
-                setAsk({ text: "", cat: null, anon: false }); setToast("Pertanyaan terkirim");
+                setAsk({ text: "", cat: null }); setToast("Pertanyaan terkirim");
               }}>Kirim pertanyaan</button>
             </section>
             <h3 className={css.cardTitle}>Pertanyaan masuk ({list.length})</h3>
             {list.length > 0 && <p className={css.note}>Setuju dengan pertanyaan orang lain? Ketuk jempolnya. Angka di bawah jempol adalah jumlah dukungan.</p>}
             {list.length ? list.map(question => <div key={question.id} className={`${css.q} ${question.mine ? css.qMine : ""}`}>
-              <div><p>{question.text}</p><div className={css.meta}><span>{question.mine ? "Pertanyaanmu" : question.by === "Contoh" ? "Contoh" : question.anon ? "Tanpa nama" : question.by}</span>
+              <div><p>{question.text}</p><div className={css.meta}><span>{question.mine ? `${question.by} (kamu)` : question.by}</span>
                 {question.status === "dijawab" && <span className={`${css.st} ${css.stOk}`}>Sudah dijawab</span>}{s.presenting === question.id && <span className={`${css.st} ${css.stLive}`}>Sedang dibahas</span>}</div></div>
               <button type="button" className={css.vote} aria-pressed={question.voted} disabled={question.mine} aria-label={`Dukung pertanyaan ini, ${question.votes} dukungan`}
                 onClick={() => update(current => ({ questions: { ...current.questions, [current.session]: current.questions[current.session].map(item => item.id === question.id ? { ...item, voted: !item.voted, votes: item.votes + (item.voted ? -1 : 1) } : item) } }))}>
@@ -267,7 +278,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             {live ? <div className={css.present}><span>Di layar sekarang</span><p>{live.text}</p></div>
               : <p className={css.lead}>Pilih pertanyaan untuk ditampilkan di layar meeting.</p>}
             {list.map(question => <div key={question.id} className={css.q}><div><p>{question.text}</p>
-              <div className={css.meta}><span>{question.anon || question.by === "Contoh" ? "Tanpa nama" : question.by}</span><span>· {question.votes} dukungan</span></div>
+              <div className={css.meta}><span>{question.by}</span><span>· {question.votes} dukungan</span></div>
               <div className={css.row}>
                 <button type="button" className={`${css.mini} ${s.presenting === question.id ? css.miniLive : ""}`} onClick={() => update({ presenting: s.presenting === question.id ? null : question.id })}>{s.presenting === question.id ? "Sedang di layar" : "Tampilkan"}</button>
                 <button type="button" className={`${css.mini} ${question.status === "dijawab" ? css.miniOn : ""}`} onClick={() => answered(question.id)}>{question.status === "dijawab" ? "Sudah dijawab" : "Tandai dijawab"}</button>

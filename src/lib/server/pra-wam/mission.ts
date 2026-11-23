@@ -51,5 +51,5 @@ export async function missionFor(member: Member): Promise<MissionView | null> {
       })),
     self: { sleep: person.sleep, wake: person.wake },
   } : null;
-  return { employeeId: member.id, nick, role, ceo: !!bod?.ceo, sentences: person?.sents ?? bod?.sents ?? [], room };
+  return { employeeId: member.id, name: member.name, nick, role, ceo: !!bod?.ceo, sentences: person?.sents ?? bod?.sents ?? [], room };
 }
