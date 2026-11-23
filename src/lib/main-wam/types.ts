@@ -359,7 +359,7 @@ export type MwAwardCategory = {
   published: boolean;
   nominees: MwAwardNominee[];
 };
-export type MwAwardApproval = { categoryId: string; nomineeId: string; approvedBy: string; approvedAt: string };
+export type MwAwardApproval = { categoryId: string; nomineeId: string; approvedBy: string | null; approvedAt: string };
 
 /**
  * A Silent Meeting question: open from its session's start to its end. Panitia may open it before

@@ -80,7 +80,7 @@ export async function adminAwards(now = new Date()): Promise<AdminAwards> {
     groups: groups.data.map(group => `Kelompok ${group.number} · ${group.name}`),
     departments: [...new Set(active.map(person => person.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")),
     photos,
-    approverNames: Object.fromEntries(approvals.data.map(approval => [approval.approvedBy, people.get(approval.approvedBy)?.fullName ?? "BOD"])),
+    approverNames: Object.fromEntries(approvals.data.flatMap(approval => (approval.approvedBy ? [[approval.approvedBy, people.get(approval.approvedBy)?.fullName ?? "BOD"]] : []))),
   };
 }
 

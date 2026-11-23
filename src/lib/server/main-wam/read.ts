@@ -238,7 +238,7 @@ export const awardCategories = (all = false) => awardCategoriesCached(all);
 export const awardApprovals = cache(async (): Promise<Read<MwAwardApproval[]>> => {
   const { data, error } = await db().from("mw_award_approvals").select("category_id,nominee_id,approved_by,approved_at").limit(50);
   return settle(error, [] as MwAwardApproval[]) ?? {
-    data: (data ?? []).map(row => ({ categoryId: row.category_id, nomineeId: row.nominee_id, approvedBy: row.approved_by ?? "", approvedAt: row.approved_at })), migrated: true,
+    data: (data ?? []).map(row => ({ categoryId: row.category_id, nomineeId: row.nominee_id, approvedBy: row.approved_by ?? null, approvedAt: row.approved_at })), migrated: true,
   };
 });
 

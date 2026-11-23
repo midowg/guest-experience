@@ -411,6 +411,13 @@ milik D), tanpa mengimpor kode area lain.
 - **Voting**: rahasia, bukan anonim; hanya agregat yang keluar dari server. Perolehan per nominasi baru
   tampil ke BOD dan Admin WAM setelah voting ditutup (`closedTally`, `closedCounts`; audit M1), dan tidak
   pernah ke peserta. Setujui pemenang yang sama sekali lagi tidak mengirim kabar lagi (audit L3).
+  **Persetujuan pemenang ada di Admin WAM 2026 → Awarding** (sejak 23 Nov 2026; layar BOD B06 di aplikasi dihapus):
+  `POST /api/admin/wam2026/awarding/[id]/setujui` `{nomineeId}` (`requireApiAdmin`, `approveWinner` dengan
+  penyetuju `{id: string | null, name}`; aturan `approvalRefusal`: voting setelah ditutup, juri kapan saja,
+  otomatis tidak; 409/422/404). Admin perorangan dicatat dengan `employeeId`; super admin dan sandi bersama
+  tanpa id, jadi `mw_award_approvals.approved_by` NULL (`MwAwardApproval.approvedBy: string | null`) dan nama
+  pelaku dipakai pada kabar panitia. Pengumuman pemenang (`isAnnounced`) tetap menunggu persetujuan. Aksi
+  `awarding-setujui` dan API aplikasi lama tetap ada, tanpa layar.
 - **Absen QR offline**: `scannedAt` dari antrean HP diterima hanya bila ada di dalam jendela absen sesi
   itu **dan** paling lama 30 menit sebelum jam server (audit M5). Selain itu jam server yang dipakai.
   Antrean menghapus scan hanya bila server menjawab hasil, atau menolak dengan alasan tetap (404/422).

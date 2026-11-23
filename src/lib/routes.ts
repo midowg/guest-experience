@@ -732,6 +732,7 @@ export const mainWamAdminApi = {
   awardCategories: `${MAIN_WAM_ADMIN_API}/awarding`,
   awardCategory: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}`,
   awardNominees: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}/nominasi`,
+  awardApprove: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}/setujui`,
   silentQuestions: `${MAIN_WAM_ADMIN_API}/silent-meeting`,
   silentQuestion: (id: string) => `${MAIN_WAM_ADMIN_API}/silent-meeting/${enc(id)}`,
   /* F · kuis */

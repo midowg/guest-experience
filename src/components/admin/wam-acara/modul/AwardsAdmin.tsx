@@ -6,7 +6,7 @@ import { Card, ConsoleButton, Pill } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { ADMIN_METHODS, ADMIN_NOMINEE_KINDS, adminRange, adminWhen, nomineeKindLabels, WAITING_TEXT, type AwardCategoryInput, type NomineeInput } from "@/lib/main-wam/modul/admin";
-import { methodLabel } from "@/lib/main-wam/modul/awards";
+import { approvalRefusal, methodLabel } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
 import { wibDate, wibTime } from "@/lib/main-wam/rundown";
 import type { MwAwardCategory, NomineeKind } from "@/lib/main-wam/types";
@@ -26,7 +26,7 @@ const methodWords: Record<(typeof ADMIN_METHODS)[number], string> = { voting: "V
 /**
  * Admin WAM 2026 → Awarding (agen D): categories (voted or judged), their window and
  * announcement time, the nominees (people, Momen photos, a kelompok or a department), and, once
- * voting closed, the count per nominee with the BOD's approval (audit M1: no running count, as the
+ * voting closed, the count per nominee with the winner's approval, now given here by an admin (audit M1: no running count, as the
  * BOD). Never who voted for whom.
  */
 export function AwardsAdmin({ initial, now: nowIso }: { initial: AdminAwards; /** Preview only: the moment shown. */ now?: string }) {
@@ -52,18 +52,19 @@ export function AwardsAdmin({ initial, now: nowIso }: { initial: AdminAwards; /*
   return <div className={css.stack}>
     {!data.migrated && <Notice tone="warning">{WAITING_TEXT}</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
-    <p className={css.note}>Peserta memilih satu nominasi per kategori selama voting dibuka (bisa diubah sampai ditutup, tidak bisa memilih diri sendiri). Perolehan suara tampil di sini dan ke BOD setelah voting ditutup, tidak pernah ke peserta. BOD menyetujui pemenang di aplikasi sebelum diumumkan.</p>
+    <p className={css.note}>Peserta memilih satu nominasi per kategori selama voting dibuka (bisa diubah sampai ditutup, tidak bisa memilih diri sendiri). Perolehan suara tampil di sini dan ke BOD setelah voting ditutup, tidak pernah ke peserta. Persetujuan pemenang sekarang dilakukan di sini (tombol &ldquo;Setujui sebagai pemenang&rdquo; pada tiap nominasi, setelah voting ditutup; kategori juri kapan saja), bukan lagi oleh BOD di aplikasi. Pengumuman pemenang di aplikasi menunggu persetujuan ini, dan panitia diberi kabar saat disetujui.</p>
     {data.categories.map(category => {
       const tally = data.tallies.find(item => item.categoryId === category.id);
       const approval = data.approvals.find(item => item.categoryId === category.id);
       const nominee = (id: string) => nomineeLabel(category, id, data);
-      const state = category.method === "voting" ? votingState(category, nowIso ? new Date(nowIso) : new Date()) : null;
+      const clock = nowIso ? new Date(nowIso) : new Date();
+      const state = category.method === "voting" ? votingState(category, clock) : null;
       return <Card key={category.id} title={category.title} id={`kategori-${category.id}`}>
         <div className={css.badges}>
           <Pill tone={category.published ? "ok" : "neutral"}>{category.published ? "Terbit" : "Draf"}</Pill>
           <Pill tone="blue">{methodLabel(category)}</Pill>
           {state && <Pill tone={state === "buka" ? "ok" : "neutral"}>{state === "buka" ? "Voting dibuka" : state === "belum" ? "Belum dibuka" : "Ditutup"}</Pill>}
-          {approval && <Pill tone="brass">Disetujui BOD</Pill>}
+          {approval && <Pill tone="brass">{approval.approvedBy ? "Disetujui BOD" : "Disetujui"}</Pill>}
         </div>
         <p className={css.meta}>
           {category.method === "voting" && <span>Voting {adminRange(category.opensAt, category.closesAt)}</span>}
@@ -75,8 +76,10 @@ export function AwardsAdmin({ initial, now: nowIso }: { initial: AdminAwards; /*
         {category.nominees.length > 0 && <ul className={css.rows} aria-label={`Nominasi ${category.title}`}>
           {(tally ? tally.rows : category.nominees.map(item => ({ nomineeId: item.id, votes: null as number | null, rank: null as number | null }))).map(row => <li key={row.nomineeId} className={css.row}>
             {row.rank !== null && <span className={css.rank}>{row.rank}</span>}
-            <span className={css.rowText}><span>{nominee(row.nomineeId)}</span>{approval?.nomineeId === row.nomineeId && <span>Pemenang · disetujui {data.approverNames[approval.approvedBy] ?? "BOD"} {stamp(approval.approvedAt)}</span>}</span>
+            <span className={css.rowText}><span>{nominee(row.nomineeId)}</span>{approval?.nomineeId === row.nomineeId && <span>Pemenang · disetujui {(approval.approvedBy && data.approverNames[approval.approvedBy]) || (approval.approvedBy ? "BOD" : "Admin")} {stamp(approval.approvedAt)}</span>}</span>
             {row.votes !== null && <span className={css.votes}>{row.votes} suara</span>}
+            {approval?.nomineeId !== row.nomineeId && !approvalRefusal(category, row.nomineeId, clock) && <ConsoleButton disabled={busy || !data.migrated}
+              onClick={() => { if (window.confirm(`${approval ? "Ganti pemenang dengan" : "Setujui"} ${nominee(row.nomineeId)} sebagai pemenang ${category.title}? Panitia diberi kabar.`)) void run(async () => (await adminRequest(mainWamAdminApi.awardApprove(category.id), { method: "POST", body: JSON.stringify({ nomineeId: row.nomineeId }) })).message); }}>Setujui sebagai pemenang</ConsoleButton>}
           </li>)}
         </ul>}
         {tally && <p className={css.small}>{tally.total} suara masuk. Hanya jumlah per nominasi; siapa memilih siapa tidak ditampilkan.</p>}

@@ -106,8 +106,8 @@ export async function castVote(categoryId: string, nomineeId: string, viewer: Pi
   }
 }
 
-/** B06: a BOD approves the winner (voting: once it closed; jury: any time). Panitia hear of it. */
-export async function approveWinner(categoryId: string, nomineeId: string, viewer: Pick<MainWamViewer, "id" | "name">, now: Date): Promise<MwAwardApproval> {
+/** A BOD (app) or an admin (Admin WAM; the super admin has no employee id, stored NULL) approves the winner (voting: once it closed; jury: any time). Panitia hear of it. */
+export async function approveWinner(categoryId: string, nomineeId: string, approver: { id: string | null; name: string }, now: Date): Promise<MwAwardApproval> {
   const { categories, approvals } = await awardsShown();
   const category = categories.find(item => item.id === categoryId);
   const refused = approvalRefusal(category, nomineeId, now);
@@ -116,19 +116,19 @@ export async function approveWinner(categoryId: string, nomineeId: string, viewe
   const before = approvals.get(categoryId);
   if (before && before.nomineeId === nomineeId) return before;
   const { data, error } = await db().from("mw_award_approvals")
-    .upsert({ category_id: categoryId, nominee_id: nomineeId, approved_by: viewer.id, approved_at: now.toISOString() }, { onConflict: "category_id" })
+    .upsert({ category_id: categoryId, nominee_id: nomineeId, approved_by: approver.id, approved_at: now.toISOString() }, { onConflict: "category_id" })
     .select("category_id,nominee_id,approved_by,approved_at").single();
   if (error) {
     if (/approval_open/.test(error.message ?? "")) throw new ServiceError(409, "Pemenang bisa disetujui setelah voting ditutup.");
     if (/approval_auto/.test(error.message ?? "")) throw new ServiceError(404, "Kategori tidak ditemukan.");
     mwFail(error, MODUL_MIGRATION);
   }
-  const row = data as { category_id: string; nominee_id: string; approved_by: string; approved_at: string };
+  const row = data as { category_id: string; nominee_id: string; approved_by: string | null; approved_at: string };
   const { nominees } = await nomineeViews([category!]);
   const winner = nominees.get(nomineeId);
   await trySendMainWamNote({
-    kind: "voting", title: "Pemenang awarding disetujui", body: `${category!.title}: ${winner?.name ?? "pemenang"}. Disetujui ${viewer.name}.`,
-    to: { audience: { type: "panitia" } }, link: mainWamPath.home, by: viewer.id, tag: `awarding-${categoryId}`,
+    kind: "voting", title: "Pemenang awarding disetujui", body: `${category!.title}: ${winner?.name ?? "pemenang"}. Disetujui ${approver.name}.`,
+    to: { audience: { type: "panitia" } }, link: mainWamPath.home, by: approver.id, tag: `awarding-${categoryId}`,
   });
   return { categoryId: row.category_id, nomineeId: row.nominee_id, approvedBy: row.approved_by, approvedAt: row.approved_at };
 }
@@ -136,5 +136,5 @@ export async function approveWinner(categoryId: string, nomineeId: string, viewe
 /** Names of who approved (B06 "Disetujui Wulan · 15.40"). */
 export async function approverNames(approvals: Iterable<MwAwardApproval>): Promise<Map<string, string>> {
   const people = await mainWamPeople();
-  return new Map([...approvals].map(approval => [approval.approvedBy, people.get(approval.approvedBy)?.name ?? "BOD"]));
+  return new Map([...approvals].flatMap(approval => (approval.approvedBy ? [[approval.approvedBy, people.get(approval.approvedBy)?.name ?? "BOD"] as [string, string]] : [])));
 }

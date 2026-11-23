@@ -33,7 +33,7 @@ export default async function DevAdminAwarding({ searchParams }: { searchParams:
   if (process.env.NODE_ENV === "production") notFound();
   const open = (await searchParams).saat === "buka";
   return <AdminPreviewFrame current="modul">
-    <PageHeader title="Awarding" subtitle="Kategori, jendela voting, nominasi, dan perolehan suara untuk persetujuan BOD." />
+    <PageHeader title="Awarding" subtitle="Kategori, jendela voting, nominasi, dan perolehan suara dan persetujuan pemenang." />
     <PageTabs tabs={mainWamModuleTabs} current="awarding" label="Modul acara" />
     <AwardsAdmin initial={awards(open)} now={at("2027-01-06", open ? "10:00" : "16:00").toISOString()} />
   </AdminPreviewFrame>;
