@@ -10,7 +10,7 @@ describe("Pra WAM jejak karbon", () => {
   it("counts the person's own share", () => {
     const parts = carbonParts(trip);
     expect(parts.perjalanan).toBeCloseTo(500 * 0.0164 + (30 * 0.89) / 30, 6);
-    expect(parts.kamar).toBe(40);
+    expect(parts.kamar).toBeCloseTo(62.7, 6);
     expect(parts.makan).toBeCloseTo(9.5, 6);
   });
 
@@ -19,7 +19,7 @@ describe("Pra WAM jejak karbon", () => {
     if (view.kind !== "ada") throw new Error("expected a figure");
     expect(view.sources.map(source => source.key)).toEqual(["kamar", "makan", "perjalanan"]);
     expect(view.sources.reduce((sum, source) => sum + source.percent, 0)).toBe(100);
-    expect(view.total).toEqual({ value: "59", unit: "kg CO₂e" });
+    expect(view.total).toEqual({ value: "81", unit: "kg CO₂e" });
     expect(view.sources[0].note).toBe("2 malam, dibagi 2 orang sekamar");
     expect(view.sources[2].note).toBe("Kereta 500 km, shuttle 30 km");
   });

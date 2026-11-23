@@ -13,15 +13,16 @@ export const CARBON_FACTORS = {
   keretaPerPenumpangKm: 0.0164,
   busPerBusKm: 0.89,
   makanPerPorsi: 1.9,
-  hotelPerKamarMalam: 40,
+  /** DEFRA 2025's hotel stay for Indonesia (from Cornell CHSB), 23 Nov 2026; was 40. */
+  hotelPerKamarMalam: 62.7,
 } as const;
 
 /**
  * Where each factor comes from (checked 23 Nov 2026), the small links at the bottom of the detail.
  * Kereta: KAI's own intensity for KA Antarkota (16,43 g per penumpang-km). Bus: the Dutch national
  * list, touringcar diesel well-to-wheel (0,888 per vehicle-km). Makan: a medium meat-eater's day
- * (5,63 kg) over three meals. Kamar: DEFRA's hotel stay per room-night (from Cornell CHSB); its
- * Indonesia row is 62,7, so 40 is still a working figure to settle with WAM 2026.
+ * (5,63 kg) over three meals. Kamar: DEFRA's hotel stay per room-night (from Cornell CHSB),
+ * its Indonesia row: 62,7.
  */
 export const CARBON_REFERENCES = [
   { factor: "kereta", short: "KAI 2026", title: "KAI: intensitas emisi KA Antarkota (ANTARA, 2026)", url: "https://bali.antaranews.com/rilis-pers/5604524/kai-susun-strategi-net-zero-emission-perkuat-peran-kereta-api-dalam-transisi-energi-indonesia" },
@@ -139,7 +140,7 @@ export function carbonFactorRows(): { key: "kereta" | "bus" | "kamar" | "makan";
   return [
     { key: "kereta", name: "Kereta", unit: "kg per penumpang-km", value: id(f.keretaPerPenumpangKm, 4) },
     { key: "bus", name: "Bus / shuttle", unit: "kg per bus-km, dibagi penumpang", value: id(f.busPerBusKm, 2) },
-    { key: "kamar", name: "Kamar", unit: "kg per kamar-malam, dibagi penghuni", value: id(f.hotelPerKamarMalam, 0) },
+    { key: "kamar", name: "Kamar", unit: "kg per kamar-malam, dibagi penghuni", value: id(f.hotelPerKamarMalam, 1) },
     { key: "makan", name: "Makan", unit: "kg per porsi", value: id(f.makanPerPorsi, 1) },
   ];
 }

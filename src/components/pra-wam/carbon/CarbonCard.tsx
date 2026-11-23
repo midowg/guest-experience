@@ -20,10 +20,10 @@ const TIPS: { icon: LucideIcon; text: string }[] = [
 
 /**
  * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026): a deep green card (the one
- * place the app goes green, so it reads as Go Green), "Jejak karbon kamu" with a leaf, the figure in
+ * place the app goes green, so it reads as green, under WAM's theme "Shaping for Tomorrow"), "Jejak karbon kamu" with a leaf, the figure in
  * big Poppins, "perkiraan" and the sources in words, and a thin bar. The whole card opens the detail
- * (a sheet): where it comes from, how it is counted, small habits, and the sources as small links at
- * the very bottom. The bar never stands on colour alone: every part is also a row with its name and share.
+ * (a sheet, the total in its subtitle so the card is not repeated): where it comes from, how it is
+ * counted (the sources as small links at its very bottom), and small habits. The bar never stands on colour alone: every part is also a row with its name and share.
  */
 export function CarbonCard({ view }: { view: CarbonView }) {
   const [open, setOpen] = useState(false);
@@ -40,7 +40,7 @@ export function CarbonCard({ view }: { view: CarbonView }) {
       <span className={css.legend}>{view.sources.map(source => <span key={source.key} className={css.legendItem}><i className={swatch(source.swatch)} aria-hidden />{source.title} {source.percent}%</span>)}</span>
       <span className={css.more}>Lihat rincian <ChevronRight aria-hidden /></span>
     </button>
-    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon kamu" subtitle="Perkiraan untuk perjalanan Pra WAM">
+    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon kamu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit} untuk perjalanan Pra WAM`}>
       <CarbonDetail view={view} />
     </Sheet>}
   </>;
@@ -48,14 +48,14 @@ export function CarbonCard({ view }: { view: CarbonView }) {
 
 function CardHead() {
   return <span className={css.head}>
-    <span className={css.chip}><Leaf aria-hidden />Go Green</span>
+    <span className={css.chip}><Leaf aria-hidden />For Tomorrow</span>
     <span className={css.title}>Jejak karbon kamu</span>
     <span className={css.estimate}><i aria-hidden />Perkiraan</span>
   </span>;
 }
 
-function Bar({ sources, tall }: { sources: CarbonSourceView[]; tall?: boolean }) {
-  return <span className={`${css.bar} ${tall ? css.barTall : ""}`} aria-hidden>
+function Bar({ sources }: { sources: CarbonSourceView[] }) {
+  return <span className={css.bar} aria-hidden>
     {sources.map(source => <i key={source.key} className={swatch(source.swatch)} style={{ flexGrow: Math.max(source.percent, 3) }} />)}
   </span>;
 }
@@ -72,13 +72,6 @@ function Motif() {
 export function CarbonDetail({ view }: { view: Extract<CarbonView, { kind: "ada" }> }) {
   const [how, setHow] = useState(false);
   return <div className={css.detail}>
-    <section className={css.hero} aria-label="Total jejak karbonmu">
-      <Motif />
-      <span className={css.estimate}><i aria-hidden />Perkiraan untukmu</span>
-      <span className={css.figure}><span className={css.number}>{view.total.value}</span><span className={css.unit}>{view.total.unit}</span></span>
-      <Bar sources={view.sources} tall />
-    </section>
-
     <section aria-labelledby="karbon-asal">
       <h3 id="karbon-asal" className={css.h}>Dari mana asalnya</h3>
       <ul className={css.rows}>
@@ -115,6 +108,12 @@ export function CarbonDetail({ view }: { view: Extract<CarbonView, { kind: "ada"
           })}
         </ul>
         <p className={css.quiet}>Emisi hanya dicatat untuk laporan dampak, tanpa penebusan atau kontribusi.</p>
+        <p className={css.refs}>
+          <span>Sumber data:</span>{" "}
+          {CARBON_REFERENCES.map((ref, index) => <span key={ref.url}>
+            <a href={ref.url} target="_blank" rel="noopener noreferrer" title={ref.title}>{ref.short}</a>{index < CARBON_REFERENCES.length - 1 ? ", " : ""}
+          </span>)}
+        </p>
       </div>
     </section>
 
@@ -125,11 +124,5 @@ export function CarbonDetail({ view }: { view: Extract<CarbonView, { kind: "ada"
       </ul>
     </section>
 
-    <footer className={css.refs}>
-      <span>Sumber data:</span>{" "}
-      {CARBON_REFERENCES.map((ref, index) => <span key={ref.url}>
-        <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.short}</a>{index < CARBON_REFERENCES.length - 1 ? ", " : ""}
-      </span>)}
-    </footer>
   </div>;
 }

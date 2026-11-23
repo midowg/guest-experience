@@ -1,9 +1,9 @@
 /*
  * Jejak karbon (Pra WAM, 23 Nov 2026). The card is the one deep-green surface in the app, so it reads
- * as Go Green in every look and both modes: its own greens below (white text ≥ 7:1 on them); the rest
+ * as green in every look and both modes: its own greens below (white text ≥ 7:1 on them); the rest
  * of the detail follows the Pra WAM tokens. Body text 16px and up (older readers).
  */
-.card, .hero {
+.card {
   --eco-deep: #0a4a34; --eco: #0d6b4a; --eco-glow: #34c98c; --on-eco: #fff; --on-eco-2: #d6f5e7;
   --eco-seg-1: #fff; --eco-seg-2: #8ff0c4; --eco-seg-3: #ffd666;
   position: relative; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; gap: 10px;
@@ -26,18 +26,16 @@
 .title { font: 600 17px/22px var(--pw-display); }
 .estimate { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font: 600 13px/16px var(--pw-body); color: var(--on-eco-2); }
 .estimate i { width: 7px; height: 7px; border-radius: 50%; background: var(--eco-seg-2); }
-.hero .estimate { margin-left: 0; }
 
 .figure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
 .number { font: 700 52px/52px var(--pw-display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .unit { font: 600 16px/20px var(--pw-body); color: var(--on-eco-2); }
 
 .bar { display: flex; gap: 3px; height: 8px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--on-eco) 15%, transparent); }
-.barTall { height: 12px; }
 .bar > i { display: block; height: 100%; flex: 1 1 0; min-width: 6px; }
-.card .seg1, .hero .seg1 { background: var(--eco-seg-1); }
-.card .seg2, .hero .seg2 { background: var(--eco-seg-2); }
-.card .seg3, .hero .seg3 { background: var(--eco-seg-3); }
+.card .seg1 { background: var(--eco-seg-1); }
+.card .seg2 { background: var(--eco-seg-2); }
+.card .seg3 { background: var(--eco-seg-3); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 500 15px/20px var(--pw-body); color: var(--on-eco); }
 .legendItem { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .legendItem > i { width: 10px; height: 10px; border-radius: 3px; }
@@ -46,7 +44,6 @@
 
 /* The detail (in the sheet). */
 .detail { display: flex; flex-direction: column; gap: 22px; padding-bottom: 4px; }
-.hero { padding: 18px; }
 .h { margin: 0 0 10px; font: 600 17px/24px var(--pw-display); color: var(--pw-text); }
 .rows { display: flex; flex-direction: column; margin: 0; padding: 4px 16px; list-style: none; border-radius: var(--pw-r-card, 24px); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
 .row { display: flex; gap: 12px; padding: 14px 0; }
@@ -87,8 +84,8 @@
 .tips > li { display: flex; align-items: flex-start; gap: 12px; font: 400 16px/24px var(--pw-body); color: var(--pw-text); }
 .tips > li > svg { flex: none; width: 22px; height: 22px; margin-top: 1px; color: var(--pw-success); }
 
-/* Sumber data: small, at the very bottom. */
-.refs { padding-top: 14px; border-top: 1px solid var(--pw-line); font: 400 13px/20px var(--pw-body); color: var(--pw-muted); }
+/* Sumber data: small, at the very bottom of Cara menghitung. */
+.howBody .refs { padding-top: 12px; border-top: 1px solid var(--pw-line); font: 400 13px/20px var(--pw-body); color: var(--pw-muted); }
 .refs a { color: var(--pw-muted); text-decoration: underline; text-underline-offset: 2px; padding: 4px 0; }
 .refs a:hover { color: var(--pw-primary); }
 .refs a:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; border-radius: 4px; }
