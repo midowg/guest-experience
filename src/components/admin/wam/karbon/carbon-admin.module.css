@@ -208,3 +208,14 @@
 
 /* The prototype's participant side: a phone-wide column. */
 .phoneStage { display: flex; flex-direction: column; gap: 16px; max-width: 440px; margin: 0 auto; padding: 16px; }
+
+/* Revised (23 Nov 2026): the group trip in plain fields, and the Berangkat sendiri list. */
+.count { min-width: 22px; padding: 1px 7px; border-radius: 999px; font: 600 12px/18px var(--pw-body); text-align: center; color: var(--pw-primary); background: var(--pw-primary-soft); }
+.warnBox { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--pw-warning-soft); font: 500 15px/22px var(--pw-body); }
+.warnBox > svg { width: 20px; height: 20px; color: var(--pw-warning); }
+.warnBox > span { flex: 1 1 220px; }
+.pairFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 16px; margin-bottom: 16px; }
+.pairFields .field + .field { margin-top: 0; }
+.card > .field { margin-bottom: 16px; }
+.check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font: 500 15px/20px var(--pw-body); cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--pw-primary); }

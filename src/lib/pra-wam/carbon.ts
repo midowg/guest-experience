@@ -15,6 +15,13 @@ export const CARBON_FACTORS = {
   makanPerPorsi: 1.9,
   /** DEFRA 2025's hotel stay for Indonesia (from Cornell CHSB), 23 Nov 2026; was 40. */
   hotelPerKamarMalam: 62.7,
+  /**
+   * A car or minibus, per vehicle-km (Pra WAM only, 23 Nov 2026): DEFRA 2025 "Large car, Diesel"
+   * (0,21007), the nearest to an Innova or Hiace; DEFRA has no minibus row. Tank-to-wheel.
+   */
+  mobilPerKm: 0.21007,
+  /** A motorbike, per vehicle-km: DEFRA 2025 "Motorbike, Average" (0,11367), tank-to-wheel. */
+  motorPerKm: 0.11367,
 } as const;
 
 /**
@@ -22,21 +29,25 @@ export const CARBON_FACTORS = {
  * Kereta: KAI's own intensity for KA Antarkota (16,43 g per penumpang-km). Bus: the Dutch national
  * list, touringcar diesel well-to-wheel (0,888 per vehicle-km). Makan: a medium meat-eater's day
  * (5,63 kg) over three meals. Kamar: DEFRA's hotel stay per room-night (from Cornell CHSB),
- * its Indonesia row: 62,7.
+ * its Indonesia row: 62,7. Mobil and motor: the same DEFRA 2025 file.
  */
 export const CARBON_REFERENCES = [
   { factor: "kereta", short: "KAI 2026", title: "KAI: intensitas emisi KA Antarkota (ANTARA, 2026)", url: "https://bali.antaranews.com/rilis-pers/5604524/kai-susun-strategi-net-zero-emission-perkuat-peran-kereta-api-dalam-transisi-energi-indonesia" },
   { factor: "bus", short: "CO2emissiefactoren 2024", title: "CO2emissiefactoren.nl: touringcar diesel (2024)", url: "https://co2emissiefactoren.nl/factoren/2024/43/176/personenvervoer-touringcar-diesel/" },
   { factor: "makan", short: "Scarborough dkk. 2014", title: "Scarborough dkk., Climatic Change 125 (2014)", url: "https://doi.org/10.1007/s10584-014-1169-1" },
-  { factor: "kamar", short: "DEFRA 2025", title: "UK DESNZ/DEFRA GHG Conversion Factors 2025 (hotel stay)", url: "https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025" },
+  { factor: "kamar", short: "DEFRA 2025", title: "UK DESNZ/DEFRA GHG Conversion Factors 2025 (hotel stay, large car, motorbike)", url: "https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025" },
 ] as const;
 
+/** How a leg is travelled: a train per passenger, the others per vehicle (split by who rides it). */
+export type LegMode = "kereta" | "bus" | "mobil" | "motor";
+export const LEG_LABEL: Record<LegMode, string> = { kereta: "Kereta", bus: "Bus", mobil: "Mobil", motor: "Motor" };
+
 export type CarbonLeg = {
-  mode: "kereta" | "bus";
+  mode: LegMode;
   /** "Jakarta → Yogyakarta". */
   label: string;
   km: number;
-  /** A bus is shared: the people on it (its bus-km split between them). A train counts per passenger already. */
+  /** A vehicle is shared: the people in it (its km split between them). A train counts per passenger already. */
   sharedBy?: number;
 };
 
@@ -94,9 +105,10 @@ export function carbonFigure(kg: number): { value: string; unit: string } {
 /** The three parts in kg. */
 export function carbonParts(input: CarbonInput): Record<CarbonSource, number> {
   const f = CARBON_FACTORS;
+  const perVehicleKm: Record<Exclude<LegMode, "kereta">, number> = { bus: f.busPerBusKm, mobil: f.mobilPerKm, motor: f.motorPerKm };
   const perjalanan = input.legs.reduce((sum, leg) => sum + (leg.mode === "kereta"
     ? positive(leg.km) * f.keretaPerPenumpangKm
-    : (positive(leg.km) * f.busPerBusKm) / Math.max(1, positive(leg.sharedBy))), 0);
+    : (positive(leg.km) * perVehicleKm[leg.mode]) / Math.max(1, positive(leg.sharedBy))), 0);
   const kamar = (positive(input.nights) * f.hotelPerKamarMalam) / Math.max(1, positive(input.roomOccupants));
   const makan = positive(input.meals) * f.makanPerPorsi;
   return { perjalanan, kamar, makan };
@@ -105,9 +117,8 @@ export function carbonParts(input: CarbonInput): Record<CarbonSource, number> {
 function noteOf(key: CarbonSource, input: CarbonInput): string {
   switch (key) {
     case "perjalanan": {
-      const km = (test: (leg: CarbonLeg) => boolean) => input.legs.filter(test).reduce((sum, leg) => sum + positive(leg.km), 0);
-      const train = km(leg => leg.mode === "kereta"), bus = km(leg => leg.mode === "bus" && leg.label !== SHUTTLE), shuttle = km(leg => leg.label === SHUTTLE);
-      return [train > 0 ? `Kereta ${id(train)} km` : "", bus > 0 ? `bus ${id(bus)} km` : "", shuttle > 0 ? `shuttle ${id(shuttle)} km` : ""].filter(Boolean).join(" · ");
+      const modes = [...new Set(input.legs.map(leg => leg.mode))];
+      return modes.map(mode => `${LEG_LABEL[mode]} ${id(input.legs.filter(leg => leg.mode === mode).reduce((sum, leg) => sum + positive(leg.km), 0))} km`).join(" · ");
     }
     case "kamar": {
       const nights = `${id(positive(input.nights))} malam`;
@@ -118,9 +129,6 @@ function noteOf(key: CarbonSource, input: CarbonInput): string {
     case "makan": return `${id(positive(input.meals))} porsi selama acara`;
   }
 }
-
-/** The label of the station–venue legs. */
-const SHUTTLE = "Shuttle";
 
 const TITLE: Record<CarbonSource, string> = { perjalanan: "Perjalanan", kamar: "Kamar", makan: "Makan" };
 
@@ -140,86 +148,72 @@ export function carbonView(input: CarbonInput | null): CarbonView {
 }
 
 /** "Cara menghitung": each factor with its unit, in Indonesian number style. */
-export function carbonFactorRows(): { key: "kereta" | "bus" | "kamar" | "makan"; name: string; unit: string; value: string }[] {
+export function carbonFactorRows(): { key: "kereta" | "bus" | "mobil" | "motor" | "kamar" | "makan"; name: string; unit: string; value: string }[] {
   const f = CARBON_FACTORS;
   return [
+    { key: "mobil", name: "Mobil / minibus", unit: "kg per km, dibagi penumpang", value: id(f.mobilPerKm, 2) },
     { key: "kereta", name: "Kereta", unit: "kg per penumpang-km", value: id(f.keretaPerPenumpangKm, 4) },
-    { key: "bus", name: "Bus / shuttle", unit: "kg per bus-km, dibagi penumpang", value: id(f.busPerBusKm, 2) },
+    { key: "bus", name: "Bus", unit: "kg per km, dibagi penumpang", value: id(f.busPerBusKm, 2) },
+    { key: "motor", name: "Motor", unit: "kg per km", value: id(f.motorPerKm, 2) },
     { key: "kamar", name: "Kamar", unit: "kg per kamar-malam, dibagi penghuni", value: id(f.hotelPerKamarMalam, 1) },
     { key: "makan", name: "Makan", unit: "kg per porsi", value: id(f.makanPerPorsi, 1) },
   ];
 }
 
 /*
- * Who fills what (23 Nov 2026), one owner per piece so nothing is typed twice or guessed:
- *   Panitia (Admin Pra WAM → Jejak karbon), once for the event: nights, meals per person, the shuttle,
- *     people per bus, and the list of routes (kota asal, moda, km one way). Km is only ever typed here.
- *   Peserta (the card on Beranda), once for themself: which route they take, whether they come back
- *     the same way, and whether they ride the shuttle. They pick, they never type a distance.
+ * Who fills what (23 Nov 2026, revised): the trip is the same for nearly everyone, so the panitia
+ * set it once and nobody has to answer.
+ *   Panitia (Admin Pra WAM → Jejak karbon): the group trip in plain fields (dari, ke, kendaraan, km
+ *     one way, people per vehicle, pulang-pergi), nights, meals, and whether the form is open.
+ *     Pra WAM: kantor Yogyakarta → Kaliurang by car or minibus; WAM 2026: kantor → Batu by train.
+ *   Peserta: nothing, unless they do not travel with the group: then a short form (dari mana, naik
+ *     apa, km one way, pulang-pergi) from the card's detail. Only for themself; the panitia only see it.
  *   Otomatis: the room and who shares it, from Misi Perjalanan's room list.
- * The panitia see each answer but do not change it; they can remind, or ask for it again (which
- * clears it). After the form closes, answers stay as they are.
  */
-export type CarbonEventSettings = {
-  nights: number;
-  mealsPerPerson: number;
-  /** Station → venue, one way. */
-  shuttleKm: number;
-  /** People per shuttle bus. */
-  shuttlePerBus: number;
-  /** People per bus on a group bus from a city. */
-  groupBusPerBus: number;
-};
+export type CarbonEventSettings = { nights: number; mealsPerPerson: number };
 
-export type TravelMode = "kereta" | "bus";
-export const TRAVEL_MODES: { key: TravelMode; label: string }[] = [{ key: "kereta", label: "Kereta" }, { key: "bus", label: "Bus rombongan" }];
-export const modeLabel = (mode: TravelMode) => TRAVEL_MODES.find(item => item.key === mode)!.label;
+export type GroupMode = "mobil" | "bus" | "kereta";
+export const GROUP_MODES: { key: GroupMode; label: string }[] = [{ key: "mobil", label: "Mobil / minibus" }, { key: "bus", label: "Bus" }, { key: "kereta", label: "Kereta" }];
 
-/** A way to the venue the panitia list; the only place a distance is typed. */
-export type CarbonRoute = { id: string; from: string; mode: TravelMode; /** One way. */ km: number };
+/** The trip everyone takes unless they say otherwise. */
+export type GroupTrip = { from: string; to: string; mode: GroupMode; /** One way. */ km: number; /** People per vehicle (not used for a train). */ perVehicle: number; roundTrip: boolean };
 
-/** "Lainnya": a way not on the list (own car, plane…). Kamar and makan still count; the trip does not, yet. */
-export const OTHER_ROUTE = "lain";
+export type OwnMode = "mobil" | "motor" | "kereta" | "lainnya";
+export const OWN_MODES: { key: OwnMode; label: string }[] = [{ key: "mobil", label: "Mobil" }, { key: "motor", label: "Motor" }, { key: "kereta", label: "Kereta" }, { key: "lainnya", label: "Lainnya" }];
 
-/** What a participant answers about themself. */
-export type CarbonTravel = { routeId: string; roundTrip: boolean; shuttle: boolean; /** ISO time of the last answer. */ answeredAt: string };
+/** A participant's own trip, only when they do not go with the group. */
+export type OwnTrip = { from: string; mode: OwnMode; /** One way. */ km: number; roundTrip: boolean };
 
-/** Everything the panitia set for the event. */
-export type CarbonSetup = { settings: CarbonEventSettings; routes: CarbonRoute[]; /** Peserta may answer (or change their answer). */ formOpen: boolean };
+/** A participant's answer; no answer (null) means they go with the group. */
+export type CarbonTravel = { own: OwnTrip; answeredAt: string };
 
-/** "Jakarta · Kereta · 513 km". */
-export const routeLabel = (route: CarbonRoute) => `${route.from} · ${modeLabel(route.mode)} · ${id(route.km)} km`;
+export type CarbonSetup = { settings: CarbonEventSettings; trip: GroupTrip; /** Participants may tell their own trip. */ formOpen: boolean };
 
-/** A route the panitia can save: a city and a distance above 0. */
-export const routeValid = (route: Pick<CarbonRoute, "from" | "km">) => route.from.trim().length > 0 && positive(route.km) > 0;
+/** "Kantor Yogyakarta → Kaliurang". */
+export const tripLabel = (trip: Pick<GroupTrip, "from" | "to">) => `${trip.from.trim() || "?"} → ${trip.to.trim() || "?"}`;
+export const groupModeLabel = (mode: GroupMode) => GROUP_MODES.find(item => item.key === mode)!.label;
+export const ownModeLabel = (mode: OwnMode) => OWN_MODES.find(item => item.key === mode)!.label;
 
-/** An answer counts when its route still exists (or is "Lainnya"). */
-export const travelAnswered = (travel: CarbonTravel | null | undefined, routes: readonly CarbonRoute[]): boolean =>
-  !!travel && (travel.routeId === OTHER_ROUTE || routes.some(route => route.id === travel.routeId));
+/** The panitia's trip can be counted: both places named, a distance, and people per vehicle unless it is a train. */
+export const tripValid = (trip: GroupTrip) => !!trip.from.trim() && !!trip.to.trim() && positive(trip.km) > 0 && (trip.mode === "kereta" || positive(trip.perVehicle) > 0);
 
-/** One person's input from the panitia's setup, their answer and their room; null while they have not answered. */
-export function personCarbonInput(setup: Pick<CarbonSetup, "settings" | "routes">, travel: CarbonTravel | null | undefined, roomOccupants: number): CarbonInput | null {
-  if (!travelAnswered(travel, setup.routes)) return null;
-  const { settings } = setup;
-  const t = travel!;
-  const times = t.roundTrip ? 2 : 1;
-  const route = setup.routes.find(item => item.id === t.routeId);
+/** A participant's own trip is complete with a place, and a distance unless "Lainnya" (not counted). */
+export const ownTripValid = (own: OwnTrip) => !!own.from.trim() && (own.mode === "lainnya" || (positive(own.km) > 0 && own.km <= 3000));
+
+/** One person's input: their own trip or the group's, their room, and the event's nights and meals. */
+export function personCarbonInput(setup: Pick<CarbonSetup, "settings" | "trip">, travel: CarbonTravel | null | undefined, roomOccupants: number): CarbonInput | null {
+  const { settings, trip } = setup;
   const legs: CarbonLeg[] = [];
-  if (route) {
-    for (let i = 0; i < times; i++) legs.push({ mode: route.mode, label: route.from, km: positive(route.km), sharedBy: route.mode === "bus" ? Math.max(1, positive(settings.groupBusPerBus)) : undefined });
-  }
-  if (t.shuttle && positive(settings.shuttleKm) > 0) {
-    for (let i = 0; i < times; i++) legs.push({ mode: "bus", label: SHUTTLE, km: positive(settings.shuttleKm), sharedBy: Math.max(1, positive(settings.shuttlePerBus)) });
+  if (travel) {
+    const own = travel.own;
+    if (!ownTripValid(own)) return null;
+    if (own.mode !== "lainnya") for (let i = 0; i < (own.roundTrip ? 2 : 1); i++) legs.push({ mode: own.mode, label: own.from, km: positive(own.km), sharedBy: 1 });
+  } else {
+    if (!tripValid(trip)) return null;
+    for (let i = 0; i < (trip.roundTrip ? 2 : 1); i++) legs.push({ mode: trip.mode, label: tripLabel(trip), km: positive(trip.km), sharedBy: trip.mode === "kereta" ? undefined : Math.max(1, positive(trip.perVehicle)) });
   }
   return { legs, nights: positive(settings.nights), roomOccupants: Math.max(1, positive(roomOccupants)), meals: positive(settings.mealsPerPerson) };
 }
 
-/** How many answers use each route: a route in use cannot be deleted. */
-export function routeUse(people: readonly Pick<CarbonPerson, "travel">[]): Map<string, number> {
-  const use = new Map<string, number>();
-  for (const person of people) if (person.travel) use.set(person.travel.routeId, (use.get(person.travel.routeId) ?? 0) + 1);
-  return use;
-}
-
-/** One row of the admin page: the person, their room (automatic, from Misi Perjalanan) and their own answer. */
+/** One row of the admin page: the person, their room (automatic, from Misi Perjalanan) and their own trip if any. */
 export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };

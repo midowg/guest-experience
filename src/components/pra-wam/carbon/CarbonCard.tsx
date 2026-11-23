@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { BedDouble, Bus, Check, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, MapPin, PencilLine, TrainFront, Utensils, type LucideIcon } from "lucide-react";
-import { CARBON_REFERENCES, OTHER_ROUTE, carbonFactorRows, modeLabel, type CarbonRoute, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView } from "@/lib/pra-wam/carbon";
+import { BedDouble, Bike, Bus, Car, ChevronDown, ChevronRight, Droplets, Info, Leaf, Lightbulb, MapPin, PencilLine, TrainFront, Users, Utensils, type LucideIcon } from "lucide-react";
+import { CARBON_REFERENCES, carbonFactorRows, groupModeLabel, ownModeLabel, tripLabel, type CarbonSource, type CarbonSourceView, type CarbonTravel, type CarbonView, type GroupTrip } from "@/lib/pra-wam/carbon";
 import { Sheet } from "../Sheet";
 import { CarbonTravelForm } from "./CarbonTravelForm";
 import css from "./carbon.module.css";
 
 const SOURCE_ICON: Record<CarbonSource, LucideIcon> = { perjalanan: TrainFront, kamar: BedDouble, makan: Utensils };
-const FACTOR_ICON = { kereta: TrainFront, bus: Bus, kamar: BedDouble, makan: Utensils } as const;
+const FACTOR_ICON = { kereta: TrainFront, bus: Bus, mobil: Car, motor: Bike, kamar: BedDouble, makan: Utensils } as const;
 const swatch = (n: 1 | 2 | 3) => css[`seg${n}`];
 
 /** Small habits for the trip: no figures (nothing here is counted), no trees, no payment. */
@@ -18,61 +18,37 @@ const TIPS: { icon: LucideIcon; text: string }[] = [
   { icon: Lightbulb, text: "Matikan AC saat keluar kamar" },
 ];
 
-/** The participant's own part: the panitia's routes, their answer, whether they may still answer, and the figure for an answer. */
-export type CarbonFormProps = { routes: CarbonRoute[]; travel: CarbonTravel | null; open: boolean; onSave: (travel: CarbonTravel) => void; estimate?: (travel: CarbonTravel) => CarbonView };
+/** The participant's own part: the panitia's group trip, their own trip if any, whether they may change it, and the figure for an answer. */
+export type CarbonFormProps = {
+  trip: GroupTrip; travel: CarbonTravel | null; open: boolean;
+  onSave: (travel: CarbonTravel | null) => void;
+  estimate?: (travel: CarbonTravel | null) => CarbonView;
+};
 
-const PART_ICON: Record<CarbonSource, LucideIcon> = SOURCE_ICON;
 const PART_ORDER: CarbonSource[] = ["perjalanan", "kamar", "makan"];
+const TITLES: Record<CarbonSource, string> = { perjalanan: "Perjalanan", kamar: "Kamar", makan: "Makan" };
 
 /**
  * Beranda's Jejak karbon card for one person (Pra WAM, 23 Nov 2026), a small green app in a card
- * ("Organic Biophilic": rounded, a leaf, earth green with sky and sun accents): a leaf badge, the
- * title and the "For Tomorrow" chip. Before they answer: the three parts as tiles, Kamar and Makan
- * already ticked (they come from the event), Perjalanan waiting, and "Isi perjalananmu" (a step-by-step
- * sheet, CarbonTravelForm). Once answered: the figure beside a ring of the three parts, then the parts
- * as tiles with their kilograms (so nothing stands on colour alone), and "Rincian". Closed and not
- * answered: one line to ask the panitia.
+ * (rounded, a leaf, earth green with sky and sun accents): a leaf badge, "Jejak karbon" and
+ * "Rincian ›" at the top; the figure beside a ring of the three parts; the parts as tiles with their
+ * kilograms (so nothing stands on colour alone). Everyone counts with the panitia's group trip, so the
+ * figure is there without filling anything; someone who travels on their own changes it from the
+ * detail. Before the panitia set the trip: one line.
  */
 export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonFormProps }) {
   const [sheet, setSheet] = useState<"detail" | "form" | null>(null);
   const close = () => setSheet(null);
-  const formSheet = form && sheet === "form" && <Sheet open onClose={close} title="Perjalananmu">
-    <CarbonTravelForm routes={form.routes} value={form.travel} estimate={form.estimate} onSave={travel => { form.onSave(travel); close(); }} />
-  </Sheet>;
-  if (view.kind === "belum") {
-    const parts = <span className={css.parts}>
-      {PART_ORDER.map(key => {
-        const Icon = PART_ICON[key];
-        const ready = key !== "perjalanan";
-        return <span key={key} className={`${css.part} ${ready ? "" : css.partTodo}`}>
-          <span className={css.partTop}><Icon aria-hidden />{ready ? <Check aria-label="siap" className={css.partOk} /> : null}</span>
-          <span className={css.partName}>{TITLES[key]}</span>
-          <span className={css.partState}>{ready ? "Otomatis" : "Isi kamu"}</span>
-        </span>;
-      })}
-    </span>;
-    if (form?.open) return <>
-      <button type="button" className={css.card} onClick={() => setSheet("form")} aria-haspopup="dialog" aria-label="Jejak karbon perjalananmu. Kamar dan makan sudah otomatis. Isi perjalananmu">
-        <Motif />
-        <CardHead />
-        <span className={css.lead}>Tinggal 1 langkah</span>
-        {parts}
-        <span className={css.cta}>Isi perjalananmu<ChevronRight aria-hidden /></span>
-      </button>
-      {formSheet}
-    </>;
-    return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon perjalananmu">
-      <Motif />
-      <CardHead />
-      {parts}
-      <p className={css.waiting}>{form ? "Pengisian sudah ditutup. Hubungi panitia." : "Angkamu belum tersedia."}</p>
-    </section>;
-  }
+  if (view.kind === "belum") return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon">
+    <Motif />
+    <CardHead />
+    <p className={css.waiting}>Angkamu muncul setelah panitia mengisi perjalanan.</p>
+  </section>;
   const byKey = new Map(view.sources.map(source => [source.key, source]));
   return <>
-    <button type="button" className={css.card} onClick={() => setSheet("detail")} aria-haspopup="dialog" aria-label={`Jejak karbon perjalananmu: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>
+    <button type="button" className={css.card} onClick={() => setSheet("detail")} aria-haspopup="dialog" aria-label={`Jejak karbon: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>
       <Motif />
-      <CardHead />
+      <CardHead more />
       <span className={css.hero}>
         <span className={css.figureBlock}>
           <span className={css.number}>{view.total.value}</span>
@@ -82,7 +58,7 @@ export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonForm
       </span>
       <span className={css.parts}>
         {PART_ORDER.map(key => {
-          const Icon = PART_ICON[key];
+          const Icon = SOURCE_ICON[key];
           const source = byKey.get(key);
           return <span key={key} className={css.part}>
             <span className={css.partTop}><Icon aria-hidden />{source && <i className={swatch(source.swatch)} aria-hidden />}</span>
@@ -91,30 +67,28 @@ export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonForm
           </span>;
         })}
       </span>
-      <span className={css.foot}><span className={css.more}>Rincian <ChevronRight aria-hidden /></span></span>
     </button>
-    {sheet === "detail" && <Sheet open onClose={close} title="Jejak karbon perjalananmu" subtitle={`Perkiraan ${view.total.value} ${view.total.unit}`}>
+    {sheet === "detail" && <Sheet open onClose={close} title="Jejak karbon" subtitle={`Perkiraan ${view.total.value} ${view.total.unit}`}>
       <CarbonDetail view={view} form={form} onEdit={() => setSheet("form")} />
     </Sheet>}
-    {formSheet}
+    {form && sheet === "form" && <Sheet open onClose={close} title="Perjalananmu">
+      <CarbonTravelForm trip={form.trip} value={form.travel} estimate={form.estimate} onSave={travel => { form.onSave(travel); close(); }} />
+    </Sheet>}
   </>;
 }
 
-const TITLES: Record<CarbonSource, string> = { perjalanan: "Perjalanan", kamar: "Kamar", makan: "Makan" };
-
-/** "Jakarta · Kereta · pulang-pergi · shuttle". */
-function answerText(form: CarbonFormProps): string {
-  const travel = form.travel!;
-  const route = form.routes.find(item => item.id === travel.routeId);
-  const way = route ? `${route.from} · ${modeLabel(route.mode)}` : "Rute lain";
-  return [way, travel.roundTrip ? "pulang-pergi" : "pergi saja", travel.shuttle ? "shuttle" : ""].filter(Boolean).join(" · ");
+/** "Kantor Yogyakarta → Kaliurang · Mobil / minibus", or their own trip. */
+function answerText(form: CarbonFormProps): { title: string; sub: string } {
+  if (!form.travel) return { title: tripLabel(form.trip), sub: `Bersama rombongan · ${groupModeLabel(form.trip.mode)}` };
+  const own = form.travel.own;
+  return { title: `Dari ${own.from}`, sub: ["Berangkat sendiri", ownModeLabel(own.mode), own.roundTrip ? "pulang-pergi" : "pergi saja"].join(" · ") };
 }
 
-function CardHead() {
+function CardHead({ more }: { more?: boolean }) {
   return <span className={css.top}>
     <span className={css.badge}><Leaf aria-hidden /></span>
     <span className={css.title}>Jejak karbon</span>
-    <span className={css.chip}>For Tomorrow</span>
+    {more && <span className={css.more}>Rincian <ChevronRight aria-hidden /></span>}
   </span>;
 }
 
@@ -146,12 +120,12 @@ function Motif() {
 export function CarbonDetail({ view, form, onEdit }: { view: Extract<CarbonView, { kind: "ada" }>; form?: CarbonFormProps; onEdit?: () => void }) {
   const [how, setHow] = useState(false);
   return <div className={css.detail}>
-    {form?.travel && <section className={css.mine} aria-label="Jawabanmu">
-      <span className={css.rowIcon}><MapPin aria-hidden /></span>
-      <span className={css.mineText}><strong>{answerText(form)}</strong></span>
+    {form && <section className={css.mine} aria-label="Perjalananmu">
+      <span className={css.rowIcon}>{form.travel ? <MapPin aria-hidden /> : <Users aria-hidden />}</span>
+      <span className={css.mineText}><strong>{answerText(form).title}</strong><span>{answerText(form).sub}</span></span>
       {form.open && onEdit && <button type="button" className={css.edit} onClick={onEdit}><PencilLine aria-hidden />Ubah</button>}
     </section>}
-    {form?.travel?.routeId === OTHER_ROUTE && <p className={css.note}><Info aria-hidden />Rute lain belum dihitung.</p>}
+    {form?.travel?.own.mode === "lainnya" && <p className={css.note}><Info aria-hidden />Kendaraan lain belum dihitung.</p>}
     <section aria-labelledby="karbon-asal">
       <h3 id="karbon-asal" className={css.h}>Asalnya</h3>
       <ul className={css.rows}>
@@ -176,7 +150,7 @@ export function CarbonDetail({ view, form, onEdit }: { view: Extract<CarbonView,
         <ChevronDown aria-hidden className={css.chevron} data-open={how || undefined} />
       </button>
       <div id="karbon-cara" className={css.howBody} hidden={!how}>
-        <p>Data perjalanan × faktor emisi. Bus dan kamar dibagi rata.</p>
+        <p>Data perjalanan × faktor emisi. Kendaraan dan kamar dibagi rata.</p>
         <ul className={css.factors}>
           {carbonFactorRows().map(row => {
             const Icon = FACTOR_ICON[row.key];
