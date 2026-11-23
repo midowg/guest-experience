@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { BarChart3, CalendarDays, Check, ChevronRight, HelpCircle, MapPin, Puzzle } from "lucide-react";
+import { BarChart3, CalendarDays, Check, ChevronRight, HelpCircle, MapPin, Puzzle, ThumbsUp } from "lucide-react";
 import {
   AGENDA, agendaSession, byVotes, HINT_COUNT, hintsOpen, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
@@ -231,12 +231,13 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
               }}>Kirim pertanyaan</button>
             </section>
             <h3 className={css.cardTitle}>Pertanyaan masuk ({list.length})</h3>
+            {list.length > 0 && <p className={css.note}>Setuju dengan pertanyaan orang lain? Ketuk jempolnya. Angka di bawah jempol adalah jumlah dukungan.</p>}
             {list.length ? list.map(question => <div key={question.id} className={`${css.q} ${question.mine ? css.qMine : ""}`}>
               <div><p>{question.text}</p><div className={css.meta}><span>{question.mine ? "Pertanyaanmu" : question.by === "Contoh" ? "Contoh" : question.anon ? "Tanpa nama" : question.by}</span>
                 {question.status === "dijawab" && <span className={`${css.st} ${css.stOk}`}>Sudah dijawab</span>}{s.presenting === question.id && <span className={`${css.st} ${css.stLive}`}>Sedang dibahas</span>}</div></div>
               <button type="button" className={css.vote} aria-pressed={question.voted} disabled={question.mine} aria-label={`Dukung pertanyaan ini, ${question.votes} dukungan`}
                 onClick={() => update(current => ({ questions: { ...current.questions, [current.session]: current.questions[current.session].map(item => item.id === question.id ? { ...item, voted: !item.voted, votes: item.votes + (item.voted ? -1 : 1) } : item) } }))}>
-                <span>+1</span><span>{question.votes}</span></button>
+                <ThumbsUp aria-hidden /><span>{question.votes}</span></button>
             </div>) : <p className={css.note}>Belum ada pertanyaan.</p>}
           </div>,
           footer: view.ceo ? <button type="button" className={css.btn} onClick={() => setSheet("ceo")}>Buka Mode CEO</button> : <button type="button" className={css.btn} onClick={() => setSheet("agenda")}>Kembali ke agenda</button>,

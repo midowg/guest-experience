@@ -145,3 +145,6 @@
   .busMove, .roadTrail, .toast { transition: none; }
   .busBob, .shake { animation: none; }
 }
+/* The support button (25 Nov 2026): a thumb and how many support it, not "+1" over a number. */
+.vote { justify-content: center; gap: 2px; }
+.vote svg { width: 20px; height: 20px; }
