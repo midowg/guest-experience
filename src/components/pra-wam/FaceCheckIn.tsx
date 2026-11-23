@@ -17,7 +17,8 @@ import css from "./face-check-in.module.css";
 
 /*
  * Absen pakai wajah (22 Nov 2026), in Detail sesi of a panitia's session, beside "Scan QR". A plain
- * camera (no oval, nothing taken by itself): the person presses "Ambil foto". The frames around the
+ * camera (no oval, nothing taken by itself): the person presses "Ambil foto", which only works while
+ * one face, near enough, looks straight at the camera (23 Nov). The frames around the
  * press become SFace's numbers on this phone, the photo goes to private storage, and the server
  * compares the numbers with the person's WG People face. Then the result: how alike, in percent
  * against the "batas cocok", the photo beside the WG People one, and what happened: hadir, hadir
@@ -68,12 +69,16 @@ const THRESHOLD = matchPercent(FACE_MATCH.cocok);
 const MIN_SHARPNESS = 20;
 const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms));
 
-/** What to fix, said under the camera; null when one face is well in view. */
-function hintOf(faces: number, closeness: number): string | null {
+/** How far the head may turn and still count as facing the camera, in degrees. */
+export const FACING_YAW = 15;
+
+/** What to fix, said under the camera; null when one face is well in view and looks at the camera. */
+export function hintOf(faces: number, closeness: number, yaw: number | null): string | null {
   if (faces === 0) return "Arahkan wajahmu ke kamera";
   if (faces > 1) return "Pastikan hanya kamu yang terlihat";
   if (closeness < 0.08) return "Dekatkan wajah ke kamera";
   if (closeness > 0.42) return "Jauhkan sedikit wajahmu";
+  if (yaw === null || Math.abs(yaw) > FACING_YAW) return "Hadapkan wajahmu lurus ke kamera";
   return null;
 }
 
@@ -173,12 +178,14 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
   const titleId = useId();
   const [phase, setPhase] = useState<Phase>({ kind: "siap" });
   const [hint, setHint] = useState<string | null>(null);
+  /** One face, near enough, looking at the camera: only then can the photo be taken. */
+  const [facing, setFacing] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
   const [recorded, setRecorded] = useState(false);
-  const live = useRef({ stream: null as MediaStream | null, engine: null as FaceEngine | null, token: "", signals: [] as FrameSignal[], timer: 0, paused: false, closed: true });
+  const live = useRef({ stream: null as MediaStream | null, engine: null as FaceEngine | null, token: "", signals: [] as FrameSignal[], timer: 0, paused: false, closed: true, noteUntil: 0 });
 
   useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
 
@@ -194,7 +201,7 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
   async function begin() {
     const state = live.current;
     state.closed = false;
-    setHint(null); setEngineReady(false); setAgreed(false); setPhotoUrl(null);
+    setHint(null); setFacing(false); state.noteUntil = 0; setEngineReady(false); setAgreed(false); setPhotoUrl(null);
     setPhase({ kind: "siap" });
     if (!dialog.current?.open) dialog.current?.showModal();
     try {
@@ -221,7 +228,10 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
         if (!state.paused && video.current.readyState >= 2) {
           const look = engine.read(video.current, performance.now());
           if (look.signal) { state.signals.push(look.signal); if (state.signals.length > KEEP_SIGNALS) state.signals.shift(); }
-          setHint(hintOf(look.faces, look.closeness));
+          const problem = hintOf(look.faces, look.closeness, look.signal?.yaw ?? null);
+          setFacing(problem === null);
+          // A note from a failed press stays a moment before the live hint takes over again.
+          if (performance.now() >= state.noteUntil) setHint(problem);
         }
         state.timer = window.setTimeout(tick, TICK_MS);
       };
@@ -245,7 +255,7 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
     for (let i = 0; i < 8 && frames.length < 3; i += 1) {
       const look = engine.read(element, performance.now());
       if (look.signal) state.signals.push(look.signal);
-      if (look.faces === 1 && look.points && look.box && !hintOf(look.faces, look.closeness)) {
+      if (look.faces === 1 && look.points && look.box && !hintOf(look.faces, look.closeness, look.signal?.yaw ?? null)) {
         if (!still) {
           still = document.createElement("canvas");
           still.width = element.videoWidth; still.height = element.videoHeight;
@@ -257,12 +267,12 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
       }
       await wait(140);
     }
+    const note = (text: string) => { state.paused = false; state.noteUntil = performance.now() + 2500; setHint(text); };
     if (!still || !box || frames.length < 2) {
-      state.paused = false;
-      setHint(!still ? "Wajah belum terlihat jelas. Lihat ke kamera, lalu tekan lagi." : "Foto buram. Tahan HP sebentar, lalu tekan lagi.");
+      note(!still ? "Wajah belum terlihat jelas. Lihat ke kamera, lalu tekan lagi." : "Foto buram. Tahan HP sebentar, lalu tekan lagi.");
       return;
     }
-    if (!sameFace(frames)) { state.paused = false; setHint("Wajah berganti saat difoto. Tekan lagi dengan wajahmu sendiri."); return; }
+    if (!sameFace(frames)) { note("Wajah berganti saat difoto. Tekan lagi dengan wajahmu sendiri."); return; }
     const signals = state.signals.slice(-200);
     stopCamera();
     setPhase({ kind: "proses", step: 0 });
@@ -316,7 +326,7 @@ export function FaceCheckIn({ sessionId, canTap, className, client = serverFaceC
           <label><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /> Saya setuju wajahku dipakai untuk absen, sama seperti di WG People.</label>
           <details><summary>Baca selengkapnya</summary><ul>{copies.id.consent.map(line => <li key={line}>{line}</li>)}</ul></details>
         </div>}
-        <button type="button" className={`button button--primary ${css.shutter}`} disabled={!engineReady || (consentNeeded && !agreed)} onClick={() => void shoot(consentNeeded)}>
+        <button type="button" className={`button button--primary ${css.shutter}`} disabled={!engineReady || !facing || (consentNeeded && !agreed)} onClick={() => void shoot(consentNeeded)}>
           <Camera size={20} aria-hidden /> Ambil foto
         </button>
         <a className={css.alt} href={praWamPath.scan}><QrCode size={16} aria-hidden /> Scan QR saja</a>

@@ -123,7 +123,8 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   panitia: scan QR, atau **absen pakai wajah** (22 Nov 2026; "Saya hadir" ditolak server).
 - **Absen pakai wajah** (migrasi `202611290001`): di Detail sesi panitia, tombol utama "Absen pakai
   wajah", "Scan QR" di sebelahnya. Kamera biasa tanpa bingkai oval, orangnya sendiri menekan
-  "Ambil foto" (tidak memotret sendiri). Wajah dicocokkan dengan data wajah WG People
+  "Ambil foto" (tidak memotret sendiri); tombol itu baru bisa ditekan saat satu wajah, cukup dekat,
+  menghadap lurus ke kamera (toleh paling 15°; 23 Nov 2026). Wajah dicocokkan dengan data wajah WG People
   (`pw_face_profiles`, model dan ambang sama): **cocok** (±76% ke atas) langsung hadir; **perlu cek**
   tercatat hadir dan panitia melihat fotonya lalu Sahkan atau Hapus tanda; **tidak cocok** tidak
   tercatat (Ambil ulang atau Scan QR). Hasil menampilkan persen kemiripan, garis batas cocok, foto
