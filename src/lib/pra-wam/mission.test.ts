@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { AGENDA, agendaSession, byVotes, initials, missionsOf, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
+import { AGENDA, agendaSession, byVotes, initials, journeyPercent, missionsOf, missionStops, ROAD, roadPoint, scrambled, sentenceRight, SENTENCES, signalPair, SIGNALS } from "./mission";
+
+describe("the road from the office to the villa (24 Nov 2026)", () => {
+  it("puts the bus at the office, along the road, and at the villa", () => {
+    expect(roadPoint(0)).toMatchObject({ x: ROAD.from[0], y: ROAD.from[1] });
+    const end = roadPoint(100);
+    expect(end.x).toBeCloseTo(ROAD.to[0], 0);
+    expect(end.y).toBeCloseTo(ROAD.to[1], 0);
+    expect(roadPoint(50).x).toBeGreaterThan(roadPoint(25).x);
+  });
+  it("moves a stretch per mission, waits before launch, and arrives on check-in", () => {
+    expect(journeyPercent({ launched: false, done: 0, missions: 3, arrived: false })).toBe(0);
+    expect(journeyPercent({ launched: true, done: 0, missions: 3, arrived: false })).toBe(8);
+    expect(journeyPercent({ launched: true, done: 3, missions: 3, arrived: false })).toBe(88);
+    expect(journeyPercent({ launched: true, done: 1, missions: 3, arrived: true })).toBe(100);
+    expect(missionStops(3)).toEqual([35, 61, 88]);
+  });
+});
 
 describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
   it("scrambles every sentence so that each piece is there once, and checks the order", () => {

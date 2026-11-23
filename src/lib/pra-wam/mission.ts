@@ -118,8 +118,39 @@ export const SAMPLE_QUESTIONS: Record<string, Omit<Question, "id" | "voted" | "m
 /** Most support first; the order they came in otherwise. */
 export const byVotes = <T extends { votes: number }>(list: readonly T[]) => list.map((item, at) => ({ item, at })).sort((a, b) => b.item.votes - a.item.votes || a.at - b.at).map(({ item }) => item);
 
-/** Points, as the prototype counts them (shown only to the person; no public ranking). */
-export const POINTS = { launch: 20, sentenceFirstTry: 100, sentence: 70, sentencePart: 50, signal: 60, message: 60, arrive: 30, guessRight: 100, agree: 40, ask: 30 } as const;
+/* ── The road from the office to the villa (24 Nov 2026): one winding curve in a 360×150 scene. ── */
+export const ROAD = { from: [34, 112], c1: [130, 40], c2: [220, 150], to: [318, 82] } as const;
+export const ROAD_PATH = `M${ROAD.from.join(" ")} C${ROAD.c1.join(" ")} ${ROAD.c2.join(" ")} ${ROAD.to.join(" ")}`;
+const bezier = (t: number): [number, number] => {
+  const u = 1 - t;
+  const at = (axis: 0 | 1) => u * u * u * ROAD.from[axis] + 3 * u * u * t * ROAD.c1[axis] + 3 * u * t * t * ROAD.c2[axis] + t * t * t * ROAD.to[axis];
+  return [at(0), at(1)];
+};
+// The curve measured once, so a share of the way is a share of its length (as pathLength="100" draws it).
+const SAMPLES = (() => {
+  const points = Array.from({ length: 201 }, (_, at) => bezier(at / 200));
+  const lengths = [0];
+  for (let at = 1; at < points.length; at++) lengths.push(lengths[at - 1] + Math.hypot(points[at][0] - points[at - 1][0], points[at][1] - points[at - 1][1]));
+  return { points, lengths, total: lengths[lengths.length - 1] };
+})();
+/** The point `percent` of the way along the road, and its heading in degrees (for the bus). */
+export function roadPoint(percent: number): { x: number; y: number; angle: number } {
+  const want = Math.max(0, Math.min(100, percent)) / 100 * SAMPLES.total;
+  let at = SAMPLES.lengths.findIndex(length => length >= want);
+  if (at <= 0) at = 1;
+  const [ax, ay] = SAMPLES.points[at - 1];
+  const [bx, by] = SAMPLES.points[at];
+  const share = (want - SAMPLES.lengths[at - 1]) / ((SAMPLES.lengths[at] - SAMPLES.lengths[at - 1]) || 1);
+  return { x: ax + (bx - ax) * share, y: ay + (by - ay) * share, angle: Math.atan2(by - ay, bx - ax) * 180 / Math.PI };
+}
+/** How far along the bus is: waiting at the office, then a stretch per mission done, the villa on arrival. */
+export function journeyPercent(input: { launched: boolean; done: number; missions: number; arrived: boolean }): number {
+  if (input.arrived) return 100;
+  if (!input.launched) return 0;
+  return Math.round(8 + (input.done / Math.max(1, input.missions)) * 80);
+}
+/** Where each mission's stop stands on the road (the share reached when it is done). */
+export const missionStops = (missions: number) => Array.from({ length: missions }, (_, at) => journeyPercent({ launched: true, done: at + 1, missions, arrived: false }));
 
 /** Initials for an avatar: "Linda Susanto" → "LS". */
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();

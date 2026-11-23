@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, BarChart3, CalendarDays, Check, HelpCircle, Mail, MessageCircleQuestion, Puzzle, Star } from "lucide-react";
 import {
-  AGENDA, agendaSession, byVotes, HINT_COUNT, initials, missionsOf, POINTS, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
+  AGENDA, agendaSession, byVotes, HINT_COUNT, initials, journeyPercent, missionsOf, QUESTION_CATEGORIES, SAMPLE_QUESTIONS, scrambled,
   sentenceLabel, sentenceRight, SENTENCES, signalPair, SIGNALS, type MissionKey, type MissionView, type Question,
 } from "@/lib/pra-wam/mission";
+import { MissionRoad } from "./MissionRoad";
 import css from "./mission.module.css";
 
 /*
@@ -18,7 +19,7 @@ import css from "./mission.module.css";
 type Screen = "home" | "launch" | "hub" | "kal" | "sig" | "pes" | "guess" | "arrive" | "reveal" | "done" | "bod" | "agenda" | "session" | "ceo";
 type Agree = { ac: string | null; lampu: string | null; alarm: string | null };
 type State = {
-  screen: Screen; launched: boolean; done: Record<MissionKey, boolean>; hints: number; points: number;
+  screen: Screen; launched: boolean; done: Record<MissionKey, boolean>; hints: number;
   kalIdx: number; pool: number[]; answer: number[]; tries: number;
   signal: Record<number, string>; message: string; guess: string[]; guessSaved: boolean;
   arrived: boolean; change: string; agree: Agree; agreed: boolean;
@@ -34,7 +35,7 @@ function fresh(view: MissionView): State {
     questions[item.id] = (SAMPLE_QUESTIONS[item.id] ?? []).map(sample => ({ ...sample, id: `c${++seq}`, by: "Contoh", anon: true, voted: false, mine: false, status: "baru" as const }));
   }
   return {
-    screen: "home", launched: false, done: { kal: false, sig: false, pes: false }, hints: 0, points: 0,
+    screen: "home", launched: false, done: { kal: false, sig: false, pes: false }, hints: 0,
     kalIdx: 0, pool: view.sentences.length ? scrambled(view.sentences[0]) : [], answer: [], tries: 0,
     signal: {}, message: "", guess: [], guessSaved: false, arrived: false, change: "", agree: { ac: null, lampu: null, alarm: null }, agreed: false,
     session: "s1", questions, presenting: null, seq,
@@ -66,16 +67,16 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
 
   const go = (screen: Screen) => { setS(current => ({ ...current, screen })); window.scrollTo({ top: 0 }); };
   const update = (patch: Partial<State> | ((current: State) => Partial<State>)) => setS(current => ({ ...current, ...(typeof patch === "function" ? patch(current) : patch) }));
-  function complete(mission: MissionKey, points: number, label: string) {
+  function complete(mission: MissionKey, label: string) {
     let opened = false;
     update(current => {
       opened = hod && current.hints < HINT_COUNT;
-      return { done: { ...current.done, [mission]: true }, points: current.points + points, hints: opened ? current.hints + 1 : current.hints, screen: "hub" };
+      return { done: { ...current.done, [mission]: true }, hints: opened ? current.hints + 1 : current.hints, screen: "hub" };
     });
-    setToast(`${label} selesai · +${points} poin${hod ? " · petunjuk baru terbuka" : ""}`);
+    setToast(`${label} selesai${hod ? " · petunjuk baru terbuka" : ""}`);
   }
 
-  const progress = s.screen === "home" ? 0 : s.screen === "launch" ? 4 : s.arrived ? 100 : Math.min(90, 10 + doneCount * 26);
+  const progress = journeyPercent({ launched: s.launched, done: doneCount, missions: missions.length, arrived: s.arrived });
   const tab = s.screen === "agenda" || s.screen === "session" || s.screen === "ceo" ? "agenda" : "misi";
   const back = (to: Screen, label: string) => <button type="button" className={css.back} onClick={() => go(to)}><ArrowLeft aria-hidden /> {label}</button>;
   const notFor = (text: string) => <><p className={css.eyebrow}>Tidak tersedia</p><h2 className={css.title}>{text}</h2><button type="button" className={css.btn} onClick={() => go("hub")}>Ke daftar misi</button></>;
@@ -124,7 +125,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             left -= 1;
             if (left > 0) { setCount(left); return; }
             clearInterval(timer); setCount(null);
-            update(current => ({ launched: true, points: current.points + POINTS.launch, screen: "hub" })); setToast("Misi terbuka!");
+            update({ launched: true, screen: "hub" }); setToast("Misi terbuka!");
           }, 700);
         }}>Launch</button>
       </>;
@@ -150,7 +151,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
           {missions.includes("pes") && item("pes", "Pesan untuk 2027", "±3 menit · dibaca BoD", Mail)}
           {hod && !s.arrived && <button type="button" className={css.mission} onClick={() => go("guess")}>
             <span className={css.ic}><HelpCircle aria-hidden /></span>
-            <span><b>{s.guessSaved ? "Ubah tebakan" : "Tebak teman sekamar"}</b><small>{s.guessSaved ? `Tebakanmu: ${guessNames}` : "Bisa kapan saja, ada bonus poin"}</small></span>
+            <span><b>{s.guessSaved ? "Ubah tebakan" : "Tebak teman sekamar"}</b><small>{s.guessSaved ? `Tebakanmu: ${guessNames}` : "Bisa kapan saja sampai tiba di venue"}</small></span>
             <span className={`${css.tag} ${css.tagGold}`}>{s.guessSaved ? "Tersimpan" : "Tebak"}</span></button>}
           <p className={css.glabel}>Sebelum sesi 16.00</p>
           <button type="button" className={css.mission} onClick={() => { update({ session: "s1" }); go("session"); }}>
@@ -176,11 +177,11 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
           setTimeout(() => {
             if (s.kalIdx < view.sentences.length - 1) {
               const next = view.sentences[s.kalIdx + 1];
-              update(current => ({ kalIdx: current.kalIdx + 1, pool: scrambled(next), answer: [], tries: 0, points: current.points + POINTS.sentencePart }));
+              update(current => ({ kalIdx: current.kalIdx + 1, pool: scrambled(next), answer: [], tries: 0 }));
               setToast("Kalimat pertama selesai · lanjut kalimat kedua");
             } else {
               update({ answer: [], tries: 0 });
-              complete("kal", tries === 1 ? POINTS.sentenceFirstTry : POINTS.sentence, "Susun Kalimat");
+              complete("kal", "Susun Kalimat");
             }
           }, 600);
         };
@@ -213,7 +214,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             <div className={css.chips} role="group" aria-label={SIGNALS[index].q}>{SIGNALS[index].o.map(option =>
               <button key={option} type="button" className={css.chip} aria-pressed={s.signal[at] === option} onClick={() => update(current => ({ signal: { ...current.signal, [at]: option } }))}>{option}</button>)}</div>
           </section>)}
-          <button type="button" className={`${css.btn} ${css.primary} ${css.end}`} disabled={!ready} onClick={() => complete("sig", POINTS.signal, "Future Signal")}>Kirim jawaban</button>
+          <button type="button" className={`${css.btn} ${css.primary} ${css.end}`} disabled={!ready} onClick={() => complete("sig", "Future Signal")}>Kirim jawaban</button>
         </>;
       }
       case "pes":
@@ -228,7 +229,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             <textarea maxLength={160} value={s.message} placeholder="Contoh: Di 2027 saya ingin timku lebih berani mencoba hal baru." onChange={event => update({ message: event.target.value })} />
           </label>
           <span className={css.note}>{s.message.length}/160</span>
-          <button type="button" className={`${css.btn} ${css.primary} ${css.end}`} disabled={!s.message.trim()} onClick={() => complete("pes", POINTS.message, "Pesan untuk 2027")}>Kirim ke BoD</button>
+          <button type="button" className={`${css.btn} ${css.primary} ${css.end}`} disabled={!s.message.trim()} onClick={() => complete("pes", "Pesan untuk 2027")}>Kirim ke BoD</button>
         </>;
       case "guess": {
         if (!hod || !view.room) return notFor("Tebak teman sekamar hanya untuk HoD");
@@ -236,7 +237,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         const need = view.room.mates.length;
         return <>
           {back("hub", "Daftar misi")}
-          <p className={css.eyebrow}>Bonus poin kalau benar</p><h1 className={css.title}>Tebak teman sekamar</h1>
+          <p className={css.eyebrow}>Sebelum tiba di venue</p><h1 className={css.title}>Tebak teman sekamar</h1>
           <p className={css.sub}>Pilih {need} HoD yang kamu kira sekamar denganmu. Tebakan bisa diubah sampai kamu tiba di venue.</p>
           {s.hints > 0 ? <div className={css.hints}>{Array.from({ length: s.hints }, (_, at) => <div key={at} className={css.hint}><b>Petunjuk {at + 1}</b>
             {view.room!.mates.map((mate, index) => <span key={mate.name}>{need > 1 ? `Teman ${index + 1}: ` : ""}{mate.hints[at]}</span>)}</div>)}</div>
@@ -256,8 +257,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
           <section className={css.card}><p>Data dari kuesionermu sudah kami terima: kontak darurat, makanan, dan ukuran kaos. Tidak perlu diisi ulang.</p>
             <label className={css.field}>Ada data yang berubah? (opsional)<input type="text" value={s.change} placeholder="Contoh: ukuran kaos jadi L" onChange={event => update({ change: event.target.value })} /></label></section>
           <button type="button" className={`${css.btn} ${css.primary} ${css.end}`} onClick={() => {
-            const right = hod && s.guessSaved && view.room!.mates.every(mate => s.guess.includes(keyOf(mate.name)));
-            update(current => ({ arrived: true, hints: HINT_COUNT, points: current.points + POINTS.arrive + (right ? POINTS.guessRight : 0), screen: hod ? "reveal" : "done" }));
+            update({ arrived: true, hints: HINT_COUNT, screen: hod ? "reveal" : "done" });
             setToast("Check-in berhasil");
           }}>Saya sudah tiba</button>
         </>;
@@ -272,18 +272,18 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
           <p className={css.eyebrow}>Check-in berhasil</p><div className={css.big}>Kamar {code}</div>
           {mystery(true)}
           <section className={css.card}><span className={css.eyebrow}>Teman sekamarmu</span>{mates.map(mate => <div key={mate.name}><b>{mate.name}</b><div className={css.note}>{mate.dept}</div></div>)}</section>
-          {s.guessSaved && <section className={`${css.card} ${css.center}`}><b>{right ? `Tebakanmu benar! +${POINTS.guessRight} poin` : "Tebakanmu belum tepat, tapi sekarang kalian sudah kenalan."}</b></section>}
+          {s.guessSaved && <section className={`${css.card} ${css.center}`}><b>{right ? "Tebakanmu benar!" : "Tebakanmu belum tepat, tapi sekarang kalian sudah kenalan."}</b></section>}
           <section className={css.card}><span className={css.eyebrow}>Ritme tidur kamar</span><div className={css.rhythm}>{rhythm(view.nick, self.sleep, self.wake, true)}{mates.map(mate => rhythm(mate.nick, mate.sleep, mate.wake))}</div></section>
           {s.agreed ? <section className={css.card}><b>Kesepakatan kamar tersimpan</b><p className={css.note}>AC {s.agree.ac} · lampu mati {s.agree.lampu} · alarm {s.agree.alarm}.</p></section>
             : <section className={css.card}><b>Kesepakatan kamar</b>{AGREEMENT.map(([field, label, options]) => <div key={field}><span className={css.note}>{label}</span>
                 <div className={css.chips} role="group" aria-label={label}>{options.map(option => <button key={option} type="button" className={css.chip} aria-pressed={s.agree[field] === option} onClick={() => update(current => ({ agree: { ...current.agree, [field]: option } }))}>{option}</button>)}</div></div>)}
-              <button type="button" className={`${css.btn} ${css.primary}`} disabled={!ready} onClick={() => { update(current => ({ agreed: true, points: current.points + POINTS.agree })); setToast("Kesepakatan kamar tersimpan"); }}>Simpan kesepakatan</button></section>}
+              <button type="button" className={`${css.btn} ${css.primary}`} disabled={!ready} onClick={() => { update({ agreed: true }); setToast("Kesepakatan kamar tersimpan"); }}>Simpan kesepakatan</button></section>}
           <button type="button" className={css.btn} onClick={() => go("done")}>Selesai</button>
         </>;
       }
       case "done": return <>
         <div className={css.big}>Sampai jumpa di sesi 16.00</div>
-        <p className={`${css.sub} ${css.center}`}>{s.points} poin terkumpul. Poin ini bertambah selama acara.</p>
+        <p className={`${css.sub} ${css.center}`}>Misi perjalanan selesai. Sampai bertemu di ruang meeting.</p>
         <section className={css.card}><span className={css.eyebrow}>Berikutnya</span>
           {hod && <p>Ambil key card kamar {view.room!.code} di meja panitia.</p>}
           <p>16.00 · Business Overview & Evaluation: kalimat dibacakan berurutan dan pertanyaan Tanya CEO dijawab.</p>
@@ -321,8 +321,8 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
             <label className={css.switch}>Kirim tanpa nama<input type="checkbox" checked={ask.anon} onChange={event => setAsk({ ...ask, anon: event.target.checked })} /></label>
             <button type="button" className={`${css.btn} ${css.primary}`} disabled={!ask.text.trim()} onClick={() => {
               const question: Question = { id: `q${s.seq + 1}`, text: ask.text.trim(), by: view.nick, anon: ask.anon, votes: 0, cat: ask.cat ?? "Lainnya", voted: false, mine: true, status: "baru" };
-              update(current => ({ seq: current.seq + 1, points: current.points + POINTS.ask, questions: { ...current.questions, [current.session]: [...(current.questions[current.session] ?? []), question] } }));
-              setAsk({ text: "", cat: null, anon: false }); setToast(`Pertanyaan terkirim · +${POINTS.ask} poin`);
+              update(current => ({ seq: current.seq + 1, questions: { ...current.questions, [current.session]: [...(current.questions[current.session] ?? []), question] } }));
+              setAsk({ text: "", cat: null, anon: false }); setToast("Pertanyaan terkirim");
             }}>Kirim pertanyaan</button>
           </section>
           <div className={css.between}><b>Pertanyaan ({list.length})</b><span className={css.note}>Urut dari dukungan terbanyak</span></div>
@@ -361,17 +361,8 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   if (!inBrowser) return <div className={css.phone}><p className={css.note} role="status">Memuat misi perjalanan…</p></div>;
   return <div className={css.phone}>
     <header className={css.appbar}>
-      <div className={css.between}>
-        <span className={css.who}>{view.role} · {view.nick}</span>
-        <span className={css.points} aria-live="polite"><Star aria-hidden /> {s.points} poin</span>
-      </div>
-      <div className={css.route} aria-label={`Posisi perjalanan ${progress} persen`}>
-        <span>Kantor</span>
-        <div className={css.track}><div className={css.fill} style={{ width: `${progress}%` }} />
-          <svg className={css.bus} style={{ left: `${Math.max(4, Math.min(96, progress))}%` }} viewBox="0 0 26 18" aria-hidden="true"><rect x="1" y="1" width="24" height="13" rx="3" fill="currentColor" /><circle cx="7" cy="15" r="2.4" fill="currentColor" /><circle cx="19" cy="15" r="2.4" fill="currentColor" /></svg>
-        </div>
-        <span>Venue</span>
-      </div>
+      <span className={css.who}>{view.role} · {view.nick}</span>
+      <MissionRoad percent={progress} missions={missions.length} done={doneCount} arrived={s.arrived} launched={s.launched} />
       <nav className={css.tabs} aria-label="Misi Perjalanan">
         <button type="button" aria-current={tab === "misi" ? "page" : undefined} onClick={() => go(s.launched ? "hub" : "home")}><Star aria-hidden /> Misi</button>
         <button type="button" aria-current={tab === "agenda" ? "page" : undefined} onClick={() => go("agenda")}><CalendarDays aria-hidden /> Agenda & Tanya CEO</button>
