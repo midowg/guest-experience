@@ -11,7 +11,7 @@ import css from "./karbon.module.css";
 /**
  * Beranda's Jejak karbon tile (prototipe .ft.gg), the left half of the pair beside Momen, for everyone
  * while the module is on: the green card (Card eco, white text). A "Jejak karbon" pill, the total in
- * big Barlow ("13,3" over "t CO₂e"), "perkiraan" and the sources in one line, and the thin stacked bar
+ * big Barlow ("17,4" over "t CO₂e"), "perkiraan" and the sources in one line, and the thin stacked bar
  * (three shades of white on the green). Nothing counted yet: one line, "Perkiraan belum tersedia", no
  * figure, no bar. The whole tile is one link to the page.
  */

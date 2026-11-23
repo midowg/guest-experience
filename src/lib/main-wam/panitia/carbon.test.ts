@@ -21,17 +21,17 @@ describe("Jejak karbon", () => {
   it("counts the design's example part by part, in kg CO₂e", () => {
     const result = carbonEstimate(example);
     expect(result.parts.makan).toBeCloseTo(1440 * 1.9, 6);          // 2.736 kg
-    expect(result.parts.hotel).toBeCloseTo(180 * 40, 6);            // 7.200 kg (perkiraan)
+    expect(result.parts.hotel).toBeCloseTo(180 * 62.7, 6);          // 11.286 kg (perkiraan)
     expect(result.parts.perjalanan).toBeCloseTo(4 * 180 * 0.89 + 2 * 350 * 120 * 0.0164, 6); // 640,8 + 1.377,6
-    expect(result.kg).toBeCloseTo(11_954.4, 6);
+    expect(result.kg).toBeCloseTo(16_040.4, 6);
     expect(result.hotelFrom).toBe("perkiraan");
     expect(result.empty).toBe(false);
   });
 
   it("gives tonnes with one decimal", () => {
-    expect(carbonEstimate(example).tonnes).toBe(12);
-    expect(tonnes(carbonEstimate(example).tonnes)).toBe("12,0");
-    expect(carbonEstimate({ ...example, portions: 2160 }).tonnes).toBe(13.3); // +720 porsi = +1.368 kg
+    expect(carbonEstimate(example).tonnes).toBe(16);
+    expect(tonnes(carbonEstimate(example).tonnes)).toBe("16,0");
+    expect(carbonEstimate({ ...example, portions: 2160 }).tonnes).toBe(17.4); // +720 porsi = +1.368 kg
     expect(tonnes(13.6)).toBe("13,6");
   });
 
@@ -42,7 +42,7 @@ describe("Jejak karbon", () => {
     expect(withBills.parts.hotel).toBeCloseTo(4000 * 0.87 + 600 * 0.4 + 200 * 2.94 + 900 * 0.5, 6);
     const partial = carbonEstimate({ ...example, bills: { ...bills, sampahKg: null } });
     expect(partial.hotelFrom).toBe("perkiraan");
-    expect(partial.parts.hotel).toBe(7200);
+    expect(partial.parts.hotel).toBeCloseTo(11_286, 6);
   });
 
   it("says what it counted, for the page that shows the sources", () => {
@@ -58,7 +58,7 @@ describe("Jejak karbon", () => {
   });
 
   it("keeps the design's factors", () => {
-    expect(CARBON_FACTORS).toEqual({ keretaPerPenumpangKm: 0.0164, busPerBusKm: 0.89, makanPerPorsi: 1.9, hotelPerKamarMalam: 40, listrikPerKwh: 0.87, airPerM3: 0.4, lpgPerKg: 2.94, sampahPerKg: 0.5 });
+    expect(CARBON_FACTORS).toEqual({ keretaPerPenumpangKm: 0.0164, busPerBusKm: 0.89, makanPerPorsi: 1.9, hotelPerKamarMalam: 62.7, listrikPerKwh: 0.87, airPerM3: 0.4, lpgPerKg: 2.94, sampahPerKg: 0.5 });
   });
 });
 

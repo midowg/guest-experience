@@ -44,16 +44,16 @@ describe("the page's view", () => {
   it("the design's example: biggest source first, with share, note and the colour in that order", () => {
     const view = carbonView(sampleCarbon(), NOW);
     if (view.kind !== "ada") throw new Error("expected a number");
-    expect(view.total).toEqual({ value: "13,3", unit: "t CO₂e" });
-    expect(view.perPerson).toBe("±111 kg per orang");
+    expect(view.total).toEqual({ value: "17,4", unit: "t CO₂e" });
+    expect(view.perPerson).toBe("±145 kg per orang");
     expect(view.updated).toBe("Sen, 4 Jan · 21.00");
     expect(view.sources.map(source => [source.key, source.amount, source.percent, source.note, source.swatch])).toEqual([
-      ["hotel", "≈7,2 t", 54, "60 kamar × 3 malam", 1],
-      ["perjalanan", "3,3 t", 25, "Kereta, shuttle", 2],
-      ["makan", "2,7 t", 21, "1.440 porsi", 3],
+      ["hotel", "≈11,3 t", 65, "60 kamar × 3 malam", 1],
+      ["perjalanan", "3,3 t", 19, "Kereta, shuttle", 2],
+      ["makan", "2,7 t", 16, "1.440 porsi", 3],
     ]);
     expect(view.sources.reduce((sum, source) => sum + source.percent, 0)).toBe(100);
-    expect(view.barLabel).toBe("Hotel 54%, Perjalanan 25%, Makan 21%");
+    expect(view.barLabel).toBe("Hotel 65%, Perjalanan 19%, Makan 16%");
   });
 
   it("the hotel is no estimate once its bills are in, and says where the number comes from", () => {
@@ -87,8 +87,8 @@ describe("the page's view", () => {
   it("speaks English with its own number style", () => {
     const view = carbonView(sampleCarbon(), NOW, "en");
     if (view.kind !== "ada") throw new Error("expected a number");
-    expect(view.total.value).toBe("13.3");
-    expect(view.perPerson).toBe("±111 kg per person");
+    expect(view.total.value).toBe("17.4");
+    expect(view.perPerson).toBe("±145 kg per person");
     expect(view.sources[0]).toMatchObject({ title: "Hotel", note: "60 rooms × 3 nights" });
     expect(view.sources[2].note).toBe("1,440 meals");
     expect(view.updated).toBe("Mon, 4 Jan · 21:00");
@@ -99,7 +99,7 @@ describe("the page's view", () => {
       ["Kereta", "0,0164", "kg per penumpang-km"],
       ["Bus", "0,89", "kg per bus-km"],
       ["Makan", "1,9", "kg per porsi"],
-      ["Hotel", "40", "kg per kamar-malam"],
+      ["Hotel", "62,7", "kg per kamar-malam"],
       ["Listrik", "0,87", "kg per kWh"],
       ["Air", "0,4", "kg per m³"],
       ["LPG", "2,94", "kg per kg"],
