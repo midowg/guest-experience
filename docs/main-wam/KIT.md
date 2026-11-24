@@ -184,10 +184,10 @@ SessionRow: jam Barlow, simpul biru, baris live emas. IconBox netral = biru 14 %
 
 | Tingkat | Bilah atas | Bilah bawah |
 | --- | --- | --- |
-| `akar` Beranda | sapaan, nama (h1), "Hari ke-2 dari 4", lonceng (satu-satunya) | ya |
-| `akar` Panitia (`/kelola`, hub) | judul besar "Panitia" (h1) | ya, tab Panitia menyala; juga di Rundown live, Absen, Pengumuman, Moderasi |
-| `akar` lain | judul besar (h1); bilah ringkas muncul setelah judul tergulir | ya |
-| `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
+| `akar` Beranda | sapaan, nama (h1), "Hari ke-2 dari 4", lonceng (satu-satunya di seluruh aplikasi), indikator segmen slide | ya |
+| `akar` Panitia (`/kelola`, hub) | judul besar "Panitia" (h1) | ya, tab Panitia menyala (alat Panitia di bawahnya adalah halaman: tanpa bilah bawah) |
+| `akar` Agenda, Momen, Saya | judul besar (h1); bilah ringkas muncul setelah judul tergulir (Agenda menggambar kepalanya sendiri); tanpa lonceng | ya |
+| `detail` (halaman yang dibuka dari sebuah tab: Kamar, Perjalanan, Panduan, Bantuan, Pengaturan, Notifikasi, Peringkat, Misi, Jejak karbon, Mozaik, alat Panitia) | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong: hanya ‹, h1 tersembunyi dari `screen.label` | **tidak** (revisi 24 Nov: bilah bawah hanya di empat tab utama, atau lima untuk panitia) |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
 | `tugas` kamera (`screen.camera`) | tidak ada (kamera punya bilahnya sendiri, mengikuti tema) | tidak |
 
