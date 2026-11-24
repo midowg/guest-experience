@@ -68,8 +68,8 @@ a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: 
 .more > svg { width: 18px; height: 18px; }
 
 /* The detail (in the sheet). */
-.detail { display: flex; flex-direction: column; gap: 22px; padding-bottom: 4px; }
-.h { margin: 0 0 10px; font: 600 17px/24px var(--pw-display); color: var(--pw-text); }
+.detail { display: flex; flex-direction: column; gap: 18px; padding-bottom: 4px; }
+.h { margin: 0 0 8px; font: 600 16px/22px var(--pw-display); color: var(--pw-text); }
 .rows { display: flex; flex-direction: column; margin: 0; padding: 4px 16px; list-style: none; border-radius: var(--pw-r-card, 24px); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
 .row { display: flex; gap: 12px; padding: 14px 0; }
 .row + .row { border-top: 1px solid var(--pw-line); }
@@ -87,9 +87,9 @@ a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: 
 .rowNote { font: 400 15px/22px var(--pw-body); color: var(--pw-muted); overflow-wrap: anywhere; }
 
 .how { border-radius: var(--pw-r-card, 24px); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
-.howRow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 16px; border: 0; background: none; color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; border-radius: var(--pw-r-card, 24px); }
+.howRow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 14px; border: 0; background: none; color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; border-radius: var(--pw-r-card, 24px); }
 .howRow:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: -3px; }
-.howText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; font: 600 16px/22px var(--pw-body); }
+.howText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; font: 600 15px/20px var(--pw-body); }
 .howText > span { font: 400 14px/20px var(--pw-body); color: var(--pw-muted); }
 .chevron { flex: none; width: 22px; height: 22px; color: var(--pw-muted); transition: transform .2s ease; }
 .chevron[data-open] { transform: rotate(180deg); }
@@ -107,8 +107,8 @@ a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: 
 .quiet { font-size: 14px; }
 
 .tips { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.tips > li { display: flex; align-items: flex-start; gap: 12px; font: 400 16px/24px var(--pw-body); color: var(--pw-text); }
-.tips > li > svg { flex: none; width: 22px; height: 22px; margin-top: 1px; color: var(--pw-success); }
+.tips > li { display: flex; align-items: flex-start; gap: 10px; font: 400 15px/22px var(--pw-body); color: var(--pw-text); }
+.tips > li > svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--pw-success); }
 
 /* Sumber data: small, at the very bottom of Cara menghitung. */
 .howBody .refs { padding-top: 12px; border-top: 1px solid var(--pw-line); font: 400 13px/20px var(--pw-body); color: var(--pw-muted); }
@@ -132,7 +132,7 @@ a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: 
 .live > svg { width: 18px; height: 18px; color: #8ff0c4; }
 .live > strong { margin-left: auto; font: 700 17px/22px var(--pw-display); font-variant-numeric: tabular-nums; }
 .otherNote { margin: 0; font: 400 14px/20px var(--pw-body); color: var(--pw-muted); }
-.save { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border: 0; border-radius: 18px; background: var(--eco); color: #fff; font: 600 17px/22px var(--pw-body); cursor: pointer; }
+.save { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; border: 0; border-radius: 16px; background: var(--eco); color: #fff; font: 600 16px/22px var(--pw-body); cursor: pointer; }
 .save > svg { width: 20px; height: 20px; }
 .save:disabled { opacity: .7; cursor: progress; }
 .saveError { margin: 0; font: 500 14px/20px var(--pw-body); color: var(--pw-danger); }
@@ -177,52 +177,52 @@ a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: 
 
 /* The calculator: total on top, a grid of tiles (locked from the panitia, or a field), kg on each. */
 .calc { --eco-deep: #0a4a34; --eco: #0d6b4a; display: flex; flex-direction: column; gap: 14px; }
-.calcTotal { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; color: #fff; background: radial-gradient(120% 90% at 100% 0%, rgba(52, 201, 140, .45), transparent 60%), linear-gradient(160deg, var(--eco), var(--eco-deep)); box-shadow: 0 10px 24px -14px rgba(10, 74, 52, .8); }
-.calcLeaf { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--eco); background: #fff; }
-.calcLeaf > svg { width: 22px; height: 22px; }
+.calcTotal { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; color: #fff; background: radial-gradient(120% 90% at 100% 0%, rgba(52, 201, 140, .45), transparent 60%), linear-gradient(160deg, var(--eco), var(--eco-deep)); box-shadow: 0 10px 24px -14px rgba(10, 74, 52, .8); }
+.calcLeaf { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--eco); background: #fff; }
+.calcLeaf > svg { width: 20px; height: 20px; }
 .calcTotalText { display: flex; flex-direction: column; min-width: 0; }
-.calcTotalText > span { font: 500 14px/18px var(--pw-body); color: #d6f5e7; }
-.calcTotalText strong { font: 700 34px/38px var(--pw-display); font-variant-numeric: tabular-nums; }
-.calcTotalText small { font: 500 15px/20px var(--pw-body); color: #d6f5e7; }
-.calcGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.ctile { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px; border-radius: 20px; background: var(--pw-surface); border: 1.5px solid var(--pw-line); }
+.calcTotalText > span { font: 500 13px/18px var(--pw-body); color: #d6f5e7; }
+.calcTotalText strong { font: 700 clamp(24px, 7.5vw, 30px)/1.15 var(--pw-display); font-variant-numeric: tabular-nums; }
+.calcTotalText small { font: 500 13px/18px var(--pw-body); color: #d6f5e7; }
+.calcGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ctile { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border-radius: 18px; background: var(--pw-surface); border: 1.5px solid var(--pw-line); }
 .ctile:focus-within { border-color: var(--pw-success); }
 .ctileWide { grid-column: 1 / -1; }
 .ctileHead { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ctileIcon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--pw-success); background: var(--pw-success-soft); }
-.ctileIcon > svg { width: 18px; height: 18px; }
-.ctileLabel { flex: 1 1 auto; min-width: 0; font: 600 15px/20px var(--pw-body); color: var(--pw-text); overflow-wrap: break-word; hyphens: manual; }
+.ctileIcon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--pw-success); background: var(--pw-success-soft); }
+.ctileIcon > svg { width: 16px; height: 16px; }
+.ctileLabel { flex: 1 1 auto; min-width: 0; font: 600 14px/18px var(--pw-body); color: var(--pw-text); overflow-wrap: break-word; hyphens: manual; }
 .lockedNote { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/16px var(--pw-body); color: var(--pw-muted); }
 .lockedNote > svg { width: 12px; height: 12px; }
 .ctileBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tileValue { font: 700 24px/28px var(--pw-display); font-variant-numeric: tabular-nums; color: var(--pw-text); }
-.tileValue small { font: 500 14px/18px var(--pw-body); color: var(--pw-muted); }
-.tileSub { font: 400 13px/18px var(--pw-body); color: var(--pw-muted); overflow-wrap: anywhere; }
-.ctileFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--pw-line); }
-.ctileKg { font: 700 15px/20px var(--pw-display); font-variant-numeric: tabular-nums; color: var(--pw-success); }
-.tileLink { text-align: left; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--pw-primary); font: 600 13px/18px var(--pw-body); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tileValue { font: 700 clamp(18px, 5.4vw, 22px)/1.2 var(--pw-display); font-variant-numeric: tabular-nums; color: var(--pw-text); }
+.tileValue small { font: 500 13px/18px var(--pw-body); color: var(--pw-muted); }
+.tileSub { font: 400 12px/16px var(--pw-body); color: var(--pw-muted); overflow-wrap: anywhere; }
+.ctileFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 6px; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--pw-line); }
+.ctileKg { font: 700 14px/18px var(--pw-display); font-variant-numeric: tabular-nums; color: var(--pw-success); }
+.tileLink { text-align: left; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--pw-primary); font: 600 12px/16px var(--pw-body); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .tileLink > svg { width: 14px; height: 14px; }
 .unitField { position: relative; display: block; }
-.unitField input { width: 100%; min-height: 48px; padding: 10px 52px 10px 14px; border-radius: 14px; border: 1.5px solid var(--pw-line); background: var(--pw-app); color: var(--pw-text); font: 700 20px/26px var(--pw-display); font-variant-numeric: tabular-nums; }
+.unitField input { width: 100%; min-height: 44px; padding: 8px 46px 8px 12px; border-radius: 12px; border: 1.5px solid var(--pw-line); background: var(--pw-app); color: var(--pw-text); font: 700 17px/22px var(--pw-display); font-variant-numeric: tabular-nums; }
 .unitField input:focus { outline: none; border-color: var(--pw-success); background: var(--pw-surface); box-shadow: 0 0 0 3px var(--pw-success-soft); }
 .unitField input[aria-invalid="true"] { border-color: var(--pw-danger); }
 .unitField input:disabled { opacity: .6; }
-.unitField b { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 14px/18px var(--pw-body); color: var(--pw-muted); }
-.tileError { font: normal 500 13px/18px var(--pw-body); color: var(--pw-danger); }
+.unitField b { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 500 13px/18px var(--pw-body); color: var(--pw-muted); }
+.tileError { font: normal 500 12px/16px var(--pw-body); color: var(--pw-danger); }
 .ownFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 12px; }
-.miniField { display: flex; flex-direction: column; gap: 6px; min-width: 0; font: 600 13px/18px var(--pw-body); color: var(--pw-muted); }
-.miniField > input { width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--pw-line); background: var(--pw-app); color: var(--pw-text); font: 400 16px/22px var(--pw-body); }
+.miniField { display: flex; flex-direction: column; gap: 4px; min-width: 0; font: 600 12px/16px var(--pw-body); color: var(--pw-muted); }
+.miniField > input { width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid var(--pw-line); background: var(--pw-app); color: var(--pw-text); font: 400 16px/22px var(--pw-body); }
 .miniField > input:focus { outline: none; border-color: var(--pw-success); background: var(--pw-surface); }
 .miniField > input[aria-invalid="true"] { border-color: var(--pw-danger); }
 .miniChips { display: flex; flex-wrap: wrap; gap: 6px; }
-.miniChips button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--pw-line); background: var(--pw-surface); color: var(--pw-text); font: 500 14px/18px var(--pw-body); cursor: pointer; }
+.miniChips button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--pw-line); background: var(--pw-surface); color: var(--pw-text); font: 500 13px/18px var(--pw-body); cursor: pointer; }
 .miniChips button[aria-checked="true"] { border-color: var(--eco); background: var(--eco); color: #fff; }
-.miniCheck { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font: 500 15px/20px var(--pw-body); color: var(--pw-text); }
+.miniCheck { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font: 500 14px/18px var(--pw-body); color: var(--pw-text); }
 .miniCheck input { width: 20px; height: 20px; accent-color: var(--eco); }
 
 /* Narrow phones (≤ 360px): the icon over the label, so no word is cut ("Perjalanan" stays whole). */
 @media (max-width: 360px) {
-  .ctile { padding: 12px; }
+  .ctile { padding: 10px; }
   .ctileHead { flex-direction: column; align-items: flex-start; gap: 6px; }
-  .calcTotalText strong { font-size: 30px; line-height: 34px; }
+  .unitField input { padding-right: 40px; }
 }
