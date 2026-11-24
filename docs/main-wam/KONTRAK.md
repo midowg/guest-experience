@@ -121,12 +121,14 @@ dengan peserta.
 
 **Hak per peran** (`mainWamCan(who, action)`, `moduleAllows`), peserta adalah dasar semua orang; peran tidak mengubah empat tab pertama. **Tab ke-5 "Panitia"** (`showsCommitteeTab`, `access.ts`) di ujung kanan, setelah Saya, hanya untuk **Panitia WAM** (dicek di server oleh layout; bukan peserta, BOD, atau panitia/admin Pra WAM). Isinya hub `/wam/acara/kelola` (`mainWamPath.committee`, gate `kelola`): Sedang berjalan, Kelola 2×2, Perlu perhatian; Rundown live, Absen, Pengumuman, dan Moderasi adalah layar di bawahnya, tombol kembalinya ke hub, tab Panitia menyala. Beranda panitia = Beranda peserta (tanpa kartu panitia):
 
+**Modul disembunyikan di aplikasi (24 Nov 2026, permintaan pemilik).** `APP_HIDDEN_MODULES = ["silent", "voting"]` (`src/lib/main-wam/modules.ts`): `readMainWamSettings` (sisi aplikasi: peserta, panitia, BOD) memaksa saklar dua modul itu mati lewat `appModules()`, apa pun isi pengaturannya. Hasilnya seperti modul mati: halaman 404, API 404, tanpa kartu Beranda, tanpa aksi di Detail sesi, tanpa entri Kelola. Admin tetap membaca saklar apa adanya (`mainWamSettingsState`): saklar modul, Silent Meeting, Awarding (kategori, nominasi, persetujuan pemenang) tetap jalan dan tersimpan; di Modul acara dua saklarnya diberi keterangan "Disembunyikan di aplikasi untuk sementara". Menyalakan lagi: kosongkan konstanta itu.
+
 | Aksi | Peserta | Panitia WAM | BOD | Modul |
 | --- | --- | --- | --- | --- |
 | `absen` (scan QR) | ya | ya | tidak | absen |
 | `foto` (Momen) | ya | ya | ya | — |
 | `silent-kirim` | ya | ya | tidak | silent (**mati bawaan**: Silent Meeting dipakai di Pra WAM, bukan Main WAM) |
-| `voting` | ya | ya | tidak | voting |
+| `voting` | ya | ya | tidak | voting (**disembunyikan di aplikasi**, lihat di bawah) |
 | `kelola` (Rundown live, Absen manual, Pengumuman, Moderasi) | tidak | ya | tidak | — (Absen manual butuh `absen`) |
 | `silent-kontrol` (buka/tutup) | tidak | ya | tidak | silent |
 | `awarding-setujui` | tidak | tidak | ya | voting |

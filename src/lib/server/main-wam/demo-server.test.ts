@@ -60,7 +60,7 @@ describe("the settings as the demo draws them", () => {
   it("every module on, kelompok published, the event following the sample rundown while no session is published; Admin's own read stays as saved", async () => {
     const shown = await settingsModule.readMainWamSettings();
     expect(shown.moduleConfig.demo).toBe(true);
-    expect(shown.modules).toMatchObject({ absen: true, voting: true, mozaik: true, karbon: true, survei: true });
+    expect(shown.modules).toMatchObject({ absen: true, voting: false, silent: false, mozaik: true, karbon: true, survei: true });
     expect(shown.groupsPublished).toBe(true);
     expect(shown.sampleRundown).toBe(true);
     const saved = await settingsModule.mainWamSettingsState();
@@ -74,7 +74,7 @@ describe("the settings as the demo draws them", () => {
     const shown = await settingsModule.readMainWamSettings();
     expect(shown.sampleRundown).toBe(false);
     expect(shown.event.startDate).toBe("2027-01-04");
-    expect(shown.modules.voting).toBe(true);
+    expect(shown.modules.voting).toBe(false);
   });
 
   it("is exactly the saved settings when the demo is off (nothing changes, no extra read of the sessions)", async () => {

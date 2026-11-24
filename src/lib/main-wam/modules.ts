@@ -23,6 +23,23 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan syarat ceklis lengkap sebelum absen." },
 };
 
+/**
+ * Modules hidden from the app (participants, panitia, BOD) for now, whatever their switch says (owner's request,
+ * 24 Nov 2026: Silent Meeting belongs to Pra WAM, voting is not used at WAM yet). The app treats them as off
+ * (readMainWamSettings applies appModules), so pages 404, APIs refuse, Beranda cards and session actions
+ * vanish. Admin keeps them: it reads the saved switches (mainWamSettingsState). To bring them back, empty this list.
+ */
+export const APP_HIDDEN_MODULES: readonly MainWamModule[] = ["silent", "voting"];
+
+/** The module switches as the app sees them: the saved ones with APP_HIDDEN_MODULES forced off. */
+export function appModules(modules: ModuleSwitches): ModuleSwitches {
+  return APP_HIDDEN_MODULES.length ? { ...modules, ...Object.fromEntries(APP_HIDDEN_MODULES.map(key => [key, false])) } : modules;
+}
+
+/** Shown beside the switch of a module in APP_HIDDEN_MODULES (Admin → Modul acara). */
+export const APP_HIDDEN_NOTE = "Disembunyikan di aplikasi untuk sementara; pengaturan tetap bisa disiapkan di sini.";
+export const appHidden = (key: MainWamModule) => APP_HIDDEN_MODULES.includes(key);
+
 export const moduleOn = (modules: ModuleSwitches, key: MainWamModule) => modules[key] === true;
 
 /** The modules that are on, in the fixed order. */

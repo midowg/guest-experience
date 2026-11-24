@@ -52,6 +52,14 @@ describe("Main WAM's settings on the server", () => {
     expect(settings.modules.absen).toBe(true);
   });
 
+  it("hide Silent Meeting and voting from the app (readMainWamSettings) whatever the saved switch, while Admin still reads them as saved", async () => {
+    row = { mode: "semua", modules: { absen: true, silent: true, voting: true } };
+    const shown = await readMainWamSettings();
+    expect(shown.modules).toMatchObject({ absen: true, silent: false, voting: false });
+    const saved = await mainWamSettingsState();
+    expect(saved.modules).toMatchObject({ absen: true, silent: true, voting: true });
+  });
+
   it("save only what changed, on the one row", async () => {
     const saved = await saveMainWamSettings({ mode: "semua", modules: { mozaik: true } });
     expect(upserts).toHaveLength(1);

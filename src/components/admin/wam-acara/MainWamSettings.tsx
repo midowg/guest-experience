@@ -7,7 +7,7 @@ import { buttonClass, Card, ConsoleButton, PageHeader, type Crumb } from "@/comp
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { DISPLAY_FONTS } from "@/components/main-wam/theme/tokens";
-import { moduleInfo } from "@/lib/main-wam/modules";
+import { APP_HIDDEN_NOTE, appHidden, moduleInfo } from "@/lib/main-wam/modules";
 import { THEME_IMAGE_BYTES, THEME_IMAGE_TYPES, type ThemeImageMime } from "@/lib/main-wam/theme-image";
 import {
   MAIN_WAM_MODES, MAIN_WAM_MODULES, THEME_IMAGE_SLOTS, mainWamModeLabels, themeImageLabels,
@@ -144,7 +144,7 @@ function ModulesCard({ id, settings, forms, locked, busy, onSave }: { id: string
     <p className={css.note}>Modul yang mati tidak meninggalkan jejak di aplikasi: tanpa kartu di Beranda, aksi di sesi, atau aksi lain di aplikasi.</p>
     <ul className={css.rows}>
       {MAIN_WAM_MODULES.map(key => <li key={key} className={css.row}>
-        <span className={css.rowText}><span>{moduleInfo[key].label}</span><span>{moduleInfo[key].hint}</span>{moduleInfo[key].note && <span>{moduleInfo[key].note}</span>}</span>
+        <span className={css.rowText}><span>{moduleInfo[key].label}</span><span>{moduleInfo[key].hint}</span>{moduleInfo[key].note && <span>{moduleInfo[key].note}</span>}{appHidden(key) && <span><em>{APP_HIDDEN_NOTE}</em></span>}</span>
         <label className={css.switch}>
           <input type="checkbox" role="switch" checked={modules[key]} disabled={locked} aria-label={moduleInfo[key].label} onChange={change => setModules({ ...modules, [key]: change.target.checked })} />
           <span className={css.track} aria-hidden />

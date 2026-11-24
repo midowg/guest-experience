@@ -44,3 +44,13 @@ describe("Silent Meeting, module off", () => {
     expect(onboardingNews({ ...off, silent: true }).example.body).toMatch(/Silent/i);
   });
 });
+
+describe("modules hidden from the app", () => {
+  it("lists Silent Meeting and voting, forces them off for the app, and leaves the rest as saved", async () => {
+    const { APP_HIDDEN_MODULES, appModules } = await import("./modules");
+    expect([...APP_HIDDEN_MODULES]).toEqual(["silent", "voting"]);
+    const saved = { ...sampleSettings().modules, silent: true, voting: true, absen: true };
+    expect(appModules(saved)).toMatchObject({ silent: false, voting: false, absen: true });
+    expect(saved.silent).toBe(true);
+  });
+});

@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { settingsForDemo } from "@/lib/main-wam/demo-sample";
+import { appModules } from "@/lib/main-wam/modules";
 import { defaultSettings, settingsFromRow, settingsPatch, type SettingsInput, type SettingsRow } from "@/lib/main-wam/settings";
 import type { MainWamSettings } from "@/lib/main-wam/types";
 import { isSupabaseConfigured, ServiceError } from "../config";
@@ -56,8 +57,10 @@ async function noRealRundown(): Promise<boolean> {
 export const readMainWamSettings = cache(async (): Promise<MainWamSettings> => {
   try {
     const saved = await mainWamSettingsState();
-    return saved.moduleConfig.demo ? settingsForDemo(saved, await noRealRundown().catch(() => true)) : saved;
-  } catch { return defaultSettings(); }
+    const shown = saved.moduleConfig.demo ? settingsForDemo(saved, await noRealRundown().catch(() => true)) : saved;
+    // The app never sees the modules hidden from it (APP_HIDDEN_MODULES), whatever their saved switch.
+    return { ...shown, modules: appModules(shown.modules) };
+  } catch { return { ...defaultSettings(), modules: appModules(defaultSettings().modules) }; }
 });
 
 /** Admin WAM → Main WAM → Pengaturan: mode, modules, module settings, theme colours and font. */
