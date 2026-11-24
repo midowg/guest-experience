@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { canReport, canSee } from "@/lib/main-wam/momen/access";
 import { isReactionEmoji, parseReactions, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { encodeCursor, MOMEN_AREA_MIGRATION, REPORT_THRESHOLD, REPORTS_PER_10_MINUTES, type FeedMode, type ReportInput } from "@/lib/main-wam/momen/filters";
-import { UMUM, type FeedPhoto, type Reactor, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
+import { UMUM, type FeedPhoto, type PhotoDetail, type Reactor, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import { PHOTO_AUDIENCES, PHOTO_STATUSES, type MainWamViewer, type MwPhoto } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { rateLimitSecret, ServiceError } from "../../config";
@@ -15,6 +15,7 @@ import type { MainWamContext } from "../gate";
 import { trySendMainWamNote } from "../notes";
 import { demoFeed, demoSessionCounts } from "../demo-momen";
 import { mainWamPeople } from "../people";
+import { sessionById } from "../read";
 import { viewAddress } from "./storage";
 
 /*
@@ -141,6 +142,17 @@ export async function visiblePhoto(viewer: MainWamViewer, id: string): Promise<P
   const photo = await photoRecord(id);
   if (!photo || !canSee(viewer, photo)) throw notFound();
   return photo;
+}
+
+/**
+ * What the viewer needs of one photo (a Mozaik tile carries only its small picture): the name Momen shows on it, its
+ * session and time. For a photo the person may see only (canSee, the same rule as the file and the reactions); anything
+ * else is a 404, so nothing leaks about a hidden, reported or not-yet-shown photo.
+ */
+export async function photoDetail(viewer: MainWamViewer, id: string): Promise<PhotoDetail> {
+  const photo = await visiblePhoto(viewer, id);
+  const [people, session] = await Promise.all([mainWamPeople(), photo.sessionId ? sessionById(photo.sessionId).catch(() => null) : null]);
+  return { id: photo.id, owner: { name: people.get(photo.ownerId)?.name ?? "Rekan" }, mine: photo.ownerId === viewer.id, sessionTitle: session?.title ?? null, takenAt: photo.takenAt };
 }
 
 /** Marks photos seen by the person (the stack's "baru"); unknown ids are ignored. */

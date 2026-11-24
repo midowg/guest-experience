@@ -7,9 +7,11 @@ import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Button, EmptyState, IconButton, Pill, PhotoFill, TextLink } from "@/components/main-wam/ui";
 import { number as formatNumber } from "@/lib/main-wam/i18n";
 import { cellLabel, mosaicPercent } from "@/lib/main-wam/momen/mosaic";
-import type { MosaicManifest } from "@/lib/main-wam/momen/types";
+import type { MosaicManifest, MosaicTile } from "@/lib/main-wam/momen/types";
+import { demoPicture, demoTileDetail, isDemoFile } from "@/lib/main-wam/momen/viewer";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { MosaicCanvas } from "./MosaicCanvas";
+import { PhotoViewerSheet, type ViewerTarget } from "./PhotoViewer";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 import css from "./mosaic.module.css";
 
@@ -32,6 +34,7 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
   const [mark, setMark] = useState(markAtStart);
   const [zoom, setZoom] = useState(1);
   const [chosen, setChosen] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ViewerTarget | null>(null);
   const fullscreen = useSyncExternalStore(() => () => undefined, () => !!document.fullscreenEnabled, () => false);
   const holder = useRef<HTMLDivElement>(null);
 
@@ -52,6 +55,12 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
     const timer = window.setInterval(refresh, MOSAIC_POLL_MS);
     document.addEventListener("visibilitychange", refresh);
     return () => { stopped = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
+  }, [demo]);
+
+  // A tap on a cell opens that photo large. A sample tile (Mode demo, previews) is a local picture with made-up details; a real one is asked of the server.
+  const openTile = useCallback((tile: MosaicTile) => {
+    const local = demo || isDemoFile(tile.src);
+    setViewing(local ? { id: tile.id, file: isDemoFile(tile.src) ? tile.src : demoPicture(tile.cell), detail: demoTileDetail(tile, "") } : { id: tile.id });
   }, [demo]);
 
   const toggle = useCallback((on: boolean) => {
@@ -83,7 +92,7 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
     {fullscreen && <ShellActions><IconButton icon={Maximize} label={t("momen.mos.fullscreen")} onClick={goFullscreen} /></ShellActions>}
     <p className={css.intro}>{t("momen.mos.intro")}</p>
     <div ref={holder} className={css.panel}>
-      <MosaicCanvas manifest={manifest} mark={mark} zoom={zoom} onZoom={setZoom} focus={mark && chosen ? selected?.cell ?? null : null} label={spoken} />
+      <MosaicCanvas manifest={manifest} mark={mark} zoom={zoom} onZoom={setZoom} focus={mark && chosen ? selected?.cell ?? null : null} label={spoken} onOpen={openTile} />
     </div>
 
     <dl className={css.stats}>
@@ -124,5 +133,6 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
     </div>}
 
     <Button variant="tonal" block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
+    <PhotoViewerSheet open={!!viewing} onClose={() => setViewing(null)} target={viewing} />
   </ScreenContent>;
 }

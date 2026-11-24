@@ -1,11 +1,21 @@
 import { z } from "zod";
 import { photoDeleteSchema } from "@/lib/main-wam/momen/filters";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireActionApi } from "@/lib/server/main-wam/gate";
+import { requireActionApi, requireMainWamApi } from "@/lib/server/main-wam/gate";
+import { photoDetail } from "@/lib/server/main-wam/momen/feed";
 import { deletePhoto } from "@/lib/server/main-wam/momen/upload";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
+
+/** GET: who took one photo the person may see, its session and time (the viewer). A photo they may not see is a 404. Not cached. */
+export async function GET(_request: Request, { params }: Params) {
+  return handle(async () => {
+    const { viewer } = await requireMainWamApi();
+    const id = validate(z.uuid(), (await params).id);
+    return success(await photoDetail(viewer, id));
+  });
+}
 
 /**
  * DELETE (optional {clientId}): Batalkan or Hapus foto, by the photo's owner only (403 for someone

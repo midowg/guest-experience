@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Puncak berkabut">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A4A6B"/><stop offset="1" stop-color="#B8C7E6"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFF3D6" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3D6" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<circle cx="248" cy="250" r="90" fill="#FFF3D6" opacity=".9"/>
+<polygon points="0,680 80,332 210,520 340,351 470,520 600,342 730,520 800,680 800,1000 0,1000" fill="#3A4A6B" opacity="0.40"/>
+<polygon points="0,770 80,402 210,610 340,398 470,610 600,528 730,610 800,770 800,1000 0,1000" fill="#3A4A6B" opacity="0.60"/>
+<polygon points="0,860 80,509 210,700 340,543 470,700 600,544 730,700 800,860 800,1000 0,1000" fill="#3A4A6B" opacity="0.80"/>
+<polygon points="0,950 80,652 210,790 340,652 470,790 600,776 730,790 800,950 800,1000 0,1000" fill="#3A4A6B" opacity="1.00"/>
+<ellipse cx="698" cy="608" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<ellipse cx="105" cy="575" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<ellipse cx="162" cy="424" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

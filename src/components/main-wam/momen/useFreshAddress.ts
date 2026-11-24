@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isDemoFile } from "@/lib/main-wam/momen/viewer";
 import { mainWamApi } from "@/lib/routes";
 
 /**
@@ -12,7 +13,8 @@ import { mainWamApi } from "@/lib/routes";
  */
 export function useFreshAddress(id: string, size: "kecil" | "besar", src: string | null): { src: string | null; onError: () => void } {
   const [failed, setFailed] = useState<string | null>(null);
-  const stale = !!src && failed === src;
+  // A sample picture (Mode demo) is a local file: asking the server for another address would only fail again.
+  const stale = !!src && failed === src && !isDemoFile(src);
   return {
     src: !src ? null : stale ? mainWamApi.photoFile(id, size) : src,
     onError: () => { if (src && failed !== src) setFailed(src); },

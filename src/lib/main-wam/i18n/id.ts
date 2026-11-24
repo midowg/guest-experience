@@ -5,6 +5,7 @@ import { idKuis } from "./id/kuis";
 import { idModul } from "./id/modul";
 import { idMisi } from "./id/misi";
 import { idMomen } from "./id/momen";
+import { idMomenViewer } from "./id/momen-viewer";
 import { idPeserta } from "./id/peserta";
 
 /*
@@ -13,6 +14,6 @@ import { idPeserta } from "./id/peserta";
  * are `area.name`. en.ts holds the same keys in English (a test keeps them the same). Never change
  * an Indonesian text here without changing the tests that read it.
  */
-export const id = { ...idCommon, ...idPeserta, ...idMomen, ...idModul, ...idDemo, ...idKuis, ...idCeklis, ...idMisi } as const;
+export const id = { ...idCommon, ...idPeserta, ...idMomen, ...idMomenViewer, ...idModul, ...idDemo, ...idKuis, ...idCeklis, ...idMisi } as const;
 
 export type MessageKey = keyof typeof id;

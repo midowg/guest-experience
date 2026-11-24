@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto bersama">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B1F5C"/><stop offset="1" stop-color="#7C5CFF"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFB86B" stop-opacity=".9"/><stop offset="1" stop-color="#FFB86B" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="400" cy="400" rx="470" ry="330" fill="url(#l)"/>
+<circle cx="103" cy="630" r="44" fill="#000" opacity="0.52"/><rect x="41" y="680" width="124" height="330" rx="50" fill="#E0457B" opacity="0.95"/>
+<circle cx="238" cy="630" r="44" fill="#000" opacity="0.52"/><rect x="176" y="680" width="124" height="330" rx="50" fill="#4ADE80" opacity="0.95"/>
+<circle cx="395" cy="630" r="44" fill="#000" opacity="0.52"/><rect x="333" y="680" width="124" height="330" rx="50" fill="#3B1F5C" opacity="0.95"/>
+<circle cx="527" cy="630" r="44" fill="#000" opacity="0.52"/><rect x="465" y="680" width="124" height="330" rx="50" fill="#7C5CFF" opacity="0.95"/>
+<circle cx="700" cy="630" r="44" fill="#000" opacity="0.52"/><rect x="638" y="680" width="124" height="330" rx="50" fill="#FFB86B" opacity="0.95"/>
+<circle cx="97" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="47" y="598" width="99" height="264" rx="40" fill="#4ADE80" opacity="0.7"/>
+<circle cx="228" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="178" y="598" width="99" height="264" rx="40" fill="#3B1F5C" opacity="0.7"/>
+<circle cx="342" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="292" y="598" width="99" height="264" rx="40" fill="#7C5CFF" opacity="0.7"/>
+<circle cx="475" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="425" y="598" width="99" height="264" rx="40" fill="#FFB86B" opacity="0.7"/>
+<circle cx="580" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="530" y="598" width="99" height="264" rx="40" fill="#E0457B" opacity="0.7"/>
+<circle cx="718" cy="558" r="35" fill="#000" opacity="0.39"/><rect x="668" y="598" width="99" height="264" rx="40" fill="#4ADE80" opacity="0.7"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

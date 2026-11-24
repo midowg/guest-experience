@@ -26,6 +26,7 @@ vi.mock("@/lib/server/main-wam/momen/feed", () => ({
   personLimit: async (scope: string, _person: string, limit: number) => { calls.push(`limit:${scope}:${limit}`); if (limited) throw new ServiceError(429, "Terlalu sering dalam waktu singkat. Coba lagi beberapa menit lagi."); },
   reportPhoto: async () => ({ hiddenForMe: true }),
   unhideReported: async () => undefined,
+  photoDetail: async (_viewer: unknown, id: string) => { calls.push("detail"); if (id !== ID) throw new ServiceError(404, "Foto tidak ditemukan."); return { id, owner: { name: "Sari" }, mine: false, sessionTitle: null, takenAt: "2027-01-05T03:00:00Z" }; },
 }));
 vi.mock("@/lib/server/main-wam/momen/upload", () => ({
   startUpload: async () => { calls.push("start"); return { kind: "selesai", id: "x", visibleAt: "y" }; },
@@ -39,7 +40,11 @@ vi.mock("@/lib/server/main-wam/momen/mosaic", () => ({
 }));
 vi.mock("@/lib/server/main-wam/momen/files", () => ({
   parsePhotoSize: (raw: string | null) => (raw === "kecil" || raw === "ubin" ? raw : "besar"),
-  photoFileAddress: async (_context: unknown, _id: string, size: string) => ({ address: `https://r2.example/x-${size}.jpg?sig`, cacheSeconds: size === "besar" ? 300 : 3000 }),
+  photoFileAddress: async (_context: unknown, id: string, size: string, options: { download?: boolean } = {}) => {
+    if (id !== ID) throw new ServiceError(404, "Foto tidak ditemukan.");
+    calls.push(`file:${size}:${options.download ? "unduh" : "lihat"}`);
+    return { address: `https://r2.example/x-${size}.jpg?sig${options.download ? "&attachment" : ""}`, cacheSeconds: size === "besar" ? 300 : 3000 };
+  },
 }));
 
 const feedRoute = await import("./route");
@@ -166,6 +171,42 @@ describe("Momen APIs check what they are sent", () => {
     const mosaic = await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`));
     expect(mosaic.headers.get("etag")).toBe('"v1"');
     expect((await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`, { headers: { "if-none-match": '"v1"' } }))).status).toBe(304);
+  });
+
+  it("Simpan foto: ?unduh=1 asks for the large file as a download (the same route and access), and anything else stays a view", async () => {
+    calls.length = 0;
+    const download = await fileRoute.GET(new Request(`${site}/x?ukuran=kecil&unduh=1`), params());
+    expect(download.status).toBe(302);
+    expect(download.headers.get("location")).toBe("https://r2.example/x-besar.jpg?sig&attachment");
+    expect((await fileRoute.GET(new Request(`${site}/x?ukuran=besar&unduh=0`), params())).headers.get("location")).not.toContain("attachment");
+    expect(calls).toEqual(["file:besar:unduh", "file:besar:lihat"]);
+  });
+
+  it("a download keeps the view's refusals: no session 401, Main WAM off 404, a photo the person may not see 404", async () => {
+    const other = "99999999-9999-4999-8999-999999999999";
+    expect((await fileRoute.GET(new Request(`${site}/x?ukuran=besar&unduh=1`), params(other))).status).toBe(404);
+    expect((await fileRoute.GET(new Request(`${site}/x?ukuran=besar&unduh=1`), params("bukan-id"))).status).toBe(422);
+    for (const status of [401, 404] as const) {
+      gate = status;
+      calls.length = 0;
+      expect((await fileRoute.GET(new Request(`${site}/x?ukuran=besar&unduh=1`), params())).status).toBe(status);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it("GET one photo (the viewer's name and session): refused without a session, a 404 for a photo the person may not see, never cached", async () => {
+    const answer = await photoRoute.GET(new Request(`${site}/x`), params());
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("cache-control")).toContain("no-store");
+    expect((await answer.json()).data).toMatchObject({ owner: { name: "Sari" }, mine: false });
+    expect((await photoRoute.GET(new Request(`${site}/x`), params("99999999-9999-4999-8999-999999999999"))).status).toBe(404);
+    expect((await photoRoute.GET(new Request(`${site}/x`), params("bukan-id"))).status).toBe(422);
+    for (const status of [401, 404] as const) {
+      gate = status;
+      calls.length = 0;
+      expect((await photoRoute.GET(new Request(`${site}/x`), params())).status).toBe(status);
+      expect(calls).toEqual([]);
+    }
   });
 
   it("let the browser reuse a large photo's redirect 5 minutes only (audit L5)", async () => {

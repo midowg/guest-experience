@@ -1,6 +1,7 @@
 import { samplePeople, sampleSessionIds } from "../sample";
 import { letterCells, cellOrder } from "./mosaic";
 import { HEART, type ReactionCount } from "./reactions";
+import { demoPicture } from "./viewer";
 import type { FeedPhoto, MosaicManifest, Reactor, SessionCount } from "./types";
 
 /*
@@ -34,7 +35,7 @@ function photo(n: number, [key, date, time, reacted, extra = {}]: Seed, viewerKe
   return {
     id: uid(n), owner: { id: person.id, name: person.name, photo: null },
     audience: "semua", sessionId: sampleSessionIds.pemaparan, width: 1280, height: 1600, takenAt: at(date, time), visibleAt: at(date, time),
-    status: "tampil", reactions: sampleReactions(reacted), seen: false, mine: key === viewerKey, src: { kecil: null, besar: null }, ...extra,
+    status: "tampil", reactions: sampleReactions(reacted), seen: false, mine: key === viewerKey, src: { kecil: demoPicture(n), besar: demoPicture(n) }, ...extra,
   };
 }
 
@@ -70,19 +71,12 @@ export const SAMPLE_TOTAL = 486;
 /** The prototype's Mozaik grid (M06: 50 × 36 = 1.800 cells). */
 export const SAMPLE_MOSAIC_GRID = { columns: 50, rows: 36 } as const;
 
-/** A 160 px gradient as a data address: a stand-in for a photo's tile (no real pictures in the repo). */
-function tilePicture(index: number): string {
-  const hue = (index * 47) % 360;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 8 8"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 62% 66%)"/><stop offset="1" stop-color="hsl(${(hue + 40) % 360} 55% 42%)"/></linearGradient></defs><rect width="8" height="8" fill="url(#g)"/></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
 /**
  * A Mozaik filled to `share` of its cells (M06: 312 of 600, 52%), in the real fill order, with
  * `mine` of the viewer's photos in it (4 at 52%). Tiles have no picture (placeholders), or with `pictures` a small
  * coloured gradient each (dev preview: so the letters stand out the way real photos make them stand out).
  */
-export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; rows: number } = SAMPLE_MOSAIC_GRID, pictures = false): MosaicManifest {
+export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; rows: number } = SAMPLE_MOSAIC_GRID, pictures = true): MosaicManifest {
   const { columns, rows } = grid;
   const total = columns * rows;
   const filled = Math.round(total * share);
@@ -93,7 +87,7 @@ export function sampleMosaic(share = 0.52, mine = 4, grid: { columns: number; ro
   const letterPlaced = placed.filter(cell => cells[cell] !== ".");
   const step = Math.max(1, Math.floor(letterPlaced.length / Math.max(1, mine)));
   const mineCells = new Set(letterPlaced.filter((_, index) => index % step === 0).slice(0, mine));
-  const tiles = placed.map((cell, index) => ({ cell, id: uid(1000 + index), src: pictures ? tilePicture(index) : null, mine: mineCells.has(cell) }));
+  const tiles = placed.map((cell, index) => ({ cell, id: uid(1000 + index), src: pictures ? demoPicture(index) : null, mine: mineCells.has(cell) }));
   return {
     version: `sample-${filled}`, columns, rows, cells, tiles, filled, total, people: filled >= total ? 118 : 86, mine: mineCells.size,
     updatedAt: at(D2, "10:05"), complete: filled >= total, migrated: true,

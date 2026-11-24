@@ -2,7 +2,8 @@ import "server-only";
 import { demoSample } from "@/lib/main-wam/demo-sample";
 import { QUICK_REACTIONS, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { UMUM, type FeedPhoto, type FeedView, type MosaicManifest, type MosaicTile, type SessionCount } from "@/lib/main-wam/momen/types";
-import { samplePeople, samplePhotos } from "@/lib/main-wam/sample";
+import { demoPicture } from "@/lib/main-wam/momen/viewer";
+import { samplePeople, samplePhotos, sampleSessionIds } from "@/lib/main-wam/sample";
 import type { MainWamContext } from "./gate";
 import { demoOn } from "./demo";
 
@@ -12,8 +13,10 @@ import { demoOn } from "./demo";
  * Mosaic. Used only while Admin has the demo on and there is no real photo; made-up names only.
  */
 
-/** The sample pictures (public/wam/demo/foto-01..12.svg): made-up scenes, local files, no outside address. */
-const demoPicture = (index: number) => `/wam/demo/foto-${String((index % 12) + 1).padStart(2, "0")}.svg`;
+/** How many sample photos the demo gallery has (the pictures are public/wam/demo/foto-01..24.svg: made-up scenes, local files, no outside address). */
+export const DEMO_PHOTOS = 24;
+/** The sessions the sample photos are spread over (null = Umum). */
+const DEMO_SESSIONS = [sampleSessionIds.pemaparan, sampleSessionIds.wellness, sampleSessionIds["sharing-ai"], sampleSessionIds["makan-malam-1"], null];
 
 /** A count spread over the quick reactions (most on the first), none of them the viewer's. */
 function spread(total: number): ReactionCount[] {
@@ -23,14 +26,24 @@ function spread(total: number): ReactionCount[] {
   return list;
 }
 
-/** The sample photos as feed photos, newest first; the sample's Rani is the viewer (so "Fotoku" has photos). */
+/**
+ * The sample photos as feed photos, newest first: the 12 sample photos and 12 more of the same people in another order and
+ * session, so the gallery has 24 with made-up names, sessions and reactions; the sample's Rani is the viewer (so "Fotoku" has photos).
+ */
 function samplePhotoList(context: MainWamContext): FeedPhoto[] {
   const me = context.viewer;
-  return demoSample(samplePhotos).map((photo, index) => {
+  const shifted = demoSample(samplePhotos);
+  return Array.from({ length: DEMO_PHOTOS }, (_, index) => {
+    const base = shifted[index % shifted.length];
+    const other = shifted[(index + 5) % shifted.length];
+    const photo = index < shifted.length ? base : {
+      ...base, id: `${base.id.slice(0, -12)}${String(100 + index).padStart(12, "0")}`, owner: other.owner, ownerId: other.ownerId, reactions: (base.reactions + index) % 17,
+      sessionId: DEMO_SESSIONS[index % DEMO_SESSIONS.length], visibleAt: new Date(Date.parse(base.visibleAt) - (index - shifted.length + 1) * 37 * 60_000).toISOString(),
+    };
     const mine = photo.ownerId === samplePeople.rani.id;
     return {
       id: photo.id, owner: mine ? { id: me.id, name: me.name, photo: me.photo } : { id: photo.owner.id, name: photo.owner.name, photo: null },
-      audience: "semua", sessionId: photo.sessionId, width: photo.width, height: photo.height, takenAt: photo.takenAt, visibleAt: photo.visibleAt, status: "tampil",
+      audience: "semua", sessionId: photo.sessionId, width: photo.width, height: photo.height, takenAt: photo.visibleAt, visibleAt: photo.visibleAt, status: "tampil",
       reactions: spread(photo.reactions), seen: mine, mine, src: { kecil: demoPicture(index), besar: demoPicture(index) },
     } satisfies FeedPhoto;
   }).sort((a, b) => Date.parse(b.visibleAt) - Date.parse(a.visibleAt));

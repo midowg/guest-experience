@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Pantai senja">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B2A6B"/><stop offset="1" stop-color="#F2994A"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFD27A" stop-opacity=".9"/><stop offset="1" stop-color="#FFD27A" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="360" cy="405" rx="440" ry="300" fill="url(#l)"/>
+<circle cx="360" cy="405" r="142" fill="#FFD27A"/>
+<path d="M0 600 Q 200 530 400 600 T 800 600 V1000 H0Z" fill="#1B2A6B" opacity="0.30"/>
+<path d="M0 690 Q 200 605 400 690 T 800 690 V1000 H0Z" fill="#1B2A6B" opacity="0.50"/>
+<path d="M0 780 Q 200 680 400 780 T 800 780 V1000 H0Z" fill="#1B2A6B" opacity="0.70"/>
+<path d="M0 870 Q 200 755 400 870 T 800 870 V1000 H0Z" fill="#1B2A6B" opacity="0.90"/>
+<rect x="300" y="575" width="120" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect x="308" y="609" width="104" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect x="316" y="643" width="88" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect x="324" y="677" width="72" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect x="332" y="711" width="56" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect x="340" y="745" width="40" height="6" rx="3" fill="#FFD27A" opacity=".5"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

@@ -615,11 +615,13 @@ export const mainWamApi = {
   photoConfirm: `${MAIN_WAM_API}/momen/simpan`,
   /** POST {ids}: photos the person has seen in the stack. */
   photosSeen: `${MAIN_WAM_API}/momen/dilihat`,
-  /** DELETE: Batalkan (within 5 s) or Hapus foto (owner). */
+  /** GET: who took one photo the person may see, its session and time (the viewer); DELETE: Batalkan (within 5 s) or Hapus foto (owner). */
   photo: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}`,
   /** GET: the photo's file, small (stack, grid) or large; a redirect to storage. */
   /** kecil = 480 px, besar = 1600 px, ubin = 160 px (Mozaik). */
   photoFile: (id: string, size: "kecil" | "besar" | "ubin" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
+  /** GET: the large file as a download (Content-Disposition: attachment on the storage address), the same access as photoFile. */
+  photoDownload: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: "besar", unduh: "1" })}`,
   /** GET: siapa bereaksi apa (daftar); PUT: bereaksi; DELETE: batal bereaksi. */
   photoReaction: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/reaksi`,
   /** POST {reason, note}: Laporkan foto (M04); DELETE: Tampilkan lagi (for the reporter). */

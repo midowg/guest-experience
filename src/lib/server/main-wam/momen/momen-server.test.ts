@@ -85,7 +85,10 @@ vi.mock("../../supabase/admin", () => ({
     },
   }),
 }));
-vi.mock("../read", () => ({ allSessions: async () => ({ data: [{ id: "00000000-0000-4000-8000-0000000000aa", status: "terbit" }, { id: "00000000-0000-4000-8000-0000000000bb", status: "draf" }], migrated: true }) }));
+vi.mock("../read", () => ({
+  allSessions: async () => ({ data: [{ id: "00000000-0000-4000-8000-0000000000aa", status: "terbit" }, { id: "00000000-0000-4000-8000-0000000000bb", status: "draf" }], migrated: true }),
+  sessionById: async (id: string) => (id === "00000000-0000-4000-8000-0000000000aa" ? { id, title: "Pemaparan departemen" } : null),
+}));
 vi.mock("../notes", () => ({ trySendMainWamNote: vi.fn(async () => 1) }));
 vi.mock("../people", () => ({ mainWamPeople: async () => new Map([["sari", { id: "sari", name: "Sari", photo: null }], ["11111111-1111-4111-8111-111111111111", { id: "11111111-1111-4111-8111-111111111111", name: "Rani", photo: "/foto/rani" }]]) }));
 vi.mock("next/server", () => ({ after: (work: () => unknown) => { void work(); } }));
@@ -107,7 +110,7 @@ vi.mock("./storage", async original => {
     },
     removeUploads: async (id: string) => { steps.push("removeUploads"); uploadsRemoved.push(id); },
     removePhotoFiles: async (id: string) => { removed.push(id); },
-    viewAddress: async (key: string | null, size: string) => (key ? `https://r2/${key}?get&size=${size}` : null),
+    viewAddress: async (key: string | null, size: string, _now?: number, download?: string) => (key ? `https://r2/${key}?get&size=${size}${download ? `&unduh=${download}` : ""}` : null),
   };
 });
 vi.mock("./feed", async original => {
@@ -377,6 +380,32 @@ describe("deleting, reporting, opening one photo", () => {
     expect(await files.photoFileAddress(context({ roles: ["panitia"] }), hidden.id, "kecil")).toEqual({ address: expect.stringContaining("-kecil.jpg?get&size=kecil"), cacheSeconds: 3000 });
     expect(files.parsePhotoSize("ubin")).toBe("ubin");
     expect(files.parsePhotoSize("../x")).toBe("besar");
+  });
+
+  it("answers a download (Simpan foto) with the large file under a plain name, for whoever sees the photo only", async () => {
+    records.set(record().id, record({ thumbKey: "main-wam/momen/33333333-3333-4333-8333-333333333333-kecil.jpg" }));
+    expect(await files.photoFileAddress(context(), record().id, "besar", { download: true })).toEqual({ address: expect.stringMatching(/33333333-3333-4333-8333-333333333333\.jpg\?get&size=besar&unduh=wam-2026-33333333\.jpg$/), cacheSeconds: 300 });
+    // The access rule is the view's: a hidden photo is a 404 to someone who may not see it, a download does not loosen it.
+    const hidden = record({ id: "44444444-4444-4444-8444-444444444444", status: "ditinjau" });
+    records.set(hidden.id, hidden);
+    expect(await statusOf(files.photoFileAddress(context(), hidden.id, "besar", { download: true }))).toBe(404);
+    expect(await statusOf(files.photoFileAddress(context({ roles: ["panitia"] }), hidden.id, "besar", { download: true }))).toBe(200);
+  });
+
+  it("tells the viewer who took a photo, in which session and when, for a photo the person sees only", async () => {
+    const withSession = record({ sessionId: "00000000-0000-4000-8000-0000000000aa" });
+    records.set(withSession.id, withSession);
+    expect(await feed.photoDetail(context().viewer, withSession.id)).toEqual({ id: withSession.id, owner: { name: "Sari" }, mine: false, sessionTitle: "Pemaparan departemen", takenAt: withSession.takenAt });
+    const own = record({ id: "55555555-5555-4555-8555-555555555555", ownerId: "11111111-1111-4111-8111-111111111111", status: "ditinjau" });
+    records.set(own.id, own);
+    expect(await feed.photoDetail(context().viewer, own.id)).toMatchObject({ owner: { name: "Rani" }, mine: true, sessionTitle: null });
+    // Hidden or reported (someone else's), for another kelompok, and not yet shown: all a plain 404, nothing leaks.
+    const hidden = record({ id: "66666666-6666-4666-8666-666666666666", status: "disembunyikan" });
+    const later = record({ id: "77777777-7777-4777-8777-777777777777", visibleAt: "2999-01-05T03:00:05Z" });
+    const other = record({ id: "88888888-8888-4888-8888-888888888888", audience: "kelompok", groupId: "00000000-0000-4000-8000-0000000000ff" });
+    for (const photo of [hidden, later, other]) records.set(photo.id, photo);
+    for (const photo of [hidden, later, other]) expect(await statusOf(feed.photoDetail(context().viewer, photo.id)), photo.id).toBe(404);
+    expect(await statusOf(feed.photoDetail(context().viewer, "99999999-9999-4999-8999-999999999999"))).toBe(404);
   });
 
   it("signs a photo without its own small copy or tile with the large file's lifetime", async () => {

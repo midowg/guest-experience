@@ -12,8 +12,10 @@ import type { QueueItem } from "@/lib/main-wam/momen/queue";
 import type { SessionChoice } from "@/lib/main-wam/momen/sessions";
 import { photoAlt } from "@/lib/main-wam/momen/stack";
 import type { FeedAnswer, FeedPhoto, FeedView, SessionCount, SessionFilter } from "@/lib/main-wam/momen/types";
+import { isDemoFile } from "@/lib/main-wam/momen/viewer";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { refusedForGood, SessionFilterSheet } from "./MomenSheets";
+import { PhotoViewerSheet } from "./PhotoViewer";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
 import { useFreshAddress } from "./useFreshAddress";
@@ -180,14 +182,15 @@ export function Gallery(props: GalleryProps) {
     </Stack>
 
     {props.counts && <SessionFilterSheet open={picking} onClose={() => setPicking(false)} sessions={props.sessions} counts={props.counts} value={session} now={now} onChange={value => filterTo(view, value)} />}
-    <Sheet open={!!mine && !confirm} onClose={() => setMine(null)} title={t("momen.yourPhoto")} flush>
-      {mine && mine.status !== "tampil" && <div style={{ padding: "0 var(--mw-space-16) var(--mw-space-8)" }}>
-        <Pill tone="warning">{mine.status === "ditinjau" ? t("momen.gal.pillReviewing") : t("momen.gal.pillHidden")}</Pill>
-      </div>}
-      <List plain inset={68} label={t("momen.photoOptions")}>
-        <ListRow icon={<Trash2 className={css.danger} />} title={<span className={css.danger}>{t("momen.deletePhoto")}</span>} chevron={false} onClick={() => setConfirm(true)} />
-      </List>
-    </Sheet>
+    {/* Fotoku: the same viewer as the Mozaik (large photo, Simpan foto), with Hapus foto under it. */}
+    <PhotoViewerSheet open={!!mine && !confirm} onClose={() => setMine(null)}
+      target={mine ? { id: mine.id, file: isDemoFile(mine.src.besar) ? mine.src.besar : null, detail: { id: mine.id, owner: { name: mine.owner.name }, mine: true, sessionTitle: props.sessions.find(item => item.id === mine.sessionId)?.title ?? (mine.sessionId ? null : t("momen.general")), takenAt: mine.takenAt } } : null}
+      actions={<>
+        {mine && mine.status !== "tampil" && <div style={{ display: "flex", justifyContent: "center" }}><Pill tone="warning">{mine.status === "ditinjau" ? t("momen.gal.pillReviewing") : t("momen.gal.pillHidden")}</Pill></div>}
+        <List plain label={t("momen.photoOptions")}>
+          <ListRow icon={<Trash2 className={css.danger} />} title={<span className={css.danger}>{t("momen.deletePhoto")}</span>} chevron={false} onClick={() => setConfirm(true)} />
+        </List>
+      </>} />
     <ConfirmDialog open={confirm} onCancel={() => setConfirm(false)} onConfirm={removeMine} tone="danger" icon={<Trash2 />} title={t("momen.deleteTitle")}
       body={props.mozaik ? t("momen.deleteBodyMosaic") : t("momen.deleteBody")} confirmLabel={t("momen.deletePhoto")} busy={deleting} busyLabel={t("momen.deleting")} />
     <Sheet open={!!queued} onClose={() => setQueued(null)} title={t("momen.yourPhoto")} subtitle={queued?.state === "gagal" ? known(queued.error ?? "") || t("srv.momen.notSentYet") : t("momen.gal.waitSignal")} flush>

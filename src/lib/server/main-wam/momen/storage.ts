@@ -179,11 +179,15 @@ function storageClient(): { s3: S3Client; bucket: string } | null {
   return client;
 }
 
-/** A view address of a private file of the given size, the same throughout its window (VIEW_POLICY). */
-export async function viewAddress(key: string | null | undefined, size: PhotoSize, now = Date.now()): Promise<string | null> {
+/**
+ * A view address of a private file of the given size, the same throughout its window (VIEW_POLICY). With `download` (a plain
+ * file name) the address answers Content-Disposition: attachment, so opening it saves the file instead of showing it.
+ */
+export async function viewAddress(key: string | null | undefined, size: PhotoSize, now = Date.now(), download?: string): Promise<string | null> {
   if (!key) return null;
   const view = storageClient();
   if (!view) return null;
   const { signedAt } = viewWindow(size, now);
-  return getSignedUrl(view.s3, new GetObjectCommand({ Bucket: view.bucket, Key: key }), { expiresIn: VIEW_POLICY[size].valid / 1000, signingDate: new Date(signedAt) });
+  const disposition = download ? { ResponseContentDisposition: `attachment; filename="${download.replace(/[^0-9A-Za-z._-]/g, "")}"` } : {};
+  return getSignedUrl(view.s3, new GetObjectCommand({ Bucket: view.bucket, Key: key, ...disposition }), { expiresIn: VIEW_POLICY[size].valid / 1000, signingDate: new Date(signedAt) });
 }

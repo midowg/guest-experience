@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
 import { previewLang } from "@/components/main-wam/dev/lang";
 import { t, type Lang } from "@/lib/main-wam/i18n";
+import { demoPicture } from "@/lib/main-wam/momen/viewer";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CameraScreen, type CameraDemo } from "@/components/main-wam/momen/CameraScreen";
 import { Gallery, type GalleryProps } from "@/components/main-wam/momen/Gallery";
@@ -143,7 +144,7 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
   }
 
   /* The slots on other areas' screens. */
-  if (layar === "P01-kartu") return at(mainWamPath.home, <ScreenContent><MomenCard photos={[null, null, null]} sub={newPhotosText(12, 12, lang)} runner={false} /></ScreenContent>);
+  if (layar === "P01-kartu") return at(mainWamPath.home, <ScreenContent><MomenCard photos={[demoPicture(5), demoPicture(0), demoPicture(2)]} sub={newPhotosText(12, 12, lang)} runner={false} /></ScreenContent>);
   return at(mainWamPath.session(sampleSessionIds.pemaparan), <ScreenContent><List>
     <ListRow icon={<Images />} title={t(lang, "momen.sessionPhotos")} value={24} href={mainWamPath.moments({ sesi: sampleSessionIds.pemaparan })} />
   </List></ScreenContent>);

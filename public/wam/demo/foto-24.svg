@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Fajar kota">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27306B"/><stop offset="1" stop-color="#FF8A5B"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FFE3A3" stop-opacity=".9"/><stop offset="1" stop-color="#FFE3A3" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="472" cy="447" rx="440" ry="300" fill="url(#l)"/>
+<circle cx="472" cy="447" r="117" fill="#FFE3A3"/>
+<path d="M0 600 Q 200 530 400 600 T 800 600 V1000 H0Z" fill="#27306B" opacity="0.30"/>
+<path d="M0 690 Q 200 605 400 690 T 800 690 V1000 H0Z" fill="#27306B" opacity="0.50"/>
+<path d="M0 780 Q 200 680 400 780 T 800 780 V1000 H0Z" fill="#27306B" opacity="0.70"/>
+<path d="M0 870 Q 200 755 400 870 T 800 870 V1000 H0Z" fill="#27306B" opacity="0.90"/>
+<rect x="412" y="617" width="120" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect x="420" y="651" width="104" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect x="428" y="685" width="88" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect x="436" y="719" width="72" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect x="444" y="753" width="56" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect x="452" y="787" width="40" height="6" rx="3" fill="#FFE3A3" opacity=".5"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

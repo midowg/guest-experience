@@ -1,13 +1,14 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Flag, Trash2 } from "lucide-react";
+import { Download, Flag, Trash2 } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Button, ConfirmDialog, List, ListRow, Sheet, TextField } from "@/components/main-wam/ui";
 import { reportSchema } from "@/lib/main-wam/momen/filters";
 import { choiceSub, countTotals, filterGroups, type SessionChoice } from "@/lib/main-wam/momen/sessions";
 import { UMUM, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import { REPORT_REASONS, type ReportReason } from "@/lib/main-wam/types";
+import { saveFile } from "./saveFile";
 import { PickList, RadioCards, type PickGroup } from "./Choices";
 import css from "./sheets.module.css";
 
@@ -29,12 +30,15 @@ export function SessionFilterSheet({ open, onClose, sessions, counts, value, onC
 }
 
 /** "…" on a photo (M01__status#aksi-orang, #aksi-sendiri): Laporkan foto, or Hapus foto for one's own. */
-export function PhotoOptionsSheet({ open, onClose, owner, mine, onReport, onDelete }: {
+export function PhotoOptionsSheet({ open, onClose, owner, mine, onReport, onDelete, save }: {
   open: boolean; onClose: () => void; owner: string; mine: boolean; onReport: () => void; onDelete: () => void;
+  /** Simpan foto: the large file's download address and name (viewerFile). */
+  save?: { href: string; name: string };
 }) {
   const t = useT();
   return <Sheet open={open} onClose={onClose} title={mine ? t("momen.altMine") : t("momen.altBy", { name: owner })} flush>
     <List plain inset={68} label={t("momen.photoOptions")}>
+      {save && <ListRow icon={<Download />} title={t("momen.view.save")} chevron={false} onClick={() => { saveFile(save.href, save.name); onClose(); }} />}
       {mine
         ? <ListRow icon={<Trash2 className={css.danger} />} title={<span className={css.danger}>{t("momen.deletePhoto")}</span>} chevron={false} onClick={onDelete} />
         : <ListRow icon={<Flag />} title={t("momen.reportPhoto")} chevron={false} onClick={onReport} />}

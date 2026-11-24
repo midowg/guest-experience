@@ -77,3 +77,13 @@ export type MosaicManifest = {
   complete: boolean;
   migrated: boolean;
 };
+
+/** What GET photo answers for the viewer (a Mozaik tile has only its small picture): who took it, when, in which session. */
+export type PhotoDetail = {
+  id: string;
+  /** The name Momen shows on the photo (nama panggilan). */
+  owner: { name: string };
+  mine: boolean;
+  sessionTitle: string | null;
+  takenAt: string;
+};

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Sorot lampu">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10112B"/><stop offset="1" stop-color="#B83280"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#FDE68A" stop-opacity=".9"/><stop offset="1" stop-color="#FDE68A" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<ellipse cx="400" cy="380" rx="520" ry="360" fill="url(#l)"/>
+<polygon points="69,0 -26,640 141,640" fill="#FDE68A" opacity=".12"/>
+<polygon points="190,0 93,640 277,640" fill="#FDE68A" opacity=".12"/>
+<polygon points="336,0 282,640 402,640" fill="#FDE68A" opacity=".12"/>
+<polygon points="451,0 389,640 507,640" fill="#FDE68A" opacity=".12"/>
+<polygon points="610,0 537,640 688,640" fill="#FDE68A" opacity=".12"/>
+<polygon points="722,0 665,640 810,640" fill="#FDE68A" opacity=".12"/>
+<rect x="0" y="700" width="800" height="300" fill="#10112B" opacity=".9"/>
+<rect x="110" y="610" width="580" height="90" rx="10" fill="#B83280" opacity=".9"/><rect x="110" y="610" width="580" height="12" fill="#FDE68A"/>
+<rect x="250" y="360" width="300" height="190" rx="12" fill="#FDE68A" opacity=".25"/><rect x="262" y="372" width="276" height="166" rx="8" fill="#10112B" opacity=".8"/>
+<circle cx="45" cy="810" r="33" fill="#000" opacity=".55"/><rect x="9" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="128" cy="810" r="29" fill="#000" opacity=".55"/><rect x="92" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="190" cy="810" r="26" fill="#000" opacity=".55"/><rect x="154" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="264" cy="810" r="27" fill="#000" opacity=".55"/><rect x="228" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="356" cy="810" r="33" fill="#000" opacity=".55"/><rect x="320" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="432" cy="810" r="30" fill="#000" opacity=".55"/><rect x="396" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="514" cy="810" r="34" fill="#000" opacity=".55"/><rect x="478" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="580" cy="810" r="34" fill="#000" opacity=".55"/><rect x="544" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="667" cy="810" r="32" fill="#000" opacity=".55"/><rect x="631" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<circle cx="738" cy="810" r="26" fill="#000" opacity=".55"/><rect x="702" y="838" width="72" height="200" rx="32" fill="#000" opacity=".55"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Gerbong malam">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A1A18"/><stop offset="1" stop-color="#2F6FEB"/></linearGradient>
+<radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#F5C542" stop-opacity=".9"/><stop offset="1" stop-color="#F5C542" stop-opacity="0"/></radialGradient>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
+<rect width="800" height="1000" fill="url(#g)"/>
+<rect x="50" y="170" width="700" height="580" rx="54" fill="#0A1A18" opacity=".88"/>
+<rect x="84" y="204" width="632" height="430" rx="30" fill="url(#g)"/>
+<rect x="104" y="320" width="56" height="155" fill="#F5C542" opacity=".3"/>
+<rect x="192" y="361" width="56" height="259" fill="#F5C542" opacity=".3"/>
+<rect x="280" y="386" width="56" height="138" fill="#F5C542" opacity=".3"/>
+<rect x="368" y="355" width="56" height="227" fill="#F5C542" opacity=".3"/>
+<rect x="456" y="376" width="56" height="179" fill="#F5C542" opacity=".3"/>
+<rect x="544" y="369" width="56" height="195" fill="#F5C542" opacity=".3"/>
+<rect x="632" y="358" width="56" height="198" fill="#F5C542" opacity=".3"/>
+<circle cx="227" cy="320" r="50" fill="#F5C542" opacity=".85"/>
+<rect x="0" y="790" width="800" height="210" fill="#0A1A18"/>
+<rect x="30" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="128" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="226" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="324" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="422" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="520" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="618" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect x="716" y="815" width="62" height="14" rx="7" fill="#F5C542"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

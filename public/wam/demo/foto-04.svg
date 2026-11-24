@@ -1,10 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Foto contoh 4">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" role="img" aria-label="Gunung fajar">
 <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B3A67"/><stop offset="1" stop-color="#6C8CD5"/></linearGradient>
 <radialGradient id="l" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#F5C542" stop-opacity=".9"/><stop offset="1" stop-color="#F5C542" stop-opacity="0"/></radialGradient>
-<filter id="n"><feGaussianBlur stdDeviation="14"/></filter></defs>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient></defs>
 <rect width="800" height="1000" fill="url(#g)"/>
-<circle cx="290" cy="260" r="90" fill="#F5C542" opacity=".9"/>
-<polygon points="0,700 80,452 210,560 340,337 470,560 600,410 730,560 800,700 800,1000 0,1000" fill="#2B3A67" opacity="0.45"/>
-<polygon points="0,800 80,412 210,660 340,577 470,660 600,489 730,660 800,800 800,1000 0,1000" fill="#2B3A67" opacity="0.7"/>
-<polygon points="0,900 80,558 210,760 340,586 470,760 600,595 730,760 800,900 800,1000 0,1000" fill="#2B3A67" opacity="0.95"/>
-<rect width="800" height="1000" fill="#000" opacity=".05"/></svg>
+<circle cx="357" cy="250" r="90" fill="#F5C542" opacity=".9"/>
+<polygon points="0,680 80,277 210,520 340,356 470,520 600,397 730,520 800,680 800,1000 0,1000" fill="#2B3A67" opacity="0.40"/>
+<polygon points="0,770 80,396 210,610 340,415 470,610 600,341 730,610 800,770 800,1000 0,1000" fill="#2B3A67" opacity="0.60"/>
+<polygon points="0,860 80,461 210,700 340,543 470,700 600,555 730,700 800,860 800,1000 0,1000" fill="#2B3A67" opacity="0.80"/>
+<polygon points="0,950 80,582 210,790 340,672 470,790 600,640 730,790 800,950 800,1000 0,1000" fill="#2B3A67" opacity="1.00"/>
+<ellipse cx="362" cy="492" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<ellipse cx="558" cy="474" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<ellipse cx="540" cy="456" rx="190" ry="26" fill="#fff" opacity=".22"/>
+<rect width="800" height="1000" fill="url(#v)"/></svg>

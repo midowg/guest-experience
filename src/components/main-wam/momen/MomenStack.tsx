@@ -12,12 +12,19 @@ import { createSeenQueue, refusedForGoodStatus, type SeenQueue } from "@/lib/mai
 import { stackCountSpoken, type StackMode } from "@/lib/main-wam/momen/stack";
 import { type FeedAnswer, type FeedPhoto, type Reactor, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { PhotoStatus } from "@/lib/main-wam/types";
+import { viewerFile } from "@/lib/main-wam/momen/viewer";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { DeletePhotoDialog, PhotoOptionsSheet, refusedForGood, ReportSheet } from "./MomenSheets";
 import { QuickReactions, ReactorsSheet } from "./Reactions";
 import { StackDeck } from "./StackDeck";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 import css from "./momen.module.css";
+
+/** Simpan foto in the photo's options: the large file as a download (a sample photo: its local picture). */
+function saveOf(photo: FeedPhoto): { href: string; name: string } {
+  const file = viewerFile(photo.id, photo.src.besar);
+  return { href: file.download, name: file.name };
+}
 
 export type MomenStackProps = {
   mode: StackMode;
@@ -345,7 +352,7 @@ export function MomenStack(props: MomenStackProps) {
 
     {current && <ReactorsSheet open={sheet === "daftar"} onClose={() => setSheet(null)} photoId={current.id} demo={demo?.reactors}
       onRemove={async emoji => { if (!current.mine && myReaction(reactionsOf(current)) === emoji) await react(current, emoji); }} />}
-    {current && <PhotoOptionsSheet open={sheet === "pilihan"} onClose={() => setSheet(null)} owner={current.owner.name} mine={current.mine}
+    {current && <PhotoOptionsSheet open={sheet === "pilihan"} onClose={() => setSheet(null)} owner={current.owner.name} mine={current.mine} save={saveOf(current)}
       onReport={() => setSheet("lapor")} onDelete={() => setSheet("hapus")} />}
     <ReportSheet open={sheet === "lapor"} onClose={() => setSheet(null)} onSubmit={report} />
     <DeletePhotoDialog open={sheet === "hapus"} busy={deleting} mozaik={mozaik} onCancel={() => setSheet(null)} onConfirm={removeMine} />

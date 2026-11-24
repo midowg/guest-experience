@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Minus } from "lucide-react";
-import { useT } from "@/components/main-wam/i18n";
+import { useLang, useT } from "@/components/main-wam/i18n";
 import { IconButton } from "@/components/main-wam/ui";
-import { cellBounds, gridGeometry, paletteIndex } from "@/lib/main-wam/momen/mosaic";
-import type { MosaicManifest } from "@/lib/main-wam/momen/types";
+import { cellBounds, cellLabel, gridGeometry, paletteIndex } from "@/lib/main-wam/momen/mosaic";
+import { moveCell, tapCell } from "@/lib/main-wam/momen/mosaic-pick";
+import type { MosaicManifest, MosaicTile } from "@/lib/main-wam/momen/types";
 import css from "./mosaic.module.css";
 
 /*
@@ -15,12 +16,14 @@ import css from "./mosaic.module.css";
  * letters under the palette colour and outside them faded. Tiles are cached per photo, so
  * a refresh draws only what changed. Zoom with two fingers, a double tap or + / −, pan by scrolling.
  * "Tandai fotoku": one's own cells ringed in gold (numbered when zoomed).
+ * A tap (a press that stays put and lets go quickly, one finger; not a pan, a pinch or a double tap) on a cell with a photo calls
+ * `onOpen` (the viewer); the arrow keys move a ring over the cells with a photo and Enter opens it.
  */
 
 export const MOSAIC_ZOOMS = [1, 2, 3] as const;
 const PAD = 2;
 
-type Colors = { outline: string; gold: string; goldSoft: string; primary: string; palette: string[]; paletteSoft: string[]; ph: string[] };
+type Colors = { focus: string; outline: string; gold: string; goldSoft: string; primary: string; palette: string[]; paletteSoft: string[]; ph: string[] };
 
 function rgba(color: string, alpha: number): string {
   const value = color.trim();
@@ -41,14 +44,20 @@ function readColors(element: HTMLElement): Colors {
   const gold = token("--mw-gold");
   const palette = [1, 2, 3, 4, 5, 6, 7, 8].map(n => token(`--mw-mosaic-${n}`));
   return {
-    outline: rgba(token("--mw-outline-2"), 0.55), gold, goldSoft: rgba(gold, 0.35), primary: token("--mw-primary"),
+    focus: token("--mw-focus"), outline: rgba(token("--mw-outline-2"), 0.55), gold, goldSoft: rgba(gold, 0.35), primary: token("--mw-primary"),
     palette, paletteSoft: palette.map(color => rgba(color, 0.55)),
     // The placeholder tokens are gradients: a cell takes their first colour.
     ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
   };
 }
 
-export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
+/** Press and release within this many px and this many ms: a tap. More is a pan, a pinch or a long press. */
+export const TAP_MOVE_PX = 8;
+export const TAP_MAX_MS = 600;
+/** A tap waits this long for a second one (double tap = zoom) before it opens a photo. */
+export const TAP_WAIT_MS = 260;
+
+export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label, onOpen }: {
   manifest: MosaicManifest;
   /** "Tandai fotoku". */
   mark: boolean;
@@ -57,8 +66,16 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   /** A cell to bring into view (a photo of one's own chosen in the strip). */
   focus: number | null;
   label: string;
+  /** A tile was chosen (tap, or Enter on the keyboard ring). */
+  onOpen?: (tile: MosaicTile) => void;
 }) {
   const t = useT();
+  const { lang } = useLang();
+  const inner = useRef<HTMLDivElement>(null);
+  const tap = useRef<{ id: number; x: number; y: number; at: number; touch: boolean } | null>(null);
+  const waiting = useRef<number | undefined>(undefined);
+  const [active, setActive] = useState<number | null>(null);
+  const helpId = useId();
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const images = useRef(new Map<string, HTMLImageElement>());
@@ -85,12 +102,12 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   // Tiles: one image per photo, kept; a new one asks for a redraw when it has loaded.
   useEffect(() => {
     for (const tile of manifest.tiles) {
-      if (!tile.src || images.current.has(tile.id)) continue;
+      if (!tile.src || images.current.has(tile.src)) continue;
       const image = new Image();
       image.decoding = "async";
       image.onload = () => setLoaded(count => count + 1);
       image.src = tile.src;
-      images.current.set(tile.id, image);
+      images.current.set(tile.src, image);
     }
   }, [manifest.tiles]);
 
@@ -128,7 +145,7 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
         if (!letter) {
           // Outside the letters: a very faint neutral grid, photo or not (a photo only whispers), so the letters stand out.
           context.globalAlpha = 0.3; context.fillStyle = colors.outline; context.fillRect(x, y, side, side);
-          const faint = tile && images.current.get(tile.id);
+          const faint = tile?.src ? images.current.get(tile.src) : undefined;
           if (faint?.complete && faint.naturalWidth) {
             const crop = Math.min(faint.naturalWidth, faint.naturalHeight);
             context.globalAlpha = 0.05;
@@ -142,7 +159,7 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
           continue;
         }
         // A letter cell with its photo: full strength, tinted with the palette colour.
-        const image = images.current.get(tile.id);
+        const image = tile.src ? images.current.get(tile.src) : undefined;
         const ready = !!(image?.complete && image.naturalWidth);
         context.globalAlpha = 1;
         if (ready && image) {
@@ -155,6 +172,12 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
         }
       }
       context.globalAlpha = 1;
+      if (active !== null) {
+        // The keyboard ring: a double line (the focus colour, then the page behind it) so it reads on any palette colour.
+        const { x, y } = cellAt(active);
+        context.lineWidth = 3; context.strokeStyle = colors.outline; context.strokeRect(x - 1.5, y - 1.5, side + 3, side + 3);
+        context.lineWidth = 2; context.strokeStyle = colors.focus; context.strokeRect(x - 1, y - 1, side + 2, side + 2);
+      }
       if (mark) {
         // One's own cells: a gold ring with a soft glow (the prototype's .me).
         context.strokeStyle = colors.gold;
@@ -179,8 +202,45 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
     element.scrollTo({ left: centreX - element.clientWidth / 2, top: centreY - element.clientHeight / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [zoom, focus, mark, mine, manifest.columns, cellAt, geometry.cell]);
 
+  useEffect(() => () => window.clearTimeout(waiting.current), []);
+  const cellsWithPhoto = useMemo(() => manifest.tiles.filter(tile => manifest.cells[tile.cell] && manifest.cells[tile.cell] !== ".").map(tile => tile.cell), [manifest.tiles, manifest.cells]);
+
+  // Focus stays on the canvas, so closing the viewer brings it back here.
+  function open(tile: MosaicTile) {
+    box.current?.focus({ preventScroll: true });
+    onOpen?.(tile);
+  }
+
+  // The keyboard ring follows the cell into view while zoomed.
+  useEffect(() => {
+    const element = box.current;
+    if (!element || zoom <= 1 || active === null) return;
+    const { x, y } = cellAt(active);
+    element.scrollTo({ left: x + geometry.cell / 2 - element.clientWidth / 2, top: y + geometry.cell / 2 - element.clientHeight / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [active, zoom, cellAt, geometry.cell]);
+
+  // A tap: one finger or the mouse stays put and lets go at once, on a cell with a photo (a pan or a pinch cancels it).
+  function tapAt(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = tap.current;
+    tap.current = null;
+    const element = box.current, surface = inner.current;
+    if (!start || start.id !== event.pointerId || !element || !surface || !onOpen) return;
+    if (event.timeStamp - start.at > TAP_MAX_MS || Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_MOVE_PX) return;
+    const bounds = surface.getBoundingClientRect();
+    const gap = zoom > 1 ? 2 : 1;
+    const picked = tapCell({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, { left: geometry.left, top: geometry.top, cell: geometry.cell, gap }, manifest.columns, manifest.rows, cellsWithPhoto, start.touch);
+    const tile = picked === null ? undefined : tiles.get(picked);
+    if (!tile) return;
+    // A double tap zooms: wait a moment for the second tap before opening.
+    window.clearTimeout(waiting.current);
+    waiting.current = window.setTimeout(() => open(tile), TAP_WAIT_MS);
+  }
+
   // Two fingers: zoom between 1× and 3× (the buttons are the one-finger way).
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    const element = box.current;
+    const onScrollbar = !!element && (event.nativeEvent.offsetX > element.clientWidth || event.nativeEvent.offsetY > element.clientHeight) && event.target === element;
+    tap.current = event.isPrimary && !onScrollbar ? { id: event.pointerId, x: event.clientX, y: event.clientY, at: event.timeStamp, touch: event.pointerType === "touch" } : null;
     if (event.pointerType !== "touch") return;
     const state = pinch.current ?? { pointers: new Map(), start: 0, zoom };
     state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -188,6 +248,8 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
     pinch.current = state;
   }
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = tap.current;
+    if (start && start.id === event.pointerId && Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_MOVE_PX) tap.current = null;
     const state = pinch.current;
     if (!state?.pointers.has(event.pointerId)) return;
     state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -197,12 +259,31 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
     if (next !== zoom) onZoom(next);
   }
   function onPointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.type === "pointerup") tapAt(event); else tap.current = null;
     pinch.current?.pointers.delete(event.pointerId);
     if (!pinch.current?.pointers.size) pinch.current = null;
   }
 
   // Keyboard: + / − / 0 zoom (the one-finger way besides a double tap); the arrow keys scroll while zoomed.
   function onKey(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const arrow = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, [number, number] | undefined>)[event.key];
+    if (arrow && !event.altKey && !event.ctrlKey && !event.metaKey && cellsWithPhoto.length) {
+      // Zoomed in with no ring yet, the arrows scroll the canvas as they always did.
+      if (active === null && zoom > 1) return;
+      event.preventDefault();
+      const from = active ?? [...cellsWithPhoto].sort((a, b) => a - b)[0];
+      setActive(active === null ? from : moveCell(from, arrow, manifest.columns, cellsWithPhoto) ?? from);
+      return;
+    }
+    if ((event.key === "Enter" || event.key === " ") && onOpen && cellsWithPhoto.length) {
+      event.preventDefault();
+      const cell = active ?? [...cellsWithPhoto].sort((a, b) => a - b)[0];
+      setActive(cell);
+      const tile = tiles.get(cell);
+      if (active !== null && tile) open(tile);
+      return;
+    }
+    if (event.key === "Escape" && active !== null) { setActive(null); return; }
     if (event.key === "+" || event.key === "=") onZoom(Math.min(3, zoom + 1));
     else if (event.key === "-") onZoom(Math.max(1, zoom - 1));
     else if (event.key === "0") onZoom(1);
@@ -211,13 +292,15 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   const tags = mark && zoom > 1 ? mine.map((cell, index) => { const { x, y } = cellAt(cell); return { cell, n: index + 1, x: x + geometry.cell / 2, y }; }) : [];
   return <div className={css.wrap}>
     {/* Zoomed in, the canvas scrolls: focusable, so the arrow keys move it too (audit T-M04, WCAG 2.1.1). */}
-    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label={t("momen.mos.canvas")} tabIndex={0} style={{ "--ratio": `${manifest.columns} / ${manifest.rows}` } as CSSProperties} onKeyDown={onKey} onDoubleClick={() => onZoom(zoom > 1 ? 1 : 2)}
+    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label={t("momen.mos.canvas")} tabIndex={0} style={{ "--ratio": `${manifest.columns} / ${manifest.rows}` } as CSSProperties} aria-describedby={onOpen ? `${helpId}` : undefined} onKeyDown={onKey} onDoubleClick={() => { window.clearTimeout(waiting.current); onZoom(zoom > 1 ? 1 : 2); }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
-      <div className={css.inner} style={{ width: width || "100%", height: height || "100%" }}>
+      <div ref={inner} className={css.inner} style={{ width: width || "100%", height: height || "100%" }}>
         <canvas ref={canvas} className={css.canvas} role="img" aria-label={label} />
         {tags.map(tag => <span key={tag.cell} className={css.tag} style={{ left: tag.x, top: tag.y }} aria-hidden>{tag.n}</span>)}
       </div>
     </div>
+    {onOpen && <span id={helpId} className={css.sr}>{t("momen.view.canvasHelp")}</span>}
+    <span className={css.sr} aria-live="polite">{active !== null ? t(tiles.has(active) ? "momen.view.cellHint" : "momen.view.cellEmpty", { where: cellLabel(manifest.cells[active], lang), n: active + 1 }) : ""}</span>
     {zoom > 1 && <div className={css.zoom}>
       <IconButton icon={Minus} label={t("momen.mos.zoomOut")} className={css.zoomBtn} onClick={() => onZoom(Math.max(1, zoom - 1))} />
     </div>}
