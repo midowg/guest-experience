@@ -169,7 +169,7 @@ biru (ikon, tautan, fokus), `accent` kartu acara; **emas tetap** (identitas WAM)
 - `<SegmentDots total current done label fill />`: segmen hari (header Beranda) dan progres misi (`fill`).
 - `<BigNumber value unit size="hero|xl|l|m" tone="gold" />`: angka Barlow dengan satuan kapital ("340 POIN").
 - `<KeyValue label value />` + `<KeyValueRow>`: petak label-nilai (.kv/.tele).
-- `<TopBar title eyebrow>` (judul tab besar dengan label di atasnya) dan `<TopBar variant="home" day indicator>`; shell mengisi `indicator` dengan slot yang digambar layar lewat `<ShellIndicator>` (indikator slide Beranda). Kartu sekunder Beranda (Kuis live, Misi, Jejak karbon, Momen, Mozaik) = SATU carousel (`BerandaCarousel`): 90 % lebar, snap, tinggi sama, indikator titik di bawah; tanpa grid dua kolom.
+- `<TopBar title eyebrow>` (judul tab besar dengan label di atasnya) dan `<TopBar variant="home" day indicator>`; shell mengisi `indicator` dengan slot yang digambar layar lewat `<ShellIndicator>` (indikator slide Beranda).
 - `Pill tone="gold"`, `IconBox tone="gold"`, `Text variant="hero|cap|cap-lg"`, `Text color="gold"`.
 
 Perubahan perilaku komponen lama (API tetap): Button primary = emas berteks gelap, tinggi 52; `tonal` = garis emas;

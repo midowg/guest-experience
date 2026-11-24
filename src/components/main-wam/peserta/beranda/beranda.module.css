@@ -68,28 +68,11 @@
 
 .nextTime { flex: none; min-width: 54px; font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
 
-/* The secondary cards (Kuis live, Misi, Jejak karbon, Momen, Mozaik) as one carousel: each card 90 % wide with the next one peeking in, one snap per card, no scrollbar, no two columns; all as tall as the tallest (stretch). It bleeds to the screen edges like the session slides. */
-.summary { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
-.sumTrack {
-  display: flex; align-items: stretch; gap: var(--mw-space-8); overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
-  margin-left: calc(var(--mw-space-16) * -1); margin-right: calc(var(--mw-space-16) * -1); padding-left: 5%; padding-right: 5%;
-  /* room above and below for the cards' glow, which an overflow container would cut */
-  margin-top: calc(var(--mw-space-16) * -1); margin-bottom: calc(var(--mw-space-16) * -1); padding-top: var(--mw-space-16); padding-bottom: var(--mw-space-16);
-}
-.sumTrack::-webkit-scrollbar { display: none; }
-.sumPanel { flex: 0 0 100%; min-width: 0; display: flex; scroll-snap-align: center; scroll-snap-stop: always; }
-.sumPanel:empty { display: none; }
-.sumPanel > * { flex: 1 1 auto; min-width: 0; }
-/* One card alone is the whole row, with no indicator. */
-.sumTrack[data-single] { overflow: visible; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; scroll-snap-type: none; }
-.sumTrack[data-single] .sumPanel { flex-basis: 100%; }
-.sumDots { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
-.sumDot { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: var(--mw-radius-8); }
-.sumDot > i { display: block; width: 8px; height: 4px; border-radius: 4px; background: var(--mw-outline-strong); opacity: 0.8; transition: width var(--mw-motion-base), background-color var(--mw-motion-base); }
-.sumDot[data-active] { width: 40px; }
-.sumDot[data-active] > i { width: 24px; height: 5px; background: var(--mw-gold); opacity: 1; }
-.sumDot:focus-visible { outline: 2px solid var(--mw-primary); outline-offset: -2px; }
-@media (prefers-reduced-motion: reduce) { .sumDot > i { transition: none; } }
+/* The pair of tiles under Misi: Jejak karbon and Momen side by side (prototipe .pair2); one alone fills the row. */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--mw-space-12); }
+.pair:empty { display: none; }
+.pair > :only-child { grid-column: 1 / -1; }
+@media (max-width: 299.98px) { .pair { grid-template-columns: 1fr; } }
 
 /* A contextual card that is not an announcement (prototipe .mc / .quizcard): eyebrow, big title, one line, one gold button. */
 .ctx { gap: var(--mw-space-8); }
