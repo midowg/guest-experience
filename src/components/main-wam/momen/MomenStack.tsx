@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Hourglass, Images, LayoutGrid, MoveHorizontal } from "lucide-react";
+import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid2x2, Hourglass, Images, LayoutGrid, MoveHorizontal } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ShellActions, ShellChrome } from "@/components/main-wam/shell";
 import { Banner, Button, IconBox, IconButton, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
@@ -328,6 +328,7 @@ export function MomenStack(props: MomenStackProps) {
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }} />
       </div>
     </> : <ShellActions>
+      <IconButton variant="tonal" icon={Grid2x2} label={t("momen.gallery")} title={t("momen.gallery")} href={mainWamPath.gallery()} className={css.galleryBtn} />
       <Button size="m" icon={<Camera />} href={mainWamPath.camera()} className={css.photoBtn}><span className={css.photoLabel}>{t("momen.photoShort")}</span></Button>
     </ShellActions>}
 

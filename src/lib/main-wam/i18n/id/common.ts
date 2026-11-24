@@ -62,6 +62,7 @@ export const idCommon = {
   "screen.notifications": "Notifikasi",
   "screen.sessionDetail": "Detail sesi",
   "screen.camera": "Kamera",
+  "screen.gallery": "Galeri",
   "screen.mosaic": "Mozaik WAM 2026",
   "screen.room": "Kamar",
   "screen.carbon": "Jejak karbon",

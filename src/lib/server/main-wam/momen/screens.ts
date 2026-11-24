@@ -1,14 +1,16 @@
 import "server-only";
 import { visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
 import { canSee } from "@/lib/main-wam/momen/access";
-import { parsePhotoId, parseSession, STACK_PAGE } from "@/lib/main-wam/momen/filters";
+import { GALLERY_PAGE, parsePhotoId, parseSession, STACK_PAGE } from "@/lib/main-wam/momen/filters";
 import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
 import { UMUM, type FeedPhoto, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { MwSession, PhotoStatus } from "@/lib/main-wam/types";
 import type { MainWamContext } from "../gate";
 import { readLang } from "../lang";
 import { allSessions } from "../read";
+import type { TaggedAnswer } from "@/lib/main-wam/momen/tagged";
 import { feedPhotos, listFeed, photoRecord, sessionCounts } from "./feed";
+import { listTagged } from "./tagged";
 
 /*
  * What each Momen screen needs from the server for its first paint (the client continues with the
@@ -93,6 +95,36 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
   }
   const page = await listFeed(context, { view, session: null, mode: "baru", limit: STACK_PAGE });
   return { ...base, mode: "baru", items: page.items, next: page.next, total: page.total, startIndex: 0, offset: 0, migrated: settings.migrated && page.migrated };
+}
+
+export type GalleryScreenData = {
+  /** The tab it opens on (?tab=ditandai). */
+  tab: "fotoku" | "ditandai";
+  /** Fotoku: the person's own photos (any status), the first page. */
+  own: { items: FeedPhoto[]; next: string | null; total: number; migrated: boolean };
+  /** Ditandai: photos of others that tag the person, the first page (empty before migration 202611300001). */
+  tagged: TaggedAnswer;
+  /** The sessions' names for a photo's details. */
+  sessions: { id: string; title: string }[];
+  mozaik: boolean;
+  migrated: boolean;
+  nowIso: string;
+};
+
+/** M05 Galeri (the icon in Momen's bar): Fotoku and Ditandai, each a grid of three with "Muat lagi" past 30. */
+export async function galleryScreen(context: MainWamContext, search: Search, now = new Date()): Promise<GalleryScreenData> {
+  const { settings } = context;
+  const tab = (Array.isArray(search.tab) ? search.tab[0] : search.tab) === "ditandai" ? "ditandai" : "fotoku";
+  const [own, tagged, sessions] = await Promise.all([
+    listFeed(context, { view: "saya", session: null, mode: "semua", limit: GALLERY_PAGE }),
+    // Never a reason to lose the Galeri: a trouble reading the tags is an empty Ditandai.
+    listTagged(context, { now }).catch(() => ({ items: [], next: null, total: 0, migrated: false } satisfies TaggedAnswer)),
+    publishedSessions(context),
+  ]);
+  return {
+    tab, own, tagged, sessions: sessions.map(session => ({ id: session.id, title: session.title })),
+    mozaik: settings.modules.mozaik, migrated: settings.migrated && own.migrated, nowIso: now.toISOString(),
+  };
 }
 
 export type CameraScreenData = {

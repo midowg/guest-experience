@@ -3,6 +3,7 @@ import { Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import stack from "./momen.module.css";
 import camera from "./camera.module.css";
 import mosaic from "./mosaic.module.css";
+import gallery from "./gallery.module.css";
 
 /*
  * Loading shapes of Momen's screens (loading.tsx), drawn inside the frame that stays: each the
@@ -43,6 +44,16 @@ export function MosaicSkeleton() {
       <Skeleton shape="block" className={mosaic.skel} />
       <Skeleton shape="block" height={56} style={{ borderRadius: 16 }} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}><Skeleton shape="title" width="50%" /><Skeleton width="100%" /></div>
+    </SkeletonGroup>
+  </ScreenContent>;
+}
+
+/** M05 memuat: the two tabs and a grid of grey squares. */
+export function GallerySkeleton() {
+  return <ScreenContent>
+    <SkeletonGroup label="Memuat galeri" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Skeleton shape="block" height={44} style={{ borderRadius: 999 }} />
+      <div className={gallery.skeletonGrid}>{Array.from({ length: 12 }, (_, index) => <Skeleton key={index} shape="block" />)}</div>
     </SkeletonGroup>
   </ScreenContent>;
 }

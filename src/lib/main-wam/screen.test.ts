@@ -52,6 +52,8 @@ describe("Main WAM's frame, from the address alone", () => {
     const cases: [string, string, string, string][] = [
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
       [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
+      [mainWamPath.gallery(), "momen", "Galeri", mainWamPath.moments()],
+      [mainWamPath.gallery("ditandai"), "momen", "Galeri", mainWamPath.moments()],
       [mainWamPath.room, "saya", "Kamar", mainWamPath.me],
       [mainWamPath.carbon(), "beranda", "Jejak karbon", mainWamPath.home],
       [mainWamPath.carbon("saya"), "saya", "Jejak karbon", mainWamPath.me],
@@ -76,7 +78,7 @@ describe("Main WAM's frame, from the address alone", () => {
 
   it("shows the bottom bar on the tab roots alone, and the bell on Beranda's root alone, for every address the app has", () => {
     const addresses = [mainWamPath.home, mainWamPath.agenda(), mainWamPath.agenda(2), mainWamPath.agendaPrep(3), mainWamPath.moments(), mainWamPath.me, mainWamPath.committee,
-      mainWamPath.notifications, mainWamPath.missions, mainWamPath.mosaic(), mainWamPath.camera(), mainWamPath.room, mainWamPath.travel("pulang"), mainWamPath.guides, mainWamPath.guide("denah-venue"),
+      mainWamPath.notifications, mainWamPath.missions, mainWamPath.mosaic(), mainWamPath.gallery(), mainWamPath.camera(), mainWamPath.room, mainWamPath.travel("pulang"), mainWamPath.guides, mainWamPath.guide("denah-venue"),
       mainWamPath.settings, mainWamPath.help, mainWamPath.carbon(), mainWamPath.carbon("saya"), mainWamPath.awards, mainWamPath.scan, mainWamPath.silentMeeting(), mainWamPath.rundownLive(2), mainWamPath.announce];
     const roots = new Set([mainWamPath.home, mainWamPath.agenda(), mainWamPath.agenda(2), mainWamPath.agendaPrep(3), mainWamPath.moments(), mainWamPath.me, mainWamPath.committee]);
     for (const path of addresses) {

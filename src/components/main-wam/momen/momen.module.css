@@ -15,6 +15,8 @@
 /* Foto at the end of the bar: 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons);
    its word gives way (it stays the button's name for a screen reader) on a narrow screen (under 360 px, or zoom 200%), so "Terbaru" keeps its line. */
 .photoBtn { margin-right: calc(var(--mw-space-8) + 2px); }
+/* Galeri, an icon on its own left of Foto: 44 round, 4 px between the two. */
+.galleryBtn { margin-right: var(--mw-space-4); }
 @media (max-width: 359.98px) { .photoBtn { width: 44px; min-height: 44px; padding-inline: 0; gap: 0; }
   .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 

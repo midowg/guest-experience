@@ -2,6 +2,7 @@ import { samplePeople, sampleSessionIds } from "../sample";
 import { letterCells, cellOrder } from "./mosaic";
 import { HEART, type ReactionCount } from "./reactions";
 import { demoPicture } from "./viewer";
+import type { TaggedPhoto } from "./tagged";
 import type { FeedPhoto, MosaicManifest, Reactor, SessionCount } from "./types";
 
 /*
@@ -58,6 +59,10 @@ export const sampleGalleryAll: FeedPhoto[] = (["rani", "fajar", "sari", "bima", 
 /** Fotoku (in the Mozaik): Rani's six photos (one in review). */
 export const sampleGalleryMine: FeedPhoto[] = [0, 1, 2, 3, 4, 5].map(index => photo(300 + index, ["rani", D2, `0${9 - Math.floor(index / 3)}:${String(50 - index * 7).padStart(2, "0")}`, index,
   { status: index === 4 ? "ditinjau" : "tampil", seen: true }]));
+
+/** Ditandai (in the Galeri): photos of colleagues that tag Rani, with who else is on them (the demo pictures, never real ones). */
+export const sampleTagged: TaggedPhoto[] = ([["fajar", ["Sari", "Dimas"]], ["sari", []], ["bima", ["Ayu"]], ["lina", ["Raka", "Tari", "Wawan"]], ["ayu", []]] as const)
+  .map(([key, withNames], index) => ({ ...photo(400 + index, [key, D2, `1${index}:${String(40 - index * 9).padStart(2, "0")}`, index, { seen: true }]), withNames: [...withNames] }));
 
 /** "Saring sesi" (M01__status#pilih-sesi): only sessions with photos, Umum last. */
 export const sampleSessionCounts: SessionCount[] = [

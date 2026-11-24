@@ -84,12 +84,17 @@ describe("the stack", () => {
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
   const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
-  it("has only the Foto button in the bar (no Galeri anywhere, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
+  it("has Galeri (an icon, left) and Foto in the bar, nothing to Mozaik, and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Foto", "/wam2026/momen/kamera"]]);
-    expect(screen.queryByRole("link", { name: "Galeri" })).toBeNull();
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam2026/momen/galeri"], ["Foto", "/wam2026/momen/kamera"]]);
+    // The icon alone: no word, a tooltip, the name for a screen reader.
+    const gallery = within(slot).getByRole("link", { name: "Galeri" });
+    expect(gallery.textContent).toBe("");
+    expect(gallery.getAttribute("title")).toBe("Galeri");
+    expect(gallery.querySelector("svg")).toBeTruthy();
+    expect(slot.querySelector('a[href*="mozaik"]')).toBeNull();
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();

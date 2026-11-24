@@ -1,0 +1,26 @@
+/* M05 Galeri (prototype .wam-photogrid, .wam-photo): two tabs, a grid of three each. Tokens only. */
+.tabs { min-width: 0; }
+.panel { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; }
+.caption { margin: 0; font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mw-space-4); margin: 0; padding: 0; list-style: none; }
+.tile {
+  position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--mw-radius-8); overflow: hidden;
+  background: var(--mw-surface-2); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tile:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.tile:active { opacity: 0.85; }
+.fill { position: absolute; inset: 0; }
+.img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The status and the name sit on the photo's foot: the status is a pill, a long name gives way with an ellipsis (its full form is the tile's name for a screen reader and the tooltip). */
+.state {
+  position: absolute; left: var(--mw-space-4); bottom: var(--mw-space-4); z-index: 1; max-width: calc(100% - var(--mw-space-8));
+  padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); font: var(--mw-type-caption-strong);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.more { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); min-height: var(--mw-touch); }
+.failed { margin: 0; font: var(--mw-type-caption); color: var(--mw-error); text-align: center; }
+.together { margin: 0; text-align: center; font: var(--mw-type-body); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.statusPill { display: flex; justify-content: center; }
+.danger { color: var(--mw-error); }
+.skeletonGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mw-space-4); }
+.skeletonGrid > * { aspect-ratio: 1; height: auto !important; width: 100% !important; border-radius: var(--mw-radius-8); }

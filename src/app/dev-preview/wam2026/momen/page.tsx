@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
 import { previewLang } from "@/components/main-wam/dev/lang";
@@ -6,15 +6,16 @@ import { t } from "@/lib/main-wam/i18n";
 import { demoPicture } from "@/lib/main-wam/momen/viewer";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CameraScreen, type CameraDemo } from "@/components/main-wam/momen/CameraScreen";
+import { Gallery } from "@/components/main-wam/momen/Gallery";
 import { Mosaic } from "@/components/main-wam/momen/Mosaic";
 import { MomenStack, type MomenStackProps, type StackDemo } from "@/components/main-wam/momen/MomenStack";
-import { MosaicSkeleton, StackSkeleton } from "@/components/main-wam/momen/Skeletons";
+import { GallerySkeleton, MosaicSkeleton, StackSkeleton } from "@/components/main-wam/momen/Skeletons";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { List, ListRow } from "@/components/main-wam/ui";
 import { Images } from "lucide-react";
 import { flushedText, newPhotosText, sentText } from "@/lib/main-wam/momen/stack";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
-import { sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleReactions, sampleReactors } from "@/lib/main-wam/momen/sample";
+import { sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleTagged, sampleReactions, sampleReactors } from "@/lib/main-wam/momen/sample";
 import { sampleSessionIds, sampleSessions, sampleTime } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
 import { DemoToast } from "./DemoToast";
@@ -29,6 +30,7 @@ export const dynamic = "force-dynamic";
 const LAYAR = [
   "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong", "M01-belum-dilihat", "M01-sebagian", "M01-semua-dilihat",
   "M02-dari-galeri", "M03", "M04",
+  "M05", "M05-status", "M05-kosong", "M05-ditandai", "M05-ditandai-kosong", "M05-ditandai-banyak", "M05-memuat",
   "M06", "M06-fotoku", "M06-fotoku-status", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
   "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
   "P01-kartu", "P04-baris", "M01-memuat-halaman",
@@ -93,7 +95,22 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M04": return at(momen, <MomenStack {...stack({ demo: { sheet: "lapor" } })} />);
   }
 
-  /* M06: Mozaik, with Fotoku (own photos; Galeri was removed on 25 Nov 2026). */
+  /* M05: Galeri (the icon in Momen's bar): Fotoku and Ditandai. */
+  const galeri = mainWamPath.gallery();
+  const empty = { items: [], next: null, total: 0, migrated: true };
+  const gallery = (over: Partial<ComponentProps<typeof Gallery>> = {}) => <Gallery tab="fotoku" own={{ items: sampleGalleryMine, next: null, total: sampleGalleryMine.length, migrated: true }}
+    tagged={{ items: sampleTagged, next: null, total: sampleTagged.length, migrated: true }} sessions={sessions.map(session => ({ id: session.id, title: session.title }))} mozaik migrated nowIso={pemaparanNow.toISOString()} demo {...over} />;
+  switch (layar) {
+    case "M05": return at(galeri, gallery());
+    case "M05-status": return at(galeri, gallery({ own: { items: sampleGalleryMine.map((photo, index) => (index === 0 ? { ...photo, status: "ditinjau" as const } : index === 1 ? { ...photo, status: "disembunyikan" as const } : photo)), next: null, total: sampleGalleryMine.length, migrated: true } }));
+    case "M05-kosong": return at(galeri, gallery({ own: empty }));
+    case "M05-ditandai": return at(mainWamPath.gallery("ditandai"), gallery({ tab: "ditandai" }));
+    case "M05-ditandai-kosong": return at(mainWamPath.gallery("ditandai"), gallery({ tab: "ditandai", tagged: empty }));
+    case "M05-ditandai-banyak": return at(mainWamPath.gallery("ditandai"), gallery({ tab: "ditandai", tagged: { items: Array.from({ length: 30 }, (_, index) => ({ ...sampleTagged[index % sampleTagged.length], id: `00000000-0000-4000-8c00-${String(index).padStart(12, "0")}` })), next: "t~2027-01-05T08:00:00+07:00~00000000-0000-4000-8c00-000000000029", total: 41, migrated: true } }));
+    case "M05-memuat": return at(galeri, <GallerySkeleton />);
+  }
+
+  /* M06: Mozaik, with Fotoku (own photos; a small row under the mosaic). */
   const mozaik = mainWamPath.mosaic();
   switch (layar) {
     case "M06": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);

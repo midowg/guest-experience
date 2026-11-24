@@ -58,6 +58,7 @@ export const enCommon: Record<keyof typeof idCommon, string> = {
   "screen.notifications": "Notifications",
   "screen.sessionDetail": "Session details",
   "screen.camera": "Camera",
+  "screen.gallery": "Gallery",
   "screen.mosaic": "WAM 2026 Mosaic",
   "screen.room": "Room",
   "screen.carbon": "Carbon footprint",

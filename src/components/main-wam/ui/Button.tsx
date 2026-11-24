@@ -60,7 +60,7 @@ const ICON_VARIANT: Record<IconButtonVariant, string> = {
  * "Kembali", "Tutup", "Notifikasi, 3 belum dibaca". `pressed` makes it a toggle (aria-pressed);
  * with `liked` a pressed heart fills red.
  */
-export function IconButton({ icon, label, variant = "standard", size = 44, pressed, liked, badge, disabled, href, external, onClick, className, ref, ...aria }: ActionProps & AriaAttributes & {
+export function IconButton({ icon, label, variant = "standard", size = 44, pressed, liked, badge, disabled, href, external, onClick, className, title, ref, ...aria }: ActionProps & AriaAttributes & {
   icon: IconProp;
   /** Spoken name; include a count when there is a badge ("Notifikasi, 3 belum dibaca"). */
   label: string;
@@ -74,9 +74,11 @@ export function IconButton({ icon, label, variant = "standard", size = 44, press
   badge?: number | "dot";
   disabled?: boolean;
   className?: string;
+  /** A tooltip on hover (a mouse or keyboard user); the spoken name stays `label`. */
+  title?: string;
   ref?: Ref<HTMLElement>;
 }) {
-  return <Pressable ref={ref} href={href} external={external} onClick={onClick} disabled={disabled} asButton aria-label={label} aria-pressed={pressed}
+  return <Pressable ref={ref} href={href} external={external} onClick={onClick} disabled={disabled} asButton aria-label={label} aria-pressed={pressed} title={title}
     className={cx(css.icon, ICON_VARIANT[variant], size === 56 && css.icon56, liked && css.liked, className)} {...aria}>
     <KitIcon icon={icon} />
     {badge !== undefined && <Badge className={css.badge} dot={badge === "dot"} count={typeof badge === "number" ? badge : undefined} />}

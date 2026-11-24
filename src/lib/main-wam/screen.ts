@@ -75,6 +75,7 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
     case "momen":
       if (!second) return { tab: "momen", level: "akar", title: say("screen.latest"), eyebrow: say("screen.moments") };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: say("screen.camera"), back: momen, camera: true };
+      if (second === "galeri") return { tab: "momen", level: "detail", title: say("screen.gallery"), back: momen };
       if (second === "mozaik") return { tab: "momen", level: "detail", title: say("screen.mosaic"), back: momen };
       return { tab: "momen", level: "detail", title: say("screen.moments"), back: momen };
     case "saya": {

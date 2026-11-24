@@ -543,6 +543,8 @@ export const mainWamPath = {
   moments: (filter: MainWamMomentsFilter = {}) => `${MAIN_WAM_PATH}/momen${mwQuery(filter)}`,
   /** U01–U05 Kamera: `sesi` overrides the automatic tag ("umum" = no tag). */
   camera: (filter: { sesi?: string } = {}) => `${MAIN_WAM_PATH}/momen/kamera${mwQuery(filter)}`,
+  /** M05 Galeri (the icon in Momen's bar): the tabs Fotoku (default) and Ditandai (the photos others tagged me in). */
+  gallery: (tab?: "ditandai") => `${MAIN_WAM_PATH}/momen/galeri${mwQuery({ tab: tab === "ditandai" ? tab : undefined })}`,
   /** M06 Mozaik; `mark` turns "Tandai fotoku" on. */
   mosaic: (mark = false) => `${MAIN_WAM_PATH}/momen/mozaik${mwQuery({ tandai: mark ? "1" : undefined })}`,
 
@@ -611,6 +613,8 @@ export const mainWamApi = {
   photoStart: `${MAIN_WAM_API}/momen/unggah`,
   /** POST {key, token, …}: the photo is uploaded; check it and keep it. */
   photoConfirm: `${MAIN_WAM_API}/momen/simpan`,
+  /** GET ?sebelum=<cursor>: one page of the photos others tagged the person in (Galeri, tab Ditandai). */
+  taggedPhotos: (before?: string) => `${MAIN_WAM_API}/momen/ditandai${mwQuery({ sebelum: before })}`,
   /** POST {ids}: photos the person has seen in the stack. */
   photosSeen: `${MAIN_WAM_API}/momen/dilihat`,
   /** GET: who took one photo the person may see, its session and time (the viewer); DELETE: Batalkan (within 5 s) or Hapus foto (owner). */
