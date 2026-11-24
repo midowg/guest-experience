@@ -55,7 +55,7 @@
 
 /* Fotoku: the person's own photos (also the ones not in the mosaic yet), a small row under the mark button. */
 .ownBox { display: flex; flex-direction: column; width: 100%; gap: var(--mw-space-8); }
-.ownTitle { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-title-small, 700 16px/22px var(--mw-font-sans)); color: var(--mw-text-1); }
+.ownTitle { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-subtitle); color: var(--mw-text-1); }
 .ownCount { font: var(--mw-type-caption); color: var(--mw-text-2); }
 .own { display: grid; width: 100%; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--mw-space-8); margin: 0; padding: 0; list-style: none; }
 .own > li { min-width: 0; }
