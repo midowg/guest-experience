@@ -28,7 +28,7 @@ type State = {
   signal: Record<number, string>;
   /** The name picked for each roommate (their key → the picked person's key). */
   guess: Record<string, string>;
-  arrived: boolean; change: string;
+  arrived: boolean;
   session: string; questions: Record<string, Question[]>; presenting: string | null; seq: number;
 };
 const noop = () => () => {};
@@ -43,7 +43,7 @@ function fresh(view: MissionView): State {
   return {
     done: { kal: false, sig: false },
     kalIdx: 0, pool: view.sentences.length ? scrambled(view.sentences[0]) : [], answer: [],
-    signal: {}, guess: {}, arrived: false, change: "",
+    signal: {}, guess: {}, arrived: false,
     session: "s1", questions, presenting: null, seq,
   };
 }
@@ -295,7 +295,6 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         title: "Sudah tiba?", subtitle: "Villa Cangkringan",
         body: <div className={css.sheetStack}>
           <p className={css.lead}>Data dari kuesionermu sudah ada, jadi tidak perlu diisi lagi.</p>
-          <label className={css.field}>Ada yang berubah? (boleh dikosongkan)<input type="text" value={s.change} placeholder="Contoh: ukuran kaos jadi L" onChange={event => update({ change: event.target.value })} /></label>
         </div>,
         footer: <button type="button" className={`${css.btn} ${css.primary}`} onClick={() => { update({ arrived: true }); close(); window.scrollTo({ top: 0, behavior: "smooth" }); setToast(hod ? "Selamat datang · kamarmu terbuka" : "Selamat datang"); }}>Ya, saya sudah tiba</button>,
       };

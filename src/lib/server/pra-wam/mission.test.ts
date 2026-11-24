@@ -6,6 +6,9 @@ vi.mock("../supabase/admin", () => ({
   createPrivilegedClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: fake.sheet ? { value: fake.sheet } : null, error: null }) }) }) }) }),
 }));
 vi.mock("./hod", () => ({ hodStanding: async () => ({ isHod: fake.hod, unitIds: [] }) }));
+// Who heads a department: everyone in the made-up list but "Dodi Lima" (a CoS, say).
+vi.mock("./appraisal", () => ({ listPeople: async () => ["Ani Satu", "Ina Dua", "Budi Tiga", "Cici Empat", "Eko Enam", "Dodi Lima"].map(name => ({ id: `id-${name}`, name: name.split(" ")[0], fullName: name, department: "Dept", active: true })) }));
+vi.mock("./leads", () => ({ listLeads: async () => ({ byPerson: new Map(["Ani Satu", "Ina Dua", "Budi Tiga", "Cici Empat", "Eko Enam"].map(name => [`id-${name}`, { departments: ["Dept"], lead: false }])) }) }));
 
 const { missionFor } = await import("./mission");
 const person = (name: string, room: string) => ({ name, nick: name.split(" ")[0], dept: "Dept", room, sleep: "22.00", wake: "05.00", sents: [3], hints: ["a", "b", "c"] });
@@ -13,7 +16,7 @@ const member = (name: string, patch: Record<string, unknown> = {}) => ({ id: `id
 
 beforeEach(() => {
   fake.hod = false;
-  fake.sheet = { rooms: { A: "A3", B: "B3" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A"), person("Budi Tiga", "B"), person("Cici Empat", "B")], bod: [{ name: "Ceo Utama", sents: [1], ceo: true }] };
+  fake.sheet = { rooms: { A: "A3", B: "B3", C: "B4" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A"), person("Budi Tiga", "B"), person("Cici Empat", "B"), person("Dodi Lima", "C"), person("Eko Enam", "C")], bod: [{ name: "Ceo Utama", sents: [1], ceo: true }] };
 });
 
 describe("missionFor", () => {
@@ -27,7 +30,8 @@ describe("missionFor", () => {
     const names = view?.room?.mates[0].questions.flatMap(question => question.choices.map(choice => choice.name)) ?? [];
     expect(names).toContain("Ina Dua");
     expect(names).not.toContain("Ani Satu");
-    expect(names.filter(name => name !== "Ina Dua").every(name => ["Budi Tiga", "Cici Empat"].includes(name))).toBe(true);
+    // The other names are HoD only: Dodi Lima (not heading a department) is never one of them.
+    expect(names.filter(name => name !== "Ina Dua").every(name => ["Budi Tiga", "Cici Empat", "Eko Enam"].includes(name))).toBe(true);
     expect(JSON.stringify(view)).not.toContain("B3");
   });
 

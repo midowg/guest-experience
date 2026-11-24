@@ -35,8 +35,26 @@ export type CarbonFormProps = {
  * calculator (CarbonCalculator: a grid of tiles, the panitia's values locked, the person's own
  * fields, the total growing on top), then how it is counted with the sources, and small habits.
  */
-export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonFormProps }) {
+export function CarbonCard({ view, form, compact = false }: { view: CarbonView; form?: CarbonFormProps; compact?: boolean }) {
   const [open, setOpen] = useState(false);
+  const sheet = open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon">
+    <CarbonDetail form={form} onSaved={() => setOpen(false)} />
+  </Sheet>;
+  // Beranda (24 Nov 2026): one row the size of the other cards (Kamar, Apa itu WAM?), still green;
+  // the figure on its line, the parts and the calculator in the sheet.
+  if (compact) {
+    const line = view.kind === "ada" ? `${view.total.value} ${view.total.unit} · perkiraan` : "Angkamu muncul setelah panitia mengisi perjalanan.";
+    const inner = <>
+      <span className={css.badge}><Leaf aria-hidden /></span>
+      <span className={css.rowText}><strong>Jejak karbon</strong><span>{line}</span></span>
+      {view.kind === "ada" && <ChevronRight className={css.rowChevron} aria-hidden />}
+    </>;
+    if (view.kind === "belum") return <section className={`${css.card} ${css.cardRow} ${css.cardWaiting}`} aria-label="Jejak karbon">{inner}</section>;
+    return <>
+      <button type="button" className={`${css.card} ${css.cardRow}`} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Jejak karbon: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>{inner}</button>
+      {sheet}
+    </>;
+  }
   if (view.kind === "belum") return <section className={`${css.card} ${css.cardWaiting}`} aria-label="Jejak karbon">
     <Motif />
     <CardHead />
@@ -66,9 +84,7 @@ export function CarbonCard({ view, form }: { view: CarbonView; form?: CarbonForm
         })}
       </span>
     </button>
-    {open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon">
-      <CarbonDetail form={form} onSaved={() => setOpen(false)} />
-    </Sheet>}
+    {sheet}
   </>;
 }
 

@@ -8,13 +8,14 @@ import { CarbonCard } from "./CarbonCard";
 
 /**
  * Beranda's Jejak karbon (24 Nov 2026): the card for the signed-in participant, the panitia's setup
- * and their room size from the server, their own answer saved with PUT /api/wam/carbon. After Simpan
+ * and their room size from the server, their own answer saved with PUT /api/wam/carbon. A row the size
+ * of Beranda's other cards; the sheet holds the parts and the calculator. After Simpan
  * the card shows the new figure at once, without reloading the page.
  */
 export function CarbonHome({ setup, occupants, travel: saved }: { setup: CarbonSetup; occupants: number; travel: CarbonTravel | null }) {
   const [travel, setTravel] = useState(saved);
   const inputFor = (answer: CarbonTravel | null) => personCarbonInput(setup, answer, occupants);
-  return <CarbonCard view={carbonView(inputFor(travel))} form={{
+  return <CarbonCard compact view={carbonView(inputFor(travel))} form={{
     trip: setup.trip, nights: setup.settings.nights, occupants, meals: setup.settings.mealsPerPerson,
     travel, open: setup.formOpen, inputFor,
     onSave: async answer => {

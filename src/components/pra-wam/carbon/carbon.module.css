@@ -16,6 +16,12 @@
 .card:active { transform: scale(.985); }
 .card:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 3px; }
 .cardWaiting { cursor: default; }
+/* Beranda's row (24 Nov 2026): the size of the other cards there (16px padding, a 40px tile, two lines). */
+.card.cardRow { flex-direction: row; align-items: center; gap: 12px; min-height: 44px; padding: 16px; }
+.rowText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rowText strong { font: 600 16px/22px var(--pw-body); color: var(--on-eco); }
+.rowText span { font: 500 14px/20px var(--pw-body); color: var(--on-eco-2); }
+.rowChevron { flex: none; width: 20px; height: 20px; color: var(--on-eco-2); }
 .waiting { margin: 0; font: 500 16px/24px var(--pw-body); color: var(--on-eco-2); }
 
 .motif { position: absolute; right: -22px; bottom: -26px; width: 150px; height: 150px; z-index: -1; pointer-events: none; fill: color-mix(in srgb, var(--on-eco) 7%, transparent); stroke: color-mix(in srgb, var(--on-eco) 16%, transparent); stroke-width: 2; stroke-linecap: round; }
