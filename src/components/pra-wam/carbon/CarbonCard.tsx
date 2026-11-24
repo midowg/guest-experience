@@ -37,7 +37,9 @@ export type CarbonFormProps = {
  */
 export function CarbonCard({ view, form, compact = false }: { view: CarbonView; form?: CarbonFormProps; compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  const sheet = open && <Sheet open onClose={() => setOpen(false)} title="Jejak karbon">
+  // Always in the page and only opened or closed, like Agenda's sheet (24 Nov 2026): a <dialog>
+  // inserted and shown in the same moment sat above the bottom bar on a phone.
+  const sheet = <Sheet open={open} onClose={() => setOpen(false)} title="Jejak karbon">
     <CarbonDetail form={form} onSaved={() => setOpen(false)} />
   </Sheet>;
   // Beranda (24 Nov 2026): one row the size of the other cards (Kamar, Apa itu WAM?), still green;
