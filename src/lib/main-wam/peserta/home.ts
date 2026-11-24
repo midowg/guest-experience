@@ -94,6 +94,44 @@ export function nowView({ sessions, now, event, absenOn, checkedIn, lang = "id" 
     : { ...base, status: "next", statusText: null, when: untilLabel(now, session.startsAt, lang), whenAt: session.startsAt, absen: false };
 }
 
+/* ── The slide of three cards ─────────────────────────────────────────────────────────────────── */
+
+/** A session on the slide's side cards ("Selesai" before the Sekarang card, "Akan datang" after it). */
+export type SlideSession = {
+  sessionId: string;
+  title: string;
+  /** "08.00–12.00". */
+  time: string;
+  place: string;
+  sessionKind: MwSession["kind"];
+};
+
+/** The cards beside the Sekarang card: the session that has just ended, and the one after the Sekarang card. */
+export type HomeSlides = { done: SlideSession | null; upcoming: SlideSession | null };
+
+const slideSession = (session: MwSession, lang: Lang): SlideSession =>
+  ({ sessionId: session.id, title: session.title, time: timeRange(session, lang), place: placeLine(session, lang), sessionKind: session.kind });
+
+/**
+ * The main card of Beranda is a slide of at most three cards: the session that has just ended (the
+ * last one of today to end), the Sekarang card (`view`), and the one that comes after it (the first
+ * of its day to start later). `sessions` is what the person may see (visibleSessions: no drafts, no
+ * Persiapan with module Ceklis off), already loaded for the Sekarang card, so this reads nothing more.
+ * A side card is null when there is none: nothing has ended today, or nothing follows. Without a
+ * Sekarang session ("Hari ini selesai", nothing published) there is nothing after it; its
+ * "Hari ini selesai" card already points at tomorrow.
+ */
+export function homeSlides(sessions: readonly MwSession[], now: Date, view: NowView, lang: Lang = "id"): HomeSlides {
+  const live = sessions.filter(isLive);
+  const today = wibDate(now.toISOString());
+  const current = view.kind === "sesi" ? live.find(session => session.id === view.sessionId) ?? null : null;
+  const done = live.filter(session => session.id !== current?.id && hasEnded(session, now) && wibDate(sessionEnd(session)) === today)
+    .sort((a, b) => Date.parse(sessionEnd(b)) - Date.parse(sessionEnd(a)) || Date.parse(b.startsAt) - Date.parse(a.startsAt) || b.sort - a.sort)[0];
+  const upcoming = current ? live.filter(session => session.id !== current.id && Date.parse(session.startsAt) > Date.parse(current.startsAt) && Date.parse(session.startsAt) > now.getTime() && wibDate(session.startsAt) === wibDate(current.startsAt))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.sort - b.sort)[0] : undefined;
+  return { done: done ? slideSession(done, lang) : null, upcoming: upcoming ? slideSession(upcoming, lang) : null };
+}
+
 /** How soon a real session must start to take the card from a meal that is on (P01__status: 07.10 Pemaparan, not Sarapan). */
 export const MEAL_GIVES_WAY_MINUTES = 90;
 
@@ -279,6 +317,8 @@ export type HomeData = {
   /** False before Main WAM's migration: "menunggu pembaruan sistem". */
   migrated: boolean;
   now: NowView;
+  /** The cards beside it on the slide: the session that has just ended, and the one after it. Left out: none. */
+  slides?: HomeSlides;
   /** The Sekarang card's session (for agen D's SessionAbsen), when it has one. */
   session: MwSession | null;
   card: HomeCardView | null;

@@ -8,12 +8,12 @@ import { ScreenContent } from "@/components/main-wam/shell";
 import { Card, CardHead } from "@/components/main-wam/ui";
 import { OfflineBanner, RefreshAt, RetryBanner } from "../Live";
 import { HomeCard } from "./HomeCard";
-import { NowCard } from "./NowCard";
+import { NowSlides } from "./NowSlides";
 import { PegasusMark } from "../PegasusMark";
 import css from "./beranda.module.css";
 
 /**
- * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: Kuis live's card first while a game is on, Sekarang (the gold
+ * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: Kuis live's card first while a game is on, the main card, a slide of at most three (Selesai, Sekarang, Akan datang; the Sekarang one is the gold
  * bracket card), one contextual
  * card, Misi, the pair Jejak karbon (green, while its module is on) and Momen side by side, and the Mozaik card
  * (module Mozaik). Other areas come in as slots, already rendered by the page. The pegasus watermark sits behind.
@@ -38,7 +38,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {slots.kuis}
     {!data.migrated
       ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
-      : !data.failed && <NowCard view={data.now} absen={slots.absen} serverNow={serverNow} ceklis={data.ceklis} />}
+      : !data.failed && <NowSlides data={data} absen={slots.absen} serverNow={serverNow} />}
     {data.card && <HomeCard card={data.card} serverNow={serverNow} />}
     {slots.misi}
     {/* Prototipe .pair2: Jejak karbon (green) and Momen side by side; one alone fills the row. */}

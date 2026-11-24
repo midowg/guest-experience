@@ -32,7 +32,7 @@ export default async function MainWamShellPreview({ searchParams }: { searchPara
   const address = SCREENS[layar] ?? SCREENS.beranda;
   const screen: MainWamScreen | null = mainWamScreen(address.split("?")[0]);
   return <MainWamTheme mode={mode === "dark" ? "dark" : mode === "system" ? "system" : "light"}>
-    <MainWamShell screen={screen} unread={3} badges={{ momen: 12 }} greeting={{ kicker: "Selamat pagi", name: "Rani", dayDots: { total: 4, current: 2, label: "Hari ke-2 dari 4" } }}>
+    <MainWamShell screen={screen} unread={3} badges={{ momen: 12 }} greeting={{ kicker: "Selamat pagi", name: "Rani", day: "Hari ke-2 dari 4" }}>
       {layar === "momen" ? <Momen /> : layar === "kamera" ? <Kamera /> : layar === "tugas" ? <Tugas /> : <Isi layar={layar} />}
     </MainWamShell>
   </MainWamTheme>;

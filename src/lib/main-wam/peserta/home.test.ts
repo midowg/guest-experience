@@ -6,7 +6,7 @@ import {
 } from "../sample";
 import type { MwSession } from "../types";
 import {
-  announcementCandidates, homeCardView, mealGivesWay, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, tripTitle, votingCandidates,
+  announcementCandidates, homeCardView, homeSlides, mealGivesWay, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, tripTitle, votingCandidates,
   type HomeCandidate,
 } from "./home";
 
@@ -159,5 +159,76 @@ describe("when Beranda refreshes by itself", () => {
     expect(nextChangeAt(sampleSessions, at("2027-01-05", "07:10"))).toBe(new Date("2027-01-05T07:30:00+07:00").toISOString());
     expect(nextChangeAt([] as MwSession[], sampleTime("pagi"), ["2027-01-05T09:00:00+07:00"])).toBe(new Date("2027-01-05T09:00:00+07:00").toISOString());
     expect(nextChangeAt(sampleSessions, at("2027-01-08", "12:00"))).toBeNull();
+  });
+});
+
+describe("the slide of three cards (homeSlides)", () => {
+  const D = "2027-01-05";
+  const mk = (id: string, start: string, end: string, extra: Partial<MwSession> = {}): MwSession =>
+    ({ ...sampleSessions[0], id, title: `Sesi ${id}`, startsAt: at(D, start).toISOString(), endsAt: at(D, end).toISOString(), sort: Number(id.replace(/\D/g, "")) || 0, status: "terbit", kind: "sesi", place: "Aula", optional: false, ...extra });
+  const list = [mk("a1", "08:00", "09:00"), mk("a2", "09:00", "10:00"), mk("a3", "10:00", "11:00"), mk("a4", "11:00", "12:00")];
+  const slides = (now: Date, sessions: readonly MwSession[] = list) =>
+    homeSlides(sessions, now, nowView({ sessions, now, event, absenOn: false, checkedIn: new Map() }));
+
+  it("a session is running: the one that has just ended before it, the one after it behind", () => {
+    const result = slides(at(D, "10:30"));
+    expect(result.done).toMatchObject({ sessionId: "a2", title: "Sesi a2", time: "09.00–10.00", place: "Aula", sessionKind: "sesi" });
+    expect(result.upcoming).toMatchObject({ sessionId: "a4", title: "Sesi a4" });
+  });
+
+  it("nothing has ended yet (before the first session of the day): no Selesai card, the Sekarang card is the next one", () => {
+    const result = slides(at(D, "07:30"));
+    expect(result.done).toBeNull();
+    expect(result.upcoming).toMatchObject({ sessionId: "a2" });
+  });
+
+  it("between sessions, no one running: the nearest next one is the Sekarang card, the one after it comes behind", () => {
+    const gap = [mk("a1", "08:00", "09:00"), mk("a2", "10:00", "11:00"), mk("a3", "12:00", "13:00")];
+    const now = at(D, "09:30");
+    expect(nowView({ sessions: gap, now, event, absenOn: false, checkedIn: new Map() })).toMatchObject({ kind: "sesi", sessionId: "a2", status: "next" });
+    const result = slides(now, gap);
+    expect(result.done).toMatchObject({ sessionId: "a1" });
+    expect(result.upcoming).toMatchObject({ sessionId: "a3" });
+  });
+
+  it("the last session of the day is running: the one before it, none after (tomorrow is not on the slide)", () => {
+    const result = slides(at(D, "11:30"));
+    expect(result.done).toMatchObject({ sessionId: "a3" });
+    expect(result.upcoming).toBeNull();
+  });
+
+  it("the day is over: the last one to end is the Selesai card beside 'Hari ini selesai', nothing after", () => {
+    const tomorrow = mk("b1", "08:00", "09:00");
+    tomorrow.startsAt = at("2027-01-06", "08:00").toISOString(); tomorrow.endsAt = at("2027-01-06", "09:00").toISOString();
+    const sessions = [...list, tomorrow];
+    const now = at(D, "20:00");
+    expect(nowView({ sessions, now, event, absenOn: false, checkedIn: new Map() })).toMatchObject({ kind: "selesai" });
+    const result = slides(now, sessions);
+    expect(result.done).toMatchObject({ sessionId: "a4" });
+    expect(result.upcoming).toBeNull();
+  });
+
+  it("a single session: the Sekarang card alone", () => {
+    expect(slides(at(D, "08:30"), [list[0]])).toEqual({ done: null, upcoming: null });
+    expect(slides(at(D, "08:30"), [])).toEqual({ done: null, upcoming: null });
+  });
+
+  it("yesterday's sessions do not make a Selesai card in the morning", () => {
+    const yesterday = mk("y1", "20:00", "21:00");
+    yesterday.startsAt = at("2027-01-04", "20:00").toISOString(); yesterday.endsAt = at("2027-01-04", "21:00").toISOString();
+    expect(slides(at(D, "07:30"), [yesterday, ...list]).done).toBeNull();
+  });
+
+  it("drafts are left out (only published sessions count), and a session without an end counts for 30 minutes", () => {
+    const draft = mk("d1", "10:30", "10:45", { status: "draf" });
+    expect(slides(at(D, "10:50"), [...list, draft]).done).toMatchObject({ sessionId: "a2" });
+    const point = mk("p1", "09:00", "09:00", { endsAt: null });
+    expect(slides(at(D, "09:40"), [list[0], point, list[2]]).done).toMatchObject({ sessionId: "p1" });
+  });
+
+  it("the session that is the Sekarang card is never also on a side", () => {
+    const now = at(D, "10:30");
+    const result = slides(now);
+    expect([result.done?.sessionId, result.upcoming?.sessionId]).not.toContain("a3");
   });
 });

@@ -3,7 +3,7 @@
   position: fixed; z-index: -1; left: 50%; bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom) + var(--mw-space-16)); width: min(100%, var(--mw-column)); height: 420px;
   transform: translateX(-50%); overflow: hidden; pointer-events: none;
 }
-.mark img { position: absolute; right: -120px; bottom: 0; width: 360px; max-width: none; height: auto; opacity: 0.05; }
+.mark img { position: absolute; right: -120px; bottom: 0; width: 360px; max-width: none; height: auto; opacity: var(--mw-motif-opacity); }
 .dark { display: none; }
 :global([data-mw-mode="dark"]) .light { display: none; }
 :global([data-mw-mode="dark"]) .dark { display: block; }

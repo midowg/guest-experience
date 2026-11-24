@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { IconButton } from "./Button";
-import { SegmentDots } from "./Brand";
 import { cx, type ActionProps, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
 import css from "./topbar.module.css";
@@ -22,7 +21,7 @@ type Common = {
  * - `variant="back"`: a detail or task screen: ‹ (to `backHref`, or `onBack`), the title left-aligned
  *   after it, 0–2 actions. A task screen may use ✕ instead (`backIcon`, `backLabel="Tutup"`). An
  *   empty title draws no heading; `label` then names the screen for screen readers (hidden h1).
- * - `variant="home"`: Beranda: greeting (a small capital label), the name in big capitals, "Hari ke-2 dari 4" (text and/or the segment dots), the bell at the end. No avatar.
+ * - `variant="home"`: Beranda: greeting (a small capital label), the name in big capitals, "HARI KE-2 DARI 4" as a small gold label, then at the end the slide indicator of the main card (`indicator`, up to three segments) and the bell. No avatar.
  * The page's h1 is in it. Safe area is the shell's job.
  */
 export function TopBar(props: Common & (
@@ -31,8 +30,8 @@ export function TopBar(props: Common & (
       /** The screen's name for screen readers when the bar shows no title (P04: "Detail sesi"); without either, no h1 here. */
       label?: string }
   | { variant: "home"; kicker: ReactNode; name: ReactNode; day?: ReactNode;
-      /** The event's days as segment dots before the bell ("Hari ke-2 dari 4": current 2, total 4); `label` is what screen readers say. */
-      dayDots?: { total: number; current: number; label: string } }
+      /** Before the bell: the slide indicator of Beranda's main card (the shell leaves a slot the screen draws into). */
+      indicator?: ReactNode }
 )) {
   const { actions, sticky, scrolled, className } = props;
   const base = cx(css.bar, sticky && css.sticky, scrolled && css.scrolled, className);
@@ -53,10 +52,10 @@ export function TopBar(props: Common & (
       <div className={css.homeText}>
         <span className={css.kicker}>{props.kicker}</span>
         <h1 className={css.name}>{props.name}</h1>
-        {props.day && (props.dayDots && props.day === props.dayDots.label ? <span className={shared.srOnly}>{props.day}</span> : <span className={css.day}>{props.day}</span>)}
+        {props.day && <span className={css.day}>{props.day}</span>}
       </div>
-      {(actions || props.dayDots) && <div className={css.homeEnd}>
-        {props.dayDots && <SegmentDots total={props.dayDots.total} current={props.dayDots.current} label={props.dayDots.label} />}
+      {(actions || props.indicator) && <div className={css.homeEnd}>
+        {props.indicator}
         {actions && <div className={css.end}>{actions}</div>}
       </div>}
     </header>;

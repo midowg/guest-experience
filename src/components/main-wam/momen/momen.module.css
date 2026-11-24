@@ -12,10 +12,12 @@
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .banner { margin-top: var(--mw-space-12); }
 
-/* The Foto button, alone beside the title: 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons); its word gives way
-   (it stays the button's name for a screen reader) when the bar is too narrow (zoom 200%). The way to Galeri is a text button under the reactions. */
-.photoBtn { margin-right: var(--mw-space-8); }
-@media (max-width: 319.98px) { .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+/* Galeri and Foto side by side at the end of the bar (Galeri on the left): 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons);
+   their words give way (they stay the buttons' names for a screen reader) on a narrow screen (under 360 px, or zoom 200%), so "Terbaru" keeps its line. Mozaik is only in Galeri's own header. */
+.photoBtn { margin-right: calc(var(--mw-space-8) + 2px); }
+.galleryBtn { flex: none; }
+@media (max-width: 359.98px) { .photoBtn, .galleryBtn { width: 44px; min-height: 44px; padding-inline: 0; gap: 0; }
+  .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 
 /* Galeri mode: the frame's bar is replaced by ‹ "Galeri". */
 .ownBar { padding-top: var(--mw-safe-top); }

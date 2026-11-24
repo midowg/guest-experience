@@ -86,12 +86,13 @@ describe("the stack", () => {
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
   const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
-  it("has just the Foto button beside the title (the way to Galeri is a text button under the reactions, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
+  it("has Galeri and Foto side by side in the bar, Galeri on the left (no Galeri button under the reactions, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Foto", "/wam2026/momen/kamera"]]);
-    expect(screen.getByRole("link", { name: "Galeri" }).getAttribute("href")).toBe("/wam2026/momen/galeri");
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam2026/momen/galeri"], ["Foto", "/wam2026/momen/kamera"]]);
+    expect(slot.contains(screen.getByRole("link", { name: "Galeri" }))).toBe(true);
+    expect(screen.getAllByRole("link", { name: "Galeri" })).toHaveLength(1);
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();

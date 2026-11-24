@@ -6,6 +6,15 @@ import { createPortal } from "react-dom";
 /** Where a screen's top-bar actions go: the end of the shell's top bar (set by MainWamShell). */
 export const ActionsSlotContext = createContext<HTMLElement | null>(null);
 
+/** Where Beranda's slide indicator goes: before the bell in the home bar (set by MainWamShell). */
+export const IndicatorSlotContext = createContext<HTMLElement | null>(null);
+
+/** Beranda's slide indicator, drawn into the home bar (the bar is the layout's; the slide's state is the screen's). */
+export function ShellIndicator({ children }: { children: ReactNode }) {
+  const slot = useContext(IndicatorSlotContext);
+  return slot ? createPortal(children, slot) : null;
+}
+
 /**
  * A screen's buttons at the end of the shell's top bar (0–2: IconButton, or a Chip on Momen):
  *   <ShellActions><IconButton icon={<Share />} label="Bagikan" onClick={…} /></ShellActions>

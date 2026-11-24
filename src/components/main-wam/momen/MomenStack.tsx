@@ -328,6 +328,7 @@ export function MomenStack(props: MomenStackProps) {
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }} />
       </div>
     </> : <ShellActions>
+      {mode === "baru" && !noCard && <Button variant="secondary" size="m" icon={<Grid3x3 />} href={galeriHref} className={css.galleryBtn}><span className={css.photoLabel}>{t("momen.gallery")}</span></Button>}
       <Button size="m" icon={<Camera />} href={mainWamPath.camera()} className={css.photoBtn}><span className={css.photoLabel}>{t("momen.photoShort")}</span></Button>
     </ShellActions>}
 
@@ -344,7 +345,6 @@ export function MomenStack(props: MomenStackProps) {
 
       <div className={css.actions}>
         {photoActions && !current!.mine && <QuickReactions chosen={chosen} onPick={emoji => void react(current!, emoji)} />}
-        {mode === "baru" && !noCard && <Button variant="text" size="m" icon={<Grid3x3 />} href={galeriHref}>{t("momen.gallery")}</Button>}
         {ownHiddenOptions && <IconButton icon={Ellipsis} label={t("momen.photoOptions")} onClick={() => setSheet("pilihan")} />}
       </div>
       </div>

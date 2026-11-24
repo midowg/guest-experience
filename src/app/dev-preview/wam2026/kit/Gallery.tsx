@@ -383,7 +383,7 @@ export function KitGallery() {
         <div className={css.barDemo}><TopBar variant="back" title="Absen" backHref="#bilah" backIcon={X} backLabel="Tutup" scrolled /></div>
       </Group>
       <Group label="TopBar · Beranda (sapaan, lonceng)">
-        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi" name="Rani" dayDots={{ total: 4, current: 2, label: "Hari ke-2 dari 4" }} actions={<IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} href="#bilah" />} /></div>
+        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi" name="Rani" day="Hari ke-2 dari 4" actions={<IconButton icon={Bell} label="Notifikasi, 3 belum dibaca" badge={3} href="#bilah" />} /></div>
       </Group>
       <Group label="BottomNav (Beranda aktif, lencana; Momen aktif)">
         <BottomNav current="beranda" badges={{ momen: 3, saya: "dot" }} className={css.navStatic} />
@@ -491,7 +491,7 @@ export function KitGallery() {
       <Group label="TopBar · judul panjang (besar, kembali, Beranda)">
         <div className={css.barDemo}><TopBar title="Ringkasan keputusan rapat panitia hari pertama" eyebrow="Agenda lengkap seluruh kegiatan" actions={<IconButton icon={Bell} label="Notifikasi" variant="tonal" badge="dot" />} /></div>
         <div className={css.barDemo}><TopBar variant="back" title="Detail sesi pemaparan departemen keuangan dan operasional" backHref="#panjang" actions={<IconButton icon={Share} label="Bagikan" />} /></div>
-        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi, selamat datang kembali" name="Rani Kusumawardhani" dayDots={{ total: 4, current: 2, label: "Hari ke-2 dari 4" }} actions={<IconButton icon={Bell} label="Notifikasi" badge={3} href="#panjang" />} /></div>
+        <div className={css.barDemo}><TopBar variant="home" kicker="Selamat pagi, selamat datang kembali" name="Rani Kusumawardhani" day="Hari ke-2 dari 4" actions={<IconButton icon={Bell} label="Notifikasi" badge={3} href="#panjang" />} /></div>
       </Group>
       <Group label="ActionBar · dua tombol panjang, ConfirmDialog (tombol bawah)">
         <div className={css.bleed}><ActionBar note="Absen dibuka 30 menit sebelum sesi dimulai dan ditutup saat sesi berakhir."><div><Button block>Absen sekarang di sesi ini</Button></div></ActionBar></div>

@@ -1,7 +1,7 @@
 import "server-only";
 import { mainWamCan } from "@/lib/main-wam/access";
 import {
-  announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
+  announcementCandidates, homeCardView, homeSlides, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
   type HomeCandidate, type HomeData,
 } from "@/lib/main-wam/peserta/home";
 import { checklistProgress, visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
@@ -70,5 +70,5 @@ export async function loadHome(context: MainWamContext, now: Date): Promise<Home
   ];
   const picked = pickCard(candidates, modules, now);
   const refreshAt = nextChangeAt(sessions, now, [...pinned.map(note => note.pinnedUntil), ...candidates.map(card => card.until)]);
-  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now, lang) : null, refreshAt, serverNow: now.toISOString(), failed: sessionsRead.failed, ceklis };
+  return { migrated: sessionsRead.migrated && settings.migrated, now: view, slides: homeSlides(sessions, now, view, lang), session, card: picked ? homeCardView(picked, now, lang) : null, refreshAt, serverNow: now.toISOString(), failed: sessionsRead.failed, ceklis };
 }

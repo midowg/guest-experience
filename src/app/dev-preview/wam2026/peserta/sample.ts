@@ -1,7 +1,7 @@
 import { mainWamCan } from "@/lib/main-wam/access";
 import type { Lang } from "@/lib/main-wam/i18n";
 import {
-  announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
+  announcementCandidates, homeCardView, homeSlides, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
   type HomeCandidate, type HomeData,
 } from "@/lib/main-wam/peserta/home";
 import { eventEndsAt, surveyOpen, surveyStarted, type SurveyForm } from "@/lib/main-wam/peserta/survey";
@@ -86,7 +86,7 @@ export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamS
   const forced = force === "tanpa" ? null : force ? candidates.find(card => card.kind === force) ?? null : undefined;
   const picked = forced !== undefined ? forced : pickCard(candidates, settings.modules, now);
   return {
-    migrated: true, now: view, session: view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null,
+    migrated: true, now: view, slides: homeSlides(sessions, now, view, lang), session: view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null,
     card: picked ? homeCardView(picked, now, lang) : null, refreshAt: nextChangeAt(sessions, now), serverNow: now.toISOString(), failed: false,
   };
 }

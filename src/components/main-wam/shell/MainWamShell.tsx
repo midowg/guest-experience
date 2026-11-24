@@ -11,7 +11,7 @@ import { cx } from "../ui/Pressable";
 import { ToastProvider } from "../ui/Toast";
 import { TopBar } from "../ui/TopBar";
 import { BottomNav, type TabBadges } from "./BottomNav";
-import { ActionsSlotContext } from "./ShellSlots";
+import { ActionsSlotContext, IndicatorSlotContext } from "./ShellSlots";
 import { setTrailDepth } from "./trail";
 import css from "./shell.module.css";
 
@@ -25,8 +25,6 @@ export type ShellGreeting = {
   name: string;
   /** "Hari ke-2 dari 4" during the event. */
   day?: string;
-  /** The same as segment dots before the bell (current day, how many days, the words for screen readers). */
-  dayDots?: { total: number; current: number; label: string };
 };
 
 /**
@@ -65,6 +63,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   const camera = !!screen?.camera;
   const nav = showsBottomBar(screen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [indicatorSlot, setIndicatorSlot] = useState<HTMLElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [compact, setCompact] = useState(false);
   const largeRef = useRef<HTMLDivElement>(null);
@@ -114,13 +113,15 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   }
 
   const actions = <span ref={setSlot} className={css.actions} />;
+  // Beranda's slide indicator is drawn here by the screen (ShellIndicator); empty, it takes no room.
+  const indicator = <span ref={setIndicatorSlot} className={css.indicator} />;
   let top: ReactNode = null;
   if (screen && !camera) {
     if (screen.level === "akar" && screen.tab === "beranda" && greeting) {
       const bell = showsBell(screen)
         ? <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? "dot" : undefined} />
         : null;
-      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} dayDots={greeting.dayDots} actions={<>{actions}{bell}</>} /></div>;
+      top = <div className={css.top}><TopBar variant="home" kicker={greeting.kicker} name={greeting.name} day={greeting.day} indicator={indicator} actions={<>{actions}{bell}</>} /></div>;
     } else if (screen.level === "akar") {
       top = <>
         <div ref={largeRef} className={css.top}><TopBar title={screen.title} eyebrow={screen.eyebrow} actions={actions} /></div>
@@ -140,6 +141,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
     style={nav ? { ["--mw-toast-bottom" as string]: "calc(var(--mw-nav-h) + var(--mw-space-16))" } : undefined}>
     <ToastProvider>
       <ActionsSlotContext.Provider value={slot}>
+        <IndicatorSlotContext.Provider value={indicatorSlot}>
         <div className={css.column}>
           <a className={css.skip} href="#isi">{t("shell.skip")}</a>
           {demo && !camera && <div className={css.demo} role="status"><FlaskConical aria-hidden />{t("demo.banner")}</div>}
@@ -147,6 +149,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
           <main id="isi" tabIndex={-1} className={css.main}>{children}</main>
           {nav && <BottomNav current={screen?.tab ?? null} badges={badges} committee={committee} />}
         </div>
+        </IndicatorSlotContext.Provider>
       </ActionsSlotContext.Provider>
     </ToastProvider>
   </div>;
