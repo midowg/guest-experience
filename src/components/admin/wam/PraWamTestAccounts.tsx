@@ -5,7 +5,6 @@ import { ExternalLink, FlaskConical, Search, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { MISSION_SESSION_ID } from "@/lib/pra-wam/mission";
 import { TEST_ACCOUNTS_MAX } from "@/lib/pra-wam/test-accounts";
 import { praWamPath, praWamTestAccountsApi } from "@/lib/routes";
 import type { TestAccountsState } from "@/lib/server/pra-wam/test-accounts";
@@ -19,7 +18,7 @@ type Message = { tone: "success" | "error"; text: string } | null;
  * Simpan, returns it to normal. "Jejak karbon hanya untuk akun uji" keeps the card from everyone
  * else while it is tested.
  */
-export function PraWamTestAccounts({ initial, crumbs = [], title = "Akun uji" }: { initial: TestAccountsState; crumbs?: readonly Crumb[]; title?: string }) {
+export function PraWamTestAccounts({ initial, missionSessionId = null, crumbs = [], title = "Akun uji" }: { initial: TestAccountsState; /** The first session set to open Misi Perjalanan. */ missionSessionId?: string | null; crumbs?: readonly Crumb[]; title?: string }) {
   const [state, setState] = useState(initial);
   const [ids, setIds] = useState(initial.accounts.ids);
   const [carbonTestOnly, setCarbonTestOnly] = useState(initial.accounts.ids.length ? initial.accounts.carbonTestOnly : true);
@@ -50,7 +49,7 @@ export function PraWamTestAccounts({ initial, crumbs = [], title = "Akun uji" }:
     <PageHeader crumbs={crumbs} title={title}
       subtitle="Akun yang boleh mencoba Misi Perjalanan sebagai HoD dan Jejak karbon sebelum acara. Hapus dari daftar untuk mengembalikannya."
       actions={<>
-        <ConsoleButtonLink href={praWamPath.session(MISSION_SESSION_ID)} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Misi Perjalanan<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>
+        {missionSessionId && <ConsoleButtonLink href={praWamPath.session(missionSessionId)} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Misi Perjalanan<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>}
         <ConsoleButton variant="primary" type="submit" form="uji-form" disabled={locked || !changed}>{busy ? "Menyimpan…" : "Simpan"}</ConsoleButton>
       </>} />
     {!state.migrated && <Notice tone="warning">Akun uji menunggu tabel pw_settings (migrasi 202611120001).</Notice>}

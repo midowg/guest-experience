@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ExternalLink, Plus, Search, Trash2, UserRound } from "lucide-react";
+import { CalendarDays, ChevronDown, ExternalLink, Plus, Search, Trash2, UserRound } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { MISSION_SESSION_ID } from "@/lib/pra-wam/mission";
 import { HINTS_MAX, isMenRoom, parseSentences, type MissionSheet, type SheetPerson } from "@/lib/pra-wam/mission-sheet";
-import { praWamMissionApi, praWamPath } from "@/lib/routes";
+import { praWamMissionApi, praWamMissionSessionsApi, praWamPath } from "@/lib/routes";
 import type { MissionAdminState } from "@/lib/server/pra-wam/mission-admin";
+import type { MissionSessionsState } from "@/lib/server/pra-wam/mission-sessions";
 import css from "./mission-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -27,10 +27,18 @@ const blankPerson = (room: string): SheetPerson => ({ name: "", nick: "", dept: 
  * sentences of Susun Kalimatmu and up to three quiz hints, and the BoD (the CEO marked). Names must
  * match the account's name; names that match none are shown. Simpan keeps the old list as a backup.
  */
-export function PraWamMission({ initial, crumbs = [], title = "Misi Perjalanan" }: { initial: MissionAdminState; crumbs?: readonly Crumb[]; title?: string }) {
+const sessionWhen = (iso: string | null) => iso ? new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)) : "Belum ada jam";
+const SESSIONS_MAX = 5;
+
+export function PraWamMission({ initial, sessions: initialSessions, crumbs = [], title = "Misi Perjalanan" }: { initial: MissionAdminState; sessions: MissionSessionsState; crumbs?: readonly Crumb[]; title?: string }) {
   const [state, setState] = useState(initial);
   const [sheet, setSheet] = useState<MissionSheet>(initial.sheet);
-  const [tab, setTab] = useState<"kamar" | "bod">("kamar");
+  const [tab, setTab] = useState<"kamar" | "bod" | "sesi">("kamar");
+  const [sessions, setSessions] = useState(initialSessions);
+  const [sessionIds, setSessionIds] = useState(initialSessions.ids);
+  const [sessionQuery, setSessionQuery] = useState("");
+  const sessionsChanged = sessionIds.join() !== sessions.ids.join();
+  const firstSession = sessions.ids[0] ?? null;
   const [openPerson, setOpenPerson] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,6 +65,16 @@ export function PraWamMission({ initial, crumbs = [], title = "Misi Perjalanan" 
     return { ...current, rooms, people: current.people.map(person => person.room === key ? { ...person, room: next } : person) };
   });
   const addPerson = (room: string) => { setOpenPerson(sheet.people.length); update(current => ({ ...current, people: [...current.people, blankPerson(room)] })); };
+
+  async function saveSessions() {
+    setBusy(true); setMessage(null);
+    try {
+      const result = await adminRequest<MissionSessionsState>(praWamMissionSessionsApi, { method: "PUT", body: JSON.stringify({ ids: sessionIds }) });
+      if (result.data) { setSessions(result.data); setSessionIds(result.data.ids); }
+      setMessage({ tone: "success", text: result.message });
+    } catch (problem) { setMessage({ tone: "error", text: errorMessage(problem) }); }
+    finally { setBusy(false); }
+  }
 
   async function save() {
     setBusy(true); setMessage(null);
@@ -109,7 +127,7 @@ export function PraWamMission({ initial, crumbs = [], title = "Misi Perjalanan" 
     <PageHeader crumbs={crumbs} title={title}
       subtitle={`Kamar, penghuni, dan petunjuk kuis untuk Meeting HoD BoD. ${state.updatedAt ? `Tersimpan ${savedLabel(state.updatedAt)} WIB · ` : ""}Setiap Simpan menyimpan cadangan isi sebelumnya.`}
       actions={<>
-        <ConsoleButtonLink href={praWamPath.session(MISSION_SESSION_ID)} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Misi Perjalanan<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>
+        {firstSession && <ConsoleButtonLink href={praWamPath.session(firstSession)} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Misi Perjalanan<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>}
         <ConsoleButton variant="primary" disabled={locked || !changed} onClick={() => { void save(); }}>{busy ? "Menyimpan…" : "Simpan"}</ConsoleButton>
       </>} />
     {!state.migrated && <Notice tone="warning">Misi Perjalanan menunggu tabel pw_settings (migrasi 202611120001).</Notice>}
@@ -120,6 +138,7 @@ export function PraWamMission({ initial, crumbs = [], title = "Misi Perjalanan" 
     <div className={css.tabs} role="tablist" aria-label="Bagian">
       <button type="button" role="tab" aria-selected={tab === "kamar"} onClick={() => setTab("kamar")}>Kamar dan HoD <span>{sheet.people.length}</span></button>
       <button type="button" role="tab" aria-selected={tab === "bod"} onClick={() => setTab("bod")}>BoD <span>{sheet.bod.length}</span></button>
+      <button type="button" role="tab" aria-selected={tab === "sesi"} onClick={() => setTab("sesi")}>Sesi <span>{sessions.ids.length}</span></button>
     </div>
 
     {tab === "kamar" && <div className="stack">
@@ -155,6 +174,27 @@ export function PraWamMission({ initial, crumbs = [], title = "Misi Perjalanan" 
         </section>;
       })}</div>
     </div>}
+
+    {tab === "sesi" && <section className={css.room} aria-label="Sesi yang membuka Misi Perjalanan">
+      <p className={css.hint}>Pilih sesi yang membuka Misi Perjalanan. Untuk HoD, BoD, dan akun uji, kartu sesi itu di Beranda dan Agenda langsung membuka Misi Perjalanan; peserta lain tetap melihat detail sesi biasa.{!sessions.saved && " Belum diatur: sementara memakai sesi forum Meeting HoD BoD."}</p>
+      {sessionIds.length > 0 && <ul className={css.people}>{sessionIds.map(id => {
+        const session = sessions.choices.find(item => item.id === id);
+        return <li key={id} className={css.person}><div className={css.personHead}>
+          <span className={css.ava} aria-hidden><CalendarDays /></span>
+          <span className={css.personText}><strong>{session?.title ?? "Sesi tidak ditemukan"}</strong><small>{session ? `${sessionWhen(session.startsAt)}${session.status === "draf" ? " · draf" : ""}` : "Mungkin sudah dihapus"}</small></span>
+          <ConsoleButton className={css.danger} disabled={locked} onClick={() => { setSessionIds(sessionIds.filter(item => item !== id)); setMessage(null); }}>Lepas</ConsoleButton>
+        </div></li>;
+      })}</ul>}
+      <label className={css.search}><span className="sr-only">Cari sesi</span><Search aria-hidden />
+        <input className="input" type="search" value={sessionQuery} placeholder={sessionIds.length >= SESSIONS_MAX ? `Paling banyak ${SESSIONS_MAX} sesi` : "Cari judul sesi"} disabled={locked || sessionIds.length >= SESSIONS_MAX} onChange={event => setSessionQuery(event.target.value)} /></label>
+      {sessionQuery.trim() && <ul className={css.people}>{sessions.choices.filter(item => !sessionIds.includes(item.id) && sessionQuery.trim().toLowerCase().split(/\s+/).every(word => item.title.toLowerCase().includes(word))).slice(0, 8).map(item => <li key={item.id} className={css.person}>
+        <button type="button" className={css.personHead} disabled={locked} onClick={() => { setSessionIds([...sessionIds, item.id]); setSessionQuery(""); setMessage(null); }}>
+          <span className={css.ava} aria-hidden><CalendarDays /></span>
+          <span className={css.personText}><strong>{item.title}</strong><small>{sessionWhen(item.startsAt)}{item.status === "draf" ? " · draf" : ""}</small></span>
+          <span className={css.meta}>Pilih</span>
+        </button></li>)}</ul>}
+      <div className={css.rowEnd}><ConsoleButton variant="primary" disabled={locked || !sessionsChanged} onClick={() => { void saveSessions(); }}>{busy ? "Menyimpan…" : "Simpan sesi"}</ConsoleButton></div>
+    </section>}
 
     {tab === "bod" && <section className={css.room} aria-label="BoD">
       <p className={css.hint}>BoD tidak punya kamar di daftar ini. CEO mendapat Mode CEO untuk menampilkan pertanyaan di layar meeting.</p>

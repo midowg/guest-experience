@@ -5,6 +5,7 @@ import { WAM_ADMIN_LABEL, wamCrumbs, wamSection } from "@/components/admin/wam/s
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { missionAdminState } from "@/lib/server/pra-wam/mission-admin";
+import { missionSessionsState } from "@/lib/server/pra-wam/mission-sessions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${wamSection("misi").label} · ${WAM_ADMIN_LABEL}` };
@@ -14,6 +15,6 @@ export default async function WamMissionPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   return <WamAdminFrame current="misi" wide>
-    <PraWamMission initial={await missionAdminState()} crumbs={wamCrumbs("misi")} title={wamSection("misi").label} />
+    <PraWamMission initial={await missionAdminState()} sessions={await missionSessionsState()} crumbs={wamCrumbs("misi")} title={wamSection("misi").label} />
   </WamAdminFrame>;
 }

@@ -482,6 +482,8 @@ export const praWamThemeApi = "/api/admin/wam/theme";
 export const praWamTestAccountsApi = "/api/admin/wam/akun-uji";
 /** PUT: Misi Perjalanan's room list (the old one kept as a backup first). */
 export const praWamMissionApi = "/api/admin/wam/misi-perjalanan";
+/** PUT: the sessions that open Misi Perjalanan. */
+export const praWamMissionSessionsApi = "/api/admin/wam/misi-perjalanan/sesi";
 
 /*
  * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside

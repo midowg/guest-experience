@@ -14,7 +14,7 @@ const shortTime = (iso: string, zone: ViewerZone) => instantLabel(iso, zone);
  * the bottom on a phone, a panel from the right on a desktop), never another page; `href` is this
  * page's address with the item open, so a new tab or a page without script still shows it.
  */
-export function AgendaTimeline({ items, now, href, zone = "WIB" }: { items: AgendaItem[]; now: Date; href: (item: AgendaItem) => string; zone?: ViewerZone }) {
+export function AgendaTimeline({ items, now, href, zone = "WIB", direct }: { items: AgendaItem[]; now: Date; href: (item: AgendaItem) => string; zone?: ViewerZone; /** 24 Nov 2026: a page to open instead of the sheet (Misi Perjalanan's sessions), or null. */ direct?: (item: AgendaItem) => string | null }) {
   const nextKey = items.find(item => new Date(item.endsAt) > now)?.key;
   return <ol className={`${base.timeline} ${own.list}`}>
     {items.map(item => {
@@ -23,7 +23,7 @@ export function AgendaTimeline({ items, now, href, zone = "WIB" }: { items: Agen
         <time dateTime={item.startsAt}>{shortTime(item.startsAt, zone)}<small>{shortTime(item.endsAt, zone)}</small></time>
         <span className={base.timeRail}><span className={`${base.timeDot} ${item.checkedInAt || done ? base.timeDotDone : item.key === nextKey ? base.timeDotNow : ""}`} /></span>
         <div className={base.timeBody}>
-          <h3><a className={own.stretch} href={href(item)} {...{ [AGENDA_ITEM]: item.key }} aria-haspopup="dialog">{item.title}</a></h3>
+          <h3>{direct?.(item) ? <a className={own.stretch} href={direct(item)!}>{item.title}</a> : <a className={own.stretch} href={href(item)} {...{ [AGENDA_ITEM]: item.key }} aria-haspopup="dialog">{item.title}</a>}</h3>
           <span className={base.place}><MapPin aria-hidden />{item.where}</span>
           {(item.checkedInAt || item.key === nextKey || item.kind === "appraisal" || item.materials > 0) && <div className={base.pills}>
             {item.checkedInAt && <span className={`${base.pill} ${base.pillSuccess}`}><CheckCircle2 aria-hidden />Hadir {shortTime(item.checkedInAt, zone)}</span>}

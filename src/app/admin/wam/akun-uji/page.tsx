@@ -5,6 +5,7 @@ import { WAM_ADMIN_LABEL, wamCrumbs, wamSection } from "@/components/admin/wam/s
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { testAccountsState } from "@/lib/server/pra-wam/test-accounts";
+import { missionSessionIds } from "@/lib/server/pra-wam/mission-sessions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${wamSection("uji").label} · ${WAM_ADMIN_LABEL}` };
@@ -14,6 +15,6 @@ export default async function WamTestAccountsPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   return <WamAdminFrame current="uji">
-    <PraWamTestAccounts initial={await testAccountsState()} crumbs={wamCrumbs("uji")} title={wamSection("uji").label} />
+    <PraWamTestAccounts initial={await testAccountsState()} missionSessionId={(await missionSessionIds())[0] ?? null} crumbs={wamCrumbs("uji")} title={wamSection("uji").label} />
   </WamAdminFrame>;
 }

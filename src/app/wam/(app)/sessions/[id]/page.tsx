@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { MissionJourney } from "@/components/pra-wam/mission/MissionJourney";
 import { SessionDetail, WaitingSession } from "@/components/pra-wam/SessionDetail";
-import { MISSION_SESSION_ID } from "@/lib/pra-wam/mission";
 import { praWamPath } from "@/lib/routes";
 import { sessionView } from "@/lib/server/pra-wam/agenda";
 import { missionFor } from "@/lib/server/pra-wam/mission";
+import { missionSessionIds } from "@/lib/server/pra-wam/mission-sessions";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { viewerZone } from "@/lib/server/pra-wam/zone";
 
@@ -26,7 +26,8 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
   const [{ id }, { dari, detail }] = await Promise.all([params, searchParams]);
   const member = await requireMemberPage(praWamPath.session(id));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  if (id === MISSION_SESSION_ID && dari !== "kelola" && detail !== "1") {
+  // 24 Nov 2026: the sessions set in Admin Pra WAM → Misi Perjalanan → Sesi.
+  if (dari !== "kelola" && detail !== "1" && (await missionSessionIds()).includes(id)) {
     const mission = await missionFor(member);
     if (mission) return <MissionJourney view={mission} detailHref={`${praWamPath.session(id)}?detail=1`} />;
   }

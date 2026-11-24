@@ -17,6 +17,10 @@ export default function DevMissionAdminPage() {
   };
   return <ConsoleShell theme="admin" area="Admin Pra WAM" storageKey="dev-misi" className={admin.shell} person={{ name: "Panitia Contoh", sub: "Werkudara" }}
     groups={[{ label: "Untuk peserta", items: [{ key: "misi", label: "Misi Perjalanan", href: "/dev-preview/admin-misi" }] }]} current="misi" pageTitle="Misi Perjalanan">
-    <PraWamMission initial={{ sheet, migrated: true, saved: true, updatedAt: "2026-11-24T02:00:00Z", unmatched: ["Tono Contoh"] }} crumbs={[{ label: "Admin Pra WAM" }, { label: "Untuk peserta" }]} title="Misi Perjalanan" />
+    <PraWamMission initial={{ sheet, migrated: true, saved: true, updatedAt: "2026-11-24T02:00:00Z", unmatched: ["Tono Contoh"] }} sessions={{ saved: true, ids: ["00000000-0000-4000-8000-000000000501"], choices: [
+      { id: "00000000-0000-4000-8000-000000000501", title: "Meeting HoD BoD (contoh)", startsAt: "2026-11-24T08:00:00Z", status: "terbit" },
+      { id: "00000000-0000-4000-8000-000000000502", title: "Forum evaluasi departemen (contoh)", startsAt: "2026-11-25T02:00:00Z", status: "terbit" },
+      { id: "00000000-0000-4000-8000-000000000503", title: "Gudang Idea (contoh)", startsAt: null, status: "draf" },
+    ] }} crumbs={[{ label: "Admin Pra WAM" }, { label: "Untuk peserta" }]} title="Misi Perjalanan" />
   </ConsoleShell>;
 }
