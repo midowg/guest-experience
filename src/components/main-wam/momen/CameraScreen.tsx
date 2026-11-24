@@ -6,8 +6,9 @@ import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCod
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
-import { CAMERA_FILTER_IDS, cssFilter, DEFAULT_CAMERA_FILTER, type CameraFilterId } from "@/lib/main-wam/momen/camera-filters";
+import { CAMERA_TONE_IDS, cssFilter, DEFAULT_CAMERA_TONE, type CameraToneId } from "@/lib/main-wam/momen/camera-filters";
 import { loadTemplateAssets } from "@/lib/main-wam/momen/camera-template-draw";
+import { DEFAULT_SIGN, SIGN_IDS, type SignId } from "@/lib/main-wam/momen/camera-templates";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -81,11 +82,10 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
-  // The template (frame, words and mark; Asli = none): always Asli when the camera opens.
-  const [filter, setFilter] = useState<CameraFilterId>(DEFAULT_CAMERA_FILTER);
+  // The sign (frame, words and mark; Tanpa = none) and the colour tone (Asli = none) are chosen apart and combined; both are default every time the camera opens.
+  const [sign, setSign] = useState<SignId>(DEFAULT_SIGN);
+  const [tone, setTone] = useState<CameraToneId>(DEFAULT_CAMERA_TONE);
   const swipe = useRef<number | null>(null);
-  const chipRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => { chipRef.current?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [filter]);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const shutterInput = useRef<HTMLInputElement>(null);
@@ -231,7 +231,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
   async function shutter() {
     if (busy) return;
-    if (live === "menyala" && video.current && stream.current) { await send([() => grabFrame(video.current!, filter)], false); return; }
+    if (live === "menyala" && video.current && stream.current) { await send([() => grabFrame(video.current!, sign, tone)], false); return; }
     shutterInput.current?.click();
   }
   function onShot(event: ChangeEvent<HTMLInputElement>) {
@@ -250,7 +250,8 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     setFacing(side);
     if (live === "menyala") await start(side, false);
   }
-  const stepFilter = (by: number) => setFilter(now => CAMERA_FILTER_IDS[Math.min(CAMERA_FILTER_IDS.length - 1, Math.max(0, CAMERA_FILTER_IDS.indexOf(now) + by))]);
+  // A swipe on the viewfinder steps the colour tone (the sign is chosen on its strip).
+  const stepTone = (by: number) => setTone(now => CAMERA_TONE_IDS[Math.min(CAMERA_TONE_IDS.length - 1, Math.max(0, CAMERA_TONE_IDS.indexOf(now) + by))]);
   function close() {
     stop();
     if (window.history.length > 1) router.back(); else router.push(mainWamPath.moments());
@@ -275,12 +276,13 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
     <div className={css.stage}><div className={css.stageInner}>
       <div className={css.view} onPointerDown={event => { swipe.current = event.clientX; }}
-        onPointerUp={event => { const from = swipe.current; swipe.current = null; if (live === "menyala" && from !== null && Math.abs(event.clientX - from) > 50) stepFilter(event.clientX < from ? 1 : -1); }}
+        onPointerUp={event => { const from = swipe.current; swipe.current = null; if (live === "menyala" && from !== null && Math.abs(event.clientX - from) > 50) stepTone(event.clientX < from ? 1 : -1); }}
         onPointerCancel={() => { swipe.current = null; }}>
-        <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
-        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} style={{ filter: cssFilter(filter) }} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
-        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")} style={{ filter: cssFilter(filter) }}><PhotoFill tone={5} className={css.fill} /></span>}
-        {live === "menyala" && <TemplateOverlay template={filter} lang={lang} className={css.overlay} />}
+        {/* The corner marks give way to a sign: its words and mark sit in the corners. */}
+        {sign === DEFAULT_SIGN && <><i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden /></>}
+        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} style={{ filter: cssFilter(tone) }} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
+        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")} style={{ filter: cssFilter(tone) }}><PhotoFill tone={5} className={css.fill} /></span>}
+        {live === "menyala" && <TemplateOverlay sign={sign} lang={lang} className={css.overlay} />}
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
           ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
@@ -302,8 +304,9 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div></div>
 
     <div className={css.dock}>
-      {live === "menyala" && <div className={css.filters} role="radiogroup" aria-label={t("momen.cam.filters")}>
-        {CAMERA_FILTER_IDS.map(id => <button key={id} ref={node => { if (node && filter === id) chipRef.current = node; }} type="button" role="radio" aria-checked={filter === id} className={css.filter} onClick={() => setFilter(id)}>{t(`momen.cam.filter.${id}`)}</button>)}
+      {live === "menyala" && <div className={css.pickers}>
+        <ChipRow label={t("momen.cam.signLabel")} name={t("momen.cam.signs")} ids={SIGN_IDS} value={sign} onPick={setSign} word={id => t(`momen.cam.sign.${id}`)} />
+        <ChipRow label={t("momen.cam.toneLabel")} name={t("momen.cam.tones")} ids={CAMERA_TONE_IDS} value={tone} onPick={setTone} word={id => t(`momen.cam.tone.${id}`)} />
       </div>}
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
@@ -333,6 +336,18 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       </ol>
       <p className={css.note}>{t("momen.cam.stillWorks")}</p>
     </Sheet>
+  </div>;
+}
+
+/** One strip of small choices with its label: a radio group, scrolled so the chosen chip is in view. */
+function ChipRow<Id extends string>({ label, name, ids, value, onPick, word }: { label: string; name: string; ids: readonly Id[]; value: Id; onPick: (id: Id) => void; word: (id: Id) => string }) {
+  const chosen = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { chosen.current?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [value]);
+  return <div className={css.row}>
+    <span className={css.rowLabel} aria-hidden>{label}</span>
+    <div className={css.filters} role="radiogroup" aria-label={name}>
+      {ids.map(id => <button key={id} ref={node => { if (node && value === id) chosen.current = node; }} type="button" role="radio" aria-checked={value === id} className={css.filter} onClick={() => onPick(id)}>{word(id)}</button>)}
+    </div>
   </div>;
 }
 

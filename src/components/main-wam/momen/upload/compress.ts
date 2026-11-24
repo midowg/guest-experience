@@ -1,8 +1,8 @@
 import { centerCrop, fitSide, halvingSteps, LARGE_RULE, squareCrop, THUMB_RULE, TILE_RULE, type Rect } from "@/lib/main-wam/momen/image";
 import { activeLang, t } from "@/lib/main-wam/i18n";
-import { applyFilterToPixels, cssFilter, DEFAULT_CAMERA_FILTER, type CameraFilterId } from "@/lib/main-wam/momen/camera-filters";
+import { applyFilterToPixels, cssFilter, DEFAULT_CAMERA_TONE, type CameraToneId } from "@/lib/main-wam/momen/camera-filters";
 import { drawTemplate, loadTemplateAssets } from "@/lib/main-wam/momen/camera-template-draw";
-import { templateLayout } from "@/lib/main-wam/momen/camera-templates";
+import { DEFAULT_SIGN, templateLayout, type SignId } from "@/lib/main-wam/momen/camera-templates";
 import { MAX_LARGE_BYTES } from "@/lib/main-wam/momen/filters";
 import { sourceProblem } from "@/lib/pra-wam/photo";
 
@@ -39,11 +39,11 @@ export async function decodeFile(file: File): Promise<Picture> {
   }
 }
 
-/** The frame the live viewfinder shows now (getUserMedia path); with a template: cut to 4:5 like the viewfinder, toned, and the template drawn on it. */
-export async function grabFrame(video: HTMLVideoElement, template: CameraFilterId = DEFAULT_CAMERA_FILTER): Promise<Picture> {
+/** The frame the live viewfinder shows now (getUserMedia path); with a tone or a sign: cut to 4:5 like the viewfinder, toned first, then the sign drawn over it (so its words and mark keep their colours). */
+export async function grabFrame(video: HTMLVideoElement, sign: SignId = DEFAULT_SIGN, tone: CameraToneId = DEFAULT_CAMERA_TONE): Promise<Picture> {
   const width = video.videoWidth, height = video.videoHeight;
   if (!width || !height) throw new PhotoProblem(t(activeLang(), "srv.momen.cameraNotReady"));
-  if (template !== DEFAULT_CAMERA_FILTER) {
+  if (sign !== DEFAULT_SIGN || tone !== DEFAULT_CAMERA_TONE) {
     const crop = centerCrop(width, height);
     const size = fitSide(crop.width, crop.height, 2000);
     const canvas = document.createElement("canvas");
@@ -51,20 +51,23 @@ export async function grabFrame(video: HTMLVideoElement, template: CameraFilterI
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (context) {
       // The viewfinder's tone, drawn into the frame that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
+      const toned = tone !== DEFAULT_CAMERA_TONE;
       const native = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
-      if (native) context.filter = cssFilter(template);
+      if (toned && native) context.filter = cssFilter(tone);
       context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, size.width, size.height);
-      if (native) context.filter = "none";
-      else {
+      if (toned && native) context.filter = "none";
+      else if (toned) {
         const pixels = context.getImageData(0, 0, size.width, size.height);
-        applyFilterToPixels(pixels.data, template);
+        applyFilterToPixels(pixels.data, tone);
         context.putImageData(pixels, 0, 0);
       }
-      // The frame, the words and the mark; a mark that did not load, or a drawing that fails, never costs the photo.
-      try {
-        const assets = await loadTemplateAssets();
-        drawTemplate(context, templateLayout(template, size.width, size.height, activeLang()), assets);
-      } catch { /* the toned photo goes without the template */ }
+      // The sign (frame, words, mark) over the toned photo; a mark that did not load, or a drawing that fails, never costs the photo.
+      if (sign !== DEFAULT_SIGN) {
+        try {
+          const assets = await loadTemplateAssets();
+          drawTemplate(context, templateLayout(sign, size.width, size.height, activeLang()), assets);
+        } catch { /* the toned photo goes without the sign */ }
+      }
       return { source: canvas, width: size.width, height: size.height, close: () => { canvas.width = 0; canvas.height = 0; } };
     }
   }

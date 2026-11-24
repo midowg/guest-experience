@@ -1,32 +1,32 @@
 /*
- * The tones of the camera's event templates (Momen only; the Misi camera has none): soft, in WAM 2026's
- * colours (gold, deep blue). The frame, text and logo of each template are in camera-templates.ts; this file
- * holds only the colour tone each one gives the picture. One list holds the numbers; from it come the CSS `filter` of the live viewfinder, the same
- * filter drawn into the photo that is sent (canvas `ctx.filter`), and a pixel fallback with the equivalent
- * matrices for browsers whose canvas ignores `ctx.filter` (Safari before 18). Pure. "asli" is the default
- * every time the camera opens and changes nothing.
+ * The colour tones of the camera (Momen only; the Misi camera has none), apart from the sign (frame, words and
+ * mark: camera-templates.ts): a tone only changes the colours of the picture, a sign only adds things on top.
+ * The two are chosen separately and combined as tone first, then the sign drawn over the toned photo, so the
+ * words and the mark keep their own colours. One list holds the numbers; from it come the CSS `filter` of the
+ * live viewfinder, the same filter drawn into the photo that is sent (canvas `ctx.filter`), and a pixel
+ * fallback with the equivalent matrices for browsers whose canvas ignores `ctx.filter` (Safari before 18).
+ * Pure. "asli" is the default every time the camera opens and changes nothing.
  */
 
-export const CAMERA_FILTER_IDS = ["asli", "emas", "biru", "jaringan", "polaroid"] as const;
-export type CameraFilterId = (typeof CAMERA_FILTER_IDS)[number];
-export const DEFAULT_CAMERA_FILTER: CameraFilterId = "asli";
+export const CAMERA_TONE_IDS = ["asli", "emas", "fajar", "mono"] as const;
+export type CameraToneId = (typeof CAMERA_TONE_IDS)[number];
+export const DEFAULT_CAMERA_TONE: CameraToneId = "asli";
 
-/** One filter: CSS filter functions in the fixed order sepia, hue (degrees), saturate, grayscale, contrast, brightness. */
+/** One tone: CSS filter functions in the fixed order sepia, hue (degrees), saturate, grayscale, contrast, brightness. */
 export type FilterOps = { sepia?: number; hue?: number; saturate?: number; grayscale?: number; contrast?: number; brightness?: number };
 
-export const CAMERA_FILTERS: Record<CameraFilterId, FilterOps> = {
+export const CAMERA_TONES: Record<CameraToneId, FilterOps> = {
   asli: {},
   emas: { sepia: 0.3, saturate: 1.2, contrast: 1.03, brightness: 1.05 },
-  biru: { sepia: 0.3, hue: 175, saturate: 0.95, contrast: 1.05, brightness: 0.98 },
-  jaringan: { sepia: 0.2, hue: 175, saturate: 0.9, contrast: 1.06, brightness: 0.96 },
-  polaroid: { saturate: 0.95, contrast: 0.97, brightness: 1.04 },
+  fajar: { saturate: 0.95, contrast: 0.97, brightness: 1.06 },
+  mono: { grayscale: 1, contrast: 1.04, brightness: 1.02 },
 };
 
-export const isCameraFilter = (value: unknown): value is CameraFilterId => typeof value === "string" && (CAMERA_FILTER_IDS as readonly string[]).includes(value);
+export const isCameraTone = (value: unknown): value is CameraToneId => typeof value === "string" && (CAMERA_TONE_IDS as readonly string[]).includes(value);
 
-/** The CSS/canvas filter string of a filter ("none" for Asli). */
-export function cssFilter(id: CameraFilterId): string {
-  const o = CAMERA_FILTERS[id];
+/** The CSS/canvas filter string of a tone ("none" for Asli). */
+export function cssFilter(id: CameraToneId): string {
+  const o = CAMERA_TONES[id];
   const parts: string[] = [];
   if (o.sepia !== undefined) parts.push(`sepia(${o.sepia})`);
   if (o.hue !== undefined) parts.push(`hue-rotate(${o.hue}deg)`);
@@ -55,8 +55,8 @@ const hueM = (deg: number): Matrix => {
 };
 
 /** The colour part (a 3x3 matrix) and the contrast and brightness of a filter, as the pixel fallback applies them. */
-export function filterTransform(id: CameraFilterId): { matrix: Matrix; contrast: number; brightness: number } {
-  const o = CAMERA_FILTERS[id];
+export function filterTransform(id: CameraToneId): { matrix: Matrix; contrast: number; brightness: number } {
+  const o = CAMERA_TONES[id];
   let m: Matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
   if (o.sepia !== undefined) m = mul(sepiaM(o.sepia), m);
   if (o.hue !== undefined) m = mul(hueM(o.hue), m);
@@ -66,7 +66,7 @@ export function filterTransform(id: CameraFilterId): { matrix: Matrix; contrast:
 }
 
 /** The fallback: the filter applied to RGBA pixels in place (alpha untouched). */
-export function applyFilterToPixels(data: Uint8ClampedArray, id: CameraFilterId): void {
+export function applyFilterToPixels(data: Uint8ClampedArray, id: CameraToneId): void {
   if (id === "asli") return;
   const { matrix: m, contrast, brightness } = filterTransform(id);
   for (let i = 0; i < data.length; i += 4) {

@@ -2,21 +2,21 @@
 
 import { useId } from "react";
 import type { Lang } from "@/lib/main-wam/i18n";
-import { FONT_STACK, hasTemplate, hexRgb, LOGO_SRC, NET_SRC, withAlpha, SHADOW, templateLayout, type TemplateId } from "@/lib/main-wam/momen/camera-templates";
+import { FONT_STACK, hasTemplate, hexRgb, LOGO_SRC, NET_SRC, withAlpha, SHADOW, templateLayout, type SignId } from "@/lib/main-wam/momen/camera-templates";
 
 /*
- * The live preview of a camera template: the same ops the sent photo draws (templateLayout), as an SVG over
+ * The live preview of a camera sign: the same ops the sent photo draws (templateLayout), as an SVG over
  * the 4:5 viewfinder. The viewBox is the 4:5 design (400 x 500) and stretches to the viewfinder, so the
- * preview is the result. Nothing for Asli. The colours come from the template list (src/lib), not from here.
+ * preview is the result. Nothing for Tanpa. The tone is not here: it is a CSS filter on the video, under this. The colours come from the template list (src/lib), not from here.
  */
 
 export const TEMPLATE_VIEW = { width: 400, height: 500 } as const;
 
-export function TemplateOverlay({ template, lang, className }: { template: TemplateId; lang: Lang; className?: string }) {
+export function TemplateOverlay({ sign, lang, className }: { sign: SignId; lang: Lang; className?: string }) {
   const uid = useId().replace(/:/g, "");
-  if (!hasTemplate(template)) return null;
-  const ops = templateLayout(template, TEMPLATE_VIEW.width, TEMPLATE_VIEW.height, lang);
-  return <svg className={className} data-template={template} viewBox={`0 0 ${TEMPLATE_VIEW.width} ${TEMPLATE_VIEW.height}`} preserveAspectRatio="none" aria-hidden focusable="false">
+  if (!hasTemplate(sign)) return null;
+  const ops = templateLayout(sign, TEMPLATE_VIEW.width, TEMPLATE_VIEW.height, lang);
+  return <svg className={className} data-sign={sign} viewBox={`0 0 ${TEMPLATE_VIEW.width} ${TEMPLATE_VIEW.height}`} preserveAspectRatio="none" aria-hidden focusable="false">
     <defs>
       <filter id={`${uid}-shadow`} x="-10%" y="-30%" width="120%" height="170%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />

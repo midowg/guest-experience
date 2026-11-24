@@ -1,17 +1,20 @@
 import type { Lang } from "@/lib/main-wam/i18n";
-import { CAMERA_FILTER_IDS, type CameraFilterId } from "./camera-filters";
 
 /*
- * The camera's event templates (Momen only; the Misi camera has none): Asli (nothing added) and four frames
- * for WAM 2026, each with the event's name, the Werkudara mark in the top-right corner, and a colour tone
- * (camera-filters.ts). One pure `templateLayout(id, width, height)` turns a template into a list of drawing
- * ops; the live viewfinder draws them as an SVG (TemplateOverlay) and the photo that is sent draws the same
- * list on its canvas (camera-template-draw.ts), so what the person sees is what is sent. Everything is placed
- * in a 400-unit-wide design and scaled by the photo's width; text stays on the edges, never on the faces.
+ * The camera's signs (Momen only; the Misi camera has none): what is added on top of the photo, apart from its
+ * colour tone (camera-filters.ts). Tanpa adds nothing; Simpel is one small line and a small mark; Emas, Jaringan
+ * and Polaroid are frames for WAM 2026, each with the event's name and the Werkudara mark in the top-right corner.
+ * A sign carries no tone: the photo is toned first and the sign is drawn over it. One pure
+ * `templateLayout(id, width, height)` turns a sign into a list of drawing ops; the live viewfinder draws them
+ * as an SVG (TemplateOverlay) and the photo that is sent draws the same list on its canvas
+ * (camera-template-draw.ts), so what the person sees is what is sent. Everything is placed in a 400-unit-wide
+ * design and scaled by the photo's width; text stays on the edges, never on the faces.
  * The colours live here (the kit's gold, deep blue, light blue), the one place of this feature.
  */
 
 export const TEMPLATE_TITLE = "Werkudara Annual Meeting 2026";
+/** Simpel's one line: "WAM 2026 · Kota Batu · 4–7 Jan 2027". */
+export const SIMPLE_LINE = "WAM 2026 · Kota Batu · 4–7 Jan 2027";
 export const TEMPLATE_DATE: Record<Lang, string> = { id: "4–7 Januari 2027 · Kota Batu", en: "4–7 January 2027 · Kota Batu" };
 export const LOGO_SRC = "/werkudara-mark.png";
 export const NET_SRC = "/wam/pegasus-jaringan-gelap.svg";
@@ -24,7 +27,11 @@ export const FONT_STACK = "\"Helvetica Neue\", Arial, sans-serif";
 
 const GOLD = "#F5C542", NAVY = "#0B1638", BLUE = "#1551A0", CYAN = "#46D2FF", PAPER = "#FAF7F0", WHITE = "#FFFFFF", MUTED = "#4A5578";
 
-export type TemplateId = CameraFilterId;
+export const SIGN_IDS = ["tanpa", "simpel", "emas", "jaringan", "polaroid"] as const;
+export type SignId = (typeof SIGN_IDS)[number];
+export const DEFAULT_SIGN: SignId = "tanpa";
+export type TemplateId = SignId;
+export const isSign = (value: unknown): value is SignId => typeof value === "string" && (SIGN_IDS as readonly string[]).includes(value);
 export type TemplateOp =
   | { k: "rect"; x: number; y: number; w: number; h: number; fill: string; opacity?: number }
   /** A fade of one colour: strongest (a0) on the bottom edge for "up", on the top edge for "down", to a1 at the other. */
@@ -36,20 +43,20 @@ export type TemplateOp =
 
 export type CameraTemplate = {
   id: TemplateId;
-  /** The words printed on the photo, in lines (joined with a space they are the title); none for Asli. */
+  /** The words printed on the photo (the title, or Simpel's line); none for Tanpa. */
   lines: string[];
   /** The mark's corner: always the top right. */
   logo: "top-right" | null;
 };
 
-export const CAMERA_TEMPLATES: CameraTemplate[] = CAMERA_FILTER_IDS.map(id => ({
+export const CAMERA_TEMPLATES: CameraTemplate[] = SIGN_IDS.map(id => ({
   id,
-  lines: id === "asli" ? [] : id === "biru" ? ["WERKUDARA", "ANNUAL MEETING 2026"] : [TEMPLATE_TITLE.toUpperCase()],
-  logo: id === "asli" ? null : "top-right",
+  lines: id === "tanpa" ? [] : id === "simpel" ? [SIMPLE_LINE] : [TEMPLATE_TITLE.toUpperCase()],
+  logo: id === "tanpa" ? null : "top-right",
 }));
 
 export const templateOf = (id: TemplateId): CameraTemplate => CAMERA_TEMPLATES.find(template => template.id === id)!;
-export const hasTemplate = (id: TemplateId): boolean => id !== "asli";
+export const hasTemplate = (id: TemplateId): boolean => id !== "tanpa";
 
 /** "#RRGGBB" to [r, g, b] (0-255). */
 export function hexRgb(hex: string): [number, number, number] {
@@ -76,6 +83,16 @@ export function templateLayout(id: TemplateId, width: number, height: number, la
   };
   const title = TEMPLATE_TITLE.toUpperCase();
 
+  if (id === "simpel") {
+    const line = SIMPLE_LINE;
+    return [
+      { k: "grad", x: 0, y: H - 44 * s, w: W, h: 44 * s, color: NAVY, a0: 0.62, a1: 0, dir: "up" },
+      { k: "grad", x: 0, y: 0, w: W, h: 64 * s, color: NAVY, a0: 0.34, a1: 0, dir: "down" },
+      logoAt(14, 30, WHITE, true),
+      text(line, 14 * s, H - 14 * s, 10.5, 600, WHITE, "start", 0.02, W - 28 * s, true),
+    ];
+  }
+
   if (id === "emas") return [
     { k: "grad", x: 0, y: 0, w: W, h: 100 * s, color: NAVY, a0: 0.5, a1: 0, dir: "down" },
     logoAt(16, 46, GOLD, true),
@@ -85,17 +102,7 @@ export function templateLayout(id: TemplateId, width: number, height: number, la
     text(date, W / 2, H - 14 * s, 9.5, 600, WHITE, "middle", 0.1, W - 28 * s),
   ];
 
-  if (id === "biru") return [
-    { k: "grad", x: 0, y: 0, w: W, h: 100 * s, color: NAVY, a0: 0.45, a1: 0, dir: "down" },
-    { k: "grad", x: 0, y: H - 130 * s, w: W, h: 130 * s, color: NAVY, a0: 0.85, a1: 0, dir: "up" },
-    { k: "frame", x: 3.5 * s, y: 3.5 * s, w: W - 7 * s, h: H - 7 * s, line: 7 * s, color: NAVY },
-    { k: "frame", x: 8.5 * s, y: 8.5 * s, w: W - 17 * s, h: H - 17 * s, line: 1.2 * s, color: GOLD },
-    logoAt(22, 46, WHITE, true, 22),
-    text("WERKUDARA", 26 * s, H - 54 * s, 11, 700, GOLD, "start", 0.32, W - 52 * s, true),
-    text("ANNUAL MEETING 2026", 26 * s, H - 28 * s, 21, 800, WHITE, "start", 0.02, W - 52 * s, true),
-  ];
-
-  if (id === "jaringan") {
+    if (id === "jaringan") {
     const nw = 260 * s;
     return [
       { k: "net", x: -56 * s, y: H - nw / NET_ASPECT + 36 * s, w: nw, h: nw / NET_ASPECT, opacity: 0.3 },
