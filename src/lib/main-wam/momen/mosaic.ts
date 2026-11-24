@@ -113,6 +113,27 @@ export function letterCells(columns: number, rows: number, text = "WAM 2026"): s
   return cells.join("");
 }
 
+/** The Beranda card's mini mosaic (the prototype's mosaic(54, 9)): one long line of text on a 54 × 9 grid. */
+export const MINI_COLUMNS = 54, MINI_ROWS = 9;
+
+/**
+ * The mini mosaic, apart from the big grid (its own mapping; the manifest, its version and the TV are untouched):
+ * the text on one line in 54 × 9, and which of its cells show as photographed. The share of the big grid's letter
+ * cells that hold a photo is carried over to the mini letters, in a fixed seeded order, so the same state always
+ * draws the same mini mosaic.
+ */
+export function miniMosaic(big: { columns: number; rows: number; cells: ArrayLike<string>; filledCells: readonly number[] }, text = "WAM 2026"): { columns: number; rows: number; cells: string; lit: Set<number> } {
+  const cells = letterCells(MINI_COLUMNS, MINI_ROWS, text);
+  const letters = (value: string) => value !== ".";
+  let bigLetters = 0;
+  for (let index = 0; index < big.columns * big.rows; index++) if (letters(big.cells[index] ?? ".")) bigLetters++;
+  const bigFilled = new Set(big.filledCells).size === 0 ? 0 : big.filledCells.filter(cell => letters(big.cells[cell] ?? ".")).length;
+  const miniLetters = [...cells].filter(letters).length;
+  const count = bigLetters > 0 ? Math.min(miniLetters, Math.round((Math.min(bigFilled, bigLetters) / bigLetters) * miniLetters)) : 0;
+  const lit = new Set(cellOrder(MINI_COLUMNS, MINI_ROWS, "mini").filter(index => letters(cells[index])).slice(0, count));
+  return { columns: MINI_COLUMNS, rows: MINI_ROWS, cells, lit };
+}
+
 /** A mask from a picture (true = inside), as one character per cell: "#" inside, "." outside. */
 export const maskCells = (inside: readonly boolean[]) => inside.map(value => (value ? "#" : ".")).join("");
 

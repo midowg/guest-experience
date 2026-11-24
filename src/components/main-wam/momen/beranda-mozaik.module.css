@@ -2,10 +2,10 @@
 .card { display: flex; flex-direction: column; gap: var(--mw-space-12); padding: 12px 14px 14px; border-radius: var(--mw-radius-20); }
 .head { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
 .live { font-size: 11px; line-height: 11px; }
-.preview { display: block; width: 100%; height: auto; max-height: 170px; border-radius: var(--mw-radius-8); }
+.preview { display: block; width: 100%; height: auto; aspect-ratio: 6 / 1; border-radius: var(--mw-radius-8); }
 .on { opacity: 1; }
-.dim { opacity: 0.5; }
-.off { fill: var(--mw-outline-2); opacity: 0.4; }
+.dim { opacity: 0.62; }
+.off { fill: var(--mw-outline-2); opacity: 0.22; }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); }
 .counts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--mw-space-8); min-width: 0; }
 .figure { font: var(--mw-type-stat-l); letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; color: var(--mw-gold-ink); }
