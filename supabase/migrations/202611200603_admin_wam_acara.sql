@@ -11,12 +11,15 @@
 -- Server only (service role). Needs 202611130012 (admin_grants), 202611160050 (its last apps check) and pw_events.
 -- ROLLBACK (by hand): drop table public.pw_event_staff;
 --   update public.admin_grants set apps = array_remove(apps, 'wam_acara');
---   then restore the apps check of 202611160050 (without 'wam_acara').
+--   then restore the apps check without 'wam_acara'.
+-- Order-safe (24 Nov 2026): the apps check below also keeps 'hr' (202611200703, which may have run first). Without it
+-- this migration fails after 0703 once someone holds 'hr' ("violates check constraint"), rolls back whole, and
+-- pw_event_staff is never made (production, 21–24 Nov 2026: the table was not there after it was run).
 begin;
 
 alter table public.admin_grants drop constraint if exists admin_grants_apps_check;
 alter table public.admin_grants add constraint admin_grants_apps_check
-  check (apps <@ array['acara', 'friday_sharing', 'your_visit', 'wam', 'kuesioner', 'tv', 'wellbeing', 'wam_acara']::text[]);
+  check (apps <@ array['acara', 'friday_sharing', 'your_visit', 'wam', 'kuesioner', 'tv', 'wellbeing', 'wam_acara', 'hr']::text[]);
 
 create table if not exists public.pw_event_staff (
   event_id uuid not null references public.pw_events (id) on delete cascade,
