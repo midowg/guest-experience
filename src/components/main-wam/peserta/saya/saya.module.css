@@ -38,7 +38,9 @@ a.row:active, button.row:active { background-color: var(--mw-press); }
 .profileCam { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
 
 /* Tokoh card (the questionnaire card's tokoh): the card's two colours as a small portrait, the name in Barlow capitals, the type under it. */
-.figure { display: flex; align-items: center; gap: var(--mw-space-16); padding: var(--mw-space-16); border-radius: var(--mw-radius-20); background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); }
+.figure { display: flex; align-items: center; gap: var(--mw-space-16); padding: var(--mw-space-16); border-radius: var(--mw-radius-20); background: linear-gradient(135deg, var(--mw-accent), color-mix(in srgb, var(--mw-accent) 70%, var(--mw-media-scrim))); color: var(--mw-on-accent); border: 1px solid transparent; box-shadow: var(--mw-elev-card); }
+.figure .figureText > * { color: var(--mw-on-accent); }
+.figure .profileLine { color: var(--mw-on-accent-2); }
 .figureArt { flex: none; width: 54px; height: 66px; border-radius: 12px; }
 .figureText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .figureName { font: 800 22px/24px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
