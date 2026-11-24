@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, CircleCheck, Image as ImageIcon, LayoutGrid, Maximize, ScanLine, Tv } from "lucide-react";
+import { Camera, CircleCheck, Image as ImageIcon, LayoutGrid, Maximize, ScanLine } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Button, EmptyState, IconButton, Pill, PhotoFill, TextLink } from "@/components/main-wam/ui";
-import { clock, number as formatNumber } from "@/lib/main-wam/i18n";
+import { number as formatNumber } from "@/lib/main-wam/i18n";
 import { cellLabel, mosaicPercent } from "@/lib/main-wam/momen/mosaic";
 import type { MosaicManifest } from "@/lib/main-wam/momen/types";
-import { wibTime } from "@/lib/main-wam/rundown";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { MosaicCanvas } from "./MosaicCanvas";
 import { MomenQueueRunner } from "./upload/QueueRunner";
@@ -101,7 +100,7 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
     </button>
     <p className={css.caption} aria-live="polite">{mine.length ? t("momen.mos.mineIn", { n: mine.length }) : t("momen.mos.noneIn")}</p>
 
-    {mark && (mine.length ? <div>
+    {mark && mine.length > 0 && <div className={css.mineBox}>
       <ul className={css.mine} aria-label={t("momen.mos.mineList")}>
         {mine.map((tile, index) => {
           const pressed = tile.id === selected?.id;
@@ -118,17 +117,12 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
         })}
       </ul>
       {selected && <TextLink icon={ImageIcon} href={mainWamPath.moments({ foto: selected.id })}>{t("momen.mos.seePhoto")}</TextLink>}
-    </div> : <EmptyState size="s" icon={LayoutGrid} title={t("momen.mos.emptyTitle")} headingLevel={3}
-      action={<Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>}>{t("momen.mos.emptyBody")}</EmptyState>)}
+    </div>}
 
-    {manifest.complete
-      ? <div className={css.complete}>
-        <Pill tone="success" icon={<CircleCheck />}>{t("momen.mos.complete", { total: number(manifest.total) })}</Pill>
-        <p className={css.caption}>{t("momen.mos.newStay")}</p>
-      </div>
-      : <p className={css.caption}>{t("momen.mos.people", { people: manifest.people, time: clock(lang, wibTime(manifest.updatedAt)) })}</p>}
+    {manifest.complete && <div className={css.complete}>
+      <Pill tone="success" icon={<CircleCheck />}>{t("momen.mos.complete", { total: number(manifest.total) })}</Pill>
+    </div>}
 
-    <p className={css.meta}><Tv aria-hidden />{t("momen.mos.tv")}</p>
-    <Button variant="secondary" block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
+    <Button variant="tonal" block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
   </ScreenContent>;
 }

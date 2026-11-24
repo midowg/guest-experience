@@ -2,7 +2,7 @@ import { ChevronRight, Images } from "lucide-react";
 import { Words } from "@/components/main-wam/i18n";
 import { Card, EyebrowLabel, Pill, PulseDot } from "@/components/main-wam/ui";
 import { number, t } from "@/lib/main-wam/i18n";
-import { mosaicPercent } from "@/lib/main-wam/momen/mosaic";
+import { mosaicPercent, paletteIndex } from "@/lib/main-wam/momen/mosaic";
 import { mainWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
 import { readLang } from "@/lib/server/main-wam/lang";
@@ -42,23 +42,33 @@ export function MozaikCard({ summary, title, filled, rest }: { summary: MosaicSu
   </Card>;
 }
 
-/** The mosaic in small: the letters' cells, lit where a photo already is; cropped to the letters (one cell around). Decorative. */
+/**
+ * The mosaic in small (the prototype's .mzg): the letters' cells each in a colour of the palette (full where a photo already is,
+ * faint where not), the cells around them a faint grid; cropped to the letters (one cell around). Decorative.
+ */
 export function MosaicPreview({ summary }: { summary: Pick<MosaicSummary, "columns" | "rows" | "cells" | "filledCells"> }) {
   const { columns, rows, cells } = summary;
   const lit = new Set(summary.filledCells);
   let left = columns, top = rows, right = -1, bottom = -1;
-  const on: string[] = [];
-  const off: string[] = [];
   for (let index = 0; index < columns * rows; index++) {
     if ((cells[index] ?? ".") === ".") continue;
     const x = index % columns, y = Math.floor(index / columns);
     left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
-    (lit.has(index) ? on : off).push(`M${x} ${y}h.86v.86h-.86z`);
   }
   if (right < 0) { left = 0; top = 0; right = columns - 1; bottom = rows - 1; }
-  const box = `${left - 1} ${top - 1} ${right - left + 3} ${bottom - top + 3}`;
-  return <svg className={css.preview} viewBox={box} preserveAspectRatio="xMidYMid meet" aria-hidden focusable="false">
+  const [x0, y0, x1, y1] = [Math.max(0, left - 1), Math.max(0, top - 1), Math.min(columns - 1, right + 1), Math.min(rows - 1, bottom + 1)];
+  const off: string[] = [];
+  const on: string[][] = Array.from({ length: 8 }, () => []);
+  const dim: string[][] = Array.from({ length: 8 }, () => []);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const index = y * columns + x;
+    const square = `M${x - x0} ${y - y0}h.88v.88h-.88z`;
+    if ((cells[index] ?? ".") === ".") off.push(square);
+    else (lit.has(index) ? on : dim)[paletteIndex(index)].push(square);
+  }
+  return <svg className={css.preview} viewBox={`0 0 ${x1 - x0 + 1} ${y1 - y0 + 1}`} preserveAspectRatio="xMidYMid meet" aria-hidden focusable="false">
     <path className={css.off} d={off.join("")} />
-    <path className={css.on} d={on.join("")} />
+    {dim.map((path, n) => path.length > 0 && <path key={`d${n}`} className={css.dim} style={{ fill: `var(--mw-mosaic-${n + 1})` }} d={path.join("")} />)}
+    {on.map((path, n) => path.length > 0 && <path key={`o${n}`} className={css.on} style={{ fill: `var(--mw-mosaic-${n + 1})` }} d={path.join("")} />)}
   </svg>;
 }

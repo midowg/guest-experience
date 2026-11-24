@@ -1,26 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Minus, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { Minus } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { IconButton } from "@/components/main-wam/ui";
-import { cellBounds, gridGeometry } from "@/lib/main-wam/momen/mosaic";
+import { cellBounds, gridGeometry, paletteIndex } from "@/lib/main-wam/momen/mosaic";
 import type { MosaicManifest } from "@/lib/main-wam/momen/types";
 import css from "./mosaic.module.css";
 
 /*
  * The Mozaik drawn on one <canvas> (RISET §9: never hundreds of animated elements): cells square,
- * the grid centred in a 16:9 box (the venue TV's shape). Empty cells are thin outlines (inside the
- * letters tinted with the event colour); a filled cell shows its 160 px tile, inside the letters
- * under the event colour and outside them faded, so "WAM 2026" stands out as photos arrive. Tiles are cached per photo, so
- * a refresh draws only what changed. Zoom with + / − (or two fingers), pan by scrolling.
- * "Tandai fotoku": the others dimmed, one's own outlined and numbered.
+ * the grid fills a box of the grid's own shape. Empty cells are faint squares (a letter's in its palette colour,
+ * the rest a faint grid), so "WAM 2026" reads even with no photo at all; a filled cell shows its 160 px tile, inside the
+ * letters under the palette colour and outside them faded. Tiles are cached per photo, so
+ * a refresh draws only what changed. Zoom with two fingers, a double tap or + / −, pan by scrolling.
+ * "Tandai fotoku": one's own cells ringed in gold (numbered when zoomed).
  */
 
 export const MOSAIC_ZOOMS = [1, 2, 3] as const;
-const PAD = 12;
+const PAD = 2;
 
-type Colors = { outline: string; accent: string; accentSoft: string; accentLine: string; primary: string; ph: string[] };
+type Colors = { outline: string; gold: string; goldSoft: string; primary: string; palette: string[]; paletteSoft: string[]; ph: string[] };
 
 function rgba(color: string, alpha: number): string {
   const value = color.trim();
@@ -38,11 +38,13 @@ function readColors(element: HTMLElement): Colors {
   const style = getComputedStyle(element);
   // The tokens are always set under the theme root; "transparent" only keeps a bare test element from throwing.
   const token = (name: string) => style.getPropertyValue(name).trim() || "transparent";
-  const accent = token("--mw-accent");
+  const gold = token("--mw-gold");
+  const palette = [1, 2, 3, 4, 5, 6, 7, 8].map(n => token(`--mw-mosaic-${n}`));
   return {
-    outline: token("--mw-outline-2"), accent, accentSoft: rgba(accent, 0.28), accentLine: rgba(accent, 0.8), primary: token("--mw-primary"),
+    outline: rgba(token("--mw-outline-2"), 0.55), gold, goldSoft: rgba(gold, 0.35), primary: token("--mw-primary"),
+    palette, paletteSoft: palette.map(color => rgba(color, 0.45)),
     // The placeholder tokens are gradients: a cell takes their first colour.
-    ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
+    ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
   };
 }
 
@@ -93,7 +95,7 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
   }, [manifest.tiles]);
 
   const width = size.width * zoom, height = size.height * zoom;
-  // A margin of 12 around the grid inside the box (the prototype's frame).
+  // A margin of 2 around the grid inside the box .
   const geometry = useMemo(() => {
     const inner = gridGeometry({ width: Math.max(1, width - 2 * PAD), height: Math.max(1, height - 2 * PAD) }, manifest.columns, manifest.rows, zoom > 1 ? 2 : 1);
     return { ...inner, left: inner.left + PAD, top: inner.top + PAD };
@@ -118,51 +120,46 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
       const side = geometry.cell;
-      const mineSet = new Set(mine);
       for (let cell = 0; cell < manifest.columns * manifest.rows; cell++) {
         const { x, y } = cellAt(cell);
         const letter = manifest.cells[cell] && manifest.cells[cell] !== ".";
         const tile = tiles.get(cell);
-        context.globalAlpha = mark && mineSet.size > 0 && !(tile && mineSet.has(cell)) ? 0.4 : 1;
+        const colour = paletteIndex(cell);
         if (!tile) {
-          if (letter) { context.fillStyle = colors.accentSoft; context.fillRect(x, y, side, side); context.strokeStyle = colors.accentLine; }
-          else context.strokeStyle = colors.outline;
-          context.lineWidth = 1;
-          context.strokeRect(x + 0.5, y + 0.5, side - 1, side - 1);
+          // No photo yet: a letter cell is a faint coloured square (the letters read even with the mosaic empty), the rest a faint grid.
+          context.fillStyle = letter ? colors.paletteSoft[colour] : colors.outline;
+          context.globalAlpha = letter ? 1 : 0.5;
+          context.fillRect(x, y, side, side);
           continue;
         }
-        // A photo outside the letters is shown faded, so the letters (full strength, under the event colour) stay readable
-        // however colourful the photos around them are.
-        if (!letter) context.globalAlpha *= 0.38;
         const image = images.current.get(tile.id);
-        if (image?.complete && image.naturalWidth) {
+        const ready = !!(image?.complete && image.naturalWidth);
+        // A photo outside the letters is shown faded, so the letters (full strength, under their colour) stay readable
+        // however colourful the photos around them are.
+        context.globalAlpha = letter ? 1 : 0.14;
+        if (ready && image) {
           const crop = Math.min(image.naturalWidth, image.naturalHeight);
           context.drawImage(image, (image.naturalWidth - crop) / 2, (image.naturalHeight - crop) / 2, crop, crop, x, y, side, side);
         } else {
-          context.fillStyle = colors.ph[(cell * 7) % 6];
+          context.fillStyle = letter ? colors.palette[colour] : colors.ph[(cell * 7) % 6];
           context.fillRect(x, y, side, side);
         }
-        if (letter) { context.fillStyle = rgba(colors.accent, image?.complete && image.naturalWidth ? 0.72 : 1); context.fillRect(x, y, side, side); }
+        if (letter && ready) { context.globalAlpha = 0.7; context.fillStyle = colors.palette[colour]; context.fillRect(x, y, side, side); }
       }
       context.globalAlpha = 1;
       if (mark) {
-        context.strokeStyle = colors.primary;
-        context.lineWidth = 2;
-        for (const cell of mine) { const { x, y } = cellAt(cell); context.strokeRect(x - 1, y - 1, side + 2, side + 2); }
+        // One's own cells: a gold ring with a soft glow (the prototype's .me).
+        context.strokeStyle = colors.gold;
+        context.shadowColor = colors.gold;
+        context.shadowBlur = 6;
+        context.lineWidth = Math.max(1.5, Math.min(3, side / 5));
+        for (const cell of mine) { const { x, y } = cellAt(cell); context.fillStyle = colors.goldSoft; context.fillRect(x, y, side, side); context.strokeRect(x - 0.5, y - 0.5, side + 1, side + 1); }
+        context.shadowBlur = 0;
       }
     });
     return () => cancelAnimationFrame(frame.current);
   });
 
-  // "Tandai fotoku": zoom to one's own cells; a chosen one comes into view.
-  useEffect(() => {
-    if (!mark || !mine.length) return;
-    const bounds = cellBounds(mine, manifest.columns);
-    if (!bounds || !size.width) return;
-    const span = Math.max((bounds.right - bounds.left + 3) / manifest.columns, (bounds.bottom - bounds.top + 3) / manifest.rows);
-    // At least 2× (the cells become big enough to see one's photo), up to what holds them all.
-    onZoom(Math.max(2, Math.min(3, Math.floor(1 / span))));
-  }, [mark, mine, manifest.columns, manifest.rows, size.width, onZoom]);
   useEffect(() => {
     const element = box.current;
     if (!element || zoom <= 1) return;
@@ -196,19 +193,25 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
     if (!pinch.current?.pointers.size) pinch.current = null;
   }
 
-  const tags = mark ? mine.map((cell, index) => { const { x, y } = cellAt(cell); return { cell, n: index + 1, x: x + geometry.cell / 2, y }; }) : [];
+  // Keyboard: + / − / 0 zoom (the one-finger way besides a double tap); the arrow keys scroll while zoomed.
+  function onKey(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key === "+" || event.key === "=") onZoom(Math.min(3, zoom + 1));
+    else if (event.key === "-") onZoom(Math.max(1, zoom - 1));
+    else if (event.key === "0") onZoom(1);
+  }
+
+  const tags = mark && zoom > 1 ? mine.map((cell, index) => { const { x, y } = cellAt(cell); return { cell, n: index + 1, x: x + geometry.cell / 2, y }; }) : [];
   return <div className={css.wrap}>
     {/* Zoomed in, the canvas scrolls: focusable, so the arrow keys move it too (audit T-M04, WCAG 2.1.1). */}
-    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label={t("momen.mos.canvas")} tabIndex={zoom > 1 ? 0 : undefined}
+    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label={t("momen.mos.canvas")} tabIndex={0} style={{ "--ratio": `${manifest.columns} / ${manifest.rows}` } as CSSProperties} onKeyDown={onKey} onDoubleClick={() => onZoom(zoom > 1 ? 1 : 2)}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
       <div className={css.inner} style={{ width: width || "100%", height: height || "100%" }}>
         <canvas ref={canvas} className={css.canvas} role="img" aria-label={label} />
         {tags.map(tag => <span key={tag.cell} className={css.tag} style={{ left: tag.x, top: tag.y }} aria-hidden>{tag.n}</span>)}
       </div>
     </div>
-    <div className={css.zoom}>
-      <IconButton icon={Plus} label={t("momen.mos.zoomIn")} className={css.zoomBtn} disabled={zoom >= 3} onClick={() => onZoom(Math.min(3, zoom + 1))} />
-      <IconButton icon={Minus} label={t("momen.mos.zoomOut")} className={css.zoomBtn} disabled={zoom <= 1} onClick={() => onZoom(Math.max(1, zoom - 1))} />
-    </div>
+    {zoom > 1 && <div className={css.zoom}>
+      <IconButton icon={Minus} label={t("momen.mos.zoomOut")} className={css.zoomBtn} onClick={() => onZoom(Math.max(1, zoom - 1))} />
+    </div>}
   </div>;
 }

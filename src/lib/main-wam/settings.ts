@@ -21,7 +21,7 @@ export const DEFAULT_EVENT: MainWamEventInfo = {
 };
 /** Every module off, Silent Meeting included (it is Pra WAM's, not Main WAM's; migration 202611220001 switches it off in a database that had it on). */
 export const DEFAULT_MODULES: ModuleSwitches = Object.fromEntries(MAIN_WAM_MODULES.map(key => [key, false])) as ModuleSwitches;
-export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 30, rows: 20 }, demo: false };
+export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 50, rows: 36 }, demo: false };
 export const DEFAULT_THEME_SETTINGS: MainWamThemeSettings = { colors: {}, displayFont: null, images: {} };
 export const DEFAULT_CONTACTS: MainWamContacts = { kamar: null, perjalanan: null, umum: null };
 export const DEFAULT_CARBON: CarbonInputs = { listrikKwh: null, airM3: null, lpgKg: null, sampahKg: null, final: false };

@@ -168,3 +168,6 @@ export function gridGeometry(box: { width: number; height: number }, columns: nu
   const cell = Math.max(1, Math.min((box.width - gap * (columns - 1)) / columns, (box.height - gap * (rows - 1)) / rows));
   return { cell, left: (box.width - (cell * columns + gap * (columns - 1))) / 2, top: (box.height - (cell * rows + gap * (rows - 1))) / 2 };
 }
+
+/** The palette colour (0–7, the tokens --mw-mosaic-1..8) of a cell: fixed by its place, so the letters never change colour between draws (the prototype's seeded pick). */
+export const paletteIndex = (cell: number) => (Math.imul(cell + 1, 2654435761) >>> 0) % 8;

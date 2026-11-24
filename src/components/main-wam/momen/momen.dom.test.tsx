@@ -493,7 +493,9 @@ describe("fixes after the audit", () => {
   it("T-M04: the zoomed canvas is a named region the keyboard can reach and scroll", () => {
     const { rerender } = render(<MosaicCanvas manifest={sampleMosaic()} mark={false} zoom={1} onZoom={() => undefined} focus={null} label="Mozaik" />);
     const region = screen.getByRole("region", { name: "Kanvas mozaik" });
-    expect(region.hasAttribute("tabindex")).toBe(false);
+    // Always reachable (the keyboard zooms with + and −); the zoom button shows only once zoomed in.
+    expect(region.getAttribute("tabindex")).toBe("0");
+    expect(screen.queryByRole("button", { name: "Perkecil" })).toBeNull();
     rerender(<MosaicCanvas manifest={sampleMosaic()} mark={false} zoom={2} onZoom={() => undefined} focus={null} label="Mozaik" />);
     expect(screen.getByRole("region", { name: "Kanvas mozaik" }).getAttribute("tabindex")).toBe("0");
   });
@@ -516,10 +518,51 @@ describe("the Mozaik", () => {
   it("marks one's own photos with numbers and where they are", () => {
     render(<ToastProvider><Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo /></ToastProvider>);
     expect(screen.getByText("4 fotomu ada di mozaik")).toBeTruthy();
-    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Mozaik WAM 2026, 312 dari 600 foto");
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Mozaik WAM 2026, 936 dari 1.800 foto");
     fireEvent.click(screen.getByRole("switch"));
     expect(screen.getByRole("list", { name: "Fotomu di mozaik" }).querySelectorAll("li")).toHaveLength(4);
     expect(screen.getByRole("link", { name: "Lihat foto" }).getAttribute("href")).toMatch(/^\/wam2026\/momen\?foto=/);
     expect(window.location.search).toBe("?tandai=1");
+  });
+});
+
+describe("the Mozaik canvas draws the prototype's grid", () => {
+  type Rect = { alpha: number };
+  function record() {
+    const fills: Rect[] = [], strokes: number[] = [];
+    const context = new Proxy({ globalAlpha: 1 } as Record<string, unknown>, {
+      get: (target, key: string) => key === "fillRect" ? () => fills.push({ alpha: target.globalAlpha as number })
+        : key === "strokeRect" ? () => strokes.push(1) : key in target ? target[key] : () => undefined,
+      set: (target, key: string, value) => { target[key] = value; return true; },
+    });
+    HTMLCanvasElement.prototype.getContext = (() => context) as never;
+    return { fills, strokes };
+  }
+  const sized = () => {
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 340 });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 245 });
+  };
+  afterEach(() => { HTMLCanvasElement.prototype.getContext = (() => null) as never; delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth; delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight; });
+
+  it("with no photo at all, every letter cell is still drawn (full alpha) over a fainter grid, and nothing is ringed", async () => {
+    sized();
+    const manifest = sampleMosaic(0, 0);
+    const letters = [...manifest.cells].filter(cell => cell !== ".").length;
+    const { fills, strokes } = record();
+    render(<MosaicCanvas manifest={manifest} mark={false} zoom={1} onZoom={() => undefined} focus={null} label="Mozaik" />);
+    await waitFor(() => expect(fills.length).toBe(manifest.columns * manifest.rows));
+    expect(fills.filter(fill => fill.alpha === 1)).toHaveLength(letters);
+    expect(fills.filter(fill => fill.alpha < 1)).toHaveLength(manifest.columns * manifest.rows - letters);
+    expect(strokes).toHaveLength(0);
+  });
+
+  it("Tandai fotoku rings each of one's own cells and does not dim the rest", async () => {
+    sized();
+    const manifest = sampleMosaic(0.52, 4);
+    const { fills, strokes } = record();
+    render(<MosaicCanvas manifest={manifest} mark zoom={1} onZoom={() => undefined} focus={null} label="Mozaik" />);
+    await waitFor(() => expect(strokes).toHaveLength(manifest.mine));
+    expect(manifest.mine).toBe(4);
+    expect(fills.some(fill => fill.alpha === 0.4)).toBe(false);
   });
 });

@@ -149,6 +149,14 @@ describe("Mozaik", () => {
     expect(top).toBeLessThan(bottom);
   });
 
+  it("on the default 50 × 36 grid the letters are two cells thick and fill the width (the prototype's look)", () => {
+    const rows = rowsOf(letterCells(50, 36, "WAM 2026"), 50);
+    // "2026" is 23 pixels wide at scale 2 = 46 of 50 columns; the first letter row is two cells tall.
+    const widest = Math.max(...rows.filter(row => /[^.]/.test(row)).map(row => row.replace(/\.+$/, "").length - row.search(/[^.]/)));
+    expect(widest).toBeGreaterThanOrEqual(40);
+    expect(rows.filter(row => row.includes("W")).length).toBe(14); // 7 pixel rows × scale 2
+  });
+
   it("fit any grid, also the default 40 × 15, and draw something on a tiny one", () => {
     // 40 × 15 (the fondasi default) is too short for 7-row letters on one line: smaller, still drawn.
     expect(letterCells(40, 15).replace(/\./g, "").length).toBeGreaterThan(40);
@@ -183,7 +191,7 @@ describe("Mozaik", () => {
 
   it("sample a half-full mosaic with four of mine on letters", () => {
     const mosaic = sampleMosaic();
-    expect(mosaic.filled).toBe(312);
+    expect(mosaic.filled).toBe(936);
     expect(mosaic.mine).toBe(4);
     expect(mosaic.tiles.filter(tile => tile.mine).every(tile => mosaic.cells[tile.cell] !== ".")).toBe(true);
     expect(sampleMosaic(1).complete).toBe(true);

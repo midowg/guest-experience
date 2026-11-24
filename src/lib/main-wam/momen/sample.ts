@@ -67,8 +67,8 @@ export const sampleSessionCounts: SessionCount[] = [
 /** "Semua sesi · 486 foto" in the sheet and the gallery. */
 export const SAMPLE_TOTAL = 486;
 
-/** The prototype's Mozaik grid (M06: 30 × 20 = 600 cells). */
-export const SAMPLE_MOSAIC_GRID = { columns: 30, rows: 20 } as const;
+/** The prototype's Mozaik grid (M06: 50 × 36 = 1.800 cells). */
+export const SAMPLE_MOSAIC_GRID = { columns: 50, rows: 36 } as const;
 
 /** A 160 px gradient as a data address: a stand-in for a photo's tile (no real pictures in the repo). */
 function tilePicture(index: number): string {

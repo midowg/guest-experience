@@ -34,12 +34,12 @@ export const dynamic = "force-dynamic";
  * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet),
  * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off), ?kuis=buka (the live-quiz card).
  */
-/** The Mozaik card with a sample: "WAM 2026" on 30 × 20, most letter cells already holding a photo. */
+/** The Mozaik card with a sample: "WAM 2026" on 50 × 36, most letter cells already holding a photo. */
 function MozaikStandIn({ lang }: { lang: Lang }) {
-  const cells = letterCells(30, 20, "WAM 2026");
+  const cells = letterCells(50, 36, "WAM 2026");
   const letters = [...cells].map((cell, index) => (cell === "." ? -1 : index)).filter(index => index >= 0);
   const filledCells = letters.filter((_, position) => position % 10 < 7);
-  const summary = { columns: 30, rows: 20, cells, filledCells, filled: filledCells.length, total: letters.length, mine: 8, migrated: true };
+  const summary = { columns: 50, rows: 36, cells, filledCells, filled: filledCells.length, total: letters.length, mine: 8, migrated: true };
   return <MozaikCard summary={summary} title={lang === "en" ? "Mosaic WAM 2026" : "Mozaik WAM 2026"} filled={number(lang, summary.filled)}
     rest={`${lang === "en" ? "of" : "dari"} ${number(lang, summary.total)} ${lang === "en" ? "photos" : "foto"} · 8 ${lang === "en" ? "yours" : "fotomu"}`} />;
 }

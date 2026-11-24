@@ -224,6 +224,15 @@
   --mw-ph-4: linear-gradient(135deg, #E3E1F2 0%, #C9C6E4 100%);
   --mw-ph-5: linear-gradient(135deg, #D6E4F5 0%, #BCD0EA 100%);
   --mw-ph-6: linear-gradient(135deg, #F1E8DA 0%, #DCCFB8 100%);
+  /* Mozaik: palet 8 warna huruf (prototipe), sama di terang dan gelap */
+  --mw-mosaic-1: #1551A0;
+  --mw-mosaic-2: #46D2FF;
+  --mw-mosaic-3: #F5C542;
+  --mw-mosaic-4: #F5821F;
+  --mw-mosaic-5: #7C3AED;
+  --mw-mosaic-6: #4ADE80;
+  --mw-mosaic-7: #F472B6;
+  --mw-mosaic-8: #2F6FEB;
   --mw-ph-glow: rgb(255 255 255 / 0.38);
   --mw-ph-shade: rgb(11 22 56 / 0.06);
 
@@ -343,6 +352,15 @@
   --mw-ph-4: linear-gradient(135deg, #272250 0%, #1A173B 100%);
   --mw-ph-5: linear-gradient(135deg, #1A2D55 0%, #101E3F 100%);
   --mw-ph-6: linear-gradient(135deg, #342F2B 0%, #28231F 100%);
+  /* Mozaik: palet 8 warna huruf (prototipe), sama di terang dan gelap */
+  --mw-mosaic-1: #1551A0;
+  --mw-mosaic-2: #46D2FF;
+  --mw-mosaic-3: #F5C542;
+  --mw-mosaic-4: #F5821F;
+  --mw-mosaic-5: #7C3AED;
+  --mw-mosaic-6: #4ADE80;
+  --mw-mosaic-7: #F472B6;
+  --mw-mosaic-8: #2F6FEB;
   --mw-ph-glow: rgb(255 255 255 / 0.06);
   --mw-ph-shade: rgb(0 0 0 / 0.2);
   color-scheme: dark;
@@ -453,6 +471,15 @@
     --mw-ph-4: linear-gradient(135deg, #272250 0%, #1A173B 100%);
     --mw-ph-5: linear-gradient(135deg, #1A2D55 0%, #101E3F 100%);
     --mw-ph-6: linear-gradient(135deg, #342F2B 0%, #28231F 100%);
+    /* Mozaik: palet 8 warna huruf (prototipe), sama di terang dan gelap */
+    --mw-mosaic-1: #1551A0;
+    --mw-mosaic-2: #46D2FF;
+    --mw-mosaic-3: #F5C542;
+    --mw-mosaic-4: #F5821F;
+    --mw-mosaic-5: #7C3AED;
+    --mw-mosaic-6: #4ADE80;
+    --mw-mosaic-7: #F472B6;
+    --mw-mosaic-8: #2F6FEB;
     --mw-ph-glow: rgb(255 255 255 / 0.06);
     --mw-ph-shade: rgb(0 0 0 / 0.2);
     color-scheme: dark;
