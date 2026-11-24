@@ -17,5 +17,5 @@ export default async function DevMissionPage({ searchParams }: { searchParams: P
   const hod: MissionView = testMissionView({ id: "dev-hod", name: "Rani Contoh", nickname: "Rani" });
   const view: MissionView = role === "bod" ? { employeeId: "dev-bod", name: "Bima Contoh", nick: "Bima", role: "BoD", ceo: true, sentences: [1], room: null }
     : hod;
-  return <div className={styles.app} style={{ padding: 16 }}><MissionJourney view={view} detailHref="#" /></div>;
+  return <div className={styles.app} style={{ padding: 16 }}><MissionJourney view={view} /></div>;
 }

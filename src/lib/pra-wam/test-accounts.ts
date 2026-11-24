@@ -48,5 +48,5 @@ export const TEST_SENTENCES = [6, 12];
 
 /** What a test account receives in Misi Perjalanan: a HoD with the made-up room. */
 export function testMissionView(member: { id: string; name: string; nickname?: string | null }): MissionView {
-  return { employeeId: member.id, name: member.name, nick: member.nickname || member.name.split(" ")[0], role: "HoD", ceo: false, sentences: TEST_SENTENCES, room: TEST_ROOM };
+  return { employeeId: member.id, name: member.name, nick: member.nickname || member.name.split(" ")[0], role: "HoD", ceo: false, sentences: TEST_SENTENCES, room: TEST_ROOM, testing: true };
 }

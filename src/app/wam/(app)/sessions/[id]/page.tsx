@@ -29,7 +29,7 @@ export default async function SessionPage({ params, searchParams }: { params: Pr
   // 24 Nov 2026: the sessions set in Admin Pra WAM → Misi Perjalanan → Sesi.
   if (dari !== "kelola" && detail !== "1" && (await missionSessionIds()).includes(id)) {
     const mission = await missionFor(member);
-    if (mission) return <MissionJourney view={mission} detailHref={`${praWamPath.session(id)}?detail=1`} />;
+    if (mission) return <MissionJourney view={mission} />;
   }
   const view = await sessionView(id, member, dari === "kelola" ? "kelola" : "app");
   if (!view) notFound();

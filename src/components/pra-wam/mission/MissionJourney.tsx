@@ -18,7 +18,8 @@ import css from "./mission.module.css";
  * mystery (HoD), two missions, and one row for the agenda with Tanya CEO. Everything else opens in a
  * sheet; "Sudah tiba di venue" stays at the bottom until check-in, then the room is shown on top.
  * Nothing the questionnaire already asks is asked again (Pesan 2027, the room agreement and three
- * Future Signal questions left out). Pra WAM's own colours. A demo: kept on this device.
+ * Future Signal questions left out). Pra WAM's own colours. Kept on this device. 24 Nov 2026: no
+ * "Prototipe", "Detail sesi" or sample questions for participants; a test account keeps samples and "Ulangi dari awal".
  */
 
 type SheetKey = MissionKey | "quiz" | "arrive" | "agenda" | "session" | "ceo";
@@ -38,7 +39,8 @@ function fresh(view: MissionView): State {
   const questions: Record<string, Question[]> = {};
   let seq = 0;
   for (const day of AGENDA) for (const item of day.items) if (item.id) {
-    questions[item.id] = (SAMPLE_QUESTIONS[item.id] ?? []).map(sample => ({ ...sample, id: `c${++seq}`, by: "Contoh", anon: true, voted: false, mine: false, status: "baru" as const }));
+    // Sample questions for a test account only (24 Nov 2026): a participant starts with none.
+    questions[item.id] = (view.testing ? SAMPLE_QUESTIONS[item.id] ?? [] : []).map(sample => ({ ...sample, id: `c${++seq}`, by: "Contoh", anon: true, voted: false, mine: false, status: "baru" as const }));
   }
   return {
     done: { kal: false, sig: false },
@@ -62,7 +64,7 @@ function Row({ icon, title, sub, done = false, onOpen }: { icon: ReactNode; titl
   </button>;
 }
 
-export function MissionJourney({ view, detailHref }: { view: MissionView; detailHref: string }) {
+export function MissionJourney({ view }: { view: MissionView }) {
   const storage = `wam-misi-${view.employeeId}`;
   // Drawn in the browser only: the demo's place is on this device, read when the state is made.
   const inBrowser = useSyncExternalStore(noop, () => true, () => false);
@@ -70,6 +72,8 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     if (typeof window === "undefined") return fresh(view);
     try { const saved = localStorage.getItem(storage); if (!saved) return fresh(view);
       const loaded = { ...fresh(view), ...JSON.parse(saved) as State };
+      // Sample questions a device kept from before (24 Nov 2026) are dropped for a participant.
+      if (!view.testing) loaded.questions = Object.fromEntries(Object.entries(loaded.questions ?? {}).map(([id, list]) => [id, (list ?? []).filter(question => question.by !== "Contoh")]));
       return { ...loaded, guess: Array.isArray(loaded.guess) ? {} : loaded.guess }; } catch { return fresh(view); }
   });
   const [sheet, setSheet] = useState<SheetKey | null>(null);
@@ -386,7 +390,6 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         </div>)}
       </section>
     </main>
-    <footer className={css.foot}><span>Prototipe</span><a href={detailHref}>Detail sesi</a></footer>
     {confirmDialog}
     {open && <Sheet open onClose={close} title={open.title} subtitle={open.subtitle} footer={open.footer}>{open.body}</Sheet>}
     <div className={`${css.toast} ${toast ? css.toastShow : ""}`} role="status">{toast}</div>
@@ -412,11 +415,10 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
       </section>
     </main>
 
-    <footer className={css.foot}>
-      <span>Prototipe</span>
-      <a href={detailHref}>Detail sesi</a>
+    {view.testing && <footer className={css.foot}>
+      <span>Akun uji</span>
       <button type="button" onClick={() => { void restart(); }}>Ulangi dari awal</button>
-    </footer>
+    </footer>}
 
     {!s.arrived && <div className={css.dock}>
       <button type="button" className={`${css.btn} ${css.primary}`} onClick={() => setSheet("arrive")}><MapPin aria-hidden className={css.btnIcon} /> Sudah tiba di venue</button>

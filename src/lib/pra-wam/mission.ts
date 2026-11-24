@@ -36,6 +36,8 @@ export type MissionView = {
   sentences: number[];
   /** Only for a HoD in the room list: the room code, the roommates (each with their quiz) and own sleeping hours. */
   room: { code: string; mates: Mate[]; self: { sleep: string | null; wake: string | null } } | null;
+  /** An Akun uji (24 Nov 2026): sample questions and "Ulangi dari awal"; never for a real participant. */
+  testing?: boolean;
 };
 
 /** Unscramble the Future: each sentence cut into phrases, in order. */
