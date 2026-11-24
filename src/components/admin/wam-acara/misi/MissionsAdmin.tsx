@@ -87,7 +87,7 @@ function MissionsTab({ data, busy, run, call }: TabProps) {
       <div className={css.badges}>
         <Pill tone={mission.active ? "ok" : "neutral"}>{mission.active ? "Aktif" : "Mati"}</Pill>
         <Pill tone="blue">{kindWords[mission.kind]}</Pill>
-        <Pill tone="brass">{mission.points} poin</Pill>
+        <Pill tone="brass">{mission.points.toLocaleString("id-ID")} poin</Pill>
         {mission.review && <Pill tone="warn">Ditinjau dulu</Pill>}
       </div>
       {mission.kind === "foto" && <p className={css.chips}>{ruleDisplays(publicRules(effectiveRules(mission, data.settings.defaultRadiusM)), "id").flatMap(rule => rule.chips).map(chip => <span key={chip} className={css.chip}>{chip}</span>)}</p>}
@@ -120,7 +120,7 @@ function MissionsTab({ data, busy, run, call }: TabProps) {
 function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: AdminMissionRow | null; data: AdminMisi; busy: boolean; onSave: (input: MissionInput) => void; onCancel: () => void }) {
   const id = useId();
   const [form, setForm] = useState(() => ({
-    title: mission?.title ?? "", description: mission?.description ?? "", kind: (mission?.kind ?? "foto") as MissionKind, points: String(mission?.points ?? 20),
+    title: mission?.title ?? "", description: mission?.description ?? "", kind: (mission?.kind ?? "foto") as MissionKind, points: String(mission?.points ?? 200),
     placeName: mission?.placeName ?? "", latitude: mission?.latitude?.toString() ?? "", longitude: mission?.longitude?.toString() ?? "", radiusM: mission?.radiusM?.toString() ?? "",
     sessionId: mission?.sessionId ?? "", credit: mission?.credit ?? "panitia" as const, review: mission?.review ?? false,
     opensAt: toLocal(mission?.opensAt ?? null), closesAt: toLocal(mission?.closesAt ?? null), sort: String(mission?.sort ?? data.missions.length + 1), active: mission?.active ?? false,
@@ -146,7 +146,7 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
     {!mission && <div className="field"><label htmlFor={`${id}-templat`}>Mulai dari templat</label>
       <select id={`${id}-templat`} className="select" defaultValue="" onChange={event => applyTemplate(event.target.value)}>
         <option value="">Misi kosong</option>
-        {MISSION_TEMPLATES.map(template => <option key={template.key} value={template.key}>{template.title} · {template.points} poin</option>)}
+        {MISSION_TEMPLATES.map(template => <option key={template.key} value={template.key}>{template.title} · {template.points.toLocaleString("id-ID")} poin</option>)}
       </select>
       <span className={css.small}>Templat mengisi nama, penjelasan, poin, dan aturan. Tempat dan jam di templat hanya contoh: ubah sesuai acara sebelum diaktifkan.</span></div>}
     <div className={css.formGrid}>
@@ -155,7 +155,7 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
         <select id={`${id}-jenis`} className="select" value={form.kind} onChange={event => set("kind", event.target.value as MissionKind)}>
           {MISSION_KINDS.map(kind => <option key={kind} value={kind}>{kindWords[kind]}</option>)}
         </select></div>
-      <div className="field"><label htmlFor={`${id}-poin`}>Poin</label><input id={`${id}-poin`} className="input" type="number" min={0} max={1000} required value={form.points} onChange={event => set("points", event.target.value)} /></div>
+      <div className="field"><label htmlFor={`${id}-poin`}>Poin</label><input id={`${id}-poin`} className="input" type="number" min={0} max={100000} required value={form.points} onChange={event => set("points", event.target.value)} /></div>
     </div>
     <div className="field"><label htmlFor={`${id}-isi`}>Penjelasan untuk peserta</label><input id={`${id}-isi`} className="input" maxLength={500} value={form.description} onChange={event => set("description", event.target.value)} placeholder="Foto dirimu atau timmu di depan tugu apel." /></div>
     {places && <div className={css.formGrid}>
@@ -201,7 +201,7 @@ function GrantForm({ mission, data, busy, onSave, onCancel }: { mission: AdminMi
   const options = data.people.map(person => ({ ...person, label: `${person.fullName} · ${person.department || "Tanpa departemen"}` }));
   const picked = options.find(person => person.label === typed);
   return <div className={css.form}>
-    <p className={css.small}>Catat bahwa seseorang sudah mengerjakan “{mission.title}”. {mission.points} poin masuk saat itu juga.</p>
+    <p className={css.small}>Catat bahwa seseorang sudah mengerjakan “{mission.title}”. {mission.points.toLocaleString("id-ID")} poin masuk saat itu juga.</p>
     <div className={css.pick}>
       <div className="field">
         <label htmlFor={`${id}-orang`}>Orang</label>
@@ -271,7 +271,7 @@ function ProofsTab({ data, busy, run, call }: TabProps) {
 function RankTab({ data, busy, run, call }: TabProps) {
   const id = useId();
   const [typed, setTyped] = useState("");
-  const [points, setPoints] = useState("10");
+  const [points, setPoints] = useState("100");
   const [note, setNote] = useState("");
   const options = data.people.map(person => ({ ...person, label: `${person.fullName} · ${person.department || "Tanpa departemen"}` }));
   const picked = options.find(person => person.label === typed);
@@ -284,7 +284,7 @@ function RankTab({ data, busy, run, call }: TabProps) {
           <input id={`${id}-orang`} className="input" list={`${id}-daftar`} value={typed} placeholder="Ketik nama karyawan" autoComplete="off" onChange={event => setTyped(event.target.value)} />
           <datalist id={`${id}-daftar`}>{options.map(person => <option key={person.id} value={person.label} />)}</datalist>
         </div>
-        <div className="field"><label htmlFor={`${id}-poin`}>Poin</label><input id={`${id}-poin`} className="input" type="number" min={-1000} max={1000} value={points} onChange={event => setPoints(event.target.value)} /></div>
+        <div className="field"><label htmlFor={`${id}-poin`}>Poin</label><input id={`${id}-poin`} className="input" type="number" min={-100000} max={100000} value={points} onChange={event => setPoints(event.target.value)} /></div>
         <div className="field"><label htmlFor={`${id}-alasan`}>Alasan</label><input id={`${id}-alasan`} className="input" maxLength={200} value={note} onChange={event => setNote(event.target.value)} placeholder="Bantu panitia di meja registrasi" /></div>
       </div>
       <div className={css.actions}>
@@ -294,7 +294,7 @@ function RankTab({ data, busy, run, call }: TabProps) {
       {data.manual.length > 0 && <ul className={css.rows} aria-label="Poin manual">
         {data.manual.map(entry => <li key={entry.id} className={css.row}>
           <span className={css.rowText}><span>{entry.person}</span><span>{entry.note}{entry.createdBy ? ` · ${entry.createdBy}` : ""} · {adminWhen(entry.createdAt)}</span></span>
-          <span className={css.votes}>{entry.points > 0 ? `+${entry.points}` : entry.points}</span>
+          <span className={css.votes}>{entry.points > 0 ? `+${entry.points.toLocaleString("id-ID")}` : entry.points.toLocaleString("id-ID")}</span>
           <ConsoleButton aria-label={`Batalkan poin ${entry.person}`} disabled={busy} icon={<Trash2 size={16} aria-hidden />} onClick={() => run(call(mainWamAdminApi.missionPoint(entry.id), "DELETE"))} />
         </li>)}
       </ul>}
@@ -306,7 +306,7 @@ function RankTab({ data, busy, run, call }: TabProps) {
           {data.leaderboard.map(person => <li key={person.employeeId} className={css.row}>
             <span className={css.rank}>{person.rank}</span>
             <span className={css.rowText}><span>{person.fullName}</span><span>{person.department || "–"} · {person.missions} misi</span></span>
-            <span className={css.votes}>{person.points}</span>
+            <span className={css.votes}>{person.points.toLocaleString("id-ID")}</span>
           </li>)}
         </ol>
         : <p className={css.note}>Belum ada peserta.</p>}

@@ -123,7 +123,7 @@ describe("loadMisi", () => {
     expect(demo.items).toHaveLength(sampleMissions.length);
     expect(demo.items.filter(item => item.status === "done")).toHaveLength(2);
     expect(demo.place).toEqual({ rank: 7, of: 118 });
-    expect(demo.points).toBe(340);
+    expect(demo.points).toBe(3400);
     // Real missions put the sample away, demo or not.
     state.rows.mw_missions = [mission("m1")];
     expect((await loadMisi(context, NOW)).sample).toBe(false);
@@ -157,6 +157,6 @@ describe("loadLeaderboard", () => {
     state.demo = true;
     const board = await loadLeaderboard(context);
     expect(board.rows).toHaveLength(118);
-    expect(board.rows.find(row => row.me)).toMatchObject({ rank: 7, points: 340, name: "Rani" });
+    expect(board.rows.find(row => row.me)).toMatchObject({ rank: 7, points: 3400, name: "Rani" });
   });
 });

@@ -36,7 +36,7 @@ export function ReviewTab({ items, migrated, busy, run, call }: {
         <div className={css.reviewBody}>
           <div className={css.reviewHead}>
             <h3>{item.missionTitle}</h3>
-            <Pill tone="brass">{item.points} poin</Pill>
+            <Pill tone="brass">{item.points.toLocaleString("id-ID")} poin</Pill>
             <Pill tone={statusTone[item.status]}>{statusWords[item.status]}</Pill>
           </div>
           <p className={css.small}>{item.person} · {item.department || "–"} · dikirim {adminWhen(item.submittedAt)} · percobaan {item.attempts}{item.maxAttempts ? ` dari ${item.maxAttempts}` : ""}</p>

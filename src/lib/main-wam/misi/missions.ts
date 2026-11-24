@@ -126,18 +126,19 @@ export const filterItems = (items: readonly MissionItem[], filter: MissionFilter
 export const sortItems = (items: readonly MissionItem[], sort: MissionSort): MissionItem[] =>
   [...items].sort((a, b) => (sort === "desc" ? b.points - a.points : a.points - b.points));
 
-/** The two sections of the page: still to do on top, done below. */
-export function sections(items: readonly MissionItem[], filter: MissionFilter, sort: MissionSort): { todo: MissionItem[]; done: MissionItem[] } {
+/**
+ * The three groups of the page: "Belum" (not sent, or turned down), "Menunggu" (sent: being checked or
+ * waiting for panitia) and "Selesai" (approved).
+ */
+export function sections(items: readonly MissionItem[], filter: MissionFilter, sort: MissionSort): { todo: MissionItem[]; waiting: MissionItem[]; done: MissionItem[] } {
   const shown = sortItems(filterItems(items, filter), sort);
-  return { todo: shown.filter(item => item.status !== "done"), done: shown.filter(item => item.status === "done") };
+  const waits = (item: MissionItem) => item.status === "pending" || item.status === "review";
+  return { todo: shown.filter(item => item.status !== "done" && !waits(item)), waiting: shown.filter(waits), done: shown.filter(item => item.status === "done") };
 }
 
 /** Can the person start it now from the app (a sesi mission is done at its session, not here)? */
 export const canStart = (item: Pick<MissionItem, "status" | "availability" | "attempts" | "maxAttempts">) =>
   (item.status === "todo" || (item.status === "rejected" && canResend("ditolak", item.attempts, item.maxAttempts))) && item.availability === "buka";
-
-/** Beranda's "Misi berikutnya": the first one still to do that is open, in the admin's order. */
-export const nextMission = (items: readonly MissionItem[]): MissionItem | null => items.find(canStart) ?? null;
 
 /* ── Words ────────────────────────────────────────────────────────────────────────────────────── */
 

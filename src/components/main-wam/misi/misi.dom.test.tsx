@@ -49,7 +49,7 @@ const ME = "00000000-0000-4000-8001-000000000001";
 
 function viewOf(completions = sampleCompletions(ME), over: Partial<MisiView> = {}, missions: readonly MwMission[] = sampleMissions): MisiView {
   const items = missionItems(missions, completions, { sessions: [{ id: sampleSessionIds["team-building"], title: "Team building" }], settings: { defaultRadiusM: 50 }, now: NOW });
-  return { migrated: true, sample: false, items, summary: summarize(items), points: 340, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: [], ...over };
+  return { migrated: true, sample: false, items, summary: summarize(items), points: 3400, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: [], ...over };
 }
 const itemOf = (title: string): MissionItem => viewOf().items.find(item => item.title === title)!;
 const BOD = "Foto bareng KEDUA BOD", PLANK = "Foto plank di Jatim Park", APEL = "Petik apel di kebun apel Batu", SUNRISE = "Sunrise dari hotel", SEKAMAR = "Selfie dengan teman sekamar";
@@ -66,62 +66,97 @@ async function violations(): Promise<string[]> {
 }
 
 describe("kartu Misi di Beranda", () => {
-  it("is one link to the page with the points, the progress in words and the next mission with what it asks", () => {
+  it("is one summary link: points big, my place, missions done of all with a bar, and Lihat misi; never the next mission", () => {
     render(<MisiCard view={viewOf()} />);
     const card = screen.getByRole("link");
     expect(card.getAttribute("href")).toBe(mainWamPath.missions);
-    expect(card.textContent).toContain("340");
+    expect(card.textContent).toContain("3.400");
     expect(card.textContent).toContain("poin");
-    // The first mission still open in the admin's order: the BOD photo, turned down once and sendable again.
-    expect(card.textContent).toContain("Misi berikutnya · +150");
-    expect(card.textContent).toContain(BOD);
-    for (const chip of ["Foto langsung", "Lokasi aktif", "Tag 2 BOD", "Wajah jelas", "Maks 3 kali"]) expect(card.textContent).toContain(chip);
-    expect(screen.getByRole("img", { name: "2 dari 12 misi selesai" })).toBeTruthy();
+    expect(card.textContent).toContain("Peringkat 7 dari 118");
+    expect(card.textContent).toContain("Lihat misi");
+    expect(card.textContent).toContain("2 dari 12 misi");
+    const bar = within(card).getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("2");
+    expect(bar.getAttribute("aria-valuemax")).toBe("12");
+    // The old "Misi berikutnya" is gone: no mission title and no chip of a rule on the card.
+    expect(card.textContent).not.toContain("Misi berikutnya");
+    expect(card.textContent).not.toContain(BOD);
+    expect(card.textContent).not.toContain("Foto langsung");
   });
 
-  it("says what is left when nothing can be started", async () => {
-    const allDone = viewOf(sampleMissions.map((mission, index) => ({ ...sampleCompletions(ME)[0], id: `c${index}`, missionId: mission.id })));
-    const { rerender } = render(<MisiCard view={allDone} />);
-    expect(screen.getByRole("link").textContent).toContain("Semua misi selesai");
-    rerender(<MisiCard view={viewOf([], { items: [], summary: summarize([]) })} />);
-    expect(screen.getByRole("link").textContent).toContain("Belum ada misi");
+  it("hides the place while the Peringkat is closed or I am not ranked, and invites when there are no points yet", async () => {
+    const { rerender } = render(<MisiCard view={viewOf(undefined, { leaderboardOpen: false })} />);
+    expect(screen.getByRole("link").textContent).not.toContain("Peringkat");
+    expect(screen.getByRole("link").textContent).toContain("3.400");
+    rerender(<MisiCard view={viewOf(undefined, { place: null })} />);
+    expect(screen.getByRole("link").textContent).not.toContain("Peringkat");
+    rerender(<MisiCard view={viewOf([], { points: 0, place: null })} />);
+    expect(screen.getByRole("link").textContent).toContain("0poin");
+    expect(screen.getByRole("link").textContent).toContain("Kerjakan misi pertamamu");
+    expect(screen.getByRole("link").textContent).toContain("0 dari 12 misi");
+    rerender(<MisiCard view={viewOf([], { items: [], summary: summarize([]), points: 0, place: null })} />);
+    expect(screen.getByRole("link").textContent).toContain("Misi muncul di sini saat dibuka");
+    expect(screen.queryByRole("progressbar")).toBeNull();
     rerender(<MisiCard view={{ ...viewOf(), migrated: false }} />);
     expect(screen.queryByRole("link")).toBeNull();
+    cleanup();
+    render(<MisiCard view={viewOf()} />);
     expect(await violations()).toEqual([]);
+  });
+
+  it("writes points of tens of thousands the way the language writes them", () => {
+    const { rerender } = render(<MisiCard view={viewOf(undefined, { points: 25400 })} />);
+    expect(screen.getByRole("link").textContent).toContain("25.400");
+    rerender(<LangProvider lang="en"><MisiCard view={viewOf(undefined, { points: 25400 })} /></LangProvider>);
+    expect(screen.getByRole("link").textContent).toContain("25,400");
   });
 
   it("speaks English", () => {
     render(<LangProvider lang="en"><MisiCard view={viewOf()} /></LangProvider>);
-    expect(screen.getByRole("link").textContent).toContain("Next mission · +150");
-    expect(screen.getByRole("link").textContent).toContain("Tag 2 board members");
-    expect(screen.getByRole("link").textContent).toContain("Missions");
+    const text = screen.getByRole("link").textContent;
+    expect(text).toContain("View missions");
+    expect(text).toContain("Rank 7 of 118");
+    expect(text).toContain("2 of 12 missions");
+    expect(text).toContain("3,400");
+    expect(text).not.toContain("Next mission");
   });
 });
 
 describe("halaman Misi", () => {
-  it("shows the points, the place, the ring and the two sections (still to do on top, done below)", async () => {
+  it("shows the points, the place, the ring and the three groups (Belum, Menunggu, Selesai) with their counts", async () => {
     const { container } = render(<MisiScreen view={viewOf()} />);
     expect(container.textContent).toContain("Poinmu");
-    expect(container.textContent).toContain("340");
+    expect(container.textContent).toContain("3.400");
     expect(container.textContent).toContain("Peringkat 7 dari 118");
     expect(screen.getByRole("img", { name: "2 dari 12 misi selesai" })).toBeTruthy();
-    const todo = screen.getByRole("region", { name: /Belum selesai · 10/ });
-    const done = screen.getByRole("region", { name: /Berhasil · 2/ });
-    expect(todo.compareDocumentPosition(done) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(todo).getAllByRole("button")).toHaveLength(10);
+    const todo = screen.getByRole("region", { name: /Belum · 8/ });
+    const waiting = screen.getByRole("region", { name: /Menunggu · 2/ });
+    const done = screen.getByRole("region", { name: /Selesai · 2/ });
+    expect(todo.compareDocumentPosition(waiting) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(waiting.compareDocumentPosition(done) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(todo).getAllByRole("button")).toHaveLength(8);
+    expect(within(waiting).getAllByRole("button")).toHaveLength(2);
     expect(within(done).getAllByRole("button")).toHaveLength(2);
-    expect(done.textContent).toContain("+80 poin diraih");
+    expect(done.textContent).toContain("+800 poin diraih");
     expect(await violations()).toEqual([]);
   });
 
   it("lists the photo missions with their TNC as chips, on the card, wrapping instead of cutting", () => {
     render(<MisiScreen view={viewOf()} />);
     const cross = screen.getByRole("button", { name: /Foto lintas departemen/ });
-    for (const chip of ["Foto langsung", "Lokasi aktif", "Tag 2 lintas departemen", "Wajah jelas", "Maks 3 kali"]) expect(cross.textContent).toContain(chip);
+    // Only the three most important chips and "+N" for the rest; the whole list is in the sheet.
+    for (const chip of ["Foto langsung", "Lokasi aktif", "Tag 2 lintas departemen"]) expect(cross.textContent).toContain(chip);
+    expect(cross.textContent).not.toContain("Maks 3 kali");
+    expect(cross.textContent).toContain("+2");
+    expect(cross.textContent).toContain("2 syarat lainnya ada di rincian misi");
     const plank = screen.getByRole("button", { name: new RegExp(PLANK) });
-    for (const chip of ["Di Jatim Park, Batu (contoh)", "Tag teman (opsional)", "Pose plank", "Maks 2 kali"]) expect(plank.textContent).toContain(chip);
-    expect(plank.textContent).toMatch(/Batas: /);
-    expect(screen.getByRole("button", { name: /Foto kelompok lengkap di Lawn/ }).textContent).toContain("Tag 4 teman");
+    for (const chip of ["Foto langsung", "Lokasi aktif", "Di Jatim Park, Batu (contoh)"]) expect(plank.textContent).toContain(chip);
+    expect(plank.textContent).not.toContain("Pose plank");
+    expect(plank.textContent).toContain("+4");
+    expect(plank.textContent).toContain("+800");
+    expect(screen.getByRole("button", { name: /Foto kelompok lengkap di Lawn/ }).textContent).toContain("Di Lawn hotel (contoh)");
+    // The row never shows the full rule text: that is in the sheet.
+    expect(plank.textContent).not.toContain("Batas: ");
   });
 
   it("says each state of a proof in words on its row: waiting to be checked, for panitia's review, turned down", () => {
@@ -129,7 +164,8 @@ describe("halaman Misi", () => {
     expect(screen.getByRole("button", { name: new RegExp(APEL) }).textContent).toContain("Menunggu pemeriksaan");
     expect(screen.getByRole("button", { name: new RegExp(SUNRISE) }).textContent).toContain("Perlu ditinjau panitia");
     expect(screen.getByRole("button", { name: new RegExp(BOD) }).textContent).toContain("Ditolak, kirim ulang");
-    expect(within(screen.getByRole("region", { name: /Berhasil/ })).getByRole("button", { name: new RegExp(SEKAMAR) }).textContent).toContain("Selesai");
+    expect(within(screen.getByRole("region", { name: /Selesai/ })).getByRole("button", { name: new RegExp(SEKAMAR) }).textContent).toContain("Selesai");
+    expect(within(screen.getByRole("region", { name: /Menunggu/ })).getAllByRole("button")).toHaveLength(2);
   });
 
   it("filters Semua, Belum and Berhasil, with the counts in the words", () => {
@@ -137,16 +173,17 @@ describe("halaman Misi", () => {
     const chips = screen.getByRole("group", { name: "Saring misi" });
     expect(within(chips).getByRole("button", { name: "Semua 12" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(within(chips).getByRole("button", { name: "Berhasil 2" }));
-    expect(screen.queryByRole("region", { name: /Belum selesai/ })).toBeNull();
-    expect(screen.getByRole("region", { name: /Berhasil · 2/ })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /Belum ·/ })).toBeNull();
+    expect(screen.getByRole("region", { name: /Selesai · 2/ })).toBeTruthy();
     fireEvent.click(within(chips).getByRole("button", { name: "Belum 10" }));
-    expect(screen.queryByRole("region", { name: /Berhasil/ })).toBeNull();
-    expect(screen.getByRole("region", { name: /Belum selesai · 10/ })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /Selesai/ })).toBeNull();
+    expect(screen.getByRole("region", { name: /Belum · 8/ })).toBeTruthy();
+    expect(screen.getByRole("region", { name: /Menunggu · 2/ })).toBeTruthy();
   });
 
   it("orders by points, highest first (the BOD photo), and the other way from the sort sheet", () => {
     render(<MisiScreen view={viewOf()} />);
-    const titles = () => within(screen.getByRole("region", { name: /Belum selesai/ })).getAllByRole("button").map(row => row.textContent ?? "");
+    const titles = () => within(screen.getByRole("region", { name: /Belum ·/ })).getAllByRole("button").map(row => row.textContent ?? "");
     expect(titles()[0]).toContain(BOD);
     fireEvent.click(screen.getByRole("button", { name: /Urutkan poin/ }));
     fireEvent.click(screen.getByRole("button", { name: "Terendah dulu" }));
@@ -158,7 +195,7 @@ describe("halaman Misi", () => {
     const { baseElement } = render(<MisiScreen view={viewOf()} />);
     fireEvent.click(screen.getByRole("button", { name: new RegExp(PLANK) }));
     const sheet = screen.getByRole("dialog");
-    expect(sheet.textContent).toContain("+80 poin");
+    expect(sheet.textContent).toContain("+800 poin");
     expect(sheet.textContent).toContain("Plank bersama, di Jatim Park.");
     expect(sheet.textContent).toContain("Syarat dapat poin");
     for (const line of ["Foto langsung dari kamera", "Lokasi aktif dan di area misi", "Berada dalam radius 150 m dari Jatim Park, Batu (contoh) saat memotret.", "Boleh tandai 3 teman", "Pose plank", "Orang di foto dalam posisi plank, seluruh badan terlihat.", "Maksimal 2 kali kirim"]) expect(sheet.textContent).toContain(line);
@@ -198,7 +235,7 @@ describe("halaman Misi", () => {
     render(<MisiScreen view={viewOf()} />);
     fireEvent.click(screen.getByRole("button", { name: new RegExp(SEKAMAR) }));
     sheet = screen.getByRole("dialog");
-    expect(sheet.textContent).toContain("Disetujui +40 poin");
+    expect(sheet.textContent).toContain("Disetujui +400 poin");
     expect((within(sheet).getByRole("button", { name: "Misi selesai" }) as HTMLButtonElement).disabled).toBe(true);
     cleanup();
     const spent = viewOf([{ ...sampleCompletions(ME)[4], missionId: sampleMissionOf("plank-jatim-park").id, attempts: 2, reviewNote: "Pose bukan plank." }]);
@@ -255,7 +292,8 @@ describe("halaman Misi", () => {
     setActiveLang("en");
     render(<LangProvider lang="en"><MisiScreen view={viewOf()} /></LangProvider>);
     const plank = screen.getByRole("button", { name: new RegExp(PLANK) });
-    for (const chip of ["Live photo", "Location on", "Tag friends (optional)", "Max 2 tries"]) expect(plank.textContent).toContain(chip);
+    for (const chip of ["Live photo", "Location on"]) expect(plank.textContent).toContain(chip);
+    expect(plank.textContent).toContain("4 more rules are in the mission details");
     expect(screen.getByRole("button", { name: new RegExp(APEL) }).textContent).toContain("Waiting to be checked");
     expect(screen.getByRole("button", { name: new RegExp(SUNRISE) }).textContent).toContain("Needs a committee review");
   });
@@ -272,10 +310,10 @@ describe("Peringkat", () => {
     const mine = container.querySelector("[aria-current='true']")!;
     expect(mine.textContent).toContain("Rani");
     expect(mine.textContent).toContain("Kamu");
-    expect(mine.textContent).toContain("340");
-    expect(container.textContent).toContain("Kamu di peringkat 7 dari 118 peserta · 340 poin");
+    expect(mine.textContent).toContain("3.400");
+    expect(container.textContent).toContain("Kamu di peringkat 7 dari 118 peserta · 3.400 poin");
     // The rank and the points are bold (prototype), the dictionary marks them with **.
-    expect([...container.querySelectorAll("p b")].map(node => node.textContent)).toEqual(["peringkat 7", "340"]);
+    expect([...container.querySelectorAll("p b")].map(node => node.textContent)).toEqual(["peringkat 7", "3.400"]);
     expect(await violations()).toEqual([]);
   });
 
@@ -295,7 +333,7 @@ describe("Peringkat", () => {
 
   it("speaks English", () => {
     const { container } = render(<LangProvider lang="en"><RankScreen migrated open rows={rows} /></LangProvider>);
-    expect(container.textContent).toContain("You are ranked 7 of 118 participants · 340 points");
+    expect(container.textContent).toContain("You are ranked 7 of 118 participants · 3,400 points");
     expect(container.textContent).toContain("You");
   });
 });
@@ -444,11 +482,11 @@ describe("langkah Tag dan Ringkasan", () => {
     expect(rows().find(([, text]) => text.includes("Wajah jelas"))).toEqual(["judged", expect.stringContaining("Dinilai pemeriksa")]);
     expect(rows().find(([, text]) => text.includes("Foto langsung dari kamera"))?.[0]).toBe("ok");
     expect(container.textContent).toContain("Tandai 2 anggota BOD (baru 0).");
-    expect((screen.getByRole("button", { name: /Kirim · \+150 poin/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Kirim · \+1\.500 poin/ }) as HTMLButtonElement).disabled).toBe(true);
     unmount();
     const ready = camera(bod, { demoStart: "ringkas", demoTagged: candidates.filter(person => person.bod).map(person => person.id) });
     expect(ready.container.querySelectorAll("li[data-state='no']")).toHaveLength(0);
-    expect((screen.getByRole("button", { name: /Kirim · \+150 poin/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: /Kirim · \+1\.500 poin/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("a person who is not a BOD fails the BOD rule, in words", () => {
@@ -503,7 +541,7 @@ describe("mengirim bukti", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Lanjut" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Lanjut" }));
     expect(container.textContent).toContain("Langkah 2 dari 2: Ringkasan");
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Kirim · \+50 poin/ })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Kirim · \+500 poin/ })); });
     return container;
   }
 
@@ -525,7 +563,7 @@ describe("mengirim bukti", () => {
     setup(json({ status: "disetujui", reasons: [] }));
     const container = await sendIt();
     await waitFor(() => expect(container.textContent).toContain("Misi selesai"));
-    expect(container.textContent).toContain("+50 poin masuk");
+    expect(container.textContent).toContain("+500 poin masuk");
   });
 
   it("says why when the rules rejected it", async () => {
@@ -540,7 +578,7 @@ describe("mengirim bukti", () => {
     const container = await sendIt();
     await waitFor(() => expect(container.textContent).toContain("Kamu belum berada di area misi."));
     expect(container.textContent).toContain("Periksa sebelum kirim");
-    expect((screen.getByRole("button", { name: /Kirim · \+50 poin/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: /Kirim · \+500 poin/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
 

@@ -6,7 +6,7 @@ import { defaultSettings } from "@/lib/main-wam/settings";
 import { MAIN_WAM_MODULES } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { distanceMeters, judgePosition, type Fix } from "./geo";
-import { abbreviateDepartment, availabilityOf, canStart, chipsOf, filterItems, missionItems, nextMission, rulesOf, sections, sortItems, summarize, whenOf } from "./missions";
+import { abbreviateDepartment, availabilityOf, canStart, chipsOf, filterItems, missionItems, rulesOf, sections, sortItems, summarize, whenOf } from "./missions";
 import { medalOf, myPlace, rankOrder, rankPeople } from "./rank";
 import { completionFromRow, missionFromRow, settingsFromRow } from "./rows";
 import { sampleBoard, sampleCompletions, sampleMissions } from "./sample";
@@ -141,13 +141,14 @@ describe("the missions a person sees", () => {
     expect(split.done.map(item => item.id)).toEqual(["a"]);
   });
 
-  it("points Beranda at the first mission still to do and open, in the admin's order", () => {
-    const items = missionItems(list, [done("a")], ctx);
-    expect(nextMission(items)?.id).toBe("b");
-    expect(nextMission(missionItems(list, [done("a"), done("b"), done("c"), done("d")], ctx))).toBeNull();
-    // A waiting one is not "next"; a turned-down one can be sent again.
-    expect(nextMission(missionItems(list, [done("a"), done("b", "menunggu")], ctx))?.id).toBe("c");
-    expect(nextMission(missionItems([list[0]], [done("a", "ditolak")], ctx))?.id).toBe("a");
+  it("splits the page into Belum, Menunggu and Selesai, and keeps points as big as tens of thousands", () => {
+    const items = missionItems([...list, mission({ id: "g", title: "Besar", points: 25000, sort: 10 })], [done("a"), done("b", "menunggu"), done("c", "ditolak")], ctx);
+    const split = sections(items, "all", "desc");
+    expect(split.waiting.map(item => item.id)).toEqual(["b"]);
+    expect(split.todo.map(item => item.id)).toEqual(["g", "c", "d"]);
+    expect(sections(items, "todo", "desc").done).toEqual([]);
+    expect(sections(items, "done", "desc").todo).toEqual([]);
+    expect(summarize(items).availablePoints).toBe(25000 + 50 + 40 + 30);
   });
 });
 
@@ -264,7 +265,9 @@ describe("the schemas", () => {
 
   it("refuses odd numbers, a window that ends before it starts, and unknown fields", () => {
     expect(missionSchema.safeParse({ ...ok, points: -1 }).success).toBe(false);
-    expect(missionSchema.safeParse({ ...ok, points: 1001 }).success).toBe(false);
+    expect(missionSchema.safeParse({ ...ok, points: 100001 }).success).toBe(false);
+    expect(missionSchema.safeParse({ ...ok, points: 1500 }).success).toBe(true);
+    expect(missionSchema.safeParse({ ...ok, points: 99999 }).success).toBe(true);
     expect(missionSchema.safeParse({ ...ok, points: 1.5 }).success).toBe(false);
     expect(missionSchema.safeParse({ ...ok, latitude: 95, longitude: 0 }).success).toBe(false);
     expect(missionSchema.safeParse({ ...ok, radiusM: 5 }).success).toBe(false);
@@ -307,24 +310,24 @@ describe("the schemas", () => {
 });
 
 describe("the sample for Mode demo", () => {
-  it("has twelve photo missions (no check-in or session mission), each with rules, from 30 to 150 points", () => {
+  it("has twelve photo missions (no check-in or session mission), each with rules, from 300 to 1.500 points", () => {
     expect(sampleMissions).toHaveLength(12);
     expect(new Set(sampleMissions.map(item => item.kind))).toEqual(new Set(["foto"]));
     expect(sampleMissions.every(item => item.rules.some(rule => rule.type === "foto_langsung"))).toBe(true);
     const points = sampleMissions.map(item => item.points);
-    expect(Math.min(...points)).toBe(30);
-    expect(Math.max(...points)).toBe(150);
-    expect(sampleMissions.find(item => item.points === 150)?.title).toBe("Foto bareng KEDUA BOD");
+    expect(Math.min(...points)).toBe(300);
+    expect(Math.max(...points)).toBe(1500);
+    expect(sampleMissions.find(item => item.points === 1500)?.title).toBe("Foto bareng KEDUA BOD");
     const items = missionItems(sampleMissions, sampleCompletions("me"), { sessions: [], settings: { defaultRadiusM: 50 }, now: NOW });
     expect(items.filter(item => item.status === "done")).toHaveLength(2);
     expect(new Set(items.map(item => item.status))).toEqual(new Set(["done", "pending", "review", "rejected", "todo"]));
     expect(summarize(items).total).toBe(12);
   });
 
-  it("ranks the asker 7th of 118 with 340 points, the others made up", () => {
+  it("ranks the asker 7th of 118 with 3.400 points, the others made up", () => {
     const board = rankPeople(sampleBoard("me", "Rani"), "me");
     expect(board).toHaveLength(118);
-    expect(myPlace(board)).toEqual({ rank: 7, of: 118, points: 340 });
+    expect(myPlace(board)).toEqual({ rank: 7, of: 118, points: 3400 });
     expect(board[0].points).toBeGreaterThan(board[1].points);
   });
 });

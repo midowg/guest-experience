@@ -23,6 +23,6 @@ export default async function PreviewSaya({ searchParams }: { searchParams: Prom
   return <Frame path={mainWamPath.me} peran={params.peran} now={now} lang={lang}>
     <SayaScreen name={viewer.name} fullName={viewer.fullName} line={profileLine(viewer)} photo={null} room={room} carbon={params.karbon !== "mati"} mosaic={params.mozaik !== "mati"} open={open}
       figure={params.tokoh === "tanpa" ? null : { name: "Marie Curie", persona: "Pemikir", colors: ["#F5C542", "#BE185D"] }}
-      points={params.poin === "tanpa" || params.peran === "bod" ? null : 340} />
+      points={params.poin === "tanpa" || params.peran === "bod" ? null : 3400} />
   </Frame>;
 }

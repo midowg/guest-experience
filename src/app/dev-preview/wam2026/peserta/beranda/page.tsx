@@ -45,12 +45,12 @@ function MozaikStandIn({ lang }: { lang: Lang }) {
     rest={`${lang === "en" ? "of" : "dari"} ${number(lang, summary.total)} ${lang === "en" ? "photos" : "foto"} · 8 ${lang === "en" ? "yours" : "fotomu"}`} />;
 }
 
-/** The Misi card with sample missions (340 points, the next one open). */
+/** The Misi card with sample missions (3.400 points, the next one open). */
 function misiStandIn(now: Date, mode?: string): React.ReactNode {
   if (mode === "mati") return null;
   const me = samplePeople.rani.id;
   const items = missionItems(sampleMissions, sampleCompletions(me), { sessions: [], settings: { defaultRadiusM: 50 }, now });
-  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: 340, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: [] };
+  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: 3400, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: [] };
   return <MisiCard view={view} />;
 }
 

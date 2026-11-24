@@ -30,14 +30,14 @@ it("starts a new mission from a template: name, points and every rule are filled
   fireEvent.click(screen.getByRole("button", { name: "Tambah misi" }));
   fireEvent.change(screen.getByLabelText("Mulai dari templat"), { target: { value: "bod-berdua" } });
   expect((screen.getByLabelText("Nama misi") as HTMLInputElement).value).toBe("Foto bareng KEDUA BOD");
-  expect((screen.getByLabelText("Poin") as HTMLInputElement).value).toBe("150");
+  expect((screen.getByLabelText("Poin") as HTMLInputElement).value).toBe("1500");
   expect((screen.getByLabelText("Jumlah orang") as HTMLInputElement).value).toBe("2");
   expect((screen.getByLabelText("Siapa yang ditandai") as HTMLSelectElement).value).toBe("bod");
   expect((screen.getByLabelText("Batas kirim per orang (kosong = tanpa batas)") as HTMLInputElement).value).toBe("3");
   fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
   await waitFor(() => expect(request.mock.calls.some(([url, init]) => url === mainWamAdminApi.missions && init?.method === "POST")).toBe(true));
   const body = JSON.parse(request.mock.calls.find(([url, init]) => url === mainWamAdminApi.missions && init?.method === "POST")![1].body);
-  expect(body).toMatchObject({ title: "Foto bareng KEDUA BOD", kind: "foto", points: 150, latitude: null, rules: [{ type: "foto_langsung" }, { type: "tag", count: 2, relation: "bod", required: true }, { type: "pose", label: "Wajah jelas" }, { type: "batas_kali", times: 3 }] });
+  expect(body).toMatchObject({ title: "Foto bareng KEDUA BOD", kind: "foto", points: 1500, latitude: null, rules: [{ type: "foto_langsung" }, { type: "tag", count: 2, relation: "bod", required: true }, { type: "pose", label: "Wajah jelas" }, { type: "batas_kali", times: 3 }] });
 });
 
 it("lets an admin fill the place, the tags, the pose, the hours and the limit of a mission by hand", () => {
@@ -71,7 +71,7 @@ it("shows the review queue with the big photo, the TNC with what the checks foun
   const list = screen.getByRole("list", { name: "Antrean tinjauan" });
   const first = within(list).getAllByRole("listitem")[0];
   expect(within(first).getByRole("img", { name: /Foto Contoh Rani untuk Foto bareng KEDUA BOD/ }).getAttribute("src")).toBe("/wam/demo/foto-05.svg");
-  expect(first.textContent).toContain("150 poin");
+  expect(first.textContent).toContain("1.500 poin");
   expect(first.textContent).toContain("Contoh Arman (BOD), Contoh Wulan (BOD)");
   expect(first.textContent).toContain("Tandai 2 anggota BOD");
   expect(first.textContent).toContain("Terpenuhi");

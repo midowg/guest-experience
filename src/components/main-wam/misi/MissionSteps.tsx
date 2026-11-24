@@ -6,7 +6,7 @@ import { useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Pill, SrOnly, TextField } from "@/components/main-wam/ui";
 import { checkRules, ruleDisplays, type PublicRule, type RuleCheck, type TagCandidate } from "@/lib/main-wam/misi/rules";
 import { orderCandidates, suggestionReason } from "@/lib/main-wam/misi/tags";
-import { ReqIcon } from "./MisiParts";
+import { ReqIcon, useNum } from "./MisiParts";
 import css from "./misi-steps.module.css";
 
 type TagRule = Extract<PublicRule, { type: "tag" }>;
@@ -71,6 +71,7 @@ export function checkOf(rules: readonly PublicRule[], input: { inside: boolean |
 
 export function SummaryStep({ rules, checks, tags, points }: { rules: readonly PublicRule[]; checks: readonly RuleCheck[]; tags: readonly TagCandidate[]; points: number }) {
   const t = useT();
+  const num = useNum();
   const { lang } = useLang();
   const shown = ruleDisplays(rules, lang);
   const unmet = checks.filter(check => check.ok === false).length;
@@ -96,6 +97,6 @@ export function SummaryStep({ rules, checks, tags, points }: { rules: readonly P
     </ul>
     {unmet > 0 && <Banner tone="warning">{t("misi.sum.lead")}</Banner>}
     <p className={css.stepLead}>{t("misi.sheet.how")}</p>
-    <SrOnly>{t("misi.sum.send", { points })}</SrOnly>
+    <SrOnly>{t("misi.sum.send", { points: num(points) })}</SrOnly>
   </div>;
 }

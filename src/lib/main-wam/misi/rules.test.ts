@@ -174,12 +174,13 @@ describe("the templates and the mission schema", () => {
       expect(missionSchema.safeParse({ title: template.title, description: template.description, kind: "foto", points: template.points, rules: template.rules }).success, template.key).toBe(true);
     }
     const top = [...MISSION_TEMPLATES].sort((a, b) => b.points - a.points)[0];
-    expect(top).toMatchObject({ key: "bod-berdua", points: 150 });
+    expect(top).toMatchObject({ key: "bod-berdua", points: 1500 });
     expect(top.rules).toContainEqual({ type: "tag", count: 2, relation: "bod", required: true });
     const byKey = Object.fromEntries(MISSION_TEMPLATES.map(template => [template.key, template]));
-    expect(byKey["sebangku-kereta"].points).toBe(60);
-    expect(byKey.sekamar.points).toBe(40);
-    expect(byKey["plank-jatim-park"].points).toBe(80);
+    expect(MISSION_TEMPLATES.map(template => template.points).every(points => points >= 300 && points <= 1500 && points % 10 === 0)).toBe(true);
+    expect(byKey["sebangku-kereta"].points).toBe(600);
+    expect(byKey.sekamar.points).toBe(400);
+    expect(byKey["plank-jatim-park"].points).toBe(800);
     expect(byKey["plank-jatim-park"].rules.some(rule => rule.type === "lokasi" && rule.name.includes("Jatim Park"))).toBe(true);
   });
 

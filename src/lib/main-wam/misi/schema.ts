@@ -15,7 +15,7 @@ export const missionSchema = z.object({
   title: z.string().trim().min(2, "Nama misi minimal 2 huruf.").max(100, "Nama misi paling banyak 100 karakter."),
   description: z.string().trim().max(500, "Penjelasan paling banyak 500 karakter.").default(""),
   kind: z.enum(MISSION_KINDS, "Pilih jenis misi."),
-  points: z.number("Isi jumlah poin.").int("Poin berupa bilangan bulat.").min(0, "Poin tidak boleh negatif.").max(1000, "Poin paling banyak 1.000."),
+  points: z.number("Isi jumlah poin.").int("Poin berupa bilangan bulat.").min(0, "Poin tidak boleh negatif.").max(100000, "Poin paling banyak 100.000."),
   placeName: z.string().trim().max(100, "Nama tempat paling banyak 100 karakter.").default(""),
   latitude: z.number().min(-90, "Garis lintang di antara -90 dan 90.").max(90, "Garis lintang di antara -90 dan 90.").nullable().default(null),
   longitude: z.number().min(-180, "Garis bujur di antara -180 dan 180.").max(180, "Garis bujur di antara -180 dan 180.").nullable().default(null),
@@ -83,7 +83,7 @@ export const grantSchema = z.object({
 /** Points by hand (a bonus, a correction): never zero, a short reason. */
 export const manualPointsSchema = z.object({
   employeeId: z.uuid("Orang tidak dikenali."),
-  points: z.number("Isi jumlah poin.").int("Poin berupa bilangan bulat.").min(-1000, "Paling sedikit -1.000.").max(1000, "Paling banyak 1.000.")
+  points: z.number("Isi jumlah poin.").int("Poin berupa bilangan bulat.").min(-100000, "Paling sedikit -100.000.").max(100000, "Paling banyak 100.000.")
     .refine(value => value !== 0, "Poin tidak boleh 0."),
   note: z.string().trim().min(2, "Tulis alasannya.").max(200, "Alasan paling banyak 200 karakter."),
 }).strict();

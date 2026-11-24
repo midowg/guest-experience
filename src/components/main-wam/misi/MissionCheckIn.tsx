@@ -9,6 +9,7 @@ import { Banner, Button, EmptyState, EyebrowLabel } from "@/components/main-wam/
 import { DEMO_WRITE_MESSAGE } from "@/lib/main-wam/demo";
 import type { MissionItem } from "@/lib/main-wam/misi/missions";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
+import { useNum } from "./MisiParts";
 import { PlaceBanner } from "./PlaceBanner";
 import { currentFix, useMissionPlace } from "./useMissionPlace";
 import { errorText, misiRequest } from "./request";
@@ -21,6 +22,7 @@ import css from "./misi.module.css";
  */
 export function MissionCheckIn({ item, demo = false }: { item: MissionItem; demo?: boolean }) {
   const t = useT();
+  const num = useNum();
   const router = useRouter();
   const { place, check } = useMissionPlace(item.id, "checkin", { demo, hasPlace: item.hasPlace, radiusM: item.radiusM });
   const [working, setWorking] = useState(false);
@@ -48,7 +50,7 @@ export function MissionCheckIn({ item, demo = false }: { item: MissionItem; demo
     return <ScreenContent>
       <EmptyState icon={approved ? <CheckCircle2 /> : <Hourglass />} title={approved ? t("misi.checkin.doneTitle") : t("misi.cam.pendingTitle")}
         action={<Button block href={mainWamPath.missions}>{t("misi.cam.backToMissions")}</Button>}>
-        {approved ? t("misi.checkin.doneBody", { points: item.points }) : t("misi.cam.pendingBody")}
+        {approved ? t("misi.checkin.doneBody", { points: num(item.points) }) : t("misi.cam.pendingBody")}
       </EmptyState>
     </ScreenContent>;
   }
@@ -56,14 +58,14 @@ export function MissionCheckIn({ item, demo = false }: { item: MissionItem; demo
   return <ScreenContent>
     <div className={css.head}>
       <div className={css.headText}>
-        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: num(item.points) })}</EyebrowLabel>
         <h2 className={css.headTitle}>{item.title}</h2>
       </div>
     </div>
     <PlaceBanner place={place} item={item} onCheck={() => void check()} />
     {problem && <Banner tone="error">{problem}</Banner>}
     <Button block size="l" icon={<MapPin />} disabled={!inside} loading={working} loadingLabel={t("misi.checkin.working")} onClick={() => void checkIn()}>
-      {t("misi.checkin.button", { points: item.points })}
+      {t("misi.checkin.button", { points: num(item.points) })}
     </Button>
   </ScreenContent>;
 }

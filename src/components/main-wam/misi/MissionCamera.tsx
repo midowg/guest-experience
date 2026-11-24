@@ -11,6 +11,7 @@ import type { MissionItem } from "@/lib/main-wam/misi/missions";
 import { tagRuleOf, type TagCandidate } from "@/lib/main-wam/misi/rules";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { StepLabel, SummaryStep, TagStep, checkOf } from "./MissionSteps";
+import { useNum } from "./MisiParts";
 import { PlaceBanner } from "./PlaceBanner";
 import { currentFix, useMissionPlace } from "./useMissionPlace";
 import { errorText, misiRequest, putJpeg } from "./request";
@@ -51,6 +52,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
   demoTagged?: readonly string[];
 }) {
   const t = useT();
+  const num = useNum();
   const router = useRouter();
   const { place, check } = useMissionPlace(item.id, "foto", { demo, hasPlace: item.hasPlace, radiusM: item.radiusM });
   const [camera, setCamera] = useState<Camera>("memuat");
@@ -155,7 +157,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
       <EmptyState icon={approved ? <CheckCircle2 /> : rejected ? <CircleX /> : <Hourglass />}
         title={approved ? t("misi.cam.doneTitle") : rejected ? t("misi.cam.rejectedTitle") : checking ? t("misi.cam.checkedTitle") : t("misi.cam.reviewTitle")}
         action={<Button block href={mainWamPath.missions}>{t("misi.cam.backToMissions")}</Button>}>
-        {approved ? t("misi.cam.doneBody", { points: item.points }) : rejected ? (result?.reasons.join(" ") || t("misi.sheet.rejected")) : checking ? t("misi.cam.checkedBody") : t("misi.cam.reviewBody")}
+        {approved ? t("misi.cam.doneBody", { points: num(item.points) }) : rejected ? (result?.reasons.join(" ") || t("misi.sheet.rejected")) : checking ? t("misi.cam.checkedBody") : t("misi.cam.reviewBody")}
       </EmptyState>
     </ScreenContent>;
   }
@@ -165,7 +167,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
     return <ScreenContent>
       <div className={css.head}>
         <div className={css.headText}>
-          <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+          <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: num(item.points) })}</EyebrowLabel>
           <h2 className={css.headTitle}>{item.title}</h2>
         </div>
       </div>
@@ -188,7 +190,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
           <SummaryStep rules={item.rules} checks={summary.checks} tags={people} points={item.points} />
           <div className={css.actions}>
             <Button variant="secondary" disabled={phase === "kirim"} onClick={() => setPhase(tagRule ? "tag" : "bidik")}>{t("misi.step.back")}</Button>
-            <Button icon={<Send />} loading={phase === "kirim"} loadingLabel={t("misi.cam.sending")} disabled={!summary.ok} onClick={() => void send()}>{t("misi.sum.send", { points: item.points })}</Button>
+            <Button icon={<Send />} loading={phase === "kirim"} loadingLabel={t("misi.cam.sending")} disabled={!summary.ok} onClick={() => void send()}>{t("misi.sum.send", { points: num(item.points) })}</Button>
           </div>
         </>}
     </ScreenContent>;
@@ -197,7 +199,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
   return <ScreenContent>
     <div className={css.head}>
       <div className={css.headText}>
-        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+        <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: num(item.points) })}</EyebrowLabel>
         <h2 className={css.headTitle}>{item.title}</h2>
       </div>
     </div>

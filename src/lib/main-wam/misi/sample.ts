@@ -8,7 +8,7 @@ import type { MwCompletion, MwMission } from "./types";
 
 /*
  * Misi's sample data (Mode demo and dev-preview), from the prototype: twelve photo missions (two done, one being checked, one waiting for panitia, one rejected), 118
- * people of whom the asker ranks 7th with 340 points. Every name is made up. Never used outside Mode
+ * people of whom the asker ranks 7th with 3.400 points. Every name is made up. Never used outside Mode
  * demo and tests; the server reads it only while the tables are empty.
  */
 
@@ -72,19 +72,19 @@ export const sampleReviewQueue = (): ReviewItem[] => {
 const FIRST = ["Aditya", "Bagas", "Citra", "Dian", "Eka", "Farah", "Galih", "Hesti", "Indra", "Jihan", "Kirana", "Lukman", "Mira", "Nadia", "Oka", "Panji", "Qori", "Rizky", "Salsa", "Tegar", "Umar", "Vina", "Wisnu", "Yuni", "Zaki"];
 const LAST = "ABDHKMPRSTW";
 const DEPARTMENTS = ["CoE", "Finance", "IT", "Comms", "HRGA", "Sales & Marketing", "Art & Creative Support", "Corporate"];
-const TOP = [620, 580, 540, 490, 440, 390];
+const TOP = [6200, 5800, 5400, 4900, 4400, 3900];
 
 /** 118 people, Rani (the asker) 7th with 340 points; the others are made up, with a spread of points below her. */
 export function sampleBoard(meId: string, meName = samplePeople.rani.name, total = 118): RankPerson[] {
   const people: RankPerson[] = [];
   for (let index = 0; index < total; index++) {
     const me = index === 6;
-    const points = index < 6 ? TOP[index] : index === 6 ? 340 : Math.max(0, 335 - (index - 7) * 3);
+    const points = index < 6 ? TOP[index] : index === 6 ? 3400 : Math.max(0, 3350 - (index - 7) * 30);
     people.push({
       id: me ? meId : uid(10, index + 1),
       name: me ? meName : `${FIRST[(index * 7 + 3) % FIRST.length]} ${LAST[(index * 5) % LAST.length]}.`,
       department: DEPARTMENTS[(index * 3) % DEPARTMENTS.length],
-      points, missions: Math.max(0, Math.min(5, Math.round(points / 70))),
+      points, missions: Math.max(0, Math.min(5, Math.round(points / 700))),
     });
   }
   return people;

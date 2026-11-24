@@ -38,7 +38,7 @@ export default async function PreviewMisi({ searchParams }: { searchParams: Prom
     : params.status === "batas" ? [...base.filter(item => item.status !== "ditolak"), { ...base[4], id: "r2", missionId: sampleMissionOf("plank-jatim-park").id, attempts: 2, reviewNote: "Pose bukan plank." }]
       : params.status === "kosong" ? [] : base;
   const items = missionItems(params.status === "kosong" ? [] : sampleMissions, completions, { sessions: [], settings: { defaultRadiusM: 50 }, now });
-  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: 340, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: params.status === "kosong" ? [] : sampleTaggedIn };
+  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: params.status === "kosong" ? 0 : 3400, place: params.status === "kosong" ? null : { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: params.status === "kosong" ? [] : sampleTaggedIn };
   const board = rankPeople(sampleBoard(me, "Rani"), me);
   const layar = params.layar ?? "misi";
   const path = layar === "beranda" ? mainWamPath.home : layar === "peringkat" ? mainWamPath.missionRank : layar === "foto" || layar === "checkin" ? mainWamPath.missionDo("x") : mainWamPath.missions;

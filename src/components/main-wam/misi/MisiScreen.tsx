@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Check, CheckCircle2, ChevronRight, Hourglass, ListFilter, Medal, Tag, Target } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
@@ -9,7 +9,7 @@ import { canStart, MISSION_FILTERS, rulesOf, sections, whenOf, type MisiView, ty
 import { canResend } from "@/lib/main-wam/misi/verify";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { errorText, misiRequest } from "./request";
-import { kindIcon, ReqChips, ReqIcon } from "./MisiParts";
+import { kindIcon, ReqChips, ReqIcon, useNum } from "./MisiParts";
 import css from "./misi.module.css";
 
 const RING = 226; // 2π × 36, the ring's circumference
@@ -43,6 +43,7 @@ function SectionTitle({ id, text }: { id: string; text: string }) {
 export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** Dev preview only: a mission whose sheet is open from the start. */ initialOpen?: string | null }) {
   const t = useT();
   const { lang } = useLang();
+  const num = useNum();
   const [filter, setFilter] = useState<MissionFilter>("all");
   const [sort, setSort] = useState<MissionSort>("desc");
   const [sortOpen, setSortOpen] = useState(false);
@@ -60,7 +61,7 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
     <section className={css.hero}>
       <div className={css.heroText}>
         <EyebrowLabel tone="gold">{t("misi.page.yourPoints")}</EyebrowLabel>
-        <p className={css.bigPoints}><span className={css.bigNumber}>{view.points}</span><span className={css.bigUnit}>{t("misi.page.points")}</span></p>
+        <p className={css.bigPoints}><span className={css.bigNumber}>{num(view.points)}</span><span className={css.bigUnit}>{t("misi.page.points")}</span></p>
         {view.leaderboardOpen && <p className={css.place}><Medal aria-hidden />{view.place ? t("misi.page.place", { rank: view.place.rank, total: view.place.of }) : t("misi.page.placeNone")}</p>}
       </div>
       <Ring done={summary.done} total={summary.total} />
@@ -76,42 +77,13 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
           </button>
         </div>
 
-        {shown.todo.length > 0 && <section aria-labelledby="misi-todo" className={css.section}>
-          <div className={css.sectionHead}>
-            <SectionTitle id="misi-todo" text={t("misi.section.todo", { n: shown.todo.length })} />
-            <span className={css.avail}>{t("misi.section.todoAvailable", { points: shown.todo.filter(item => item.availability !== "tutup").reduce((sum, item) => sum + item.points, 0) })}</span>
-          </div>
-          <ul className={css.rows}>
-            {shown.todo.map(item => <li key={item.id}><button type="button" className={css.mrow} onClick={() => setOpenId(item.id)}>
-              <IconBox icon={kindIcon(item.kind)} className={css.mIcon} />
-              <span className={css.mText}>
-                <b>{item.title}</b>
-                {item.status === "pending" ? <Pill tone="warning">{t("misi.row.pending")}</Pill>
-                  : item.status === "review" ? <Pill tone="warning">{t("misi.row.review")}</Pill>
-                  : item.status === "rejected" ? <Pill tone="error">{canStart(item) ? t("misi.row.rejected") : t("misi.status.rejected")}</Pill>
-                    : item.availability === "tutup" ? <Pill>{t("misi.row.closed")}</Pill>
-                      : item.availability === "belum" ? <Pill>{t("misi.row.soon")}</Pill> : <ReqChips item={item} />}
-              </span>
-              <span className={css.rowPoints}>+{item.points}<ChevronRight aria-hidden /></span>
-            </button></li>)}
-          </ul>
-        </section>}
+        <MissionGroup id="misi-todo" title={t("misi.section.todo", { n: shown.todo.length })} items={shown.todo} onOpen={setOpenId}
+          note={shown.todo.length > 0 ? <span className={css.avail}>{t("misi.section.todoAvailable", { points: num(shown.todo.filter(item => item.availability !== "tutup").reduce((sum, item) => sum + item.points, 0)) })}</span> : null} />
+        <MissionGroup id="misi-waiting" title={t("misi.section.waiting", { n: shown.waiting.length })} items={shown.waiting} onOpen={setOpenId} />
+        <MissionGroup id="misi-done" title={t("misi.section.done", { n: shown.done.length })} items={shown.done} onOpen={setOpenId}
+          note={shown.done.length > 0 ? <span className={css.earned}>{t("misi.section.doneEarned", { points: num(shown.done.reduce((sum, item) => sum + item.points, 0)) })}</span> : null} />
 
-        {shown.done.length > 0 && <section aria-labelledby="misi-done" className={css.section}>
-          <div className={css.sectionHead}>
-            <SectionTitle id="misi-done" text={t("misi.section.done", { n: shown.done.length })} />
-            <span className={css.earned}>{t("misi.section.doneEarned", { points: shown.done.reduce((sum, item) => sum + item.points, 0) })}</span>
-          </div>
-          <ul className={css.doneRows}>
-            {shown.done.map(item => <li key={item.id}><button type="button" className={css.drow} onClick={() => setOpenId(item.id)}>
-              <span className={css.doneMark}><Check aria-hidden /></span>
-              <span className={css.dText}>{item.title}<SrOnly> {t("misi.row.doneSr")}</SrOnly></span>
-              <span className={css.donePoints}>+{item.points}</span>
-            </button></li>)}
-          </ul>
-        </section>}
-
-        {!shown.todo.length && !shown.done.length && <p className={css.emptyFilter}>{t("misi.emptyFilter")}</p>}
+        {!shown.todo.length && !shown.waiting.length && !shown.done.length && <p className={css.emptyFilter}>{t("misi.emptyFilter")}</p>}
       </>}
 
     {view.taggedIn.length > 0 && <TaggedList view={view} />}
@@ -124,6 +96,45 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
     </Sheet>
     {selected && <MissionSheet item={selected} index={items.indexOf(selected) + 1} total={items.length} onClose={() => setOpenId(null)} lang={lang} />}
   </ScreenContent>;
+}
+
+/** One group of the list ("Belum", "Menunggu", "Selesai") with its count; nothing at all when it is empty. */
+function MissionGroup({ id, title, items, note, onOpen }: { id: string; title: string; items: MissionItem[]; note?: ReactNode; onOpen: (id: string) => void }) {
+  if (!items.length) return null;
+  return <section aria-labelledby={id} className={css.section}>
+    <div className={css.sectionHead}>
+      <SectionTitle id={id} text={title} />
+      {note}
+    </div>
+    <ul className={css.rows}>{items.map(item => <li key={item.id}><MissionRow item={item} onOpen={onOpen} /></li>)}</ul>
+  </section>;
+}
+
+/**
+ * One mission of the list, the same card for every group: the title and the points, a short line, the
+ * status, the three most important rules and "+N" for the rest. It only opens the sheet (the rules in
+ * full, the status and the button are there); the list never goes to another page for a detail.
+ */
+function MissionRow({ item, onOpen }: { item: MissionItem; onOpen: (id: string) => void }) {
+  const t = useT();
+  const num = useNum();
+  const status = item.status === "done" ? <Pill tone="success">{t("misi.row.doneSr")}</Pill>
+    : item.status === "pending" ? <Pill tone="warning">{t("misi.row.pending")}</Pill>
+    : item.status === "review" ? <Pill tone="warning">{t("misi.row.review")}</Pill>
+    : item.status === "rejected" ? <Pill tone="error">{canStart(item) ? t("misi.row.rejected") : t("misi.status.rejected")}</Pill>
+    : item.availability === "tutup" ? <Pill>{t("misi.row.closed")}</Pill>
+    : item.availability === "belum" ? <Pill>{t("misi.row.soon")}</Pill>
+    : <Pill>{t("misi.row.statusTodo")}</Pill>;
+  return <button type="button" className={css.mrow} data-state={item.status} onClick={() => onOpen(item.id)}>
+    <IconBox icon={item.status === "done" ? <Check /> : kindIcon(item.kind)} className={css.mIcon} />
+    <span className={css.mText}><b>{item.title}</b></span>
+    <span className={css.rowPoints}>+{num(item.points)}<ChevronRight aria-hidden /></span>
+    <span className={css.mMore}>
+      {item.description && <span className={css.mDesc}>{item.description}</span>}
+      <span className={css.mStatus}>{status}</span>
+      <ReqChips item={item} max={3} />
+    </span>
+  </button>;
 }
 
 /** The photos I am tagged in, each with "Lepas tag" (only the tagged person lifts a tag). */
@@ -158,6 +169,7 @@ function TaggedList({ view }: { view: MisiView }) {
 /** The sheet of one mission: its description, the TNC (what earns the points), the state of my proof, and one button. */
 function MissionSheet({ item, index, total, onClose, lang }: { item: MissionItem; index: number; total: number; onClose: () => void; lang: ReturnType<typeof useLang>["lang"] }) {
   const t = useT();
+  const num = useNum();
   const rules = rulesOf(item, lang);
   const resendable = item.status === "rejected" && canResend("ditolak", item.attempts, item.maxAttempts);
   let action;
@@ -173,11 +185,11 @@ function MissionSheet({ item, index, total, onClose, lang }: { item: MissionItem
   else if (canStart(item)) action = <Button block icon={<Target />} href={mainWamPath.missionDo(item.id)}>{t(item.status === "rejected" ? "misi.sheet.resend" : "misi.sheet.do")}</Button>;
   return <Sheet open onClose={onClose} title={item.title} subtitle={t("misi.sheet.kicker", { n: index, total })} footer={action}>
     <div className={css.sheetBody}>
-      <p className={css.sheetPoints}><b aria-hidden>+{item.points}</b><span aria-hidden>{t("misi.page.points")}</span><SrOnly>{t("misi.sheet.points", { points: item.points })}</SrOnly></p>
+      <p className={css.sheetPoints}><b aria-hidden>+{num(item.points)}</b><span aria-hidden>{t("misi.page.points")}</span><SrOnly>{t("misi.sheet.points", { points: num(item.points) })}</SrOnly></p>
       {item.description && <Text variant="body-long" color="2">{item.description}</Text>}
       {item.status === "pending" && <Banner tone="info" title={t("misi.status.pending")}>{t("misi.sheet.pendingBody")}</Banner>}
       {item.status === "review" && <Banner tone="info" title={t("misi.status.review")}>{t("misi.sheet.reviewBody")}</Banner>}
-      {item.status === "done" && <Banner tone="success" title={t("misi.status.approved", { points: item.points })} />}
+      {item.status === "done" && <Banner tone="success" title={t("misi.status.approved", { points: num(item.points) })} />}
       {item.status === "rejected" && <Banner tone="warning" title={t("misi.status.rejected")}>
         {item.rejectedNote ? `${t("misi.status.rejectedWhy", { why: item.rejectedNote })} ` : ""}
         {resendable ? t("misi.sheet.rejectedAgain") : t("misi.status.noResend")}
