@@ -3,7 +3,7 @@ import { reviewRuleLines, type ReviewItem } from "@/lib/main-wam/misi/review-vie
 import { COMPLETION_COLUMNS, COMPLETION_COLUMNS_BASE, completionFromRow } from "@/lib/main-wam/misi/rows";
 import type { ReviewInput } from "@/lib/main-wam/misi/schema";
 import { MISSIONS_MIGRATION, type MwCompletion } from "@/lib/main-wam/misi/types";
-import { canMove, REVIEW_STATUSES } from "@/lib/main-wam/misi/verify";
+import { canMove, isFromMomen, REVIEW_STATUSES } from "@/lib/main-wam/misi/verify";
 import { mainWamAdminApi, mainWamPath } from "@/lib/routes";
 import { ServiceError } from "../../config";
 import { createPrivilegedClient } from "../../supabase/admin";
@@ -60,16 +60,17 @@ export async function listReviewQueue(): Promise<ReviewItem[]> {
       id: completion.id, missionId: mission.id, missionTitle: mission.title, points: mission.points,
       person: person?.fullName ?? "Karyawan (tidak aktif)", department: person?.department ?? "", status: completion.status, submittedAt: completion.createdAt,
       attempts: completion.attempts, maxAttempts: mission.rules.find(rule => rule.type === "batas_kali")?.times ?? null,
-      photo: completion.hasProof ? mainWamAdminApi.missionProof(completion.id) : null,
+      photo: completion.hasProof || completion.checkResult?.auto ? mainWamAdminApi.missionProof(completion.id) : null,
       tags: completion.photoId ? tagged.get(completion.photoId) ?? [] : [], rules,
       checks: completion.checkResult?.checks ?? [], verifier: completion.checkResult?.verifier ?? null, reviewNote: completion.reviewNote,
+      auto: completion.checkResult?.auto ? { status: completion.checkResult.auto.status, by: completion.checkResult.auto.by, passed: completion.checkResult.auto.passed, unknown: completion.checkResult.auto.unknown } : null,
     } satisfies ReviewItem];
   });
 }
 
-/** An approved proof: its Momen photo is shown and the tagged people are told. */
-export async function afterApproval(completion: Pick<MwCompletion, "photoId">, missionTitle: string, personName: string): Promise<void> {
-  if (!completion.photoId) return;
+/** An approved proof: its Momen photo is shown and the tagged people are told. (A Momen photo that was recognised is already shown, and its tagged people were told when they were tagged.) */
+export async function afterApproval(completion: Pick<MwCompletion, "photoId" | "checkResult">, missionTitle: string, personName: string): Promise<void> {
+  if (!completion.photoId || isFromMomen(completion)) return;
   await publishMissionPhoto(completion.photoId);
   await notifyTagged(completion.photoId, personName, missionTitle);
 }
@@ -97,7 +98,8 @@ export async function decideReview(id: string, reviewerId: string | null, input:
     await afterApproval(current, title, people.get(current.employeeId)?.name ?? "Rekan").catch(() => undefined);
     await trySendMainWamNote({ kind: "lain", title: `Misi ${title} disetujui`, body: `${mission?.points ?? 0} poin masuk.`, to: { people: [current.employeeId], label: "Peserta misi" }, link: mainWamPath.missions, by: reviewerId, tag: `misi-${current.id}` });
   } else {
-    if (current.photoId) {
+    // A photo made from a proof goes with the rejection; a regular Momen photo that was recognised stays: it was never made for the mission.
+    if (current.photoId && !isFromMomen(current)) {
       await withdrawMissionPhoto(current.photoId).catch(() => undefined);
       await db().from("mw_mission_completions").update({ photo_id: null }).eq("id", id);
     }

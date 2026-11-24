@@ -67,16 +67,24 @@ export async function savePhotoTags(photoId: string, taggedBy: string, tags: rea
   if (error) mwFail(error as DbError, MISSIONS_PHOTO_MIGRATION);
 }
 
+/** The words of "you were tagged": about a mission photo, or (no mission title) about a regular Momen photo. */
+const taggedWords = (taggerName: string, missionTitle: string | null) => missionTitle
+  ? { title: `Kamu ditandai di foto misi ${missionTitle}`, body: `${taggerName} menandaimu di foto misi ${missionTitle}. Kamu bisa melepas tag dari halaman Misi.` }
+  : { title: "Kamu ditandai di sebuah foto", body: `${taggerName} menandaimu di foto Momen. Kamu bisa melepas tag dari halaman Misi.` };
+
+/** Tells every tag still on the photo (never throws). */
+export async function tellTagged(photoId: string, taggerName: string, missionTitle: string | null): Promise<void> {
+  const { data, error } = await db().from("mw_photo_tags").select("employee_id").eq("photo_id", photoId).is("removed_at", null);
+  if (error || !data?.length) return;
+  await trySendMainWamNote({
+    kind: "lain", ...taggedWords(taggerName, missionTitle),
+    to: { people: data.map(row => row.employee_id as string), label: "Orang yang ditandai" }, link: mainWamPath.missions, by: null, tag: `tag-${photoId}`,
+  });
+}
+
 /** "Kamu ditandai di foto misi <judul>", to every tag still on the photo (never throws; after the response when it can). */
 export async function notifyTagged(photoId: string, taggerName: string, missionTitle: string): Promise<void> {
-  const send = async () => {
-    const { data, error } = await db().from("mw_photo_tags").select("employee_id").eq("photo_id", photoId).is("removed_at", null);
-    if (error || !data?.length) return;
-    await trySendMainWamNote({
-      kind: "lain", title: `Kamu ditandai di foto misi ${missionTitle}`, body: `${taggerName} menandaimu di foto misi ${missionTitle}. Kamu bisa melepas tag dari halaman Misi.`,
-      to: { people: data.map(row => row.employee_id as string), label: "Orang yang ditandai" }, link: mainWamPath.missions, by: null, tag: `tag-${photoId}`,
-    });
-  };
+  const send = () => tellTagged(photoId, taggerName, missionTitle);
   try { after(send); } catch { await send(); }
 }
 
@@ -116,6 +124,7 @@ export async function taggedInOf(employeeId: string): Promise<TaggedIn[]> {
   const rows = data as { photo_id: string; tagged_by: string }[];
   const photos = await db().from("mw_photos").select("id,mission_id").in("id", rows.map(row => row.photo_id)).eq("status", "tampil");
   if (photos.error) return [];
+  const shown = new Set((photos.data ?? []).map(photo => photo.id as string));
   const missionIds = [...new Set((photos.data ?? []).map(photo => photo.mission_id as string | null).filter((id): id is string => !!id))];
   const missions = missionIds.length ? await db().from("mw_missions").select("id,title").in("id", missionIds) : { data: [], error: null };
   if (missions.error) return [];
@@ -123,8 +132,10 @@ export async function taggedInOf(employeeId: string): Promise<TaggedIn[]> {
   const missionOf = new Map((photos.data ?? []).map(photo => [photo.id as string, photo.mission_id as string | null]));
   const people = await mainWamPeople();
   return rows.flatMap(row => {
+    if (!shown.has(row.photo_id)) return [];
     const missionId = missionOf.get(row.photo_id);
-    const title = missionId ? titles.get(missionId) : null;
-    return title ? [{ photoId: row.photo_id, byName: people.get(row.tagged_by)?.name ?? "Rekan", missionTitle: title }] : [];
+    // A photo made for a mission has its title; a regular Momen photo has none (an empty title says so).
+    const title = missionId ? titles.get(missionId) : "";
+    return title !== undefined && title !== null ? [{ photoId: row.photo_id, byName: people.get(row.tagged_by)?.name ?? "Rekan", missionTitle: title }] : [];
   });
 }

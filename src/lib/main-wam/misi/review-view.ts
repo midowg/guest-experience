@@ -1,5 +1,6 @@
 import { effectiveRules, publicRules, ruleDisplays, type RuleCheck, type RuleSource, type RuleType } from "./rules";
 import type { CompletionStatus } from "./types";
+import type { AutoProof } from "./verify";
 
 /*
  * One proof as the review queue shows it (Admin WAM → Misi → Tinjauan now; the panitia's screen later,
@@ -27,6 +28,8 @@ export type ReviewItem = {
   checks: RuleCheck[];
   verifier: { provider: string; result: { putusan: "lolos" | "gagal" | "ragu"; alasan: string[]; skor?: number } } | null;
   reviewNote: string;
+  /** A regular Momen photo the app recognised as meeting this mission (the badge "Otomatis dari Momen" and why); null for a shot made for the mission. */
+  auto?: Pick<AutoProof, "status" | "by" | "passed" | "unknown"> | null;
 };
 
 /** The TNC of a mission as the reviewer reads it, one line per rule (a pose says what it asks). */

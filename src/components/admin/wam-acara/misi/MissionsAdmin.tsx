@@ -8,8 +8,9 @@ import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { adminRange, adminWhen, WAITING_TEXT } from "@/lib/main-wam/modul/admin";
 import type { MissionInput, SettingsInput } from "@/lib/main-wam/misi/schema";
 import { effectiveRules, publicRules, ruleDisplays } from "@/lib/main-wam/misi/rules";
+import { autoModeOf } from "@/lib/main-wam/misi/detect";
 import { MISSION_TEMPLATES, templateByKey } from "@/lib/main-wam/misi/templates";
-import { MISSION_KINDS, type CompletionStatus, type MissionKind } from "@/lib/main-wam/misi/types";
+import { AUTO_DETECT_MODES, MISSION_KINDS, type AutoDetectMode, type CompletionStatus, type MissionKind } from "@/lib/main-wam/misi/types";
 import { draftToRules, RulesEditor, rulesToDraft, type RulesDraft } from "./RulesEditor";
 import { ReviewTab } from "./ReviewTab";
 import { statusTone, statusWords } from "./status-words";
@@ -25,6 +26,13 @@ export type Tab = "misi" | "tinjauan" | "bukti" | "peringkat" | "pengaturan";
 const toLocal = (iso: string | null) => (iso ? `${wibDate(iso)}T${wibTime(iso)}` : "");
 const fromLocal = (value: string) => (value ? `${value}:00+07:00` : null);
 
+/** Detection from Momen photos, in the admin's words. */
+export const detectWords: Record<AutoDetectMode, string> = { mati: "Mati", cocok: "Hanya yang pasti cocok", mungkin: "Termasuk yang mungkin cocok" };
+const detectHelp: Record<AutoDetectMode, string> = {
+  mati: "Foto Momen tidak pernah dikenali untuk misi ini. Peserta tetap bisa mengerjakannya lewat kamera misi.",
+  cocok: "Foto Momen yang aturan tempat dan tag-nya terpenuhi diajukan sendiri. Pose atau objek dinilai pemeriksa.",
+  mungkin: "Foto yang belum bisa dipastikan (misalnya tanpa lokasi) ikut diajukan, semuanya masuk antrean Tinjauan.",
+};
 export const kindWords: Record<MissionKind, string> = { foto: "Foto langsung", checkin: "Check-in lokasi (lama)", sesi: "Sesi (lama)" };
 const sourceWords = { foto: "Foto", lokasi: "Lokasi", absen: "Absen otomatis", panitia: "Dicatat panitia" } as const;
 
@@ -89,6 +97,7 @@ function MissionsTab({ data, busy, run, call }: TabProps) {
         <Pill tone="blue">{kindWords[mission.kind]}</Pill>
         <Pill tone="brass">{mission.points.toLocaleString("id-ID")} poin</Pill>
         {mission.review && <Pill tone="warn">Ditinjau dulu</Pill>}
+        {mission.kind === "foto" && (() => { const mode = autoModeOf({ ...mission, rules: effectiveRules(mission, data.settings.defaultRadiusM) }); return <Pill tone={mode === "mati" ? "neutral" : "ok"}>Deteksi dari Momen: {detectWords[mode]}{mission.autoDetect ? "" : " (bawaan)"}</Pill>; })()}
       </div>
       {mission.kind === "foto" && <p className={css.chips}>{ruleDisplays(publicRules(effectiveRules(mission, data.settings.defaultRadiusM)), "id").flatMap(rule => rule.chips).map(chip => <span key={chip} className={css.chip}>{chip}</span>)}</p>}
       <p className={css.meta}>
@@ -122,7 +131,7 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
   const [form, setForm] = useState(() => ({
     title: mission?.title ?? "", description: mission?.description ?? "", kind: (mission?.kind ?? "foto") as MissionKind, points: String(mission?.points ?? 200),
     placeName: mission?.placeName ?? "", latitude: mission?.latitude?.toString() ?? "", longitude: mission?.longitude?.toString() ?? "", radiusM: mission?.radiusM?.toString() ?? "",
-    sessionId: mission?.sessionId ?? "", credit: mission?.credit ?? "panitia" as const, review: mission?.review ?? false,
+    sessionId: mission?.sessionId ?? "", credit: mission?.credit ?? "panitia" as const, review: mission?.review ?? false, autoDetect: (mission?.autoDetect ?? "") as AutoDetectMode | "",
     opensAt: toLocal(mission?.opensAt ?? null), closesAt: toLocal(mission?.closesAt ?? null), sort: String(mission?.sort ?? data.missions.length + 1), active: mission?.active ?? false,
   }));
   const [draft, setDraft] = useState<RulesDraft>(() => rulesToDraft(mission ? effectiveRules(mission, data.settings.defaultRadiusM) : [{ type: "foto_langsung" }, { type: "batas_kali", times: 3 }]));
@@ -139,8 +148,11 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
   const submit = () => onSave({
     title: form.title, description: form.description, kind: form.kind, points: Number(form.points), placeName: photo ? "" : form.placeName, latitude: photo ? null : number(form.latitude), longitude: photo ? null : number(form.longitude),
     radiusM: photo ? null : number(form.radiusM), sessionId: form.sessionId || null, credit: form.credit, review: form.review, opensAt: photo ? null : fromLocal(form.opensAt), closesAt: photo ? null : fromLocal(form.closesAt),
-    sort: Number(form.sort) || 0, active: form.active, rules: form.kind === "foto" ? draftToRules(draft) : [],
+    sort: Number(form.sort) || 0, active: form.active, rules: form.kind === "foto" ? draftToRules(draft) : [], autoDetect: photo && form.autoDetect ? form.autoDetect : null,
   });
+  // What "by default" means for this mission as it is being edited: on when the rules give evidence (a place, a required tag), else off.
+  const defaultMode = autoModeOf({ kind: "foto", autoDetect: null, rules: draftToRules(draft) });
+  const shownMode = form.autoDetect || defaultMode;
   const places = form.kind === "checkin";
   return <form className={css.form} onSubmit={event => { event.preventDefault(); submit(); }}>
     {!mission && <div className="field"><label htmlFor={`${id}-templat`}>Mulai dari templat</label>
@@ -185,6 +197,12 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
       <div className="field"><label htmlFor={`${id}-urut`}>Urutan</label><input id={`${id}-urut`} className="input" type="number" min={0} max={999} value={form.sort} onChange={event => set("sort", event.target.value)} /></div>
     </div>
     {form.kind === "foto" && <RulesEditor draft={draft} onChange={setDraft} />}
+    {form.kind === "foto" && <div className="field"><label htmlFor={`${id}-deteksi`}>Deteksi otomatis dari foto Momen</label>
+      <select id={`${id}-deteksi`} className="select" value={form.autoDetect} onChange={event => set("autoDetect", event.target.value as AutoDetectMode | "")}>
+        <option value="">Bawaan: {detectWords[defaultMode]}</option>
+        {AUTO_DETECT_MODES.map(mode => <option key={mode} value={mode}>{detectWords[mode]}</option>)}
+      </select>
+      <span className={css.small}>{detectHelp[shownMode]} Bawaan: aktif bila misi punya syarat tempat atau tag wajib; mati bila hanya bergantung pada pose atau objek, supaya antrean Tinjauan tidak banjir. Peserta bisa menarik pengajuan otomatis selama belum diputuskan.</span></div>}
     {form.kind === "foto" && <label className={css.check}><input type="checkbox" checked={form.review} onChange={event => set("review", event.target.checked)} />Selalu tinjau dulu oleh panitia (walau pemeriksa otomatis menyatakan lolos)</label>}
     <label className={css.check}><input type="checkbox" checked={form.active} onChange={event => set("active", event.target.checked)} />Aktif (tampil di aplikasi peserta)</label>
     <div className={css.actions}>

@@ -28,6 +28,11 @@ vi.mock("@/lib/server/main-wam/misi/actions", () => ({
   startPhoto: record("startPhoto", { id: "x", token: "t", uploads: {} }), confirmPhoto: record("confirmPhoto", { status: "disetujui", reasons: [] }),
 }));
 vi.mock("@/lib/server/main-wam/misi/review", () => ({ listReviewQueue: record("listReviewQueue", []) }));
+vi.mock("@/lib/server/main-wam/misi/deteksi", () => ({
+  setAutoSwitch: record("setAutoSwitch", { on: true, stored: true }), checkMyPhotos: record("checkMyPhotos", { checked: 0, results: [] }), submitSuggestion: record("submitSuggestion", { completionStatus: "perlu_ditinjau" }),
+  dismissSuggestion: record("dismissSuggestion"), takeBack: record("takeBack"), detectionOfPhoto: record("detectionOfPhoto", { pending: false, items: [] }),
+}));
+vi.mock("@/lib/server/main-wam/misi/deteksi-store", () => ({ readAutoPref: record("readAutoPref", { on: true, stored: true }) }));
 vi.mock("@/lib/server/main-wam/misi/tags", () => ({ removeMyTag: record("removeMyTag") }));
 vi.mock("@/lib/server/main-wam/misi/admin", () => ({
   adminMisi: record("adminMisi", {}), createMission: record("createMission", {}), updateMission: record("updateMission", {}), deleteMission: record("deleteMission"),
@@ -48,8 +53,9 @@ const position = { latitude: -7.87, longitude: 112.52, accuracy: 12, at: new Dat
 const photo = { clientId: ID, position, size: 400_000, thumbSize: 40_000, tileSize: 8_000, width: 1280, height: 1600, tags: [] as string[] };
 
 async function routes() {
-  const [list, board, check, checkin, start, keep, untag] = await Promise.all([
+  const [list, board, check, checkin, start, keep, untag, switchRoute, checkMine, suggest, takeBack, ofPhoto] = await Promise.all([
     import("./route"), import("./peringkat/route"), import("./[id]/cek/route"), import("./[id]/checkin/route"), import("./[id]/foto/unggah/route"), import("./[id]/foto/simpan/route"), import("./tag/[photoId]/route"),
+    import("./deteksi/route"), import("./periksa/route"), import("./[id]/ajukan/route"), import("./[id]/otomatis/route"), import("../momen/[id]/deteksi/route"),
   ]);
   return {
     list: () => list.GET(),
@@ -59,6 +65,13 @@ async function routes() {
     start: () => start.POST(req("POST", photo), p({ id: ID })),
     keep: () => keep.POST(req("POST", { ...photo, token: `1767000000.${"a".repeat(64)}` }), p({ id: ID })),
     untag: () => untag.DELETE(req("DELETE"), p({ photoId: ID })),
+    switchRead: () => switchRoute.GET(),
+    switchSave: () => switchRoute.PUT(req("PUT", { on: false })),
+    checkMine: () => checkMine.POST(req("POST")),
+    suggest: () => suggest.POST(req("POST", { photoId: ID }), p({ id: ID })),
+    dismiss: () => suggest.DELETE(req("DELETE", { photoId: ID }), p({ id: ID })),
+    takeBack: () => takeBack.DELETE(req("DELETE"), p({ id: ID })),
+    ofPhoto: () => ofPhoto.GET(req("GET"), p({ id: ID })),
   };
 }
 type Name = keyof Awaited<ReturnType<typeof routes>>;
@@ -126,6 +139,29 @@ describe("Misi's participant APIs", () => {
     const check = await import("./[id]/cek/route");
     expect((await check.POST(req("POST", { kind: "lain", position }), p({ id: ID }))).status).toBe(422);
     expect(state.calls).toEqual([]);
+  });
+
+  it("refuse the detection APIs from another site, with input outside the schema, and change nothing", async () => {
+    const switchRoute = await import("./deteksi/route");
+    const suggest = await import("./[id]/ajukan/route");
+    const takeBack = await import("./[id]/otomatis/route");
+    const foreign = (method: string, body?: unknown) => new Request(`${ORIGIN}/x`, { method, headers: { origin: "https://lain.example", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+    expect((await switchRoute.PUT(foreign("PUT", { on: true }))).status).toBe(403);
+    expect((await suggest.POST(foreign("POST", { photoId: ID }), p({ id: ID }))).status).toBe(403);
+    expect((await takeBack.DELETE(foreign("DELETE"), p({ id: ID }))).status).toBe(403);
+    expect((await switchRoute.PUT(req("PUT", { on: "ya" }))).status).toBe(422);
+    expect((await switchRoute.PUT(req("PUT", { on: true, lain: 1 }))).status).toBe(422);
+    expect((await suggest.POST(req("POST", { photoId: "bukan-uuid" }), p({ id: ID }))).status).toBe(422);
+    expect((await suggest.POST(req("POST", { photoId: ID, status: "disetujui" }), p({ id: ID }))).status).toBe(422);
+    expect((await suggest.POST(req("POST", { photoId: ID }), p({ id: "bukan-uuid" }))).status).toBe(422);
+    expect((await takeBack.DELETE(req("DELETE"), p({ id: "bukan-uuid" }))).status).toBe(422);
+    expect(state.calls).toEqual([]);
+  });
+
+  it("answer the detection of a photo and the checks without any position or place", async () => {
+    const all = await routes();
+    const body = JSON.stringify(await (await all.ofPhoto()).json()) + JSON.stringify(await (await all.checkMine()).json()) + JSON.stringify(await (await all.switchRead()).json());
+    expect(body).not.toMatch(/latitude|longitude|geo|accuracy/i);
   });
 });
 

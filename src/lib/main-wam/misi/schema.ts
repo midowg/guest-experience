@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_LARGE_BYTES, MAX_THUMB_BYTES, MAX_TILE_BYTES } from "@/lib/main-wam/momen/filters";
 import { rulesSchema, TAG_MAX, tagRuleOf, type MissionRule } from "./rules";
-import { MISSION_CREDITS, MISSION_KINDS } from "./types";
+import { AUTO_DETECT_MODES, MISSION_CREDITS, MISSION_KINDS } from "./types";
 
 /*
  * What the Misi APIs accept (zod, shared by the forms, the routes and the tests): an admin's mission,
@@ -29,6 +29,8 @@ export const missionSchema = z.object({
   active: z.boolean().default(false),
   /** The TNC of a photo mission (rules.ts). A place or a window in it also fills the older columns. */
   rules: rulesSchema.default([]),
+  /** Detection from Momen photos: null = by default (detect.ts autoModeOf). */
+  autoDetect: z.enum(AUTO_DETECT_MODES, "Pilih cara deteksi dari Momen.").nullable().default(null),
 }).strict().superRefine((value, context) => {
   if (value.rules.length && value.kind !== "foto") context.addIssue({ code: "custom", path: ["rules"], message: "Aturan hanya untuk misi foto." });
   if ((value.latitude === null) !== (value.longitude === null)) context.addIssue({ code: "custom", path: ["longitude"], message: "Isi garis lintang dan garis bujur bersama." });
@@ -56,6 +58,8 @@ export const missionRow = (input: MissionInput) => {
     review: input.kind === "foto" ? input.review : false,
     opens_at: waktu ? waktu.start : input.opensAt, closes_at: waktu ? waktu.end : input.closesAt, sort: input.sort, active: input.active, updated_at: new Date().toISOString(),
     ...(input.rules.length ? { rules: input.rules } : {}),
+    // Written only when set (or reset), so a mission saves before migration 202611300003; null is the default.
+    ...(input.kind === "foto" && input.autoDetect ? { auto_detect: input.autoDetect } : {}),
   };
 };
 export { tagRuleOf };

@@ -104,14 +104,16 @@ async function missionById(id: string): Promise<MwMission> {
 export async function createMission(input: MissionInput): Promise<MwMission> {
   const { data, error } = await db().from("mw_missions").insert(missionRow(input)).select(MISSION_COLUMNS_BASE).single();
   if (error) adminFail(error, REFUSALS);
-  return missionFromRow(data);
+  return missionFromRow({ ...data, auto_detect: input.kind === "foto" ? input.autoDetect : null });
 }
 
 export async function updateMission(id: string, input: MissionInput): Promise<MwMission> {
   await missionById(id);
   const { data, error } = await db().from("mw_missions").update(missionRow(input)).eq("id", id).select(MISSION_COLUMNS_BASE).single();
   if (error) adminFail(error, REFUSALS);
-  return missionFromRow(data);
+  // Back to "by default": a null is written apart, so a mission still saves before migration 202611300003.
+  if (!input.autoDetect) { const reset = await db().from("mw_missions").update({ auto_detect: null }).eq("id", id); if (reset.error && !mwMissing(reset.error)) adminFail(reset.error, REFUSALS); }
+  return missionFromRow({ ...data, auto_detect: input.kind === "foto" ? input.autoDetect : null });
 }
 
 /** A mission nobody has done: deleting one that has completions would take their points with it, so it is only turned off. */
@@ -179,8 +181,19 @@ export async function deleteManualEntry(id: string): Promise<void> {
 /** A proof photo's short-lived address for Admin WAM, or null (no photo, no storage). */
 export async function proofRedirect(completionId: string): Promise<string | null> {
   if (!isId(completionId)) return null;
-  const { data, error } = await db().from("mw_mission_completions").select("proof_key").eq("id", completionId).maybeSingle();
-  if (error) { if (mwMissing(error)) return null; adminFail(error, REFUSALS); }
-  return proofAddress((data?.proof_key as string | null | undefined) ?? null);
+  const { data, error } = await db().from("mw_mission_completions").select("proof_key,photo_id").eq("id", completionId).maybeSingle();
+  if (error) {
+    if (!mwMissing(error)) adminFail(error, REFUSALS);
+    // Before migration 202611300001 there is no photo link: the proof's own file only.
+    const older = await db().from("mw_mission_completions").select("proof_key").eq("id", completionId).maybeSingle();
+    return proofAddress((older.data?.proof_key as string | null | undefined) ?? null);
+  }
+  const proof = (data?.proof_key as string | null | undefined) ?? null;
+  if (proof) return proofAddress(proof);
+  // A regular Momen photo that was recognised as meeting the mission has no proof file of its own: its Momen photo is the proof.
+  const photoId = (data?.photo_id as string | null | undefined) ?? null;
+  if (!photoId) return null;
+  const photo = await db().from("mw_photos").select("file_key").eq("id", photoId).maybeSingle();
+  return proofAddress((photo.data?.file_key as string | null | undefined) ?? null);
 }
 

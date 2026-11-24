@@ -18,7 +18,22 @@ export type CheckResult = {
   /** null when the rules alone rejected it (the verifier was never asked). */
   verifier: { provider: string; result: VerifierResult } | null;
   decidedAt: string;
+  /** Set when the proof is a regular Momen photo recognised as meeting the mission (detect.ts), not a shot made for it. */
+  auto?: AutoProof;
 };
+
+/**
+ * Where a proof from Momen came from and why it was recognised: the reviewer reads `passed` and `unknown`
+ * ("Alasan deteksi"). `by` says who sent it: the app by itself, or the person tapping Ajukan on a suggestion.
+ * No coordinates are kept here, only the distance, so the position of a photo never outlives it.
+ */
+export type AutoProof = { via: "momen"; photoId: string; status: "cocok" | "mungkin"; by: "otomatis" | "peserta"; passed: string[]; unknown: string[]; distanceM: number | null };
+
+/** The proof is a regular Momen photo recognised as meeting the mission (detect.ts), not a shot made for it: its photo is the person's own. */
+export const isFromMomen = (completion: { checkResult: CheckResult | null }) => completion.checkResult?.auto?.via === "momen";
+
+/** A proof the person can still take back (Tarik): sent, and nobody has decided yet. */
+export const TAKE_BACK_STATUSES: readonly CompletionStatus[] = ["dikirim", "diperiksa", "perlu_ditinjau", "menunggu"];
 
 /** The statuses a person is waiting in. */
 export const WAITING_STATUSES: readonly CompletionStatus[] = ["dikirim", "diperiksa"];

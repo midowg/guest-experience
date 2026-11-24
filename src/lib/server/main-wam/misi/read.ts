@@ -3,8 +3,8 @@ import { cache } from "react";
 import { demoSample } from "@/lib/main-wam/demo-sample";
 import { missionItems, summarize, type MisiView, type MissionSummary } from "@/lib/main-wam/misi/missions";
 import { myPlace, rankPeople, type RankPerson, type RankRow } from "@/lib/main-wam/misi/rank";
-import { COMPLETION_COLUMNS, COMPLETION_COLUMNS_BASE, completionFromRow, MISSION_COLUMNS, MISSION_COLUMNS_BASE, missionFromRow, SETTINGS_COLUMNS, settingsFromRow } from "@/lib/main-wam/misi/rows";
-import { sampleBoard, sampleCompletions, sampleMissions, sampleTaggedIn } from "@/lib/main-wam/misi/sample";
+import { COMPLETION_COLUMNS, COMPLETION_COLUMNS_BASE, completionFromRow, MISSION_COLUMNS, MISSION_COLUMNS_BASE, MISSION_COLUMNS_RULES, missionFromRow, SETTINGS_COLUMNS, settingsFromRow } from "@/lib/main-wam/misi/rows";
+import { sampleBoard, sampleCompletions, sampleFromPhotos, sampleMissions, sampleTaggedIn } from "@/lib/main-wam/misi/sample";
 import { DEFAULT_MISSION_SETTINGS, MISSIONS_MIGRATION, type MissionSettings, type MwCompletion, type MwMission } from "@/lib/main-wam/misi/types";
 import type { MainWamViewer, MwSession } from "@/lib/main-wam/types";
 import { isSupabaseConfigured } from "../../config";
@@ -15,6 +15,7 @@ import { mwMissing, type DbError, type Read } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAttendees, mainWamPeople } from "../people";
 import { allSessions } from "../read";
+import { fromMyPhotos } from "./deteksi";
 import { taggedInOf } from "./tags";
 
 /*
@@ -45,7 +46,8 @@ export const allMissions = cache(async (): Promise<Read<MwMission[]>> => {
   if (early) return early;
   const read = (columns: string) => db().from("mw_missions").select(columns).order("sort").order("created_at").limit(300);
   let { data, error } = await read(MISSION_COLUMNS);
-  // Before migration 202611300001 there is no `rules` column: read the older columns (the rules come from them).
+  // Before migration 202611300003 there is no `auto_detect` column, before 202611300001 no `rules` column: read the older columns (the rules come from them).
+  if (error && mwMissing(error)) ({ data, error } = await read(MISSION_COLUMNS_RULES));
   if (error && mwMissing(error)) ({ data, error } = await read(MISSION_COLUMNS_BASE));
   return settle(error, [] as MwMission[]) ?? { data: ((data ?? []) as unknown as Record<string, unknown>[]).map(row => missionFromRow(row)), migrated: true };
 });
@@ -123,8 +125,10 @@ export async function loadMisi(context: MainWamContext, now: Date): Promise<Misi
   const totals = await pointTotals();
   const board = rankPeople(await rankPool(totals.data), viewer.id);
   const items = missionItems(missions.data, completions, { sessions, settings, now });
+  const mine = await fromMyPhotos(context, items).catch(() => ({ auto: false, saved: false, list: [] }));
   return {
     migrated: true, sample: false, items, summary: summarize(items), points: totals.data.get(viewer.id)?.points ?? 0, taggedIn: await taggedInOf(viewer.id).catch(() => []),
+    fromPhotos: mine.list, autoDetect: mine.auto, autoDetectSaved: mine.saved,
     // While the Peringkat is closed nobody learns their place, not even from the API.
     place: settings.leaderboardOpen ? placeOf(board) : null, leaderboardOpen: settings.leaderboardOpen, settings,
   };
@@ -139,7 +143,7 @@ function demoData(viewer: MainWamViewer, sessions: readonly Pick<MwSession, "id"
   const items = missionItems(missions, sampleCompletions(viewer.id), { sessions, settings, now });
   const board = rankPeople(sampleBoard(viewer.id, viewer.name), viewer.id);
   const mine = board.find(row => row.me);
-  return { migrated: true, sample: true, items, summary: summarize(items), points: mine?.points ?? 0, place: placeOf(board), leaderboardOpen: true, taggedIn: sampleTaggedIn, settings };
+  return { migrated: true, sample: true, items, summary: summarize(items), points: mine?.points ?? 0, place: placeOf(board), leaderboardOpen: true, taggedIn: sampleTaggedIn, fromPhotos: sampleFromPhotos(items), autoDetect: true, autoDetectSaved: true, settings };
 }
 
 /** The Peringkat for one person: every row, and whether it is open. Sample while Mode demo stands in. */

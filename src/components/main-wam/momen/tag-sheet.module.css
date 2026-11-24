@@ -1,0 +1,22 @@
+/* The tag step of the Momen camera ("Ada siapa di foto ini?"). Tokens only (--mw-*); words wrap, targets are at least 44 tall. */
+.body { display: flex; flex-direction: column; gap: var(--mw-space-12); }
+.footer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--mw-space-12); }
+.photoRow { display: flex; align-items: center; gap: var(--mw-space-12); }
+.photo { flex: none; width: 56px; height: 70px; object-fit: cover; border-radius: var(--mw-radius-12); border: 1px solid var(--mw-outline); }
+.count { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.note { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.picked { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); margin: 0; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: var(--mw-space-4); min-height: 44px; padding: 0 var(--mw-space-12); border: 1px solid var(--mw-gold-line); border-radius: var(--mw-radius-full); background: color-mix(in srgb, var(--mw-gold) 18%, var(--mw-surface)); color: var(--mw-text-1); font: 700 13px/16px var(--mw-font-sans); cursor: pointer; }
+.chip > svg { width: 14px; height: 14px; }
+.chip:focus-visible, .person:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.listTitle { margin: 0 0 var(--mw-space-4); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+.people { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; max-height: 32dvh; overflow-y: auto; }
+.person { width: 100%; display: flex; align-items: center; gap: var(--mw-space-12); min-height: 52px; padding: var(--mw-space-8) var(--mw-space-4); border: 0; border-top: 1px solid var(--mw-outline); background: transparent; color: var(--mw-text-1); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.person:disabled { opacity: 0.45; cursor: not-allowed; }
+.person[aria-pressed="true"] { background: color-mix(in srgb, var(--mw-gold) 14%, transparent); }
+.personText { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.personText b { font: 700 14px/18px var(--mw-font-sans); overflow-wrap: anywhere; }
+.personText small { font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.mark { flex: none; width: 24px; height: 24px; border-radius: var(--mw-radius-full); border: 2px solid var(--mw-outline-2); display: inline-flex; align-items: center; justify-content: center; }
+.person[aria-pressed="true"] .mark { background: var(--mw-success); border-color: var(--mw-success); color: var(--mw-on-primary); }
+.mark > svg { width: 14px; height: 14px; }

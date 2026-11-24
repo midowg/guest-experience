@@ -38,8 +38,16 @@ export function ReviewTab({ items, migrated, busy, run, call }: {
             <h3>{item.missionTitle}</h3>
             <Pill tone="brass">{item.points.toLocaleString("id-ID")} poin</Pill>
             <Pill tone={statusTone[item.status]}>{statusWords[item.status]}</Pill>
+            {item.auto && <Pill tone="blue">Otomatis dari Momen</Pill>}
           </div>
           <p className={css.small}>{item.person} · {item.department || "–"} · dikirim {adminWhen(item.submittedAt)} · percobaan {item.attempts}{item.maxAttempts ? ` dari ${item.maxAttempts}` : ""}</p>
+          {item.auto && <div>
+            <p className={css.small}><b>Alasan deteksi</b> · foto Momen biasa, {item.auto.status === "cocok" ? "aturan yang bisa dicek terpenuhi" : "belum bisa dipastikan sepenuhnya"} · {item.auto.by === "peserta" ? "diajukan peserta dari saran" : "diajukan otomatis"}</p>
+            <ul className={css.checklist}>
+              {item.auto.passed.map(line => <li key={line}><span className={`${css.mark} ${css.markOk}`}>Terpenuhi</span><span>{line}</span></li>)}
+              {item.auto.unknown.map(line => <li key={line}><span className={`${css.mark} ${css.markNeutral}`}>Dinilai pemeriksa</span><span>{line}</span></li>)}
+            </ul>
+          </div>}
           <div>
             <p className={css.small}><b>Syarat dan hasil pemeriksaan otomatis</b></p>
             <ul className={css.checklist}>

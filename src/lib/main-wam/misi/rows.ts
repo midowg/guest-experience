@@ -1,6 +1,6 @@
 import { parseRules } from "./rules";
 import type { CheckResult } from "./verify";
-import { COMPLETION_SOURCES, COMPLETION_STATUSES, DEFAULT_MISSION_SETTINGS, MISSION_CREDITS, MISSION_KINDS, type MissionSettings, type MwCompletion, type MwMission, type MwPointEntry } from "./types";
+import { AUTO_DETECT_MODES, COMPLETION_SOURCES, COMPLETION_STATUSES, DEFAULT_MISSION_SETTINGS, MISSION_CREDITS, MISSION_KINDS, type MissionSettings, type MwCompletion, type MwMission, type MwPointEntry } from "./types";
 
 /*
  * Database rows → the Misi types. A column that is missing or odd never stops a screen: it falls back
@@ -16,14 +16,17 @@ const oneOf = <T extends string>(list: readonly T[], value: unknown, fallback: T
 
 /** The columns before migration 202611300001; a reader falls back to these while the newer ones are not there. */
 export const MISSION_COLUMNS_BASE = "id,title,description,kind,points,place_name,latitude,longitude,radius_m,session_id,credit,review,opens_at,closes_at,sort,active";
-export const MISSION_COLUMNS = `${MISSION_COLUMNS_BASE},rules`;
+/** With the rules (migration 202611300001); a reader falls back to the base when they are not there. */
+export const MISSION_COLUMNS_RULES = `${MISSION_COLUMNS_BASE},rules`;
+/** With the detection mode too (migration 202611300003). */
+export const MISSION_COLUMNS = `${MISSION_COLUMNS_RULES},auto_detect`;
 export function missionFromRow(row: Row): MwMission {
   return {
     id: text(row.id), title: text(row.title), description: text(row.description), kind: oneOf(MISSION_KINDS, row.kind, "foto"), points: num(row.points),
     placeName: text(row.place_name), latitude: numOrNull(row.latitude), longitude: numOrNull(row.longitude), radiusM: numOrNull(row.radius_m),
     sessionId: textOrNull(row.session_id), credit: oneOf(MISSION_CREDITS, row.credit, "panitia"), review: row.review === true,
     opensAt: textOrNull(row.opens_at), closesAt: textOrNull(row.closes_at), sort: num(row.sort), active: row.active === true,
-    rules: parseRules(row.rules),
+    rules: parseRules(row.rules), autoDetect: AUTO_DETECT_MODES.find(mode => mode === row.auto_detect) ?? null,
   };
 }
 

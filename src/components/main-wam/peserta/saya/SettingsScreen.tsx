@@ -8,6 +8,7 @@ import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { mainWamPath, praWamApi, praWamPath } from "@/lib/routes";
 import type { MainWamMode } from "@/lib/main-wam/appearance";
 import { ScreenContent } from "@/components/main-wam/shell";
+import { AutoSwitch } from "@/components/main-wam/misi/AutoSwitch";
 import { MainWamModeSetting, MainWamMotionSwitch } from "@/components/main-wam/theme";
 import { Banner, Button, EyebrowLabel, KitIcon, List, Pill, Sheet, Spinner, SwitchRow, TextField, useToast } from "@/components/main-wam/ui";
 import { LanguageSetting, useKnown, useT } from "@/components/main-wam/i18n";
@@ -29,7 +30,7 @@ type Panel = "notifikasi" | "pasang" | "password" | "panitia";
  * Bantuan (the Bantuan page, Hubungi panitia). At the bottom the version and, for a BOD with access,
  * Akses MCP. Quiet hours still hold (aturan-wam §7a). The same Web Push and password API as WAM.
  */
-export function SettingsScreen({ version, mode = "system", reduceMotion = false, help = null, mcp = false, preview }: {
+export function SettingsScreen({ version, mode = "system", reduceMotion = false, help = null, mcp = false, missionDetect = null, preview }: {
   version: string;
   /** This device's "Kurangi gerak" (cookie, read by the page). */
   reduceMotion?: boolean;
@@ -39,6 +40,8 @@ export function SettingsScreen({ version, mode = "system", reduceMotion = false,
   help?: Contact | null;
   /** BOD with Akses MCP (Pra WAM's Pengaturan holds McpCard). */
   mcp?: boolean;
+  /** My switch "Deteksi misi otomatis" (KONTRAK §13); null = no Misi for this person (a BOD, or the module is off): no such row. */
+  missionDetect?: { on: boolean; saved: boolean } | null;
   preview?: { push?: PushState; open?: Panel; installed?: boolean };
 }) {
   const t = useT();
@@ -72,6 +75,10 @@ export function SettingsScreen({ version, mode = "system", reduceMotion = false,
           <Row icon={<SquarePlus />} title={t("peserta.settings.install")} sub={t(installed ? "peserta.settings.installed" : "peserta.settings.installSub")} onClick={() => setOpen("pasang")} aria-haspopup="dialog" />
         </RowGroup>
       </section>
+      {missionDetect && <section className={css2.section}>
+        <EyebrowLabel as="h2">{t("misi.auto.group")}</EyebrowLabel>
+        <List plain bleed><AutoSwitch inList initial={missionDetect.on} saved={missionDetect.saved} sample={preview !== undefined} /></List>
+      </section>}
       <section className={css2.section}>
         <EyebrowLabel as="h2">{t("peserta.settings.groupAccount")}</EyebrowLabel>
         <RowGroup>

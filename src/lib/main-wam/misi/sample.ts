@@ -1,6 +1,6 @@
 import { samplePeople } from "@/lib/main-wam/sample";
 import type { RankPerson } from "./rank";
-import type { TaggedIn } from "./missions";
+import type { FromPhoto, MissionItem, TaggedIn } from "./missions";
 import { reviewRuleLines, type ReviewItem } from "./review-view";
 import type { MissionRule, RuleCheck, RuleType } from "./rules";
 import { MISSION_TEMPLATES } from "./templates";
@@ -48,6 +48,20 @@ export const sampleCompletions = (employeeId: string): MwCompletion[] => [
 /** A sample "Kamu ditandai" row (Contoh Sari tagged the asker in her roommate selfie). */
 export const sampleTaggedIn: TaggedIn[] = [{ photoId: uid(13, 1), byName: "Sari", missionTitle: "Selfie dengan teman sekamar" }];
 
+/**
+ * "Dari fotomu" in Mode demo: one Momen photo sent by itself for a mission that is waiting for panitia (Tarik is offered), one only
+ * offered (Ajukan). The pictures are the demo SVGs (`thumb`); the ids are fixed.
+ */
+export const sampleFromPhotos = (items: readonly Pick<MissionItem, "id" | "title" | "points" | "status">[]): (FromPhoto & { thumb: string })[] => {
+  const of = (key: string) => items.find(item => item.id === sampleMissionOf(key).id);
+  const sent = of("sunrise"), offered = of("tugu-apel"), more = of("bareng-panitia");
+  return [
+    ...(sent ? [{ photoId: uid(14, 1), missionId: sent.id, title: sent.title, points: sent.points, outcome: "diajukan" as const, status: "cocok" as const, state: sent.status, canTakeBack: sent.status === "pending" || sent.status === "review", thumb: "/wam/demo/foto-20.svg" }] : []),
+    ...(offered ? [{ photoId: uid(14, 2), missionId: offered.id, title: offered.title, points: offered.points, outcome: "saran" as const, status: "cocok" as const, state: offered.status, canTakeBack: false, thumb: "/wam/demo/foto-08.svg" }] : []),
+    ...(more ? [{ photoId: uid(14, 3), missionId: more.id, title: more.title, points: more.points, outcome: "saran" as const, status: "mungkin" as const, state: more.status, canTakeBack: false, thumb: "/wam/demo/foto-12.svg" }] : []),
+  ];
+};
+
 /** One sample proof in the admin's review queue (Admin WAM → Misi → Tinjauan). Photos are the demo SVGs. */
 export const sampleReviewQueue = (): ReviewItem[] => {
   const mission = (key: string) => sampleMissionOf(key);
@@ -57,15 +71,17 @@ export const sampleReviewQueue = (): ReviewItem[] => {
     { id: uid(12, 1), missionId: mission("bod-berdua").id, missionTitle: mission("bod-berdua").title, points: mission("bod-berdua").points, person: "Contoh Rani", department: "CoE", status: "perlu_ditinjau",
       submittedAt: "2027-01-05T09:12:00+07:00", attempts: 1, maxAttempts: 3, photo: "/wam/demo/foto-05.svg", tags: [{ id: uid(1, 19), name: "Contoh Arman", department: "BOD" }, { id: uid(1, 20), name: "Contoh Wulan", department: "BOD" }],
       rules: reviewRuleLines(mission("bod-berdua")),
-      checks: check([true, true, null, true], ["foto_langsung", "tag", "pose", "batas_kali"]), verifier: verdict, reviewNote: "" },
+      checks: check([true, true, null, true], ["foto_langsung", "tag", "pose", "batas_kali"]), verifier: verdict, reviewNote: "", auto: null },
     { id: uid(12, 2), missionId: mission("plank-jatim-park").id, missionTitle: mission("plank-jatim-park").title, points: mission("plank-jatim-park").points, person: "Contoh Sari", department: "HRGA", status: "perlu_ditinjau",
       submittedAt: "2027-01-05T10:40:00+07:00", attempts: 1, maxAttempts: 2, photo: "/wam/demo/foto-12.svg", tags: [{ id: uid(1, 3), name: "Contoh Dewi", department: "Art & Creative Support" }],
       rules: reviewRuleLines(mission("plank-jatim-park")),
-      checks: check([true, true, true, null, true, true], ["foto_langsung", "lokasi", "tag", "pose", "waktu", "batas_kali"]), verifier: verdict, reviewNote: "" },
+      checks: check([true, true, true, null, true, true], ["foto_langsung", "lokasi", "tag", "pose", "waktu", "batas_kali"]), verifier: verdict, reviewNote: "",
+      auto: { status: "cocok", by: "otomatis", passed: ["Foto dari kamera aplikasi", "Foto diambil di Jatim Park, Batu (contoh) (dalam radius 150 m)", "Waktu foto dalam jam misi", "Batas kirim belum tercapai"], unknown: ["Pose atau objek di foto: dinilai pemeriksa"] } },
     { id: uid(12, 3), missionId: mission("sunrise").id, missionTitle: mission("sunrise").title, points: mission("sunrise").points, person: "Contoh Bima", department: "Finance", status: "perlu_ditinjau",
       submittedAt: "2027-01-05T06:05:00+07:00", attempts: 1, maxAttempts: 2, photo: "/wam/demo/foto-20.svg", tags: [],
       rules: reviewRuleLines(mission("sunrise")),
-      checks: check([true, true, null, true, true], ["foto_langsung", "lokasi", "pose", "waktu", "batas_kali"]), verifier: verdict, reviewNote: "" },
+      checks: check([true, null, null, true, true], ["foto_langsung", "lokasi", "pose", "waktu", "batas_kali"]), verifier: verdict, reviewNote: "",
+      auto: { status: "mungkin", by: "peserta", passed: ["Foto dari kamera aplikasi", "Waktu foto dalam jam misi"], unknown: ["Lokasi foto tidak dibagikan, jadi belum bisa dicek", "Pose atau objek di foto: dinilai pemeriksa"] } },
   ];
 };
 

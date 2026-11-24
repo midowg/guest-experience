@@ -9,6 +9,7 @@ import { canStart, MISSION_FILTERS, rulesOf, sections, whenOf, type MisiView, ty
 import { canResend } from "@/lib/main-wam/misi/verify";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { errorText, misiRequest } from "./request";
+import { FromPhotos } from "./FromPhotos";
 import { kindIcon, ReqChips, ReqIcon, useNum } from "./MisiParts";
 import css from "./misi.module.css";
 
@@ -86,6 +87,8 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
         {!shown.todo.length && !shown.waiting.length && !shown.done.length && <p className={css.emptyFilter}>{t("misi.emptyFilter")}</p>}
       </>}
 
+    {view.fromPhotos !== undefined && <FromPhotos view={view} />}
+
     {view.taggedIn.length > 0 && <TaggedList view={view} />}
 
     <Sheet open={sortOpen} onClose={() => setSortOpen(false)} title={t("misi.sort.title")}>
@@ -159,7 +162,7 @@ function TaggedList({ view }: { view: MisiView }) {
     <ul className={css.rows}>
       {rows.map(row => <li key={row.photoId} className={css.taggedRow}>
         <IconBox icon={<Tag />} className={css.mIcon} />
-        <span className={css.taggedText}>{t("misi.tagged.item", { name: row.byName, mission: row.missionTitle })}</span>
+        <span className={css.taggedText}>{row.missionTitle ? t("misi.tagged.item", { name: row.byName, mission: row.missionTitle }) : t("misi.tagged.itemMomen", { name: row.byName })}</span>
         <Button variant="secondary" size="m" loading={busy === row.photoId} onClick={() => void remove(row.photoId)}>{t("misi.tagged.remove")}</Button>
       </li>)}
     </ul>

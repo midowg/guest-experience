@@ -83,6 +83,16 @@ export const REPORT_THRESHOLD = 3;
 /** U04: at most 10 photos from the gallery at once. */
 export const GALLERY_PICK_MAX = 10;
 
+/** Where the photo was taken, only when the person switched "Tandai lokasi" on: the server uses it to match missions, never shows it. */
+export const photoGeoSchema = z.object({
+  latitude: z.number("Lokasi belum terbaca.").min(-90).max(90),
+  longitude: z.number("Lokasi belum terbaca.").min(-180).max(180),
+  accuracy: z.number("Lokasi belum terbaca.").min(0).max(100_000),
+}).strict();
+export type PhotoGeo = z.infer<typeof photoGeoSchema>;
+/** How many friends one photo may tag (the same limit as a mission photo). */
+export const PHOTO_TAG_MAX = 6;
+
 const size = (max: number) => z.number().int().min(1, "Berkas kosong.").max(max, "Foto terlalu besar. Ambil ulang fotonya.");
 export const photoStartSchema = z.object({
   clientId: z.string().regex(UUID, "Foto tidak dikenali. Ambil ulang fotonya."),
@@ -93,12 +103,19 @@ export const photoStartSchema = z.object({
   size: size(MAX_LARGE_BYTES),
   thumbSize: size(MAX_THUMB_BYTES),
   tileSize: size(MAX_TILE_BYTES),
+  /** Optional: the friends in the photo (employee ids), "Ada siapa di foto ini?". */
+  tags: z.array(z.string().regex(UUID, "Orang yang ditandai tidak dikenali.")).max(PHOTO_TAG_MAX, `Paling banyak ${PHOTO_TAG_MAX} orang.`).default([]),
+  /** Optional: the coarse position, kept only for matching missions. */
+  geo: photoGeoSchema.nullable().default(null),
+  /** Picked from the gallery (not the camera): never a "foto langsung", and no position is kept. */
+  gallery: z.boolean().default(false),
 });
-export type PhotoStart = z.infer<typeof photoStartSchema>;
+/** What the phone sends (tags, geo and gallery may be left out: the schema fills them in). */
+export type PhotoStart = z.input<typeof photoStartSchema>;
 export const photoConfirmSchema = photoStartSchema.extend({
   token: z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Ulangi dari awal."),
 });
-export type PhotoConfirm = z.infer<typeof photoConfirmSchema>;
+export type PhotoConfirm = z.input<typeof photoConfirmSchema>;
 
 /** DELETE photo: `clientId` lets the sender clean up an upload that was cancelled before it was kept. */
 export const photoDeleteSchema = z.object({ clientId: z.string().regex(UUID).optional() });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, X } from "lucide-react";
+import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, MapPin, QrCode, Settings, SwitchCamera, Users, X } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
@@ -16,8 +16,14 @@ import { queuedPill, sentText } from "@/lib/main-wam/momen/stack";
 import { autoTag } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
+import { misiDetectApi } from "@/lib/main-wam/misi/detect-routes";
+import type { FromPhoto } from "@/lib/main-wam/misi/missions";
+import type { TagCandidate } from "@/lib/main-wam/misi/rules";
+import { errorText, misiRequest } from "@/components/main-wam/misi/request";
 import { decodeFile, grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto, type Picture } from "./upload/compress";
 import { TemplateOverlay } from "./TemplateOverlay";
+import { MomenTagSheet } from "./MomenTagSheet";
+import { useShareLocation, type ShareMode } from "./useShareLocation";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
 import css from "./camera.module.css";
@@ -40,9 +46,14 @@ import css from "./camera.module.css";
  */
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
-export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara" };
+export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara" | "tag"; geo?: ShareMode };
 
 const PERMISSION_KEY = "mw-momen-kamera";
+/** "Tag teman": whether the step "Ada siapa di foto ini?" is asked after each photo ("tidak" = no). */
+const TAG_KEY = "mw-momen-tag";
+/** The phone's clock (kept out of the component body: it runs when a photo is made, never while drawing). */
+const nowMs = () => Date.now();
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 function store(kind: "local" | "session", key: string, value?: string): string | null {
   try {
@@ -55,7 +66,7 @@ function store(kind: "local" | "session", key: string, value?: string): string |
 const newId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID()
   : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (Number(c) ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (Number(c) / 4)))).toString(16)));
 
-export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession, demo }: {
+export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession, demo, candidates = [], detect = false }: {
   sessions: MwSession[];
   nowIso: string;
   absen: boolean;
@@ -64,6 +75,10 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   initialSession: string | null;
   /** Dev preview only: a fixed state to look at. */
   demo?: CameraDemo;
+  /** The people the person may tag ("Ada siapa di foto ini?"): active participants, with the room, seat and BOD hints. None = no tag step. */
+  candidates?: readonly TagCandidate[];
+  /** Some mission takes detection from Momen photos: the camera offers "Tandai lokasi" and follows what detection found. */
+  detect?: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -85,6 +100,16 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   // The sign (frame, words and mark; Tanpa = none) and the colour tone (Asli = none) are chosen apart and combined; both are default every time the camera opens.
   const [sign, setSign] = useState<SignId>(DEFAULT_SIGN);
   const [tone, setTone] = useState<CameraToneId>(DEFAULT_CAMERA_TONE);
+  // Optional extras (KONTRAK §13): the position of the photo, and the friends in it. Both can be left off.
+  const geo = useShareLocation(detect && !demo, demo?.geo);
+  const [tagAsk, setTagAsk] = useState(true);
+  const [stash, setStash] = useState<{ items: QueueItem[]; thumb: string | null; problem: string | null } | null>(demo?.sheet === "tag" ? { items: [], thumb: "/wam/demo/foto-05.svg", problem: null } : null);
+  const stashRef = useRef(stash);
+  useEffect(() => { stashRef.current = stash; });
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- what this phone chose before (browser storage), known only after the first paint
+  useEffect(() => { if (!demo && store("local", TAG_KEY) === "tidak") setTagAsk(false); }, [demo]);
+  // A photo that waits for its tag step is never lost: leaving the screen sends it as it is.
+  useEffect(() => () => { const waiting = stashRef.current; if (waiting?.items.length) void momenQueue().add(waiting.items); }, []);
   const swipe = useRef<number | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -183,6 +208,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     if (!pictures.length) return;
     setBusy(true);
     const batch = newId();
+    const where = fromGallery ? null : geo.fixNow();
     const ready: QueueItem[] = [];
     let thumb: string | null = null;
     let problem: string | null = null;
@@ -192,9 +218,9 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
         const [besar, kecil, ubin] = await Promise.all([prepared.besar.arrayBuffer(), prepared.kecil.arrayBuffer(), prepared.ubin.arrayBuffer()]);
         thumb ??= URL.createObjectURL(prepared.kecil);
         ready.push({
-          clientId: newId(), batch, sessionId: tag, takenAt: new Date(Date.now() + clockOffset.current).toISOString(), createdAt: Date.now() + ready.length,
+          clientId: newId(), batch, sessionId: tag, takenAt: new Date(nowMs() + clockOffset.current).toISOString(), createdAt: nowMs() + ready.length,
           width: prepared.width, height: prepared.height, besar, kecil, ubin, state: "antre", attempts: 0, nextAt: 0, error: null, offline: false, photoId: null,
-          deferred: navigator.onLine === false,
+          deferred: navigator.onLine === false, tags: [], geo: where, gallery: fromGallery,
         });
       } catch (error) {
         problem = error instanceof PhotoProblem ? error.message : t("momen.cam.unreadable");
@@ -207,6 +233,13 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       return;
     }
     if (thumb) { setLast(previous => { if (previous) URL.revokeObjectURL(previous); return thumb; }); }
+    // One photo from the camera and the step switched on: ask "Ada siapa di foto ini?" before it goes (skippable; a gallery batch is never asked).
+    if (!fromGallery && ready.length === 1 && tagAsk && candidates.length > 0) { setStash({ items: ready, thumb, problem }); return; }
+    await deliver(ready, thumb, problem);
+  }
+
+  /** The photo goes (the queue keeps it until it is sent), with the toast "Terkirim · Batalkan", and what detection finds is told after. */
+  async function deliver(ready: QueueItem[], thumb: string | null, problem: string | null) {
     await momenQueue().add(ready);
     const ids = ready.map(item => item.clientId);
     const cancel = () => {
@@ -227,6 +260,53 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       action: { label: t("momen.cam.undo"), onAction: cancel }, secondary: { label: t("ui.see"), onAction: () => { void see(); } },
     });
     if (problem) toast.show({ text: problem, tone: "error" });
+    if (detect) void follow(ids[0]);
+  }
+
+  /** The tag step is done (or skipped): the photo goes with the people chosen. */
+  function tagDone(ids: string[]) {
+    const waiting = stash;
+    setStash(null);
+    if (!waiting?.items.length) return;
+    void deliver(waiting.items.map(item => ({ ...item, tags: ids })), waiting.thumb, waiting.problem);
+  }
+  function askTags(ask: boolean) { setTagAsk(ask); store("local", TAG_KEY, ask ? "ya" : "tidak"); }
+
+  /*
+   * After a photo is sent: the server looks for missions it meets (it waits for the photo to show to others first), so ask a few
+   * times, then say what it found: "Fotomu otomatis diajukan untuk misi ..." with Tarik, or "Fotomu cocok untuk misi ..." with Ajukan.
+   * Nothing found, or any trouble, says nothing: the photo is already kept.
+   */
+  async function follow(clientId: string) {
+    const photoId = await momenQueue().sentId(clientId, 25_000);
+    if (!photoId) return;
+    for (const wait of [6500, 6000, 8000]) {
+      await sleep(wait);
+      try {
+        const answer = await misiRequest<{ pending: boolean; items: FromPhoto[] }>(misiDetectApi.ofPhoto(photoId));
+        if (answer.data.pending) continue;
+        announce(answer.data.items.filter(item => item.photoId === photoId));
+        return;
+      } catch { return; }
+    }
+  }
+  function announce(found: FromPhoto[]) {
+    const [first, ...rest] = [...found].sort((a, b) => Number(b.outcome === "diajukan") - Number(a.outcome === "diajukan"));
+    if (!first) return;
+    const points = first.points.toLocaleString(lang === "en" ? "en-US" : "id-ID");
+    const done = first.outcome === "diajukan" && first.state === "done";
+    const base = done ? t("misi.auto.doneSub", { points }) : first.outcome === "diajukan" ? t("misi.auto.sentSub", { points }) : t("misi.auto.suggestSub", { points });
+    const open = { label: t("misi.auto.open"), onAction: () => { stop(); router.push(mainWamPath.missions); } };
+    const change = async (work: () => Promise<unknown>, said: string) => {
+      try { await work(); toast.show({ text: said, tone: "info", duration: 3500 }); } catch (error) { toast.show({ text: errorText(error) || t("misi.auto.failed"), tone: "error" }); }
+    };
+    toast.show({
+      text: done ? t("misi.auto.done", { title: first.title }) : first.outcome === "diajukan" ? t("misi.auto.sent", { title: first.title }) : t("misi.auto.suggest", { title: first.title }),
+      sub: rest.length ? t("misi.auto.more", { sub: base, n: rest.length }) : base, tone: done ? "success" : "info", duration: 9000, secondary: open,
+      ...(first.outcome === "saran"
+        ? { action: { label: t("misi.auto.submit"), onAction: () => { void change(() => misiRequest(misiDetectApi.submit(first.missionId), { method: "POST", json: { photoId: first.photoId } }), t("misi.auto.submitted")); } } }
+        : first.canTakeBack ? { action: { label: t("misi.auto.takeBack"), onAction: () => { void change(() => misiRequest(misiDetectApi.takeBack(first.missionId), { method: "DELETE" }), t("misi.auto.tookBack")); } } } : {}),
+    });
   }
 
   async function shutter() {
@@ -308,6 +388,17 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
         <ChipRow label={t("momen.cam.signLabel")} name={t("momen.cam.signs")} ids={SIGN_IDS} value={sign} onPick={setSign} word={id => t(`momen.cam.sign.${id}`)} />
         <ChipRow label={t("momen.cam.toneLabel")} name={t("momen.cam.tones")} ids={CAMERA_TONE_IDS} value={tone} onPick={setTone} word={id => t(`momen.cam.tone.${id}`)} />
       </div>}
+      {(live === "menyala" || live === "hp") && (candidates.length > 0 || detect) && <div className={css.options}>
+        <div className={css.row}>
+          <span className={css.rowLabel} aria-hidden>{t("momen.cam.optionsLabel")}</span>
+          <div className={css.filters} role="group" aria-label={t("momen.cam.options")}>
+            {candidates.length > 0 && <button type="button" className={css.filter} aria-pressed={tagAsk} onClick={() => askTags(!tagAsk)}><Users aria-hidden />{t("momen.cam.tagChip")}</button>}
+            {detect && <button type="button" className={css.filter} aria-pressed={geo.mode === "aktif"} data-blocked={geo.mode === "ditolak" ? "" : undefined} onClick={geo.toggle}>
+              <MapPin aria-hidden />{geo.mode === "aktif" ? t("momen.cam.geo.on") : geo.mode === "ditolak" ? t("momen.cam.geo.blocked") : t("momen.cam.geo.off")}</button>}
+          </div>
+        </div>
+        {detect && geo.mode !== "mati" && <p className={css.geoNote} role="status">{geo.mode === "aktif" ? t("momen.cam.geo.note") : t("momen.cam.geo.blockedNote")}</p>}
+      </div>}
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
           {last
@@ -322,6 +413,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
+    <MomenTagSheet open={stash !== null} thumb={stash?.thumb ?? null} candidates={candidates} ask={tagAsk} onAskChange={askTags} onDone={tagDone} />
     {/* Making the photo ready to send (the pictures are shrunk on the phone first): a dialog, so nothing is tapped twice. */}
     <LoadingDialog open={busy} title={t("momen.cam.sendingPhoto")} />
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>

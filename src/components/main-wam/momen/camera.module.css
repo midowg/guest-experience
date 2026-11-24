@@ -10,7 +10,7 @@
   background: var(--mw-bg); color: var(--mw-text-1);
 }
 /* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
-:global(:root):has(.screen) { --mw-toast-bottom: 208px; }
+:global(:root):has(.screen) { --mw-toast-bottom: 276px; }
 
 .bar { display: flex; align-items: center; gap: var(--mw-space-12); height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
 .stage { position: relative; flex: 1 1 auto; min-height: 220px; }
@@ -75,6 +75,17 @@
 }
 .filter[aria-checked="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
 .filter:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+/* The two optional extras (Tag teman, Tandai lokasi) are switches, not a choice among many: pressed = on. */
+.filter { display: inline-flex; align-items: center; gap: var(--mw-space-4); }
+.filter > svg { width: 14px; height: 14px; flex: none; }
+.filter[aria-pressed="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
+.filter[data-blocked] { color: var(--mw-text-2); }
+.options { align-self: stretch; display: flex; flex-direction: column; gap: var(--mw-space-4); margin-bottom: calc(-1 * var(--mw-space-8)); }
+.options .filters { flex-wrap: wrap; overflow: visible; }
+.options .filter { padding: 0 10px; }
+/* On the narrowest phones the label gives way, so both chips stay on one line (the icons say what they are). */
+@media (max-width: 359.98px) { .options .rowLabel { display: none; } }
+.geoNote { margin: 0; padding: 0 var(--mw-space-16); font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* O04: the pre-permission, in the app's theme, before the camera. */

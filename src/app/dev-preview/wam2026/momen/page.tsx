@@ -16,7 +16,8 @@ import { Images } from "lucide-react";
 import { flushedText, newPhotosText, sentText } from "@/lib/main-wam/momen/stack";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
 import { sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleTagged, sampleReactions, sampleReactors } from "@/lib/main-wam/momen/sample";
-import { sampleSessionIds, sampleSessions, sampleTime } from "@/lib/main-wam/sample";
+import { sampleTagCandidates } from "@/lib/main-wam/misi/tag-sample";
+import { samplePeople, sampleSessionIds, sampleSessions, sampleTime } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
 import { DemoToast } from "./DemoToast";
 
@@ -32,7 +33,7 @@ const LAYAR = [
   "M02-dari-galeri", "M03", "M04",
   "M05", "M05-status", "M05-kosong", "M05-ditandai", "M05-ditandai-kosong", "M05-ditandai-banyak", "M05-memuat",
   "M06", "M06-fotoku", "M06-fotoku-status", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
-  "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
+  "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp", "U-tag", "U-lokasi", "U-diajukan", "U-saran",
   "P01-kartu", "P04-baris", "M01-memuat-halaman",
 ] as const;
 
@@ -140,6 +141,15 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "U05": return at(kamera, camera({ phase: "kamera", live: "ditolak" }), "teamBuilding");
     case "U-hp": return at(kamera, camera({ phase: "kamera", live: "hp" }), "teamBuilding");
     case "O04": return at(kamera, camera({ phase: "izin" }), "pagi");
+    // Detection of missions from Momen photos (KONTRAK §13): the tag step, the location switch, the toast "otomatis diajukan" (also at /dev-preview/wam2026/misi?layar=kamera|toast).
+    case "U-tag": case "U-lokasi": case "U-diajukan": case "U-saran": {
+      const extras = <CameraScreen sessions={sessions} nowIso={teamNow.toISOString()} absen migrated initialSession={null} candidates={sampleTagCandidates(samplePeople.rani.id)} detect
+        demo={{ phase: "kamera", live: "contoh", geo: layar === "U-lokasi" ? "aktif" : "mati", ...(layar === "U-tag" ? { sheet: "tag" as const } : {}) }} />;
+      const found = layar === "U-saran"
+        ? { text: t(lang, "misi.auto.suggest", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.suggestSub", { points: "400" }), action: t(lang, "misi.auto.submit") }
+        : { text: t(lang, "misi.auto.sent", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.sentSub", { points: "400" }), action: t(lang, "misi.auto.takeBack") };
+      return at(kamera, <>{extras}{(layar === "U-diajukan" || layar === "U-saran") && <DemoToast text={found.text} sub={found.sub} tone="info" action={found.action} secondary={t(lang, "misi.auto.open")} thumb />}</>, "teamBuilding");
+    }
   }
 
   /* The slots on other areas' screens. */

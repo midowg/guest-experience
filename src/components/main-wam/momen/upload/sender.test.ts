@@ -61,6 +61,17 @@ describe("the photo queue", () => {
     expect(seen).toEqual([expect.objectContaining({ type: "sent", photoId: "p-1" })]);
   });
 
+  it("sends the friends tagged, the position and whether it came from the gallery in both steps; an older queued photo goes without them", async () => {
+    const queue = new MomenQueue(memoryStore(), () => 1000);
+    const geo = { latitude: -7.88, longitude: 112.52, accuracy: 14 };
+    await queue.add([item(1, { tags: ["22222222-2222-4222-8222-222222222222"], geo, gallery: false }), item(2)]);
+    await queue.flush();
+    const bodies = calls.filter(call => call.url === mainWamApi.photoStart || call.url === mainWamApi.photoConfirm).map(call => call.body);
+    expect(bodies[0]).toMatchObject({ tags: ["22222222-2222-4222-8222-222222222222"], geo, gallery: false });
+    expect(bodies[1]).toMatchObject({ tags: ["22222222-2222-4222-8222-222222222222"], geo, gallery: false });
+    expect(bodies[2]).toMatchObject({ tags: [], geo: null, gallery: false });
+  });
+
   it("keeps a photo without a signal, with a backoff, then sends it when back online (told as waited)", async () => {
     let now = 1000;
     const queue = new MomenQueue(memoryStore(), () => now);

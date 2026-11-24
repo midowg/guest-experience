@@ -205,6 +205,7 @@ export class MomenQueue {
       const agreed: PhotoStart = {
         clientId: item.clientId, sessionId: item.sessionId, takenAt: item.takenAt, width: item.width, height: item.height,
         size: item.besar.byteLength, thumbSize: item.kecil.byteLength, tileSize: item.ubin.byteLength,
+        tags: item.tags ?? [], geo: item.geo ?? null, gallery: item.gallery ?? false,
       };
       const start = await momenFetch<UploadStart>(mainWamApi.photoStart, { method: "POST", json: agreed });
       if (!start.data) return this.failed(item, start.status, "server", start.message);

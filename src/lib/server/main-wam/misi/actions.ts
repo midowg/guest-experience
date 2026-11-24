@@ -93,7 +93,7 @@ export async function checkPosition(context: MainWamContext, missionId: string, 
 }
 
 /** Writes the completion: new, or over a rejected one (sent again). */
-async function keepCompletion(context: MainWamContext, found: MissionTarget, row: Record<string, unknown>, status: string = found.mission.review ? "menunggu" : "disetujui"): Promise<MwCompletion> {
+export async function keepCompletion(context: MainWamContext, found: MissionTarget, row: Record<string, unknown>, status: string = found.mission.review ? "menunggu" : "disetujui"): Promise<MwCompletion> {
   const now = new Date().toISOString();
   const base = { review_note: "", ...row, status, reviewed_by: null, reviewed_at: null, updated_at: now };
   const query = found.existing

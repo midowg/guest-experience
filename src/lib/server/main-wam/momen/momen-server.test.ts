@@ -92,6 +92,9 @@ vi.mock("../read", () => ({
 vi.mock("../notes", () => ({ trySendMainWamNote: vi.fn(async () => 1) }));
 vi.mock("../people", () => ({ mainWamPeople: async () => new Map([["sari", { id: "sari", name: "Sari", photo: null }], ["11111111-1111-4111-8111-111111111111", { id: "11111111-1111-4111-8111-111111111111", name: "Rani", photo: "/foto/rani" }]]) }));
 vi.mock("next/server", () => ({ after: (work: () => unknown) => { void work(); } }));
+// Mission detection runs after the answer (misi/deteksi.ts); here only that it is asked for, with what the phone sent, and never fails the photo.
+const detection = vi.hoisted(() => ({ calls: [] as { photo: { id: string; visibleAt: string }; input: unknown }[], fails: false }));
+vi.mock("../misi/deteksi", () => ({ scheduleAfterMomenSaved: (_context: unknown, photo: { id: string; visibleAt: string }, input: unknown) => { detection.calls.push({ photo, input }); if (detection.fails) throw new Error("deteksi rusak"); } }));
 vi.mock("./storage", async original => {
   const real = await original<typeof import("./storage")>();
   return {
@@ -195,6 +198,47 @@ describe("sending a photo", () => {
     const done = await upload.confirmUpload(context(), { ...start, audience: "kelompok", group: "x", sessionId: "00000000-0000-4000-8000-0000000000bb", token: begun.token } as unknown as Parameters<typeof upload.confirmUpload>[1]);
     expect(done.id).toBe(begun.id);
     expect(inserted[0]).toMatchObject({ id: begun.id, audience: "semua", group_id: null, session_id: null, tile_key: `main-wam/momen/${begun.id}-ubin.jpg` });
+  });
+});
+
+describe("mission detection after a photo is kept", () => {
+  const geo = { latitude: -7.88, longitude: 112.52, accuracy: 14 };
+  const tags = ["22222222-2222-4222-8222-222222222222"];
+  beforeEach(() => { detection.calls = []; detection.fails = false; });
+
+  it("is asked for once the photo is kept, with the friends tagged, the position and the gallery flag the phone sent", async () => {
+    const begun = await upload.startUpload(context(), { ...start, tags, geo, gallery: false });
+    if (begun.kind !== "unggah") throw new Error("expected an upload");
+    const done = await upload.confirmUpload(context(), { ...start, tags, geo, gallery: false, token: begun.token });
+    expect(detection.calls).toEqual([{ photo: { id: done.id, visibleAt: "2027-01-05T08:20:05Z" }, input: { tags, geo, gallery: false } }]);
+    expect(steps.indexOf("insert")).toBeGreaterThan(-1);
+  });
+
+  it("an older phone sends none of it: detection still looks at the photo, with no tags and no position", async () => {
+    const begun = await upload.startUpload(context(), start);
+    if (begun.kind !== "unggah") throw new Error("expected an upload");
+    await upload.confirmUpload(context(), { ...start, token: begun.token });
+    expect(detection.calls[0].input).toEqual({ tags: [], geo: null, gallery: false });
+  });
+
+  it("is not asked for a photo that was already kept (a repeat) or that failed to be kept", async () => {
+    const begun = await upload.startUpload(context(), start);
+    if (begun.kind !== "unggah") throw new Error("expected an upload");
+    copyFails = true;
+    await statusOf(upload.confirmUpload(context(), { ...start, token: begun.token }));
+    copyFails = false;
+    records.set(begun.id, record({ id: begun.id, ownerId: context().viewer.id }));
+    await upload.confirmUpload(context(), { ...start, token: begun.token });
+    expect(detection.calls).toEqual([]);
+  });
+
+  it("a detection that breaks never stops the photo from being kept: it is already saved and the answer is the same", async () => {
+    detection.fails = true;
+    const begun = await upload.startUpload(context(), start);
+    if (begun.kind !== "unggah") throw new Error("expected an upload");
+    const done = await upload.confirmUpload(context(), { ...start, token: begun.token });
+    expect(done.id).toBe(begun.id);
+    expect(inserted).toHaveLength(1);
   });
 });
 

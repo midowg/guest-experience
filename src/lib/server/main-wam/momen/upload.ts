@@ -8,6 +8,7 @@ import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, type DbError } from "../errors";
 import type { MainWamContext } from "../gate";
 import { allSessions } from "../read";
+import { scheduleAfterMomenSaved } from "../misi/deteksi";
 import { personLimit, photoRecord } from "./feed";
 import { checkUploaded, keepUploaded, photoIdFor, removePhotoFiles, removeUploads, storageReady, tokenMatches, uploadAddresses, uploadToken, type PhotoKeys } from "./storage";
 
@@ -20,6 +21,8 @@ import { checkUploaded, keepUploaded, photoIdFor, removePhotoFiles, removeUpload
  *   3. confirm: the server checks the token, the sizes and the first bytes, copies the files to the
  *      photo's own keys, keeps the photo and removes the uploads; others see it 5 seconds later (Batalkan).
  * Every step can run again: a photo sent twice (a retry, a queue after a lost answer) is kept once.
+ * Two optional extras ride along (KONTRAK §13): the friends tagged and, when the person switched "Tandai lokasi" on,
+ * a coarse position. After the answer, misi/deteksi.ts keeps them and recognises the missions the photo meets.
  */
 
 const db = () => createPrivilegedClient();
@@ -90,6 +93,9 @@ export async function confirmUpload(context: MainWamContext, input: PhotoConfirm
   }
   // Kept: the uploads under tmp/ are no longer needed (if this fails, the lifecycle rule removes them).
   await removeUploads(id);
+  // The tags, the position and the missions this photo meets are looked after once the answer is sent: they never slow, or fail, the photo.
+  try { scheduleAfterMomenSaved(context, { id: data.id as string, visibleAt: data.visible_at as string }, { tags: input.tags ?? [], geo: input.geo ?? null, gallery: input.gallery ?? false }); }
+  catch (error) { console.warn("main-wam: deteksi misi tidak dijadwalkan", error instanceof Error ? error.message : error); }
   return { id: data.id as string, visibleAt: data.visible_at as string };
 }
 

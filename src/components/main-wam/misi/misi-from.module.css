@@ -1,0 +1,18 @@
+/* "Dari fotomu" on the Misi page. Tokens only (--mw-*); words wrap, targets are at least 44 tall. */
+.lead { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.item { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: var(--mw-space-8) var(--mw-space-12); padding: var(--mw-space-12); border: 1px solid var(--mw-outline); border-left: 3px solid var(--mw-gold); border-radius: var(--mw-radius-16); background: var(--mw-surface); }
+.item[data-kind="saran"] { border-left-color: var(--mw-outline-2); }
+.thumb { width: 48px; height: 60px; object-fit: cover; border-radius: var(--mw-radius-12); border: 1px solid var(--mw-outline); background: var(--mw-surface-2); }
+.text { min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); }
+.text b { font: 700 14px/18px var(--mw-font-sans); overflow-wrap: anywhere; }
+.text small { font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.pills { display: flex; flex-wrap: wrap; gap: var(--mw-space-4); }
+.points { font: 800 18px/1 var(--mw-display-font); font-variant-numeric: tabular-nums; color: var(--mw-gold-ink); }
+.actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+.actions:empty { display: none; }
+.empty { display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-12); border: 1px dashed var(--mw-outline-2); border-radius: var(--mw-radius-16); color: var(--mw-text-2); }
+.empty > svg { flex: none; width: 24px; height: 24px; }
+.empty p { margin: 0; display: flex; flex-direction: column; gap: var(--mw-space-4); font: var(--mw-type-body-small); }
+.empty b { color: var(--mw-text-1); font-weight: 700; }
+.tools { display: flex; flex-direction: column; gap: var(--mw-space-8); }
+.report { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }

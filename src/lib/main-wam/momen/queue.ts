@@ -39,6 +39,12 @@ export type QueueItem = {
   photoId: string | null;
   /** Not sent at once (offline, or retried): its sending is told with "2 foto terkirim" (U03). */
   deferred: boolean;
+  /** Friends tagged on the phone before sending (optional: a queue item of an older version has none). */
+  tags?: string[];
+  /** The coarse position when "Tandai lokasi" was on for this photo. */
+  geo?: { latitude: number; longitude: number; accuracy: number } | null;
+  /** Picked from the gallery. */
+  gallery?: boolean;
 };
 
 /** Backoff with full jitter (AWS): random(0, min(5 minutes, 2 s × 2^attempt)). */

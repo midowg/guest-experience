@@ -8,6 +8,9 @@ import type { CheckResult } from "./verify";
 
 export const MISSION_KINDS = ["foto", "checkin", "sesi"] as const;
 export type MissionKind = (typeof MISSION_KINDS)[number];
+/** Whether a Momen photo may be recognised as this mission's proof (detect.ts): mati, only a sure match, or a doubtful one too. */
+export const AUTO_DETECT_MODES = ["mati", "cocok", "mungkin"] as const;
+export type AutoDetectMode = (typeof AUTO_DETECT_MODES)[number];
 /** sesi missions: who credits them (panitia by hand, or automatically from the session's absen). */
 export const MISSION_CREDITS = ["panitia", "absen"] as const;
 export type MissionCredit = (typeof MISSION_CREDITS)[number];
@@ -26,6 +29,8 @@ export type CompletionSource = (typeof COMPLETION_SOURCES)[number];
 export const MISSIONS_MIGRATION = "202611260001_main_wam_misi.sql";
 /** The photo missions' rules, tags, statuses and the link to Momen (docs/main-wam/KONTRAK.md §13). */
 export const MISSIONS_PHOTO_MIGRATION = "202611300001_main_wam_misi_foto.sql";
+/** Detection of missions from Momen photos: the photo's position, what was detected, the person's switch (KONTRAK §13). */
+export const MISSIONS_DETECT_MIGRATION = "202611300003_main_wam_misi_deteksi.sql";
 
 export type MwMission = {
   id: string;
@@ -48,6 +53,8 @@ export type MwMission = {
   active: boolean;
   /** The TNC (rules.ts). Empty for a mission made before the rules: its columns stand in (effectiveRules). */
   rules: MissionRule[];
+  /** Detection from Momen photos: null = by default (on when the rules give evidence), else the admin's choice. */
+  autoDetect?: AutoDetectMode | null;
 };
 
 export type MwCompletion = {

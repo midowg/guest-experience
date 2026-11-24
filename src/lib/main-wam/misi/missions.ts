@@ -96,7 +96,24 @@ export function summarize(items: readonly MissionItem[]): MissionSummary {
 }
 
 /** A mission photo someone tagged me in (the Misi page lists it with "Lepas tag"). */
-export type TaggedIn = { photoId: string; byName: string; missionTitle: string };
+export type TaggedIn = { photoId: string; byName: string; /** Empty: a regular Momen photo, not one made for a mission. */ missionTitle: string };
+
+/**
+ * A photo of mine that meets a mission, found by detection (detect.ts): "diajukan" = sent by itself (it can be taken back
+ * while nobody has decided), "saran" = only offered (the person taps Ajukan). `state` is where the mission stands for me now.
+ */
+export type FromPhoto = {
+  photoId: string;
+  missionId: string;
+  title: string;
+  points: number;
+  outcome: "diajukan" | "saran";
+  status: "cocok" | "mungkin";
+  state: MissionStatus;
+  canTakeBack: boolean;
+  /** Mode demo only: the picture to show (an SVG), since a demo photo is not in storage. */
+  thumb?: string;
+};
 
 /** What the Beranda card and the Misi page get (JSON-safe, nothing about where a mission is or who else did it). */
 export type MisiView = {
@@ -111,6 +128,12 @@ export type MisiView = {
   leaderboardOpen: boolean;
   /** Photos I am tagged in (still on). */
   taggedIn: TaggedIn[];
+  /** "Dari fotomu": my Momen photos that meet a mission (sent or offered). Absent before detection exists. */
+  fromPhotos?: FromPhoto[];
+  /** My switch "Deteksi misi otomatis" (default on); false = only suggestions. */
+  autoDetect?: boolean;
+  /** The switch can be saved (the migration has run); false = suggestions only until then. */
+  autoDetectSaved?: boolean;
 };
 
 export const MISSION_FILTERS = ["all", "todo", "done"] as const;
