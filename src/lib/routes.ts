@@ -599,6 +599,8 @@ export const mainWamApi = {
   checklist: (sessionId: string) => `${MAIN_WAM_API}/ceklis/${enc(sessionId)}`,
   /** GET: an item's photo, a redirect to storage (module ceklis). */
   checklistPhoto: (itemId: string, version?: string) => `${MAIN_WAM_API}/ceklis/foto/${enc(itemId)}${mwQuery({ v: version })}`,
+  /** GET: a roommate's profile (only answers marked "Rekan bisa lihat ini"); 404 unless we share the room (L01 Kamar). */
+  roommate: (id: string) => `${MAIN_WAM_API}/kamar/${enc(id)}`,
   /** GET: my notifications; POST {id?}: mark one, or all, read. */
   notifications: `${MAIN_WAM_API}/notifikasi`,
   /** GET: a guide's file (Denah, PDF), a redirect to storage. */

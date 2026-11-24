@@ -1,0 +1,23 @@
+/* ── Kamar: teman sekamar (baris ketuk dan sheet profil) ── */
+.memberButton {
+  display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 52px; padding: 0; margin: 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--mw-radius-12); -webkit-tap-highlight-color: transparent;
+}
+.memberButton:focus-visible { outline-offset: 2px; }
+.memberChevron { flex: none; width: 20px; height: 20px; margin-left: auto; color: var(--mw-text-2); }
+.mateHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-12); }
+.mateCard { display: flex; flex-direction: column; gap: var(--mw-space-4); padding: var(--mw-space-12) var(--mw-space-16); border-radius: var(--mw-radius-12); border: 1px solid var(--mw-outline); }
+.mateCardName { margin: 0; font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.mateCardSub { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.mateAnswers { display: flex; flex-direction: column; margin: 0; padding: 0; }
+.mateAnswer { display: flex; flex-direction: column; gap: var(--mw-space-4); padding: var(--mw-space-12) 0; border-top: 1px solid var(--mw-outline); }
+.mateAnswer:first-child { border-top: 0; padding-top: 0; }
+.mateAsk { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.mateReply { margin: 0; padding: 0; list-style: none; font: var(--mw-type-body); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.mateReply li + li { margin-top: var(--mw-space-4); }
+.mateNote { margin: 0; font: var(--mw-type-caption); color: var(--mw-text-2); }
+.sheetStack { display: flex; flex-direction: column; gap: var(--mw-space-16); }
+.personText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.memberName { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.memberDept { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.textMuted { margin: 0; font: var(--mw-type-body); color: var(--mw-text-2); }

@@ -1,29 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { KeyRound, LifeBuoy } from "lucide-react";
+import { useCallback, useState } from "react";
+import { ChevronRight, KeyRound, LifeBuoy } from "lucide-react";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
+import type { RoommateView } from "@/lib/main-wam/peserta/roommate";
+import { sampleRoommate } from "@/lib/main-wam/sample-roommate";
 import type { RoomPerson } from "@/lib/main-wam/types";
+import { mainWamApi } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Avatar, BracketCard, Button, Card, EmptyState } from "@/components/main-wam/ui";
 import { ContactSheet } from "../ContactSheet";
+import { mwRequest } from "../request";
+import { RoommateSheet } from "./RoommateSheet";
 import css from "../peserta.module.css";
+import tap from "./roommate.module.css";
 
 export type RoomProps = {
   /** HR's room, everyone in it (any number); null before HR publishes the rooms. */
   room: { name: string; sub: string; note: string; people: RoomPerson[] } | null;
   stay: { checkIn: string; checkOut: string };
   roomHelp: Contact | null;
+  /** Dev-preview only: roommates open with sample profiles (no sign-in there). */
+  sample?: boolean;
 };
 
 /**
  * Kamar (L01; the kelompok are gone from the app, revisi 18 Nov): the room card (everyone in it,
  * you marked; check-in and check-out; Bantuan kamar). Not published yet: says so in place of the card.
  */
-export function RoomScreen({ room, stay, roomHelp }: RoomProps) {
+export function RoomScreen({ room, stay, roomHelp, sample }: RoomProps) {
   const t = useT();
   const [calling, setCalling] = useState(false);
+  const [mate, setMate] = useState<RoomPerson | null>(null);
+  const [views, setViews] = useState<Record<string, RoommateView>>({});
+  const keep = useCallback((view: RoommateView) => setViews(current => ({ ...current, [view.person.id]: view })), []);
+  const load = useCallback(async (id: string): Promise<RoommateView> => {
+    if (sample) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const others = (room?.people ?? []).filter(person => !person.me);
+      return sampleRoommate(others.find(person => person.id === id) ?? others[0], Math.max(0, others.findIndex(person => person.id === id)));
+    }
+    return (await mwRequest<{ view: RoommateView }>(mainWamApi.roommate(id))).data.view;
+  }, [sample, room]);
   return <ScreenContent>
     {room
       ? <BracketCard as="section" motif="konstelasi" className={css.room} aria-label={t("peserta.room.room", { name: room.name })}>
@@ -35,10 +54,17 @@ export function RoomScreen({ room, stay, roomHelp }: RoomProps) {
           <span className={css.roomKey} aria-hidden><KeyRound /></span>
         </div>
         <ul className={css.members} aria-label={t("peserta.room.residents", { name: room.name, n: room.people.length })}>
-          {room.people.map(person => <li key={person.id} className={css.member}>
-            <Avatar name={person.name} size={32} />
-            <span className={css.memberText}><span className={css.memberName}>{person.me ? t("peserta.room.you", { name: person.name }) : person.name}</span><span className={css.memberDept}>{person.department}</span></span>
-          </li>)}
+          {room.people.map(person => {
+            const body = <>
+              <Avatar name={person.name} photo={person.photo} size={32} />
+              <span className={css.memberText}><span className={css.memberName}>{person.me ? t("peserta.room.you", { name: person.name }) : person.name}</span><span className={css.memberDept}>{person.department}</span></span>
+            </>;
+            return <li key={person.id} className={css.member}>
+              {person.me ? body : <button type="button" className={tap.memberButton} aria-label={t("peserta.room.view", { name: person.name })} aria-haspopup="dialog" onClick={() => setMate(person)}>
+                {body}<ChevronRight aria-hidden className={tap.memberChevron} />
+              </button>}
+            </li>;
+          })}
         </ul>
         {room.note && <p className={css.roomNote}>{room.note}</p>}
         {(stay.checkIn || stay.checkOut) && <>
@@ -51,6 +77,7 @@ export function RoomScreen({ room, stay, roomHelp }: RoomProps) {
         {roomHelp && <Button variant="secondary" size="m" icon={<LifeBuoy />} className={css.roomButton} onClick={() => setCalling(true)}>{t("peserta.room.roomHelp")}</Button>}
       </BracketCard>
       : <Card><EmptyState size="s" icon={<KeyRound />} title={t("peserta.room.roomWaiting")}>{t("peserta.room.waiting")}</EmptyState></Card>}
+    {mate && <RoommateSheet person={mate} view={views[mate.id]} onLoaded={keep} load={load} onClose={() => setMate(null)} />}
     {roomHelp && <ContactSheet contact={roomHelp} title={t("peserta.room.roomHelp")} open={calling} onClose={() => setCalling(false)} />}
   </ScreenContent>;
 }

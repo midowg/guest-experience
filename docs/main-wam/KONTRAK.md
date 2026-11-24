@@ -253,7 +253,7 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 | Area | Kunci |
 | --- | --- |
 | fondasi | `themeImage(slot, v)`: mode `semua` → `splash`/`icon` publik; lainnya hanya untuk yang melihat Main WAM dan Admin WAM; `v` harus versi aktif (selain itu 404 `no-store`); cache 1 hari |
-| A | `home`, `agenda`, `session(id)`, `notifications`, `guideFile(id)`; login/password/push/foto profil tetap `praWamApi` |
+| A | `home`, `agenda`, `session(id)`, `roommate(id)`, `notifications`, `guideFile(id)`; login/password/push/foto profil tetap `praWamApi` |
 | B | `photos(filter)`, `photoStart`, `photoConfirm`, `photosSeen`, `photo(id)`, `photoFile(id, ukuran)`, `photoReaction(id)` (GET daftar siapa bereaksi apa; PUT/DELETE bereaksi), `photoReport(id)`, `mosaic` |
 | C | `rundownSession(id)`, `rundownLog`, `attendance(sesiId)`, `announcements`, `announcement(id)`, `moderation`, `moderatePhoto(id)`, `summary` |
 | D | `checkIn(token)`, `sessionQr(sesiId)`, `silent`, `silentFeedback`, `silentControl(id)`, `silentRecap`, `awards`, `vote(id)`, `approveAward(id)` |
@@ -726,3 +726,17 @@ Keputusan pemilik: tiap peserta punya **misi** bernilai **poin**; kartu **Misi**
 Ringkasan BOD/panitia di aplikasi WAM 2026 tidak ada lagi: kartu "Ringkasan" di Beranda (B01), layar Kehadiran (B02), Rekap Silent Meeting (B05), dan Persetujuan Awarding (B06) di `/wam2026/ringkasan/*`. Alamat lama dialihkan ke Beranda (`next.config.ts`, `/wam2026/ringkasan/:path*` dan `/wam/acara/ringkasan/:path*`).
 - Dihapus: halaman `(app)/ringkasan/**`, API `/api/wam/acara/ringkasan` dan `/api/wam/acara/silent-meeting/rekap`, `mainWamPath.attendanceSummary|silentRecap|awardApproval`, `mainWamApi.summary|silentRecap`, aksi `ringkasan` dan `silent-rekap`, komponen `BerandaBod`, `Kehadiran`, `AwardApproval`, `SilentRecapView`, `lib/main-wam/panitia/summary.ts`, `bodSummary`/`attendanceDay`/`silentRecap` di server, tautan "Lihat rekap" dan "Persetujuan awarding" di Detail sesi dan Silent Meeting.
 - Tetap: Admin WAM 2026 (termasuk menu "Ringkasan"-nya), hub Panitia (Kelola), Absen manual, Awarding admin, Silent Meeting, Jejak karbon, dan API `awarding/{id}/setujui` beserta aksi `awarding-setujui` (kini tanpa layar di aplikasi). Peran BOD memakai Beranda dan Detail sesi seperti peserta, tanpa kartu Ringkasan.
+
+## Profil teman sekamar (Kamar, 24 Nov 2026)
+
+Di Kamar (L01) setiap teman sekamar (bukan diri sendiri) adalah tombol "Lihat profil <nama>". Diketuk, sheet terbuka langsung
+(kepala dari daftar kamar, kerangka muat di dalamnya), lalu isinya datang dari `GET /api/wam/acara/kamar/[id]` (`mainWamApi.roommate(id)`).
+
+- **Akses (server):** hanya teman dalam kamar yang sama (pairing HR yang dipakai layar Kamar, `viewerRoom`) dan masih aktif. Diri sendiri, orang
+  di luar kamar, id tak dikenal, dan viewer tanpa kamar: semuanya **404** satu jawaban (tidak membocorkan keberadaan). 401 tanpa sesi. Batas 120 per 10 menit per orang.
+- **Isi:** hanya yang keluar dari `colleagueOf` (src/lib/server/pra-wam/colleagues.ts): kartu tokoh dan jawaban bertanda **`rekan`**
+  ("Rekan bisa lihat ini"); jawaban untuk fasilitator, HR, anonim, atau rahasia tidak pernah lewat. Jawaban dibangun ulang per kolom
+  (`key`, `prompt`, `lines`), tanpa nama dan departemen (pertanyaan 1 dan 2, sudah di kepala), paling banyak 8 (`ROOMMATE_ANSWER_LIMIT`). Tanpa telepon atau email.
+- **Belum mengisi / tabel belum ada:** 200 dengan `filled: false`: sheet menampilkan "Belum mengisi kuesioner" (nama, departemen, foto tetap tampil).
+- **Mode demo:** tanpa kamar sungguhan, profil contoh (`sample-roommate.ts`, teman pertama terisi, kedua kosong). Pratinjau `/dev-preview/wam2026/peserta/kamar` (`sample`) memakainya tanpa login.
+- **Berkas:** `src/lib/main-wam/peserta/roommate.ts` (tipe, pemangkasan), `src/lib/server/main-wam/peserta/roommate.ts` (`loadRoommate`), `src/app/api/wam/acara/kamar/[id]/route.ts`, `src/components/main-wam/peserta/saya/RoommateSheet.tsx`. Tes: `route.test.ts`, `roommate.dom.test.tsx`.

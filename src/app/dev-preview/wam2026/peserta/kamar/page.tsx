@@ -25,6 +25,6 @@ export default async function PreviewRoom({ searchParams }: { searchParams: Prom
   const roomHelp = { id: samplePeople.putri.id, name: "Putri", role: t(lang, "peserta.contact.roomCommittee"), photo: null, ...contactLinks("0800-0000-0002") };
   return <Frame path={mainWamPath.room} now={now} lang={lang}>
     <RoomScreen room={params.status === "kamar-belum" ? null : { name: room.name, sub: roomSub(room, lang), note: room.note, people: room.people }}
-      stay={{ checkIn: stayTime(settings.event.checkInAt, lang), checkOut: stayTime(settings.event.checkOutAt, lang) }} roomHelp={roomHelp} />
+      stay={{ checkIn: stayTime(settings.event.checkInAt, lang), checkOut: stayTime(settings.event.checkOutAt, lang) }} roomHelp={roomHelp} sample />
   </Frame>;
 }

@@ -73,7 +73,7 @@ async function roomOf(employeeId: string): Promise<ViewerRoom | null> {
     const detail = details.error ? null : (details.data as { floor: string; note: string } | null);
     const roomPeople = ((members.data ?? []) as { employee_id: string }[])
       .map(row => people.get(row.employee_id)).filter(person => !!person)
-      .map(person => ({ id: person!.id, name: person!.name, department: person!.department, me: person!.id === employeeId }))
+      .map(person => ({ id: person!.id, name: person!.name, department: person!.department, me: person!.id === employeeId, photo: person!.photo ?? null }))
       // The person first ("Rani (kamu)"), then by name.
       .sort((a, b) => Number(b.me) - Number(a.me) || a.name.localeCompare(b.name, "id"));
     const { id, name, kind } = room.data as { id: string; name: string; kind: string };

@@ -110,7 +110,7 @@ export type MainWamSettings = {
 export type MainWamRole = "peserta" | "panitia" | "bod" | "admin";
 
 export type ViewerGroup = { id: string; number: number; name: string; coordinator: boolean; size: number };
-export type RoomPerson = { id: string; name: string; department: string; me: boolean };
+export type RoomPerson = { id: string; name: string; department: string; me: boolean; photo?: string | null };
 /** The person's room from HR's published pairing (Kuesioner → Kamar), everyone in it. */
 export type ViewerRoom = { id: string; name: string; kind: string; floor: string; note: string; people: RoomPerson[] };
 
