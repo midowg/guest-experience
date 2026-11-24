@@ -32,6 +32,8 @@
 .video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .mirror { transform: scaleX(-1); }
 .fill { position: absolute; inset: 0; }
+/* The chosen template over the viewfinder (the same drawing the sent photo gets); it never takes a touch. */
+.overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .off {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
   padding: var(--mw-space-24); text-align: center; background: var(--mw-surface-2); color: var(--mw-text-1);
@@ -59,12 +61,12 @@
 .shutter:active::before, .shutter[aria-busy="true"]::before { transform: scale(0.86); }
 .shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-text-1) 28%, transparent); cursor: default; }
 .shutter:disabled::before { background: color-mix(in srgb, var(--mw-text-1) 20%, transparent); }
-/* Filter strip above the shutter: scrolls sideways and snaps; each filter is a chip with its whole name; the swipe on the viewfinder changes it too. */
+/* Template strip above the shutter: five chips, scrolls sideways on a narrow phone and keeps the chosen one in view; the swipe on the viewfinder changes it too. */
 .view { touch-action: pan-y; }
-.filters { align-self: stretch; display: flex; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 0 var(--mw-space-16); margin-bottom: calc(-1 * var(--mw-space-8)); }
+.filters { align-self: stretch; display: flex; justify-content: safe center; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 0 var(--mw-space-16); margin-bottom: calc(-1 * var(--mw-space-8)); }
 .filters::-webkit-scrollbar { display: none; }
 .filter {
-  flex: none; scroll-snap-align: center; min-height: 36px; padding: 0 var(--mw-space-16); border: 0; border-radius: var(--mw-radius-full); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  flex: none; scroll-snap-align: center; min-height: 36px; padding: 0 var(--mw-space-12); border: 0; border-radius: var(--mw-radius-full); cursor: pointer; -webkit-tap-highlight-color: transparent;
   font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; white-space: nowrap; background: var(--mw-surface-2); color: var(--mw-text-1);
   box-shadow: inset 0 0 0 1px var(--mw-outline);
 }

@@ -34,7 +34,7 @@ describe("the two dictionaries say the same things", () => {
   });
 
   it("do not leave English identical to Indonesian except for names that are the same in both", () => {
-    const allowed = new Set(["Agenda", "Awarding", "Silent Meeting", "WAM", "WhatsApp", "Check-in", "Check-out", "Check-in {time}", "Password", "Dress code: ", "Hotel", "shuttle", "Email", "Shaping for tomorrow", "Werkudara Annual Meeting", "kg per bus-km", "kg per kWh", "kg per m³", "kg per kg"]);
+    const allowed = new Set(["Agenda", "Awarding", "Silent Meeting", "WAM", "WhatsApp", "Check-in", "Check-out", "Check-in {time}", "Password", "Dress code: ", "Hotel", "shuttle", "Email", "Shaping for tomorrow", "Werkudara Annual Meeting", "Polaroid", "kg per bus-km", "kg per kWh", "kg per m³", "kg per kg"]);
     const same = (idKeys as (keyof typeof id)[]).filter(key => id[key] === en[key] && !allowed.has(id[key]) && id[key].replace(/[^A-Za-z]/g, "").length > 3);
     expect(same, "texts still in Indonesian in en.ts").toEqual([]);
   });

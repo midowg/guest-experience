@@ -1,12 +1,13 @@
 /*
- * The camera's small filters (Momen only; the Misi camera has none). Soft, in WAM 2026's colours: gold, deep
- * blue, green. One list holds the numbers; from it come the CSS `filter` of the live viewfinder, the same
+ * The tones of the camera's event templates (Momen only; the Misi camera has none): soft, in WAM 2026's
+ * colours (gold, deep blue). The frame, text and logo of each template are in camera-templates.ts; this file
+ * holds only the colour tone each one gives the picture. One list holds the numbers; from it come the CSS `filter` of the live viewfinder, the same
  * filter drawn into the photo that is sent (canvas `ctx.filter`), and a pixel fallback with the equivalent
  * matrices for browsers whose canvas ignores `ctx.filter` (Safari before 18). Pure. "asli" is the default
  * every time the camera opens and changes nothing.
  */
 
-export const CAMERA_FILTER_IDS = ["asli", "emas", "biru", "fajar", "hijau", "mono"] as const;
+export const CAMERA_FILTER_IDS = ["asli", "emas", "biru", "jaringan", "polaroid"] as const;
 export type CameraFilterId = (typeof CAMERA_FILTER_IDS)[number];
 export const DEFAULT_CAMERA_FILTER: CameraFilterId = "asli";
 
@@ -17,9 +18,8 @@ export const CAMERA_FILTERS: Record<CameraFilterId, FilterOps> = {
   asli: {},
   emas: { sepia: 0.3, saturate: 1.2, contrast: 1.03, brightness: 1.05 },
   biru: { sepia: 0.3, hue: 175, saturate: 0.95, contrast: 1.05, brightness: 0.98 },
-  fajar: { sepia: 0.08, saturate: 1.1, contrast: 0.94, brightness: 1.08 },
-  hijau: { sepia: 0.25, hue: 60, saturate: 1.1, contrast: 1.02 },
-  mono: { grayscale: 1, contrast: 1.05 },
+  jaringan: { sepia: 0.2, hue: 175, saturate: 0.9, contrast: 1.06, brightness: 0.96 },
+  polaroid: { saturate: 0.95, contrast: 0.97, brightness: 1.04 },
 };
 
 export const isCameraFilter = (value: unknown): value is CameraFilterId => typeof value === "string" && (CAMERA_FILTER_IDS as readonly string[]).includes(value);

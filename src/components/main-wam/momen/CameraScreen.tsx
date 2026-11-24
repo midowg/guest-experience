@@ -7,6 +7,7 @@ import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
 import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
 import { CAMERA_FILTER_IDS, cssFilter, DEFAULT_CAMERA_FILTER, type CameraFilterId } from "@/lib/main-wam/momen/camera-filters";
+import { loadTemplateAssets } from "@/lib/main-wam/momen/camera-template-draw";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -15,6 +16,7 @@ import { autoTag } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { decodeFile, grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto, type Picture } from "./upload/compress";
+import { TemplateOverlay } from "./TemplateOverlay";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
 import css from "./camera.module.css";
@@ -79,14 +81,19 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
-  // Always Asli when the camera opens.
+  // The template (frame, words and mark; Asli = none): always Asli when the camera opens.
   const [filter, setFilter] = useState<CameraFilterId>(DEFAULT_CAMERA_FILTER);
   const swipe = useRef<number | null>(null);
+  const chipRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { chipRef.current?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [filter]);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const shutterInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const wantLive = useRef(false);
+
+  /* The mark and the network art of the templates, ready before the first shutter (a late or failed load never costs the photo). */
+  useEffect(() => { if (!demo) void loadTemplateAssets(); }, [demo]);
 
   /* The clock (server time): the automatic tag follows the running session while not touched. */
   useEffect(() => {
@@ -273,6 +280,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
         <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
         {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} style={{ filter: cssFilter(filter) }} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
         {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")} style={{ filter: cssFilter(filter) }}><PhotoFill tone={5} className={css.fill} /></span>}
+        {live === "menyala" && <TemplateOverlay template={filter} lang={lang} className={css.overlay} />}
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
           ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
@@ -295,7 +303,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
     <div className={css.dock}>
       {live === "menyala" && <div className={css.filters} role="radiogroup" aria-label={t("momen.cam.filters")}>
-        {CAMERA_FILTER_IDS.map(id => <button key={id} type="button" role="radio" aria-checked={filter === id} className={css.filter} onClick={() => setFilter(id)}>{t(`momen.cam.filter.${id}`)}</button>)}
+        {CAMERA_FILTER_IDS.map(id => <button key={id} ref={node => { if (node && filter === id) chipRef.current = node; }} type="button" role="radio" aria-checked={filter === id} className={css.filter} onClick={() => setFilter(id)}>{t(`momen.cam.filter.${id}`)}</button>)}
       </div>}
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>

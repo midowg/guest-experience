@@ -11,18 +11,21 @@ describe("the camera's filters", () => {
   });
 
   it("maps each filter to its CSS filter in a fixed order, from one list", () => {
-    expect(CAMERA_FILTER_IDS).toEqual(["asli", "emas", "biru", "fajar", "hijau", "mono"]);
-    expect(cssFilter("mono")).toBe("grayscale(1) contrast(1.05)");
+    expect(CAMERA_FILTER_IDS).toEqual(["asli", "emas", "biru", "jaringan", "polaroid"]);
+    expect(cssFilter("polaroid")).toBe("saturate(0.95) contrast(0.97) brightness(1.04)");
     expect(cssFilter("biru")).toBe("sepia(0.3) hue-rotate(175deg) saturate(0.95) contrast(1.05) brightness(0.98)");
     for (const id of CAMERA_FILTER_IDS) expect(Object.keys(CAMERA_FILTERS)).toContain(id);
     expect(isCameraFilter("emas")).toBe(true);
     expect(isCameraFilter("neon")).toBe(false);
   });
 
-  it("the pixel fallback matches the filter: Mono gives equal channels, Emas warms, Biru cools, alpha stays", () => {
-    const grey = new Uint8ClampedArray([200, 40, 90, 77]);
-    applyFilterToPixels(grey, "mono");
-    expect(grey[0]).toBe(grey[1]); expect(grey[1]).toBe(grey[2]); expect(grey[3]).toBe(77);
+  it("the pixel fallback matches the filter: Emas warms, Biru and Jaringan cool, alpha stays", () => {
+    const alpha = new Uint8ClampedArray([200, 40, 90, 77]);
+    applyFilterToPixels(alpha, "polaroid");
+    expect(alpha[3]).toBe(77);
+    const net = new Uint8ClampedArray([128, 128, 128, 255]);
+    applyFilterToPixels(net, "jaringan");
+    expect(net[2]).toBeGreaterThan(net[0]);
     const gold = new Uint8ClampedArray([128, 128, 128, 255]);
     applyFilterToPixels(gold, "emas");
     expect(gold[0]).toBeGreaterThan(gold[2]);

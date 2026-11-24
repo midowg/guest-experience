@@ -410,16 +410,31 @@ describe("the camera", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("offers the small filters under the viewfinder: Asli is chosen every time, one tap picks another, the viewfinder follows; none without a live picture", () => {
+  it("offers the five templates under the viewfinder: Asli is chosen every time with nothing drawn, one tap picks another and the preview shows its words and mark in the top right; none without a live picture", () => {
     const { unmount, container } = render(camera({ phase: "kamera", live: "contoh" }));
-    const group = screen.getByRole("radiogroup", { name: "Filter foto" });
+    const group = screen.getByRole("radiogroup", { name: "Bingkai foto" });
     const names = within(group).getAllByRole("radio").map(radio => radio.textContent);
-    expect(names).toEqual(["Asli", "Emas", "Biru", "Fajar", "Hijau", "Mono"]);
+    expect(names).toEqual(["Asli", "Emas", "Biru", "Jaringan", "Polaroid"]);
     expect(within(group).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
-    fireEvent.click(within(group).getByRole("radio", { name: "Mono" }));
-    expect(within(group).getByRole("radio", { name: "Mono" }).getAttribute("aria-checked")).toBe("true");
+    expect(container.querySelector("svg[data-template]")).toBeNull();
+    fireEvent.click(within(group).getByRole("radio", { name: "Polaroid" }));
+    expect(within(group).getByRole("radio", { name: "Polaroid" }).getAttribute("aria-checked")).toBe("true");
     expect(within(group).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("false");
-    expect((container.querySelector("[role=img]") as HTMLElement).style.filter).toContain("grayscale(1)");
+    const overlay = container.querySelector("svg[data-template=polaroid]") as SVGElement;
+    expect(overlay.getAttribute("viewBox")).toBe("0 0 400 500");
+    expect(overlay.textContent).toContain("WERKUDARA ANNUAL MEETING 2026");
+    expect(overlay.textContent).toContain("4–7 JANUARI 2027 · KOTA BATU");
+    const logo = overlay.querySelector("image[data-logo]") as SVGElement;
+    expect(logo.getAttribute("href")).toBe("/werkudara-mark.png");
+    expect(Number(logo.getAttribute("x")) + Number(logo.getAttribute("width"))).toBeLessThanOrEqual(400);
+    expect(Number(logo.getAttribute("x"))).toBeGreaterThan(200);
+    expect(Number(logo.getAttribute("y"))).toBeLessThan(60);
+    fireEvent.click(within(group).getByRole("radio", { name: "Emas" }));
+    expect(container.querySelector("svg[data-template=emas]")).toBeTruthy();
+    expect(container.querySelector("svg[data-template=polaroid]")).toBeNull();
+    expect((container.querySelector("[role=img]") as HTMLElement).style.filter).toContain("sepia(0.3)");
+    fireEvent.click(within(group).getByRole("radio", { name: "Asli" }));
+    expect(container.querySelector("svg[data-template]")).toBeNull();
     unmount();
     render(camera({ phase: "kamera", live: "hp" }));
     expect(screen.queryByRole("radiogroup")).toBeNull();
