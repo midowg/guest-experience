@@ -5,6 +5,7 @@ import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
 import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaCarousel } from "@/components/pra-wam/AgendaCarousel";
+import { CarbonHome } from "@/components/pra-wam/carbon/CarbonHome";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { AGENDA_ITEM, checkInStatus, checkInText, heroCheckInNote, withItem } from "@/lib/pra-wam/agenda";
 import { wibDate } from "@/lib/pra-wam/appraisal";
@@ -13,6 +14,7 @@ import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { getAbout } from "@/lib/server/pra-wam/about";
+import { myCarbon } from "@/lib/server/pra-wam/carbon";
 import { myAttendance, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
@@ -71,7 +73,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // 19 Nov 2026: times in the viewer's own zone.
   const zone = await viewerZone();
   const today = wibDate(now.toISOString());
-  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
+  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room, carbon] = await Promise.all([
     // From a week back: the carousel's earlier cards (yesterday too) are a swipe to the left.
     myAgenda(member, daysBefore(today, 7)), myNotifications(member), myOpenRequests(member), bookingOpenFor(member),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
@@ -82,6 +84,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     myQuestionnaireCard(member.id).catch(() => null),
     // The WAM room, once HR publishes the pairing; never in the way of Beranda either.
     myRoom(member.id).catch(() => null),
+    // Jejak karbon (24 Nov 2026), for the people in Misi Perjalanan's room list once the panitia set the trip.
+    myCarbon(member).catch(() => null),
   ]);
   // The blue card: the session whose check-in is open now, else the next thing still to come.
   const next = checkInNow(items, now) ?? items.find(item => new Date(item.endsAt) > now);
@@ -206,6 +210,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
         {quest?.progress.done && questCard}
         {quest?.progress.done && quest.card && <ColleaguesCard href={praWamPath.colleagues} />}
+        {carbon && <CarbonHome setup={carbon.setup} occupants={carbon.occupants} travel={carbon.travel} />}
         {about && <AboutCard about={about.about} />}
       </div>
 

@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { BedDouble, Car, Check, CupSoda, Laptop, Leaf, Lock, Smartphone, Utensils, X, type LucideIcon } from "lucide-react";
+import { BedDouble, Car, Check, CupSoda, Laptop, Leaf, Loader2, Lock, Smartphone, Utensils, X, type LucideIcon } from "lucide-react";
 import {
   OWN_MODES, calculatorTiles, carbonFigure, groupModeLabel, ownTripValid, tileKg, tripLabel,
   type CarbonInput, type CarbonTravel, type GroupTrip, type OwnMode, type OwnTrip,
 } from "@/lib/pra-wam/carbon";
+import { errorText } from "../api";
 import css from "./carbon.module.css";
 
 const num = (value: number) => new Intl.NumberFormat("id-ID").format(value);
@@ -17,14 +18,15 @@ type Extra = keyof typeof LIMIT;
  * and the kilograms it makes, and the total on top that grows as they type. What the panitia already
  * know is filled and locked (the group trip, the nights in their room, the meals); what only the
  * person knows is a field (plastic bottles, laptop hours, phone charges). Someone who does not go with
- * the group opens "Berangkat sendiri" on the trip tile. Simpan keeps it; closed, it only shows.
+ * the group opens "Berangkat sendiri" on the trip tile. Simpan keeps it (and waits for the server,
+ * the error beside the button); closed, it only shows.
  */
 export function CarbonCalculator({ trip, nights, occupants, meals, travel, open, inputFor, onSave }: {
   trip: GroupTrip; nights: number; occupants: number; meals: number;
   travel: CarbonTravel | null; open: boolean;
   /** The figures for an answer (the same function the card uses). */
   inputFor: (travel: CarbonTravel) => CarbonInput | null;
-  onSave: (travel: CarbonTravel) => void;
+  onSave: (travel: CarbonTravel) => void | Promise<unknown>;
 }) {
   const ids = useId();
   const [own, setOwn] = useState<OwnTrip | null>(travel?.own ?? null);
@@ -32,6 +34,8 @@ export function CarbonCalculator({ trip, nights, occupants, meals, travel, open,
     bottles: travel?.bottles ? String(travel.bottles) : "", laptopHours: travel?.laptopHours ? String(travel.laptopHours) : "", phoneCharges: travel?.phoneCharges ? String(travel.phoneCharges) : "",
   });
   const [tried, setTried] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const value = (key: Extra) => Math.max(0, Number(extra[key].replace(",", ".")) || 0);
   const tooMuch = (key: Extra) => value(key) > LIMIT[key];
   const ownBad = !!own && !ownTripValid(own);
@@ -44,7 +48,15 @@ export function CarbonCalculator({ trip, nights, occupants, meals, travel, open,
   const setOwnTrip = (change: Partial<OwnTrip>) => setOwn(current => ({ ...(current ?? { from: "", mode: "mobil", km: 0, roundTrip: true }), ...change }));
   const together = occupants === 2 ? "berdua" : occupants === 3 ? "bertiga" : `${num(occupants)} orang`;
 
-  return <form className={css.calc} noValidate onSubmit={event => { event.preventDefault(); setTried(true); if (valid && open) onSave(draft); }}>
+  const submit = async () => {
+    setTried(true);
+    if (!valid || !open || saving) return;
+    setSaving(true);
+    setError("");
+    try { await onSave(draft); } catch (problem) { setError(errorText(problem)); } finally { setSaving(false); }
+  };
+
+  return <form className={css.calc} noValidate aria-busy={saving || undefined} onSubmit={event => { event.preventDefault(); void submit(); }}>
     <div className={css.calcTotal} aria-live="polite">
       <span className={css.calcLeaf}><Leaf aria-hidden /></span>
       <span className={css.calcTotalText}><span>Total perkiraan</span><strong>{figure.value} <small>{figure.unit}</small></strong></span>
@@ -80,7 +92,8 @@ export function CarbonCalculator({ trip, nights, occupants, meals, travel, open,
       <ExtraTile icon={Smartphone} label="Isi daya HP" unit="kali" limit={LIMIT.phoneCharges} value={extra.phoneCharges} disabled={!open} kg={tiles?.hp ?? 0} onChange={text => setExtra(current => ({ ...current, phoneCharges: text }))} />
     </div>
 
-    {open ? <button type="submit" className={css.save}><Check aria-hidden />Simpan</button> : <p className={css.otherNote}>Pengisian sudah ditutup.</p>}
+    {error && <p className={css.saveError} role="alert">{error}</p>}
+    {open ? <button type="submit" className={css.save} disabled={saving}>{saving ? <><Loader2 aria-hidden className={css.spin} />Menyimpan…</> : <><Check aria-hidden />Simpan</>}</button> : <p className={css.otherNote}>Pengisian sudah ditutup.</p>}
   </form>;
 }
 

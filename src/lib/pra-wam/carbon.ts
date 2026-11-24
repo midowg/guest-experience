@@ -273,12 +273,15 @@ export function calculatorTiles(input: CarbonInput) {
 export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };
 
 /*
- * Storage (Admin Pra WAM → Jejak karbon, 24 Nov 2026): two rows of pw_settings, no new table. The
- * panitia's setup, and later the participants' answers keyed by personKey(name), the same key as
- * Misi Perjalanan's room list (where the people and their rooms come from).
+ * Storage (Admin Pra WAM → Jejak karbon, 24 Nov 2026): rows of pw_settings, no new table. The
+ * panitia's setup in one row; each participant's answer in a row of their own (carbonAnswerKey), so
+ * two people saving at once never overwrite each other. Answers are keyed by personKey(name), the
+ * same key as Misi Perjalanan's room list (where the people and their rooms come from); the row's
+ * key is a hash of it, as pw_settings keys are short and plain (^[a-z0-9_]{2,40}$).
  */
 export const CARBON_SETTING_KEY = "carbon_setup";
-export const CARBON_ANSWERS_KEY = "carbon_answers";
+/** A participant's row: "carbon_" and 32 hex characters (see carbonAnswerKey on the server). */
+export const CARBON_ANSWER_ROW = /^carbon_[0-9a-f]{32}$/;
 
 /** Nothing set yet: no trip, so every card waits ("Angkamu muncul setelah panitia mengisi perjalanan"). */
 export const EMPTY_CARBON_SETUP: CarbonSetup = {
@@ -311,21 +314,21 @@ export function asCarbonSetup(value: unknown): CarbonSetup {
 }
 
 const answerSchema = z.object({
-  own: z.object({ from: z.string().max(80), mode: z.enum(["mobil", "motor", "kereta", "lainnya"]), km: z.number().min(0).max(3000), roundTrip: z.boolean() }).nullable(),
-  bottles: z.number().min(0).max(50), laptopHours: z.number().min(0).max(72), phoneCharges: z.number().min(0).max(20),
+  own: z.object({ from: z.string().trim().max(80, "Asal paling panjang 80 huruf."), mode: z.enum(["mobil", "motor", "kereta", "lainnya"]), km: z.number().min(0).max(3000), roundTrip: z.boolean() }).nullable(),
+  bottles: z.number().min(0).max(50, "Paling banyak 50 botol."), laptopHours: z.number().min(0).max(72, "Paling lama 72 jam."), phoneCharges: z.number().min(0).max(20, "Paling banyak 20 kali."),
   answeredAt: z.string(),
 });
 
-/** The stored answers by person key; a malformed one is left out rather than counted wrong. */
-export function asCarbonAnswers(value: unknown): Record<string, CarbonTravel> {
-  if (!value || typeof value !== "object") return {};
-  const answers: Record<string, CarbonTravel> = {};
-  for (const [key, answer] of Object.entries(value as Record<string, unknown>)) {
-    const parsed = answerSchema.safeParse(answer);
-    if (parsed.success) answers[key] = parsed.data;
-  }
-  return answers;
+/** One stored answer, or null when there is none or it cannot be read (never counted wrong). */
+export function asCarbonAnswer(value: unknown): CarbonTravel | null {
+  const parsed = answerSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
+
+/** What a participant may send from the calculator: their own trip complete or none, sensible numbers. */
+export const carbonAnswerInputSchema = answerSchema.omit({ answeredAt: true }).refine(answer => !answer.own || ownTripValid(answer.own), {
+  message: "Isi asal dan jarak 1–3.000 km.", path: ["own"],
+});
 
 /** The people for the admin page from Misi Perjalanan's sheet: their room's code and how many share it. */
 export function carbonPeopleFrom(sheet: { rooms?: Record<string, string>; people?: { name: string; dept?: string; room: string }[] } | null, answers: Record<string, CarbonTravel>, key: (name: string) => string): CarbonPerson[] {

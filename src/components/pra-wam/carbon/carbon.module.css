@@ -122,6 +122,11 @@
 .otherNote { margin: 0; font: 400 14px/20px var(--pw-body); color: var(--pw-muted); }
 .save { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border: 0; border-radius: 18px; background: var(--eco); color: #fff; font: 600 17px/22px var(--pw-body); cursor: pointer; }
 .save > svg { width: 20px; height: 20px; }
+.save:disabled { opacity: .7; cursor: progress; }
+.saveError { margin: 0; font: 500 14px/20px var(--pw-body); color: var(--pw-danger); }
+.spin { animation: carbonSpin 0.9s linear infinite; }
+@keyframes carbonSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 .save:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 3px; }
 
 /* Perjalananmu: the group trip, or the participant's own in plain fields. */

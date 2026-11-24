@@ -247,6 +247,8 @@ export const praWamApi = {
   forgot: `${WAM_API}/forgot-password`,
   resetPassword: `${WAM_API}/reset-password`,
   sessions: (id?: string) => `${WAM_API}/sessions${id ? `/${id}` : ""}`,
+  /** PUT: the participant's own part of Jejak karbon (24 Nov 2026). */
+  carbon: `${WAM_API}/carbon`,
   sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
   /** GET (panitia): Linimasa's week or day as PDF, Excel, or the WhatsApp text. */
   sessionsExport: (format: "pdf" | "xlsx" | "text", rentang: string, tanggal: string) => `${WAM_API}/sessions/export?${new URLSearchParams({ format, rentang, tanggal })}`,

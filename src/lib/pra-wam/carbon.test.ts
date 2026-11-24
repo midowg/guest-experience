@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_CARBON_SETUP, asCarbonSetup, calculatorTiles, carbonFigure, carbonSetupSchema, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tileKg, tripLabel, tripValid, type CarbonInput } from "./carbon";
+import { EMPTY_CARBON_SETUP, asCarbonSetup, carbonAnswerInputSchema, calculatorTiles, carbonFigure, carbonSetupSchema, carbonParts, carbonView, ownTripValid, personCarbonInput, splitPercent, tileKg, tripLabel, tripValid, type CarbonInput } from "./carbon";
 
 const trip: CarbonInput = {
   legs: [{ mode: "kereta", label: "pergi", km: 500 }, { mode: "bus", label: "shuttle", km: 30, sharedBy: 30 }],
@@ -116,5 +116,17 @@ describe("what Admin Pra WAM saves", () => {
     expect(carbonSetupSchema.safeParse({ ...good, trip: { ...good.trip, mode: "pesawat" } }).success).toBe(false);
     expect(asCarbonSetup({ nope: true })).toEqual(EMPTY_CARBON_SETUP);
     expect(personCarbonInput(EMPTY_CARBON_SETUP, null, 2)).toBeNull();
+  });
+});
+
+describe("Jejak karbon: what a participant may send", () => {
+  it("takes the group trip or a complete own trip, and refuses too much", () => {
+    expect(carbonAnswerInputSchema.safeParse({ own: null, bottles: 2, laptopHours: 4, phoneCharges: 1 }).success).toBe(true);
+    expect(carbonAnswerInputSchema.safeParse({ own: { from: "Sleman", mode: "motor", km: 15, roundTrip: true }, bottles: 0, laptopHours: 0, phoneCharges: 0 }).success).toBe(true);
+    expect(carbonAnswerInputSchema.safeParse({ own: { from: "Lain", mode: "lainnya", km: 0, roundTrip: true }, bottles: 0, laptopHours: 0, phoneCharges: 0 }).success).toBe(true);
+    const bad = carbonAnswerInputSchema.safeParse({ own: { from: " ", mode: "mobil", km: 0, roundTrip: true }, bottles: 0, laptopHours: 0, phoneCharges: 0 });
+    expect(bad.success ? "" : bad.error.issues[0].message).toBe("Isi asal dan jarak 1–3.000 km.");
+    expect(carbonAnswerInputSchema.safeParse({ own: null, bottles: 51, laptopHours: 0, phoneCharges: 0 }).success).toBe(false);
+    expect(carbonAnswerInputSchema.safeParse({ own: null, bottles: -1, laptopHours: 0, phoneCharges: 0 }).success).toBe(false);
   });
 });

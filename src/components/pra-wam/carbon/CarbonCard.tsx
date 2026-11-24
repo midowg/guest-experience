@@ -25,7 +25,7 @@ export type CarbonFormProps = {
   trip: GroupTrip; nights: number; occupants: number; meals: number;
   travel: CarbonTravel | null; open: boolean;
   inputFor: (travel: CarbonTravel) => CarbonInput | null;
-  onSave: (travel: CarbonTravel) => void;
+  onSave: (travel: CarbonTravel) => void | Promise<unknown>;
 };
 
 /**
@@ -109,7 +109,7 @@ export function CarbonDetail({ form, onSaved }: { form?: CarbonFormProps; onSave
   const [how, setHow] = useState(false);
   return <div className={css.detail}>
     {form && <CarbonCalculator trip={form.trip} nights={form.nights} occupants={form.occupants} meals={form.meals} travel={form.travel} open={form.open}
-      inputFor={form.inputFor} onSave={travel => { form.onSave(travel); onSaved?.(); }} />}
+      inputFor={form.inputFor} onSave={async travel => { await form.onSave(travel); onSaved?.(); }} />}
 
     <section className={css.how}>
       <button type="button" className={css.howRow} aria-expanded={how} aria-controls="karbon-cara" onClick={() => setHow(!how)}>
