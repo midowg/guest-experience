@@ -346,6 +346,8 @@ export const wamAdminPath = {
   theme: `${WAM_ADMIN}/tema`,
   /** Akun uji (24 Nov 2026): accounts that try Misi Perjalanan and Jejak karbon before the event. */
   testAccounts: `${WAM_ADMIN}/akun-uji`,
+  /** Misi Perjalanan (24 Nov 2026): the rooms, the HoD in them with quiz hints, and the BoD. */
+  mission: `${WAM_ADMIN}/misi-perjalanan`,
   /** TV Announcement: the office TVs, their pictures, and how long each stays. */
   tv: `${WAM_ADMIN}/tv`,
   /** The board as a TV plays it, for the signed-in admin (no TV key). */
@@ -478,6 +480,8 @@ export const praWamSettingsApi = "/api/admin/wam/settings";
 export const praWamThemeApi = "/api/admin/wam/theme";
 /** PUT: the Akun uji list and whether Jejak karbon shows only to them. */
 export const praWamTestAccountsApi = "/api/admin/wam/akun-uji";
+/** PUT: Misi Perjalanan's room list (the old one kept as a backup first). */
+export const praWamMissionApi = "/api/admin/wam/misi-perjalanan";
 
 /*
  * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside
