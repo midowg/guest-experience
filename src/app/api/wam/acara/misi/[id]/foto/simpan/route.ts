@@ -14,7 +14,8 @@ export async function POST(request: Request, { params }: Params) {
     checkOrigin(request);
     const id = validate(z.uuid("Misi tidak dikenali."), (await params).id);
     const input = validate(photoConfirmSchema, await readJson(request, 3_000));
-    const completion = await confirmPhoto(context, id, input);
-    return success({ status: completion.status }, completion.status === "disetujui" ? "Misi selesai." : "Foto terkirim. Menunggu persetujuan.");
+    const outcome = await confirmPhoto(context, id, input);
+    const message = outcome.status === "disetujui" ? "Misi selesai." : outcome.status === "ditolak" ? "Foto belum memenuhi syarat." : "Foto terkirim. Panitia akan meninjau.";
+    return success({ status: outcome.status, reasons: outcome.reasons }, message);
   });
 }

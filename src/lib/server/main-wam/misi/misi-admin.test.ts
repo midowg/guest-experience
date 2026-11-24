@@ -43,10 +43,12 @@ vi.mock("../admin/common", async () => {
   };
 });
 vi.mock("./read", () => ({
-  allMissions: async () => ({ data: [{ id: ID, title: "Foto apel", kind: "foto", points: 40, placeName: "", latitude: null, longitude: null, radiusM: null, sessionId: null, credit: "panitia", review: true, opensAt: null, closesAt: null, sort: 1, active: true, description: "" }], migrated: true }),
+  allMissions: async () => ({ data: [{ id: ID, title: "Foto apel", kind: "foto", points: 40, placeName: "", latitude: null, longitude: null, radiusM: null, sessionId: null, credit: "panitia", review: true, opensAt: null, closesAt: null, sort: 1, active: true, description: "", rules: [] }], migrated: true }),
   missionSettings: async () => ({ defaultRadiusM: 50, maxAccuracyM: 100, leaderboardOpen: true }),
   pointTotals: async () => ({ data: new Map([[PERSON, { points: 70, missions: 2 }], ["b", { points: 70, missions: 1 }]]), migrated: true }),
 }));
+const decided = vi.hoisted(() => [] as unknown[][]);
+vi.mock("./review", () => ({ decideReview: async (...args: unknown[]) => { decided.push(args); }, listReviewQueue: async () => [{ id: "q1" }] }));
 vi.mock("../read", () => ({ allSessionsReal: async () => ({ data: [{ id: "s1", title: "Team building", startsAt: "2027-01-05T15:00:00+07:00", status: "terbit" }, { id: "s2", title: "Batal", startsAt: "2027-01-05T16:00:00+07:00", status: "batal" }], migrated: true }) }));
 vi.mock("../people", () => ({
   mainWamAttendees: async () => [PERSON, "b"],
@@ -76,15 +78,10 @@ describe("Admin WAM → Misi", () => {
     expect(writes()).toEqual([{ table: "mw_missions", name: "delete", row: undefined }]);
   });
 
-  it("records who decided a proof, when and why, and takes the mission's own status words", async () => {
-    state.rows.mw_mission_completions = [{ id: ID }];
+  it("hands a decision to the shared review (the same one panitia's screen will use), with the admin as the reviewer", async () => {
     await admin.reviewCompletion(ID, { status: "ditolak", note: "Bukan di tugu" });
-    expect(writes()[0]).toMatchObject({ table: "mw_mission_completions", name: "update", row: { status: "ditolak", review_note: "Bukan di tugu", reviewed_by: ADMIN, reviewed_at: expect.any(String) } });
-  });
-
-  it("says a completion that is gone is gone", async () => {
-    state.rows.mw_mission_completions = [];
-    expect(await refused(admin.reviewCompletion(ID, { status: "disetujui", note: "" }))).toEqual({ status: 404, message: expect.stringContaining("tidak ditemukan") });
+    expect(decided).toEqual([[ID, ADMIN, { status: "ditolak", note: "Bukan di tugu" }]]);
+    expect(writes()).toEqual([]);
   });
 
   it("records a person as having done a mission (panitia's hand), once", async () => {
@@ -116,15 +113,17 @@ describe("Admin WAM → Misi", () => {
 
   it("shows the whole page of an admin: missions with counts, the Peringkat in full names, sessions that are not cancelled", async () => {
     state.rows.mw_mission_completions = [
-      { id: "c1", mission_id: ID, employee_id: PERSON, source: "foto", status: "menunggu", proof_key: "main-wam/misi/x.jpg", created_at: "2027-01-05T09:00:00+07:00" },
+      { id: "c1", mission_id: ID, employee_id: PERSON, source: "foto", status: "perlu_ditinjau", proof_key: "main-wam/misi/x.jpg", created_at: "2027-01-05T09:00:00+07:00" },
       { id: "c2", mission_id: ID, employee_id: "b", source: "foto", status: "disetujui", proof_key: null, created_at: "2027-01-05T08:00:00+07:00" },
     ];
     const data = await admin.adminMisi();
     expect(data.migrated).toBe(true);
     expect(data.missions[0]).toMatchObject({ id: ID, done: 1, pending: 1, rejected: 0 });
-    expect(data.completions[0]).toMatchObject({ id: "c1", status: "menunggu", person: "Rani Contoh", missionTitle: "Foto apel", hasProof: true });
+    expect(data.completions[0]).toMatchObject({ id: "c1", status: "perlu_ditinjau", person: "Rani Contoh", missionTitle: "Foto apel", hasProof: true });
     expect(data.leaderboard.map(row => [row.rank, row.fullName])).toEqual([[1, "Rani Contoh"], [1, "Bima Contoh"]]);
     expect(data.sessions.map(session => session.id)).toEqual(["s1"]);
+    // The review queue comes from the shared function; a proof waiting for a person counts as waiting.
+    expect(data.reviewQueue).toEqual([{ id: "q1" }]);
   });
 
   it("gives a proof's address only for a completion that has one", async () => {

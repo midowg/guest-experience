@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleMissions } from "@/lib/main-wam/misi/sample";
+import type { VerifierResult } from "@/lib/main-wam/misi/verify";
 import { DEFAULT_MISSION_SETTINGS, type MwMission } from "@/lib/main-wam/misi/types";
 import { defaultSettings } from "@/lib/main-wam/settings";
+import type { TagCandidate } from "@/lib/main-wam/misi/rules";
 import type { MainWamViewer } from "@/lib/main-wam/types";
 
 /*
@@ -19,6 +21,10 @@ const state = vi.hoisted(() => ({
   insertError: null as { code?: string; message?: string } | null,
   removed: [] as string[][],
   copied: [] as [string, string][],
+  pool: new Map() as Map<string, TagCandidate>,
+  photos: [] as Record<string, unknown>[],
+  tagged: [] as { photoId: string; by: string; ids: string[] }[],
+  approvals: [] as string[],
   uploadedBytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1]),
 }));
 
@@ -49,6 +55,17 @@ vi.mock("./read", () => ({
   missionSettings: async () => ({ ...DEFAULT_MISSION_SETTINGS }),
 }));
 vi.mock("../modul/rate", () => ({ limitPerson: async () => undefined }));
+vi.mock("./tags", () => ({
+  loadTagPool: async () => state.pool,
+  resolveTags: (pool: Map<string, TagCandidate>, ids: string[]) => ids.map(id => {
+    const found = pool.get(id);
+    if (!found) throw Object.assign(new Error("Orang yang ditandai harus peserta acara yang aktif."), { status: 422 });
+    return found;
+  }),
+  savePhotoTags: async (photoId: string, by: string, tags: TagCandidate[]) => { state.tagged.push({ photoId, by, ids: tags.map(tag => tag.id) }); },
+}));
+vi.mock("../momen/mission-photo", () => ({ createMissionPhoto: async (input: Record<string, unknown>) => { state.photos.push(input); return "99999999-9999-4999-8999-999999999999"; } }));
+vi.mock("./review", () => ({ afterApproval: async (_completion: unknown, title: string) => { state.approvals.push(title); } }));
 vi.mock("../../r2", () => ({
   isR2Configured: () => true,
   presignUpload: async (key: string) => `https://storage.test/${key}`,
@@ -60,6 +77,7 @@ vi.mock("../../r2", () => ({
 
 const { checkIn, checkPosition, confirmPhoto, startPhoto } = await import("./actions");
 const { proofIdFor } = await import("./storage");
+const { registerVerifier } = await import("./verifier");
 
 const NOW = new Date("2027-01-05T10:00:00+07:00");
 const ALUN = { latitude: -7.8707, longitude: 112.5283 };
@@ -69,7 +87,7 @@ const context = { viewer, settings: defaultSettings() };
 const MISSION_ID = "11111111-1111-4111-8111-111111111111";
 const mission = (over: Partial<MwMission> = {}): MwMission => ({
   id: MISSION_ID, title: "Jelajah Taman Kota", description: "", kind: "checkin", points: 30, placeName: "Taman Kota", latitude: ALUN.latitude, longitude: ALUN.longitude, radiusM: 50,
-  sessionId: null, credit: "panitia", review: false, opensAt: null, closesAt: null, sort: 1, active: true, ...over,
+  sessionId: null, credit: "panitia", review: false, opensAt: null, closesAt: null, sort: 1, active: true, rules: [], ...over,
 });
 const here = (over: Partial<{ latitude: number; longitude: number; accuracy: number; at: string }> = {}) => ({ ...ALUN, accuracy: 12, at: NOW.toISOString(), ...over });
 const writes = () => state.from.flatMap(call => call.ops.filter(([name]) => name === "insert" || name === "update").map(([name, args]) => ({ table: call.table, name, row: args[0] as Record<string, unknown> })));
@@ -82,6 +100,10 @@ beforeEach(() => {
   state.insertError = null;
   state.removed = [];
   state.copied = [];
+  state.pool = new Map();
+  state.photos = [];
+  state.tagged = [];
+  state.approvals = [];
 });
 
 describe("check-in", () => {
@@ -172,15 +194,15 @@ describe("check-in", () => {
 describe("photo missions", () => {
   const photo = () => mission({ kind: "foto", points: 40 });
   const CLIENT = "33333333-3333-4333-8333-333333333333";
-  const body = (over: Record<string, unknown> = {}) => ({ clientId: CLIENT, position: here(), size: 400_000, thumbSize: 40_000, width: 1280, height: 1600, ...over });
+  const body = (over: Record<string, unknown> = {}) => ({ clientId: CLIENT, position: here(), size: 400_000, thumbSize: 40_000, tileSize: 8_000, width: 1280, height: 1600, tags: [] as string[], ...over });
 
   beforeEach(() => { state.missions = [photo()]; });
 
-  it("signs two uploads under tmp/ and a token, once the position passes", async () => {
+  it("signs three uploads under tmp/ and a token, once the position passes", async () => {
     const started = await startPhoto(context, MISSION_ID, body(), NOW);
     const id = proofIdFor(viewer.id, MISSION_ID, CLIENT);
     expect(started.id).toBe(id);
-    expect(started.uploads).toEqual({ besar: `https://storage.test/tmp/main-wam/misi/${id}.jpg`, kecil: `https://storage.test/tmp/main-wam/misi/${id}-kecil.jpg` });
+    expect(started.uploads).toEqual({ besar: `https://storage.test/tmp/main-wam/misi/${id}.jpg`, kecil: `https://storage.test/tmp/main-wam/misi/${id}-kecil.jpg`, ubin: `https://storage.test/tmp/main-wam/misi/${id}-ubin.jpg` });
     expect(started.token).toMatch(/^\d{10}\.[0-9a-f]{64}$/);
   });
 
@@ -195,20 +217,128 @@ describe("photo missions", () => {
     expect(await refused(startPhoto(context, MISSION_ID, body({ position: here({ latitude: ALUN.latitude + 0.003 }) }), NOW))).toEqual({ status: 422, message: "Kamu belum berada di area misi." });
   });
 
-  it("keeps a photo proof: copies the two files, records the position and the keys, removes the uploads", async () => {
+  it("keeps a photo proof: copies the three files, records the position and the keys, removes the uploads", async () => {
     const started = await startPhoto(context, MISSION_ID, body(), NOW);
     const done = await confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW);
     const id = started.id;
-    expect(done.status).toBe("disetujui");
-    expect(state.copied).toEqual([[`tmp/main-wam/misi/${id}.jpg`, `main-wam/misi/${id}.jpg`], [`tmp/main-wam/misi/${id}-kecil.jpg`, `main-wam/misi/${id}-kecil.jpg`]]);
-    expect(writes()[0].row).toMatchObject({ source: "foto", status: "disetujui", proof_key: `main-wam/misi/${id}.jpg`, proof_thumb_key: `main-wam/misi/${id}-kecil.jpg`, mission_id: MISSION_ID, employee_id: viewer.id });
+    // The built-in verifier ("manual") always doubts: the proof waits for a person, no points yet.
+    expect(done.status).toBe("perlu_ditinjau");
+    expect(state.copied).toEqual([
+      [`tmp/main-wam/misi/${id}.jpg`, `main-wam/misi/${id}.jpg`], [`tmp/main-wam/misi/${id}-kecil.jpg`, `main-wam/misi/${id}-kecil.jpg`], [`tmp/main-wam/misi/${id}-ubin.jpg`, `main-wam/misi/${id}-ubin.jpg`],
+    ]);
+    expect(writes()[0].row).toMatchObject({
+      source: "foto", status: "perlu_ditinjau", proof_key: `main-wam/misi/${id}.jpg`, proof_thumb_key: `main-wam/misi/${id}-kecil.jpg`, mission_id: MISSION_ID, employee_id: viewer.id,
+      attempts: 1, review_note: "", check_result: { verifier: { provider: "manual", result: { putusan: "ragu" } } },
+    });
     expect(state.removed.flat()).toEqual(expect.arrayContaining([`tmp/main-wam/misi/${id}.jpg`]));
   });
 
-  it("waits for review when the mission asks for it", async () => {
-    state.missions = [{ ...photo(), review: true }];
+  it("also becomes a Momen photo that waits (not shown, nobody told) until the proof is approved", async () => {
     const started = await startPhoto(context, MISSION_ID, body(), NOW);
-    expect((await confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW)).status).toBe("menunggu");
+    await confirmPhoto(context, MISSION_ID, { ...body(), token: started.token }, NOW);
+    expect(state.photos).toEqual([expect.objectContaining({ ownerId: viewer.id, missionId: MISSION_ID, approved: false, clientId: CLIENT, proof: { besar: `main-wam/misi/${started.id}.jpg`, kecil: `main-wam/misi/${started.id}-kecil.jpg`, ubin: `main-wam/misi/${started.id}-ubin.jpg` } })]);
+    expect(state.approvals).toEqual([]);
+    expect(writes().some(write => write.table === "mw_mission_completions" && write.name === "update" && write.row.photo_id === "99999999-9999-4999-8999-999999999999")).toBe(true);
+  });
+
+  describe("with a verifier that is sure", () => {
+    const verdicts: Record<string, VerifierResult> = { lolos: { putusan: "lolos", alasan: [] }, gagal: { putusan: "gagal", alasan: ["Bukan plank."] } };
+    beforeAll(() => { for (const [name, result] of Object.entries(verdicts)) registerVerifier({ name: `uji-${name}`, verify: async () => result }); registerVerifier({ name: "uji-rusak", verify: async () => { throw new Error("mati"); } }); });
+    afterEach(() => { vi.unstubAllEnvs(); });
+    const send = async (over: Record<string, unknown> = {}) => {
+      const started = await startPhoto(context, MISSION_ID, body(over), NOW);
+      return confirmPhoto(context, MISSION_ID, { ...body(over), token: started.token }, NOW);
+    };
+
+    it("approves on 'lolos': the points come with the status, the Momen photo is shown and the tagged are told", async () => {
+      vi.stubEnv("MISI_VERIFIER", "uji-lolos");
+      const done = await send();
+      expect(done.status).toBe("disetujui");
+      expect(writes()[0].row).toMatchObject({ status: "disetujui", review_note: "" });
+      expect(state.photos[0]).toMatchObject({ approved: true });
+      expect(state.approvals).toEqual(["Jelajah Taman Kota"]);
+    });
+
+    it("rejects on 'gagal' with the verifier's reasons, and makes no Momen photo", async () => {
+      vi.stubEnv("MISI_VERIFIER", "uji-gagal");
+      const done = await send();
+      expect(done).toMatchObject({ status: "ditolak", reasons: ["Bukan plank."] });
+      expect(writes()[0].row).toMatchObject({ status: "ditolak", review_note: "Bukan plank." });
+      expect(state.photos).toEqual([]);
+    });
+
+    it("never approves or rejects when the provider breaks: it doubts", async () => {
+      vi.stubEnv("MISI_VERIFIER", "uji-rusak");
+      expect((await send()).status).toBe("perlu_ditinjau");
+      expect(writes()[0].row.check_result).toMatchObject({ verifier: { provider: "uji-rusak", result: { putusan: "ragu" } } });
+    });
+
+    it("a mission that asks for review waits even when the verifier is sure", async () => {
+      vi.stubEnv("MISI_VERIFIER", "uji-lolos");
+      state.missions = [{ ...photo(), review: true }];
+      expect((await send()).status).toBe("perlu_ditinjau");
+      expect(state.approvals).toEqual([]);
+    });
+  });
+
+  describe("rules the server checks itself, before the verifier", () => {
+    const ALIF: TagCandidate = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "Contoh Alif", department: "Finance", bod: false, seatmate: false, roommate: false };
+    const WULAN: TagCandidate = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "Contoh Wulan", department: "BOD", bod: true, seatmate: false, roommate: false };
+    const ARMAN: TagCandidate = { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", name: "Contoh Arman", department: "BOD", bod: true, seatmate: false, roommate: false };
+    beforeEach(() => {
+      state.pool = new Map([ALIF, WULAN, ARMAN].map(person => [person.id, person]));
+      state.missions = [{ ...photo(), rules: [{ type: "foto_langsung" }, { type: "tag", count: 2, relation: "bod", required: true }, { type: "batas_kali", times: 2 }] }];
+    });
+    const send = async (tags: string[]) => {
+      const started = await startPhoto(context, MISSION_ID, body({ tags }), NOW);
+      return confirmPhoto(context, MISSION_ID, { ...body({ tags }), token: started.token }, NOW);
+    };
+
+    it("rejects a proof whose tags break the rule, with the reason and without a Momen photo or tags", async () => {
+      const done = await send([WULAN.id]);
+      expect(done.status).toBe("ditolak");
+      expect(done.reasons[0]).toContain("baru 1");
+      expect(writes()[0].row).toMatchObject({ status: "ditolak", attempts: 1, review_note: expect.stringContaining("Tandai 2 anggota BOD") });
+      expect(state.photos).toEqual([]);
+      expect(state.tagged).toEqual([]);
+      const wrong = await send([WULAN.id, ALIF.id]);
+      expect(wrong.reasons[0]).toContain("BOD");
+    });
+
+    it("keeps the tags with the Momen photo when the rules hold (shown after approval)", async () => {
+      const done = await send([WULAN.id, ARMAN.id]);
+      expect(done.status).toBe("perlu_ditinjau");
+      expect(state.tagged).toEqual([{ photoId: "99999999-9999-4999-8999-999999999999", by: viewer.id, ids: [WULAN.id, ARMAN.id] }]);
+      expect(writes()[0].row.check_result).toMatchObject({ checks: expect.arrayContaining([expect.objectContaining({ type: "tag", ok: true })]) });
+    });
+
+    it("refuses a tag who is not an active participant (422), before any upload is signed", async () => {
+      expect(await refused(startPhoto(context, MISSION_ID, body({ tags: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"] }), NOW))).toMatchObject({ status: 422 });
+    });
+
+    it("counts a rejected proof as a try: sends again while the limit allows, then stops", async () => {
+      state.existing = { id: "c0", mission_id: MISSION_ID, employee_id: viewer.id, status: "ditolak", source: "foto", attempts: 1, proof_key: "main-wam/misi/lama.jpg" };
+      const again = await send([WULAN.id, ARMAN.id]);
+      expect(again.status).toBe("perlu_ditinjau");
+      expect(writes()[0].row).toMatchObject({ attempts: 2 });
+      state.from = [];
+      state.existing = { ...state.existing, attempts: 2 };
+      expect(await refused(startPhoto(context, MISSION_ID, body(), NOW))).toEqual({ status: 409, message: "Batas kirim misi ini sudah tercapai." });
+    });
+
+    it("refuses a mission still in the checker's or panitia's hands", async () => {
+      for (const status of ["dikirim", "diperiksa", "perlu_ditinjau", "menunggu"]) {
+        state.existing = { id: "c0", mission_id: MISSION_ID, employee_id: viewer.id, status, source: "foto" };
+        expect(await refused(startPhoto(context, MISSION_ID, body(), NOW))).toEqual({ status: 409, message: "Kirimanmu sedang ditinjau." });
+      }
+    });
+
+    it("rejects a proof sent outside the hours (the mission closed meanwhile is refused up front)", async () => {
+      state.missions = [{ ...photo(), rules: [{ type: "foto_langsung" }, { type: "waktu", start: "2027-01-05T08:00:00+07:00", end: "2027-01-05T12:00:00+07:00" }], opensAt: "2027-01-05T08:00:00+07:00", closesAt: "2027-01-05T12:00:00+07:00" }];
+      expect((await send([])).status).toBe("perlu_ditinjau");
+      state.missions = [{ ...photo(), closesAt: "2027-01-05T09:00:00+07:00" }];
+      expect(await refused(startPhoto(context, MISSION_ID, body(), NOW))).toEqual({ status: 409, message: "Misi ini sudah ditutup." });
+    });
   });
 
   it("refuses a token for other sizes, another photo or an expired time, before touching storage", async () => {

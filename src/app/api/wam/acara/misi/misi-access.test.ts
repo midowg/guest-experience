@@ -20,13 +20,15 @@ vi.mock("@/lib/server/admin-session", async () => {
 });
 const record = (name: string, value: unknown = null) => async () => { state.calls.push(name); return value; };
 vi.mock("@/lib/server/main-wam/misi/read", () => ({
-  loadMisi: record("loadMisi", { migrated: true, sample: false, items: [], summary: {}, points: 0, place: null, leaderboardOpen: true, settings: {} }),
+  loadMisi: record("loadMisi", { migrated: true, sample: false, items: [], summary: {}, points: 0, place: null, leaderboardOpen: true, taggedIn: [], settings: {} }),
   loadLeaderboard: record("loadLeaderboard", { migrated: true, open: true, rows: [] }),
 }));
 vi.mock("@/lib/server/main-wam/misi/actions", () => ({
   checkPosition: record("checkPosition", { inside: true }), checkIn: record("checkIn", { status: "disetujui" }),
-  startPhoto: record("startPhoto", { id: "x", token: "t", uploads: {} }), confirmPhoto: record("confirmPhoto", { status: "disetujui" }),
+  startPhoto: record("startPhoto", { id: "x", token: "t", uploads: {} }), confirmPhoto: record("confirmPhoto", { status: "disetujui", reasons: [] }),
 }));
+vi.mock("@/lib/server/main-wam/misi/review", () => ({ listReviewQueue: record("listReviewQueue", []) }));
+vi.mock("@/lib/server/main-wam/misi/tags", () => ({ removeMyTag: record("removeMyTag") }));
 vi.mock("@/lib/server/main-wam/misi/admin", () => ({
   adminMisi: record("adminMisi", {}), createMission: record("createMission", {}), updateMission: record("updateMission", {}), deleteMission: record("deleteMission"),
   saveMissionSettings: record("saveMissionSettings", {}), grantCompletion: record("grantCompletion"), reviewCompletion: record("reviewCompletion"), deleteCompletion: record("deleteCompletion"),
@@ -43,11 +45,11 @@ const person = (roles: MainWamViewer["roles"]): MainWamViewer => ({ id: "2222222
 const ALL_ON: ModuleSwitches = { absen: true, voting: true, silent: true, survei: true, mozaik: true, karbon: true, kuis: true, ceklis: true, misi: true };
 const withModules = (modules: Partial<ModuleSwitches>) => { state.settings = { ...defaultSettings(), migrated: true, mode: "semua", modules: { ...defaultSettings().modules, ...modules } }; };
 const position = { latitude: -7.87, longitude: 112.52, accuracy: 12, at: new Date().toISOString() };
-const photo = { clientId: ID, position, size: 400_000, thumbSize: 40_000, width: 1280, height: 1600 };
+const photo = { clientId: ID, position, size: 400_000, thumbSize: 40_000, tileSize: 8_000, width: 1280, height: 1600, tags: [] as string[] };
 
 async function routes() {
-  const [list, board, check, checkin, start, keep] = await Promise.all([
-    import("./route"), import("./peringkat/route"), import("./[id]/cek/route"), import("./[id]/checkin/route"), import("./[id]/foto/unggah/route"), import("./[id]/foto/simpan/route"),
+  const [list, board, check, checkin, start, keep, untag] = await Promise.all([
+    import("./route"), import("./peringkat/route"), import("./[id]/cek/route"), import("./[id]/checkin/route"), import("./[id]/foto/unggah/route"), import("./[id]/foto/simpan/route"), import("./tag/[photoId]/route"),
   ]);
   return {
     list: () => list.GET(),
@@ -56,6 +58,7 @@ async function routes() {
     checkin: () => checkin.POST(req("POST", { position }), p({ id: ID })),
     start: () => start.POST(req("POST", photo), p({ id: ID })),
     keep: () => keep.POST(req("POST", { ...photo, token: `1767000000.${"a".repeat(64)}` }), p({ id: ID })),
+    untag: () => untag.DELETE(req("DELETE"), p({ photoId: ID })),
   };
 }
 type Name = keyof Awaited<ReturnType<typeof routes>>;
@@ -128,10 +131,11 @@ describe("Misi's participant APIs", () => {
 
 describe("Admin WAM → Main WAM → Misi APIs", () => {
   async function adminCalls() {
-    const [list, one, grant, completion, proof, points, point, settings] = await Promise.all([
+    const [list, one, grant, completion, proof, points, point, settings, review] = await Promise.all([
       import("../../../admin/wam2026/misi/route"), import("../../../admin/wam2026/misi/[id]/route"), import("../../../admin/wam2026/misi/[id]/catat/route"),
       import("../../../admin/wam2026/misi/penyelesaian/[id]/route"), import("../../../admin/wam2026/misi/penyelesaian/[id]/foto/route"),
       import("../../../admin/wam2026/misi/poin/route"), import("../../../admin/wam2026/misi/poin/[id]/route"), import("../../../admin/wam2026/misi/pengaturan/route"),
+      import("../../../admin/wam2026/misi/tinjauan/route"),
     ]);
     const mission = { title: "Foto apel", kind: "foto", points: 40 };
     return [
@@ -141,6 +145,7 @@ describe("Admin WAM → Main WAM → Misi APIs", () => {
       () => proof.GET(req("GET"), p({ id: ID })),
       () => points.POST(req("POST", { employeeId: ID, points: 10, note: "Bantu panitia" })), () => point.DELETE(req("DELETE"), p({ id: ID })),
       () => settings.PUT(req("PUT", { defaultRadiusM: 50, maxAccuracyM: 100, leaderboardOpen: true })),
+      () => review.GET(),
     ];
   }
 
@@ -159,6 +164,22 @@ describe("Admin WAM → Main WAM → Misi APIs", () => {
     expect((await points.POST(req("POST", { employeeId: ID, points: 0, note: "Nol" }))).status).toBe(422);
     const completion = await import("../../../admin/wam2026/misi/penyelesaian/[id]/route");
     expect((await completion.PATCH(req("PATCH", { status: "menunggu" }), p({ id: ID }))).status).toBe(422);
+    // A rejection without its reason is refused: the person reads that reason.
+    expect((await completion.PATCH(req("PATCH", { status: "ditolak" }), p({ id: ID }))).status).toBe(422);
     expect(state.calls).toEqual([]);
+  });
+
+  it("serve the review queue to an admin only, and refuse a decision from another site", async () => {
+    const review = await import("../../../admin/wam2026/misi/tinjauan/route");
+    state.admin = false;
+    expect((await review.GET()).status).toBe(401);
+    expect(state.calls).toEqual([]);
+    state.admin = true;
+    const body = await (await review.GET()).json() as { data: { items: unknown[] } };
+    expect(body.data.items).toEqual([]);
+    const completion = await import("../../../admin/wam2026/misi/penyelesaian/[id]/route");
+    const foreign = new Request(`${ORIGIN}/x`, { method: "PATCH", headers: { origin: "https://lain.example", "content-type": "application/json" }, body: JSON.stringify({ status: "disetujui" }) });
+    expect((await completion.PATCH(foreign, p({ id: ID }))).status).toBe(403);
+    expect(state.calls).toEqual(["listReviewQueue"]);
   });
 });

@@ -7,7 +7,7 @@ import { startPhoto } from "@/lib/server/main-wam/misi/actions";
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
-/** POST {clientId, position, size, thumbSize, width, height}: two upload addresses (besar, kecil) and a token, once the position passes. */
+/** POST {clientId, position, size, thumbSize, tileSize, width, height, tags}: three upload addresses (besar, kecil, ubin) and a token, once the position passes. */
 export async function POST(request: Request, { params }: Params) {
   return handle(async () => {
     const context = await requireActionApi("misi");

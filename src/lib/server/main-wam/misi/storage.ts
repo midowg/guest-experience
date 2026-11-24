@@ -10,7 +10,8 @@ import { copyObject, isR2Configured, presignDownload, presignUpload, removeObjec
  * Momen: it is a proof for the admin, never shown to other participants.
  *   - the proof's id comes from the person, the mission and the phone's clientId (HMAC), so a photo
  *     sent twice lands on the same files;
- *   - two JPEGs: <id>.jpg (besar) and <id>-kecil.jpg;
+ *   - three JPEGs, as a Momen photo: <id>.jpg (besar), <id>-kecil.jpg and <id>-ubin.jpg (the Mozaik's tile),
+ *     so the proof can also become a Momen photo (momen/mission-photo.ts copies them);
  *   - the browser uploads under tmp/main-wam/misi/ (presigned PUT, type and exact size signed);
  *     "simpan" checks the first bytes and copies them inside storage to main-wam/misi/, then removes
  *     the uploads (what is never kept is emptied by the `tmp/` lifecycle rule, KONTRAK §10);
@@ -19,8 +20,8 @@ import { copyObject, isR2Configured, presignDownload, presignUpload, removeObjec
 
 export const PROOF_PREFIX = "main-wam/misi/";
 export const PROOF_UPLOAD_PREFIX = "tmp/main-wam/misi/";
-export type ProofKeys = { besar: string; kecil: string };
-const filesUnder = (prefix: string, id: string): ProofKeys => ({ besar: `${prefix}${id}.jpg`, kecil: `${prefix}${id}-kecil.jpg` });
+export type ProofKeys = { besar: string; kecil: string; ubin: string };
+const filesUnder = (prefix: string, id: string): ProofKeys => ({ besar: `${prefix}${id}.jpg`, kecil: `${prefix}${id}-kecil.jpg`, ubin: `${prefix}${id}-ubin.jpg` });
 export const proofKeysOf = (id: string) => filesUnder(PROOF_PREFIX, id);
 export const proofUploadKeysOf = (id: string) => filesUnder(PROOF_UPLOAD_PREFIX, id);
 
@@ -42,7 +43,7 @@ export function proofIdFor(ownerId: string, missionId: string, clientId: string,
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export type Agreed = { id: string; size: number; thumbSize: number; width: number; height: number };
+export type Agreed = { id: string; size: number; thumbSize: number; tileSize: number; width: number; height: number };
 const TOKEN_SECONDS = 15 * 60;
 const signature = (agreed: Agreed, expires: number, key: string) =>
   createHmac("sha256", key).update(`mw-misi-unggah\0${agreed.id}\0${agreed.size}\0${agreed.thumbSize}\0${agreed.width}\0${agreed.height}\0${expires}`).digest("hex");
@@ -60,11 +61,11 @@ export function proofTokenMatches(token: string, agreed: Agreed, now = Date.now(
 }
 
 /** Two upload addresses under tmp/ (10 minutes each), type and exact size signed. */
-export async function proofUploadAddresses(id: string, sizes: { size: number; thumbSize: number }): Promise<ProofKeys> {
+export async function proofUploadAddresses(id: string, sizes: { size: number; thumbSize: number; tileSize: number }): Promise<ProofKeys> {
   if (!proofStorageReady()) throw notReady();
   const keys = proofUploadKeysOf(id);
-  const [besar, kecil] = await Promise.all([presignUpload(keys.besar, "image/jpeg", sizes.size), presignUpload(keys.kecil, "image/jpeg", sizes.thumbSize)]);
-  return { besar, kecil };
+  const [besar, kecil, ubin] = await Promise.all([presignUpload(keys.besar, "image/jpeg", sizes.size), presignUpload(keys.kecil, "image/jpeg", sizes.thumbSize), presignUpload(keys.ubin, "image/jpeg", sizes.tileSize)]);
+  return { besar, kecil, ubin };
 }
 
 export async function removeProofUploads(id: string): Promise<void> {
@@ -86,12 +87,12 @@ export async function removeProofKeys(keys: readonly (string | null | undefined)
 }
 
 /** Both uploads are there with the agreed sizes and are JPEGs; otherwise 422 (and the uploads go). */
-export async function checkProofUploaded(id: string, sizes: { size: number; thumbSize: number }): Promise<void> {
+export async function checkProofUploaded(id: string, sizes: { size: number; thumbSize: number; tileSize: number }): Promise<void> {
   if (!proofStorageReady()) throw notReady();
   const keys = proofUploadKeysOf(id);
   let starts: Uint8Array[];
   try {
-    starts = await Promise.all([uploadedStart(keys.besar, sizes.size), uploadedStart(keys.kecil, sizes.thumbSize)]);
+    starts = await Promise.all([uploadedStart(keys.besar, sizes.size), uploadedStart(keys.kecil, sizes.thumbSize), uploadedStart(keys.ubin, sizes.tileSize)]);
   } catch (error) {
     await removeProofUploads(id);
     throw error;
@@ -104,7 +105,7 @@ export async function keepProof(id: string): Promise<ProofKeys> {
   if (!proofStorageReady()) throw notReady();
   const from = proofUploadKeysOf(id), to = proofKeysOf(id);
   try {
-    await Promise.all([copyObject(from.besar, to.besar, "image/jpeg"), copyObject(from.kecil, to.kecil, "image/jpeg")]);
+    await Promise.all([copyObject(from.besar, to.besar, "image/jpeg"), copyObject(from.kecil, to.kecil, "image/jpeg"), copyObject(from.ubin, to.ubin, "image/jpeg")]);
   } catch {
     throw new ServiceError(503, "Foto belum dapat disimpan. Coba kirim lagi.");
   }

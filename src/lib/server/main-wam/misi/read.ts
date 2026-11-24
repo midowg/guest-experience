@@ -3,8 +3,8 @@ import { cache } from "react";
 import { demoSample } from "@/lib/main-wam/demo-sample";
 import { missionItems, summarize, type MisiView, type MissionSummary } from "@/lib/main-wam/misi/missions";
 import { myPlace, rankPeople, type RankPerson, type RankRow } from "@/lib/main-wam/misi/rank";
-import { COMPLETION_COLUMNS, completionFromRow, MISSION_COLUMNS, missionFromRow, SETTINGS_COLUMNS, settingsFromRow } from "@/lib/main-wam/misi/rows";
-import { sampleBoard, sampleCompletions, sampleMissions } from "@/lib/main-wam/misi/sample";
+import { COMPLETION_COLUMNS, COMPLETION_COLUMNS_BASE, completionFromRow, MISSION_COLUMNS, MISSION_COLUMNS_BASE, missionFromRow, SETTINGS_COLUMNS, settingsFromRow } from "@/lib/main-wam/misi/rows";
+import { sampleBoard, sampleCompletions, sampleMissions, sampleTaggedIn } from "@/lib/main-wam/misi/sample";
 import { DEFAULT_MISSION_SETTINGS, MISSIONS_MIGRATION, type MissionSettings, type MwCompletion, type MwMission } from "@/lib/main-wam/misi/types";
 import type { MainWamViewer, MwSession } from "@/lib/main-wam/types";
 import { isSupabaseConfigured } from "../../config";
@@ -15,6 +15,7 @@ import { mwMissing, type DbError, type Read } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAttendees, mainWamPeople } from "../people";
 import { allSessions } from "../read";
+import { taggedInOf } from "./tags";
 
 /*
  * Misi's readers (docs/main-wam/KONTRAK.md §13): the missions, a person's completions, the points as a
@@ -42,16 +43,21 @@ export const missionSettings = cache(async (): Promise<MissionSettings> => {
 export const allMissions = cache(async (): Promise<Read<MwMission[]>> => {
   const early = notConfigured<MwMission[]>([]);
   if (early) return early;
-  const { data, error } = await db().from("mw_missions").select(MISSION_COLUMNS).order("sort").order("created_at").limit(300);
-  return settle(error, [] as MwMission[]) ?? { data: (data ?? []).map(row => missionFromRow(row)), migrated: true };
+  const read = (columns: string) => db().from("mw_missions").select(columns).order("sort").order("created_at").limit(300);
+  let { data, error } = await read(MISSION_COLUMNS);
+  // Before migration 202611300001 there is no `rules` column: read the older columns (the rules come from them).
+  if (error && mwMissing(error)) ({ data, error } = await read(MISSION_COLUMNS_BASE));
+  return settle(error, [] as MwMission[]) ?? { data: ((data ?? []) as unknown as Record<string, unknown>[]).map(row => missionFromRow(row)), migrated: true };
 });
 
 /** One person's completions (a few rows). */
 export async function completionsOf(employeeId: string): Promise<Read<MwCompletion[]>> {
   const early = notConfigured<MwCompletion[]>([]);
   if (early) return early;
-  const { data, error } = await db().from("mw_mission_completions").select(COMPLETION_COLUMNS).eq("employee_id", employeeId).limit(500);
-  return settle(error, [] as MwCompletion[]) ?? { data: (data ?? []).map(row => completionFromRow(row)), migrated: true };
+  const read = (columns: string) => db().from("mw_mission_completions").select(columns).eq("employee_id", employeeId).limit(500);
+  let { data, error } = await read(COMPLETION_COLUMNS);
+  if (error && mwMissing(error)) ({ data, error } = await read(COMPLETION_COLUMNS_BASE));
+  return settle(error, [] as MwCompletion[]) ?? { data: ((data ?? []) as unknown as Record<string, unknown>[]).map(row => completionFromRow(row)), migrated: true };
 }
 
 /** Points and missions done per person (the ledger's sum), from the view. */
@@ -118,7 +124,7 @@ export async function loadMisi(context: MainWamContext, now: Date): Promise<Misi
   const board = rankPeople(await rankPool(totals.data), viewer.id);
   const items = missionItems(missions.data, completions, { sessions, settings, now });
   return {
-    migrated: true, sample: false, items, summary: summarize(items), points: totals.data.get(viewer.id)?.points ?? 0,
+    migrated: true, sample: false, items, summary: summarize(items), points: totals.data.get(viewer.id)?.points ?? 0, taggedIn: await taggedInOf(viewer.id).catch(() => []),
     // While the Peringkat is closed nobody learns their place, not even from the API.
     place: settings.leaderboardOpen ? placeOf(board) : null, leaderboardOpen: settings.leaderboardOpen, settings,
   };
@@ -126,14 +132,14 @@ export async function loadMisi(context: MainWamContext, now: Date): Promise<Misi
 
 const placeOf = (board: readonly RankRow[]) => { const place = myPlace(board); return place ? { rank: place.rank, of: place.of } : null; };
 const emptySummary: MissionSummary = { total: 0, done: 0, pending: 0, availablePoints: 0, earnedPoints: 0 };
-const empty = (migrated: boolean, settings: MissionSettings): MisiData => ({ migrated, sample: false, items: [], summary: emptySummary, points: 0, place: null, leaderboardOpen: settings.leaderboardOpen, settings });
+const empty = (migrated: boolean, settings: MissionSettings): MisiData => ({ migrated, sample: false, items: [], summary: emptySummary, points: 0, place: null, leaderboardOpen: settings.leaderboardOpen, taggedIn: [], settings });
 
 function demoData(viewer: MainWamViewer, sessions: readonly Pick<MwSession, "id" | "title">[], settings: MissionSettings, now: Date): MisiData {
   const missions = demoSample(sampleMissions, now);
   const items = missionItems(missions, sampleCompletions(viewer.id), { sessions, settings, now });
   const board = rankPeople(sampleBoard(viewer.id, viewer.name), viewer.id);
   const mine = board.find(row => row.me);
-  return { migrated: true, sample: true, items, summary: summarize(items), points: mine?.points ?? 0, place: placeOf(board), leaderboardOpen: true, settings };
+  return { migrated: true, sample: true, items, summary: summarize(items), points: mine?.points ?? 0, place: placeOf(board), leaderboardOpen: true, taggedIn: sampleTaggedIn, settings };
 }
 
 /** The Peringkat for one person: every row, and whether it is open. Sample while Mode demo stands in. */

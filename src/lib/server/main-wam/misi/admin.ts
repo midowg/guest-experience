@@ -1,6 +1,7 @@
 import "server-only";
 import { rankOrder } from "@/lib/main-wam/misi/rank";
-import { COMPLETION_COLUMNS, completionFromRow, ENTRY_COLUMNS, entryFromRow, MISSION_COLUMNS, missionFromRow, settingsFromRow } from "@/lib/main-wam/misi/rows";
+import { REVIEW_STATUSES } from "@/lib/main-wam/misi/verify";
+import { COMPLETION_COLUMNS, COMPLETION_COLUMNS_BASE, completionFromRow, ENTRY_COLUMNS, entryFromRow, MISSION_COLUMNS_BASE, missionFromRow, settingsFromRow } from "@/lib/main-wam/misi/rows";
 import { missionRow, type MissionInput, type ReviewInput, type SettingsInput } from "@/lib/main-wam/misi/schema";
 import type { CompletionSource, CompletionStatus, MissionKind, MissionSettings, MwMission } from "@/lib/main-wam/misi/types";
 import type { MwSession } from "@/lib/main-wam/types";
@@ -10,7 +11,9 @@ import { adminActor, adminFail, adminPeople } from "../admin/common";
 import { mwMissing } from "../errors";
 import { mainWamAttendees, mainWamPeople } from "../people";
 import { allSessionsReal } from "../read";
+import type { ReviewItem } from "@/lib/main-wam/misi/review-view";
 import { allMissions, missionSettings, pointTotals } from "./read";
+import { decideReview, listReviewQueue } from "./review";
 import { proofAddress, removeProofFiles } from "./storage";
 
 /*
@@ -35,6 +38,8 @@ export type AdminMisi = {
   settings: MissionSettings;
   missions: AdminMissionRow[];
   completions: AdminCompletion[];
+  /** The proofs waiting for a person (Tinjauan). */
+  reviewQueue: ReviewItem[];
   leaderboard: AdminLeader[];
   manual: AdminPointEntry[];
   sessions: Pick<MwSession, "id" | "title" | "startsAt" | "status">[];
@@ -46,27 +51,30 @@ export async function adminMisi(): Promise<AdminMisi> {
   const [missions, settings, totals, sessions, people, attendees] = await Promise.all([
     allMissions(), missionSettings(), pointTotals(), allSessionsReal(), mainWamPeople(), mainWamAttendees(),
   ]);
-  const empty: AdminMisi = { migrated: missions.migrated, settings, missions: [], completions: [], leaderboard: [], manual: [], sessions: [], people: [] };
+  const empty: AdminMisi = { migrated: missions.migrated, settings, missions: [], completions: [], reviewQueue: [], leaderboard: [], manual: [], sessions: [], people: [] };
   if (!missions.migrated) return empty;
-  const [completionRows, entryRows] = await Promise.all([
-    db().from("mw_mission_completions").select(COMPLETION_COLUMNS).order("created_at", { ascending: false }).limit(1000),
+  const readCompletions = (columns: string) => db().from("mw_mission_completions").select(columns).order("created_at", { ascending: false }).limit(1000);
+  const [completionRows, entryRows, reviewQueue] = await Promise.all([
+    readCompletions(COMPLETION_COLUMNS).then(async first => (first.error && mwMissing(first.error) ? readCompletions(COMPLETION_COLUMNS_BASE) : first)),
     db().from("mw_point_entries").select(ENTRY_COLUMNS).eq("kind", "manual").order("created_at", { ascending: false }).limit(100),
+    listReviewQueue(),
   ]);
   if (completionRows.error) adminFail(completionRows.error, REFUSALS);
   if (entryRows.error) adminFail(entryRows.error, REFUSALS);
-  const completions = (completionRows.data ?? []).map(row => completionFromRow(row));
+  const completions = ((completionRows.data ?? []) as unknown as Record<string, unknown>[]).map(row => completionFromRow(row));
   const titles = new Map(missions.data.map(mission => [mission.id, mission]));
   const named = (id: string | null) => (id ? people.get(id)?.fullName ?? "Karyawan (tidak aktif)" : null);
   const counts = new Map<string, { done: number; pending: number; rejected: number }>();
   for (const completion of completions) {
     const count = counts.get(completion.missionId) ?? { done: 0, pending: 0, rejected: 0 };
-    if (completion.status === "disetujui") count.done++; else if (completion.status === "menunggu") count.pending++; else count.rejected++;
+    if (completion.status === "disetujui") count.done++; else if (completion.status === "ditolak") count.rejected++; else count.pending++;
     counts.set(completion.missionId, count);
   }
-  const waitingFirst = [...completions].sort((a, b) => Number(b.status === "menunggu") - Number(a.status === "menunggu") || b.createdAt.localeCompare(a.createdAt)).slice(0, 300);
+  const waitingFirst = [...completions].sort((a, b) => Number(REVIEW_STATUSES.includes(b.status)) - Number(REVIEW_STATUSES.includes(a.status)) || b.createdAt.localeCompare(a.createdAt)).slice(0, 300);
   return {
     migrated: true, settings,
     missions: missions.data.map(mission => ({ ...mission, ...(counts.get(mission.id) ?? { done: 0, pending: 0, rejected: 0 }) })),
+    reviewQueue,
     completions: waitingFirst.map(completion => ({
       id: completion.id, missionId: completion.missionId, missionTitle: titles.get(completion.missionId)?.title ?? "Misi", missionKind: titles.get(completion.missionId)?.kind ?? "foto",
       employeeId: completion.employeeId, person: named(completion.employeeId) ?? "Karyawan", department: people.get(completion.employeeId)?.department ?? "",
@@ -87,21 +95,21 @@ export async function adminMisi(): Promise<AdminMisi> {
 
 async function missionById(id: string): Promise<MwMission> {
   if (!isId(id)) throw new ServiceError(404, "Misi tidak ditemukan.");
-  const { data, error } = await db().from("mw_missions").select(MISSION_COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await db().from("mw_missions").select(MISSION_COLUMNS_BASE).eq("id", id).maybeSingle();
   if (error) adminFail(error, REFUSALS);
   if (!data) throw new ServiceError(404, "Misi tidak ditemukan.");
   return missionFromRow(data);
 }
 
 export async function createMission(input: MissionInput): Promise<MwMission> {
-  const { data, error } = await db().from("mw_missions").insert(missionRow(input)).select(MISSION_COLUMNS).single();
+  const { data, error } = await db().from("mw_missions").insert(missionRow(input)).select(MISSION_COLUMNS_BASE).single();
   if (error) adminFail(error, REFUSALS);
   return missionFromRow(data);
 }
 
 export async function updateMission(id: string, input: MissionInput): Promise<MwMission> {
   await missionById(id);
-  const { data, error } = await db().from("mw_missions").update(missionRow(input)).eq("id", id).select(MISSION_COLUMNS).single();
+  const { data, error } = await db().from("mw_missions").update(missionRow(input)).eq("id", id).select(MISSION_COLUMNS_BASE).single();
   if (error) adminFail(error, REFUSALS);
   return missionFromRow(data);
 }
@@ -123,15 +131,10 @@ export async function saveMissionSettings(input: SettingsInput): Promise<Mission
   return settingsFromRow(data);
 }
 
-/** Approve or reject a proof (also one that was approved by itself: rejecting takes the points back). */
+/** Approve or reject a proof (also one that was approved by itself: rejecting takes the points back). The shared decision, review.ts. */
 export async function reviewCompletion(id: string, input: ReviewInput): Promise<void> {
-  if (!isId(id)) throw new ServiceError(404, "Penyelesaian tidak ditemukan.");
   const actor = await adminActor();
-  const { data, error } = await db().from("mw_mission_completions")
-    .update({ status: input.status, review_note: input.note, reviewed_by: actor.employeeId, reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq("id", id).select("id").maybeSingle();
-  if (error) adminFail(error, REFUSALS);
-  if (!data) throw new ServiceError(404, "Penyelesaian tidak ditemukan. Muat ulang halaman.");
+  await decideReview(id, actor.employeeId, input);
 }
 
 /** Panitia's hand: a person did a mission (a sesi mission, or any other with a note); approved at once. */
