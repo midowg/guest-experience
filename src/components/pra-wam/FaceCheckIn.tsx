@@ -83,7 +83,7 @@ export function hintOf(faces: number, closeness: number, yaw: number | null): st
 }
 
 /** A square around the face in the still picture, 480 px, within 120 KB. */
-async function cropSelfie(still: HTMLCanvasElement, box: FaceBox): Promise<{ blob: Blob; mime: PhotoMime }> {
+export async function cropSelfie(still: HTMLCanvasElement, box: FaceBox): Promise<{ blob: Blob; mime: PhotoMime }> {
   const width = still.width, height = still.height;
   const side = Math.min(width, height, Math.max(box.width * width, box.height * height) * 1.8);
   const cx = (box.x + box.width / 2) * width, cy = (box.y + box.height / 2) * height;

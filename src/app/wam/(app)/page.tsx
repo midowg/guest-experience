@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
-import { Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { Bell, CalendarClock, CheckCircle2, Clock, Compass, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
 import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaCarousel } from "@/components/pra-wam/AgendaCarousel";
+import { CarbonHome } from "@/components/pra-wam/carbon/CarbonHome";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { AGENDA_ITEM, checkInStatus, checkInText, heroCheckInNote, withItem } from "@/lib/pra-wam/agenda";
 import { wibDate } from "@/lib/pra-wam/appraisal";
@@ -13,6 +14,8 @@ import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { getAbout } from "@/lib/server/pra-wam/about";
+import { myCarbon } from "@/lib/server/pra-wam/carbon";
+import { missionSessionsFor } from "@/lib/server/pra-wam/mission-sessions";
 import { myAttendance, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
@@ -71,7 +74,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // 19 Nov 2026: times in the viewer's own zone.
   const zone = await viewerZone();
   const today = wibDate(now.toISOString());
-  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
+  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room, carbon] = await Promise.all([
     // From a week back: the carousel's earlier cards (yesterday too) are a swipe to the left.
     myAgenda(member, daysBefore(today, 7)), myNotifications(member), myOpenRequests(member), bookingOpenFor(member),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
@@ -82,7 +85,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     myQuestionnaireCard(member.id).catch(() => null),
     // The WAM room, once HR publishes the pairing; never in the way of Beranda either.
     myRoom(member.id).catch(() => null),
+    // Jejak karbon (24 Nov 2026), for the people in Misi Perjalanan's room list once the panitia set the trip.
+    myCarbon(member).catch(() => null),
   ]);
+  // Misi Perjalanan's sessions (24 Nov 2026, set in Admin Pra WAM): their card opens it directly.
+  const mission = await missionSessionsFor(member, items.map(item => item.sessionId));
+  const missionHref = (item: { sessionId?: string | null }) => item.sessionId && mission.has(item.sessionId) ? praWamPath.session(item.sessionId) : null;
   // The blue card: the session whose check-in is open now, else the next thing still to come.
   const next = checkInNow(items, now) ?? items.find(item => new Date(item.endsAt) > now);
   const attendance = next?.kind === "sesi" && next.sessionId ? await myAttendance(next.sessionId, member).catch(() => null) : null;
@@ -149,7 +157,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             const label = current ? (going ? "Sedang berlangsung" : "Berikutnya") : ended ? "Selesai" : "Nanti";
             return <section key={item.key} className={`${base.hero} ${ended && !current ? own.heroPast : ""}`} aria-label={`${label}: ${item.title}`}>
               <div className={base.heroTop}><span>{label} · {item.tag}</span><span>{ended ? dayWord(wibDate(item.startsAt)) : untilLabel(item, now, today) || dayWord(wibDate(item.startsAt))}</span></div>
-              <h2>{absenHere ? item.title : <a href={open(item)} {...opens(item)}>{item.title}</a>}</h2>
+              <h2>{missionHref(item) ? <a href={missionHref(item)!}>{item.title}</a> : absenHere ? item.title : <a href={open(item)} {...opens(item)}>{item.title}</a>}</h2>
               <span className={base.heroLine}><Clock aria-hidden />{wibDate(item.startsAt) === today ? "" : `${spanLabel(item.startsAt, item.endsAt).split(" · ")[0]} · `}{zoneSpan(item.startsAt, item.endsAt, zone)}</span>
               <span className={base.heroLine}><MapPin aria-hidden />{item.where}</span>
               {current ? <>
@@ -158,7 +166,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             session "Absen", which opens its sheet with Absen pakai wajah and Scan QR; with when it opens
             or until when, or "Hadir 09.42 · ..." once done.
           */}
-          {item.kind === "sesi" && (heroStatus && item.sessionId
+          {/* Misi Perjalanan's session (24 Nov 2026): no check-in here, only the way into the mission. */}
+          {item.kind === "sesi" && missionHref(item) && <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>}
+          {item.kind === "sesi" && !missionHref(item) && (heroStatus && item.sessionId
             ? checkInWay(item) === "tombol"
               ? <SelfCheckIn variant="hero" sessionId={item.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
               : <div className={sc.hero}>
@@ -176,12 +186,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
               : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />Lihat detail</a>)}
           {item.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><CalendarClock size={20} aria-hidden />Lihat booking</a>}
-              </> : item.checkedInAt
-                ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
-                : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />{item.kind === "appraisal" ? "Lihat booking" : "Lihat detail"}</a>}
+              </> : missionHref(item)
+                ? <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>
+                : item.checkedInAt
+                  ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
+                  : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />{item.kind === "appraisal" ? "Lihat booking" : "Lihat detail"}</a>}
             </section>;
           })}
         </AgendaCarousel>}
+
+        {/* Jejak karbon (24 Nov 2026): right under the session card, opening its own page. */}
+        {carbon && <CarbonHome setup={carbon.setup} occupants={carbon.occupants} travel={carbon.travel} />}
 
         {manage !== null && <ManageCard manages={managesSessions(member)} openRequests={manage} />}
 

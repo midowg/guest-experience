@@ -103,7 +103,7 @@ export const proofTypes = {
   "image/jpeg": { ext: "jpg", steps: [0.88, 0.8, 0.72, 0.64, 0.56, 0.48] },
 } as const;
 export type ProofMime = keyof typeof proofTypes;
-const proofMimes = Object.keys(proofTypes) as [ProofMime, ...ProofMime[]];
+export const proofMimes = Object.keys(proofTypes) as [ProofMime, ...ProofMime[]];
 
 /** The size to draw a picture at: its longer side at most `side`, never larger than it was. */
 export function fitWithin(width: number, height: number, side = PROOF_SIDE): { width: number; height: number } {
@@ -188,10 +188,10 @@ export const faceToCheck = (rows: Pick<AttendanceRow, "checkedInAt" | "method" |
   rows.filter(row => row.checkedInAt && row.method === "wajah" && row.faceStatus === "perlu_cek").length;
 
 const faceToken = z.string().regex(/^\d{10,13}\.[A-Za-z0-9_-]{16,64}\.[0-9a-f]{64}$/, "Sesi absen tidak dikenali. Ulangi dari awal.");
-const faceUploadToken = z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Ulangi dari awal.");
+export const faceUploadToken = z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Ulangi dari awal.");
 const faceNumber = (min: number, max: number) => z.number().finite().min(min).max(max);
-const faceEmbedding = z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE, "Data wajah tidak lengkap. Ulangi dari awal.");
-const faceSignal = z.object({ t: faceNumber(0, 1e13), blinkLeft: faceNumber(0, 1), blinkRight: faceNumber(0, 1), smileLeft: faceNumber(0, 1), smileRight: faceNumber(0, 1), yaw: faceNumber(-90, 90) });
+export const faceEmbedding = z.array(z.number().finite().min(-10).max(10)).length(EMBEDDING_SIZE, "Data wajah tidak lengkap. Ulangi dari awal.");
+export const faceSignal = z.object({ t: faceNumber(0, 1e13), blinkLeft: faceNumber(0, 1), blinkRight: faceNumber(0, 1), smileLeft: faceNumber(0, 1), smileRight: faceNumber(0, 1), yaw: faceNumber(-90, 90) });
 
 /** Step two: where the photo goes (WebP or JPEG, at most 120 KB like WG People's selfie). */
 export const faceUploadSchema = z.object({

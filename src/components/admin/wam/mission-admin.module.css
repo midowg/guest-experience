@@ -1,0 +1,48 @@
+/* Admin Pra WAM → Misi Perjalanan (24 Nov 2026). Console tokens only. */
+.unsaved { margin: 0; font-size: 14px; font-weight: 600; color: var(--cs-primary); }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--cs-line); border-radius: 999px; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.tabs button[aria-selected="true"] { border-color: var(--cs-primary); background: var(--cs-primary-soft); color: var(--cs-primary); }
+.tabs button span { padding: 1px 8px; border-radius: 999px; background: var(--cs-surface); font-size: 13px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.search { position: relative; flex: 1 1 260px; display: block; min-width: 0; }
+.search > svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--cs-muted); pointer-events: none; }
+.search input { width: 100%; padding-left: 42px; }
+.empty, .hint { margin: 0; font-size: 14px; color: var(--cs-muted); }
+.rooms { display: grid; gap: 16px; }
+@media (min-width: 1200px) { .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.room { display: grid; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--cs-line); border-radius: 18px; background: var(--cs-surface); }
+.roomWarn { border-color: var(--cs-bad-fg); }
+.roomHead { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.roomHead > strong { font-size: 16px; color: var(--cs-text); }
+.roomHead > small { width: 100%; font-size: 13px; color: var(--cs-muted); }
+.code { display: grid; gap: 4px; flex: 1 1 120px; min-width: 0; }
+.code > span, .field > span { font-size: 13px; font-weight: 600; color: var(--cs-muted); }
+.count { align-self: center; padding: 4px 10px; border-radius: 999px; background: var(--cs-primary-soft); color: var(--cs-primary); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.danger { color: var(--cs-bad-fg); }
+.people { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.person { border: 1px solid var(--cs-line); border-radius: 14px; overflow: hidden; }
+.personHead { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.personHead:hover { background: var(--cs-hover); }
+.ava { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--cs-primary-soft); color: var(--cs-primary); }
+.ava svg { width: 18px; height: 18px; }
+.personText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.personText strong { font-size: 15px; color: var(--cs-text); overflow-wrap: anywhere; }
+.personText small, .meta { font-size: 13px; color: var(--cs-muted); }
+.meta { flex: none; white-space: nowrap; }
+.chev { flex: none; width: 18px; height: 18px; color: var(--cs-muted); transition: transform .15s ease; }
+.chev[data-open] { transform: rotate(180deg); }
+.personBody { display: grid; gap: 14px; padding: 4px 12px 14px; border-top: 1px solid var(--cs-line); }
+.fields { display: grid; gap: 12px; padding-top: 12px; }
+@media (min-width: 640px) { .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field { display: grid; gap: 4px; min-width: 0; }
+.hints { display: grid; gap: 12px; }
+.rowEnd { display: flex; justify-content: flex-end; }
+.addPerson { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px dashed var(--cs-line); border-radius: 14px; background: transparent; color: var(--cs-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.addPerson:hover { border-color: var(--cs-primary); }
+.addPerson svg { width: 16px; height: 16px; }
+.bodList { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.bodList li { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--cs-line); border-radius: 14px; }
+@media (min-width: 720px) { .bodList li { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto; } }
+.ceo { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--cs-text); }
+.ceo input { width: 20px; height: 20px; accent-color: var(--cs-primary); }

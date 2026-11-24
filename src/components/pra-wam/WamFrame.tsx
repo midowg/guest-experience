@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, FileText, Home, Plus, Send, User, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, ChartPie, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, FileText, Home, Plus, Send, User, Users, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
 import { bodOnly, managesSessions, roleSummary, seesAgendaTab, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
@@ -33,6 +33,8 @@ const personal: Item[] = [
 /** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. No + : a BOD does not check in. */
 const bod: Item[] = [
   { id: "dashboard", label: "Ringkasan", href: praWamPath.dashboard, icon: <BarChart3 aria-hidden /> },
+  // 24 Nov 2026: every figure and chart moved here; Ringkasan keeps what matters.
+  { id: "analitik", label: "Analitik", href: praWamPath.analytics, icon: <ChartPie aria-hidden /> },
   { id: "agenda", label: "Agenda", href: praWamPath.agenda, icon: <CalendarDays aria-hidden /> },
   { id: "peserta", label: "Peserta", href: praWamPath.people, icon: <Users aria-hidden /> },
   { id: "akun", label: "Profil", href: praWamPath.account, icon: <User aria-hidden /> },

@@ -8,7 +8,7 @@ import type { CarbonInputs, MwSession, MwTrip } from "../types";
  *
  * Factors (kg CO₂e, all "perlu dicek" in the design):
  *   kereta 0,0164 per penumpang-km · bus 0,89 per bus-km · makan 1,9 per porsi
- *   hotel ≈40 per kamar-malam while the bills are not in, otherwise
+ *   hotel ≈62,7 per kamar-malam (DEFRA 2025, Indonesia; was 40 until 23 Nov 2026) while the bills are not in, otherwise
  *   listrik 0,87/kWh · air 0,4/m³ · LPG 2,94/kg · sampah 0,5/kg
  */
 
@@ -16,7 +16,7 @@ export const CARBON_FACTORS = {
   keretaPerPenumpangKm: 0.0164,
   busPerBusKm: 0.89,
   makanPerPorsi: 1.9,
-  hotelPerKamarMalam: 40,
+  hotelPerKamarMalam: 62.7,
   listrikPerKwh: 0.87,
   airPerM3: 0.4,
   lpgPerKg: 2.94,

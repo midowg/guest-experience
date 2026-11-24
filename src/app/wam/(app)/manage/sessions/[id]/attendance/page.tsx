@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
-import { ChevronLeft, FileText, Info } from "lucide-react";
+import { ChevronLeft, FileText, Info, ScanFace } from "lucide-react";
 import { AttendancePanel } from "@/components/pra-wam/AttendancePanel";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { ButtonLink, Notice } from "@/components/ui";
@@ -40,11 +40,16 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   const origin = process.env.NEXT_PUBLIC_SITE_URL || `${host?.startsWith("localhost") ? "http" : "https"}://${host}`;
   const qrSvg = token ? await QRCode.toString(absolute(origin, praWamPath.checkIn(token)), { type: "svg", margin: 0, errorCorrectionLevel: "M" }) : null;
   const window = session.startsAt && session.endsAt ? checkInWindow(session.startsAt, session.endsAt) : null;
+  // Mode tablet (23 Nov 2026): a published session that needs a check-in.
+  const tablet = manage && session.status === "terbit" && !session.booking?.outside;
   return <>
     <ScreenHead eyebrow={byButton ? "Jadwal sesi · absen Saya hadir" : "Jadwal sesi · QR absen"} title={manage && !byButton ? "Cetak QR absen" : "Daftar hadir"}
       lead={byButton ? `${session.title} · ${sessionWhen(session)}. Sesi dari booking ruang: peserta absen dengan tombol Saya hadir, tanpa QR.`
         : manage ? "Setiap sesi punya satu QR tetap. Cetak dan tempel di ruang; peserta absen dengan scan QR." : `${session.title} · ${sessionWhen(session)}`}
-      actions={manage && token ? <a className="button button--primary" href={praWamApi.sessionQr(session.id)} target="_blank" rel="noopener"><FileText size={18} aria-hidden /> Unduh PDF A5</a> : undefined} />
+      actions={manage && (token || tablet) ? <>
+        {tablet && <ButtonLink variant={token ? "secondary" : "primary"} href={praWamPath.sessionFaceTablet(session.id)}><ScanFace size={18} aria-hidden /> Mode tablet</ButtonLink>}
+        {token && <a className="button button--primary" href={praWamApi.sessionQr(session.id)} target="_blank" rel="noopener"><FileText size={18} aria-hidden /> Unduh PDF A5</a>}
+      </> : undefined} />
     {session.status !== "terbit" && <Notice tone="info">Sesi belum terbit. QR baru mencatat kehadiran setelah sesi diterbitkan.</Notice>}
 
     <div className={styles.printGrid} style={{ marginTop: 16 }}>

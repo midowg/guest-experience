@@ -46,7 +46,7 @@ describe("Jejak karbon: kartu Beranda", () => {
     render(<CarbonCard view={view()} />);
     const card = screen.getByRole("link", { name: /Jejak karbon/ });
     expect(card.getAttribute("href")).toBe(mainWamPath.carbon());
-    expect(card.textContent).toContain("13,3");
+    expect(card.textContent).toContain("17,4");
     expect(card.textContent).toContain("t CO₂e");
     expect(card.textContent).toContain("perkiraan");
     expect(card.getAttribute("aria-label")).toBeNull();
@@ -70,7 +70,7 @@ describe("Jejak karbon: kartu Beranda", () => {
     expect(container.querySelectorAll("a").length).toBe(1);
     expect(link.querySelector("svg.lucide-leaf")).toBeTruthy();
     expect(link.textContent).toMatch(/perkiraan\s·\sHotel\s\d+%\sPerjalanan\s\d+%\sMakan\s\d+%/);
-    expect(link.querySelector('[class*="tileNumber"]')!.textContent).toBe("13,3");
+    expect(link.querySelector('[class*="tileNumber"]')!.textContent).toBe("17,4");
   });
 
   it("nothing counted yet: says so kindly and still opens the page; from Saya it keeps Saya's address", () => {
@@ -82,7 +82,7 @@ describe("Jejak karbon: kartu Beranda", () => {
 
   it("speaks English", () => {
     render(<LangProvider lang="en"><CarbonCard view={view("en")} /></LangProvider>);
-    expect(screen.getByRole("link", { name: /Carbon trail/ }).textContent).toContain("13.3");
+    expect(screen.getByRole("link", { name: /Carbon trail/ }).textContent).toContain("17.4");
   });
 });
 
@@ -90,7 +90,7 @@ describe("Jejak karbon: halaman", () => {
   it("follows the design's order: total with per person and time, where it comes from, how it is counted, the note", () => {
     const { container } = render(<CarbonScreen view={view()} />);
     const text = container.textContent ?? "";
-    const order = ["Emisi WAM 2026", "Perkiraan", "13,3", "±111 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Katalog emisi", "dihitung otomatis dari data acara"];
+    const order = ["Emisi WAM 2026", "Perkiraan", "17,4", "±145 kg per orang", "Diperbarui Sen, 4 Jan · 21.00", "Dari mana asalnya", "Hotel", "Perjalanan", "Makan", "Katalog emisi", "dihitung otomatis dari data acara"];
     let at = -1;
     for (const part of order) { const next = text.indexOf(part, at + 1); expect(next, part).toBeGreaterThan(at); at = next; }
     expect(screen.getByRole("heading", { level: 2, name: "Dari mana asalnya" })).toBeTruthy();
@@ -99,7 +99,7 @@ describe("Jejak karbon: halaman", () => {
   it("every source is a row with its name, amount, share and what was counted (not colour alone)", () => {
     render(<CarbonScreen view={view()} />);
     const sources = screen.getByRole("list", { name: "Sumber emisi" });
-    expect(within(sources).getByText("≈7,2 t · 54%")).toBeTruthy();
+    expect(within(sources).getByText("≈11,3 t · 65%")).toBeTruthy();
     expect(within(sources).getByText("60 kamar × 3 malam")).toBeTruthy();
     expect(within(sources).getByText("Kereta, shuttle")).toBeTruthy();
     expect(within(sources).getByText("1.440 porsi")).toBeTruthy();
@@ -118,7 +118,7 @@ describe("Jejak karbon: halaman", () => {
     expect(rows).toHaveLength(8);
     expect(rows[0].textContent).toContain("Kereta");
     expect(rows[0].textContent).toContain("0,0164");
-    expect(rows[3].textContent).toContain("40");
+    expect(rows[3].textContent).toContain("62,7");
     expect(screen.getByText("Perlu dicek")).toBeTruthy();
     expect(screen.getByText(/tanpa penebusan, pohon, atau kontribusi/)).toBeTruthy();
     fireEvent.click(how);
@@ -144,7 +144,7 @@ describe("Jejak karbon: halaman", () => {
   it("in English", () => {
     render(<LangProvider lang="en"><CarbonScreen view={view("en")} /></LangProvider>);
     expect(screen.getByText("Where it comes from")).toBeTruthy();
-    expect(screen.getByText("±111 kg per person")).toBeTruthy();
+    expect(screen.getByText("±145 kg per person")).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Emission catalogue/ })).toBeTruthy();
   });
 

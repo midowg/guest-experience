@@ -18,11 +18,27 @@ const insights: BodInsights = {
 
 describe("BodSummary", () => {
   it("says what is missing instead of inventing numbers", () => {
-    render(<BodSummary data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" />);
+    const { unmount } = render(<BodSummary data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" />);
     expect(screen.getByRole("heading", { level: 1, name: "Selamat pagi, Fadli" })).toBeTruthy();
     expect(screen.getByText("Belum ada forum yang berjalan")).toBeTruthy();
-    expect(screen.getAllByText("Jadwal ruang belum bisa dibaca.").length).toBe(2);
     expect(screen.getByText("Tidak ada yang perlu perhatian saat ini.")).toBeTruthy();
+    unmount();
+    render(<BodSummary view="analitik" data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" />);
+    expect(screen.getAllByText("Jadwal ruang belum bisa dibaca.").length).toBe(2);
+  });
+
+  it("keeps Ringkasan simple: what matters and a way to Analitik, the charts only in Analitik (24 Nov 2026)", () => {
+    const { unmount } = render(<BodSummary data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" carbon={<p>Kartu karbon</p>} />);
+    expect(screen.getByText("Perlu perhatian")).toBeTruthy();
+    expect(screen.getByText("Kartu karbon")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Lihat semua data/ }).getAttribute("href")).toBe("/wam/analitik");
+    expect(screen.queryByText("Kehadiran per forum")).toBeNull();
+    expect(screen.queryByText("Pemakaian ruang")).toBeNull();
+    unmount();
+    render(<BodSummary view="analitik" data={summary} insights={insights} greeting="Hai" date="Hari ini" />);
+    expect(screen.getByRole("heading", { name: "Analitik" })).toBeTruthy();
+    expect(screen.getByText("Kehadiran per forum")).toBeTruthy();
+    expect(screen.queryByText("Perlu perhatian")).toBeNull();
   });
 
   it("has no MCP link: Akses MCP is not in the peserta app", () => {

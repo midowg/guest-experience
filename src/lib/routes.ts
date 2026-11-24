@@ -192,6 +192,8 @@ export const praWamPath = {
   needs: `${PRA_WAM_PATH}/manage/kebutuhan`,
   /** BOD: the panitia's Ringkasan operasional, read only. */
   panitiaView: `${PRA_WAM_PATH}/manage?lihat=panitia`,
+  /** BOD (24 Nov 2026): every figure and chart, so Ringkasan keeps what matters only. */
+  analytics: `${PRA_WAM_PATH}/analitik`,
   /** Panitia: write announcements and see who has read them. */
   announcements: `${PRA_WAM_PATH}/manage/announcements`,
   /** Panitia: schedule change requests to answer. */
@@ -202,6 +204,8 @@ export const praWamPath = {
   editSession: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}`,
   /** Panitia: a session's QR to print, and who is present. */
   sessionAttendance: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}/attendance`,
+  /** Mode tablet (23 Nov 2026): panitia's tablet recognises faces at the door. */
+  sessionFaceTablet: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}/tablet`,
   /** What a session's printed QR holds: scanning it signs the person in. */
   checkIn: (token: string) => `${PRA_WAM_PATH}/check-in/${enc(token)}`,
   /** The in-app scanner, for phones whose camera app does not open links. */
@@ -233,6 +237,8 @@ export const praWamPath = {
   questionnaire: (slug: string) => `${PRA_WAM_PATH}/${enc(slug)}`,
   /** Rekan: the character cards of everyone who finished the questionnaire. */
   colleagues: `${PRA_WAM_PATH}/rekan`,
+  /** Jejak karbon (24 Nov 2026): the calculator on a page of its own, from Beranda or Ringkasan BoD. */
+  carbon: `${PRA_WAM_PATH}/jejak-karbon`,
   /** Meeting HOD: meetings between department heads, for HODs only; a view of Book (the old address redirects there). */
   hod: `${PRA_WAM_PATH}/hod`,
   /** One colleague's card and what they share with colleagues. */
@@ -245,6 +251,8 @@ export const praWamApi = {
   forgot: `${WAM_API}/forgot-password`,
   resetPassword: `${WAM_API}/reset-password`,
   sessions: (id?: string) => `${WAM_API}/sessions${id ? `/${id}` : ""}`,
+  /** PUT: the participant's own part of Jejak karbon (24 Nov 2026). */
+  carbon: `${WAM_API}/carbon`,
   sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
   /** GET (panitia): Linimasa's week or day as PDF, Excel, or the WhatsApp text. */
   sessionsExport: (format: "pdf" | "xlsx" | "text", rentang: string, tanggal: string) => `${WAM_API}/sessions/export?${new URLSearchParams({ format, rentang, tanggal })}`,
@@ -266,6 +274,8 @@ export const praWamApi = {
   faceCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah`,
   faceCheckInPhoto: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/foto`,
   faceCheckInSubmit: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/kirim`,
+  faceTablet: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet`,
+  faceTabletRecord: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet/catat`,
   /** POST (panitia): agree to a face check-in marked perlu cek. */
   attendanceFaceApprove: (sessionId: string, employeeId: string) => `${WAM_API}/sessions/${sessionId}/attendance/${employeeId}/wajah`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
@@ -330,8 +340,14 @@ export const wamAdminPath = {
   rooms: `${WAM_ADMIN}/ruang`,
   events: `${WAM_ADMIN}/acara`,
   about: `${WAM_ADMIN}/apa-itu-wam`,
+  /** Jejak karbon: the group trip, nights and meals, and who travels on their own (24 Nov 2026). */
+  carbon: `${WAM_ADMIN}/jejak-karbon`,
   /** The app's theme for everyone: Dream Out Loud or Werkudara, each light and dark. */
   theme: `${WAM_ADMIN}/tema`,
+  /** Akun uji (24 Nov 2026): accounts that try Misi Perjalanan and Jejak karbon before the event. */
+  testAccounts: `${WAM_ADMIN}/akun-uji`,
+  /** Misi Perjalanan (24 Nov 2026): the rooms, the HoD in them with quiz hints, and the BoD. */
+  mission: `${WAM_ADMIN}/misi-perjalanan`,
   /** TV Announcement: the office TVs, their pictures, and how long each stays. */
   tv: `${WAM_ADMIN}/tv`,
   /** The board as a TV plays it, for the signed-in admin (no TV key). */
@@ -456,10 +472,18 @@ export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eve
 export const praWamMinutesRuleApi = "/api/admin/wam/minutes-rule";
 /** Admin WAM: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
 export const praWamAboutApi = "/api/admin/wam/about";
+/** Admin WAM → Jejak karbon: PUT the setup, POST {id} sends someone back to the group trip. */
+export const praWamCarbonApi = "/api/admin/wam/jejak-karbon";
 /** Admin WAM: PUT the app settings, e.g. whether Book shows the floor plan. */
 export const praWamSettingsApi = "/api/admin/wam/settings";
 /** Admin WAM → Tema aplikasi (any admin). */
 export const praWamThemeApi = "/api/admin/wam/theme";
+/** PUT: the Akun uji list and whether Jejak karbon shows only to them. */
+export const praWamTestAccountsApi = "/api/admin/wam/akun-uji";
+/** PUT: Misi Perjalanan's room list (the old one kept as a backup first). */
+export const praWamMissionApi = "/api/admin/wam/misi-perjalanan";
+/** PUT: the sessions that open Misi Perjalanan. */
+export const praWamMissionSessionsApi = "/api/admin/wam/misi-perjalanan/sesi";
 
 /*
  * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside
