@@ -305,7 +305,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
           {AGENDA.map(day => <div key={day.day} className={css.stack}><p className={css.day}>{day.day}</p>{day.items.map(item => item.id
             ? <button key={item.id} type="button" className={css.agendaItem} onClick={() => openSession(item.id!)}>
                 <time>{item.t}</time><span><b>{item.title}</b><small>{s.questions[item.id!]?.length ?? 0} pertanyaan</small></span><ChevronRight className={css.chev} aria-hidden /></button>
-            : <div key={item.title + item.t} className={`${css.agendaItem} ${css.plain}`}><time>{item.t}</time><span><b>{item.title}</b></span><span /></div>)}</div>)}
+            : <div key={item.title + item.t} className={`${css.agendaItem} ${css.plain}`}><time>{item.t}</time><span><b>{item.title}</b>{item.desc && <small>{item.desc}</small>}</span><span /></div>)}</div>)}
         </div>,
       };
       case "session": {

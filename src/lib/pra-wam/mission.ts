@@ -1,5 +1,5 @@
 /*
- * Misi Perjalanan (prototype, 23 Nov 2026): the 45-minute bus ride from the office to the Villa
+ * Misi Perjalanan (prototype, 23 Nov 2026): the ride by Hiace from the office (11.00) to the Villa
  * Cangkringan for the HoD BoD meeting (forum "CSM & prioritas CAPEX", 24–28 Nov). HoD, BoD and
  * CoS open this instead of the session's usual detail. Missions (Susun Kalimatmu, Future Signal,
  * Pesan untuk 2027) open hints about a HoD's roommate; the room and the roommate are revealed after
@@ -90,29 +90,45 @@ export function hintsOpen(done: number, missions: number): number {
   return done >= missions ? HINT_COUNT : Math.min(HINT_COUNT, Math.round(done * HINT_COUNT / missions));
 }
 
-/** The rundown of the Meeting HOD BOD (Ishoma left out); sessions with an id take questions. */
+/**
+ * The rundown of the Meeting HOD BOD (revised 24 Nov 2026, the panitia's "Ringkasan · Rundown"):
+ * each day with its theme; meetings with an id take questions (s2, Department Evaluation, dropped).
+ */
 export type AgendaItem = { id?: string; t: string; end?: string; title: string; desc: string };
 export const AGENDA: { day: string; items: AgendaItem[] }[] = [
-  { day: "Selasa, 24 Nov", items: [
-    { t: "14.30", title: "Keberangkatan menuju lokasi", desc: "Berangkat dari kantor" },
-    { t: "15.30", title: "Persiapan dan check-in", desc: "Villa Cangkringan" },
-    { id: "s1", t: "16.00", end: "18.00", title: "Business Overview & Evaluation Meeting", desc: "Evaluasi financial dan non-financial, pencapaian revenue, margin, dan action plan." }] },
-  { day: "Rabu, 25 Nov", items: [
-    { t: "Pagi", title: "Morning Activity", desc: "Oleh panitia" },
-    { id: "s2", t: "09.00", end: "12.00", title: "Department Evaluation Presentation", desc: "Penyampaian evaluasi dan pencapaian masing-masing departemen." },
-    { id: "s3", t: "13.00", end: "18.00", title: "Gudang Idea & Research Presentation", desc: "Pemaparan ide, hasil riset, dan peluang pengembangan." }] },
-  { day: "Kamis, 26 Nov", items: [
-    { t: "Pagi", title: "Morning Activity", desc: "Oleh panitia" },
+  { day: "Selasa, 24 Nov · Arrival & Welcome", items: [
+    { t: "11.00", title: "Berangkat", desc: "Dengan Hiace dari kantor" },
+    { t: "11.40", title: "Makan siang", desc: "Mbak Pesta" },
+    { t: "14.00", title: "Check-in", desc: "Lewat aplikasi" },
+    { t: "Sore", title: "Turndown", desc: "Di kamar" },
+    { id: "s1", t: "15.00", end: "18.00", title: "Business Overview & Evaluation", desc: "Evaluasi financial dan non-financial, pencapaian revenue, margin, dan action plan." },
+    { t: "19.00", title: "Dinner", desc: "Buffet hotel" },
+    { t: "20.00", title: "Cok Bakal", desc: "Meditation" }] },
+  { day: "Rabu, 25 Nov · Strategic Meeting", items: [
+    { t: "06.00", end: "07.00", title: "Jalan santai pedesaan", desc: "Wedang Seruni" },
+    { t: "Pagi", title: "Breakfast", desc: "Hotel" },
+    { id: "s3", t: "09.00", end: "18.00", title: "Gudang Idea & Research Presentation", desc: "Pemaparan ide, hasil riset, dan peluang pengembangan." },
+    { t: "Siang", title: "Lunch", desc: "Hotel" },
+    { t: "19.00", title: "Dinner", desc: "Masak bersama" }] },
+  { day: "Kamis, 26 Nov · Target Setting", items: [
+    { t: "06.00", end: "08.00", title: "Yoga", desc: "" },
+    { t: "Pagi", title: "Breakfast", desc: "Hotel" },
     { id: "s4", t: "09.00", end: "12.00", title: "Sesi 1 · Business Strategy & Goal Setting", desc: "Penetapan goals financial dan non-financial." },
+    { t: "Siang", title: "Lunch", desc: "Hotel" },
     { id: "s5", t: "13.00", end: "18.00", title: "Sesi 2 · Revenue Target Setting", desc: "Pembahasan target nominal omzet." },
-    { t: "Malam", title: "Karaoke", desc: "Kegiatan kebersamaan (opsional)" }] },
-  { day: "Jumat, 27 Nov", items: [
-    { t: "Pagi", title: "Morning Activity", desc: "Oleh panitia" },
+    { t: "19.00", title: "Dinner", desc: "Tampah Pulcang, Pulen Kopi Ponti Cangkringan" }] },
+  { day: "Jumat, 27 Nov · Strategy Breakdown", items: [
+    { t: "06.00", end: "08.00", title: "Jalan pagi ke pasar", desc: "" },
+    { t: "Pagi", title: "Breakfast", desc: "Hotel" },
     { id: "s6", t: "09.00", end: "12.00", title: "Sesi 1 · Target & Budget Planning", desc: "Penyusunan target dan perencanaan anggaran." },
-    { id: "s7", t: "13.00", end: "18.00", title: "Sesi 2 · Strategy Breakdown & Action Plan", desc: "Penjabaran strategi menjadi program kerja dan rencana aksi." },
-    { t: "Malam", title: "BBQ", desc: "Kegiatan kebersamaan (opsional)" }] },
-  { day: "Sabtu, 28 Nov", items: [
-    { id: "s8", t: "09.00", end: "11.00", title: "Final Wrap-Up & Closing Session", desc: "Rekapitulasi hasil meeting, kesimpulan, dan tindak lanjut." }] },
+    { t: "Siang", title: "Jumatan & lunch", desc: "" },
+    { id: "s7", t: "13.30", end: "18.00", title: "Sesi 2 · Strategy Breakdown & Action Plan & Wrap-Up", desc: "Penjabaran strategi menjadi program kerja dan rencana aksi." },
+    { t: "19.00", title: "BBQ dinner & karaoke", desc: "" }] },
+  { day: "Sabtu, 28 Nov · Reflection & Departure", items: [
+    { t: "07.00", end: "08.30", title: "Sound healing", desc: "" },
+    { t: "Pagi", title: "Breakfast", desc: "Hotel" },
+    { id: "s8", t: "09.00", end: "15.00", title: "Rekapitulasi hasil meeting", desc: "Kesimpulan dan tindak lanjut." },
+    { t: "15.30", title: "Kepulangan", desc: "Early dinner: Mbak Gebyar" }] },
 ];
 export const agendaSession = (id: string) => {
   for (const day of AGENDA) for (const item of day.items) if (item.id === id) return { ...item, day: day.day };

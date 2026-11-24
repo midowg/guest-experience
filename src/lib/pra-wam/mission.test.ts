@@ -61,9 +61,10 @@ describe("Misi Perjalanan (prototype, 23 Nov 2026)", () => {
   });
 
   it("finds a session of the rundown, sorts questions by support, and makes initials", () => {
-    expect(agendaSession("s1")?.day).toBe("Selasa, 24 Nov");
+    expect(agendaSession("s1")?.day).toBe("Selasa, 24 Nov · Arrival & Welcome");
+    expect(agendaSession("s2")).toBeNull();
     expect(agendaSession("x")).toBeNull();
-    expect(AGENDA.flatMap(day => day.items).filter(item => item.id)).toHaveLength(8);
+    expect(AGENDA.flatMap(day => day.items).filter(item => item.id)).toHaveLength(7);
     expect(byVotes([{ id: "a", votes: 1 }, { id: "b", votes: 3 }, { id: "c", votes: 1 }]).map(item => item.id)).toEqual(["b", "a", "c"]);
     expect(initials("Linda Susanto")).toBe("LS");
   });

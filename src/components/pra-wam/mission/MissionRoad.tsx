@@ -11,7 +11,7 @@ import css from "./mission.module.css";
 export function MissionRoad({ percent, missions, done, arrived, launched }: { percent: number; missions: number; done: number; arrived: boolean; launched: boolean }) {
   const bus = roadPoint(percent);
   const stops = missionStops(missions);
-  const status = launched ? tripStatus({ done, missions, arrived }) : "Bus siap berangkat pukul 14.30";
+  const status = launched ? tripStatus({ done, missions, arrived }) : "Siap berangkat pukul 11.00";
   const flip = Math.abs(bus.angle) > 90;
   return <div className={`${css.road} ${arrived ? css.roadArrived : ""}`}>
     <p className={css.roadStatus} aria-live="polite">{status}</p>
@@ -56,6 +56,6 @@ export function MissionRoad({ percent, missions, done, arrived, launched }: { pe
         </g>
       </g>
     </svg>
-    <div className={css.roadEnds}><span><b>Kantor</b> · 14.30</span><span><b>Villa Cangkringan</b> · ±15.15</span></div>
+    <div className={css.roadEnds}><span><b>Kantor</b> · 11.00</span><span><b>Villa Cangkringan</b> · 14.00</span></div>
   </div>;
 }
