@@ -29,7 +29,7 @@ beforeEach(() => {
   fake.error = null;
   fake.writes = [];
   fake.rows = [
-    { key: "mission_journey", value: { rooms: { A: "A3", B: "B1" }, people: [{ name: "Ani Satu", dept: "Dept", room: "A" }, { name: "Ina Dua", dept: "Dept", room: "A" }, { name: "Budi Tiga", room: "B" }], bod: [] }, updated_at: null },
+    { key: "mission_journey", value: { rooms: { A: "A3", B: "B1" }, people: [{ name: "Ani Satu", dept: "Dept", room: "A" }, { name: "Ina Dua", dept: "Dept", room: "A" }, { name: "Budi Tiga", room: "B" }], bod: [{ name: "Bima Dir" }, { name: "Ani Satu" }] }, updated_at: null },
     { key: "carbon_setup", value: setup, updated_at: "2026-11-24T02:00:00Z" },
     { key: carbonAnswerKey("INA DUA"), value: answer(motor), updated_at: null },
     { key: carbonAnswerKey("ANI SATU"), value: { broken: true }, updated_at: null },
@@ -46,7 +46,7 @@ describe("Jejak karbon (Admin Pra WAM)", () => {
   it("reads the setup, the people with their room code and roommates, and good answers only", async () => {
     const state = await carbonAdminState();
     expect(state).toMatchObject({ setup, saved: true, migrated: true, updatedAt: "2026-11-24T02:00:00Z" });
-    expect(state.people.map(person => [person.id, person.room, person.occupants, !!person.travel])).toEqual([["ANI SATU", "A3", 2, false], ["INA DUA", "A3", 2, true], ["BUDI TIGA", "B1", 1, false]]);
+    expect(state.people.map(person => [person.id, person.room, person.occupants, !!person.travel])).toEqual([["ANI SATU", "A3", 2, false], ["INA DUA", "A3", 2, true], ["BUDI TIGA", "B1", 1, false], ["BIMA DIR", "BoD", 1, false]]);
   });
 
   it("starts empty when nothing is saved, and waits when pw_settings is not there", async () => {
@@ -76,6 +76,13 @@ describe("Jejak karbon (peserta)", () => {
     expect(await myCarbon({ name: "Orang Lain" })).toBeNull();
   });
 
+  it("gives a BoD a card too, in a room of their own (listed once even when also in the room list)", async () => {
+    expect(await myCarbon({ name: "Bima Dir" })).toMatchObject({ occupants: 1, travel: null });
+    await saveMyCarbon({ name: "Bima Dir" }, { own: null, bottles: 1, laptopHours: 2, phoneCharges: 1 });
+    expect(fake.writes.map(write => write.key)).toEqual([carbonAnswerKey("BIMA DIR")]);
+    expect((await carbonAdminState()).people.filter(person => person.id === "ANI SATU")).toHaveLength(1);
+  });
+
   it("shows no card until the panitia set a trip that can be counted", async () => {
     fake.rows = fake.rows.map(row => row.key === "carbon_setup" ? { ...row, value: EMPTY_CARBON_SETUP } : row);
     expect(await myCarbon({ name: "Ina Dua" })).toBeNull();
@@ -88,7 +95,7 @@ describe("Jejak karbon (peserta)", () => {
     await saveMyCarbon({ name: "Ani Satu" }, { own: null, bottles: 0, laptopHours: 1, phoneCharges: 0 });
     expect(fake.writes.map(write => write.key)).toEqual([carbonAnswerKey("BUDI TIGA"), carbonAnswerKey("ANI SATU")]);
     const people = (await carbonAdminState()).people;
-    expect(people.map(person => [person.id, person.travel?.bottles ?? null, person.travel?.own?.from ?? null])).toEqual([["ANI SATU", 0, null], ["INA DUA", 1, "Magelang"], ["BUDI TIGA", 2, "Sleman"]]);
+    expect(people.map(person => [person.id, person.travel?.bottles ?? null, person.travel?.own?.from ?? null])).toEqual([["ANI SATU", 0, null], ["INA DUA", 1, "Magelang"], ["BUDI TIGA", 2, "Sleman"], ["BIMA DIR", null, null]]);
   });
 
   it("refuses someone not in the list, and a closed form", async () => {

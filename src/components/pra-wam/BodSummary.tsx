@@ -40,6 +40,8 @@ type Props = {
   survey?: { name: string; participation: Participation } | null;
   /** 19 Nov 2026: the viewer's zone for the hours; WIB by default. */
   zone?: ViewerZone;
+  /** 24 Nov 2026: the BoD's own Jejak karbon row (CarbonHome), under the greeting; none when not set. */
+  carbon?: ReactNode;
 };
 
 /**
@@ -49,7 +51,7 @@ type Props = {
  * requests and HOD meetings, announcements and documents, and quick links.
  * Nothing is invented: a part without data says so.
  */
-export function BodSummary({ data, insights, greeting, date, survey = null, zone = "WIB" }: Props) {
+export function BodSummary({ data, insights, greeting, date, survey = null, zone = "WIB", carbon = null }: Props) {
   const notSignedIn = data.accounts - data.signedIn;
   const started = data.forums.filter(forum => forum.expected > 0);
   const average = data.attendanceReady && started.length ? percent(started.reduce((sum, forum) => sum + forum.present, 0), started.reduce((sum, forum) => sum + forum.expected, 0)) : null;
@@ -71,6 +73,8 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
         {phase?.daysToWam != null && <span className={`${styles.scopePill} ${styles.scopeBrass}`}><CalendarDays aria-hidden />WAM {phase.daysToWam === 0 ? "hari ini" : `${phase.daysToWam} hari lagi`}</span>}
       </div>
     </header>
+
+    {carbon && <div className={styles.carbon}>{carbon}</div>}
 
     <div className={styles.top}>
       <ForumHero data={data} insights={insights} zone={zone} />

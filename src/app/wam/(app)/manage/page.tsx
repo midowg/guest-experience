@@ -3,6 +3,7 @@ import { CalendarClock, CalendarDays, ChevronRight, FileText, Megaphone, Noteboo
 import { Avatar, Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill, RowList, StatCard, StatRow } from "@/components/console";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
+import { CarbonHome } from "@/components/pra-wam/carbon/CarbonHome";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
 import { hourWindow, nowHours, phaseDay, readiness, roomRows, timelineLegend, withQuery } from "@/components/pra-wam/manage/schedule";
 import { Notice } from "@/components/ui";
@@ -15,6 +16,7 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { sentAnnouncements } from "@/lib/server/pra-wam/announcements";
 import { daySchedule } from "@/lib/server/pra-wam/appraisal";
 import { bodInsights } from "@/lib/server/pra-wam/bod-insights";
+import { myCarbon } from "@/lib/server/pra-wam/carbon";
 import { bodSummary, overview, type Overview } from "@/lib/server/pra-wam/dashboard";
 import { currentPhase } from "@/lib/server/pra-wam/events";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
@@ -52,10 +54,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const now = new Date();
   // BOD reads everything and changes nothing: their own summary.
   if (!manage && (await searchParams).lihat !== "panitia") {
-    const [summary, insights, survey] = await Promise.all([bodSummary(member, now), bodInsights(member, now), questionnaireSurvey()]);
+    const [summary, insights, survey, carbon] = await Promise.all([bodSummary(member, now), bodInsights(member, now), questionnaireSurvey(), myCarbon(member).catch(() => null)]);
     return <>
       {!summary.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
-      <BodSummary zone={await viewerZone()} data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} insights={insights} survey={survey} />
+      <BodSummary zone={await viewerZone()} data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} insights={insights} survey={survey}
+        carbon={carbon && <CarbonHome setup={carbon.setup} occupants={carbon.occupants} travel={carbon.travel} />} />
     </>;
   }
   const data = await overview(member, now);

@@ -22,3 +22,15 @@ describe("Misi Perjalanan: Sudah tiba", () => {
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
   });
 });
+
+describe("Misi Perjalanan: BoD", () => {
+  it("shows only the questions per session: no road, missions, quiz or Sudah tiba", async () => {
+    render(<MissionJourney view={{ ...view, employeeId: "dev-bod", role: "BoD", ceo: true, sentences: [1] }} detailHref="#" />);
+    expect(await screen.findByRole("heading", { name: "Pertanyaan per sesi" })).toBeTruthy();
+    expect(screen.queryByText(/Misi di perjalanan|Susun Kalimatmu|Siapa teman sekamarmu/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Sudah tiba di venue/ })).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Business Overview & Evaluation/ })); });
+    expect(await screen.findByRole("button", { name: "Buka Mode CEO" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Kirim pertanyaan" })).toBeNull();
+  });
+});

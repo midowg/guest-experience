@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { PraWamMcp } from "@/components/admin/wam/PraWamMcp";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
+import { CarbonHome } from "@/components/pra-wam/carbon/CarbonHome";
+import { SAMPLE_CARBON_SETUP } from "@/lib/pra-wam/carbon-sample";
 import { McpCard } from "@/components/pra-wam/McpCard";
 import { AccountStatus, BodPeopleList, BodProfileView, ForumStatus } from "@/components/pra-wam/BodPeople";
 import { attentionItems } from "@/lib/pra-wam/bod";
@@ -98,7 +100,9 @@ export default async function DevBodPage({ searchParams }: { searchParams: Promi
     : keadaan === "absen" ? { ...sample, attendanceReady: false } : sample;
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     <BodSummary data={data} insights={keadaan === "kosong" ? emptyInsights : insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November"
-      survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2026", participation: { done: 38, active: 57 } }} />
+      survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2026", participation: { done: 38, active: 57 } }}
+      // Jejak karbon for a BoD (24 Nov 2026): a room of their own; made-up setup.
+      carbon={keadaan === "kosong" ? null : <CarbonHome setup={SAMPLE_CARBON_SETUP} occupants={1} travel={null} />} />
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24 }}>
       <AccountStatus state="aktif" /><AccountStatus state="belum-masuk" /><AccountStatus state="tanpa-akun" />
       <ForumStatus title="Review data" mark="hadir" /><ForumStatus title="Meeting budget" mark="tidak-hadir" /><ForumStatus title="HOD Meeting" mark="berlangsung" />

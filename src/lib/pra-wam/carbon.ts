@@ -270,7 +270,7 @@ export function calculatorTiles(input: CarbonInput) {
 }
 
 /** One row of the admin page: the person, their room (automatic, from Misi Perjalanan) and their own trip if any. */
-export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null };
+export type CarbonPerson = { id: string; name: string; dept: string; room: string; occupants: number; travel: CarbonTravel | null; /** BoD: a room of their own (24 Nov 2026). */ bod?: boolean };
 
 /*
  * Storage (Admin Pra WAM → Jejak karbon, 24 Nov 2026): rows of pw_settings, no new table. The
@@ -330,14 +330,22 @@ export const carbonAnswerInputSchema = answerSchema.omit({ answeredAt: true }).r
   message: "Isi asal dan jarak 1–3.000 km.", path: ["own"],
 });
 
-/** The people for the admin page from Misi Perjalanan's sheet: their room's code and how many share it. */
-export function carbonPeopleFrom(sheet: { rooms?: Record<string, string>; people?: { name: string; dept?: string; room: string }[] } | null, answers: Record<string, CarbonTravel>, key: (name: string) => string): CarbonPerson[] {
+/**
+ * The people for Jejak karbon from Misi Perjalanan's sheet: the HoD with their room's code and how
+ * many share it, then the BoD (24 Nov 2026), each in a room of their own (not in the room list).
+ */
+export function carbonPeopleFrom(sheet: { rooms?: Record<string, string>; people?: { name: string; dept?: string; room: string }[]; bod?: { name: string }[] } | null, answers: Record<string, CarbonTravel>, key: (name: string) => string): CarbonPerson[] {
   const people = sheet?.people ?? [];
   const count = new Map<string, number>();
   for (const person of people) count.set(person.room, (count.get(person.room) ?? 0) + 1);
-  return people.map(person => ({
+  const hod = people.map((person): CarbonPerson => ({
     id: key(person.name), name: person.name, dept: person.dept ?? "",
     room: sheet?.rooms?.[person.room] ?? person.room, occupants: count.get(person.room) ?? 1,
     travel: answers[key(person.name)] ?? null,
   }));
+  const listed = new Set(hod.map(person => person.id));
+  const bod = (sheet?.bod ?? []).filter(person => person.name?.trim() && !listed.has(key(person.name))).map((person): CarbonPerson => ({
+    id: key(person.name), name: person.name, dept: "BoD", room: "BoD", occupants: 1, travel: answers[key(person.name)] ?? null, bod: true,
+  }));
+  return [...hod, ...bod];
 }

@@ -105,7 +105,7 @@ export function CarbonAdminBody({ setup, people, onSetup, onToGroup, say }: {
   const sum = counted.reduce((acc, row) => ({ perjalanan: acc.perjalanan + row.parts!.perjalanan, kamar: acc.kamar + row.parts!.kamar, makan: acc.makan + row.parts!.makan, perangkat: acc.perangkat + row.parts!.perangkat }), { perjalanan: 0, kamar: 0, makan: 0, perangkat: 0 });
   const total = sum.perjalanan + sum.kamar + sum.makan + sum.perangkat;
   const shares = splitPercent([sum.kamar, sum.perjalanan, sum.makan, sum.perangkat]);
-  const rooms = new Set(people.map(person => person.room)).size;
+  const rooms = new Set(people.map(person => person.bod ? `bod:${person.id}` : person.room)).size;
   const preview = people.find(person => person.id === previewId) ?? people[0];
 
   return <>

@@ -97,6 +97,8 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     setS(fresh(view)); close(); window.scrollTo({ top: 0 }); setToast("Diulang dari awal");
   }
   const hod = view.role === "HoD" && !!view.room;
+  /** BoD (24 Nov 2026): no missions, road or quiz, only the questions gathered per session. */
+  const bod = view.role === "BoD";
   const missions = useMemo(() => missionsOf(view), [view]);
   const doneCount = missions.filter(item => s.done[item]).length;
   const hints = s.arrived ? HINT_COUNT : hintsOpen(doneCount, missions.length);
@@ -174,7 +176,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
     if (!s.arrived) return null;
     if (!hod || !view.room) return <section className={`${css.card} ${css.welcome}`}>
       <h2 className={css.cardTitle}>Selamat datang di Villa Cangkringan</h2>
-      <p className={css.lead}>Sesi pertama mulai pukul 16.00.</p></section>;
+      <p className={css.lead}>Sesi pertama mulai pukul {agendaSession("s1")?.t ?? "15.00"}.</p></section>;
     const { mates, self, code } = view.room;
     const rhythm = (nick: string, sleep: string | null, wake: string | null, you = false) => <div key={nick}><span>{nick}{you ? " (kamu)" : ""}</span><span>Tidur {sleep ?? "–"}</span><span>Bangun {wake ?? "–"}</span></div>;
     return <>
@@ -313,10 +315,10 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
         if (!session) return null;
         const list = byVotes(s.questions[s.session] ?? []);
         return {
-          title: "Tanya CEO", subtitle: `${session.title} · ${session.day}, ${session.t}`,
+          title: bod ? "Pertanyaan sesi" : "Tanya CEO", subtitle: `${session.title} · ${session.day}, ${session.t}`,
           body: <div className={css.sheetStack}>
             <p className={css.lead}>{session.desc}</p>
-            <section className={css.card}>
+            {!bod && <section className={css.card}>
               <label className={css.field}>Pertanyaanmu<textarea maxLength={200} value={ask.text} placeholder="Tulis pertanyaan untuk CEO" onChange={event => setAsk({ ...ask, text: event.target.value })} /></label>
               <div className={css.chips} role="group" aria-label="Topik (boleh dilewati)">{QUESTION_CATEGORIES.map(cat => <button key={cat} type="button" className={css.chip} aria-pressed={ask.cat === cat} onClick={() => setAsk({ ...ask, cat: ask.cat === cat ? null : cat })}>{cat}</button>)}</div>
               <p className={css.note}>Dikirim atas nama {view.name}.</p>
@@ -325,7 +327,7 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
                 update(current => ({ seq: current.seq + 1, questions: { ...current.questions, [current.session]: [...(current.questions[current.session] ?? []), question] } }));
                 setAsk({ text: "", cat: null }); setToast("Pertanyaan terkirim");
               }}>Kirim pertanyaan</button>
-            </section>
+            </section>}
             <h3 className={css.cardTitle}>Pertanyaan masuk ({list.length})</h3>
             {list.length > 0 && <p className={css.note}>Setuju dengan pertanyaan orang lain? Ketuk jempolnya. Angka di bawah jempol adalah jumlah dukungan.</p>}
             {list.length ? list.map(question => <div key={question.id} className={`${css.q} ${question.mine ? css.qMine : ""}`}>
@@ -336,7 +338,9 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
                 <ThumbsUp aria-hidden /><span>{question.votes}</span></button>
             </div>) : <p className={css.note}>Belum ada pertanyaan.</p>}
           </div>,
-          footer: view.ceo ? <button type="button" className={css.btn} onClick={() => setSheet("ceo")}>Buka Mode CEO</button> : <button type="button" className={css.btn} onClick={() => setSheet("agenda")}>Kembali ke agenda</button>,
+          footer: view.ceo ? <button type="button" className={css.btn} onClick={() => setSheet("ceo")}>Buka Mode CEO</button>
+            : bod ? <button type="button" className={css.btn} onClick={close}>Tutup</button>
+            : <button type="button" className={css.btn} onClick={() => setSheet("agenda")}>Kembali ke agenda</button>,
         };
       }
       case "ceo": {
@@ -367,6 +371,26 @@ export function MissionJourney({ view, detailHref }: { view: MissionView; detail
   if (!inBrowser) return <div className={css.phone}><p className={css.note} role="status">Memuat misi perjalanan…</p></div>;
   const open = sheetBody();
   const first = agendaSession("s1")!;
+
+  // BoD: the meetings by day, each opening the questions sent for it (and Mode CEO for the CEO).
+  if (bod) return <div className={css.phone}>
+    <main className={css.screen}>
+      <section className={css.stack} aria-labelledby="sesi-judul">
+        <h2 id="sesi-judul" className={css.sectionTitle}>Pertanyaan per sesi</h2>
+        <p className={css.note}>Pertanyaan dari peserta untuk setiap sesi meeting. Ketuk sesi untuk membacanya{view.ceo ? " dan membuka Mode CEO" : ""}.</p>
+        {AGENDA.filter(day => day.items.some(item => item.id)).map(day => <div key={day.day} className={css.stack}>
+          <p className={css.day}>{day.day}</p>
+          {day.items.filter(item => item.id).map(item => <button key={item.id} type="button" className={css.agendaItem} onClick={() => openSession(item.id!)}>
+            <time>{item.t}</time><span><b>{item.title}</b><small>{s.questions[item.id!]?.length ?? 0} pertanyaan</small></span><ChevronRight className={css.chev} aria-hidden />
+          </button>)}
+        </div>)}
+      </section>
+    </main>
+    <footer className={css.foot}><span>Prototipe</span><a href={detailHref}>Detail sesi</a></footer>
+    {confirmDialog}
+    {open && <Sheet open onClose={close} title={open.title} subtitle={open.subtitle} footer={open.footer}>{open.body}</Sheet>}
+    <div className={`${css.toast} ${toast ? css.toastShow : ""}`} role="status">{toast}</div>
+  </div>;
 
   return <div className={css.phone}>
     <div ref={roadBox}><MissionRoad percent={percent} missions={missions.length} done={doneCount} arrived={s.arrived} launched /></div>
