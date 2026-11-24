@@ -36,7 +36,7 @@ export default async function PreviewAgenda({ searchParams }: { searchParams: Pr
   const links = params.kuis === "1" ? { quizSessions: new Set([sampleSessionIds.pemaparan]), missionPoints: new Map([[sampleSessionIds["team-building"], 50]]) } : undefined;
   const empty = params.status === "kosong" || params.status === "migrasi";
   return <Frame path={mainWamPath.agenda()} now={now} lang={lang}>
-    <AgendaScreen unread={3} migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang, prepDates)} day={/^\d+$/.test(tab) ? Number(tab) : 0} tab={tab}
+    <AgendaScreen migrated={params.status !== "migrasi"} days={agendaDays(event, todayOf(now), lang, prepDates)} day={/^\d+$/.test(tab) ? Number(tab) : 0} tab={tab}
       rows={empty ? [] : agendaRowsOfTab(all, tab, event, now, previewLog(now), lang, ceklis ? { lists: sampleChecklists(), checked } : undefined, links)} anyPublished={!empty} since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} forceOffline={params.status === "offline"} />
   </Frame>;
 }

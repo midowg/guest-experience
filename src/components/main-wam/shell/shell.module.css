@@ -20,7 +20,7 @@
   transform: translateX(-50%); pointer-events: none; background: var(--mw-motif-konstelasi) right bottom / 100% auto no-repeat;
   opacity: var(--mw-motif-opacity); filter: var(--mw-motif-filter);
 }
-.app:has([data-mw-hide-nav]) .column::before { bottom: 0; }
+.app:not([data-mw-nav]) .column::before, .app:has([data-mw-hide-nav]) .column::before { bottom: 0; }
 /* A screen that draws the pegasus watermark (PegasusMark) takes the place of the konstelasi art. */
 .app:has([data-mw-pegasus]) .column::before { display: none; }
 @media (min-width: 600px) {
@@ -64,7 +64,7 @@
 /* Hidden by the screen itself (<ShellChrome hideTopBar />, the camera, the QR scanner): CSS only, so no flash. */
 .app:has([data-mw-hide-topbar]) .top, .app:has([data-mw-hide-topbar]) .compact { display: none; }
 
-.main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; outline: none; }
+.main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; outline: none; padding-bottom: var(--mw-safe-bottom); }
 .app[data-mw-nav] .main { padding-bottom: calc(var(--mw-nav-h) + var(--mw-safe-bottom) + var(--mw-space-8)); }
 .app:has([data-mw-hide-nav]) .main { padding-bottom: 0; }
 

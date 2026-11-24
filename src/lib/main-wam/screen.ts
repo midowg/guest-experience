@@ -8,8 +8,10 @@ import { t, type Lang } from "./i18n";
  * with usePathname; every screen of every area is listed here now (KONTRAK §5), so no agent edits it.
  *
  * Levels:
- *   akar    tab root: top bar (Beranda: greeting and bell), bottom bar.
- *   detail  reading a level deeper: back arrow and title, the bottom bar stays (its tab lit).
+ *   akar    tab root (Beranda, Agenda, Momen, Saya, and Panitia for panitia): top bar (Beranda: greeting and
+ *           bell), the bottom bar. Only a tab root draws the bottom bar.
+ *   detail  a page opened from somewhere (revisi 24 Nov): back arrow and title, no bottom bar (its tab is
+ *           kept only as the screen's family).
  *   tugas   a form, the camera, a result: close (x) or no top bar, no bottom bar.
  * `camera`: the camera (U01–U05) only. It draws its own bar and controls, so the frame draws no bars; it follows
  * the app's theme like every screen (only the live picture is natural). `back.href` is the fallback when there is no
@@ -102,7 +104,9 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
   return { tab: null, level: "detail", title: say("screen.fallback"), back: home };
 }
 
-/** Whether the bottom bar shows on this screen (tab roots and details; never tasks). */
-export const showsBottomBar = (screen: MainWamScreen | null) => !!screen && screen.level !== "tugas";
+/** Whether the bottom bar shows on this screen: the tab roots only (revisi 24 Nov: every page opened from one hides it; a tab root has no back arrow, a page has). */
+export const showsBottomBar = (screen: MainWamScreen | null) => !!screen && screen.level === "akar";
+/** A session's own address (Detail sesi, /agenda/<id>): a sheet, over whichever screen was open (the address alone does not say which). */
+export const isSessionSheetPath = (pathname: string) => { const path = strip(pathname); return under(path, `${MAIN_WAM_PATH}/agenda`) && rest(path, `${MAIN_WAM_PATH}/agenda`).length > 0 && !rest(path, `${MAIN_WAM_PATH}/agenda`).includes("/"); };
 /** The bell is on Beranda's root only (SPEC revisi 16 Nov). */
 export const showsBell = (screen: MainWamScreen | null) => screen?.tab === "beranda" && screen.level === "akar";

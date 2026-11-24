@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { MomenQueueRunner } from "@/components/main-wam/momen/upload/QueueRunner";
 import { AbsenQueue } from "@/components/main-wam/modul/absen/AbsenQueue";
+import { SessionSheetPending } from "@/components/main-wam/peserta/agenda/SessionSheet";
 import { MainWamShell, SignInFirst } from "@/components/main-wam/shell";
 import { mainWamGate, mainWamRole, showsCommitteeTab } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
@@ -23,7 +24,7 @@ import { mainWamViewer } from "@/lib/server/main-wam/viewer";
  * sign-in; otherwise nothing of Main WAM is drawn, not even a loading screen (audit M6), and
  * SignInFirst takes them to WAM's sign-in, coming back to the exact screen (a QR's address, say).
  */
-export default async function MainWamAppLayout({ children }: { children: ReactNode }) {
+export default async function MainWamAppLayout({ children, sheet }: { children: ReactNode; /** Detail sesi opened from inside the app: a sheet over the screen that stays (@sheet, intercepting route). */ sheet: ReactNode }) {
   const read = readMainWamSettings();
   const [settings, viewer] = await Promise.all([read, mainWamViewer(read)]);
   const gate = mainWamGate(settings.mode, viewer);
@@ -32,6 +33,8 @@ export default async function MainWamAppLayout({ children }: { children: ReactNo
   const [unread, lang] = await Promise.all([unreadCount(viewer.id).catch(() => 0), readLang()]);
   return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event, mainWamRole(viewer), lang)} unread={unread} committee={showsCommitteeTab(viewer)} demo={settings.moduleConfig.demo}>
     {children}
+    {sheet}
+    <SessionSheetPending />
     {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
     {moduleOn(settings.modules, "absen") && <AbsenQueue />}
     {/* Photos taken offline go out (and say "2 foto terkirim") from any screen (agen B, U03). */}

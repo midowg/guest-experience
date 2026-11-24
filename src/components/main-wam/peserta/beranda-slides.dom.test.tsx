@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { useState, type ReactNode } from "react";
 import type { HomeData, NowView } from "@/lib/main-wam/peserta/home";
 import { mainWamPath } from "@/lib/routes";
@@ -29,10 +31,16 @@ function Harness({ home }: { home: HomeData }) {
   </IndicatorSlotContext.Provider>;
 }
 
-/** jsdom has no layout: give the track a width and record where the slide was sent. */
+/** The carousel's layout in numbers: cards 90 % wide, 8 apart, the first one centred by 5 % of padding. Where a centred card scrolls to. */
+const PITCH = 278;
+/** jsdom has no layout: give the track a width and its cards the carousel's geometry (90 % wide, 8 apart), and record where the slide was sent. */
 function stubTrack(width = 300) {
   const track = screen.getByRole("region", { name: /Sesi: baru selesai/ });
   Object.defineProperty(track, "clientWidth", { configurable: true, value: width });
+  Array.from(track.children).forEach((panel, index) => {
+    Object.defineProperty(panel, "offsetWidth", { configurable: true, value: width * 0.9 });
+    Object.defineProperty(panel, "offsetLeft", { configurable: true, value: width * 0.05 + index * (width * 0.9 + 8) });
+  });
   const scrollTo = vi.fn(({ left }: { left: number }) => { track.scrollLeft = left; });
   track.scrollTo = scrollTo as unknown as typeof track.scrollTo;
   return { track, scrollTo };
@@ -71,7 +79,7 @@ describe("Slide kartu utama Beranda", () => {
     const segment = (name: RegExp) => screen.getByRole("button", { name });
     // Tap the third: slides to 2 x width.
     fireEvent.click(segment(/Akan datang/));
-    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: 600 }));
+    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: 2 * PITCH }));
     fireEvent.scroll(track);
     expect(segment(/Akan datang/).getAttribute("aria-current")).toBe("true");
     expect(segment(/Sedang berlangsung/).getAttribute("aria-current")).toBeNull();
@@ -79,7 +87,7 @@ describe("Slide kartu utama Beranda", () => {
     track.scrollLeft = 0; fireEvent.scroll(track);
     expect(segment(/Selesai/).getAttribute("aria-current")).toBe("true");
     // Half-way between the first and second rounds to the nearer one.
-    track.scrollLeft = 170; fireEvent.scroll(track);
+    track.scrollLeft = 150; fireEvent.scroll(track);
     expect(segment(/Sedang berlangsung/).getAttribute("aria-current")).toBe("true");
   });
 
@@ -87,11 +95,11 @@ describe("Slide kartu utama Beranda", () => {
     const first = data({ slides: { done: side("s2", "Sarapan"), upcoming: side("s4", "Makan siang") } });
     const { rerender } = render(<Harness home={first} />);
     const { track, scrollTo } = stubTrack(300);
-    track.scrollLeft = 600; fireEvent.scroll(track);
+    track.scrollLeft = 2 * PITCH; fireEvent.scroll(track);
     expect(screen.getByRole("button", { name: /Akan datang/ }).getAttribute("aria-current")).toBe("true");
     scrollTo.mockClear();
     act(() => rerender(<Harness home={{ ...first, now: { ...live, sessionId: "s4", title: "Makan siang" }, slides: { done: side("s3", "Pemaparan departemen"), upcoming: side("s5", "Silent Meeting") } }} />));
-    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ left: 300 }));
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ left: PITCH }));
     expect(screen.getByRole("button", { name: /Sedang berlangsung: Makan siang/ }).getAttribute("aria-current")).toBe("true");
   });
 
@@ -102,7 +110,7 @@ describe("Slide kartu utama Beranda", () => {
     expect(segments[0].getAttribute("aria-current")).toBe("true");
     const { scrollTo } = stubTrack(300);
     fireEvent.click(segments[1]);
-    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: 300 }));
+    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: PITCH }));
   });
 
   it("the last session of the day: Selesai and Sekarang, no card after it", () => {
@@ -124,6 +132,33 @@ describe("Slide kartu utama Beranda", () => {
     expect(segments).toHaveLength(2);
     expect(screen.getByText("Hari ini selesai")).toBeTruthy();
     expect(segments[1].getAttribute("aria-current")).toBe("true");
+  });
+
+  it("is a carousel: the card in view 90 % wide so the next one peeks in, one snap per card, and the track is as tall as the card in view", () => {
+    const css = readFileSync(join(process.cwd(), "src/components/main-wam/peserta/beranda/beranda.module.css"), "utf8");
+    expect(css).toMatch(/\.panel \{[^}]*flex: 0 0 100%[^}]*scroll-snap-align: center[^}]*scroll-snap-stop: always/);
+    expect(css).toMatch(/\.track \{[^}]*align-items: flex-start[^}]*scroll-snap-type: x mandatory/);
+    expect(css).toMatch(/padding-left: 5%; padding-right: 5%/);
+    render(<Harness home={data({ slides: { done: side("s2", "Sarapan"), upcoming: side("s4", "Makan siang") } })} />);
+    const { track } = stubTrack(300);
+    Array.from(track.children).forEach((panel, index) => {
+      Object.defineProperty(panel, "offsetHeight", { configurable: true, value: [180, 320, 200][index] });
+    });
+    // Swiping to the third card: the track follows the card in view (jsdom reads the glow room as 0).
+    act(() => { track.scrollLeft = 2 * PITCH; fireEvent.scroll(track); });
+    expect(screen.getByRole("button", { name: /Akan datang/ }).getAttribute("aria-current")).toBe("true");
+    expect(track.style.height).toBe("200px");
+    act(() => { track.scrollLeft = 0; fireEvent.scroll(track); });
+    expect(track.style.height).toBe("180px");
+  });
+
+  it("the Sekarang card has no 'Berikutnya' row any more: the next session is the Akan datang card beside it", () => {
+    render(<Harness home={data({ now: { ...live, next: { time: "12.00", title: "Makan siang", place: "Restoran" } }, slides: { done: null, upcoming: side("s4", "Makan siang") } })} />);
+    const cards = screen.getAllByRole("group").filter(el => el.getAttribute("aria-roledescription") === "slide");
+    expect(within(cards[0]).queryByText("Berikutnya")).toBeNull();
+    expect(within(cards[0]).queryByText("Makan siang")).toBeNull();
+    expect(within(cards[1]).getByText("Akan datang")).toBeTruthy();
+    expect(within(cards[1]).getByRole("link", { name: /Detail sesi: Makan siang/ })).toBeTruthy();
   });
 
   it("the indicator is the English words in English", async () => {

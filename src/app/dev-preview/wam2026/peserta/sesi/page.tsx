@@ -7,7 +7,11 @@ import { SessionScreen } from "@/components/main-wam/peserta/agenda/SessionScree
 import { SessionSheet, SessionSheetLoading } from "@/components/main-wam/peserta/agenda/SessionSheet";
 import { ceklisBlock } from "@/lib/main-wam/ceklis/ceklis";
 import { sampleChecklistItems, sampleChecklists, samplePrepSession } from "@/lib/main-wam/ceklis/sample";
-import { AgendaSkeleton } from "@/components/main-wam/peserta/Skeletons";
+import { AgendaScreen } from "@/components/main-wam/peserta/agenda/AgendaScreen";
+import { agendaDays, agendaRowsOfTab, shownTab } from "@/lib/main-wam/peserta/agenda";
+import { hhmm } from "@/lib/main-wam/peserta/format";
+import { sampleSettings } from "@/lib/main-wam/sample";
+import { todayOf } from "../sample";
 import { contactLinks } from "@/lib/main-wam/peserta/contact";
 import { sessionView } from "@/lib/main-wam/peserta/session";
 import { samplePeople, sampleSessionIds } from "@/lib/main-wam/sample";
@@ -30,7 +34,16 @@ export default async function PreviewSession({ searchParams }: { searchParams: P
   const prep = params.sesi === "persiapan";
   const key = params.sesi && params.sesi in sampleSessionIds ? params.sesi : prep ? "persiapan" : "pemaparan";
   const path = mainWamPath.session(prep ? samplePrepSession.id : sampleSessionIds[key]);
-  if (params.status === "memuat") return <Frame path={path} now={now} lang={lang}><AgendaSkeleton /><SessionSheetLoading /></Frame>;
+  // Loading: the screen behind stays as it is (Agenda here; from Beranda it is Beranda), only the sheet is a skeleton.
+  if (params.status === "memuat") {
+    const event = sampleSettings().event;
+    const tab = shownTab(undefined, now, event, []);
+    return <Frame path={mainWamPath.agenda()} now={now} lang={lang}>
+      <AgendaScreen migrated days={agendaDays(event, todayOf(now), lang, [])} day={/^\d+$/.test(tab) ? Number(tab) : 0} tab={tab}
+        rows={agendaRowsOfTab(previewSessions(now), tab, event, now, previewLog(now), lang)} anyPublished since={hhmm(new Date(now.getTime() - 120_000).toISOString(), lang)} />
+      <SessionSheetLoading />
+    </Frame>;
+  }
   const found = prep ? samplePrepSession : previewSessions(now).find(session => session.id === sampleSessionIds[key])!;
   const session = params.status === "batal" ? { ...found, status: "batal" as const } : found;
   const dimas = samplePeople.dimas;

@@ -86,35 +86,45 @@ describe("(app)/layout: the frame", () => {
   it("nobody signed in, mode pra/uji: no frame, no loading screen, no screen; WAM's sign-in instead", async () => {
     for (const each of ["pra", "uji"] as const) {
       mode = each;
-      expect(typeOf(await AppLayout({ children: page }))).toBe(SignInFirst);
+      expect(typeOf(await AppLayout({ children: page, sheet: null }))).toBe(SignInFirst);
     }
   });
 
   it("nobody signed in, mode semua: the screen (it sends them to Main WAM's sign-in)", async () => {
     mode = "semua";
-    expect(await AppLayout({ children: page })).toBe(page);
+    expect(await AppLayout({ children: page, sheet: null })).toBe(page);
   });
 
   it("signed in but not a penguji in mode pra/uji: not found", async () => {
     viewer = person(false);
     for (const each of ["pra", "uji"] as const) {
       mode = each;
-      await expect(AppLayout({ children: page })).rejects.toThrow("NOT_FOUND");
+      await expect(AppLayout({ children: page, sheet: null })).rejects.toThrow("NOT_FOUND");
     }
   });
 
   it("a penguji: the frame, with the role on the day line for panitia", async () => {
     viewer = person(true, ["panitia"]);
-    const out = await AppLayout({ children: page }) as ReactElement<{ unread: number; greeting: { name: string } }>;
+    const out = await AppLayout({ children: page, sheet: null }) as ReactElement<{ unread: number; greeting: { name: string } }>;
     expect(typeOf(out)).toBe(MainWamShell);
     expect(out.props).toMatchObject({ unread: 2, greeting: { name: "Dimas" }, committee: true });
+  });
+
+  it("draws the @sheet slot (Detail sesi opened from inside the app) next to the screen, inside the frame", async () => {
+    viewer = person(true, ["panitia"]);
+    const sheet = <aside id="sheet" />;
+    const out = await AppLayout({ children: page, sheet }) as ReactElement<{ children: unknown[] }>;
+    const kids = Array.isArray(out.props.children) ? out.props.children : [out.props.children];
+    expect(kids).toContain(page);
+    expect(kids).toContain(sheet);
+    expect(kids.indexOf(sheet)).toBe(kids.indexOf(page) + 1);
   });
 
   it("the Panitia tab only for the panitia role: not a peserta, a BOD, or an admin who is not panitia", async () => {
     mode = "semua";
     for (const [roles, tab] of [[[], false], [["bod"], false], [["admin"], false], [["panitia"], true], [["admin", "panitia"], true]] as const) {
       viewer = person(roles.includes("admin" as never), [...roles]);
-      const out = await AppLayout({ children: page }) as ReactElement<{ committee: boolean }>;
+      const out = await AppLayout({ children: page, sheet: null }) as ReactElement<{ committee: boolean }>;
       expect(out.props.committee, roles.join("+") || "peserta").toBe(tab);
     }
   });

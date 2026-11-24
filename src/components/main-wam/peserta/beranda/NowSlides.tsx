@@ -56,9 +56,27 @@ function SideCard({ slot, session }: { slot: "done" | "upcoming"; session: Slide
   </BracketCard>;
 }
 
+// Where a card sits when it is centred in the track (the cards are 90 % wide with the neighbours peeking at both edges).
+const leftOf = (el: HTMLElement, index: number) => {
+  const panel = el.children[index] as HTMLElement | undefined;
+  return panel ? Math.max(panel.offsetLeft - (el.clientWidth - panel.offsetWidth) / 2, 0) : 0;
+};
+const nearest = (el: HTMLElement) => {
+  const middle = el.scrollLeft + el.clientWidth / 2;
+  let best = 0;
+  let gap = Infinity;
+  Array.from(el.children).forEach((child, index) => {
+    const panel = child as HTMLElement;
+    const away = Math.abs(panel.offsetLeft + panel.offsetWidth / 2 - middle);
+    if (away < gap) { gap = away; best = index; }
+  });
+  return best;
+};
+
 /**
- * Beranda's main card as a slide of at most three cards, one per screen, swiped sideways (scroll-snap, no
- * scrollbar): the session that has just ended ("Selesai"), the Sekarang card, the one after it
+ * Beranda's main card as a carousel of at most three cards: the card in view is about 90 % wide with the edge of
+ * the one before and after peeking in, swiped sideways with one snap per card (scroll-snap, no scrollbar), and the
+ * track is as tall as the card in view. The session that has just ended ("Selesai"), the Sekarang card, the one after it
  * ("Akan datang"). It opens on the Sekarang card, and goes back to it when the session changes. The
  * indicator, one segment per card, sits in the head before the bell (ShellIndicator); a tap moves
  * to that card. The side cards come from the sessions already loaded (homeSlides): no more reads.
@@ -82,7 +100,7 @@ export function NowSlides({ data, absen, serverNow }: { data: HomeData; absen?: 
   const go = useCallback((index: number, smooth: boolean) => {
     const el = track.current;
     if (!el) return;
-    const left = index * el.clientWidth;
+    const left = leftOf(el, index);
     const calm = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (typeof el.scrollTo === "function") el.scrollTo({ left, behavior: smooth && !calm ? "smooth" : "auto" });
     else el.scrollLeft = left;
@@ -105,16 +123,35 @@ export function NowSlides({ data, absen, serverNow }: { data: HomeData; absen?: 
     return () => window.removeEventListener("resize", onResize);
   }, [active, go]);
 
+  // The track is as tall as the card in view (not as the tallest of the three); it follows when the card changes or grows.
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = track.current;
+    const panel = el?.children[active] as HTMLElement | undefined;
+    if (!el || !panel || slides.length < 2) { setHeight(null); return; }
+    const measure = () => {
+      const style = window.getComputedStyle(el);
+      const room = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+      const wanted = panel.offsetHeight;
+      setHeight(wanted > 0 ? wanted + room : null);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [active, slides.length, anchor]);
+
   const onScroll = () => {
     const el = track.current;
     if (!el || !el.clientWidth) return;
-    setActive(Math.min(Math.max(Math.round(el.scrollLeft / el.clientWidth), 0), slides.length - 1));
+    setActive(nearest(el));
   };
 
   const word = (slide: Slide) => t(`peserta.slides.${slideStatus(slide.slot, slide.slot === "now" ? nowStatus : null)}`);
   const single = slides.length < 2;
   return <div className={css.slides}>
-    <div ref={track} className={css.track} role="region" aria-roledescription="carousel" aria-label={t("peserta.slides.label")} tabIndex={single ? undefined : 0} onScroll={onScroll}>
+    <div ref={track} className={css.track} data-single={single ? "" : undefined} style={height ? { height } : undefined} role="region" aria-roledescription="carousel" aria-label={t("peserta.slides.label")} tabIndex={single ? undefined : 0} onScroll={onScroll}>
       {slides.map((slide, index) => <div key={slide.key} className={css.panel} role="group" aria-roledescription="slide" aria-label={t("peserta.slides.card", { n: index + 1, total: slides.length })} data-slot={slide.slot}>{slide.node}</div>)}
     </div>
     {!single && <ShellIndicator>

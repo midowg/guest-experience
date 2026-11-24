@@ -25,9 +25,16 @@ const code = (path: string) => readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\
 
 describe("Main WAM's pages and APIs", () => {
   it("call the gate on every page inside the frame", () => {
-    const pages = files(join(root, "(app)"), "page.tsx");
+    // The @sheet slot's catch-all draws nothing (it only clears the sheet), so it has no data to gate.
+    const pages = files(join(root, "(app)"), "page.tsx").filter(path => !/@sheet[\\/]\[\.\.\.catchAll\]/.test(path));
     expect(pages.length).toBeGreaterThanOrEqual(4);
     for (const page of pages) expect(code(page), page).toMatch(/require(MainWam|Module|Action)Page\(/);
+  });
+
+  it("draw no sheet from the @sheet slot's catch-all and answer the frame's own page with a 404 (an unknown address stays one)", () => {
+    expect(code(join(root, "(app)", "@sheet", "[...catchAll]", "page.tsx"))).toMatch(/return null/);
+    expect(code(join(root, "(app)", "@sheet", "default.tsx"))).toMatch(/return null/);
+    expect(code(join(root, "(app)", "default.tsx"))).toMatch(/notFound\(\)/);
   });
 
   it("call the gate in every API, except the theme's images (public: the splash shows before signing in)", () => {

@@ -35,7 +35,7 @@ export function AgendaSkeleton() {
   return <ScreenContent>
     <ShellChrome hideTopBar />
     <SkeletonGroup label="Memuat agenda" className={css.skeletonStack}>
-      <div className={own.skHead}><span className={css.skeletonBody}><Skeleton width={64} height={14} /><Skeleton width={180} height={44} /></span><Skeleton shape="circle" width={44} height={44} /></div>
+      <div className={own.skHead}><span className={css.skeletonBody}><Skeleton width={64} height={14} /><Skeleton width={180} height={44} /></span></div>
       <div className={css.dayBar}>
         <div className={`${css.dayTabs} ${css.skeletonTabs}`}>
           {[0, 1, 2, 3].map(day => <Skeleton key={day} shape="block" height={52} />)}

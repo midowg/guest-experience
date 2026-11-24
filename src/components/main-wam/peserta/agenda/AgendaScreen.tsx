@@ -1,11 +1,11 @@
 "use client";
 
-import { Bell, CalendarDays, Hourglass } from "lucide-react";
+import { CalendarDays, Hourglass } from "lucide-react";
 import type { AgendaDayTab, AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import { mainWamPath } from "@/lib/routes";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
-import { EmptyState, EyebrowLabel, IconButton, NetworkMotif } from "@/components/main-wam/ui";
+import { EmptyState, EyebrowLabel, NetworkMotif } from "@/components/main-wam/ui";
 import { OfflineBanner } from "../Live";
 import { AgendaDayTabs } from "./AgendaDayTabs";
 import { AgendaTimeline } from "./AgendaTimeline";
@@ -18,17 +18,15 @@ const tabHref = (item: AgendaDayTab) => (item.prep ? mainWamPath.agendaPrep(Numb
 
 /**
  * Agenda (P03, prototipe final SC.agenda): the screen draws its own head, "AGENDA" over "HARI KE-2" (or
- * "PERSIAPAN") in big Barlow capitals with the bell, then the day tabs (the chosen day in the address, so
+ * "PERSIAPAN") in big Barlow capitals (no bell: it is Beranda's alone), then the day tabs (the chosen day in the address, so
  * Back and a reload keep it; a big number over "Sel Jan", "H-3" over "1 Jan" for a Persiapan day, today
  * dotted), then a timeline: hours, a rail with a node, title, place and small tags (kind, "Wajib absen",
  * "Ceklis 0/2"); the running one lit gold with "Sedang berlangsung", the next marked "Berikutnya", a moved
  * one "Jam berubah", a cancelled one struck through and not openable. A row opens Detail sesi (a sheet).
  */
-export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, since, forceOffline, unread = 0 }: {
+export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, since, forceOffline }: {
   migrated: boolean; days: AgendaDayTab[]; day: number; /** The tab's key ("2", or "h3" for a Persiapan day); the day's number when left out. */ tab?: string;
   rows: AgendaRow[]; anyPublished: boolean; since: string; forceOffline?: boolean;
-  /** Unread notifications, the bell's badge (the shell only draws the bell on Beranda). */
-  unread?: number;
 }) {
   const t = useT();
   const key = tab ?? String(day);
@@ -46,7 +44,6 @@ export function AgendaScreen({ migrated, days, day, tab, rows, anyPublished, sin
         <EyebrowLabel>{t("peserta.agenda.eyebrow")}</EyebrowLabel>
         <h1 className={own.headTitle}>{title}</h1>
       </div>
-      <IconButton variant="tonal" icon={<Bell />} label={unread > 0 ? t("shell.bellUnread", { n: unread }) : t("shell.bell")} href={mainWamPath.notifications} badge={unread > 0 ? unread : undefined} />
     </header>
     <div className={css.dayBar}>
       <AgendaDayTabs className={css.dayTabs} current={key} days={days} hrefOf={tabHref} label={t("ui.eventDays")} />

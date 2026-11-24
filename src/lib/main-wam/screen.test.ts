@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mainWamPath } from "@/lib/routes";
-import { mainWamScreen, mainWamTabs, mainWamTabsFor, showsBell, showsBottomBar } from "./screen";
+import { isSessionSheetPath, mainWamScreen, mainWamTabs, mainWamTabsFor, showsBell, showsBottomBar } from "./screen";
 
 const at = (path: string) => mainWamScreen(path.split("?")[0]);
 
@@ -31,7 +31,7 @@ describe("Main WAM's frame, from the address alone", () => {
     for (const [path, title] of [[mainWamPath.rundownLive(2), "Rundown live"], [mainWamPath.attendanceManual("s1"), "Absen sesi"], [mainWamPath.moderation("disembunyikan"), "Moderasi Momen"]] as const) {
       expect(at(path), path).toMatchObject({ tab: "panitia", level: "detail", title });
       expect(at(path)?.back?.href, path).toBe(mainWamPath.committee);
-      expect(showsBottomBar(at(path)), path).toBe(true);
+      expect(showsBottomBar(at(path)), path).toBe(false);
     }
     expect(at(mainWamPath.announce)).toMatchObject({ tab: "panitia", level: "tugas", back: { href: mainWamPath.committee } });
     expect(showsBottomBar(at(mainWamPath.announce))).toBe(false);
@@ -48,7 +48,7 @@ describe("Main WAM's frame, from the address alone", () => {
     expect(at(`${mainWamPath.home}/`)).toMatchObject({ tab: "beranda", level: "akar" });
   });
 
-  it("keeps the bottom bar on detail screens, with the tab they belong to and a way back", () => {
+  it("drops the bottom bar on every detail screen (a page opened from a tab), which keeps its tab as a family and has a way back", () => {
     const cases: [string, string, string, string][] = [
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
       [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
@@ -69,9 +69,26 @@ describe("Main WAM's frame, from the address alone", () => {
       const screen = at(path);
       expect(screen, path).toMatchObject({ tab, level: "detail", title });
       expect(screen?.back?.href, path).toBe(back);
-      expect(showsBottomBar(screen), path).toBe(true);
+      expect(showsBottomBar(screen), path).toBe(false);
       expect(showsBell(screen), path).toBe(false);
     }
+  });
+
+  it("shows the bottom bar on the tab roots alone, and the bell on Beranda's root alone, for every address the app has", () => {
+    const addresses = [mainWamPath.home, mainWamPath.agenda(), mainWamPath.agenda(2), mainWamPath.agendaPrep(3), mainWamPath.moments(), mainWamPath.me, mainWamPath.committee,
+      mainWamPath.notifications, mainWamPath.missions, mainWamPath.mosaic(), mainWamPath.camera(), mainWamPath.room, mainWamPath.travel("pulang"), mainWamPath.guides, mainWamPath.guide("denah-venue"),
+      mainWamPath.settings, mainWamPath.help, mainWamPath.carbon(), mainWamPath.carbon("saya"), mainWamPath.awards, mainWamPath.scan, mainWamPath.silentMeeting(), mainWamPath.rundownLive(2), mainWamPath.announce];
+    const roots = new Set([mainWamPath.home, mainWamPath.agenda(), mainWamPath.agenda(2), mainWamPath.agendaPrep(3), mainWamPath.moments(), mainWamPath.me, mainWamPath.committee]);
+    for (const path of addresses) {
+      expect(showsBottomBar(at(path)), path).toBe(roots.has(path));
+      expect(showsBell(at(path)), path).toBe(path === mainWamPath.home);
+    }
+  });
+
+  it("knows a session's own address (the sheet), and no other", () => {
+    expect(isSessionSheetPath(mainWamPath.session("s-1"))).toBe(true);
+    expect(isSessionSheetPath(`${mainWamPath.session("s-1")}/`)).toBe(true);
+    for (const path of [mainWamPath.agenda(), mainWamPath.agenda(2), mainWamPath.agendaPrep(3), mainWamPath.home, mainWamPath.moments(), `${mainWamPath.session("s-1")}/x`]) expect(isSessionSheetPath(path), path).toBe(false);
   });
 
   it("draws Agenda's own frame behind Detail sesi, which is a sheet over it (P04)", () => {

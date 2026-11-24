@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Bell, FlaskConical, X } from "lucide-react";
-import { mainWamScreen, showsBell, showsBottomBar, type MainWamScreen } from "@/lib/main-wam/screen";
+import { isSessionSheetPath, mainWamScreen, showsBell, showsBottomBar, type MainWamScreen } from "@/lib/main-wam/screen";
 import { mainWamPath } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { IconButton } from "../ui/Button";
@@ -35,7 +35,8 @@ export type ShellGreeting = {
  *   takes over once it scrolls away), or ‹ + title on a detail screen and ✕ + title on a task
  *   screen. The camera has its own. A screen adds buttons with <ShellActions> and can
  *   turn a bar off with <ShellChrome>.
- * - bottom bar on tab roots and details, never on tasks.
+ * - bottom bar on the tab roots only (Beranda, Agenda, Momen, Saya, and Panitia for panitia): every page opened
+ *   from one (a detail, a task) hides it and has ‹ or ✕ in its top bar instead (revisi 24 Nov).
  * - toasts (ToastProvider) above the bottom bar.
  * Safe areas (notch, home bar) are padded; on a wide screen the app is a phone-wide column.
  * Wrap it in <MainWamTheme>. `screen` forces a frame (previews only).
@@ -59,7 +60,12 @@ export function MainWamShell({ children, greeting, unread = 0, badges, committee
   const router = useRouter();
   const { lang } = useLang();
   const t = useT();
-  const screen = forced !== undefined ? forced : mainWamScreen(pathname ?? "", lang);
+  // Detail sesi is a sheet over whichever screen opened it (Beranda, Agenda, Notifikasi: the sheet route is
+  // intercepted, so the page behind stays); the frame is that screen's, not the sheet's address's. Opened
+  // directly (a link, a reload) the page is Agenda with the sheet, so the address itself is the frame.
+  const [behind, setBehind] = useState(pathname ?? "");
+  if (pathname && !isSessionSheetPath(pathname) && behind !== pathname) setBehind(pathname);
+  const screen = forced !== undefined ? forced : mainWamScreen(pathname && isSessionSheetPath(pathname) ? behind : (pathname ?? ""), lang);
   const camera = !!screen?.camera;
   const nav = showsBottomBar(screen);
   const [slot, setSlot] = useState<HTMLElement | null>(null);

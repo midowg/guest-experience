@@ -18,7 +18,7 @@ const KIND_ICON = { sesi: <CalendarDays />, makan: <Utensils />, perjalanan: <Tr
  * Kartu Sekarang (P01, P01__status, P02; prototipe .mc): the session that matters now, as the gold
  * bracket card: its state in gold capitals ("SEDANG BERLANGSUNG"), the title in big Barlow capitals,
  * where and when, how far it has run, "WAJIB ABSEN · Tutup 08.30" beside the gold Absen button (agen D's
- * SessionAbsen, passed as `absen`), and the session that follows ("BERIKUTNYA 12.00"). Else "Hari
+ * SessionAbsen, passed as `absen`) (the session that follows is its own card in the slide, "Akan datang"). Else "Hari
  * ini selesai" with tomorrow's first session. The title and place open Detail sesi; the Absen button
  * sits beside that link, never inside it.
  */
@@ -70,11 +70,6 @@ export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; abs
         {view.absenCloses && <span className={css.footSub}>{t("peserta.now.absenCloses", { time: view.absenCloses })}</span>}
       </div>
       <div className={css.absen}>{absen}</div>
-    </div>}
-    {view.next && live && <div className={css.next}>
-      <span className={css.nextTime}>{view.next.time}</span>
-      <span className={css.nextText}><b>{view.next.title}</b>{view.next.place && <small>{view.next.place}</small>}</span>
-      <EyebrowLabel tone="gold" className={css.nextTag}>{t("peserta.now.nextUp")}</EyebrowLabel>
     </div>}
   </BracketCard>;
 }
