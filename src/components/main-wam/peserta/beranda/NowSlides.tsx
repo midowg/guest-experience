@@ -46,7 +46,7 @@ function SideCard({ slot, session }: { slot: "done" | "upcoming"; session: Slide
       </span>
       <Pill icon={KIND_ICON[session.sessionKind]}>{t(`peserta.session.kind.${session.sessionKind}`)}</Pill>
     </div>
-    <div className={css.link}>{body}</div>
+    <div className={`${css.link} ${css.sideBody}`}>{body}</div>
     <div className={css.sideFoot}>
       {!done && <span className={css.nextTime}>{session.time.split("–")[0]}</span>}
       <Link href={mainWamPath.session(session.sessionId)} className={css.detailLink} aria-label={`${t("peserta.slides.detail")}: ${session.title}`}>
@@ -74,10 +74,11 @@ const nearest = (el: HTMLElement) => {
 };
 
 /**
- * Beranda's main card as a carousel of at most three cards: the card in view is about 90 % wide with the edge of
- * the one before and after peeking in, swiped sideways with one snap per card (scroll-snap, no scrollbar), and the
- * track is as tall as the card in view. The session that has just ended ("Selesai"), the Sekarang card, the one after it
- * ("Akan datang"). It opens on the Sekarang card, and goes back to it when the session changes. The
+ * Beranda's main card as a carousel of at most three cards: the session that has just ended ("Selesai"), the Sekarang
+ * card, the one after it ("Akan datang"). The card in view is about 90 % wide with the edge of the one before and after
+ * peeking in, swiped sideways with one snap per card (scroll-snap, no scrollbar). All the cards are one height, the
+ * Sekarang card's (the track stretches them: the tallest side card only wins when it is taller, so no text is cut), and it
+ * never changes while swiping. It opens on the Sekarang card, and goes back to it when the session changes. The
  * indicator, one segment per card, sits in the head before the bell (ShellIndicator); a tap moves
  * to that card. The side cards come from the sessions already loaded (homeSlides): no more reads.
  */
@@ -123,25 +124,6 @@ export function NowSlides({ data, absen, serverNow }: { data: HomeData; absen?: 
     return () => window.removeEventListener("resize", onResize);
   }, [active, go]);
 
-  // The track is as tall as the card in view (not as the tallest of the three); it follows when the card changes or grows.
-  const [height, setHeight] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const el = track.current;
-    const panel = el?.children[active] as HTMLElement | undefined;
-    if (!el || !panel || slides.length < 2) { setHeight(null); return; }
-    const measure = () => {
-      const style = window.getComputedStyle(el);
-      const room = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-      const wanted = panel.offsetHeight;
-      setHeight(wanted > 0 ? wanted + room : null);
-    };
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(panel);
-    return () => observer.disconnect();
-  }, [active, slides.length, anchor]);
-
   const onScroll = () => {
     const el = track.current;
     if (!el || !el.clientWidth) return;
@@ -151,7 +133,7 @@ export function NowSlides({ data, absen, serverNow }: { data: HomeData; absen?: 
   const word = (slide: Slide) => t(`peserta.slides.${slideStatus(slide.slot, slide.slot === "now" ? nowStatus : null)}`);
   const single = slides.length < 2;
   return <div className={css.slides}>
-    <div ref={track} className={css.track} data-single={single ? "" : undefined} style={height ? { height } : undefined} role="region" aria-roledescription="carousel" aria-label={t("peserta.slides.label")} tabIndex={single ? undefined : 0} onScroll={onScroll}>
+    <div ref={track} className={css.track} data-single={single ? "" : undefined} role="region" aria-roledescription="carousel" aria-label={t("peserta.slides.label")} tabIndex={single ? undefined : 0} onScroll={onScroll}>
       {slides.map((slide, index) => <div key={slide.key} className={css.panel} role="group" aria-roledescription="slide" aria-label={t("peserta.slides.card", { n: index + 1, total: slides.length })} data-slot={slide.slot}>{slide.node}</div>)}
     </div>
     {!single && <ShellIndicator>

@@ -134,22 +134,23 @@ describe("Slide kartu utama Beranda", () => {
     expect(segments[1].getAttribute("aria-current")).toBe("true");
   });
 
-  it("is a carousel: the card in view 90 % wide so the next one peeks in, one snap per card, and the track is as tall as the card in view", () => {
+  it("is a carousel: the card in view 90 % wide so the next one peeks in, one snap per card, and every card is one height (the track stretches them, nothing sets a height while swiping)", () => {
     const css = readFileSync(join(process.cwd(), "src/components/main-wam/peserta/beranda/beranda.module.css"), "utf8");
     expect(css).toMatch(/\.panel \{[^}]*flex: 0 0 100%[^}]*scroll-snap-align: center[^}]*scroll-snap-stop: always/);
-    expect(css).toMatch(/\.track \{[^}]*align-items: flex-start[^}]*scroll-snap-type: x mandatory/);
+    expect(css).toMatch(/\.track \{[^}]*align-items: stretch[^}]*scroll-snap-type: x mandatory/);
+    expect(css).not.toMatch(/\.track \{[^}]*align-items: flex-start/);
     expect(css).toMatch(/padding-left: 5%; padding-right: 5%/);
+    // The side cards keep their foot (Detail sesi) at the bottom of the taller card and centre the title and place above it.
+    expect(css).toMatch(/\.sideFoot \{[^}]*margin-top: auto/);
+    expect(css).toMatch(/\.sideBody \{[^}]*margin-top: auto/);
     render(<Harness home={data({ slides: { done: side("s2", "Sarapan"), upcoming: side("s4", "Makan siang") } })} />);
     const { track } = stubTrack(300);
-    Array.from(track.children).forEach((panel, index) => {
-      Object.defineProperty(panel, "offsetHeight", { configurable: true, value: [180, 320, 200][index] });
-    });
-    // Swiping to the third card: the track follows the card in view (jsdom reads the glow room as 0).
+    expect(track.style.height).toBe("");
     act(() => { track.scrollLeft = 2 * PITCH; fireEvent.scroll(track); });
     expect(screen.getByRole("button", { name: /Akan datang/ }).getAttribute("aria-current")).toBe("true");
-    expect(track.style.height).toBe("200px");
+    expect(track.style.height).toBe("");
     act(() => { track.scrollLeft = 0; fireEvent.scroll(track); });
-    expect(track.style.height).toBe("180px");
+    expect(track.style.height).toBe("");
   });
 
   it("the Sekarang card has no 'Berikutnya' row any more: the next session is the Akan datang card beside it", () => {

@@ -16,15 +16,15 @@
 .metaItem > span { min-width: 0; overflow-wrap: anywhere; }
 .chevron { width: 20px; height: 20px; color: var(--mw-text-2); }
 
-/* The carousel of up to three cards: the card in view is 90 % wide, centred, with the edge of the one before and after peeking in (5 % each side less the gap), one snap per card, no scrollbar; it bleeds to the screen edges and is as tall as the card in view (NowSlides sets the height; without script the tallest). It opens on the Sekarang card (NowSlides sets data-ready once it has scrolled there; without script it shows after a moment). */
+/* The carousel of up to three cards: the card in view is 90 % wide, centred, with the edge of the one before and after peeking in (5 % each side less the gap), one snap per card, no scrollbar; it bleeds to the screen edges and every card is as tall as the Sekarang card (the track stretches its cards to one height: the Sekarang card's, or the tallest side card when that one is taller, so it never changes while swiping and no text is cut). It opens on the Sekarang card (NowSlides sets data-ready once it has scrolled there; without script it shows after a moment). */
 .slides { display: flex; flex-direction: column; min-width: 0; }
 .track {
-  display: flex; align-items: flex-start; gap: var(--mw-space-8); overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+  display: flex; align-items: stretch; gap: var(--mw-space-8); overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
   /* bleed to the screen edges (the screen's own side margin, 16) and keep the first and last card centred like the ones between */
   margin-left: calc(var(--mw-space-16) * -1); margin-right: calc(var(--mw-space-16) * -1); padding-left: 5%; padding-right: 5%;
   /* room above and below for the card's glow, which an overflow container would cut */
   margin-top: calc(var(--mw-space-16) * -1); margin-bottom: calc(var(--mw-space-24) * -1); padding-top: var(--mw-space-16); padding-bottom: var(--mw-space-24);
-  opacity: 0; animation: mwSlidesShow 0s linear 600ms forwards; transition: height var(--mw-motion-base);
+  opacity: 0; animation: mwSlidesShow 0s linear 600ms forwards;
 }
 .track[data-ready] { opacity: 1; animation: none; }
 .track::-webkit-scrollbar { display: none; }
@@ -35,10 +35,12 @@
 /* A single card is the whole row, as before. */
 .track[data-single] { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
 @keyframes mwSlidesShow { to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } }
 
 /* A finished session is a little quieter than the live one; its link to Detail sesi is small. */
 .sideDone .title { color: var(--mw-text-2); }
+/* In a card taller than its own content (the Sekarang card sets the height) the title and place sit centred between the top row and the foot, which stays at the bottom. */
+.sideBody { margin-top: auto; }
 .sideFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mw-space-8) var(--mw-space-12); margin-top: auto; padding-top: var(--mw-space-8); border-top: 1px solid var(--mw-outline); }
 .detailLink { display: inline-flex; align-items: center; gap: var(--mw-space-4); min-height: 44px; margin-left: auto; font: var(--mw-type-label); color: var(--mw-primary); text-decoration: none; -webkit-tap-highlight-color: transparent; }
 .detailLink > svg { width: 18px; height: 18px; }
