@@ -20,7 +20,7 @@ import { formContent, questionnaireMissing, questionnaireWaiting } from "./quest
  */
 
 /** One named answer, with the level it is read at (see answerLevel). */
-type Row = { employee_id: string; question_id: string; value: AnswerValue; level: Visibility };
+export type Row = { employee_id: string; question_id: string; value: AnswerValue; level: Visibility };
 
 const failed = (error: { code?: string; message?: string }): never => {
   if (questionnaireMissing(error)) throw questionnaireWaiting();
@@ -42,7 +42,7 @@ async function allRows<T>(read: (from: number, to: number) => PromiseLike<{ data
  * Named answers to these questions. "*" brings read_level once migration 202611050002 is in and
  * breaks nothing before it; each row is then read at the stricter of its own level and its question's.
  */
-async function namedAnswers(formId: string, questionIds: string[], questions: QQuestion[]): Promise<Row[]> {
+export async function namedAnswers(formId: string, questionIds: string[], questions: QQuestion[]): Promise<Row[]> {
   if (!questionIds.length) return [];
   const client = createPrivilegedClient();
   const levelOf = new Map(questions.map(question => [question.id, question.visibility]));
@@ -63,7 +63,7 @@ async function anonymousAnswers(formId: string, questionIds: string[]): Promise<
 }
 
 /** Each person's sharing choice per section that has a deciding question (question 30). */
-function sharesOf(questions: QQuestion[], sectionIds: string[], rows: Row[]): Map<string, Map<string, Share>> {
+export function sharesOf(questions: QQuestion[], sectionIds: string[], rows: Row[]): Map<string, Map<string, Share>> {
   const bySection = new Map<string, Map<string, Share>>();
   for (const sectionId of sectionIds) {
     const decider = shareQuestion(questions, sectionId);
@@ -76,7 +76,7 @@ function sharesOf(questions: QQuestion[], sectionIds: string[], rows: Row[]): Ma
 }
 
 /** Ids of the deciding questions, which the server reads for every reader (they hold no story, only a choice). */
-const deciderIds = (questions: QQuestion[], sectionIds: string[]) =>
+export const deciderIds = (questions: QQuestion[], sectionIds: string[]) =>
   sectionIds.map(sectionId => shareQuestion(questions, sectionId)?.id).filter((id): id is string => !!id);
 
 /* ---- Rekap ------------------------------------------------------------------------------------ */

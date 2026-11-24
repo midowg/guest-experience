@@ -27,11 +27,19 @@ describe("BodSummary", () => {
     expect(screen.getAllByText("Jadwal ruang belum bisa dibaca.").length).toBe(2);
   });
 
-  it("keeps Ringkasan simple: what matters and a way to Analitik, the charts only in Analitik (24 Nov 2026)", () => {
-    const { unmount } = render(<BodSummary data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" carbon={<p>Kartu karbon</p>} />);
+  it("keeps Ringkasan simple: what matters, the questionnaire under Jejak karbon, the figures and charts only in Analitik (24 Nov 2026)", () => {
+    const survey = { name: "Kuesioner personal WAM 2026", participation: { done: 38, active: 57 } };
+    const { container, unmount } = render(<BodSummary data={summary} insights={insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November" carbon={<p>Kartu karbon</p>} survey={survey} />);
     expect(screen.getByText("Perlu perhatian")).toBeTruthy();
-    expect(screen.getByText("Kartu karbon")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Lihat semua data/ }).getAttribute("href")).toBe("/wam/analitik");
+    const carbon = screen.getByText("Kartu karbon");
+    const card = screen.getByRole("region", { name: "Kuesioner personal WAM 2026" });
+    // The card comes right after Jejak karbon, in the same column.
+    expect(carbon.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Lihat semua jawaban/ }).getAttribute("href")).toBe("/wam/analitik/kuesioner");
+    expect(screen.getByRole("link", { name: /Export/ }).getAttribute("href")).toBe("/wam/analitik/kuesioner?export=1");
+    // The four figures are Analitik's: not repeated on Ringkasan, and no second way to Analitik beside the menu.
+    expect(container.querySelector('[aria-label="Angka utama"]')).toBeNull();
+    expect(screen.queryByRole("link", { name: /Lihat semua data/ })).toBeNull();
     expect(screen.queryByText("Kehadiran per forum")).toBeNull();
     expect(screen.queryByText("Pemakaian ruang")).toBeNull();
     unmount();

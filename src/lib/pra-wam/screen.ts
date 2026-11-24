@@ -32,6 +32,7 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.timeline: return { current: "timeline" };
     case praWamPath.account: return { current: "akun" };
     case praWamPath.analytics: return { current: "analitik" };
+    case praWamPath.bodSurvey: return { current: "analitik", back: { href: praWamPath.analytics, title: "Data kuesioner" } };
     // Pengaturan (9 Nov 2026): a screen of its own with the bottom bar, no back arrow to Profil.
     case praWamPath.settings: return { current: "akun" };
     case praWamPath.about: return { back: { href: search.get("dari") === "pengaturan" ? praWamPath.settings : praWamPath.home, title: "Tentang WAM" } };
