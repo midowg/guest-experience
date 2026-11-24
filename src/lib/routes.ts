@@ -652,6 +652,8 @@ export const mainWamApi = {
   silent: `${MAIN_WAM_API}/silent-meeting`,
   /** POST {questionId, topic, body}: one anonymous feedback (T01). */
   silentFeedback: `${MAIN_WAM_API}/silent-meeting/masukan`,
+  /** PUT {own, bottles, laptopHours, phoneCharges}: the person's own part of Jejak karbon (E01), as Pra WAM's calculator. */
+  carbon: `${MAIN_WAM_API}/karbon`,
   /** POST {action: "buka" | "tutup"}: panitia opens it early or closes it for good (K02 row); once closed it never opens again. */
   silentControl: (questionId: string) => `${MAIN_WAM_API}/silent-meeting/${enc(questionId)}/kontrol`,
   /** GET: categories, nominees, my votes (and for BOD the counts). */

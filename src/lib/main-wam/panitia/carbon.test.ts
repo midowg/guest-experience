@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tonnes } from "./format";
+import { CARBON_FACTORS as PRA_FACTORS } from "@/lib/pra-wam/carbon";
 import { CARBON_FACTORS, carbonDataFrom, carbonEstimate, nightsBetween, type CarbonData } from "./carbon";
 
 /*
@@ -58,7 +59,12 @@ describe("Jejak karbon", () => {
   });
 
   it("keeps the design's factors", () => {
-    expect(CARBON_FACTORS).toEqual({ keretaPerPenumpangKm: 0.0164, busPerBusKm: 0.89, makanPerPorsi: 1.9, hotelPerKamarMalam: 62.7, listrikPerKwh: 0.87, airPerM3: 0.4, lpgPerKg: 2.94, sampahPerKg: 0.5 });
+    expect(CARBON_FACTORS).toMatchObject({ keretaPerPenumpangKm: 0.0164, busPerBusKm: 0.89, makanPerPorsi: 1.9, hotelPerKamarMalam: 62.7, listrikPerKwh: 0.87, airPerM3: 0.4, lpgPerKg: 2.94, sampahPerKg: 0.5 });
+  });
+
+  it("is Pra WAM's table plus the hotel's bills: one source of truth, nothing written twice", () => {
+    for (const key of Object.keys(PRA_FACTORS) as (keyof typeof PRA_FACTORS)[]) expect(CARBON_FACTORS[key], key).toBe(PRA_FACTORS[key]);
+    expect(Object.keys(CARBON_FACTORS).sort()).toEqual([...Object.keys(PRA_FACTORS), "airPerM3", "lpgPerKg", "sampahPerKg"].sort());
   });
 });
 

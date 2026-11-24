@@ -1,3 +1,4 @@
+import { CARBON_FACTORS as PRA_FACTORS } from "@/lib/pra-wam/carbon";
 import type { CarbonInputs, MwSession, MwTrip } from "../types";
 
 /*
@@ -12,12 +13,13 @@ import type { CarbonInputs, MwSession, MwTrip } from "../types";
  *   listrik 0,87/kWh · air 0,4/m³ · LPG 2,94/kg · sampah 0,5/kg
  */
 
+/**
+ * One table for both apps (24 Nov 2026): Pra WAM's factors (src/lib/pra-wam/carbon.ts, which also holds
+ * mobil, motor, botol, laptop and HP) plus the hotel's bills only WAM 2026 has. Nothing is written twice,
+ * so the two can never drift apart.
+ */
 export const CARBON_FACTORS = {
-  keretaPerPenumpangKm: 0.0164,
-  busPerBusKm: 0.89,
-  makanPerPorsi: 1.9,
-  hotelPerKamarMalam: 62.7,
-  listrikPerKwh: 0.87,
+  ...PRA_FACTORS,
   airPerM3: 0.4,
   lpgPerKg: 2.94,
   sampahPerKg: 0.5,

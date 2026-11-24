@@ -41,7 +41,7 @@ export function carbonShort(kg: number, lang: Lang = "id"): string {
 export const perPersonKg = (kg: number, people: number): number | null => (people > 0 && kg > 0 ? Math.max(1, Math.round(kg / people)) : null);
 
 export type CarbonSourceView = {
-  key: CarbonSource;
+  key: CarbonSource | "perangkat";
   /** "Hotel". */
   title: string;
   /** Hotel before the bills are in is an estimate: "≈7,2 t". */
@@ -49,8 +49,8 @@ export type CarbonSourceView = {
   percent: number;
   /** "60 kamar × 3 malam", "Kereta, shuttle", "1.440 porsi". */
   note: string;
-  /** Which of the three bar colours (token --mw-chart-emisi-N). */
-  swatch: 1 | 2 | 3;
+  /** Which of the bar colours (token --mw-chart-emisi-N; the fourth, a person's devices, is the gold accent). */
+  swatch: 1 | 2 | 3 | 4;
 };
 
 export type CarbonView =
@@ -114,7 +114,7 @@ export function carbonView(result: CarbonResult | null, now: Date, lang: Lang = 
   };
 }
 
-export type CatalogKey = "kereta" | "bus" | "makan" | "hotel" | "listrik" | "air" | "lpg" | "sampah";
+export type CatalogKey = "kereta" | "bus" | "mobil" | "motor" | "makan" | "botol" | "hotel" | "laptop" | "hp" | "listrik" | "air" | "lpg" | "sampah";
 
 /**
  * "Katalog emisi": every factor the footprint is counted with (kg CO₂e per unit), from the one table
@@ -124,7 +124,9 @@ export type CatalogKey = "kereta" | "bus" | "makan" | "hotel" | "listrik" | "air
 export function carbonCatalog(lang: Lang = "id"): { key: CatalogKey; name: string; unit: string; value: string }[] {
   const f = CARBON_FACTORS;
   const rows: [CatalogKey, number, number][] = [
-    ["kereta", f.keretaPerPenumpangKm, 4], ["bus", f.busPerBusKm, 2], ["makan", f.makanPerPorsi, 1], ["hotel", f.hotelPerKamarMalam, 1],
+    ["kereta", f.keretaPerPenumpangKm, 4], ["bus", f.busPerBusKm, 2], ["mobil", f.mobilPerKm, 2], ["motor", f.motorPerKm, 2],
+    ["makan", f.makanPerPorsi, 1], ["botol", f.botolPerBuah, 1], ["hotel", f.hotelPerKamarMalam, 1],
+    ["laptop", f.laptopKwhPerJam, 3], ["hp", f.hpKwhPerIsi, 3],
     ["listrik", f.listrikPerKwh, 2], ["air", f.airPerM3, 1], ["lpg", f.lpgPerKg, 2], ["sampah", f.sampahPerKg, 1],
   ];
   return rows.map(([key, value, digits]) => ({ key, name: t(lang, `peserta.carbon.cat.name.${key}` as MessageKey), unit: t(lang, `peserta.carbon.cat.unit.${key}` as MessageKey), value: number(lang, value, digits) }));

@@ -1,5 +1,6 @@
 import { carbonEstimate, type CarbonData, type CarbonResult } from "../panitia/carbon";
-import { personalCarbonEstimate, type PersonalCarbonData, type PersonalCarbonResult } from "./carbon-saya";
+import type { CarbonTravel } from "@/lib/pra-wam/carbon";
+import { personalCarbonEstimate, type CarbonPageModel, type PersonalCarbonData, type PersonalCarbonResult } from "./carbon-saya";
 
 /*
  * Sample Jejak karbon (dev-preview, tests, and the demo's fallback): the design's example, 120
@@ -36,4 +37,18 @@ export const samplePersonalData: PersonalCarbonData = {
   nights: 3, roomOccupants: 3, meals: 12, hotelAverageKg: 94, hotelFromBills: false,
 };
 
-export const samplePersonalCarbon = (over: Partial<PersonalCarbonData> = {}): PersonalCarbonResult => personalCarbonEstimate({ ...samplePersonalData, ...over });
+export const samplePersonalCarbon = (over: Partial<PersonalCarbonData> = {}, answer: CarbonTravel | null = null): PersonalCarbonResult => personalCarbonEstimate({ ...samplePersonalData, ...over }, answer);
+
+/** Sample answers in Jejak karbon's calculator (fictional): small things only, and an own trip by car (a long way, round trip). */
+export const sampleCarbonAnswer: CarbonTravel = { own: null, bottles: 6, laptopHours: 14, phoneCharges: 5, answeredAt: "2027-01-04T10:00:00+07:00" };
+export const sampleCarbonOwnAnswer: CarbonTravel = { own: { from: "Magelang", mode: "mobil", km: 410, roundTrip: true }, bottles: 6, laptopHours: 14, phoneCharges: 5, answeredAt: "2027-01-04T10:00:00+07:00" };
+
+/** The Jejak karbon page's model from the example (previews, tests): what it recounts from, with the options of the previews. */
+export function sampleCarbonModel(options: { data?: Partial<PersonalCarbonData> | null; overall?: CarbonPageModel["overall"]; answer?: CarbonTravel | null; open?: boolean; storage?: "ok" | "waiting"; now: string }): CarbonPageModel {
+  return {
+    data: options.data === null ? null : { ...samplePersonalData, ...options.data },
+    answer: options.answer ?? null,
+    overall: options.overall === undefined ? sampleCarbon() : options.overall,
+    open: options.open ?? true, storage: options.storage ?? "ok", now: options.now,
+  };
+}
