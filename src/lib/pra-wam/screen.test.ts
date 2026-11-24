@@ -12,6 +12,7 @@ describe("wamScreen: what the frame shows, from the address alone", () => {
     expect(wamScreen("/wam/timeline", q(), me)).toEqual({ current: "timeline" });
     expect(wamScreen("/wam/manage/requests", q(), me)).toEqual({ current: "permintaan" });
     expect(wamScreen("/wam/hod", q(), me)).toEqual({ current: "appraisal" });
+    expect(wamScreen("/wam/analitik", q(), { id: "b1", bod: true })).toEqual({ current: "analitik" });
   });
 
   it("gives a pushed screen its back arrow and title, as the pages did", () => {

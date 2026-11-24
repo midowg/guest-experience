@@ -192,6 +192,8 @@ export const praWamPath = {
   needs: `${PRA_WAM_PATH}/manage/kebutuhan`,
   /** BOD: the panitia's Ringkasan operasional, read only. */
   panitiaView: `${PRA_WAM_PATH}/manage?lihat=panitia`,
+  /** BOD (24 Nov 2026): every figure and chart, so Ringkasan keeps what matters only. */
+  analytics: `${PRA_WAM_PATH}/analitik`,
   /** Panitia: write announcements and see who has read them. */
   announcements: `${PRA_WAM_PATH}/manage/announcements`,
   /** Panitia: schedule change requests to answer. */

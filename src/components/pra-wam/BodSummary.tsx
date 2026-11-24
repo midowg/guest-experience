@@ -42,6 +42,11 @@ type Props = {
   zone?: ViewerZone;
   /** 24 Nov 2026: the BoD's own Jejak karbon row (CarbonHome), under the session card; none when not set. */
   carbon?: ReactNode;
+  /**
+   * 24 Nov 2026: "ringkasan" (the default) keeps what matters (the forum now, Jejak karbon, Perlu
+   * perhatian, four figures); "analitik" holds every figure and chart (menu Analitik).
+   */
+  view?: "ringkasan" | "analitik";
 };
 
 /**
@@ -51,7 +56,7 @@ type Props = {
  * requests and HOD meetings, announcements and documents, and quick links.
  * Nothing is invented: a part without data says so.
  */
-export function BodSummary({ data, insights, greeting, date, survey = null, zone = "WIB", carbon = null }: Props) {
+export function BodSummary({ data, insights, greeting, date, survey = null, zone = "WIB", carbon = null, view = "ringkasan" }: Props) {
   const notSignedIn = data.accounts - data.signedIn;
   const started = data.forums.filter(forum => forum.expected > 0);
   const average = data.attendanceReady && started.length ? percent(started.reduce((sum, forum) => sum + forum.present, 0), started.reduce((sum, forum) => sum + forum.expected, 0)) : null;
@@ -64,8 +69,8 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
     <header className={styles.intro}>
       <div>
         <p className={styles.eyebrow}>{phase ? `${phase.name}${phase.day && phase.days ? ` · hari ke-${phase.day} dari ${phase.days}` : ""}` : "Ringkasan BOD"}</p>
-        <h1>{greeting}</h1>
-        <p className={styles.lead}>{date} · data langsung · akses baca saja</p>
+        <h1>{view === "analitik" ? "Analitik" : greeting}</h1>
+        <p className={styles.lead}>{view === "analitik" ? `Semua data · ${date} · baca saja` : `${date} · data langsung · akses baca saja`}</p>
       </div>
       <div className={styles.scope} aria-label="Cakupan data">
         <span className={styles.scopePill}>Semua departemen</span>
@@ -74,7 +79,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       </div>
     </header>
 
-    <div className={styles.top}>
+    {view === "ringkasan" && <div className={styles.top}>
       {/* Jejak karbon (24 Nov 2026) right under the session card, in its column. */}
       {carbon ? <div className={styles.heroCol}><ForumHero data={data} insights={insights} zone={zone} />{carbon}</div> : <ForumHero data={data} insights={insights} zone={zone} />}
       <section className={`${base.card} ${styles.attention}`} aria-labelledby="perhatian">
@@ -87,8 +92,21 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
             return <li key={item.kind}>{href ? <a className={styles.attentionRow} href={href}>{body}</a> : <div className={styles.attentionRow}>{body}</div>}</li>;
           })}</ul>}
       </section>
-    </div>
+    </div>}
 
+    {view === "ringkasan" && <>
+      <ul className={styles.tiles} aria-label="Angka utama">
+        <Tile value={data.people} label="Peserta" note={`${data.departments} departemen`} href={praWamPath.people} dot="var(--bod-c1)" />
+        <Tile value={average === null ? "—" : `${average}%`} label="Rata-rata hadir forum" note={!data.attendanceReady ? "Absen belum aktif" : started.length ? `${started.length} forum sudah berjalan` : "Belum ada forum berjalan"} dot="var(--bod-c4)" />
+        <Tile value={data.accounts ? `${data.signedIn}/${data.accounts}` : "—"} label="Akun pernah masuk" note={data.accounts === 0 ? "Akun belum dibuat" : notSignedIn > 0 ? `${notSignedIn} belum pernah masuk` : "Semua sudah masuk"} href={praWamPath.people} dot="var(--bod-c2)" />
+        <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} dot="var(--bod-c3)" />
+      </ul>
+      <nav className={styles.quick} aria-label="Data lengkap">
+        <a className={styles.quickItem} href={praWamPath.analytics}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Lihat semua data<small>Analitik: kehadiran, ruang, aplikasi, dan lainnya</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
+      </nav>
+    </>}
+
+    {view === "analitik" && <>
     <ul className={styles.tiles} aria-label="Angka utama">
       <Tile value={data.people} label="Peserta" note={`${data.departments} departemen${data.businessUnits || insights.businessUnits.length ? ` · ${data.businessUnits || insights.businessUnits.length} BU` : ""}`} href={praWamPath.people} dot="var(--bod-c1)" />
       <Tile value={data.accounts ? `${data.signedIn}/${data.accounts}` : "—"} label="Akun pernah masuk" note={data.accounts === 0 ? "Akun belum dibuat" : notSignedIn > 0 ? `${notSignedIn} belum pernah masuk` : "Semua sudah masuk"} href={praWamPath.people} dot="var(--bod-c2)" />
@@ -173,6 +191,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       <a className={styles.quickItem} href={praWamPath.people}><span className={styles.quickIcon}><Users aria-hidden /></span><span>Semua peserta<small>per departemen dan BU</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       <a className={styles.quickItem} href={praWamPath.panitiaView}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Dashboard panitia<small>baca saja</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
     </nav>
+    </>}
   </div>;
 }
 
