@@ -1,3 +1,5 @@
+import { parseRules } from "./rules";
+import type { CheckResult } from "./verify";
 import { COMPLETION_SOURCES, COMPLETION_STATUSES, DEFAULT_MISSION_SETTINGS, MISSION_CREDITS, MISSION_KINDS, type MissionSettings, type MwCompletion, type MwMission, type MwPointEntry } from "./types";
 
 /*
@@ -12,17 +14,29 @@ const num = (value: unknown, fallback = 0) => (typeof value === "number" && Numb
 const numOrNull = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
 const oneOf = <T extends string>(list: readonly T[], value: unknown, fallback: T): T => (list.includes(value as T) ? value as T : fallback);
 
-export const MISSION_COLUMNS = "id,title,description,kind,points,place_name,latitude,longitude,radius_m,session_id,credit,review,opens_at,closes_at,sort,active";
+/** The columns before migration 202611300001; a reader falls back to these while the newer ones are not there. */
+export const MISSION_COLUMNS_BASE = "id,title,description,kind,points,place_name,latitude,longitude,radius_m,session_id,credit,review,opens_at,closes_at,sort,active";
+export const MISSION_COLUMNS = `${MISSION_COLUMNS_BASE},rules`;
 export function missionFromRow(row: Row): MwMission {
   return {
     id: text(row.id), title: text(row.title), description: text(row.description), kind: oneOf(MISSION_KINDS, row.kind, "foto"), points: num(row.points),
     placeName: text(row.place_name), latitude: numOrNull(row.latitude), longitude: numOrNull(row.longitude), radiusM: numOrNull(row.radius_m),
     sessionId: textOrNull(row.session_id), credit: oneOf(MISSION_CREDITS, row.credit, "panitia"), review: row.review === true,
     opensAt: textOrNull(row.opens_at), closesAt: textOrNull(row.closes_at), sort: num(row.sort), active: row.active === true,
+    rules: parseRules(row.rules),
   };
 }
 
-export const COMPLETION_COLUMNS = "id,mission_id,employee_id,source,status,proof_key,proof_thumb_key,latitude,longitude,accuracy_m,distance_m,taken_at,note,reviewed_by,reviewed_at,review_note,created_at";
+export const COMPLETION_COLUMNS_BASE = "id,mission_id,employee_id,source,status,proof_key,proof_thumb_key,latitude,longitude,accuracy_m,distance_m,taken_at,note,reviewed_by,reviewed_at,review_note,created_at";
+export const COMPLETION_COLUMNS = `${COMPLETION_COLUMNS_BASE},attempts,photo_id,check_result`;
+
+/** check_result (jsonb) → the typed result; anything odd is null. */
+export function checkResultFromJson(value: unknown): CheckResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  if (!Array.isArray(row.checks)) return null;
+  return value as CheckResult;
+}
 export function completionFromRow(row: Row): MwCompletion {
   return {
     id: text(row.id), missionId: text(row.mission_id), employeeId: text(row.employee_id), source: oneOf(COMPLETION_SOURCES, row.source, "panitia"),
@@ -30,6 +44,7 @@ export function completionFromRow(row: Row): MwCompletion {
     latitude: numOrNull(row.latitude), longitude: numOrNull(row.longitude), accuracyM: numOrNull(row.accuracy_m), distanceM: numOrNull(row.distance_m),
     takenAt: textOrNull(row.taken_at), note: text(row.note), reviewedBy: textOrNull(row.reviewed_by), reviewedAt: textOrNull(row.reviewed_at),
     reviewNote: text(row.review_note), createdAt: text(row.created_at),
+    attempts: Math.max(1, num(row.attempts, 1)), photoId: textOrNull(row.photo_id), checkResult: checkResultFromJson(row.check_result),
   };
 }
 

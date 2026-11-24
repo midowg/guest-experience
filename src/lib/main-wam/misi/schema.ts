@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { MAX_LARGE_BYTES, MAX_THUMB_BYTES } from "@/lib/main-wam/momen/filters";
+import { MAX_LARGE_BYTES, MAX_THUMB_BYTES, MAX_TILE_BYTES } from "@/lib/main-wam/momen/filters";
+import { rulesSchema, TAG_MAX, tagRuleOf, type MissionRule } from "./rules";
 import { MISSION_CREDITS, MISSION_KINDS } from "./types";
 
 /*
@@ -26,7 +27,10 @@ export const missionSchema = z.object({
   closesAt: optionalIso,
   sort: z.number().int().min(0).max(999).default(0),
   active: z.boolean().default(false),
+  /** The TNC of a photo mission (rules.ts). A place or a window in it also fills the older columns. */
+  rules: rulesSchema.default([]),
 }).strict().superRefine((value, context) => {
+  if (value.rules.length && value.kind !== "foto") context.addIssue({ code: "custom", path: ["rules"], message: "Aturan hanya untuk misi foto." });
   if ((value.latitude === null) !== (value.longitude === null)) context.addIssue({ code: "custom", path: ["longitude"], message: "Isi garis lintang dan garis bujur bersama." });
   if (value.kind === "checkin" && (value.latitude === null || value.longitude === null)) context.addIssue({ code: "custom", path: ["latitude"], message: "Check-in perlu titik lokasi." });
   if (value.kind === "sesi" && value.active && !value.sessionId) context.addIssue({ code: "custom", path: ["sessionId"], message: "Misi sesi yang aktif perlu sesinya." });
@@ -34,16 +38,27 @@ export const missionSchema = z.object({
 });
 export type MissionInput = z.infer<typeof missionSchema>;
 
-/** The mission's row for the database. A kind keeps only what it uses (a sesi mission has no place). */
-export const missionRow = (input: MissionInput) => ({
-  title: input.title, description: input.description, kind: input.kind, points: input.points,
-  place_name: input.kind === "sesi" ? "" : input.placeName,
-  latitude: input.kind === "sesi" ? null : input.latitude, longitude: input.kind === "sesi" ? null : input.longitude,
-  radius_m: input.kind === "sesi" ? null : input.radiusM,
-  session_id: input.kind === "sesi" ? input.sessionId : null, credit: input.kind === "sesi" ? input.credit : "panitia",
-  review: input.kind === "foto" ? input.review : false,
-  opens_at: input.opensAt, closes_at: input.closesAt, sort: input.sort, active: input.active, updated_at: new Date().toISOString(),
-});
+/**
+ * The mission's row for the database. A kind keeps only what it uses (a sesi mission has no place). The
+ * rules' place and window are mirrored into the older columns (the position check and the opening
+ * hours read those); `rules` is written only when there are some, so a mission without rules saves
+ * before migration 202611300001.
+ */
+export const missionRow = (input: MissionInput) => {
+  const lokasi = input.rules.find((rule): rule is Extract<MissionRule, { type: "lokasi" }> => rule.type === "lokasi");
+  const waktu = input.rules.find((rule): rule is Extract<MissionRule, { type: "waktu" }> => rule.type === "waktu");
+  return {
+    title: input.title, description: input.description, kind: input.kind, points: input.points,
+    place_name: input.kind === "sesi" ? "" : lokasi?.name ?? input.placeName,
+    latitude: input.kind === "sesi" ? null : lokasi?.latitude ?? input.latitude, longitude: input.kind === "sesi" ? null : lokasi?.longitude ?? input.longitude,
+    radius_m: input.kind === "sesi" ? null : lokasi?.radiusM ?? input.radiusM,
+    session_id: input.kind === "sesi" ? input.sessionId : null, credit: input.kind === "sesi" ? input.credit : "panitia",
+    review: input.kind === "foto" ? input.review : false,
+    opens_at: waktu ? waktu.start : input.opensAt, closes_at: waktu ? waktu.end : input.closesAt, sort: input.sort, active: input.active, updated_at: new Date().toISOString(),
+    ...(input.rules.length ? { rules: input.rules } : {}),
+  };
+};
+export { tagRuleOf };
 
 export const settingsSchema = z.object({
   defaultRadiusM: z.number().int("Radius berupa bilangan bulat.").min(10, "Radius paling kecil 10 m.").max(1000, "Radius paling besar 1.000 m."),
@@ -56,7 +71,7 @@ export type SettingsInput = z.infer<typeof settingsSchema>;
 export const reviewSchema = z.object({
   status: z.enum(["disetujui", "ditolak"], "Pilih setujui atau tolak."),
   note: z.string().trim().max(300, "Catatan paling banyak 300 karakter.").default(""),
-}).strict();
+}).strict().refine(value => value.status === "disetujui" || value.note.length >= 2, { path: ["note"], message: "Tulis alasan penolakan agar peserta tahu." });
 export type ReviewInput = z.infer<typeof reviewSchema>;
 
 /** Panitia's hand: a person finished a sesi mission (or any mission, with a note) without a proof. */
@@ -88,9 +103,15 @@ export const photoStartSchema = z.object({
   position: positionSchema,
   size: z.number().int().min(1, "Berkas kosong.").max(MAX_LARGE_BYTES, "Foto terlalu besar. Ambil ulang fotonya."),
   thumbSize: z.number().int().min(1, "Berkas kosong.").max(MAX_THUMB_BYTES, "Foto terlalu besar. Ambil ulang fotonya."),
+  tileSize: z.number().int().min(1, "Berkas kosong.").max(MAX_TILE_BYTES, "Foto terlalu besar. Ambil ulang fotonya."),
   width: z.number().int().min(1).max(4_000),
   height: z.number().int().min(1).max(4_000),
+  /** The people tagged in the photo (employee ids); the mission's tag rule says how many and who. */
+  tags: z.array(z.uuid("Orang yang ditandai tidak dikenali.")).max(TAG_MAX, `Paling banyak ${TAG_MAX} orang.`).default([]),
 }).strict();
 export type PhotoStartInput = z.infer<typeof photoStartSchema>;
 export const photoConfirmSchema = photoStartSchema.extend({ token: z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Ulangi dari awal.") }).strict();
 export type PhotoConfirmInput = z.infer<typeof photoConfirmSchema>;
+
+/** A person lifting their own tag off a photo. */
+export const untagSchema = z.object({ photoId: z.uuid("Foto tidak dikenali.") }).strict();

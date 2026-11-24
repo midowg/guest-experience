@@ -5,7 +5,6 @@ import { mainWamScreen } from "@/lib/main-wam/screen";
 import { defaultSettings } from "@/lib/main-wam/settings";
 import { MAIN_WAM_MODULES } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
-import { sampleSessionIds } from "@/lib/main-wam/sample";
 import { distanceMeters, judgePosition, type Fix } from "./geo";
 import { abbreviateDepartment, availabilityOf, canStart, chipsOf, filterItems, missionItems, nextMission, rulesOf, sections, sortItems, summarize, whenOf } from "./missions";
 import { medalOf, myPlace, rankOrder, rankPeople } from "./rank";
@@ -75,7 +74,7 @@ describe("distance and position", () => {
 
 const mission = (over: Partial<MwMission> & Pick<MwMission, "id" | "title">): MwMission => ({
   description: "", kind: "foto", points: 20, placeName: "", latitude: null, longitude: null, radiusM: null, sessionId: null, credit: "panitia", review: false,
-  opensAt: null, closesAt: null, sort: 0, active: true, ...over,
+  opensAt: null, closesAt: null, sort: 0, active: true, rules: [], ...over,
 });
 const done = (missionId: string, status: MwCompletion["status"] = "disetujui", reviewNote = ""): Pick<MwCompletion, "missionId" | "status" | "reviewNote"> => ({ missionId, status, reviewNote });
 
@@ -105,8 +104,10 @@ describe("the missions a person sees", () => {
   });
 
   it("tells done, waiting, turned down and still to do apart", () => {
-    const items = missionItems(list, [done("a"), done("b", "menunggu"), done("c", "ditolak", "Bukan di tugu")], ctx);
+    const items = missionItems(list, [done("a"), done("b", "dikirim"), done("c", "ditolak", "Bukan di tugu")], ctx);
     expect(items.map(item => item.status)).toEqual(["done", "pending", "rejected", "todo"]);
+    // Perlu ditinjau (and the older "menunggu") is its own state: panitia must look.
+    expect(missionItems(list, [done("a", "perlu_ditinjau"), done("b", "menunggu"), done("c", "diperiksa")], ctx).map(item => item.status)).toEqual(["review", "review", "pending", "todo"]);
     expect(items[2].rejectedNote).toBe("Bukan di tugu");
     expect(items[0].rejectedNote).toBe("");
   });
@@ -151,7 +152,7 @@ describe("the missions a person sees", () => {
 });
 
 describe("the words of a mission", () => {
-  const base = { description: "", points: 40, placeName: "", hasPlace: false, radiusM: 50, sessionId: null, sessionTitle: null, credit: "panitia" as const, review: false, opensAt: null, closesAt: null, rejectedNote: "", status: "todo" as const, availability: "buka" as const };
+  const base = { description: "", points: 40, placeName: "", hasPlace: false, radiusM: 50, sessionId: null, sessionTitle: null, credit: "panitia" as const, review: false, opensAt: null, closesAt: null, rejectedNote: "", status: "todo" as const, availability: "buka" as const, rules: [], attempts: 0, maxAttempts: null };
   it("gives the chips under a title per kind", () => {
     expect(chipsOf({ kind: "foto" }).map(chip => chip.title)).toEqual(["Foto langsung", "Lokasi aktif"]);
     expect(chipsOf({ kind: "checkin" }).map(chip => chip.title)).toEqual(["Check-in lokasi"]);
@@ -162,7 +163,7 @@ describe("the words of a mission", () => {
   it("writes 'Syarat dapat poin' from the mission, in both languages", () => {
     const photo = rulesOf({ ...base, id: "p", title: "Apel", kind: "foto", hasPlace: true, placeName: "Alun-alun Batu", radiusM: 50, closesAt: "2027-01-05T21:00:00+07:00" });
     expect(photo.map(rule => rule.title)).toEqual(["Foto langsung dari kamera", "Lokasi aktif dan di area misi", "Berlaku sampai Sel, 5 Jan 21.00"]);
-    expect(photo[0].note).toBe("Hanya dari kamera aplikasi. Foto dari galeri tidak dihitung.");
+    expect(photo[0].note).toBe("Hanya dari kamera aplikasi, dengan lokasi aktif. Foto dari galeri tidak dihitung.");
     expect(photo[1].note).toBe("Berada dalam radius 50 m dari Alun-alun Batu saat memotret.");
     expect(rulesOf({ ...base, id: "p", title: "Apel", kind: "foto", hasPlace: true, placeName: "Alun-alun Batu" }, "en")[1].note).toBe("Be within 50 m of Alun-alun Batu when you take the photo.");
     const noPlace = rulesOf({ ...base, id: "p", title: "Tim", kind: "foto" });
@@ -290,10 +291,15 @@ describe("the schemas", () => {
   });
 
   it("photo steps: sizes within Momen's limits, a token only on the second step", () => {
-    const start = { clientId: "11111111-1111-4111-8111-111111111111", position: { latitude: -7.87, longitude: 112.5, accuracy: 12, at: "2027-01-05T10:00:00+07:00" }, size: 400_000, thumbSize: 40_000, width: 1280, height: 1600 };
+    const start = { clientId: "11111111-1111-4111-8111-111111111111", position: { latitude: -7.87, longitude: 112.5, accuracy: 12, at: "2027-01-05T10:00:00+07:00" }, size: 400_000, thumbSize: 40_000, tileSize: 8_000, width: 1280, height: 1600 };
     expect(photoStartSchema.safeParse(start).success).toBe(true);
     expect(photoStartSchema.safeParse({ ...start, size: 2_000_000 }).success).toBe(false);
     expect(photoStartSchema.safeParse({ ...start, thumbSize: 0 }).success).toBe(false);
+    expect(photoStartSchema.safeParse({ ...start, tileSize: 0 }).success).toBe(false);
+    expect(photoStartSchema.parse(start).tags).toEqual([]);
+    expect(photoStartSchema.safeParse({ ...start, tags: ["11111111-1111-4111-8111-111111111111"] }).success).toBe(true);
+    expect(photoStartSchema.safeParse({ ...start, tags: ["bukan-uuid"] }).success).toBe(false);
+    expect(photoStartSchema.safeParse({ ...start, tags: Array.from({ length: 7 }, (_, index) => `11111111-1111-4111-8111-11111111111${index}`) }).success).toBe(false);
     expect(photoConfirmSchema.safeParse(start).success).toBe(false);
     expect(photoConfirmSchema.safeParse({ ...start, token: `1767000000.${"a".repeat(64)}` }).success).toBe(true);
     expect(photoConfirmSchema.safeParse({ ...start, token: "x" }).success).toBe(false);
@@ -301,13 +307,18 @@ describe("the schemas", () => {
 });
 
 describe("the sample for Mode demo", () => {
-  it("has the prototype's five missions, two done by the asker", () => {
-    expect(sampleMissions).toHaveLength(5);
-    expect(new Set(sampleMissions.map(item => item.kind))).toEqual(new Set(["foto", "checkin", "sesi"]));
-    expect(sampleMissions.find(item => item.kind === "sesi")?.sessionId).toBe(sampleSessionIds["team-building"]);
+  it("has twelve photo missions (no check-in or session mission), each with rules, from 30 to 150 points", () => {
+    expect(sampleMissions).toHaveLength(12);
+    expect(new Set(sampleMissions.map(item => item.kind))).toEqual(new Set(["foto"]));
+    expect(sampleMissions.every(item => item.rules.some(rule => rule.type === "foto_langsung"))).toBe(true);
+    const points = sampleMissions.map(item => item.points);
+    expect(Math.min(...points)).toBe(30);
+    expect(Math.max(...points)).toBe(150);
+    expect(sampleMissions.find(item => item.points === 150)?.title).toBe("Foto bareng KEDUA BOD");
     const items = missionItems(sampleMissions, sampleCompletions("me"), { sessions: [], settings: { defaultRadiusM: 50 }, now: NOW });
     expect(items.filter(item => item.status === "done")).toHaveLength(2);
-    expect(summarize(items).total).toBe(5);
+    expect(new Set(items.map(item => item.status))).toEqual(new Set(["done", "pending", "review", "rejected", "todo"]));
+    expect(summarize(items).total).toBe(12);
   });
 
   it("ranks the asker 7th of 118 with 340 points, the others made up", () => {

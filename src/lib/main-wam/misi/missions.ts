@@ -1,7 +1,9 @@
 import { clock, shortDate, t, type Lang } from "@/lib/main-wam/i18n";
 import { wibDate, wibTime } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
+import { effectiveRules, publicRules, ruleDisplays, timesOf, type PublicRule } from "./rules";
 import type { MissionKind, MissionSettings, MwCompletion, MwMission } from "./types";
+import { canResend } from "./verify";
 
 /*
  * The missions as a participant sees them: which are still to do, which are done, which wait for an
@@ -9,7 +11,8 @@ import type { MissionKind, MissionSettings, MwCompletion, MwMission } from "./ty
  * order of the Misi page; the one Beranda's card points at. Pure: tested without a server.
  */
 
-export type MissionStatus = "todo" | "pending" | "rejected" | "done";
+/** todo: not sent; pending: sent, being checked; review: panitia must look; rejected: turned down; done: approved. */
+export type MissionStatus = "todo" | "pending" | "review" | "rejected" | "done";
 export type MissionAvailability = "buka" | "belum" | "tutup";
 
 /** One mission for one person, JSON-safe (it travels to the browser). */
@@ -31,8 +34,13 @@ export type MissionItem = {
   review: boolean;
   opensAt: string | null;
   closesAt: string | null;
-  /** Why an admin turned a proof down, shown with "Kirim ulang". */
+  /** Why a proof was turned down (the automatic checks or a reviewer), shown with "Kirim ulang". */
   rejectedNote: string;
+  /** The TNC as the phone gets it (no coordinates): rules.ts. A photo mission always has some. */
+  rules: PublicRule[];
+  /** Proofs sent so far, and the limit (batas_kali; null = none). */
+  attempts: number;
+  maxAttempts: number | null;
 };
 
 export function availabilityOf(mission: Pick<MwMission, "opensAt" | "closesAt">, now: Date): MissionAvailability {
@@ -41,13 +49,20 @@ export function availabilityOf(mission: Pick<MwMission, "opensAt" | "closesAt">,
   return "buka";
 }
 
-const statusOf = (completion: MwCompletion | undefined): MissionStatus =>
-  !completion ? "todo" : completion.status === "disetujui" ? "done" : completion.status === "menunggu" ? "pending" : "rejected";
+const statusOf = (completion: Pick<MwCompletion, "status"> | undefined): MissionStatus => {
+  if (!completion) return "todo";
+  switch (completion.status) {
+    case "disetujui": return "done";
+    case "dikirim": case "diperiksa": return "pending";
+    case "perlu_ditinjau": case "menunggu": return "review";
+    case "ditolak": return "rejected";
+  }
+};
 
 /** The active missions in the admin's order, each with this person's state. */
 export function missionItems(
   missions: readonly MwMission[],
-  completions: readonly Pick<MwCompletion, "missionId" | "status" | "reviewNote">[],
+  completions: readonly (Pick<MwCompletion, "missionId" | "status" | "reviewNote"> & { attempts?: number })[],
   context: { sessions: readonly Pick<MwSession, "id" | "title">[]; settings: Pick<MissionSettings, "defaultRadiusM">; now: Date },
 ): MissionItem[] {
   const byMission = new Map(completions.map(completion => [completion.missionId, completion]));
@@ -56,7 +71,8 @@ export function missionItems(
     .filter(mission => mission.active)
     .sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, "id"))
     .map(mission => {
-      const completion = byMission.get(mission.id) as MwCompletion | undefined;
+      const completion = byMission.get(mission.id);
+      const rules = effectiveRules(mission, context.settings.defaultRadiusM);
       return {
         id: mission.id, title: mission.title, description: mission.description, kind: mission.kind, points: mission.points,
         status: statusOf(completion), availability: availabilityOf(mission, context.now),
@@ -64,6 +80,7 @@ export function missionItems(
         sessionId: mission.sessionId, sessionTitle: mission.sessionId ? sessions.get(mission.sessionId) ?? null : null,
         credit: mission.credit, review: mission.review, opensAt: mission.opensAt, closesAt: mission.closesAt,
         rejectedNote: completion?.status === "ditolak" ? completion.reviewNote : "",
+        rules: mission.kind === "foto" ? publicRules(rules) : [], attempts: completion?.attempts ?? (completion ? 1 : 0), maxAttempts: timesOf(rules),
       };
     });
 }
@@ -73,10 +90,13 @@ export function summarize(items: readonly MissionItem[]): MissionSummary {
   const done = items.filter(item => item.status === "done");
   const open = items.filter(item => item.status !== "done" && item.availability !== "tutup");
   return {
-    total: items.length, done: done.length, pending: items.filter(item => item.status === "pending").length,
+    total: items.length, done: done.length, pending: items.filter(item => item.status === "pending" || item.status === "review").length,
     availablePoints: open.reduce((sum, item) => sum + item.points, 0), earnedPoints: done.reduce((sum, item) => sum + item.points, 0),
   };
 }
+
+/** A mission photo someone tagged me in (the Misi page lists it with "Lepas tag"). */
+export type TaggedIn = { photoId: string; byName: string; missionTitle: string };
 
 /** What the Beranda card and the Misi page get (JSON-safe, nothing about where a mission is or who else did it). */
 export type MisiView = {
@@ -89,6 +109,8 @@ export type MisiView = {
   points: number;
   place: { rank: number; of: number } | null;
   leaderboardOpen: boolean;
+  /** Photos I am tagged in (still on). */
+  taggedIn: TaggedIn[];
 };
 
 export const MISSION_FILTERS = ["all", "todo", "done"] as const;
@@ -111,18 +133,20 @@ export function sections(items: readonly MissionItem[], filter: MissionFilter, s
 }
 
 /** Can the person start it now from the app (a sesi mission is done at its session, not here)? */
-export const canStart = (item: Pick<MissionItem, "status" | "availability">) => (item.status === "todo" || item.status === "rejected") && item.availability === "buka";
+export const canStart = (item: Pick<MissionItem, "status" | "availability" | "attempts" | "maxAttempts">) =>
+  (item.status === "todo" || (item.status === "rejected" && canResend("ditolak", item.attempts, item.maxAttempts))) && item.availability === "buka";
 
 /** Beranda's "Misi berikutnya": the first one still to do that is open, in the admin's order. */
 export const nextMission = (items: readonly MissionItem[]): MissionItem | null => items.find(canStart) ?? null;
 
 /* ── Words ────────────────────────────────────────────────────────────────────────────────────── */
 
-export type RequirementIcon = "camera" | "map-pin" | "users" | "clock" | "shield-check";
+export type RequirementIcon = "camera" | "map-pin" | "users" | "clock" | "shield-check" | "tag" | "pose" | "repeat";
 export type Requirement = { icon: RequirementIcon; title: string; note?: string };
 
 /** The short chips under a mission's title ("Foto langsung", "Lokasi aktif"). */
-export function chipsOf(item: Pick<MissionItem, "kind">, lang: Lang = "id"): Requirement[] {
+export function chipsOf(item: Pick<MissionItem, "kind"> & { rules?: readonly PublicRule[] }, lang: Lang = "id"): Requirement[] {
+  if (item.kind === "foto" && item.rules?.length) return ruleDisplays(item.rules, lang).flatMap(rule => rule.chips.map(title => ({ icon: rule.icon, title })));
   if (item.kind === "foto") return [{ icon: "camera", title: t(lang, "misi.req.photo") }, { icon: "map-pin", title: t(lang, "misi.req.location") }];
   if (item.kind === "checkin") return [{ icon: "map-pin", title: t(lang, "misi.req.checkin") }];
   return [{ icon: "users", title: t(lang, "misi.req.session") }];
@@ -133,6 +157,7 @@ export const whenOf = (iso: string, lang: Lang = "id") => `${shortDate(lang, wib
 
 /** "Syarat dapat poin": what the mission asks, in order (the sheet shows it). */
 export function rulesOf(item: MissionItem, lang: Lang = "id"): Requirement[] {
+  if (item.kind === "foto" && item.rules.length) return ruleDisplays(item.rules, lang).map(rule => ({ icon: rule.icon, title: rule.title, ...(rule.note ? { note: rule.note } : {}) }));
   const place = item.placeName || t(lang, "misi.place.generic");
   const out: Requirement[] = [];
   if (item.kind === "foto") {
