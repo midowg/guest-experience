@@ -35,3 +35,18 @@ export function shareUrl(env: Record<string, string | undefined> = process.env):
   const site = siteUrl(env);
   return isLocal(site) ? new URL(PUBLIC_SITE) : site;
 }
+
+/**
+ * The address a check-in QR opens (24 Nov 2026): the site the panitia has open, so the QR leads where
+ * people already use the app; never a local one (NEXT_PUBLIC_SITE_URL copied from a laptop to Vercel
+ * put localhost in every QR). A local or unknown address becomes the share address (shareUrl).
+ */
+export function qrOrigin(requestOrigin: string | null | undefined, env: Record<string, string | undefined> = process.env): string {
+  if (requestOrigin) {
+    try {
+      const url = new URL(requestOrigin);
+      if (!isLocal(url) && (url.protocol === "https:" || url.protocol === "http:")) return url.origin;
+    } catch { /* fall through to the share address */ }
+  }
+  return shareUrl(env).origin;
+}
