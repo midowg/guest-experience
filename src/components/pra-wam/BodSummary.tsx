@@ -12,6 +12,7 @@ import { praWamPath } from "@/lib/routes";
 import type { BodInsights } from "@/lib/server/pra-wam/bod-insights";
 import type { BodSummary as Summary } from "@/lib/server/pra-wam/dashboard";
 import type { Participation } from "@/lib/server/pra-wam/recap";
+import { BodSurveyCard } from "./bod-survey/BodSurveyCard";
 import base from "./pra-wam.module.css";
 import styles from "./bod.module.css";
 
@@ -43,8 +44,9 @@ type Props = {
   /** 24 Nov 2026: the BoD's own Jejak karbon row (CarbonHome), under the session card; none when not set. */
   carbon?: ReactNode;
   /**
-   * 24 Nov 2026: "ringkasan" (the default) keeps what matters (the forum now, Jejak karbon, Perlu
-   * perhatian, four figures); "analitik" holds every figure and chart (menu Analitik).
+   * 24 Nov 2026: "ringkasan" (the default) keeps what matters (the forum now, Jejak karbon, the
+   * questionnaire card, Perlu perhatian); "analitik" holds every figure and chart (menu Analitik).
+   * The four figures Ringkasan had are in Analitik's tiles, so they are not repeated here.
    */
   view?: "ringkasan" | "analitik";
 };
@@ -80,8 +82,14 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
     </header>
 
     {view === "ringkasan" && <div className={styles.top}>
-      {/* Jejak karbon (24 Nov 2026) right under the session card, in its column. */}
-      {carbon ? <div className={styles.heroCol}><ForumHero data={data} insights={insights} zone={zone} />{carbon}</div> : <ForumHero data={data} insights={insights} zone={zone} />}
+      {/* Jejak karbon (24 Nov 2026) right under the session card, then the questionnaire, in its column. */}
+      {carbon || survey
+        ? <div className={styles.heroCol}>
+          <ForumHero data={data} insights={insights} zone={zone} />
+          {carbon}
+          {survey && <BodSurveyCard name={survey.name} done={survey.participation.done} active={survey.participation.active} href={praWamPath.bodSurvey} exportHref={`${praWamPath.bodSurvey}?export=1`} />}
+        </div>
+        : <ForumHero data={data} insights={insights} zone={zone} />}
       <section className={`${base.card} ${styles.attention}`} aria-labelledby="perhatian">
         <div className={styles.cardHead}><h2 id="perhatian">Perlu perhatian</h2>{data.attention.length > 0 && <span className={styles.countPill}>{data.attention.length}</span>}</div>
         {data.attention.length === 0
@@ -94,18 +102,6 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       </section>
     </div>}
 
-    {view === "ringkasan" && <>
-      <ul className={styles.tiles} aria-label="Angka utama">
-        <Tile value={data.people} label="Peserta" note={`${data.departments} departemen`} href={praWamPath.people} dot="var(--bod-c1)" />
-        <Tile value={average === null ? "—" : `${average}%`} label="Rata-rata hadir forum" note={!data.attendanceReady ? "Absen belum aktif" : started.length ? `${started.length} forum sudah berjalan` : "Belum ada forum berjalan"} dot="var(--bod-c4)" />
-        <Tile value={data.accounts ? `${data.signedIn}/${data.accounts}` : "—"} label="Akun pernah masuk" note={data.accounts === 0 ? "Akun belum dibuat" : notSignedIn > 0 ? `${notSignedIn} belum pernah masuk` : "Semua sudah masuk"} href={praWamPath.people} dot="var(--bod-c2)" />
-        <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} dot="var(--bod-c3)" />
-      </ul>
-      <nav className={styles.quick} aria-label="Data lengkap">
-        <a className={styles.quickItem} href={praWamPath.analytics}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Lihat semua data<small>Analitik: kehadiran, ruang, aplikasi, dan lainnya</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
-      </nav>
-    </>}
-
     {view === "analitik" && <>
     <ul className={styles.tiles} aria-label="Angka utama">
       <Tile value={data.people} label="Peserta" note={`${data.departments} departemen${data.businessUnits || insights.businessUnits.length ? ` · ${data.businessUnits || insights.businessUnits.length} BU` : ""}`} href={praWamPath.people} dot="var(--bod-c1)" />
@@ -115,7 +111,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       <Tile value={data.published} label="Sesi terbit" note={data.drafts ? `${data.drafts} draf menunggu jam` : "Tidak ada draf"} href={praWamPath.sessions} dot="var(--bod-c1)" />
       <Tile value={insights.rooms ? hoursLabel(weekHours) : "—"} label="Ruang terpakai minggu ini" note={insights.rooms ? `${weekUses} booking dan sesi` : "Jadwal ruang belum tersedia"} href={praWamPath.appraisal()} dot="var(--bod-c2)" />
       <Tile value={insights.documents?.total ?? "—"} label="Dokumen" note={insights.documents ? `${insights.documents.general} umum · ${insights.documents.perSession} materi sesi` : "Dokumen belum tersedia"} href={praWamPath.documents} dot="var(--bod-c3)" />
-      <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} dot="var(--bod-c4)" />
+      <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} href={survey ? praWamPath.bodSurvey : undefined} dot="var(--bod-c4)" />
     </ul>
 
     <div className={styles.grid}>
@@ -162,7 +158,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       </section>
 
       <section className={`${base.card} ${styles.span3}`} aria-labelledby="survei">
-        <div className={styles.cardHead}><h2 id="survei">Kuesioner</h2></div>
+        <div className={styles.cardHead}><h2 id="survei">Kuesioner</h2>{survey && <a href={praWamPath.bodSurvey}>Lihat data</a>}</div>
         {survey
           ? <><p className={styles.surveyName}>{survey.name}</p><Meter value={survey.participation.done} of={survey.participation.active} label={`${survey.participation.done} dari ${survey.participation.active} selesai`} /></>
           : <p className={styles.empty}>Belum ada kuesioner. Partisipasinya muncul di sini setelah dibuka.</p>}

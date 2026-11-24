@@ -194,6 +194,8 @@ export const praWamPath = {
   panitiaView: `${PRA_WAM_PATH}/manage?lihat=panitia`,
   /** BOD (24 Nov 2026): every figure and chart, so Ringkasan keeps what matters only. */
   analytics: `${PRA_WAM_PATH}/analitik`,
+  /** Data kuesioner for BoD (24 Nov 2026): every summary, each person's answers BoD may read, Export. */
+  bodSurvey: `${PRA_WAM_PATH}/analitik/kuesioner`,
   /** Panitia: write announcements and see who has read them. */
   announcements: `${PRA_WAM_PATH}/manage/announcements`,
   /** Panitia: schedule change requests to answer. */
@@ -274,6 +276,8 @@ export const praWamApi = {
   faceCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah`,
   faceCheckInPhoto: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/foto`,
   faceCheckInSubmit: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/wajah/kirim`,
+  bodSurveyPerson: (employeeId: string) => `${WAM_API}/kuesioner/orang/${employeeId}`,
+  bodSurveyExport: (isi: "jawaban" | "ringkasan") => `${WAM_API}/kuesioner/export?isi=${isi}`,
   faceTablet: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet`,
   faceTabletRecord: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/tablet/catat`,
   /** POST (panitia): agree to a face check-in marked perlu cek. */
