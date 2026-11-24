@@ -166,7 +166,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             session "Absen", which opens its sheet with Absen pakai wajah and Scan QR; with when it opens
             or until when, or "Hadir 09.42 · ..." once done.
           */}
-          {item.kind === "sesi" && (heroStatus && item.sessionId
+          {/* Misi Perjalanan's session (24 Nov 2026): no check-in here, only the way into the mission. */}
+          {item.kind === "sesi" && missionHref(item) && <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>}
+          {item.kind === "sesi" && !missionHref(item) && (heroStatus && item.sessionId
             ? checkInWay(item) === "tombol"
               ? <SelfCheckIn variant="hero" sessionId={item.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
               : <div className={sc.hero}>
@@ -182,15 +184,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </div>
             : item.checkedInAt
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
-              : missionHref(item)
-                ? <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>
-                : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />Lihat detail</a>)}
-          {item.kind === "sesi" && heroStatus && item.sessionId && missionHref(item) && <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>}
+              : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />Lihat detail</a>)}
           {item.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><CalendarClock size={20} aria-hidden />Lihat booking</a>}
-              </> : item.checkedInAt
-                ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
-                : missionHref(item)
-                  ? <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>
+              </> : missionHref(item)
+                ? <a className={`${base.heroButton} ${own.wide}`} href={missionHref(item)!}><Compass size={20} aria-hidden />Misi Perjalanan</a>
+                : item.checkedInAt
+                  ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(item.checkedInAt)}</span>
                   : <a className={`${base.heroButton} ${own.wide}`} href={open(item)} {...opens(item)}><Info size={20} aria-hidden />{item.kind === "appraisal" ? "Lihat booking" : "Lihat detail"}</a>}
             </section>;
           })}
