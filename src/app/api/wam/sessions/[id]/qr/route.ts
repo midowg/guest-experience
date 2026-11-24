@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { qrOrigin } from "@/lib/site-url";
 import { absolute, praWamPath } from "@/lib/routes";
 import { checkOrigin, handle, success, validate } from "@/lib/server/http";
 import { qrToken } from "@/lib/server/pra-wam/attendance";
@@ -8,7 +9,8 @@ import { getSession } from "@/lib/server/pra-wam/sessions";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
-const origin = (request: Request) => process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+// Never localhost (24 Nov 2026): the address the request came to, else the public site.
+const origin = (request: Request) => qrOrigin(new URL(request.url).origin);
 
 /** GET: the session's QR on an A5 page to print (panitia). */
 export async function GET(request: Request, { params }: Params) {

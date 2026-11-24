@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { qrOrigin } from "@/lib/site-url";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { ChevronLeft, FileText, Info, ScanFace } from "lucide-react";
@@ -36,8 +37,10 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   });
   if (typeof loaded === "string") return <><Notice tone="warning">{loaded}</Notice></>;
   const [rows, token] = loaded;
+  // The address this page was opened on, never localhost (24 Nov 2026: the configured site address
+  // on Vercel was a laptop's localhost, so every QR led there).
   const host = (await headers()).get("host");
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || `${host?.startsWith("localhost") ? "http" : "https"}://${host}`;
+  const origin = qrOrigin(host ? `https://${host}` : null);
   const qrSvg = token ? await QRCode.toString(absolute(origin, praWamPath.checkIn(token)), { type: "svg", margin: 0, errorCorrectionLevel: "M" }) : null;
   const window = session.startsAt && session.endsAt ? checkInWindow(session.startsAt, session.endsAt) : null;
   // Mode tablet (23 Nov 2026): a published session that needs a check-in.

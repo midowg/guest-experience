@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { shareUrl, siteUrl } from "./site-url";
+import { PUBLIC_SITE, qrOrigin, shareUrl, siteUrl } from "./site-url";
 
 it("prefers the configured address, then the Vercel production domain, then localhost", () => {
   expect(siteUrl({ NEXT_PUBLIC_SITE_URL: "https://invitation.example", VERCEL_PROJECT_PRODUCTION_URL: "x.vercel.app" }).origin).toBe("https://invitation.example");
@@ -20,4 +20,12 @@ it("never shares a localhost link: a local site address becomes the public site"
   expect(shareUrl({}).origin).toBe("https://journey.werkudara.group");
   expect(shareUrl({ NEXT_PUBLIC_SITE_URL: "https://staging.example" }).origin).toBe("https://staging.example");
   expect(shareUrl({ NEXT_PUBLIC_SITE_URL: "http://localhost:3000", NEXT_PUBLIC_SHARE_URL: "https://share.example" }).origin).toBe("https://share.example");
+});
+
+it("qrOrigin: a check-in QR leads to the address the panitia has open, never localhost (24 Nov 2026)", () => {
+  expect(qrOrigin("https://journey.werkudara.group", {})).toBe("https://journey.werkudara.group");
+    expect(qrOrigin("https://preview-abc.vercel.app", { NEXT_PUBLIC_SITE_URL: "http://localhost:3000", VERCEL: "1" })).toBe("https://preview-abc.vercel.app");
+    expect(qrOrigin("http://localhost:3000", { NEXT_PUBLIC_SITE_URL: "http://localhost:3000", VERCEL: "1", VERCEL_ENV: "production" })).toBe(PUBLIC_SITE);
+    expect(qrOrigin(null, {})).toBe(PUBLIC_SITE);
+    expect(qrOrigin("not a url", {})).toBe(PUBLIC_SITE);
 });

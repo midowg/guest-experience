@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { qrOrigin } from "@/lib/site-url";
 import { mainWamCan } from "@/lib/main-wam/access";
 import { absolute, mainWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
@@ -8,7 +9,8 @@ import { sessionQrSheet, sessionQrToken } from "@/lib/server/main-wam/modul/abse
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ sesiId: string }> };
-const origin = (request: Request) => process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+// Never localhost (24 Nov 2026): the address the request came to, else the public site.
+const origin = (request: Request) => qrOrigin(new URL(request.url).origin);
 
 /** Panitia and Admin WAM only, while module Absen QR is on; 404 for anyone else (one answer for "not for you", KONTRAK §9 #4). */
 async function panitia() {
