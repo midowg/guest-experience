@@ -18,7 +18,7 @@ vi.mock("./feed", () => ({
   photoRecord: async () => null,
 }));
 
-const { cameraScreen, galleryScreen } = await import("./screens");
+const { cameraScreen, stackScreen } = await import("./screens");
 
 const NOW = new Date("2027-01-04T10:00:00+07:00");
 const prep: MwSession = { ...sampleSession("kumpul"), id: "00000000-0000-4000-8000-0000000000a1", title: "Persiapan berangkat", startsAt: "2027-01-02T09:00:00+07:00", endsAt: null };
@@ -36,8 +36,8 @@ describe("Momen's sessions follow module Ceklis", () => {
     expect((await cameraScreen(context(false), {}, NOW)).sessions.map(session => session.title)).toEqual(["Kumpul"]);
   });
 
-  it("gallery: the filter sheet's sessions follow it too", async () => {
-    expect((await galleryScreen(context(true), {}, NOW)).sessions.map(session => session.title)).toContain("Persiapan berangkat");
-    expect((await galleryScreen(context(false), {}, NOW)).sessions.map(session => session.title)).not.toContain("Persiapan berangkat");
+  it("stack: the filter sheet's sessions follow it too", async () => {
+    expect((await stackScreen(context(true), {}, NOW)).sessions.map(session => session.title)).toContain("Persiapan berangkat");
+    expect((await stackScreen(context(false), {}, NOW)).sessions.map(session => session.title)).not.toContain("Persiapan berangkat");
   });
 });

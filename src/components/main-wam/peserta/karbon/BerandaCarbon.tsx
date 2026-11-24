@@ -16,5 +16,5 @@ export function BerandaCarbon({ context, now }: { context: MainWamContext; now: 
 }
 
 async function Counted({ context, now }: { context: MainWamContext; now: Date }) {
-  return <CarbonCard view={await loadCarbon(context, now)} />;
+  return <CarbonCard view={(await loadCarbon(context, now)).mine} />;
 }

@@ -23,7 +23,7 @@ export type SayaProps = {
   photo: string | null;
   /** "Kamar 208" · "3 orang · bersama Sari, Dewi"; null before HR publishes the rooms. */
   room: { title: string; sub: string } | null;
-  /** The tokoh of the person's questionnaire card ("Marie Curie", persona "Pemikir"); null/absent while there is no card: no tokoh card then. */
+  /** The tokoh of the person's questionnaire card ("Marie Curie", persona "Pemikir"): its name shows under the name on the profile card; null/absent while there is no card: no line then. */
   figure?: { name: string; persona: string; colors: [string, string] } | null;
   /** Module Misi is on for this person and the points are read: the "Misi dan poin" row with its total. Null/absent: no row. */
   points?: number | null;
@@ -67,20 +67,16 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
         <Avatar name={name} photo={photo} size={64} />
         <span className={css2.profileText}>
           <span className={css2.profileName}>{name}</span>
+          {figure && <span className={css2.profileFigure}>
+            <span className={css2.figureDot} style={{ backgroundImage: `linear-gradient(160deg, ${figure.colors[0]}, ${figure.colors[1]})` }} aria-hidden />
+            <SrOnly>{t("peserta.me.figure")}: </SrOnly>{figure.name}
+          </span>}
           {line && <span className={css2.profileLine}>{line}</span>}
         </span>
         <Camera aria-hidden className={css2.profileCam} />
         {fullName !== name && <SrOnly>{`, ${fullName}`}</SrOnly>}
         <SrOnly>{`, ${t("peserta.me.changePhoto")}`}</SrOnly>
       </button>
-      {figure && <div className={css2.figure}>
-        <span className={css2.figureArt} style={{ backgroundImage: `linear-gradient(160deg, ${figure.colors[0]}, ${figure.colors[1]})` }} aria-hidden />
-        <span className={css2.figureText}>
-          <EyebrowLabel>{t("peserta.me.figure")}</EyebrowLabel>
-          <b className={css2.figureName}>{figure.name}</b>
-          <span className={css2.profileLine}>{t("peserta.me.figureSub", { persona: figure.persona })}</span>
-        </span>
-      </div>}
       <RowGroup>
         {room
           ? <Row icon={<KeyRound />} title={room.title} sub={room.sub} href={mainWamPath.room} />

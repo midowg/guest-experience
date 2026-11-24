@@ -1,9 +1,9 @@
 import "server-only";
 import { visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
 import { canSee } from "@/lib/main-wam/momen/access";
-import { GALLERY_PAGE, parsePhotoId, parseSession, parseView, STACK_PAGE } from "@/lib/main-wam/momen/filters";
+import { parsePhotoId, parseSession, STACK_PAGE } from "@/lib/main-wam/momen/filters";
 import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
-import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
+import { UMUM, type FeedPhoto, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { MwSession, PhotoStatus } from "@/lib/main-wam/types";
 import type { MainWamContext } from "../gate";
 import { readLang } from "../lang";
@@ -12,7 +12,7 @@ import { feedPhotos, listFeed, photoRecord, sessionCounts } from "./feed";
 
 /*
  * What each Momen screen needs from the server for its first paint (the client continues with the
- * APIs): the stack (M01–M03), the gallery (M05), the camera (U01). The pages pass these to their
+ * APIs): the stack (M01–M03), the camera (U01). The pages pass these to their
  * client components; the dev previews build the same shapes from sample data.
  */
 
@@ -63,7 +63,7 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
     mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, me: { name: viewer.name, photo: viewer.photo }, nowIso: now.toISOString(),
   };
 
-  // Opened at one photo (Galeri, Mozaik, a note about one's own photo).
+  // Opened at one photo (a toast, a note about one's own photo, Foto sesi).
   const photo = foto ? await photoRecord(foto).catch(() => null) : null;
   if (photo && canSee(viewer, photo, now)) {
     if (photo.ownerId === viewer.id && photo.status !== "tampil") {
@@ -93,25 +93,6 @@ export async function stackScreen(context: MainWamContext, search: Search, now =
   }
   const page = await listFeed(context, { view, session: null, mode: "baru", limit: STACK_PAGE });
   return { ...base, mode: "baru", items: page.items, next: page.next, total: page.total, startIndex: 0, offset: 0, migrated: settings.migrated && page.migrated };
-}
-
-export type GalleryScreen = {
-  view: FeedView; session: SessionFilter; sessionTitle: string | null; items: FeedPhoto[]; next: string | null; total: number; counts: SessionCount[] | null;
-  sessions: SessionChoice[]; mozaik: boolean; migrated: boolean; nowIso: string;
-};
-
-export async function galleryScreen(context: MainWamContext, search: Search, now = new Date()): Promise<GalleryScreen> {
-  const { settings } = context;
-  const lang = await readLang();
-  const view = parseView(search.lihat);
-  const session = parseSession(search.sesi);
-  const [sessions, counts, page] = await Promise.all([
-    publishedSessions(context), sessionCounts(context, view), listFeed(context, { view, session, mode: "semua", limit: GALLERY_PAGE }),
-  ]);
-  return {
-    view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now, lang)),
-    mozaik: settings.modules.mozaik, migrated: settings.migrated && page.migrated, nowIso: now.toISOString(),
-  };
 }
 
 export type CameraScreenData = {

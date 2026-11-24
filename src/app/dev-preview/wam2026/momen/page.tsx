@@ -2,21 +2,19 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
 import { previewLang } from "@/components/main-wam/dev/lang";
-import { t, type Lang } from "@/lib/main-wam/i18n";
+import { t } from "@/lib/main-wam/i18n";
 import { demoPicture } from "@/lib/main-wam/momen/viewer";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CameraScreen, type CameraDemo } from "@/components/main-wam/momen/CameraScreen";
-import { Gallery, type GalleryProps } from "@/components/main-wam/momen/Gallery";
 import { Mosaic } from "@/components/main-wam/momen/Mosaic";
 import { MomenStack, type MomenStackProps, type StackDemo } from "@/components/main-wam/momen/MomenStack";
-import { GallerySkeleton, MosaicSkeleton, StackSkeleton } from "@/components/main-wam/momen/Skeletons";
+import { MosaicSkeleton, StackSkeleton } from "@/components/main-wam/momen/Skeletons";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { List, ListRow } from "@/components/main-wam/ui";
 import { Images } from "lucide-react";
-import { sessionChoice } from "@/lib/main-wam/momen/sessions";
 import { flushedText, newPhotosText, sentText } from "@/lib/main-wam/momen/stack";
 import { HEART, type ReactionCount } from "@/lib/main-wam/momen/reactions";
-import { SAMPLE_TOTAL, sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleReactions, sampleReactors, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
+import { sampleFeedSemua, sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleReactions, sampleReactors } from "@/lib/main-wam/momen/sample";
 import { sampleSessionIds, sampleSessions, sampleTime } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
 import { DemoToast } from "./DemoToast";
@@ -31,8 +29,7 @@ export const dynamic = "force-dynamic";
 const LAYAR = [
   "M01", "M01-sesi", "M01-reaksi-saya", "M01-reaksi-banyak", "M01-daftar-reaksi", "M01-daftar-reaksi-banyak", "M01-daftar-reaksi-memuat", "M01-daftar-reaksi-gagal", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia", "M01-fotomu", "M01-fotomu-kosong", "M01-belum-dilihat", "M01-sebagian", "M01-semua-dilihat",
   "M02-dari-galeri", "M03", "M04",
-  "M05", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
-  "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
+  "M06", "M06-fotoku", "M06-fotoku-status", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
   "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
   "P01-kartu", "P04-baris", "M01-memuat-halaman",
 ] as const;
@@ -45,7 +42,6 @@ const manyReactions: ReactionCount[] = [
   { emoji: "👏", count: 3, mine: false }, { emoji: "😮", count: 2, mine: false }, { emoji: "🙏", count: 1, mine: false },
 ];
 const sessions = sampleSessions.filter(session => session.status === "terbit");
-const choices = (now: Date, lang: Lang = "id") => sessions.map(session => sessionChoice(session, now, lang));
 
 function stack(over: Partial<MomenStackProps> & { demo?: StackDemo } = {}): MomenStackProps {
   return {
@@ -54,13 +50,6 @@ function stack(over: Partial<MomenStackProps> & { demo?: StackDemo } = {}): Mome
     anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: pemaparanNow.toISOString(), ...over,
   };
 }
-function gallery(over: Partial<GalleryProps> = {}): GalleryProps {
-  return {
-    view: "semua", session: null, sessionTitle: null, items: [...sampleFeedSemua, ...sampleGalleryAll].map(photo => ({ ...photo, seen: true })), next: null, total: SAMPLE_TOTAL,
-    counts: sampleSessionCounts, sessions: choices(pemaparanNow), mozaik: true, migrated: true, nowIso: pemaparanNow.toISOString(), ...over,
-  };
-}
-
 export default async function DevMomen({ searchParams }: { searchParams: Promise<{ layar?: string; lang?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
@@ -104,20 +93,13 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "M04": return at(momen, <MomenStack {...stack({ demo: { sheet: "lapor" } })} />);
   }
 
-  /* M05: Galeri. */
-  const galeri = mainWamPath.gallery();
-  switch (layar) {
-    case "M05": return at(galeri, <Gallery {...gallery()} />);
-    case "M05-fotoku": return at(galeri, <Gallery {...gallery({ view: "saya", items: sampleGalleryMine, total: 6 })} />);
-    case "M05-sesi": return at(galeri, <Gallery {...gallery({ session: sampleSessionIds["team-building"], sessionTitle: "Team building", items: sampleFeedSemua.slice(0, 6), total: 38 })} />);
-    case "M05-kosong": return at(galeri, <Gallery {...gallery({ session: sampleSessionIds.bns, sessionTitle: "Batu Night Spectacular", items: [], total: 0 })} />);
-    case "M05-memuat": return at(galeri, <GallerySkeleton />);
-  }
-
-  /* M06: Mozaik. */
+  /* M06: Mozaik, with Fotoku (own photos; Galeri was removed on 25 Nov 2026). */
   const mozaik = mainWamPath.mosaic();
   switch (layar) {
     case "M06": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
+    case "M06-fotoku": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo own={sampleGalleryMine} ownTotal={sampleGalleryMine.length} />);
+    case "M06-fotoku-status": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark={false} title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo
+      own={sampleGalleryMine.map((photo, index) => (index === 0 ? { ...photo, status: "ditinjau" as const } : index === 1 ? { ...photo, status: "disembunyikan" as const } : photo))} ownTotal={sampleGalleryMine.length} />);
     case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 4, undefined, true)} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
     case "M06-tandai-kosong": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 0)} mark title={t(lang, "momen.mos.title", { name: "WAM 2026" })} demo />);
     case "M06-memuat": return at(mozaik, <MosaicSkeleton />);

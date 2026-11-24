@@ -26,23 +26,34 @@ async function roomsInUse(): Promise<number> {
   } catch { return 0; }
 }
 
+/** Every seat listed (trip and person): the totals count them per trip, a person's own footprint reads theirs. */
+async function seatRows(): Promise<{ tripId: string; employeeId: string }[]> {
+  const { data, error } = await db().from("mw_trip_seats").select("trip_id,employee_id").limit(5000);
+  if (error) return [];
+  return (data ?? []).map(row => ({ tripId: row.trip_id as string, employeeId: row.employee_id as string }));
+}
+
 /** Seats listed per trip (people on each leg). */
-async function seatsPerTrip(): Promise<Map<string, number>> {
+export function seatsPerTrip(rows: readonly { tripId: string }[]): Map<string, number> {
   const out = new Map<string, number>();
-  const { data, error } = await db().from("mw_trip_seats").select("trip_id").limit(5000);
-  if (error) return out;
-  for (const row of data ?? []) out.set(row.trip_id as string, (out.get(row.trip_id as string) ?? 0) + 1);
+  for (const row of rows) out.set(row.tripId, (out.get(row.tripId) ?? 0) + 1);
   return out;
+}
+
+/** What the estimate needs from Admin WAM, read once: the event's total and a person's own share both count from it. */
+export async function gatherCarbon(settings: MainWamSettings) {
+  const [people, rooms, trips, seats, sessions] = await Promise.all([mainWamEventPeople(), roomsInUse(), listTrips(), seatRows(), allSessions()]);
+  const first = settings.event.checkInAt ? wibDate(settings.event.checkInAt) : settings.event.startDate;
+  const last = settings.event.checkOutAt ? wibDate(settings.event.checkOutAt) : settings.event.endDate;
+  const count = settings.sampleRundown ? Object.keys(samplePeople).length : people.accounts.length;
+  const nights = nightsBetween(first, last);
+  const data = carbonDataFrom({ people: count, rooms, nights, trips: trips.data, seats: seatsPerTrip(seats), sessions: sessions.data, bills: settings.carbon });
+  return { people: count, nights, trips: trips.data, seats, sessions: sessions.data, result: carbonEstimate(data) };
 }
 
 export async function carbonForEvent(settings: MainWamSettings): Promise<CarbonResult | null> {
   try {
-    const [people, rooms, trips, seats, sessions] = await Promise.all([mainWamEventPeople(), roomsInUse(), listTrips(), seatsPerTrip(), allSessions()]);
-    const first = settings.event.checkInAt ? wibDate(settings.event.checkInAt) : settings.event.startDate;
-    const last = settings.event.checkOutAt ? wibDate(settings.event.checkOutAt) : settings.event.endDate;
-    const result = carbonEstimate(carbonDataFrom({
-      people: settings.sampleRundown ? Object.keys(samplePeople).length : people.accounts.length, rooms, nights: nightsBetween(first, last), trips: trips.data, seats, sessions: sessions.data, bills: settings.carbon,
-    }));
+    const { result } = await gatherCarbon(settings);
     return result.empty ? null : result;
   } catch { return null; }
 }

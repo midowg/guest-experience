@@ -60,6 +60,9 @@ export type CarbonView =
     total: { value: string; unit: string };
     /** "±114 kg per orang", null when nobody is counted. */
     perPerson: string | null;
+    /** Everyone counted ("120") and the average per person ("145 kg"); null when nobody is counted. */
+    people: string | null;
+    average: string | null;
     /** Biggest first; a source with nothing in it is left out. */
     sources: CarbonSourceView[];
     /** "Sen, 4 Jan · 21.00". */
@@ -103,6 +106,8 @@ export function carbonView(result: CarbonResult | null, now: Date, lang: Lang = 
     kind: "ada",
     total: carbonFigure(result.kg, lang),
     perPerson: per === null ? null : t(lang, "peserta.carbon.perPerson", { kg: number(lang, per) }),
+    people: result.basis.people > 0 ? number(lang, result.basis.people) : null,
+    average: per === null ? null : `${number(lang, per)} kg`,
     sources,
     updated: `${shortDateOfInstant(lang, now)} · ${clock(lang, wibTime(now.toISOString()))}`,
     barLabel: sources.map(source => `${source.title} ${source.percent}%`).join(", "),

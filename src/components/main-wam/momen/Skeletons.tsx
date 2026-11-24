@@ -2,7 +2,6 @@ import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import stack from "./momen.module.css";
 import camera from "./camera.module.css";
-import gallery from "./gallery.module.css";
 import mosaic from "./mosaic.module.css";
 
 /*
@@ -10,11 +9,11 @@ import mosaic from "./mosaic.module.css";
  * shape of its screen, so nothing jumps when it arrives.
  */
 
-/** M01 memuat: the camera and the gallery beside the title (audit T-M05), the card as a panel with a spinner place, the reaction row. */
+/** M01 memuat: the camera beside the title (audit T-M05), the card as a panel with a spinner place, the reaction row. */
 export function StackSkeleton() {
   return <div className={stack.view}>
     <ShellActions>
-      <span className={stack.skeletonChips} aria-hidden><Skeleton shape="block" width={44} height={44} style={{ borderRadius: 999 }} /><Skeleton shape="block" width={44} height={44} style={{ borderRadius: 999 }} /></span>
+      <span className={stack.skeletonChips} aria-hidden><Skeleton shape="block" width={44} height={44} style={{ borderRadius: 999 }} /></span>
     </ShellActions>
     <SkeletonGroup label="Memuat momen" style={{ display: "contents" }}>
       <div className={stack.stage}>
@@ -35,17 +34,6 @@ export function CameraSkeleton() {
       <div className={camera.dock}><div style={{ height: 36 }} /><div className={camera.controls}><span /><span className={camera.shutter} aria-hidden /><span /></div></div>
     </SkeletonGroup>
   </div>;
-}
-
-/** M05: the filters, then nine grey squares. */
-export function GallerySkeleton() {
-  return <ScreenContent>
-    <SkeletonGroup label="Memuat galeri" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Skeleton shape="block" height={44} style={{ borderRadius: 12 }} />
-      <Skeleton shape="block" width={128} height={36} style={{ borderRadius: 999 }} />
-      <div className={gallery.skeletonGrid}>{Array.from({ length: 9 }, (_, index) => <Skeleton key={index} shape="block" />)}</div>
-    </SkeletonGroup>
-  </ScreenContent>;
 }
 
 /** M06 memuat: the canvas as a grey block, a title and a line. */

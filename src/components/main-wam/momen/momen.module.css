@@ -4,7 +4,7 @@
  * photo (the name pill, the options, the reaction pills) keeps the fixed media colours: they sit on a scrim, not on the page. The card takes the height that is left
  * (the deck is a flex item and a size container), from 4:5 up to 9:16, so the actions sit right under it on any screen.
  */
-/* The page's column is the height of the screen (the frame's <main> grows to it): the title bar (with the camera and the gallery) above, then the
+/* The page's column is the height of the screen (the frame's <main> grows to it): the title bar (with the camera) above, then the
    stage, which holds the cards, the line under them and the quick reactions. The cards take whatever height is left
    (a flex item, no fixed number), up to a 9:16 card; the line and the actions follow right under them, and
    on a very tall screen the three are centred together instead of drifting apart. */
@@ -12,14 +12,13 @@
 .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .banner { margin-top: var(--mw-space-12); }
 
-/* Galeri and Foto side by side at the end of the bar (Galeri on the left): 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons);
-   their words give way (they stay the buttons' names for a screen reader) on a narrow screen (under 360 px, or zoom 200%), so "Terbaru" keeps its line. Mozaik is only in Galeri's own header. */
+/* Foto at the end of the bar: 16 px from the screen's edge like the page (the bar keeps 6 px for icon buttons);
+   its word gives way (it stays the button's name for a screen reader) on a narrow screen (under 360 px, or zoom 200%), so "Terbaru" keeps its line. */
 .photoBtn { margin-right: calc(var(--mw-space-8) + 2px); }
-.galleryBtn { flex: none; }
-@media (max-width: 359.98px) { .photoBtn, .galleryBtn { width: 44px; min-height: 44px; padding-inline: 0; gap: 0; }
+@media (max-width: 359.98px) { .photoBtn { width: 44px; min-height: 44px; padding-inline: 0; gap: 0; }
   .photoLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 
-/* Galeri mode: the frame's bar is replaced by ‹ "Galeri". */
+/* Opened at one photo (from Mozaik, a toast, a note): the frame's bar is replaced by ‹ "Foto". */
 .ownBar { padding-top: var(--mw-safe-top); }
 
 /* The deck takes the space between the title bar and the line under it (flex 1), at least 240 and at most
@@ -116,5 +115,5 @@
 .panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
 .panelInner a, .panelInner button { pointer-events: auto; }
 
-/* Loading (audit T-M05): Galeri and Mozaik beside the title hold their place, as the chips do (32 high in a 44 target, 4 apart). */
+/* Loading (audit T-M05): the Foto button beside the title holds its place, as the chips do (32 high in a 44 target, 4 apart). */
 .skeletonChips { display: flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-touch); }

@@ -235,7 +235,7 @@ export async function reportPhoto(context: MainWamContext, id: string, input: Re
   if (result?.hidden) {
     const notify = () => trySendMainWamNote({
       kind: "momen", title: "Fotomu disembunyikan sementara", body: "Ada rekan yang melaporkan fotomu. Panitia akan meninjaunya.",
-      to: { people: [result.owner_id], label: "Pemilik foto" }, link: mainWamPath.gallery({ lihat: "saya" }), by: null, photoHidden: true, tag: `foto-${photo.id}`,
+      to: { people: [result.owner_id], label: "Pemilik foto" }, link: mainWamPath.moments({ foto: photo.id }), by: null, photoHidden: true, tag: `foto-${photo.id}`,
     });
     try { after(notify); } catch { await notify(); }
   }

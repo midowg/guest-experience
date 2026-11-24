@@ -29,6 +29,9 @@ const config: NextConfig = {
       { source: "/wam/acara", destination: "/wam2026", permanent: true },
       { source: "/wam/acara/:path*", destination: "/wam2026/:path*", permanent: true },
       // Ringkasan panitia/BOD in the event app was removed on 23 Nov 2026 (the owner's ask); old links land on Beranda, not a 404.
+      // Galeri in Momen was removed on 25 Nov 2026 (the owner's ask: the photos are in the Mozaik); old links land on the Mozaik.
+      { source: "/wam2026/momen/galeri", destination: "/wam2026/momen/mozaik", permanent: false },
+      { source: "/wam/acara/momen/galeri", destination: "/wam2026/momen/mozaik", permanent: false },
       { source: "/wam2026/ringkasan/:path*", destination: "/wam2026", permanent: false },
       { source: "/wam/acara/ringkasan/:path*", destination: "/wam2026", permanent: false },
       { source: "/panduan", destination: "/your-visit", permanent: false },

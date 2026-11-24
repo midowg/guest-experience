@@ -215,11 +215,11 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     };
     // eslint-disable-next-line @next/next/no-img-element -- the photo just made on this phone (object URL)
     const picture = thumb ? <img src={thumb} alt="" /> : undefined;
-    // "Lihat": the stack opened at the photo just sent (the first of a batch), in the view it went to; Fotoku if the server has not got it in a moment.
+    // "Lihat": the stack opened at the photo just sent (the first of a batch), in the view it went to; the Momen stack if the server has not got it in a moment.
     const see = async () => {
       const id = await momenQueue().sentId(ids[0], 3000);
       stop();
-      router.push(id ? mainWamPath.moments({ foto: id }) : mainWamPath.gallery({ lihat: "saya" }));
+      router.push(id ? mainWamPath.moments({ foto: id }) : mainWamPath.moments());
     };
     if (ready[0].deferred) toast.show({ text: t("momen.cam.sendsOnline"), thumb: picture, action: { label: t("momen.cam.undo"), onAction: cancel } });
     else toast.show({

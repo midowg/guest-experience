@@ -37,13 +37,9 @@ a.row:active, button.row:active { background-color: var(--mw-press); }
 .profileLine { font: 400 13px/18px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .profileCam { flex: none; width: 20px; height: 20px; color: var(--mw-text-2); }
 
-/* Tokoh card (the questionnaire card's tokoh): the card's two colours as a small portrait, the name in Barlow capitals, the type under it. */
-.figure { display: flex; align-items: center; gap: var(--mw-space-16); padding: var(--mw-space-16); border-radius: var(--mw-radius-20); background: linear-gradient(135deg, var(--mw-accent), color-mix(in srgb, var(--mw-accent) 70%, var(--mw-media-scrim))); color: var(--mw-on-accent); border: 1px solid transparent; box-shadow: var(--mw-elev-card); }
-.figure .figureText > * { color: var(--mw-on-accent); }
-.figure .profileLine { color: var(--mw-on-accent-2); }
-.figureArt { flex: none; width: 54px; height: 66px; border-radius: 12px; }
-.figureText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.figureName { font: 800 22px/24px var(--mw-font-condensed); letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
+/* The tokoh under the name: the card's two colours as a small swatch, the tokoh's name in the name's colour. */
+.profileFigure { display: flex; align-items: center; gap: var(--mw-space-8); font: 600 14px/20px var(--mw-font-sans); color: var(--mw-text-1); overflow-wrap: anywhere; }
+.figureDot { flex: none; width: 10px; height: 14px; border-radius: 3px; }
 
 .stack { display: flex; flex-direction: column; gap: var(--mw-space-12); min-width: 0; }
 .note { margin: 0; font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); }

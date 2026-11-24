@@ -128,6 +128,6 @@ export async function moderatePhoto(context: MainWamContext, id: string, input: 
   if (!result?.out_owner || (input.action === "tampilkan" && input.from === "tampil")) return;
   await trySendMainWamNote({
     kind: "momen", title: "Momen", body: ownerNotice[input.action], to: { people: [result.out_owner], label: "Pengunggah" },
-    link: input.action === "tampilkan" ? mainWamPath.moments({ foto: id }) : mainWamPath.gallery({ lihat: "saya" }), by: context.viewer.id, photoHidden: input.action !== "tampilkan",
+    link: mainWamPath.moments({ foto: id }), by: context.viewer.id, photoHidden: input.action !== "tampilkan",
   });
 }

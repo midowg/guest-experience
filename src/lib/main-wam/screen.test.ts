@@ -51,7 +51,6 @@ describe("Main WAM's frame, from the address alone", () => {
   it("keeps the bottom bar on detail screens, with the tab they belong to and a way back", () => {
     const cases: [string, string, string, string][] = [
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
-      [mainWamPath.gallery(), "momen", "Galeri", mainWamPath.moments()],
       [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
       [mainWamPath.room, "saya", "Kamar", mainWamPath.me],
       [mainWamPath.carbon(), "beranda", "Jejak karbon", mainWamPath.home],

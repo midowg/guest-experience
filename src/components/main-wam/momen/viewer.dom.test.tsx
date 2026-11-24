@@ -1,10 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { gridGeometry } from "@/lib/main-wam/momen/mosaic";
-import { sampleGalleryAll, sampleGalleryMine, sampleMosaic, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
-import { sessionChoice } from "@/lib/main-wam/momen/sessions";
+import { sampleGalleryMine, sampleMosaic } from "@/lib/main-wam/momen/sample";
 import type { MosaicManifest, PhotoDetail } from "@/lib/main-wam/momen/types";
-import { sampleSessions } from "@/lib/main-wam/sample";
 import { mainWamApi } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
@@ -18,7 +16,6 @@ vi.mock("@/components/pra-wam/api", () => ({ praWamRequest: (...args: unknown[])
 
 const { MosaicCanvas, TAP_WAIT_MS } = await import("./MosaicCanvas");
 const { Mosaic } = await import("./Mosaic");
-const { Gallery } = await import("./Gallery");
 
 class TestPointerEvent extends MouseEvent {
   pointerId: number; isPrimary: boolean; pointerType: string;
@@ -230,25 +227,58 @@ describe("the viewer in the Mozaik", () => {
   });
 });
 
-describe("Galeri", () => {
-  const sessions = sampleSessions.filter(session => session.status === "terbit").map(session => sessionChoice(session, new Date("2027-01-05T10:05:00+07:00")));
-  const props = { view: "saya" as const, session: null, sessionTitle: null, items: sampleGalleryMine, next: null, total: 6, counts: sampleSessionCounts, sessions, mozaik: true, migrated: true, nowIso: "2027-01-05T10:05:00+07:00" };
+describe("Fotoku in the Mozaik", () => {
+  const mosaic = (own = sampleGalleryMine, extra: Partial<React.ComponentProps<typeof Mosaic>> = {}) =>
+    render(<ToastProvider><Mosaic initial={manifest} mark={false} title="Mozaik WAM 2026" demo own={own} ownTotal={own.length} {...extra} /></ToastProvider>);
 
-  it("shows a picture in every tile of Semua (the sample's own pictures, no empty gradient blocks)", () => {
-    const { container } = render(<ToastProvider><Gallery {...props} view="semua" items={sampleGalleryAll} total={21} /></ToastProvider>);
-    const images = [...container.querySelectorAll("img")];
-    expect(images.length).toBeGreaterThanOrEqual(sampleGalleryAll.length);
-    for (const image of images) expect(image.getAttribute("src")).toMatch(/^\/wam\/demo\/foto-\d\d\.svg$/);
+  it("lists the person's own photos under the mosaic, with a picture in every tile", () => {
+    mosaic();
+    const list = screen.getByRole("list", { name: "Fotoku" });
+    expect(within(list).getAllByRole("button")).toHaveLength(sampleGalleryMine.length);
+    for (const image of list.querySelectorAll("img")) expect(image.getAttribute("src")).toMatch(/^\/wam\/demo\/foto-\d\d\.svg$/);
   });
 
-  it("Fotoku opens the same viewer (large photo, Simpan foto), with Hapus foto under it", () => {
-    render(<ToastProvider><Gallery {...props} /></ToastProvider>);
-    fireEvent.click(screen.getAllByRole("button", { name: /^Fotomu/ })[0]);
+  it("shows nothing when there is no photo of one's own", () => {
+    mosaic([]);
+    expect(screen.queryByRole("list", { name: "Fotoku" })).toBeNull();
+  });
+
+  it("a photo of one's own opens the viewer (Fotomu, large photo, Simpan foto) with Hapus foto under it", () => {
+    mosaic();
+    fireEvent.click(within(screen.getByRole("list", { name: "Fotoku" })).getAllByRole("button", { name: /^Fotomu/ })[0]);
     const sheet = screen.getByRole("dialog");
     expect(within(sheet).getByRole("heading", { name: "Fotomu" })).toBeTruthy();
     expect(within(sheet).getByRole("img", { name: "Fotomu" }).getAttribute("src")).toMatch(/^\/wam\/demo\/foto-\d\d\.svg$/);
     expect(within(sheet).getByRole("button", { name: "Simpan foto" })).toBeTruthy();
     expect(within(sheet).getByRole("button", { name: "Hapus foto" })).toBeTruthy();
     expect(request).not.toHaveBeenCalled();
+  });
+
+  it("marks a photo under review or hidden (also one that is not in the mosaic) and says it in the viewer", () => {
+    const own = [{ ...sampleGalleryMine[0], status: "ditinjau" as const }, { ...sampleGalleryMine[1], status: "disembunyikan" as const }];
+    mosaic(own);
+    const list = screen.getByRole("list", { name: "Fotoku" });
+    expect(list.textContent).toContain("Ditinjau");
+    expect(list.textContent).toContain("Disembunyikan");
+    fireEvent.click(within(list).getAllByRole("button")[0]);
+    expect(within(screen.getByRole("dialog")).getByText("Ditinjau panitia")).toBeTruthy();
+  });
+
+  it("Hapus foto asks first, then the photo leaves Fotoku (a sample photo asks nothing of the server)", async () => {
+    mosaic();
+    const list = () => screen.getByRole("list", { name: "Fotoku" });
+    fireEvent.click(within(list()).getAllByRole("button")[0]);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Hapus foto" }));
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Hapus foto" }));
+    await waitFor(() => expect(within(list()).getAllByRole("button")).toHaveLength(sampleGalleryMine.length - 1));
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("has no link to a Galeri anywhere (\"Lihat foto\" opens the viewer in place)", () => {
+    const { container } = mosaic(sampleGalleryMine, { mark: true });
+    expect(container.querySelector('a[href*="galeri"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lihat foto" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(container.querySelector('a[href*="galeri"]')).toBeNull();
   });
 });

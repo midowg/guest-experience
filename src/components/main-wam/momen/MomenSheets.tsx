@@ -12,7 +12,7 @@ import { saveFile } from "./saveFile";
 import { PickList, RadioCards, type PickGroup } from "./Choices";
 import css from "./sheets.module.css";
 
-/** "Saring sesi" (M01__status#pilih-sesi, M05): Semua sesi, sessions with photos by day, Umum. */
+/** "Saring sesi" (M01__status#pilih-sesi): Semua sesi, sessions with photos by day, Umum. */
 export function SessionFilterSheet({ open, onClose, sessions, counts, value, onChange, now }: {
   open: boolean; onClose: () => void; sessions: SessionChoice[]; counts: SessionCount[]; value: SessionFilter; onChange: (value: SessionFilter) => void; now: Date;
 }) {

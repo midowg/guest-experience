@@ -50,12 +50,12 @@ const ALL: Seed[] = [
 /** M01: 24 new photos for everyone (the third is Dimas, 10.02, 24 reactions). */
 export const sampleFeedSemua: FeedPhoto[] = ALL.map((seed, index) => photo(index + 1, seed));
 
-/** M05 Galeri: 21 photos. */
+/** 21 more photos (the stack opened at one photo). */
 export const sampleGalleryAll: FeedPhoto[] = (["rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "rani", "fajar", "sari", "bima", "ayu", "raka", "lina", "tari", "wawan", "nina", "fajar"] as const)
   .map((key, index) => photo(200 + index, [key, index < 15 ? D2 : D1, `${String(10 - Math.floor(index / 4)).padStart(2, "0")}:${String(59 - (index % 4) * 13).padStart(2, "0")}`, index % 5,
     { seen: true }]));
 
-/** M05 Fotoku: Rani's six photos (one in review). */
+/** Fotoku (in the Mozaik): Rani's six photos (one in review). */
 export const sampleGalleryMine: FeedPhoto[] = [0, 1, 2, 3, 4, 5].map(index => photo(300 + index, ["rani", D2, `0${9 - Math.floor(index / 3)}:${String(50 - index * 7).padStart(2, "0")}`, index,
   { status: index === 4 ? "ditinjau" : "tampil", seen: true }]));
 

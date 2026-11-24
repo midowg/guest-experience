@@ -59,7 +59,7 @@ describe("MainWamShell", () => {
   });
 
   it("keeps ‹ and the title on a detail screen under a tab", () => {
-    nav.pathname = mainWamPath.gallery();
+    nav.pathname = mainWamPath.mosaic();
     render(<MainWamShell greeting={greeting}><p>Isi</p></MainWamShell>);
     expect(screen.getByRole("link", { name: "Momen" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Kembali" }).getAttribute("href")).toBe(mainWamPath.moments());

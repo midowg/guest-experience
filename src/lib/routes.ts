@@ -505,7 +505,7 @@ const mwQuery = (values: Record<string, string | number | undefined | null | fal
   return search ? `?${search}` : "";
 };
 export type MainWamMomentsFilter = { sesi?: string; foto?: string };
-export type MainWamGalleryFilter = { lihat?: "semua" | "saya"; sesi?: string };
+export type MainWamPhotosFilter = { lihat?: "semua" | "saya"; sesi?: string };
 export const mainWamPath = {
   /* A · peserta */
   /** Beranda (P01/P02; BOD B01 and panitia K01 add their card). */
@@ -543,8 +543,6 @@ export const mainWamPath = {
   moments: (filter: MainWamMomentsFilter = {}) => `${MAIN_WAM_PATH}/momen${mwQuery(filter)}`,
   /** U01–U05 Kamera: `sesi` overrides the automatic tag ("umum" = no tag). */
   camera: (filter: { sesi?: string } = {}) => `${MAIN_WAM_PATH}/momen/kamera${mwQuery(filter)}`,
-  /** M05 Galeri: Semua or Fotoku, one session. */
-  gallery: (filter: MainWamGalleryFilter = {}) => `${MAIN_WAM_PATH}/momen/galeri${mwQuery(filter)}`,
   /** M06 Mozaik; `mark` turns "Tandai fotoku" on. */
   mosaic: (mark = false) => `${MAIN_WAM_PATH}/momen/mozaik${mwQuery({ tandai: mark ? "1" : undefined })}`,
 
@@ -607,8 +605,8 @@ export const mainWamApi = {
   guideFile: (id: string) => `${MAIN_WAM_API}/panduan/${enc(id)}/berkas`,
 
   /* B · momen */
-  /** GET: the stack or the gallery (?lihat=&sesi=&sebelum=). */
-  photos: (filter: MainWamGalleryFilter & { sebelum?: string } = {}) => `${MAIN_WAM_API}/momen${mwQuery(filter)}`,
+  /** GET: the stack or a list of photos (?lihat=&sesi=&sebelum=). */
+  photos: (filter: MainWamPhotosFilter & { sebelum?: string } = {}) => `${MAIN_WAM_API}/momen${mwQuery(filter)}`,
   /** POST {clientId, sessionId, size, width, height, takenAt}: an upload address for one photo. */
   photoStart: `${MAIN_WAM_API}/momen/unggah`,
   /** POST {key, token, …}: the photo is uploaded; check it and keep it. */
@@ -681,6 +679,8 @@ export const mainWamApi = {
   missionPhotoStart: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/foto/unggah`,
   /** POST {…the same, token}: the files are in storage; check them, the position, and keep the proof. */
   missionPhotoConfirm: (id: string) => `${MAIN_WAM_API}/misi/${enc(id)}/foto/simpan`,
+  /** DELETE: lift my own tag off a mission photo (the Momen photo's id). */
+  missionUntag: (photoId: string) => `${MAIN_WAM_API}/misi/tag/${enc(photoId)}`,
 };
 
 /**
@@ -803,6 +803,8 @@ export const mainWamAdminApi = {
   missionCompletion: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/penyelesaian/${enc(id)}`,
   /** GET: a proof photo (redirect to storage). */
   missionProof: (id: string) => `${MAIN_WAM_ADMIN_API}/misi/penyelesaian/${enc(id)}/foto`,
+  /** GET: the proofs waiting for a person (Tinjauan); the decision is PATCH on missionCompletion. */
+  missionReview: `${MAIN_WAM_ADMIN_API}/misi/tinjauan`,
   /** POST {employeeId, points, note}: points by hand. */
   missionPoints: `${MAIN_WAM_ADMIN_API}/misi/poin`,
   /** DELETE: take a manual entry back. */

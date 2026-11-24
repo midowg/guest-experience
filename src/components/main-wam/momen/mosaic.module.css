@@ -52,3 +52,17 @@
 .markOn { background: var(--mw-gold); border-color: var(--mw-gold); color: var(--mw-on-gold); box-shadow: var(--mw-glow); }
 .markBtn:focus-visible { outline: 3px solid var(--mw-focus); outline-offset: 2px; }
 .mineBox { display: flex; flex-direction: column; align-items: flex-start; width: 100%; gap: var(--mw-space-8); }
+
+/* Fotoku: the person's own photos (also the ones not in the mosaic yet), a small row under the mark button. */
+.ownBox { display: flex; flex-direction: column; width: 100%; gap: var(--mw-space-8); }
+.ownTitle { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-title-small, 700 16px/22px var(--mw-font-sans)); color: var(--mw-text-1); }
+.ownCount { font: var(--mw-type-caption); color: var(--mw-text-2); }
+.own { display: grid; width: 100%; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--mw-space-8); margin: 0; padding: 0; list-style: none; }
+.own > li { min-width: 0; }
+.ownState {
+  position: absolute; left: var(--mw-space-4); bottom: var(--mw-space-4); z-index: 1; max-width: calc(100% - var(--mw-space-8));
+  padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); font: var(--mw-type-caption-strong);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.statusPill { display: flex; justify-content: center; }
+.danger { color: var(--mw-error); }

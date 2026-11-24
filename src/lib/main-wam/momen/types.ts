@@ -3,7 +3,7 @@ import type { ReactionCount } from "./reactions";
 
 /*
  * Momen's own types (area B, docs/main-wam/KONTRAK.md §6): what the stack (M01–M03), the gallery
- * (M05), the camera's queue (U01–U04) and the Mozaik (M06) exchange with the server. Shared types
+ * (Fotoku in the Mozaik), the camera's queue (U01–U04) and the Mozaik (M06) exchange with the server. Shared types
  * (MwPhoto, PhotoAudience, ReportReason) stay in ../types.ts.
  */
 

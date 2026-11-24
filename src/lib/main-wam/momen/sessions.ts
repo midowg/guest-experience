@@ -4,7 +4,7 @@ import type { MwSession } from "../types";
 import type { SessionCount } from "./types";
 
 /*
- * The session sheets of Momen: "Saring sesi" (M01, M05: sessions that have photos, by day, newest
+ * The session sheets of Momen: "Saring sesi" (M01: sessions that have photos, by day, newest
  * first, then Umum) and "Tag sesi" (U01: sessions already started, Umum first). Pure.
  */
 

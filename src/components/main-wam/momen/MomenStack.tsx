@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Grid3x3, Hourglass, Images, MoveHorizontal } from "lucide-react";
+import { Camera, CircleCheck, CloudOff, Ellipsis, EyeOff, Hourglass, Images, LayoutGrid, MoveHorizontal } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { ShellActions, ShellChrome } from "@/components/main-wam/shell";
 import { Banner, Button, IconBox, IconButton, Spinner, TopBar, useToast } from "@/components/main-wam/ui";
@@ -33,10 +33,10 @@ export type MomenStackProps = {
   sessionTitle: string | null;
   items: FeedPhoto[];
   next: string | null;
-  /** How many the counter counts: new photos (baru), the session's photos, the gallery's photos. */
+  /** How many the counter counts: new photos (baru), the session's photos, the photos around the one opened. */
   total: number;
   startIndex: number;
-  /** Galeri: photos newer than the first one loaded (the counter starts after them). */
+  /** Opened at one photo: photos newer than the first one loaded (the counter starts after them). */
   offset: number;
   mozaik: boolean;
   migrated: boolean;
@@ -66,14 +66,14 @@ function readFlag(key: string): boolean {
 /**
  * M01–M04: Momen as a stack of photos to swipe through (Instagram Instants), every photo for everyone. The stack
  * holds only the photos not seen yet (the person's own one shows once, first): a photo that was in front counts as
- * seen and is not in the stack next time, only in the gallery; at the end "Kamu sudah lihat semua" (M03), and a
+ * seen and is not in the stack next time (it stays in the Mozaik and in the session's photos); at the end "Kamu sudah lihat semua" (M03), and a
  * photo that comes in later appears there as new (a light poll while that panel is up). The title bar has only the
- * Foto button (and Galeri). There is no counter of photos and no next/previous button: the stack is swiped.
+ * Foto button. There is no counter of photos and no next/previous button: the stack is swiped.
  * Messages under a photo are postponed: there is no comment UI at all.
  * Reactions: eight plain emoji under the photo (4 × 2), a small pill inside the photo (three avatars and the number of
  * reactions; a tap on it opens the list of who reacted with what, where one's own reaction can be taken back); one
- * per person, a tap on the same emoji takes it back, a double tap on the photo is the red heart. "…" on the photo → Laporkan foto (M04) or Hapus foto (one's own). Opened from
- * the gallery (`foto`), it starts at that photo with ‹ Galeri. The server gave the first page; more pages
+ * per person, a tap on the same emoji takes it back, a double tap on the photo is the red heart. "…" on the photo → Laporkan foto (M04) or Hapus foto (one's own). Opened at
+ * one photo (`foto`, from a toast or a note), it starts at that photo with ‹ Foto. The server gave the first page; more pages
  * come five cards ahead; seen photos are told to the server in small batches.
  */
 export function MomenStack(props: MomenStackProps) {
@@ -275,7 +275,7 @@ export function MomenStack(props: MomenStackProps) {
   }
 
   /* What stands in the front card's place. */
-  const galeriHref = mainWamPath.gallery({ sesi: session ?? undefined });
+  const backHref = mainWamPath.moments({ sesi: session ?? undefined });
   let panel: ReactNode = null;
   let noCard = false;
   if (demo?.loading) {
@@ -308,7 +308,7 @@ export function MomenStack(props: MomenStackProps) {
       <p className={css.panelBody}>{t("momen.stack.seenAllBody")}</p>
       <div className={css.panelActions}>
         <Button block icon={Camera} href={mainWamPath.camera()}>{t("momen.takePhoto")}</Button>
-        <Button block variant="secondary" icon={Grid3x3} href={galeriHref}>{t("momen.stack.openGallery")}</Button>
+        {mozaik && <Button block variant="secondary" icon={LayoutGrid} href={mainWamPath.mosaic()}>{t("momen.stack.seeMosaic")}</Button>}
       </div></>;
   }
 
@@ -324,11 +324,10 @@ export function MomenStack(props: MomenStackProps) {
     {mode === "galeri" ? <>
       <ShellChrome hideTopBar />
       <div className={css.ownBar}>
-        <TopBar variant="back" title={t("momen.stack.galleryTitleAll")} backHref={galeriHref}
+        <TopBar variant="back" title={t("momen.photoShort")} backHref={backHref}
           onBack={event => { if (window.history.length > 1) { event.preventDefault(); router.back(); } }} />
       </div>
     </> : <ShellActions>
-      {mode === "baru" && !noCard && <Button variant="secondary" size="m" icon={<Grid3x3 />} href={galeriHref} className={css.galleryBtn}><span className={css.photoLabel}>{t("momen.gallery")}</span></Button>}
       <Button size="m" icon={<Camera />} href={mainWamPath.camera()} className={css.photoBtn}><span className={css.photoLabel}>{t("momen.photoShort")}</span></Button>
     </ShellActions>}
 

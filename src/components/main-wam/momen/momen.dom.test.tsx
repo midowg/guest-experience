@@ -4,8 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HEART, withReaction } from "@/lib/main-wam/momen/reactions";
 import { pileTilt } from "@/lib/main-wam/momen/stack";
-import { sampleFeedSemua, sampleMosaic, sampleReactions, sampleReactors, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
-import { sessionChoice } from "@/lib/main-wam/momen/sessions";
+import { sampleFeedSemua, sampleMosaic, sampleReactions, sampleReactors } from "@/lib/main-wam/momen/sample";
 import { sampleSessionIds, sampleSessions } from "@/lib/main-wam/sample";
 import { mainWamApi } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
@@ -30,7 +29,6 @@ const { MomenStack } = await import("./MomenStack");
 const { CameraScreen } = await import("./CameraScreen");
 const { Mosaic } = await import("./Mosaic");
 const { MosaicCanvas } = await import("./MosaicCanvas");
-const { Gallery } = await import("./Gallery");
 const { StackSkeleton } = await import("./Skeletons");
 const { ActionsSlotContext } = await import("@/components/main-wam/shell/ShellSlots");
 
@@ -86,13 +84,12 @@ describe("the stack", () => {
   const quick = (emoji: string) => screen.getByRole("button", { name: `Reaksi ${emoji}` });
   const mineQuick = (emoji: string) => quick(emoji).getAttribute("aria-pressed") === "true";
 
-  it("has Galeri and Foto side by side in the bar, Galeri on the left (no Galeri button under the reactions, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
+  it("has only the Foto button in the bar (no Galeri anywhere, none to Mozaik), and no filter at all (no Semua / Kelompokku, no session chip)", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><ToastProvider><MomenStack {...props} /></ToastProvider></ActionsSlotContext.Provider>);
-    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Galeri", "/wam2026/momen/galeri"], ["Foto", "/wam2026/momen/kamera"]]);
-    expect(slot.contains(screen.getByRole("link", { name: "Galeri" }))).toBe(true);
-    expect(screen.getAllByRole("link", { name: "Galeri" })).toHaveLength(1);
+    expect([...slot.querySelectorAll("a")].map(link => [link.getAttribute("aria-label") ?? link.textContent, link.getAttribute("href")])).toEqual([["Foto", "/wam2026/momen/kamera"]]);
+    expect(screen.queryByRole("link", { name: "Galeri" })).toBeNull();
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio", { name: "Kelompokku" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Saring sesi/ })).toBeNull();
@@ -298,13 +295,13 @@ describe("the stack", () => {
     expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam2026/momen/kamera");
   });
 
-  it("says there is nothing new when every photo was seen: an invitation to the camera, a way to the gallery (and the Mozaik)", () => {
+  it("says there is nothing new when every photo was seen: an invitation to the camera and a way to the Mozaik (no Galeri)", () => {
     render(<ToastProvider><MomenStack {...props} items={sampleFeedSemua.slice(0, 5)} startIndex={5} total={5} /></ToastProvider>);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
-    expect(screen.getByText("Foto baru dari rekan muncul di sini. Yang sudah kamu lihat tetap ada di Galeri.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Buka Galeri" }).getAttribute("href")).toBe("/wam2026/momen/galeri");
+    expect(screen.getByText("Foto baru dari rekan muncul di sini.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Buka Galeri" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Lihat Mozaik" }).getAttribute("href")).toBe("/wam2026/momen/mozaik");
     expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam2026/momen/kamera")).toBe(true);
-    expect(screen.queryByRole("link", { name: "Lihat Mozaik" })).toBeNull(); // Mozaik is not a button of the stack or its empty state
   });
 
   it("a photo the server still sends as seen is not in the stack (an older database), and the start follows the photos left", () => {
@@ -315,7 +312,7 @@ describe("the stack", () => {
     expect(screen.queryByText("Sudah dilihat")).toBeNull();
   });
 
-  it("opened from the gallery or a toast it may show a photo seen before, marked \"Sudah dilihat\", without putting it in the regular stack", () => {
+  it("opened at one photo (a toast, a note) it may show a photo seen before, marked \"Sudah dilihat\", without putting it in the regular stack", () => {
     const items = sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, seen: true } : photo));
     render(<ToastProvider><MomenStack {...props} mode="galeri" items={items} total={24} startIndex={2} /></ToastProvider>);
     expect(screen.getByText("Sudah dilihat")).toBeTruthy();
@@ -479,19 +476,6 @@ describe("the camera", () => {
 });
 
 describe("fixes after the audit", () => {
-  const galleryProps = {
-    view: "semua" as const, session: sampleSessionIds.bns, sessionTitle: "Batu Night Spectacular", items: [], next: null, total: 0, counts: sampleSessionCounts,
-    sessions: sampleSessions.map(session => sessionChoice(session, now)), mozaik: true, migrated: true, nowIso: now.toISOString(),
-  };
-
-  it("T-M02: a gallery filtered to a session without photos says 0 foto and offers every session", () => {
-    render(<ToastProvider><Gallery {...galleryProps} /></ToastProvider>);
-    expect(screen.getByRole("heading", { name: "Belum ada foto di sesi ini" })).toBeTruthy();
-    expect(document.body.textContent).toContain("Batu Night Spectacular\u00a0· 0 foto");
-    fireEvent.click(screen.getByRole("button", { name: "Semua sesi" }));
-    expect(replace).toHaveBeenCalledWith("/wam2026/momen/galeri", { scroll: false });
-  });
-
   it("T-M02: the stack filtered to a session without photos offers every session too", () => {
     render(<ToastProvider><MomenStack mode="sesi" session={sampleSessionIds.bns} sessionTitle="Batu Night Spectacular" items={[]} next={null} total={0} startIndex={0} offset={0}
       mozaik migrated anyPhotos={false} own={null} eventName="WAM 2026" nowIso={now.toISOString()} demo={{}} /></ToastProvider>);
@@ -502,7 +486,7 @@ describe("fixes after the audit", () => {
   it("M3: Hapus foto of a nominated photo (409) closes the dialog and says why", async () => {
     request.mockImplementationOnce(async () => { throw Object.assign(new Error("Foto ini masuk nominasi Awarding, jadi tidak bisa dihapus."), { name: "PraWamApiError", status: 409 }); });
     const mine = { ...sampleFeedSemua[0], mine: true };
-    render(<ToastProvider><Gallery {...galleryProps} view="saya" session={null} sessionTitle={null} items={[mine]} total={1} /></ToastProvider>);
+    render(<ToastProvider><Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo={false} own={[mine]} ownTotal={1} /></ToastProvider>);
     fireEvent.click(screen.getByRole("button", { name: /^Fotomu/ }));
     fireEvent.click(screen.getByRole("button", { name: "Hapus foto" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Hapus foto" }));
@@ -537,11 +521,11 @@ describe("fixes after the audit", () => {
     expect(screen.getByRole("region", { name: "Kanvas mozaik" }).getAttribute("tabindex")).toBe("0");
   });
 
-  it("T-M05: while Momen loads, Galeri and Mozaik hold their place beside the title", () => {
+  it("T-M05: while Momen loads, the Foto button holds its place beside the title", () => {
     const slot = document.createElement("div");
     document.body.append(slot);
     render(<ActionsSlotContext.Provider value={slot}><StackSkeleton /></ActionsSlotContext.Provider>);
-    expect(slot.querySelectorAll("[aria-hidden] > *")).toHaveLength(2);
+    expect(slot.querySelectorAll("[aria-hidden] > *")).toHaveLength(1);
     slot.remove();
   });
 
@@ -558,7 +542,10 @@ describe("the Mozaik", () => {
     expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Mozaik WAM 2026, 936 dari 1.800 foto");
     fireEvent.click(screen.getByRole("switch"));
     expect(screen.getByRole("list", { name: "Fotomu di mozaik" }).querySelectorAll("li")).toHaveLength(4);
-    expect(screen.getByRole("link", { name: "Lihat foto" }).getAttribute("href")).toMatch(/^\/wam2026\/momen\?foto=/);
+    // "Lihat foto" opens the viewer in place (no address to a gallery or the stack).
+    expect(screen.queryByRole("link", { name: "Lihat foto" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lihat foto" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
     expect(window.location.search).toBe("?tandai=1");
   });
 });

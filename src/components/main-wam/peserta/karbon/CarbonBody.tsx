@@ -4,5 +4,5 @@ import { CarbonScreen } from "./CarbonScreen";
 
 /** What E01 Jejak karbon shows, for both of its addresses; the page has already called the gate (module karbon). */
 export async function CarbonBody({ context }: { context: MainWamContext }) {
-  return <CarbonScreen view={await loadCarbon(context, new Date())} />;
+  return <CarbonScreen page={await loadCarbon(context, new Date())} />;
 }

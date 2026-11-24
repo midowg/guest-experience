@@ -138,13 +138,19 @@ describe("Saya", () => {
 
   it("shows the call name on the card, and the tokoh and Misi rows only when their data is there", () => {
     const { unmount } = render(<SayaScreen {...props} />);
-    expect(screen.queryByText("Tokoh WAM-mu")).toBeNull();
+    expect(screen.queryByText(/Marie Curie/)).toBeNull();
     expect(screen.queryByRole("link", { name: /Misi dan poin/ })).toBeNull();
     unmount();
     render(<SayaScreen {...props} figure={{ name: "Marie Curie", persona: "Pemikir", colors: ["#111111", "#222222"] }} points={340} />);
     expect(screen.getByText("Rani", { selector: "span" })).toBeTruthy();
-    expect(screen.getByText("Tokoh WAM-mu")).toBeTruthy();
-    expect(screen.getByText("Tipe Pemikir · dipakai di kuis")).toBeTruthy();
+    // The tokoh is one small line under the name on the profile card (name, tokoh, job line), with no card of its own and no word about the quiz.
+    const card = screen.getByText("Rani", { selector: "span" }).closest("button")!;
+    const nameLine = screen.getByText("Rani", { selector: "span" });
+    const tokohLine = [...card.querySelectorAll("span")].find(line => line.textContent === "Tokoh: Marie Curie")!;
+    expect(nameLine.compareDocumentPosition(tokohLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.textContent).toContain("Tokoh: Marie Curie");
+    expect(screen.queryByText("Tokoh WAM-mu")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/kuis|Tipe Pemikir/i);
     expect(screen.getByRole("link", { name: /Misi dan poin.*340 poin/ }).getAttribute("href")).toBe(mainWamPath.missions);
   });
 

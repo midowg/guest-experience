@@ -14,8 +14,8 @@ import { uploadedByText } from "@/lib/main-wam/momen/stack";
 import { demoPicture } from "@/lib/main-wam/momen/viewer";
 import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
 import { CarbonCard } from "@/components/main-wam/peserta/karbon/CarbonCard";
-import { carbonView } from "@/lib/main-wam/peserta/carbon";
-import { sampleCarbon } from "@/lib/main-wam/peserta/sample";
+import { carbonPageView } from "@/lib/main-wam/peserta/carbon-saya";
+import { sampleCarbon, samplePersonalCarbon } from "@/lib/main-wam/peserta/sample";
 import { MozaikCard } from "@/components/main-wam/momen/BerandaMozaik";
 import { letterCells } from "@/lib/main-wam/momen/mosaic";
 import { number } from "@/lib/main-wam/i18n";
@@ -72,7 +72,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
       slots={{ absen: <AbsenStandIn home />, misi: misiStandIn(now, params.misi),
         kuis: params.kuis === "buka" ? <KuisLiveCard lang={lang} title={lang === "en" ? "WAM live quiz" : "Kuis live WAM"} joined={false} href={mainWamPath.quiz("contoh")} /> : null, momen: <MomenCard photos={[demoPicture(5), demoPicture(0), demoPicture(2)]} unseen={params.waktu === "berangkat" ? 3 : 12} by={uploadedByText("Sari", "Aula Utama", new Date(now.getTime() - 2 * 60_000).toISOString(), now, lang)} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
         mozaik: params.mozaik === "mati" ? null : <MozaikStandIn lang={lang} />,
-        carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonView(params.karbon === "belum" ? null : sampleCarbon(), now, lang)} /> }} />
+        carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonPageView(params.karbon === "belum" ? null : samplePersonalCarbon(), sampleCarbon(), now, lang).mine} /> }} />
   </Frame>;
 }
 

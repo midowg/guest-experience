@@ -1,4 +1,5 @@
 import { carbonEstimate, type CarbonData, type CarbonResult } from "../panitia/carbon";
+import { personalCarbonEstimate, type PersonalCarbonData, type PersonalCarbonResult } from "./carbon-saya";
 
 /*
  * Sample Jejak karbon (dev-preview, tests, and the demo's fallback): the design's example, 120
@@ -21,3 +22,18 @@ export const sampleCarbonData: CarbonData = {
 
 /** The estimate of the design's example; `over` changes what was counted (a smaller event, bills in). */
 export const sampleCarbon = (over: Partial<CarbonData> = {}): CarbonResult => carbonEstimate({ ...sampleCarbonData, ...over });
+
+/*
+ * The person's own footprint in the same example (Jejak karbon per person, 24 Nov 2026): a seat on the
+ * train both ways and the shuttle (4 buses of 30), a room shared by three for 3 nights,
+ * 12 meals. About 113 kg CO₂e against the event average of 145 kg. Fictional.
+ */
+export const samplePersonalData: PersonalCarbonData = {
+  legs: [
+    { mode: "kereta", km: 520, sharedBy: 1, listed: true }, { mode: "kereta", km: 520, sharedBy: 1, listed: true },
+    { mode: "bus", km: 180, sharedBy: 30, listed: true }, { mode: "bus", km: 180, sharedBy: 30, listed: true },
+  ],
+  nights: 3, roomOccupants: 3, meals: 12, hotelAverageKg: 94, hotelFromBills: false,
+};
+
+export const samplePersonalCarbon = (over: Partial<PersonalCarbonData> = {}): PersonalCarbonResult => personalCarbonEstimate({ ...samplePersonalData, ...over });
