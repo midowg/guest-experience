@@ -1,4 +1,4 @@
-import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Leaf, Map as MapIcon, Palette, Plug, Send, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { Archive, CalendarRange, ClipboardList, FlaskConical, Info, KeyRound, LayoutDashboard, Leaf, Map as MapIcon, Palette, Plug, Send, Tv, UsersRound, type LucideIcon } from "lucide-react";
 import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
 import { wamAdminPath } from "@/lib/routes";
@@ -10,7 +10,7 @@ import { wamAdminPath } from "@/lib/routes";
  * name starts a new group in the menu. Main WAM is not here (20 Nov 2026): it has its own door,
  * Admin WAM 2026 (src/components/admin/wam-acara/sections.ts), given apart.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "karbon" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "karbon" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner" | "uji";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -44,6 +44,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "about", label: "Apa itu WAM", group: "Untuk peserta", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
   { key: "karbon", label: "Jejak karbon", group: "Untuk peserta", href: wamAdminPath.carbon, icon: Leaf, summary: "Perjalanan rombongan, malam, makan, dan perkiraan jejak karbon peserta." },
   { key: "tv", label: "TV Announcement", group: "Untuk peserta", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
+  { key: "uji", label: "Akun uji", group: "Pengaturan", href: wamAdminPath.testAccounts, icon: FlaskConical, summary: "Akun yang boleh mencoba Misi Perjalanan sebagai HoD dan Jejak karbon sebelum acara." },
   { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];

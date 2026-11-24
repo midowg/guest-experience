@@ -344,6 +344,8 @@ export const wamAdminPath = {
   carbon: `${WAM_ADMIN}/jejak-karbon`,
   /** The app's theme for everyone: Dream Out Loud or Werkudara, each light and dark. */
   theme: `${WAM_ADMIN}/tema`,
+  /** Akun uji (24 Nov 2026): accounts that try Misi Perjalanan and Jejak karbon before the event. */
+  testAccounts: `${WAM_ADMIN}/akun-uji`,
   /** TV Announcement: the office TVs, their pictures, and how long each stays. */
   tv: `${WAM_ADMIN}/tv`,
   /** The board as a TV plays it, for the signed-in admin (no TV key). */
@@ -474,6 +476,8 @@ export const praWamCarbonApi = "/api/admin/wam/jejak-karbon";
 export const praWamSettingsApi = "/api/admin/wam/settings";
 /** Admin WAM → Tema aplikasi (any admin). */
 export const praWamThemeApi = "/api/admin/wam/theme";
+/** PUT: the Akun uji list and whether Jejak karbon shows only to them. */
+export const praWamTestAccountsApi = "/api/admin/wam/akun-uji";
 
 /*
  * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside

@@ -9,6 +9,8 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import type { Member } from "./session";
+import { testAccounts } from "./test-accounts";
+import { TEST_OCCUPANTS } from "@/lib/pra-wam/test-accounts";
 
 /*
  * Jejak karbon (24 Nov 2026): the panitia's setup, the participants' answers, and the people with
@@ -87,26 +89,36 @@ export type MyCarbon = { setup: CarbonSetup; occupants: number; travel: CarbonTr
  * This person's Jejak karbon for Beranda: null when they are not in Misi Perjalanan's room list, or
  * the panitia have not set a trip that can be counted. Only their own answer and room size.
  */
-export async function myCarbon(member: Pick<Member, "name">): Promise<MyCarbon | null> {
+export async function myCarbon(member: Pick<Member, "id" | "name">): Promise<MyCarbon | null> {
   const me = personKey(member.name);
   const key = carbonAnswerKey(me);
-  const rows = await readRows([CARBON_SETTING_KEY, MISSION_SETTING_KEY, key]);
+  const [rows, tests] = await Promise.all([readRows([CARBON_SETTING_KEY, MISSION_SETTING_KEY, key]), testAccounts()]);
   if (!rows) return null;
   const setup = asCarbonSetup(rows.get(CARBON_SETTING_KEY)?.value);
   if (!tripValid(setup.trip)) return null;
+  const occupants = occupantsOf(rows, me, member.id, tests);
+  if (occupants === null) return null;
+  return { setup, occupants, travel: asCarbonAnswer(rows.get(key)?.value) };
+}
+
+/**
+ * How many share this person's room, or null when Jejak karbon is not for them: the room list's
+ * people and BoD, and an Akun uji (its made-up room); while "hanya akun uji" is on, test accounts only.
+ */
+function occupantsOf(rows: Map<string, Row>, me: string, id: string, tests: { ids: string[]; carbonTestOnly: boolean }): number | null {
+  const testing = tests.ids.includes(id);
+  if (tests.carbonTestOnly && !testing) return null;
   const person = carbonPeopleFrom((rows.get(MISSION_SETTING_KEY)?.value ?? null) as Sheet, {}, personKey).find(item => item.id === me);
-  if (!person) return null;
-  return { setup, occupants: person.occupants, travel: asCarbonAnswer(rows.get(key)?.value) };
+  return person ? person.occupants : testing ? TEST_OCCUPANTS : null;
 }
 
 /** Saves this person's answer (checked by carbonAnswerInputSchema) while the panitia keep the form open. */
-export async function saveMyCarbon(member: Pick<Member, "name">, answer: Omit<CarbonTravel, "answeredAt">): Promise<CarbonTravel> {
-  const rows = await readRows([CARBON_SETTING_KEY, MISSION_SETTING_KEY]);
+export async function saveMyCarbon(member: Pick<Member, "id" | "name">, answer: Omit<CarbonTravel, "answeredAt">): Promise<CarbonTravel> {
+  const [rows, tests] = await Promise.all([readRows([CARBON_SETTING_KEY, MISSION_SETTING_KEY]), testAccounts()]);
   if (!rows) throw waiting();
   const setup = asCarbonSetup(rows.get(CARBON_SETTING_KEY)?.value);
   const me = personKey(member.name);
-  const listed = carbonPeopleFrom((rows.get(MISSION_SETTING_KEY)?.value ?? null) as Sheet, {}, personKey).some(item => item.id === me);
-  if (!listed) throw new ServiceError(403, "Jejak karbon belum dibuka untuk akunmu.");
+  if (occupantsOf(rows, me, member.id, tests) === null) throw new ServiceError(403, "Jejak karbon belum dibuka untuk akunmu.");
   if (!tripValid(setup.trip)) throw new ServiceError(409, "Panitia belum mengisi perjalanan.");
   if (!setup.formOpen) throw new ServiceError(409, "Pengisian sudah ditutup.");
   const travel: CarbonTravel = { own: answer.own && { ...answer.own, from: answer.own.from.trim() }, bottles: answer.bottles, laptopHours: answer.laptopHours, phoneCharges: answer.phoneCharges, answeredAt: new Date().toISOString() };

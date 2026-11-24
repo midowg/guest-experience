@@ -1,0 +1,30 @@
+/* Admin Pra WAM → Akun uji (24 Nov 2026). Console tokens only. */
+.layout { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 960px) { .layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.panel { display: grid; gap: 14px; min-width: 0; padding: 20px; border: 1px solid var(--cs-line); border-radius: 18px; background: var(--cs-surface); }
+.h { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; font-weight: 600; color: var(--cs-text); }
+.count { padding: 2px 8px; border-radius: 999px; background: var(--cs-primary-soft); color: var(--cs-primary); font-size: 13px; font-weight: 600; }
+.empty { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--cs-muted); font-size: 15px; }
+.empty svg { width: 18px; height: 18px; flex: none; }
+.list, .found, .points { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.list li { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 8px 8px 14px; border: 1px solid var(--cs-line); border-radius: 14px; }
+.list li > span, .found button > span:first-child { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.list strong, .found strong { font-size: 15px; font-weight: 600; color: var(--cs-text); overflow-wrap: anywhere; }
+.list small, .found small { font-size: 13px; color: var(--cs-muted); }
+.remove { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--cs-bad-fg); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.remove:hover { background: var(--cs-hover); }
+.remove svg { width: 16px; height: 16px; }
+.search { position: relative; display: block; }
+.search > svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--cs-muted); pointer-events: none; }
+.search input { width: 100%; padding-left: 42px; }
+.found button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 14px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.found button:hover { border-color: var(--cs-primary); }
+.add { flex: none; font-size: 14px; font-weight: 600; color: var(--cs-primary); }
+.hint { margin: 0; font-size: 14px; color: var(--cs-muted); }
+.points li { font-size: 14px; line-height: 1.5; color: var(--cs-muted); }
+.points strong { color: var(--cs-text); }
+.check { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); cursor: pointer; }
+.check input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--cs-primary); }
+.check span { display: grid; gap: 4px; }
+.check strong { font-size: 15px; color: var(--cs-text); }
+.check small { font-size: 13px; line-height: 1.45; color: var(--cs-muted); }

@@ -4,6 +4,8 @@ import { MISSION_SETTING_KEY, personKey, quizChoices, type Mate, type MissionRol
 import { listPeople } from "./appraisal";
 import { hodStanding } from "./hod";
 import { listLeads } from "./leads";
+import { testAccounts } from "./test-accounts";
+import { testMissionView } from "@/lib/pra-wam/test-accounts";
 import type { Member } from "./session";
 
 /*
@@ -42,7 +44,10 @@ const isCos = (member: Pick<Member, "position">) => /chief of staff/i.test(membe
 
 /** This person's Misi Perjalanan, or null when it is not for them (only HoD, BoD and CoS). */
 export async function missionFor(member: Member): Promise<MissionView | null> {
-  const sheet = await readSheet().catch(() => null);
+  const [sheet, tests] = await Promise.all([readSheet().catch(() => null), testAccounts()]);
+  // An Akun uji (24 Nov 2026) not in the room list: a HoD with a made-up room, before the event.
+  const testing = tests.ids.includes(member.id) && !sheet?.people.some(item => key(item.name) === key(member.name));
+  if (testing) return testMissionView(member);
   if (!sheet) return null;
   const me = key(member.name);
   const person = sheet.people.find(item => key(item.name) === me) ?? null;

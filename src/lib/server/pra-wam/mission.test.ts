@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /* Who may open Misi Perjalanan, and that each person receives their own room only (made-up people). */
-const fake = vi.hoisted(() => ({ sheet: null as unknown, hod: false }));
+const fake = vi.hoisted(() => ({ sheet: null as unknown, hod: false, tests: [] as string[] }));
 vi.mock("../supabase/admin", () => ({
   createPrivilegedClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: fake.sheet ? { value: fake.sheet } : null, error: null }) }) }) }) }),
 }));
+vi.mock("./test-accounts", () => ({ testAccounts: async () => ({ ids: fake.tests, carbonTestOnly: false }) }));
 vi.mock("./hod", () => ({ hodStanding: async () => ({ isHod: fake.hod, unitIds: [] }) }));
 // Who heads a department: everyone in the made-up list but "Dodi Lima" (a CoS, say).
 vi.mock("./appraisal", () => ({ listPeople: async () => ["Ani Satu", "Ina Dua", "Budi Tiga", "Cici Empat", "Eko Enam", "Dodi Lima"].map(name => ({ id: `id-${name}`, name: name.split(" ")[0], fullName: name, department: "Dept", active: true })) }));
@@ -16,6 +17,7 @@ const member = (name: string, patch: Record<string, unknown> = {}) => ({ id: `id
 
 beforeEach(() => {
   fake.hod = false;
+  fake.tests = [];
   fake.sheet = { rooms: { A: "A3", B: "B3", C: "B4" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A"), person("Budi Tiga", "B"), person("Cici Empat", "B"), person("Dodi Lima", "C"), person("Eko Enam", "C")], bod: [{ name: "Ceo Utama", sents: [1], ceo: true }] };
 });
 
@@ -56,5 +58,19 @@ describe("missionFor", () => {
   it("is closed to everyone while the sheet is missing", async () => {
     fake.sheet = null;
     expect(await missionFor(member("Ani Satu"))).toBeNull();
+  });
+
+  it("gives an Akun uji a HoD with a made-up room before the event, never a real one, and takes it back", async () => {
+    expect(await missionFor(member("Uji Coba"))).toBeNull();
+    fake.tests = ["id-Uji Coba"];
+    const view = await missionFor(member("Uji Coba"));
+    expect(view).toMatchObject({ role: "HoD", room: { code: "UJI" } });
+    expect(JSON.stringify(view)).not.toMatch(/Ani Satu|Ina Dua|Budi Tiga|A3|B3/);
+    fake.sheet = null;
+    expect(await missionFor(member("Uji Coba"))).toMatchObject({ room: { code: "UJI" } });
+    // Someone in the real room list keeps their real room even when listed as a test account.
+    fake.sheet = { rooms: { A: "A3" }, people: [person("Ani Satu", "A"), person("Ina Dua", "A")], bod: [] };
+    fake.tests = ["id-Ani Satu"];
+    expect((await missionFor(member("Ani Satu")))?.room?.code).toBe("A3");
   });
 });

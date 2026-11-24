@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /* Jejak karbon: what the admin page reads, Simpan, "Ke rombongan", and the participant's own row (made-up people). */
 type Row = { key: string; value: unknown; updated_at: string | null };
-const fake = vi.hoisted(() => ({ rows: [] as Row[], writes: [] as { key: string; value: unknown }[], error: null as null | { code: string; message: string } }));
+const fake = vi.hoisted(() => ({ tests: { ids: [] as string[], carbonTestOnly: false }, rows: [] as Row[], writes: [] as { key: string; value: unknown }[], error: null as null | { code: string; message: string } }));
+vi.mock("./test-accounts", () => ({ testAccounts: async () => fake.tests }));
 vi.mock("../supabase/admin", () => ({
   createPrivilegedClient: () => ({
     from: () => ({
@@ -23,9 +24,11 @@ const { carbonAdminState, carbonAnswerKey, myCarbon, saveCarbonSetup, saveMyCarb
 const { EMPTY_CARBON_SETUP } = await import("@/lib/pra-wam/carbon");
 const setup = { settings: { nights: 2, mealsPerPerson: 6 }, trip: { from: "Kantor", to: "Venue", mode: "mobil", km: 25, perVehicle: 6, roundTrip: true }, formOpen: true };
 const answer = (own: unknown) => ({ own, bottles: 1, laptopHours: 2, phoneCharges: 1, answeredAt: "2026-11-24T01:00:00Z" });
+const who = (name: string) => ({ id: `id-${name}`, name });
 const motor = { from: "Magelang", mode: "motor", km: 40, roundTrip: true };
 
 beforeEach(() => {
+  fake.tests = { ids: [], carbonTestOnly: false };
   fake.error = null;
   fake.writes = [];
   fake.rows = [
@@ -71,37 +74,48 @@ describe("Jejak karbon (Admin Pra WAM)", () => {
 
 describe("Jejak karbon (peserta)", () => {
   it("gives a listed person their setup, room size and own answer; nobody else gets a card", async () => {
-    expect(await myCarbon({ name: " ina  dua " })).toMatchObject({ setup, occupants: 2, travel: { own: motor, bottles: 1 } });
-    expect(await myCarbon({ name: "Budi Tiga" })).toMatchObject({ occupants: 1, travel: null });
-    expect(await myCarbon({ name: "Orang Lain" })).toBeNull();
+    expect(await myCarbon(who(" ina  dua "))).toMatchObject({ setup, occupants: 2, travel: { own: motor, bottles: 1 } });
+    expect(await myCarbon(who("Budi Tiga"))).toMatchObject({ occupants: 1, travel: null });
+    expect(await myCarbon(who("Orang Lain"))).toBeNull();
   });
 
   it("gives a BoD a card too, in a room of their own (listed once even when also in the room list)", async () => {
-    expect(await myCarbon({ name: "Bima Dir" })).toMatchObject({ occupants: 1, travel: null });
-    await saveMyCarbon({ name: "Bima Dir" }, { own: null, bottles: 1, laptopHours: 2, phoneCharges: 1 });
+    expect(await myCarbon(who("Bima Dir"))).toMatchObject({ occupants: 1, travel: null });
+    await saveMyCarbon(who("Bima Dir"), { own: null, bottles: 1, laptopHours: 2, phoneCharges: 1 });
     expect(fake.writes.map(write => write.key)).toEqual([carbonAnswerKey("BIMA DIR")]);
     expect((await carbonAdminState()).people.filter(person => person.id === "ANI SATU")).toHaveLength(1);
   });
 
   it("shows no card until the panitia set a trip that can be counted", async () => {
     fake.rows = fake.rows.map(row => row.key === "carbon_setup" ? { ...row, value: EMPTY_CARBON_SETUP } : row);
-    expect(await myCarbon({ name: "Ina Dua" })).toBeNull();
-    await expect(saveMyCarbon({ name: "Ina Dua" }, { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/belum mengisi perjalanan/);
+    expect(await myCarbon(who("Ina Dua"))).toBeNull();
+    await expect(saveMyCarbon(who("Ina Dua"), { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/belum mengisi perjalanan/);
   });
 
   it("saves only the person's own row, and two people never overwrite each other", async () => {
-    const saved = await saveMyCarbon({ name: "Budi Tiga" }, { own: { from: " Sleman ", mode: "motor", km: 15, roundTrip: false }, bottles: 2, laptopHours: 3, phoneCharges: 1 });
+    const saved = await saveMyCarbon(who("Budi Tiga"), { own: { from: " Sleman ", mode: "motor", km: 15, roundTrip: false }, bottles: 2, laptopHours: 3, phoneCharges: 1 });
     expect(saved).toMatchObject({ own: { from: "Sleman", km: 15 }, bottles: 2 });
-    await saveMyCarbon({ name: "Ani Satu" }, { own: null, bottles: 0, laptopHours: 1, phoneCharges: 0 });
+    await saveMyCarbon(who("Ani Satu"), { own: null, bottles: 0, laptopHours: 1, phoneCharges: 0 });
     expect(fake.writes.map(write => write.key)).toEqual([carbonAnswerKey("BUDI TIGA"), carbonAnswerKey("ANI SATU")]);
     const people = (await carbonAdminState()).people;
     expect(people.map(person => [person.id, person.travel?.bottles ?? null, person.travel?.own?.from ?? null])).toEqual([["ANI SATU", 0, null], ["INA DUA", 1, "Magelang"], ["BUDI TIGA", 2, "Sleman"], ["BIMA DIR", null, null]]);
   });
 
   it("refuses someone not in the list, and a closed form", async () => {
-    await expect(saveMyCarbon({ name: "Orang Lain" }, { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/belum dibuka/);
+    await expect(saveMyCarbon(who("Orang Lain"), { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/belum dibuka/);
     fake.rows = fake.rows.map(row => row.key === "carbon_setup" ? { ...row, value: { ...setup, formOpen: false } } : row);
-    await expect(saveMyCarbon({ name: "Ina Dua" }, { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/ditutup/);
+    await expect(saveMyCarbon(who("Ina Dua"), { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/ditutup/);
     expect(fake.writes).toEqual([]);
+  });
+
+  it("gives an Akun uji a card (a made-up room of three), and while only for tests, nobody else", async () => {
+    expect(await myCarbon(who("Uji Coba"))).toBeNull();
+    fake.tests = { ids: ["id-Uji Coba"], carbonTestOnly: true };
+    expect(await myCarbon(who("Uji Coba"))).toMatchObject({ occupants: 3, travel: null });
+    expect(await myCarbon(who("Ina Dua"))).toBeNull();
+    await expect(saveMyCarbon(who("Ina Dua"), { own: null, bottles: 0, laptopHours: 0, phoneCharges: 0 })).rejects.toThrow(/belum dibuka/);
+    await saveMyCarbon(who("Uji Coba"), { own: null, bottles: 1, laptopHours: 0, phoneCharges: 0 });
+    fake.tests = { ids: ["id-Uji Coba"], carbonTestOnly: false };
+    expect(await myCarbon(who("Ina Dua"))).toMatchObject({ occupants: 2 });
   });
 });
