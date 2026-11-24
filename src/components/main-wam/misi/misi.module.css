@@ -153,3 +153,9 @@
 @media (prefers-reduced-motion: reduce) {
   .ringFill, .shutter { transition: none; }
 }
+
+/* ── The TNC chips (a pill each, wrapping) and the "Kamu ditandai" list ─────────────────────── */
+.req { padding: 2px var(--mw-space-8); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-full); background: var(--mw-surface); color: var(--mw-text-2); }
+.reqs { gap: var(--mw-space-4); }
+.taggedRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-12); padding: var(--mw-space-12); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); }
+.taggedText { flex: 1 1 140px; min-width: 0; font: var(--mw-type-body-small); overflow-wrap: anywhere; }

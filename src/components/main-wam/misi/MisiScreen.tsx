@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, CheckCircle2, ChevronRight, Hourglass, ListFilter, Medal, Target } from "lucide-react";
+import { Check, CheckCircle2, ChevronRight, Hourglass, ListFilter, Medal, Tag, Target } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Banner, Button, EmptyState, EyebrowLabel, IconBox, List, ListRow, Pill, Sheet, SrOnly, Text } from "@/components/main-wam/ui";
 import { canStart, MISSION_FILTERS, rulesOf, sections, whenOf, type MisiView, type MissionFilter, type MissionItem, type MissionSort } from "@/lib/main-wam/misi/missions";
-import { mainWamPath } from "@/lib/routes";
+import { canResend } from "@/lib/main-wam/misi/verify";
+import { mainWamApi, mainWamPath } from "@/lib/routes";
+import { errorText, misiRequest } from "./request";
 import { kindIcon, ReqChips, ReqIcon } from "./MisiParts";
 import css from "./misi.module.css";
 
@@ -85,7 +87,8 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
               <span className={css.mText}>
                 <b>{item.title}</b>
                 {item.status === "pending" ? <Pill tone="warning">{t("misi.row.pending")}</Pill>
-                  : item.status === "rejected" ? <Pill tone="error">{t("misi.row.rejected")}</Pill>
+                  : item.status === "review" ? <Pill tone="warning">{t("misi.row.review")}</Pill>
+                  : item.status === "rejected" ? <Pill tone="error">{canStart(item) ? t("misi.row.rejected") : t("misi.status.rejected")}</Pill>
                     : item.availability === "tutup" ? <Pill>{t("misi.row.closed")}</Pill>
                       : item.availability === "belum" ? <Pill>{t("misi.row.soon")}</Pill> : <ReqChips item={item} />}
               </span>
@@ -111,6 +114,8 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
         {!shown.todo.length && !shown.done.length && <p className={css.emptyFilter}>{t("misi.emptyFilter")}</p>}
       </>}
 
+    {view.taggedIn.length > 0 && <TaggedList view={view} />}
+
     <Sheet open={sortOpen} onClose={() => setSortOpen(false)} title={t("misi.sort.title")}>
       <List plain>
         {(["desc", "asc"] as const).map(key => <ListRow key={key} title={t(key === "desc" ? "misi.sort.high" : "misi.sort.low")} aria-pressed={sort === key}
@@ -121,24 +126,63 @@ export function MisiScreen({ view, initialOpen = null }: { view: MisiView; /** D
   </ScreenContent>;
 }
 
-/** The sheet of one mission: only its description, what earns the points, and one button. */
+/** The photos I am tagged in, each with "Lepas tag" (only the tagged person lifts a tag). */
+function TaggedList({ view }: { view: MisiView }) {
+  const t = useT();
+  const [gone, setGone] = useState<Set<string>>(new Set());
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  async function remove(photoId: string) {
+    if (view.sample) { setGone(current => new Set(current).add(photoId)); return; }
+    setBusy(photoId); setProblem(null);
+    try { await misiRequest(mainWamApi.missionUntag(photoId), { method: "DELETE" }); setGone(current => new Set(current).add(photoId)); }
+    catch (error) { setProblem(errorText(error) || t("misi.tagged.failed")); }
+    finally { setBusy(null); }
+  }
+  const rows = view.taggedIn.filter(row => !gone.has(row.photoId));
+  if (!rows.length && !gone.size) return null;
+  return <section aria-labelledby="misi-tagged" className={css.section}>
+    <div className={css.sectionHead}><SectionTitle id="misi-tagged" text={t("misi.tagged.title")} /></div>
+    {problem && <Banner tone="error">{problem}</Banner>}
+    {!rows.length && <p className={css.emptyFilter}>{t("misi.tagged.removed")}</p>}
+    <ul className={css.rows}>
+      {rows.map(row => <li key={row.photoId} className={css.taggedRow}>
+        <IconBox icon={<Tag />} className={css.mIcon} />
+        <span className={css.taggedText}>{t("misi.tagged.item", { name: row.byName, mission: row.missionTitle })}</span>
+        <Button variant="secondary" size="m" loading={busy === row.photoId} onClick={() => void remove(row.photoId)}>{t("misi.tagged.remove")}</Button>
+      </li>)}
+    </ul>
+  </section>;
+}
+
+/** The sheet of one mission: its description, the TNC (what earns the points), the state of my proof, and one button. */
 function MissionSheet({ item, index, total, onClose, lang }: { item: MissionItem; index: number; total: number; onClose: () => void; lang: ReturnType<typeof useLang>["lang"] }) {
   const t = useT();
   const rules = rulesOf(item, lang);
+  const resendable = item.status === "rejected" && canResend("ditolak", item.attempts, item.maxAttempts);
   let action;
   if (item.status === "done") action = <Button block disabled icon={<CheckCircle2 />}>{t("misi.sheet.done")}</Button>;
   else if (item.status === "pending") action = <Button block disabled icon={<Hourglass />}>{t("misi.sheet.pending")}</Button>;
+  else if (item.status === "review") action = <Button block disabled icon={<Hourglass />}>{t("misi.sheet.review")}</Button>;
+  else if (item.status === "rejected" && !resendable) action = <Button block disabled>{t("misi.sheet.noResend")}</Button>;
   else if (item.availability === "tutup") action = <Button block disabled>{t("misi.sheet.closed")}</Button>;
   else if (item.availability === "belum") action = <Button block disabled>{t("misi.sheet.soon", { when: item.opensAt ? whenOf(item.opensAt, lang) : "" })}</Button>;
   else if (item.kind === "sesi") action = item.sessionId
     ? <Button block icon={<Target />} href={mainWamPath.session(item.sessionId)}>{t("misi.sheet.do")}</Button>
     : <Button block disabled>{t("misi.sheet.noSession")}</Button>;
-  else if (canStart(item)) action = <Button block icon={<Target />} href={mainWamPath.missionDo(item.id)}>{t("misi.sheet.do")}</Button>;
+  else if (canStart(item)) action = <Button block icon={<Target />} href={mainWamPath.missionDo(item.id)}>{t(item.status === "rejected" ? "misi.sheet.resend" : "misi.sheet.do")}</Button>;
   return <Sheet open onClose={onClose} title={item.title} subtitle={t("misi.sheet.kicker", { n: index, total })} footer={action}>
     <div className={css.sheetBody}>
       <p className={css.sheetPoints}><b aria-hidden>+{item.points}</b><span aria-hidden>{t("misi.page.points")}</span><SrOnly>{t("misi.sheet.points", { points: item.points })}</SrOnly></p>
       {item.description && <Text variant="body-long" color="2">{item.description}</Text>}
-      {item.status === "rejected" && <Banner tone="warning" title={t("misi.sheet.rejected")}>{item.rejectedNote ? `${t("misi.sheet.rejectedNote", { note: item.rejectedNote })} ` : ""}{t("misi.sheet.rejectedAgain")}</Banner>}
+      {item.status === "pending" && <Banner tone="info" title={t("misi.status.pending")}>{t("misi.sheet.pendingBody")}</Banner>}
+      {item.status === "review" && <Banner tone="info" title={t("misi.status.review")}>{t("misi.sheet.reviewBody")}</Banner>}
+      {item.status === "done" && <Banner tone="success" title={t("misi.status.approved", { points: item.points })} />}
+      {item.status === "rejected" && <Banner tone="warning" title={t("misi.status.rejected")}>
+        {item.rejectedNote ? `${t("misi.status.rejectedWhy", { why: item.rejectedNote })} ` : ""}
+        {resendable ? t("misi.sheet.rejectedAgain") : t("misi.status.noResend")}
+        {item.maxAttempts ? ` ${t("misi.status.tries", { n: item.attempts, max: item.maxAttempts })}` : ""}
+      </Banner>}
       <EyebrowLabel as="h3">{t("misi.sheet.rules")}</EyebrowLabel>
       <ul className={css.rules}>
         {rules.map(rule => <li key={rule.title} className={css.rule}>
@@ -146,6 +190,7 @@ function MissionSheet({ item, index, total, onClose, lang }: { item: MissionItem
           <span className={css.ruleText}><b>{rule.title}</b>{rule.note && <small>{rule.note}</small>}</span>
         </li>)}
       </ul>
+      {item.kind === "foto" && <Text variant="caption" color="2">{t("misi.sheet.how")}</Text>}
     </div>
   </Sheet>;
 }

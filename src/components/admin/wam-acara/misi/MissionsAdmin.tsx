@@ -7,22 +7,25 @@ import { Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { adminRange, adminWhen, WAITING_TEXT } from "@/lib/main-wam/modul/admin";
 import type { MissionInput, SettingsInput } from "@/lib/main-wam/misi/schema";
+import { effectiveRules, publicRules, ruleDisplays } from "@/lib/main-wam/misi/rules";
+import { MISSION_TEMPLATES, templateByKey } from "@/lib/main-wam/misi/templates";
 import { MISSION_KINDS, type CompletionStatus, type MissionKind } from "@/lib/main-wam/misi/types";
+import { draftToRules, RulesEditor, rulesToDraft, type RulesDraft } from "./RulesEditor";
+import { ReviewTab } from "./ReviewTab";
+import { statusTone, statusWords } from "./status-words";
 import { wibDate, wibTime } from "@/lib/main-wam/rundown";
 import { mainWamAdminApi } from "@/lib/routes";
 import type { AdminCompletion, AdminMisi, AdminMissionRow } from "@/lib/server/main-wam/misi/admin";
 import css from "./misi-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
-type Tab = "misi" | "bukti" | "peringkat" | "pengaturan";
+export type Tab = "misi" | "tinjauan" | "bukti" | "peringkat" | "pengaturan";
 
 /** "2027-01-06T08:00" (WIB, for <input type="datetime-local">) ↔ an ISO instant. */
 const toLocal = (iso: string | null) => (iso ? `${wibDate(iso)}T${wibTime(iso)}` : "");
 const fromLocal = (value: string) => (value ? `${value}:00+07:00` : null);
 
-export const kindWords: Record<MissionKind, string> = { foto: "Foto langsung", checkin: "Check-in lokasi", sesi: "Sesi" };
-const statusWords: Record<CompletionStatus, string> = { menunggu: "Menunggu", disetujui: "Disetujui", ditolak: "Ditolak" };
-const statusTone = { menunggu: "warn", disetujui: "ok", ditolak: "bad" } as const;
+export const kindWords: Record<MissionKind, string> = { foto: "Foto langsung", checkin: "Check-in lokasi (lama)", sesi: "Sesi (lama)" };
 const sourceWords = { foto: "Foto", lokasi: "Lokasi", absen: "Absen otomatis", panitia: "Dicatat panitia" } as const;
 
 /**
@@ -31,12 +34,12 @@ const sourceWords = { foto: "Foto", lokasi: "Lokasi", absen: "Absen otomatis", p
  * by hand, and the settings (the default radius, the worst location accuracy, whether the Peringkat
  * is open). Full names (aturan-wam §4). The numbers are example values until the owner decides.
  */
-export function MissionsAdmin({ initial }: { initial: AdminMisi }) {
+export function MissionsAdmin({ initial, initialTab = "misi" }: { initial: AdminMisi; /** Dev preview only: the part shown first. */ initialTab?: Tab }) {
   const [data, setData] = useState(initial);
-  const [tab, setTab] = useState<Tab>("misi");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
-  const waiting = data.completions.filter(item => item.status === "menunggu").length;
+  const waiting = data.reviewQueue.length;
 
   async function reload(text: string) {
     const fresh = await adminRequest<AdminMisi>(mainWamAdminApi.missions);
@@ -55,10 +58,11 @@ export function MissionsAdmin({ initial }: { initial: AdminMisi }) {
     {!data.migrated && <Notice tone="warning">{WAITING_TEXT}</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     <SegmentedControl<Tab> label="Bagian Misi" value={tab} onChange={setTab} options={[
-      { value: "misi", label: `Misi (${data.missions.length})` }, { value: "bukti", label: waiting ? `Bukti (${waiting} menunggu)` : "Bukti" },
+      { value: "misi", label: `Misi (${data.missions.length})` }, { value: "tinjauan", label: waiting ? `Tinjauan (${waiting})` : "Tinjauan" }, { value: "bukti", label: "Semua bukti" },
       { value: "peringkat", label: "Peringkat dan poin" }, { value: "pengaturan", label: "Pengaturan" },
     ]} />
     {tab === "misi" && <MissionsTab data={data} busy={busy} run={run} call={call} />}
+    {tab === "tinjauan" && <ReviewTab items={data.reviewQueue} migrated={data.migrated} busy={busy} run={run} call={call} />}
     {tab === "bukti" && <ProofsTab data={data} busy={busy} run={run} call={call} />}
     {tab === "peringkat" && <RankTab data={data} busy={busy} run={run} call={call} />}
     {tab === "pengaturan" && <SettingsTab data={data} busy={busy} run={run} call={call} />}
@@ -78,7 +82,7 @@ function MissionsTab({ data, busy, run, call }: TabProps) {
   const [granting, setGranting] = useState<string | null>(null);
   const sessions = useMemo(() => new Map(data.sessions.map(session => [session.id, session])), [data.sessions]);
   return <>
-    <p className={css.note}>Peserta mengerjakan misi aktif satu kali. Poin masuk lewat catatan poin (saldo = jumlah catatan). Misi yang sudah punya penyelesaian tidak bisa dihapus, hanya dimatikan.</p>
+    <p className={css.note}>Semua misi baru berupa foto, dengan syarat dan ketentuan (TNC) per misi. Foto dicek otomatis lalu, bila ragu, masuk tab Tinjauan. Poin masuk hanya saat disetujui (saldo = jumlah catatan poin). Misi yang sudah punya penyelesaian tidak bisa dihapus, hanya dimatikan. Jenis check-in dan sesi tetap ada untuk misi lama, tidak dipakai di templat.</p>
     {data.missions.map(mission => <Card key={mission.id} title={mission.title} id={`misi-${mission.id}`}>
       <div className={css.badges}>
         <Pill tone={mission.active ? "ok" : "neutral"}>{mission.active ? "Aktif" : "Mati"}</Pill>
@@ -86,6 +90,7 @@ function MissionsTab({ data, busy, run, call }: TabProps) {
         <Pill tone="brass">{mission.points} poin</Pill>
         {mission.review && <Pill tone="warn">Ditinjau dulu</Pill>}
       </div>
+      {mission.kind === "foto" && <p className={css.chips}>{ruleDisplays(publicRules(effectiveRules(mission, data.settings.defaultRadiusM)), "id").flatMap(rule => rule.chips).map(chip => <span key={chip} className={css.chip}>{chip}</span>)}</p>}
       <p className={css.meta}>
         {mission.latitude !== null && <span>{mission.placeName || "Titik"} · {mission.latitude.toFixed(5)}, {mission.longitude?.toFixed(5)} · radius {mission.radiusM ?? data.settings.defaultRadiusM} m{mission.radiusM === null ? " (bawaan)" : ""}</span>}
         {mission.kind === "sesi" && <span>Sesi: {mission.sessionId ? sessions.get(mission.sessionId)?.title ?? "–" : "belum dipilih"} · dicatat {mission.credit === "absen" ? "otomatis dari absen" : "panitia"}</span>}
@@ -120,15 +125,30 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
     sessionId: mission?.sessionId ?? "", credit: mission?.credit ?? "panitia" as const, review: mission?.review ?? false,
     opensAt: toLocal(mission?.opensAt ?? null), closesAt: toLocal(mission?.closesAt ?? null), sort: String(mission?.sort ?? data.missions.length + 1), active: mission?.active ?? false,
   }));
+  const [draft, setDraft] = useState<RulesDraft>(() => rulesToDraft(mission ? effectiveRules(mission, data.settings.defaultRadiusM) : [{ type: "foto_langsung" }, { type: "batas_kali", times: 3 }]));
+  const applyTemplate = (key: string) => {
+    const template = templateByKey(key);
+    if (!template) return;
+    setForm(current => ({ ...current, kind: "foto", title: template.title, description: template.description, points: String(template.points), review: false }));
+    setDraft(rulesToDraft(template.rules));
+  };
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm(current => ({ ...current, [key]: value }));
   const number = (text: string) => (text.trim() === "" ? null : Number(text.replace(",", ".")));
+  // A photo mission's place and hours live in its rules (the server mirrors them into the older columns).
+  const photo = form.kind === "foto";
   const submit = () => onSave({
-    title: form.title, description: form.description, kind: form.kind, points: Number(form.points), placeName: form.placeName, latitude: number(form.latitude), longitude: number(form.longitude),
-    radiusM: number(form.radiusM), sessionId: form.sessionId || null, credit: form.credit, review: form.review, opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt),
-    sort: Number(form.sort) || 0, active: form.active,
+    title: form.title, description: form.description, kind: form.kind, points: Number(form.points), placeName: photo ? "" : form.placeName, latitude: photo ? null : number(form.latitude), longitude: photo ? null : number(form.longitude),
+    radiusM: photo ? null : number(form.radiusM), sessionId: form.sessionId || null, credit: form.credit, review: form.review, opensAt: photo ? null : fromLocal(form.opensAt), closesAt: photo ? null : fromLocal(form.closesAt),
+    sort: Number(form.sort) || 0, active: form.active, rules: form.kind === "foto" ? draftToRules(draft) : [],
   });
-  const places = form.kind !== "sesi";
+  const places = form.kind === "checkin";
   return <form className={css.form} onSubmit={event => { event.preventDefault(); submit(); }}>
+    {!mission && <div className="field"><label htmlFor={`${id}-templat`}>Mulai dari templat</label>
+      <select id={`${id}-templat`} className="select" defaultValue="" onChange={event => applyTemplate(event.target.value)}>
+        <option value="">Misi kosong</option>
+        {MISSION_TEMPLATES.map(template => <option key={template.key} value={template.key}>{template.title} · {template.points} poin</option>)}
+      </select>
+      <span className={css.small}>Templat mengisi nama, penjelasan, poin, dan aturan. Tempat dan jam di templat hanya contoh: ubah sesuai acara sebelum diaktifkan.</span></div>}
     <div className={css.formGrid}>
       <div className="field"><label htmlFor={`${id}-nama`}>Nama misi</label><input id={`${id}-nama`} className="input" required maxLength={100} value={form.title} onChange={event => set("title", event.target.value)} placeholder="Foto apel Kota Batu" /></div>
       <div className="field"><label htmlFor={`${id}-jenis`}>Jenis</label>
@@ -158,11 +178,14 @@ function MissionForm({ mission, data, busy, onSave, onCancel }: { mission: Admin
         </select></div>
     </div>}
     <div className={css.formGrid}>
+      {form.kind !== "foto" && <>
       <div className="field"><label htmlFor={`${id}-buka`}>Mulai berlaku (WIB)</label><input id={`${id}-buka`} className="input" type="datetime-local" value={form.opensAt} onChange={event => set("opensAt", event.target.value)} /></div>
       <div className="field"><label htmlFor={`${id}-tutup`}>Berlaku sampai (WIB)</label><input id={`${id}-tutup`} className="input" type="datetime-local" value={form.closesAt} onChange={event => set("closesAt", event.target.value)} /></div>
+      </>}
       <div className="field"><label htmlFor={`${id}-urut`}>Urutan</label><input id={`${id}-urut`} className="input" type="number" min={0} max={999} value={form.sort} onChange={event => set("sort", event.target.value)} /></div>
     </div>
-    {form.kind === "foto" && <label className={css.check}><input type="checkbox" checked={form.review} onChange={event => set("review", event.target.checked)} />Tinjau fotonya dulu (poin masuk setelah disetujui)</label>}
+    {form.kind === "foto" && <RulesEditor draft={draft} onChange={setDraft} />}
+    {form.kind === "foto" && <label className={css.check}><input type="checkbox" checked={form.review} onChange={event => set("review", event.target.checked)} />Selalu tinjau dulu oleh panitia (walau pemeriksa otomatis menyatakan lolos)</label>}
     <label className={css.check}><input type="checkbox" checked={form.active} onChange={event => set("active", event.target.checked)} />Aktif (tampil di aplikasi peserta)</label>
     <div className={css.actions}>
       <ConsoleButton type="submit" variant="primary" disabled={busy || !form.title.trim()}>{busy ? "Menyimpan…" : "Simpan"}</ConsoleButton>

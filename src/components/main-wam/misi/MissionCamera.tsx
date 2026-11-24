@@ -1,22 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CameraOff, CheckCircle2, Hourglass, ImageOff, Lock, RotateCcw, Send, SwitchCamera } from "lucide-react";
+import { ArrowRight, Camera, CameraOff, CheckCircle2, CircleX, Hourglass, ImageOff, Lock, RotateCcw, Send, SwitchCamera } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Banner, Button, EmptyState, EyebrowLabel, IconBox, IconButton, Pill, Text } from "@/components/main-wam/ui";
 import { grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto } from "@/components/main-wam/momen/upload/compress";
 import type { MissionItem } from "@/lib/main-wam/misi/missions";
+import { tagRuleOf, type TagCandidate } from "@/lib/main-wam/misi/rules";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
+import { StepLabel, SummaryStep, TagStep, checkOf } from "./MissionSteps";
 import { PlaceBanner } from "./PlaceBanner";
 import { currentFix, useMissionPlace } from "./useMissionPlace";
 import { errorText, misiRequest, putJpeg } from "./request";
 import { DEMO_WRITE_MESSAGE } from "@/lib/main-wam/demo";
 import css from "./misi.module.css";
+import stepCss from "./misi-steps.module.css";
 
 /*
- * A photo mission: the camera, and only the camera. The viewfinder is the live stream (getUserMedia);
+ * A photo mission in steps: Kamera (the camera, and only the camera), Tag (when the mission asks to tag
+ * friends: pick them), Ringkasan (the checklist of the mission's rules, met or not, then send).
+ * The camera step: the camera, and only the camera. The viewfinder is the live stream (getUserMedia);
  * there is no file picker and no `capture` input anywhere on this screen, so a photo from the gallery
  * cannot be chosen. The shutter stays locked until the server says the position is inside the mission's
  * area (or, without a place, that the location is on). The photo is made ready on the phone (the same
@@ -25,20 +30,37 @@ import css from "./misi.module.css";
  */
 
 type Camera = "memuat" | "menyala" | "ditolak" | "tidakada";
-type Shot = { besar: Blob; kecil: Blob; width: number; height: number; url: string; clientId: string };
+type Shot = { besar: Blob; kecil: Blob; ubin: Blob; width: number; height: number; url: string; clientId: string };
+type Phase = "bidik" | "tag" | "ringkas" | "kirim" | "selesai";
+type Result = { status: string; reasons: string[] } | null;
+
+const DEMO_SHOT = "/wam/demo/foto-05.svg";
 
 const newId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID()
   : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (Number(c) ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (Number(c) / 4)))).toString(16)));
 
-export function MissionCamera({ item, demo = false }: { item: MissionItem; /** Mode demo: nothing is read from the server or saved. */ demo?: boolean }) {
+export function MissionCamera({ item, demo = false, candidates = [], viewer = { id: "", department: "" }, demoStart = null, demoTagged = [] }: {
+  item: MissionItem;
+  /** Mode demo: nothing is read from the server or saved. */
+  demo?: boolean;
+  /** The people the person may tag (the server lists them: active participants, with BOD, seat and room flags). */
+  candidates?: readonly TagCandidate[];
+  viewer?: { id: string; department: string };
+  /** Dev preview only: start at a step with the stand-in photo (the preview has no camera). */
+  demoStart?: "tag" | "ringkas" | null;
+  demoTagged?: readonly string[];
+}) {
   const t = useT();
   const router = useRouter();
   const { place, check } = useMissionPlace(item.id, "foto", { demo, hasPlace: item.hasPlace, radiusM: item.radiusM });
   const [camera, setCamera] = useState<Camera>("memuat");
   const [facing, setFacing] = useState<"environment" | "user">("environment");
-  const [shot, setShot] = useState<Shot | null>(null);
-  const [phase, setPhase] = useState<"bidik" | "kirim" | "selesai">("bidik");
-  const [result, setResult] = useState<"disetujui" | "menunggu" | null>(null);
+  const tagRule = tagRuleOf(item.rules);
+  const empty = () => new Blob();
+  const [shot, setShot] = useState<Shot | null>(() => (demo && demoStart ? { besar: empty(), kecil: empty(), ubin: empty(), width: 1200, height: 1500, url: DEMO_SHOT, clientId: "demo" } : null));
+  const [phase, setPhase] = useState<Phase>(demo && demoStart ? demoStart : "bidik");
+  const [tagged, setTagged] = useState<string[]>([...demoTagged]);
+  const [result, setResult] = useState<Result>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
@@ -82,7 +104,7 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
   }, [camera]);
 
   // Lets go of the preview's object URL when it is replaced or the screen closes.
-  useEffect(() => () => { if (shot) URL.revokeObjectURL(shot.url); }, [shot]);
+  useEffect(() => () => { if (shot && shot.url.startsWith("blob:")) URL.revokeObjectURL(shot.url); }, [shot]);
 
   const unlocked = place.status === "ready" && place.answer.inside;
   const canShoot = camera === "menyala" && unlocked && !preparing;
@@ -92,7 +114,7 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
     setPreparing(true); setProblem(null);
     try {
       const prepared = await prepareInTurn(async () => prepareMomenPhoto(await grabFrame(video.current!)));
-      setShot({ besar: prepared.besar, kecil: prepared.kecil, width: prepared.width, height: prepared.height, url: URL.createObjectURL(prepared.kecil), clientId: newId() });
+      setShot({ besar: prepared.besar, kecil: prepared.kecil, ubin: prepared.ubin, width: prepared.width, height: prepared.height, url: URL.createObjectURL(prepared.kecil), clientId: newId() });
       stop();
     } catch (error) {
       setProblem(error instanceof PhotoProblem ? error.message : t("misi.cam.unreadable"));
@@ -105,28 +127,70 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
     setPhase("kirim"); setProblem(null);
     try {
       const position = await currentFix();
-      const body = { clientId: shot.clientId, position, size: shot.besar.size, thumbSize: shot.kecil.size, width: shot.width, height: shot.height };
-      const started = await misiRequest<{ token: string; uploads: { besar: string; kecil: string } }>(mainWamApi.missionPhotoStart(item.id), { method: "POST", json: body });
-      await Promise.all([putJpeg(started.data.uploads.besar, shot.besar), putJpeg(started.data.uploads.kecil, shot.kecil)]);
-      const done = await misiRequest<{ status: "disetujui" | "menunggu" }>(mainWamApi.missionPhotoConfirm(item.id), { method: "POST", json: { ...body, token: started.data.token } });
-      setResult(done.data.status);
+      const body = { clientId: shot.clientId, position, size: shot.besar.size, thumbSize: shot.kecil.size, tileSize: shot.ubin.size, width: shot.width, height: shot.height, tags: tagged };
+      const started = await misiRequest<{ token: string; uploads: { besar: string; kecil: string; ubin: string } }>(mainWamApi.missionPhotoStart(item.id), { method: "POST", json: body });
+      await Promise.all([putJpeg(started.data.uploads.besar, shot.besar), putJpeg(started.data.uploads.kecil, shot.kecil), putJpeg(started.data.uploads.ubin, shot.ubin)]);
+      const done = await misiRequest<{ status: string; reasons: string[] }>(mainWamApi.missionPhotoConfirm(item.id), { method: "POST", json: { ...body, token: started.data.token } });
+      setResult(done.data);
       setPhase("selesai");
       router.refresh();
     } catch (error) {
-      setPhase("bidik");
+      setPhase("ringkas");
       setProblem(error instanceof Error && !("status" in error) ? t("misi.loc.offNote") : errorText(error));
     }
   }
 
-  function retake() { setShot(null); setProblem(null); setPhase("bidik"); void check(); }
+  function retake() { setShot(null); setProblem(null); setTagged([]); setPhase("bidik"); void check(); }
+
+  const people = useMemo(() => tagged.flatMap(id => candidates.find(candidate => candidate.id === id) ?? []), [tagged, candidates]);
+  const summary = useMemo(() => checkOf(item.rules, { inside: item.hasPlace ? place.status === "ready" && place.answer.inside : null, tags: people, viewer, attempts: Math.max(0, item.attempts) }), [item.rules, item.hasPlace, item.attempts, place, people, viewer]);
+  const steps = tagRule ? 3 : 2;
+  const afterShot = () => setPhase(tagRule ? "tag" : "ringkas");
+  const tagEnough = !tagRule || !tagRule.required || tagged.length >= tagRule.count;
 
   if (phase === "selesai") {
-    const approved = result === "disetujui";
+    const status = result?.status ?? "perlu_ditinjau";
+    const approved = status === "disetujui", rejected = status === "ditolak", checking = status === "dikirim" || status === "diperiksa";
     return <ScreenContent>
-      <EmptyState icon={approved ? <CheckCircle2 /> : <Hourglass />} title={approved ? t("misi.cam.doneTitle") : t("misi.cam.pendingTitle")}
+      <EmptyState icon={approved ? <CheckCircle2 /> : rejected ? <CircleX /> : <Hourglass />}
+        title={approved ? t("misi.cam.doneTitle") : rejected ? t("misi.cam.rejectedTitle") : checking ? t("misi.cam.checkedTitle") : t("misi.cam.reviewTitle")}
         action={<Button block href={mainWamPath.missions}>{t("misi.cam.backToMissions")}</Button>}>
-        {approved ? t("misi.cam.doneBody", { points: item.points }) : t("misi.cam.pendingBody")}
+        {approved ? t("misi.cam.doneBody", { points: item.points }) : rejected ? (result?.reasons.join(" ") || t("misi.sheet.rejected")) : checking ? t("misi.cam.checkedBody") : t("misi.cam.reviewBody")}
       </EmptyState>
+    </ScreenContent>;
+  }
+
+  if (shot && (phase === "tag" || phase === "ringkas" || phase === "kirim")) {
+    const onSummary = phase !== "tag";
+    return <ScreenContent>
+      <div className={css.head}>
+        <div className={css.headText}>
+          <EyebrowLabel tone="gold">{t("misi.sheet.points", { points: item.points })}</EyebrowLabel>
+          <h2 className={css.headTitle}>{item.title}</h2>
+        </div>
+      </div>
+      <StepLabel step={onSummary ? steps : 2} total={steps} name={onSummary ? t("misi.step.summary") : t("misi.step.tag")} />
+      {problem && <Banner tone="error">{problem}</Banner>}
+      <div className={stepCss.thumbRow}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the photo just made on this phone (object URL) or the demo stand-in */}
+        <img className={stepCss.thumb} src={shot.url} alt={t("misi.cam.preview")} />
+        <Button variant="secondary" size="m" icon={<RotateCcw />} disabled={phase === "kirim"} onClick={retake}>{t("misi.cam.retake")}</Button>
+      </div>
+      {phase === "tag" && tagRule
+        ? <>
+          <TagStep rule={tagRule} candidates={candidates} selected={tagged} onChange={setTagged} />
+          <div className={css.actions}>
+            <Button variant="secondary" onClick={() => setPhase("bidik")}>{t("misi.step.back")}</Button>
+            <Button icon={<ArrowRight />} disabled={!tagEnough} onClick={() => setPhase("ringkas")}>{t("misi.step.next")}</Button>
+          </div>
+        </>
+        : <>
+          <SummaryStep rules={item.rules} checks={summary.checks} tags={people} points={item.points} />
+          <div className={css.actions}>
+            <Button variant="secondary" disabled={phase === "kirim"} onClick={() => setPhase(tagRule ? "tag" : "bidik")}>{t("misi.step.back")}</Button>
+            <Button icon={<Send />} loading={phase === "kirim"} loadingLabel={t("misi.cam.sending")} disabled={!summary.ok} onClick={() => void send()}>{t("misi.sum.send", { points: item.points })}</Button>
+          </div>
+        </>}
     </ScreenContent>;
   }
 
@@ -137,6 +201,7 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
         <h2 className={css.headTitle}>{item.title}</h2>
       </div>
     </div>
+    <StepLabel step={1} total={steps} name={t("misi.step.camera")} />
     <PlaceBanner place={place} item={item} onCheck={() => void check()} />
     {problem && <Banner tone="error">{problem}</Banner>}
 
@@ -158,12 +223,13 @@ export function MissionCamera({ item, demo = false }: { item: MissionItem; /** M
       <Pill tone="onmedia" icon={<Camera />} className={css.stageChip}>{t("misi.cam.chip")}</Pill>
       {!shot && camera === "menyala" && !unlocked && <div className={css.lock}><Lock aria-hidden />{t("misi.cam.locked")}</div>}
     </div>
+    {demo && !shot && <Button className={stepCss.demoShot} variant="secondary" size="m" icon={<Camera />} onClick={() => setShot({ besar: empty(), kecil: empty(), ubin: empty(), width: 1200, height: 1500, url: DEMO_SHOT, clientId: "demo" })}>{t("misi.demo.useSample")}</Button>}
     <p className={css.noGallery}><ImageOff aria-hidden />{t("misi.cam.noGallery")}</p>
 
     {shot
       ? <div className={css.actions}>
-        <Button variant="secondary" icon={<RotateCcw />} disabled={phase === "kirim"} onClick={retake}>{t("misi.cam.retake")}</Button>
-        <Button icon={<Send />} loading={phase === "kirim"} loadingLabel={t("misi.cam.sending")} onClick={() => void send()}>{t("misi.cam.send", { points: item.points })}</Button>
+        <Button variant="secondary" icon={<RotateCcw />} onClick={retake}>{t("misi.cam.retake")}</Button>
+        <Button icon={<ArrowRight />} onClick={afterShot}>{t("misi.step.next")}</Button>
       </div>
       : <div className={css.shutterRow}>
         <span className={css.shutterSide} />

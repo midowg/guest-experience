@@ -49,8 +49,8 @@ function MozaikStandIn({ lang }: { lang: Lang }) {
 function misiStandIn(now: Date, mode?: string): React.ReactNode {
   if (mode === "mati") return null;
   const me = samplePeople.rani.id;
-  const items = missionItems(sampleMissions, sampleCompletions(me), { sessions: [{ id: sampleSessionIds["team-building"], title: "Team building" }], settings: { defaultRadiusM: 50 }, now });
-  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: 340, place: { rank: 7, of: 118 }, leaderboardOpen: true };
+  const items = missionItems(sampleMissions, sampleCompletions(me), { sessions: [], settings: { defaultRadiusM: 50 }, now });
+  const view: MisiView = { migrated: true, sample: true, items, summary: summarize(items), points: 340, place: { rank: 7, of: 118 }, leaderboardOpen: true, taggedIn: [] };
   return <MisiCard view={view} />;
 }
 
