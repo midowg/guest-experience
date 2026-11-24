@@ -187,6 +187,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           })}
         </AgendaCarousel>}
 
+        {/* Jejak karbon (24 Nov 2026): right under the session card, opening its own page. */}
+        {carbon && <CarbonHome setup={carbon.setup} occupants={carbon.occupants} travel={carbon.travel} />}
+
         {manage !== null && <ManageCard manages={managesSessions(member)} openRequests={manage} />}
 
         {(request || latest) && <div className={own.pair}>
@@ -210,7 +213,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
         {quest?.progress.done && questCard}
         {quest?.progress.done && quest.card && <ColleaguesCard href={praWamPath.colleagues} />}
-        {carbon && <CarbonHome setup={carbon.setup} occupants={carbon.occupants} travel={carbon.travel} />}
         {about && <AboutCard about={about.about} />}
       </div>
 

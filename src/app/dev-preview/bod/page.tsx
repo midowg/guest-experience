@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PraWamMcp } from "@/components/admin/wam/PraWamMcp";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
+import { WamFrame } from "@/components/pra-wam/WamFrame";
 import { CarbonHome } from "@/components/pra-wam/carbon/CarbonHome";
 import { SAMPLE_CARBON_SETUP } from "@/lib/pra-wam/carbon-sample";
 import { McpCard } from "@/components/pra-wam/McpCard";
@@ -84,9 +85,9 @@ const profile: BodProfile = {
  * ?keadaan=kosong shows a summary before any forum; ?keadaan=absen, one before migration 05;
  * ?tema=terang, the light mode (dark is the default); ?tampilan=werkudara, the Werkudara theme; ?halaman=peserta and ?halaman=profil, Peserta and Profil peserta.
  */
-export default async function DevBodPage({ searchParams }: { searchParams: Promise<{ keadaan?: string; tema?: string; tampilan?: string; halaman?: string }> }) {
+export default async function DevBodPage({ searchParams }: { searchParams: Promise<{ keadaan?: string; tema?: string; tampilan?: string; halaman?: string; bingkai?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { keadaan, tema, tampilan, halaman } = await searchParams;
+  const { keadaan, tema, tampilan, halaman, bingkai } = await searchParams;
   if (halaman) return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     {halaman === "mcp" ? <div style={{ maxWidth: 640 }}><McpCard hasKey lastUsedAt="2026-11-26T03:12:00Z" calls={[{ title: "Ringkasan WAM", ok: true, createdAt: "2026-11-26T03:12:00Z" }, { title: "Hasil survei", ok: false, createdAt: "2026-11-26T03:10:00Z" }]} /></div>
       : halaman === "mcp-admin" ? <PraWamMcp crumbs={[]} title="Akses MCP" initial={{ migrated: true, candidates: [{ employeeId: "00000000-0000-4000-8000-000000000201", name: "Dimas Pratama", department: "Finance" }],
@@ -98,6 +99,13 @@ export default async function DevBodPage({ searchParams }: { searchParams: Promi
   const data: Summary = keadaan === "kosong"
     ? { ...sample, active: null, forums: [], units: [], signedIn: 0, attention: [] }
     : keadaan === "absen" ? { ...sample, attendanceReady: false } : sample;
+  // ?bingkai=1 (24 Nov 2026): inside the app's frame with the BoD menu (Ringkasan, Agenda, Peserta, Profil).
+  if (bingkai) return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}>
+    <WamFrame member={{ id: "dev-bod", name: "Bima Contoh", nickname: "Bima", department: "BOD", roles: ["bod"], photo: null }} unread={0} waiting={0} phaseLabel="Pra WAM">
+      <BodSummary data={data} insights={insights} greeting="Selamat pagi, Bima" date="Kamis, 26 November"
+        carbon={<CarbonHome setup={SAMPLE_CARBON_SETUP} occupants={1} travel={null} />} />
+    </WamFrame>
+  </div>;
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     <BodSummary data={data} insights={keadaan === "kosong" ? emptyInsights : insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November"
       survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2026", participation: { done: 38, active: 57 } }}

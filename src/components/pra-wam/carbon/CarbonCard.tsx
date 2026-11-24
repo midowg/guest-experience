@@ -35,7 +35,7 @@ export type CarbonFormProps = {
  * calculator (CarbonCalculator: a grid of tiles, the panitia's values locked, the person's own
  * fields, the total growing on top), then how it is counted with the sources, and small habits.
  */
-export function CarbonCard({ view, form, compact = false }: { view: CarbonView; form?: CarbonFormProps; compact?: boolean }) {
+export function CarbonCard({ view, form, compact = false, href }: { view: CarbonView; form?: CarbonFormProps; compact?: boolean; /** Compact: open this page instead of the sheet (Beranda, Ringkasan BoD). */ href?: string }) {
   const [open, setOpen] = useState(false);
   // Always in the page and only opened or closed, like Agenda's sheet (24 Nov 2026): a <dialog>
   // inserted and shown in the same moment sat above the bottom bar on a phone.
@@ -52,8 +52,10 @@ export function CarbonCard({ view, form, compact = false }: { view: CarbonView; 
       {view.kind === "ada" && <ChevronRight className={css.rowChevron} aria-hidden />}
     </>;
     if (view.kind === "belum") return <section className={`${css.card} ${css.cardRow} ${css.cardWaiting}`} aria-label="Jejak karbon">{inner}</section>;
+    const label = `Jejak karbon: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`;
+    if (href) return <a className={`${css.card} ${css.cardRow}`} href={href} aria-label={label}>{inner}</a>;
     return <>
-      <button type="button" className={`${css.card} ${css.cardRow}`} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Jejak karbon: perkiraan ${view.total.value} ${view.total.unit}. ${view.barLabel}. Buka rincian`}>{inner}</button>
+      <button type="button" className={`${css.card} ${css.cardRow}`} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={label}>{inner}</button>
       {sheet}
     </>;
   }

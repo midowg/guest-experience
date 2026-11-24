@@ -40,7 +40,7 @@ type Props = {
   survey?: { name: string; participation: Participation } | null;
   /** 19 Nov 2026: the viewer's zone for the hours; WIB by default. */
   zone?: ViewerZone;
-  /** 24 Nov 2026: the BoD's own Jejak karbon row (CarbonHome), under the greeting; none when not set. */
+  /** 24 Nov 2026: the BoD's own Jejak karbon row (CarbonHome), under the session card; none when not set. */
   carbon?: ReactNode;
 };
 
@@ -74,10 +74,9 @@ export function BodSummary({ data, insights, greeting, date, survey = null, zone
       </div>
     </header>
 
-    {carbon && <div className={styles.carbon}>{carbon}</div>}
-
     <div className={styles.top}>
-      <ForumHero data={data} insights={insights} zone={zone} />
+      {/* Jejak karbon (24 Nov 2026) right under the session card, in its column. */}
+      {carbon ? <div className={styles.heroCol}><ForumHero data={data} insights={insights} zone={zone} />{carbon}</div> : <ForumHero data={data} insights={insights} zone={zone} />}
       <section className={`${base.card} ${styles.attention}`} aria-labelledby="perhatian">
         <div className={styles.cardHead}><h2 id="perhatian">Perlu perhatian</h2>{data.attention.length > 0 && <span className={styles.countPill}>{data.attention.length}</span>}</div>
         {data.attention.length === 0

@@ -18,6 +18,12 @@
 .cardWaiting { cursor: default; }
 /* Beranda's row (24 Nov 2026): the size of the other cards there (16px padding, a 40px tile, two lines). */
 .card.cardRow { flex-direction: row; align-items: center; gap: 12px; min-height: 44px; padding: 16px; }
+/* As a link to its page: no link colour or underline from the app. */
+a.card.cardRow, a.card.cardRow:visited { color: var(--on-eco); text-decoration: none; }
+/* The page (praWamPath.carbon): the calculator and the rest, a toast after Simpan. */
+.page { display: grid; gap: 16px; max-width: 40rem; margin: 0 auto; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 40; transform: translate(-50%, 12px); padding: 12px 18px; border-radius: 999px; background: var(--pw-text); color: var(--pw-app); font: 600 15px/20px var(--pw-body); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+.toastShow { opacity: 1; transform: translate(-50%, 0); }
 .rowText { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .rowText strong { font: 600 16px/22px var(--pw-body); color: var(--on-eco); }
 .rowText span { font: 500 14px/20px var(--pw-body); color: var(--on-eco-2); }

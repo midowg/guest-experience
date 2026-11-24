@@ -27,9 +27,8 @@
 .scopeBrass { background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); box-shadow: none; }
 
 /* The blue card and Perlu perhatian */
-/* Jejak karbon (24 Nov 2026): one row, as wide as a card column on a wide screen. */
-.carbon { display: grid; }
-@media (min-width: 768px) { .carbon { max-width: 28rem; } }
+/* Jejak karbon (24 Nov 2026): the session card and the row under it, one column of .top. */
+.heroCol { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .top { display: grid; gap: 16px; }
 .hero { align-content: start; min-height: 220px; }
 .hero h2 { font-size: 24px; }

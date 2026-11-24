@@ -38,6 +38,7 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.scan: return { current: "agenda", back: { href: praWamPath.agenda, title: "Scan QR absen" } };
     case praWamPath.newPassword(): return { back: { href: safePraWamNext(search.get("next")) ?? praWamPath.home, title: "Keamanan akun" } };
     case praWamPath.colleagues: return { back: { href: praWamPath.home, title: "Kartu rekan" } };
+    case praWamPath.carbon: return { back: { href: viewer.bod ? praWamPath.dashboard : praWamPath.home, title: "Jejak karbon" } };
     case praWamPath.appraisal(): return { current: "appraisal" };
     case praWamPath.hod: return { current: "appraisal" };
     // Booking is a view of its own (9 Nov 2026): a new one belongs to Timeline (whose calendar opens

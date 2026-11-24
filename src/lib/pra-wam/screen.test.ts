@@ -18,6 +18,9 @@ describe("wamScreen: what the frame shows, from the address alone", () => {
     expect(wamScreen("/wam/settings", q(), me)).toEqual({ current: "akun" });
     expect(wamScreen("/wam/about", q("dari=pengaturan"), me).back).toEqual({ href: "/wam/settings", title: "Tentang WAM" });
     expect(wamScreen("/wam/about", q(), me).back?.href).toBe("/wam");
+    // Jejak karbon's own page (24 Nov 2026): back to Beranda, or to Ringkasan for a BoD; no bottom bar.
+    expect(wamScreen("/wam/jejak-karbon", q(), me)).toEqual({ back: { href: "/wam", title: "Jejak karbon" } });
+    expect(wamScreen("/wam/jejak-karbon", q(), { id: "b1", bod: true }).back?.href).toBe("/wam/manage");
     expect(wamScreen("/wam/book/new", q("date=2026-11-06&edit=b1"), me)).toEqual({ current: "appraisal", back: { href: "/wam/book", title: "Ubah booking" } });
     // A new booking is a view of its own under Timeline, back to Timeline (9 Nov 2026).
     expect(wamScreen("/wam/book/new", q("date=2026-11-14"), me)).toEqual({ current: "timeline", back: { href: "/wam/timeline", title: "Book ruang" } });

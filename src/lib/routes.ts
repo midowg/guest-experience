@@ -235,6 +235,8 @@ export const praWamPath = {
   questionnaire: (slug: string) => `${PRA_WAM_PATH}/${enc(slug)}`,
   /** Rekan: the character cards of everyone who finished the questionnaire. */
   colleagues: `${PRA_WAM_PATH}/rekan`,
+  /** Jejak karbon (24 Nov 2026): the calculator on a page of its own, from Beranda or Ringkasan BoD. */
+  carbon: `${PRA_WAM_PATH}/jejak-karbon`,
   /** Meeting HOD: meetings between department heads, for HODs only; a view of Book (the old address redirects there). */
   hod: `${PRA_WAM_PATH}/hod`,
   /** One colleague's card and what they share with colleagues. */
