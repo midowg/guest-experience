@@ -42,7 +42,7 @@ function readColors(element: HTMLElement): Colors {
   const palette = [1, 2, 3, 4, 5, 6, 7, 8].map(n => token(`--mw-mosaic-${n}`));
   return {
     outline: rgba(token("--mw-outline-2"), 0.55), gold, goldSoft: rgba(gold, 0.35), primary: token("--mw-primary"),
-    palette, paletteSoft: palette.map(color => rgba(color, 0.45)),
+    palette, paletteSoft: palette.map(color => rgba(color, 0.55)),
     // The placeholder tokens are gradients: a cell takes their first colour.
     ph: [1, 2, 3, 4, 5, 6].map(n => /#[0-9a-f]{3,8}|rgba?\([^)]*\)/i.exec(token(`--mw-ph-${n}`))?.[0] ?? "transparent"),
   };
@@ -125,26 +125,34 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
         const letter = manifest.cells[cell] && manifest.cells[cell] !== ".";
         const tile = tiles.get(cell);
         const colour = paletteIndex(cell);
-        if (!tile) {
-          // No photo yet: a letter cell is a faint coloured square (the letters read even with the mosaic empty), the rest a faint grid.
-          context.fillStyle = letter ? colors.paletteSoft[colour] : colors.outline;
-          context.globalAlpha = letter ? 1 : 0.5;
-          context.fillRect(x, y, side, side);
+        if (!letter) {
+          // Outside the letters: a very faint neutral grid, photo or not (a photo only whispers), so the letters stand out.
+          context.globalAlpha = 0.3; context.fillStyle = colors.outline; context.fillRect(x, y, side, side);
+          const faint = tile && images.current.get(tile.id);
+          if (faint?.complete && faint.naturalWidth) {
+            const crop = Math.min(faint.naturalWidth, faint.naturalHeight);
+            context.globalAlpha = 0.05;
+            context.drawImage(faint, (faint.naturalWidth - crop) / 2, (faint.naturalHeight - crop) / 2, crop, crop, x, y, side, side);
+          }
           continue;
         }
+        if (!tile) {
+          // A letter cell with no photo yet: its palette colour, light (the letters read even with the mosaic empty).
+          context.globalAlpha = 1; context.fillStyle = colors.paletteSoft[colour]; context.fillRect(x, y, side, side);
+          continue;
+        }
+        // A letter cell with its photo: full strength, tinted with the palette colour.
         const image = images.current.get(tile.id);
         const ready = !!(image?.complete && image.naturalWidth);
-        // A photo outside the letters is shown faded, so the letters (full strength, under their colour) stay readable
-        // however colourful the photos around them are.
-        context.globalAlpha = letter ? 1 : 0.14;
+        context.globalAlpha = 1;
         if (ready && image) {
           const crop = Math.min(image.naturalWidth, image.naturalHeight);
           context.drawImage(image, (image.naturalWidth - crop) / 2, (image.naturalHeight - crop) / 2, crop, crop, x, y, side, side);
+          context.globalAlpha = 0.85; context.fillStyle = colors.palette[colour]; context.fillRect(x, y, side, side);
         } else {
-          context.fillStyle = letter ? colors.palette[colour] : colors.ph[(cell * 7) % 6];
+          context.fillStyle = colors.palette[colour];
           context.fillRect(x, y, side, side);
         }
-        if (letter && ready) { context.globalAlpha = 0.7; context.fillStyle = colors.palette[colour]; context.fillRect(x, y, side, side); }
       }
       context.globalAlpha = 1;
       if (mark) {
