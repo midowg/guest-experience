@@ -238,7 +238,7 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
 | `Button` | `variant`: `primary` · `secondary` · `tonal` · `text` · `danger` · `danger-outline` · `danger-text`; `size` `l` (48) / `m` (40, sentuh 44); `block`; `icon`; `loading` + `loadingLabel`; `disabled`; `type`; `href` | aksi. `loading`: spinner, klik diabaikan, fokus tetap (aria-busy), submit tidak terkirim dua kali. Tinggi minimum 48/40; label yang tidak muat membungkus (tombol meninggi), tidak dipotong |
-| `IconButton` | `icon`, **`label`** (wajib, nama yang dibacakan), `variant` `standard` · `tonal` · `filled` · `onmedia`, `size` 44/56, `pressed` (+ `liked` = hati merah), `badge` (angka atau `"dot"`) | aksi tanpa teks. Sertakan jumlah di `label` ("Notifikasi, 3 belum dibaca") |
+| `IconButton` | `icon`, **`label`** (wajib, nama yang dibacakan), `variant` `standard` · `tonal` · `filled` · `onmedia`, `size` 44/56, `pressed` (+ `liked` = hati merah), `badge` (angka atau `"dot"`), `title` (tooltip) | aksi tanpa teks (Galeri di bilah Momen: `Grid2x2`, `title` "Galeri"). Sertakan jumlah di `label` ("Notifikasi, 3 belum dibaca") |
 | `TextLink` | `href`/`onClick`, `chevron` | "Lihat semua", "Semua" |
 
 ```tsx
