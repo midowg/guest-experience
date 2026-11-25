@@ -43,7 +43,7 @@ beforeAll(() => {
   window.addEventListener("popstate", notify);
 });
 beforeEach(() => { window.history.replaceState(null, "", "/wlm"); ocr.text = ""; ocr.fail = false; });
-afterEach(() => { cleanup(); clearResources("wbapp:"); window.localStorage.clear(); });
+afterEach(() => { cleanup(); clearResources("wbapp:"); window.localStorage.clear(); vi.useRealTimers(); });
 
 const fast = () => mockApi({ latency: [0, 0] });
 const app = (api: WellbeingApi = fast()) => render(<WellbeingApp me={sampleMe} api={api} />);
@@ -247,6 +247,8 @@ describe("WellbeingApp", () => {
   });
 
   it("shows Peringkat as a race: the podium, my place, the chasers, and the rest under Lihat semua (18 Nov 2026)", async () => {
+    // The sample's own points grow as the month goes on (the others' stay): held on 18 Nov, where the sample person is past #8.
+    vi.useFakeTimers({ now: new Date("2026-11-18T03:00:00Z"), toFake: ["Date"] });
     window.history.replaceState(null, "", "/wlm/peringkat");
     app();
     // The top three in rank order (the grid puts #1 in the middle), #1 with its lead.
@@ -632,6 +634,37 @@ describe("WellbeingApp", () => {
     expect(created).toHaveBeenCalled();
     expect(clicked).toHaveBeenCalled();
     clicked.mockRestore();
+  });
+
+  it("changes my activity while the admin has not checked it, and not once checked (25 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wlm/riwayat");
+    const api = mockApi({ latency: [0, 0] });
+    const update = vi.spyOn(api, "updateActivity");
+    app(api);
+    // Yesterday's steps: not checked yet, so Ubah is there.
+    fireEvent.click((await screen.findAllByRole("button", { name: /^Langkah harian, / }, { timeout: 3000 }))[0]);
+    expect(await within(dialog()).findByText("Belum diperiksa admin. Kamu masih bisa mengubahnya.")).toBeTruthy();
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Ubah" }));
+    // The detail closes first, then Ubah aktivitas opens.
+    await screen.findByRole("dialog", { name: "Ubah aktivitas" }, { timeout: 3000 });
+    const steps = await within(dialog()).findByLabelText("Jumlah langkah") as HTMLInputElement;
+    expect(steps.value).toBe("9120");
+    // No points while editing, as in Catat.
+    expect(dialog().textContent).not.toMatch(/[\d.]+ poin|\+\d/);
+    fireEvent.change(steps, { target: { value: "50" } });
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan perubahan" }));
+    expect(within(dialog()).getByRole("alert").textContent).toMatch(/minimal 100/);
+    fireEvent.change(steps, { target: { value: "10450" } });
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan perubahan" }));
+    expect(await screen.findByText("Aktivitas diperbarui.")).toBeTruthy();
+    expect(update).toHaveBeenCalledWith(expect.stringMatching(/^act-/), expect.objectContaining({ code: "physical.steps", steps: 10450, photos: [expect.objectContaining({ key: expect.any(String) })] }));
+    // An older one, checked by the admin: no Ubah.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const older = (await screen.findAllByRole("button", { name: /^Langkah harian, / })).at(-1)!;
+    fireEvent.click(older);
+    await within(dialog()).findByText("Detail aktivitas");
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(within(dialog()).queryByRole("button", { name: "Ubah" })).toBeNull();
   });
 
   it("shows points from an admin under Riwayat › Dari admin", async () => {

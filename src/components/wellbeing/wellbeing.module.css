@@ -899,3 +899,7 @@ input[type="date"].input { display: block; }
 @keyframes splashIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 @keyframes splashDrift { to { transform: translate3d(6vmax, 4vmax, 0) scale(1.06); } }
 @keyframes splashBar { 0%, 100% { opacity: .35; transform: scaleX(.75); } 45% { opacity: 1; transform: scaleX(1.2); } }
+
+/* Ubah aktivitas (25 Nov 2026): Catat's fields in one column. */
+.editForm { display: grid; gap: 16px; }
+.editForm .field, .editForm .grid2 { margin: 0; }

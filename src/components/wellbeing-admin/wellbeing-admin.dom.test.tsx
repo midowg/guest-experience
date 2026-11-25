@@ -146,6 +146,23 @@ describe("Admin Wellbeing", () => {
     expect(await within(panel).findByText("Isi tanggal mulai dan akhir.")).toBeTruthy();
   });
 
+  it("deletes an activity from Periksa behind ⋯, asked once more (25 Nov 2026)", async () => {
+    open("periksa");
+    const card = (await screen.findAllByRole("article", { name: /^Dewi, Running/ }, { timeout: 3000 }))[0];
+    const before = screen.getAllByRole("article").length;
+    fireEvent.click(within(card).getByRole("button", { name: /^Lainnya untuk / }));
+    fireEvent.click(within(card).getByRole("menuitem", { name: "Hapus aktivitas" }));
+    // Asked in the card: what goes, and that it cannot come back; Batal keeps it.
+    expect(within(card).getByRole("alert").textContent).toMatch(/tidak bisa dikembalikan/);
+    fireEvent.click(within(card).getByRole("button", { name: "Batal" }));
+    expect(within(card).queryByRole("alert")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: /^Lainnya untuk / }));
+    fireEvent.click(within(card).getByRole("menuitem", { name: "Hapus aktivitas" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Hapus" }));
+    expect(await screen.findByText("Aktivitas dihapus.")).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(before - 1));
+  });
+
   it("lets employees log since the programme started, or sets a day limit (Aturan pencatatan, 18 Nov 2026)", async () => {
     open("pengaturan");
     const backdate = await screen.findByLabelText("Boleh mundur", {}, { timeout: 3000 }) as HTMLSelectElement;

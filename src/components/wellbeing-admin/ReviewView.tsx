@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { Activity, CalendarCheck, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, ExternalLink, FileSpreadsheet, ImageOff, Keyboard, Layers, LayoutGrid, List, Pencil, Play, SlidersHorizontal, Undo2, X } from "lucide-react";
-import { Avatar, ConsoleButton, PageHeader, Pill, SearchField, useStoredValue } from "@/components/console";
+import { Activity, CalendarCheck, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, ExternalLink, FileSpreadsheet, ImageOff, Keyboard, Layers, LayoutGrid, List, MoreHorizontal, Pencil, Play, SlidersHorizontal, Trash2, Undo2, X } from "lucide-react";
+import { Avatar, buttonClass, ConsoleButton, PageHeader, Pill, SearchField, useStoredValue } from "@/components/console";
 import { errorMessage } from "@/components/admin/shared/api";
 import { SkeletonRows } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
@@ -105,6 +105,17 @@ export function ReviewView() {
       if (!silent) toast({ message, tone: "ok", action: { label: "Urungkan", run: () => void undo(data, before) } });
     } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
   }
+  /** Hapus (25 Nov 2026): out of every list at once; no Urungkan (it is gone for good). */
+  async function remove(item: WbActivity) {
+    try {
+      const { message } = await send(wellbeingAdminApi.activity(item.id), "DELETE");
+      const gone = (list: WbActivity[]) => list.filter(other => other.id !== item.id);
+      setResource<WbActivityPage>(source.key, current => current && { ...current, items: gone(current.items), unchecked: item.checked ? current.unchecked : Math.max(0, current.unchecked - 1) });
+      setMore(current => current.key === source.key ? { ...current, items: gone(current.items) } : current);
+      revalidate("wb:overview"); revalidate("wb:people"); revalidate(`wb:person:${item.employeeId}`);
+      toast({ message, tone: "ok" });
+    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); throw error; }
+  }
   async function undo(item: WbActivity, previous: ReviewInput) {
     await review(item, previous, true);
     revalidate(source.key);
@@ -185,7 +196,7 @@ export function ReviewView() {
             </span>}
           </div>
           <div ref={list} className={view === "daftar" ? css.rows : css.cards} data-view={view}>
-            {items.map(item => <ActivityItem key={item.id} layout={view} item={item} today={today} picked={selected.includes(item.id)} onPick={() => toggle(item.id)} onReview={next => review(item, next)} onMove={move} />)}
+            {items.map(item => <ActivityItem key={item.id} layout={view} item={item} today={today} picked={selected.includes(item.id)} onPick={() => toggle(item.id)} onReview={next => review(item, next)} onDelete={() => remove(item)} onMove={move} />)}
           </div>
         </>}
     {next && <div className={css.more}><ConsoleButton onClick={() => void loadMore()} disabled={extra.loading}>{extra.loading ? "Memuat…" : "Muat lagi"}</ConsoleButton></div>}
@@ -337,8 +348,34 @@ function ProofViewer({ proofs, start, onClose }: { proofs: readonly string[]; st
   </dialog>;
 }
 
-function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }: { layout: View; item: WbActivity; today: string; picked: boolean; onPick: () => void; onReview: (next: ReviewInput) => Promise<void>; onMove: (from: HTMLElement, step: 1 | -1) => void }) {
-  const [mode, setMode] = useState<"view" | "adjust" | "reject">("view");
+/**
+ * An item's rare actions (25 Nov 2026), as Admin's standard has them: behind ⋯, now only Hapus. Esc or a
+ * click outside closes it.
+ */
+function ItemMenu({ label, onDelete }: { label: string; onDelete: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", outside);
+    box.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [open]);
+  return <div className={css.menuBox} ref={box} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(false); button.current?.focus(); } else if (event.key === "Tab") setOpen(false); }}>
+    <button ref={button} type="button" className={`${buttonClass()} ${css.moreButton}`} aria-label={`Lainnya untuk ${label}`} title="Lainnya" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <MoreHorizontal size={18} aria-hidden="true" /></button>
+    {open && <div className={css.menu} role="menu" aria-label={`Lainnya untuk ${label}`}>
+      <button type="button" role="menuitem" className={`${css.menuItem} ${css.menuDanger}`} onClick={() => { setOpen(false); onDelete(); }}>
+        <span className={css.menuIcon}><Trash2 size={16} aria-hidden="true" /></span><span>Hapus aktivitas</span>
+      </button>
+    </div>}
+  </div>;
+}
+
+function ActivityItem({ layout, item, today, picked, onPick, onReview, onDelete, onMove }: { layout: View; item: WbActivity; today: string; picked: boolean; onPick: () => void; onReview: (next: ReviewInput) => Promise<void>; onDelete: () => Promise<void>; onMove: (from: HTMLElement, step: 1 | -1) => void }) {
+  const [mode, setMode] = useState<"view" | "adjust" | "reject" | "delete">("view");
   const [busy, setBusy] = useState(false);
   const [value, setValue] = useState(String(item.points));
   const [reason, setReason] = useState("");
@@ -358,6 +395,10 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     if (!Number.isInteger(next) || next < 0) return setProblem("Isi poin dengan angka 0 atau lebih.");
     if (!reason.trim()) return setProblem("Tulis alasannya; karyawan akan membacanya.");
     void act({ status: "adjusted", points: next, reason: reason.trim(), checked: true });
+  }
+  async function submitDelete() {
+    setBusy(true); setProblem("");
+    try { await onDelete(); } catch { setBusy(false); setMode("view"); }
   }
   function submitReject() {
     if (!reason.trim()) return setProblem("Pilih atau tulis alasannya.");
@@ -396,7 +437,14 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
       ...(item.checked ? [] : [<ConsoleButton key="ok" variant="primary" icon={<Check size={18} aria-hidden="true" />} disabled={busy} aria-label={row ? "Oke" : undefined} title={row ? "Oke (O)" : undefined} onClick={ok}>{row ? null : "Oke"}</ConsoleButton>]),
     ];
 
-  const editor = mode !== "view" && <form className={css.editor} onSubmit={event => { event.preventDefault(); if (mode === "adjust") submitAdjust(); else submitReject(); }}>
+  const editor = mode === "delete" ? <form className={css.editor} onSubmit={event => { event.preventDefault(); void submitDelete(); }}>
+    <p className={css.deleteAsk} role="alert"><strong>Hapus aktivitas ini?</strong> {points(item.points)} poin hilang dari total {name}, foto buktinya ikut terhapus, dan tidak bisa dikembalikan.
+      {item.source === "import" && " Aktivitas dari aplikasi lama bisa masuk lagi kalau data lama diimpor ulang."}</p>
+    <div className={css.editorActions}>
+      <ConsoleButton disabled={busy} onClick={() => setMode("view")}>Batal</ConsoleButton>
+      <button type="submit" className={`${buttonClass("primary")} ${css.dangerButton}`} disabled={busy}><Trash2 size={18} aria-hidden="true" />{busy ? "Menghapus…" : "Hapus"}</button>
+    </div>
+  </form> : mode !== "view" && <form className={css.editor} onSubmit={event => { event.preventDefault(); if (mode === "adjust") submitAdjust(); else submitReject(); }}>
     {mode === "adjust" && <label className={css.field}><span>Poin baru</span>
       <input className={css.input} inputMode="numeric" value={value} onChange={event => setValue(event.target.value.replace(/\D/g, "").slice(0, 6))} autoFocus /></label>}
     {mode === "reject" && <div className={css.reasonChips} role="group" aria-label="Alasan cepat">
@@ -445,7 +493,7 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     <div className={css.rowWhat}><strong title={title}>{title}</strong>{meta}</div>
     <Proof photos={item.photos} size="sm" onOpen={() => setViewing(0)} />
     <div className={css.rowScore}>{pointsView}{status}</div>
-    <span className={css.rowActions}>{mode === "view" ? actions : null}</span>
+    <span className={css.rowActions}>{mode === "view" ? <>{actions}<ItemMenu label={item.typeName} onDelete={() => setMode("delete")} /></> : null}</span>
     {(reasonNote || item.note) && <div className={css.rowExtra}>
       {item.note && <p className={css.note}>“{item.note}”</p>}
       {reasonNote}
@@ -460,6 +508,7 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
       <Avatar name={item.employeeName || name} size={40} />
       {who(css.cardWho)}
       {status}
+      {mode === "view" && <ItemMenu label={item.typeName} onDelete={() => setMode("delete")} />}
     </header>
     <div className={css.cardBody}>
       <div className={css.cardWhat}>

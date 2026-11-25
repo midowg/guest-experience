@@ -14,6 +14,13 @@
 .panelHost { display: contents; font-family: 'Nunito', system-ui, sans-serif; line-height: 1.55; }
 
 .view { animation: viewIn .2s cubic-bezier(.2, 0, 0, 1); }
+/*
+ * Each page's head (25 Nov 2026): its buttons level with the title (not pushed down beside the line under
+ * it), room before the tools under the head, and the line wide enough to read: where the page is narrow
+ * (the side menu open on a laptop) the buttons go to their own row under the line instead of squeezing it.
+ */
+.view > header { align-items: flex-start; margin-bottom: 1.5rem; }
+.view > header > div:first-child { flex-basis: 30rem; }
 @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .stack { display: grid; gap: 1.25rem; }
 .text { margin: 0; color: var(--cs-muted); line-height: 1.55; }
@@ -476,3 +483,12 @@ textarea.input { min-height: 5.5rem; padding: .625rem .875rem; resize: vertical;
 .photoTools button::after { content: ""; position: absolute; inset: -6px; }
 .photoAdd { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1.5px dashed var(--cs-line); background: transparent; color: var(--cs-muted); display: grid; place-items: center; align-content: center; gap: .25rem; font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
 .photoAdd:disabled { opacity: .6; cursor: progress; }
+
+/* Hapus (25 Nov 2026): an item's rare actions behind ⋯ (Admin's standard), asked once more in the item. */
+.moreButton { width: 2.5rem; padding-inline: 0; justify-content: center; }
+.cardHead > .menuBox:last-child { margin-left: auto; }
+.menuDanger { color: var(--cs-bad-fg); }
+.menuDanger .menuIcon { background: var(--cs-bad-bg); color: var(--cs-bad-fg); }
+.dangerButton, .dangerButton:hover:not(:disabled) { background: var(--cs-bad-fg); border-color: var(--cs-bad-fg); color: #fff; }
+.deleteAsk { margin: 0; font-size: 14px; line-height: 1.5; color: var(--cs-text); }
+.deleteAsk strong { display: block; margin-bottom: 2px; }

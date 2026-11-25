@@ -256,7 +256,7 @@ const uploadedPhotoSchema = uploadStartSchema.extend({
   token: z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, unknownUpload),
 });
 
-export const logSchema = z.object({
+const logFields = {
   code: z.string().trim().regex(/^[a-z]+\.[a-z0-9_]{2,60}$/, "Pilih kegiatannya."),
   date: z.string().regex(DAY, "Tanggal tidak valid."),
   /** The time of day (WIB), optional (17 Nov 2026). */
@@ -265,12 +265,29 @@ export const logSchema = z.object({
   kcal: z.number().min(0).max(20000, "Kalori terlalu besar.").nullish(),
   minutes: z.number().int("Durasi dalam menit, bilangan bulat.").min(1, "Durasi minimal 1 menit.").max(1440, "Durasi paling lama 1440 menit (sehari).").nullish(),
   note: z.string().trim().max(500, "Catatan paling banyak 500 karakter.").default(""),
-  photos: z.array(uploadedPhotoSchema).min(1, "Lampirkan minimal satu foto bukti.").max(MAX_PHOTOS, `Paling banyak ${MAX_PHOTOS} foto.`),
   force: z.boolean().default(false),
-}).superRefine((value, ctx) => {
+};
+const oncePerPhoto = (value: { photos: { key: string }[] }, ctx: z.RefinementCtx) => {
   if (new Set(value.photos.map(photo => photo.key)).size !== value.photos.length) ctx.addIssue({ code: "custom", path: ["photos"], message: "Ada foto yang terkirim dua kali." });
-});
+};
+export const logSchema = z.object({
+  ...logFields,
+  photos: z.array(uploadedPhotoSchema).min(1, "Lampirkan minimal satu foto bukti.").max(MAX_PHOTOS, `Paling banyak ${MAX_PHOTOS} foto.`),
+}).superRefine(oncePerPhoto);
 export type LogInput = z.infer<typeof logSchema>;
+
+/**
+ * Ubah (25 Nov 2026): my own activity, while the admin has not checked it. The same fields as Catat; a
+ * photo is either one already on the activity (its key only) or one uploaded just now (with its token).
+ */
+const keptPhotoSchema = z.object({ key: z.string().min(1).max(500) });
+export const editSchema = z.object({
+  ...logFields,
+  photos: z.array(z.union([uploadedPhotoSchema, keptPhotoSchema])).min(1, "Lampirkan minimal satu foto bukti.").max(MAX_PHOTOS, `Paling banyak ${MAX_PHOTOS} foto.`),
+}).superRefine(oncePerPhoto);
+export type EditInput = z.infer<typeof editSchema>;
+/** A photo uploaded just now (it has a token), not one already on the activity. */
+export const isNewPhoto = (photo: EditInput["photos"][number]): photo is LogInput["photos"][number] => "token" in photo;
 
 const count = (value: number) => value.toLocaleString("id-ID");
 

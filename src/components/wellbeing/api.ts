@@ -6,7 +6,7 @@ import { compressImage } from "@/lib/compress-image";
 import type { PhotoMime } from "@/lib/pra-wam/photo";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi, wellbeingApi, wellbeingPath } from "@/lib/routes";
-import type { WbAppCatalog, WbBoard, WbClaimResult, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRewards, WbStrava, WbStravaSync, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
+import type { WbAppCatalog, WbBoard, WbClaimResult, WbEditInput, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRewards, WbStrava, WbStravaSync, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
 
 /*
@@ -28,6 +28,8 @@ export type WellbeingApi = {
   startUpload(input: { mime: string; size: number }, options?: RequestOptions): Promise<WbUploadStart>;
   /** 409 with code "limit" | "same_day" | "strava_twin" (WellbeingApiError.code). */
   log(input: WbLogInput, options?: RequestOptions): Promise<WbLogResult>;
+  /** Ubah (25 Nov 2026): my activity changed while the admin has not checked it (409 once checked). */
+  updateActivity(id: string, input: WbEditInput, options?: RequestOptions): Promise<WbLogResult>;
   leaderboard(period: BoardPeriod, dim: BoardDim): Promise<WbBoard>;
   ledger(): Promise<WbLedger>;
   /** Ends the WAM session and leaves for the sign-in page. */
@@ -80,7 +82,7 @@ const UPLOAD_TIMEOUT = 60_000;
 export const cancelledError = () => new WellbeingApiError("Dibatalkan.", 0, undefined, true);
 export const isCancelled = (error: unknown) => error instanceof WellbeingApiError && error.cancelled;
 
-async function request<T>(url: string, init: { method?: "GET" | "POST" | "DELETE"; json?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+async function request<T>(url: string, init: { method?: "GET" | "POST" | "PATCH" | "DELETE"; json?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   if (init.signal?.aborted) throw cancelledError();
   // Given up after 30 seconds, or at once on Batalkan.
   const controller = new AbortController();
@@ -132,6 +134,7 @@ export const realApi: WellbeingApi = {
   activity: id => request<WbMyActivity>(wellbeingApi.activity(id)),
   startUpload: (input, options) => request<WbUploadStart>(wellbeingApi.uploads, { method: "POST", json: input, signal: options?.signal }),
   log: (input, options) => request<WbLogResult>(wellbeingApi.log, { method: "POST", json: input, signal: options?.signal }),
+  updateActivity: (id, input, options) => request<WbLogResult>(wellbeingApi.activity(id), { method: "PATCH", json: input, signal: options?.signal }),
   leaderboard: (period, dim) => request<WbBoard>(wellbeingApi.leaderboard(period, dim)),
   ledger: () => request<WbLedger>(wellbeingApi.ledger),
   signOut: async () => {

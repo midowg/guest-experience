@@ -328,6 +328,24 @@ umumnya (kode atau link, fleksibel).
   `tests/backend/wellbeing-reward-types-check.sql`. Sebelum migrasi dijalankan, Hadiah jalan seperti sebelumnya dan
   pilihan Uang, Voucher kode, dan Lainnya di editor nonaktif.
 
+## Ubah dan hapus aktivitas (25 Nov 2026)
+
+- **Karyawan bisa mengubah aktivitasnya** selama belum diperiksa admin: Riwayat → aktivitas → **Ubah**. Yang bisa diubah
+  sama seperti Catat: kegiatan (sejenis), tanggal, jam, langkah atau kalori dan durasi, catatan, dan foto bukti (foto lama
+  bisa dibuang, foto baru ditambah). Aturannya sama dengan Catat: sekali sehari/sebulan, kembaran Strava, batas tanggal.
+  Aktivitas itu sendiri tidak dihitung bentrok. Poinnya mengikuti data baru.
+  - Hanya catatan sendiri (bukan dari Strava atau aplikasi lama), yang belum diberi Oke, belum diubah, dan belum ditolak.
+    Begitu admin memeriksanya, tombol Ubah hilang. Kalau admin baru saja memeriksa saat karyawan menyimpan, simpanan
+    ditolak dengan pesan.
+  - Foto yang dibuang ikut dihapus dari penyimpanan.
+  - `PATCH /api/wellbeing/activities/<id>` (`updateMyActivity`).
+- **Admin bisa menghapus aktivitas**: Periksa → tombol ⋯ di aktivitas → **Hapus aktivitas**, lalu dikonfirmasi di
+  kartunya. Poinnya langsung hilang dari total, foto buktinya ikut terhapus, dan tidak bisa dikembalikan.
+  - Aktivitas dari aplikasi lama bisa masuk lagi kalau data lama diimpor ulang.
+  - `DELETE /api/admin/wellbeing/activities/<id>` (`deleteActivity`).
+- **Kepala halaman admin**: tombol sejajar judul, ada jarak sebelum tab. Saat halaman sempit (menu samping terbuka di
+  laptop), tombol pindah ke baris sendiri di bawah keterangan.
+
 ## Unduh rekap saya (19 Nov 2026)
 
 Karyawan bisa mengunduh datanya sendiri untuk rekap pribadi: **Profil → Data saya → Unduh rekap saya**.

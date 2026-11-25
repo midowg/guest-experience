@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, CircleX, ImageOff, LogOut, Moon, NotebookPen, SlidersHorizontal, Smartphone, Sun, X, type LucideIcon } from "lucide-react";
+import { Check, CircleX, Hourglass, ImageOff, LogOut, Moon, NotebookPen, Pencil, SlidersHorizontal, Smartphone, Sun, X, type LucideIcon } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { load } from "@/components/app-shell/resource";
-import type { WbMyActivity } from "@/lib/wellbeing/app-types";
+import { canEditActivity, type WbMyActivity } from "@/lib/wellbeing/app-types";
 import { dimensionLabels, isVideoProof, wibToday } from "@/lib/wellbeing/rules";
 import { keys, useTheme, useWellbeing, type CatatPreset, type ThemeChoice } from "./context";
 import { activityTitle, clockLabel, dayLabel, distance, formatDate, num, sourceLabels } from "./format";
@@ -18,7 +18,7 @@ import css from "./wellbeing.module.css";
 
 type Fresh = { id: string; item: WbMyActivity | null; failed: boolean };
 
-export function ActivitySheet({ activity, onClose, onRedo }: { activity: WbMyActivity | null; onClose: () => void; onRedo: (preset: CatatPreset) => void }) {
+export function ActivitySheet({ activity, onClose, onRedo, onEdit }: { activity: WbMyActivity | null; onClose: () => void; onRedo: (preset: CatatPreset) => void; onEdit: (activity: WbMyActivity) => void }) {
   const { api } = useWellbeing();
   // The list's copy shows at once; the details are asked for again on every opening, and the
   // photos come only from that answer (signed addresses from earlier may have run out).
@@ -39,9 +39,13 @@ export function ActivitySheet({ activity, onClose, onRedo }: { activity: WbMyAct
   const photos = current?.item?.photos ?? null;
   const today = wibToday();
 
+  // Ubah (25 Nov 2026): my own Catat entry, while the admin has not checked it (from the fresh answer only, so the photos' keys are there).
+  const editable = !!current?.item && canEditActivity(current.item);
   return <Panel open={!!activity} onClose={onClose} title="Detail aktivitas" variant="sheet"
     footer={item?.status === "rejected" ? <button type="button" className={cx(css.btn, css.btnTonal, css.block)} onClick={() => onRedo({ code: item.typeCode, kind: item.kind, date: item.date })}>
-      <NotebookPen size={20} aria-hidden="true" />Catat ulang</button> : undefined}>
+      <NotebookPen size={20} aria-hidden="true" />Catat ulang</button>
+      : editable && current?.item ? <button type="button" className={cx(css.btn, css.btnTonal, css.block)} onClick={() => onEdit(current.item!)}>
+      <Pencil size={20} aria-hidden="true" />Ubah</button> : undefined}>
     {item && <>
       <div className={css.sum} style={{ padding: 0 }}>
         <ActivityLead activity={item} size="lg" />
@@ -50,6 +54,7 @@ export function ActivitySheet({ activity, onClose, onRedo }: { activity: WbMyAct
           <span className={css.rowMeta}>{dayLabel(item.date, today)} · {formatDate(item.date, { day: "numeric", month: "long", year: "numeric" })}{item.time ? ` · pukul ${clockLabel(item.time)}` : ""}</span>
         </div>
       </div>
+      {item.source === "manual" && item.status === "approved" && !item.checked && <p className={cx(css.note, css.noteInfo)}><Hourglass size={20} aria-hidden="true" /><span>Belum diperiksa admin. Kamu masih bisa mengubahnya.</span></p>}
       {item.status === "rejected" && <p className={cx(css.note, css.noteErr)}><CircleX size={20} aria-hidden="true" /><span><b>Ditolak admin.</b> {item.reason ?? ""} Poin tidak dihitung.</span></p>}
       {item.status === "adjusted" && <p className={cx(css.note, css.noteWarn)}><SlidersHorizontal size={20} aria-hidden="true" /><span><b>Poin diubah admin</b> dari {num(item.pointsClaimed)} jadi {num(item.points)}. {item.reason ?? ""}</span></p>}
       <div className={cx(css.card, css.list, css.detailRows)}>

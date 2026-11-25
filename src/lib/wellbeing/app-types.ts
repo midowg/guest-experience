@@ -41,7 +41,14 @@ export type WbMyActivity = {
   /** The admin's reason when changed or rejected (shown to the employee). */
   reason: string | null;
   createdAt: string;
+  /** Checked by the admin (Oke, changed or rejected): from then on it cannot be changed (25 Nov 2026). */
+  checked: boolean;
+  /** The photos as stored (photos are ready-to-show addresses): Ubah sends back the ones it keeps. */
+  photoKeys: string[];
 };
+
+/** Ubah (25 Nov 2026): only my own Catat entries, while the admin has not checked them. */
+export const canEditActivity = (activity: Pick<WbMyActivity, "source" | "status" | "checked">) => activity.source === "manual" && activity.status === "approved" && !activity.checked;
 
 /**
  * What Admin Wellbeing → Aplikasi karyawan sets (17 Nov 2026): an announcement on Beranda (only while
@@ -98,6 +105,8 @@ export type WbUploadedPhoto = { key: string; mime: string; size: number; token: 
  */
 export type WbLogInput = { code: string; date: string; time?: string | null; steps?: number | null; kcal?: number | null; minutes?: number | null; note: string; photos: WbUploadedPhoto[]; force?: boolean };
 export type WbLogResult = { activity: WbMyActivity; totals: WbHome["totals"] };
+/** PATCH /api/wellbeing/activities/<id> (Ubah, 25 Nov 2026): as Catat, a photo either kept (its stored key) or uploaded just now. */
+export type WbEditInput = Omit<WbLogInput, "photos"> & { photos: (WbUploadedPhoto | { key: string })[] };
 
 /** GET /api/wellbeing/leaderboard?period=month|all&dim=all|<dimension> */
 /** `photo`: the person's WAM profile photo, or null for initials (18 Nov 2026). */
