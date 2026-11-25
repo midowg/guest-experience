@@ -1,0 +1,109 @@
+"use client";
+
+import { useState } from "react";
+import { ArrowUpDown } from "lucide-react";
+import { wibClock, wibDay } from "@/lib/coffee/quota";
+import { DETAIL_HEAD } from "@/lib/coffee/recap";
+import { KIND_LABEL, STATUS_LABEL, type RecapRow } from "@/lib/coffee/types";
+import { STATUS_TONE } from "./format";
+import css from "./coffee-admin.module.css";
+
+const PAGE = 100;
+const sheetDate = (iso: string) => wibDay(iso).split("-").reverse().join("/");
+const clock = (iso: string) => wibClock(iso).replace(":", ".");
+
+/**
+ * Rekap → Detail: one row per drink, the same columns as the files. The table scrolls inside its
+ * own box with the name held in place; on a phone it is a list. A hundred rows at a time; the
+ * files always hold all of them.
+ */
+export function DetailTable({ rows, phone }: { rows: RecapRow[]; phone: boolean }) {
+  const [newest, setNewest] = useState(true);
+  const [limit, setLimit] = useState(PAGE);
+  if (!rows.length) return <p className={css.small}>Tidak ada baris untuk filter ini.</p>;
+  // The server sends the newest first.
+  const ordered = newest ? rows : [...rows].reverse();
+  const shown = ordered.slice(0, limit);
+  const more = rows.length - shown.length;
+  const status = (row: RecapRow) => (
+    <span className={css.statusCell}>
+      <span className={css.pill} data-tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</span>
+      {row.manual && <span className={css.pill} data-tone="off">Dicatat manual</span>}
+    </span>
+  );
+  const foot = more > 0 && (
+    <div className={css.moreRow}>
+      <button type="button" className={css.secondary} onClick={() => setLimit(value => value + PAGE)}>Tampilkan {Math.min(PAGE, more)} baris lagi</button>
+    </div>
+  );
+
+  if (phone) return (
+    <>
+      <button type="button" className={css.textButton} onClick={() => setNewest(value => !value)}>
+        <ArrowUpDown size={16} aria-hidden />{newest ? "Terbaru dulu" : "Terlama dulu"}
+      </button>
+      <ul className={`${css.cardList} ${css.detailList}`}>
+        {shown.map(row => (
+          <li key={row.key}>
+            <span className={css.cardListMain}>
+              <strong>{row.drink}</strong>
+              <span>{row.temperature === "es" ? `Es · gula ${row.sugar} · es ${row.ice}` : `Panas · gula ${row.sugar}`}</span>
+              <span>{row.name} · {KIND_LABEL[row.kind]}{row.claimNo ? ` ke-${row.claimNo}` : ""}{row.guest ? ` · ${row.guest}` : ""}{row.room ? ` · ${row.room}` : ""}</span>
+              <span>{sheetDate(row.at)} {clock(row.at)} · {row.no}{row.doneBy ? ` · oleh ${row.doneBy}` : ""}</span>
+              {row.reason && <span>Catatan tolak: {row.reason}</span>}
+            </span>
+            <span className={css.cardListSide}>{status(row)}</span>
+          </li>
+        ))}
+      </ul>
+      {foot}
+    </>
+  );
+
+  return (
+    <>
+      <div className={`${css.tableBox} ${css.detailBox}`} tabIndex={0} role="region" aria-label="Tabel detail, bisa digulir ke samping">
+        <table className={`${css.table} ${css.detail}`}>
+          <thead>
+            <tr>
+              <th scope="col" aria-sort={newest ? "descending" : "ascending"}>
+                <button type="button" className={css.sortButton} onClick={() => setNewest(value => !value)}>
+                  Tanggal<ArrowUpDown size={14} aria-hidden /><span className={css.srOnly}>, urutkan {newest ? "terlama dulu" : "terbaru dulu"}</span>
+                </button>
+              </th>
+              {DETAIL_HEAD.slice(1, 21).map(head => <th key={head} scope="col">{head}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map(row => (
+              <tr key={row.key}>
+                <td className={css.num}>{sheetDate(row.at)}</td>
+                <td className={css.num}>{clock(row.at)}</td>
+                <td className={css.num}>{row.no}</td>
+                <td>{KIND_LABEL[row.kind]}</td>
+                <td className={css.nameCell}>{row.name}</td>
+                <td>{row.group}</td>
+                <td>{row.position || "–"}</td>
+                <td>{row.bu || "–"}</td>
+                <td>{row.pic || "–"}</td>
+                <td>{row.guest || "–"}</td>
+                <td className={css.num}>{row.kind === "tamu" && row.guestCount ? row.guestCount : "–"}</td>
+                <td>{row.room || "–"}</td>
+                <td className={css.nameCell}>{row.drink}</td>
+                <td>{row.temperature === "es" ? "Es" : "Panas"}</td>
+                <td>{row.sugar}</td>
+                <td>{row.temperature === "es" ? row.ice : "–"}</td>
+                <td>{status(row)}</td>
+                <td>{row.reason || "–"}</td>
+                <td>{row.doneBy || "–"}</td>
+                <td className={css.num}>{row.doneAt ? clock(row.doneAt) : "–"}</td>
+                <td className={css.num}>{row.claimNo ?? "–"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {foot}
+    </>
+  );
+}

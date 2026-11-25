@@ -464,3 +464,58 @@ adanya; daftar `admin_grants_apps_check` disalin dari `202611200703_admin_grants
 - Foto minuman: `coffeePath.photo(slug)` (`public/coffee/drinks/`). Tes penjaga di `routes.test.ts` menolak alamat
   `/coffee…` yang ditulis tangan di luar `routes.ts` (kecuali `dev-preview`).
 - Kutipan jatah per orang di ringkasan memakai jatah bulanan; untuk rentang lebih dari sebulan F1 perlu memutuskan cara menampilkannya.
+
+---
+
+## Catatan pelaksanaan F1 (25 Nov 2026)
+
+F1 (pengelola, `/admin/coffee`) selesai di cabang `feat/werkudara-coffee`. Tidak ada berkas F0 (`src/lib/server/coffee/**`,
+`supabase/migrations/**`, API) yang diubah; tidak ditemukan cacat server yang menghalangi F1.
+
+**Belum diuji (apa adanya):**
+- Halaman asli `/admin/coffee`, `/rekap`, `/pengaturan` **belum pernah dibuka setelah masuk admin**: agen tidak memakai
+  sandi admin. Yang dicek: ketiganya terkompilasi dan mengalihkan ke `/admin/login?next=…` tanpa sesi (307), API menjawab 401.
+  Tampilan "menunggu migrasi" (bingkai + `Notice`) dilihat lewat `/dev-preview/coffee/nyata/admin?tunggu=1`, yang memakai
+  komponen yang sama (`CoffeeAdminWaiting`), bukan lewat jalur server yang sesungguhnya.
+- Unduh CSV / Excel: hanya alamatnya yang diuji (membawa filter yang sama); berkasnya butuh sesi admin dan migrasi.
+- "Dua jendela pengelola ≤ 10 detik" diuji dengan server tiruan (tombol pratinjau), bukan dua sesi asli.
+- Salin rincian: panel browser agen menolak izin clipboard, jadi yang terlihat di browser hanya "Gagal salin"; jalur
+  berhasil diuji di tes (`QueueView.dom.test.tsx`).
+- Lebar 768 px tidak dicek terpisah (1440, 375, 320 dicek; di bawah 1024 px menu menjadi laci bawaan `ConsoleShell`).
+
+**Selisih dari rencana:**
+1. **Satu layar, bukan tiga halaman terpisah.** `CoffeeAdminApp.tsx` (baru) memegang Antrean, Rekap, dan Pengaturan sekaligus
+   di dalam `ConsoleShell`. Ketiga `page.tsx` tetap ada (alamat langsung, data awal dari server), tetapi pindah bagian hanya
+   mengganti alamat (`history.pushState`, seperti `HrFrame`) tanpa memuat ulang: tautan menu `ConsoleShell` (yang berupa
+   `<a href>`) dicegat di `CoffeeAdminApp`. Sebelum JavaScript siap, tautan itu tetap bekerja sebagai tautan biasa.
+   Bagian yang belum pernah dibuka dimuat lewat API dengan kerangka per bagian; yang sudah dibuka tampil dari simpanan
+   lalu diperbarui diam-diam.
+2. **Warna mengikuti konsol admin, bukan hijau prototipe.** Tata letak, isi, dan kata mengikuti prototipe; warna memakai
+   token `--cs-*` (biru Werkudara sebagai satu warna utama, status ok/warn/bad bersama), sesuai `docs/standar-admin.md` §8.
+   Tanda "Rapat" dan "Tim · rapat" memakai teal, bukan ungu. Font ikut admin. Kepala halaman memakai `PageHeader` konsol.
+3. **HP:** bilah atas dan laci menu milik `ConsoleShell` tetap ada; bilah tab bawah prototipe (Antrean, Rekap, Catat,
+   Lainnya) ditambahkan di ≤ 760 px. Judul halaman tetap tampil di HP (prototipe menyembunyikannya).
+4. **Pesan aksi:** `Flash` dari `hr-admin` tidak dipakai karena tidak punya tombol; pesan dibuat sendiri (dengan
+   **Urungkan**). Berhasil hilang sendiri 6 detik; galat tetap sampai ditutup. Membuka sheet/dialog menutup pesan yang tersisa.
+   Kalimat pesan tidak menyebut "notifikasi terkirim" (push baru ada di F4).
+5. **Rekap:** pilihan bulan = 12 bulan terakhir; tanggal Dari/Sampai bebas (paling lama 366 hari, dicek sebelum bertanya ke
+   server), bulan menjadi "Rentang lain" bila bukan satu bulan penuh. Status menambah "Batal". Setiap perubahan filter
+   bertanya ke server (pencarian menunggu 300 ms). **Rentang lebih dari satu bulan: "Per orang" hanya menampilkan jumlah
+   klaim, tanpa titik jatah, dengan satu kalimat keterangan.** Titik jatah hanya digambar untuk jatah 1–8.
+   Detail menampilkan 100 baris sekaligus ("Tampilkan … baris lagi"); di HP berupa daftar. Filter tidak ditulis ke alamat.
+6. **Catat manual:** "Lainnya" pada Ruangan membuka kolom nama ruangan (opsional). Jumlah 1–50 (prototipe 30), mengikuti
+   skema F0. Baris jatah di bawah nama membaca `…/people?bulan=` dan `…/settings`; penolakan server (409) tampil di sheet.
+7. **Salin rincian** yang ditolak browser menampilkan "Gagal salin" (prototipe diam).
+8. Berkas di luar daftar rencana: `CoffeeAdminApp.tsx`, `format.ts`, `sample.ts` (server tiruan di memori untuk pratinjau
+   dan tes; nama contoh ditulis "Rina Putri (contoh)" supaya nama depan tetap terbaca di baris pendek),
+   `src/app/dev-preview/coffee/nyata/admin/AdminPreview.tsx`. `?layar=rekap|pengaturan`, `?alamat=1` (alamat ikut berubah
+   seperti halaman asli), dan `?tunggu=1` ada di halaman pratinjau.
+
+**Untuk F2 (karyawan):**
+- `Layer.tsx` (dialog/sheet: Escape, jebakan fokus, tombol kembali HP) dan `usePhone()` bisa diimpor dari
+  `src/components/coffee-admin/Layer.tsx`; kelasnya ada di `coffee-admin.module.css` dan membaca token `--cs-*`, jadi di
+  aplikasi karyawan perlu CSS sendiri.
+- Pola klien: `api.ts` mendefinisikan tipe klien dan dioper sebagai prop; `sample.ts` menjadi contoh server tiruan untuk
+  `/dev-preview/coffee/nyata` dan tes.
+- Tes yang berkedip: `src/components/main-wam/ui/modal.dom.test.tsx` gagal 2 tes sekali saat seluruh suite dijalankan
+  (lulus sendiri dan lulus pada putaran kedua); bukan bagian Coffee.
