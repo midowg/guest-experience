@@ -300,12 +300,12 @@ describe("the stack", () => {
     expect(screen.getAllByRole("link", { name: "Ambil foto" })[0].getAttribute("href")).toBe("/wam2026/momen/kamera");
   });
 
-  it("says there is nothing new when every photo was seen: an invitation to the camera and a way to the Mozaik (no Galeri)", () => {
+  it("says there is nothing new when every photo was seen: an invitation to the camera only (no Galeri, and the Mozaik is not repeated here: owner 25 Nov)", () => {
     render(<ToastProvider><MomenStack {...props} items={sampleFeedSemua.slice(0, 5)} startIndex={5} total={5} /></ToastProvider>);
     expect(screen.getByRole("heading", { name: "Kamu sudah lihat semua" })).toBeTruthy();
     expect(screen.getByText("Foto baru dari rekan muncul di sini.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Buka Galeri" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Lihat Mozaik" }).getAttribute("href")).toBe("/wam2026/momen/mozaik");
+    expect(screen.queryByRole("link", { name: "Lihat Mozaik" })).toBeNull();
     expect(screen.getAllByRole("link", { name: "Ambil foto" }).some(link => link.getAttribute("href") === "/wam2026/momen/kamera")).toBe(true);
   });
 

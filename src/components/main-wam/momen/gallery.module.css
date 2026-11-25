@@ -17,6 +17,12 @@
   padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); font: var(--mw-type-caption-strong);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Ditandai: the uploader's name on the tile's foot (prototype .gt .st); it wraps, never cut (KIT 15); the tile's accessible name already says it. */
+.by {
+  position: absolute; left: var(--mw-space-4); bottom: var(--mw-space-4); z-index: 1; max-width: calc(100% - var(--mw-space-8)); box-sizing: border-box;
+  padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-8); background: var(--mw-media-scrim); color: var(--mw-media-on); font: var(--mw-type-caption-strong);
+  overflow-wrap: anywhere; text-align: left;
+}
 .more { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); min-height: var(--mw-touch); }
 .failed { margin: 0; font: var(--mw-type-caption); color: var(--mw-error); text-align: center; }
 .together { margin: 0; text-align: center; font: var(--mw-type-body); color: var(--mw-text-2); overflow-wrap: anywhere; }

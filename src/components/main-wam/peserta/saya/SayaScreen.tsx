@@ -7,7 +7,8 @@ import { ScreenContent, ScreenSection, ShellActions } from "@/components/main-wa
 import { Avatar, ConfirmDialog, EyebrowLabel, IconButton, SrOnly } from "@/components/main-wam/ui";
 import { DemoSwitch } from "@/components/main-wam/demo/DemoSwitch";
 import type { DemoRole } from "@/lib/main-wam/types";
-import { useT } from "@/components/main-wam/i18n";
+import { useLang, useT } from "@/components/main-wam/i18n";
+import { number } from "@/lib/main-wam/i18n";
 import { failText, mwRequest } from "../request";
 import { ProfileSheet } from "./ProfileSheet";
 import { Row, RowGroup } from "./Rows";
@@ -45,6 +46,7 @@ export type SayaProps = {
  */
 export function SayaScreen({ name, fullName, line, photo, room, carbon = false, mosaic = false, figure = null, points = null, demo = null, open = null }: SayaProps) {
   const t = useT();
+  const { lang } = useLang();
   const [sheet, setSheet] = useState<"foto" | "keluar" | null>(open);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function SayaScreen({ name, fullName, line, photo, room, carbon = false, 
       <RowGroup label={t("peserta.me.eventInfo")}>
         <Row icon={<FileText />} title={t("screen.guides")} href={mainWamPath.guides} />
         {mosaic && <Row icon={<Images />} title={t("peserta.me.mosaic")} href={mainWamPath.mosaic()} />}
-        {points !== null && <Row icon={<Trophy />} title={t("peserta.me.missions")} value={t("peserta.me.points", { n: points })} href={mainWamPath.missions} />}
+        {points !== null && <Row icon={<Trophy />} title={t("peserta.me.missions")} value={t("peserta.me.points", { n: number(lang, points) })} href={mainWamPath.missions} />}
         {carbon && <Row icon={<Leaf />} title={t("peserta.me.carbon")} href={mainWamPath.carbon("saya")} />}
       </RowGroup>
       <RowGroup>

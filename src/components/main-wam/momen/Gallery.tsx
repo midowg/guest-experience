@@ -199,6 +199,7 @@ function TaggedTab({ page, sessions, now, demo }: { page: TaggedAnswer; sessions
         <Pressable className={css.tile} onClick={() => setOpen(photo)} aria-label={t("momen.altBy", { name: photo.owner.name })} title={photoAlt(photo, now, lang)}>
           <PhotoFill tone={tone(photo.id)} className={css.fill} />
           <GridImg photo={photo} />
+          <span className={css.by} aria-hidden>{photo.owner.name}</span>
         </Pressable>
       </li>)}
     </ul>

@@ -98,8 +98,8 @@ describe("the page's view", () => {
     expect(carbonCatalog().map(row => [row.name, row.value, row.unit])).toEqual([
       ["Kereta", "0,0164", "kg per penumpang-km"],
       ["Bus", "0,89", "kg per bus-km"],
-      ["Mobil / minibus", "0,21", "kg per km, dibagi penumpang"],
-      ["Motor", "0,11", "kg per km"],
+      ["Mobil / minibus", "0,21007", "kg per km, dibagi penumpang"],
+      ["Motor", "0,11367", "kg per km"],
       ["Makan", "1,9", "kg per porsi"],
       ["Botol plastik", "0,1", "kg per botol"],
       ["Hotel", "62,7", "kg per kamar-malam"],

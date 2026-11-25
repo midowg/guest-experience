@@ -124,7 +124,7 @@ export type CatalogKey = "kereta" | "bus" | "mobil" | "motor" | "makan" | "botol
 export function carbonCatalog(lang: Lang = "id"): { key: CatalogKey; name: string; unit: string; value: string }[] {
   const f = CARBON_FACTORS;
   const rows: [CatalogKey, number, number][] = [
-    ["kereta", f.keretaPerPenumpangKm, 4], ["bus", f.busPerBusKm, 2], ["mobil", f.mobilPerKm, 2], ["motor", f.motorPerKm, 2],
+    ["kereta", f.keretaPerPenumpangKm, 4], ["bus", f.busPerBusKm, 2], ["mobil", f.mobilPerKm, 5], ["motor", f.motorPerKm, 5],
     ["makan", f.makanPerPorsi, 1], ["botol", f.botolPerBuah, 1], ["hotel", f.hotelPerKamarMalam, 1],
     ["laptop", f.laptopKwhPerJam, 3], ["hp", f.hpKwhPerIsi, 3],
     ["listrik", f.listrikPerKwh, 2], ["air", f.airPerM3, 1], ["lpg", f.lpgPerKg, 2], ["sampah", f.sampahPerKg, 1],

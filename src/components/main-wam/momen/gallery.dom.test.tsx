@@ -108,6 +108,12 @@ describe("Fotoku", () => {
 });
 
 describe("Ditandai", () => {
+  it("labels every tile with the name of who took the photo", () => {
+    ui({ tab: "ditandai" });
+    const tiles = grid("Foto yang menandaimu").getAllByRole("button");
+    sampleTagged.forEach((photo, index) => expect(tiles[index].textContent).toContain(photo.owner.name));
+  });
+
   it("a tap opens the viewer with who took it, Bersama (you and the others on it), Simpan foto and Lepas tag", () => {
     ui({ tab: "ditandai" });
     fireEvent.click(grid("Foto yang menandaimu").getAllByRole("button")[0]);
@@ -147,7 +153,7 @@ describe("Ditandai", () => {
   it("is a friendly empty state when nobody tagged me", () => {
     ui({ tab: "ditandai", tagged: { ...none, total: 0 } });
     expect(screen.getByRole("heading", { name: "Belum ada foto yang menandaimu" })).toBeTruthy();
-    expect(screen.getByText("Saat rekan menandaimu di foto misi, fotonya muncul di sini.")).toBeTruthy();
+    expect(screen.getByText("Foto temanmu yang menandaimu muncul di sini.")).toBeTruthy();
   });
 
   it("before the tags' migration the tab says the system is being updated; Fotoku keeps working", () => {
