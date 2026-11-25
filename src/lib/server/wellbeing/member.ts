@@ -8,7 +8,7 @@ import type {
 } from "@/lib/wellbeing/app-types";
 import {
   DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, earliestDate, limitReached, logValues, monthRange, previousMonth, wibToday,
-  type DimensionId, type Limit, type LogInput, type PointsMode, type ReviewStatus, type UploadStartInput, type WellbeingSettings,
+  isNewPhoto, type DimensionId, type EditInput, type Limit, type LogInput, type PointsMode, type ReviewStatus, type UploadStartInput, type WellbeingSettings,
 } from "@/lib/wellbeing/rules";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -33,7 +33,7 @@ const RECENT = 5;
 /** Days of history read at a time for the streak; an older window only while the streak reaches back that far. */
 const STREAK_WINDOW = 60;
 
-const MY_COLUMNS = "id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,created_at,type:wb_activity_types(name,kind)";
+const MY_COLUMNS = "id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,checked,created_at,type:wb_activity_types(name,kind)";
 
 const storageNotReady = () => new ServiceError(503, "Penyimpanan foto belum siap. Coba lagi nanti, atau kabari admin Wellbeing.");
 const loginNotReady = () => new ServiceError(503, "Login belum disiapkan. Isi WAM_SESSION_SECRET pada server.");
@@ -53,6 +53,7 @@ function toMine(row: Row): WbMyActivity {
     steps: nullableNumber(row.steps), kcal: nullableNumber(row.kcal), minutes: nullableNumber(row.minutes), distanceM: nullableNumber(row.distance_m),
     note: (row.note as string) ?? "", photos: (row.photos as string[] | null) ?? [], pointsClaimed: row.points_claimed as number,
     points: countedPoints(status, row.points as number), status, reason: (row.review_reason as string | null) ?? null, createdAt: row.created_at as string,
+    checked: !!row.checked, photoKeys: (row.photos as string[] | null) ?? [],
   };
 }
 
@@ -300,6 +301,98 @@ export async function logActivity(member: Member, input: LogInput, now = new Dat
     await discard();
     fail(error);
   }
+  const [activity] = await withPhotoUrls([toMine(data as unknown as Row)]);
+  const summary = await myTotals(member.id, now);
+  return { activity, totals: summary?.totals ?? emptyTotals(today) };
+}
+
+/**
+ * Ubah (25 Nov 2026): change my own activity while the admin has not checked it (Catat's own data only:
+ * not from Strava or the old app, not yet Oke'd, changed or rejected). The same checks as Catat (the
+ * type, the date and time, the values, once a day or month, Strava's twin), this activity left out of
+ * them; the photos kept are the activity's own, new ones are checked uploads. The points follow the new
+ * values. Saved only while it is still unchecked, so an admin's Oke a moment earlier wins (409); the
+ * photos taken off are removed from storage.
+ */
+export async function updateMyActivity(member: Member, id: string, input: EditInput, now = new Date()): Promise<WbLogResult> {
+  const client = db();
+  const read = await client.from("wb_activities").select("id,source,status,checked,photos").eq("id", id).eq("employee_id", member.id).maybeSingle();
+  if (read.error) fail(read.error);
+  const current = read.data as Row | null;
+  if (!current) throw new ServiceError(404, "Aktivitas tidak ditemukan.");
+  if (current.source !== "manual") throw new ServiceError(409, "Aktivitas dari Strava atau aplikasi lama tidak bisa diubah.");
+  if (current.checked || current.status !== "approved") throw new ServiceError(409, "Aktivitas ini sudah diperiksa admin, jadi tidak bisa diubah lagi.");
+  const before = (current.photos as string[] | null) ?? [];
+  const fresh = input.photos.filter(isNewPhoto);
+  if (input.photos.some(photo => !isNewPhoto(photo) && !before.includes(photo.key))) throw refused("photos", "Foto bukti tidak dikenali. Tutup lalu buka lagi aktivitasnya.");
+  const secret = praWamSecret();
+  if (fresh.some(photo => !isOwnUploadKey(photo.key, member.id, photo.mime) || !uploadTokenMatches(secret, photo.token, photo, member.id, now.getTime()))) {
+    throw refused("photos", "Foto bukti tidak dikenali atau sudah kedaluwarsa. Unggah ulang fotonya.");
+  }
+  if (fresh.length && !isR2Configured()) throw storageNotReady();
+  const freshKeys = fresh.map(photo => photo.key), keys = input.photos.map(photo => photo.key);
+  const discard = () => removeObjects(freshKeys).catch(() => undefined);
+
+  const today = wibToday(now);
+  const [settingsRead, typeRead] = await Promise.all([readSettings(), client.from("wb_activity_types").select(TYPE_COLUMNS).eq("code", input.code).maybeSingle()]);
+  if (typeRead.error) fail(typeRead.error);
+  if (!settingsRead.migrated) throw waiting();
+  const paused = controlsForApp(settingsRead.app, today).pausedMessage;
+  if (paused) throw new ServiceError(503, paused);
+  const type = typeRead.data as Row | null;
+  if (!type || !type.active) throw refused("code", "Kegiatan ini sudah tidak tersedia. Pilih kegiatan lain.");
+  const settings = settingsRead.settings;
+  const problem = dateProblem(input.date, today, settings.backdateDays, settings.programStart);
+  if (problem) throw refused("date", problem);
+  if (input.time && input.date === today && input.time > wibClock(new Date(now.getTime() + 5 * 60_000))) throw refused("time", "Jam itu belum lewat hari ini.");
+  const mode = type.points_mode as PointsMode;
+  const values = logValues(mode, input, settings);
+  if (!values.ok) throw new ServiceError(422, Object.values(values.fieldErrors)[0][0], values.fieldErrors);
+
+  // The type in the month, this activity left out; new photos not used by another activity.
+  const month = monthRange(input.date);
+  const [history, reused] = await Promise.all([
+    readAll((from, to) => client.from("wb_activities").select("id,happened_on,source").eq("employee_id", member.id).eq("type_code", input.code).neq("status", "rejected").neq("id", id)
+      .gte("happened_on", month.from).lte("happened_on", month.to).order("id").range(from, to)),
+    freshKeys.length ? client.from("wb_activities").select("id").eq("employee_id", member.id).overlaps("photos", freshKeys).limit(1) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (history.error) fail(history.error);
+  if (reused.error) fail(reused.error);
+  if (reused.data?.length) throw refused("photos", "Foto ini sudah dipakai untuk aktivitas lain. Unggah foto baru.");
+  const dates = history.rows.map(row => row.happened_on as string);
+  const limit = (type.limit_per as Limit | null) ?? null;
+  if (limit && limitReached(limit, input.date, dates)) {
+    throw conflict("limit", limit === "day" ? "Kegiatan ini hanya sekali sehari dan sudah tercatat pada tanggal itu." : "Kegiatan ini hanya sekali sebulan dan sudah tercatat bulan itu.");
+  }
+  if (type.kind === "daily" && dates.includes(input.date)) throw conflict("same_day", "Kegiatan ini sudah kamu catat pada tanggal itu.");
+  if (type.kind === "sport" && !input.force && history.rows.some(row => row.source === "strava" && row.happened_on === input.date)) {
+    throw conflict("strava_twin", `Pada tanggal itu sudah ada ${type.name as string} dari Strava. Kalau ini olahraga yang berbeda, kirim sekali lagi.`);
+  }
+
+  try {
+    await Promise.all(fresh.map(photo => verifyUpload(photo.key, photo.size, [kindFromMime(photo.mime) ?? "jpeg"])));
+  } catch (error) {
+    await discard();
+    throw error;
+  }
+  const points = claimedPoints(mode, type.points as number, values, settings);
+  const { data, error } = await withTimeColumn(on => client.from("wb_activities").update({
+    type_code: type.code, dimension_id: type.dimension_id, happened_on: input.date, ...(on ? { happened_time: input.time ?? null } : {}),
+    title: String(type.name).slice(0, 200), steps: values.steps, kcal: values.kcal, minutes: values.minutes, note: input.note, photos: keys,
+    points_claimed: points, points, updated_at: now.toISOString(),
+  }).eq("id", id).eq("employee_id", member.id).eq("checked", false).eq("status", "approved").select(withTime(MY_COLUMNS, on)).maybeSingle());
+  if (error) {
+    await discard();
+    if (error.code === "23505") throw conflict("same_day", "Kegiatan ini sudah kamu catat pada tanggal itu.");
+    fail(error);
+  }
+  if (!data) {
+    await discard();
+    throw new ServiceError(409, "Aktivitas ini baru saja diperiksa admin, jadi tidak bisa diubah lagi.");
+  }
+  // Photos taken off this activity: only this person's own uploads are ever deleted.
+  const dropped = before.filter(key => !keys.includes(key) && key.startsWith(`wellbeing/${member.id}/`));
+  if (dropped.length) await removeObjects(dropped).catch(() => undefined);
   const [activity] = await withPhotoUrls([toMine(data as unknown as Row)]);
   const summary = await myTotals(member.id, now);
   return { activity, totals: summary?.totals ?? emptyTotals(today) };

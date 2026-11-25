@@ -23,6 +23,7 @@ import { ActivitySheet, SignOutSheet, ThemeSheet } from "./Sheets";
 import { STRAVA_OPEN, STRAVA_RESULTS, StravaSheet } from "./StravaSheet";
 import { RewardsSheet } from "./Rewards";
 import { ExportSheet } from "./ExportSheet";
+import { EditActivitySheet } from "./EditActivitySheet";
 import css from "./wellbeing.module.css";
 
 /*
@@ -40,7 +41,7 @@ export function sectionOf(pathname: string, base = WELLBEING_PATH): WellbeingSec
 }
 const pathOf = (section: WellbeingSection, base: string) => section === "beranda" ? base : `${base}/${section}`;
 
-type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "photo" } | { kind: "board" } | { kind: "rewards"; tab: "hadiah" | "klaim" } | { kind: "export" } | { kind: "signout" };
+type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "edit"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "photo" } | { kind: "board" } | { kind: "rewards"; tab: "hadiah" | "klaim" } | { kind: "export" } | { kind: "signout" };
 
 /** Wait until the closed sheet's history entry is gone, so the next sheet's entry is not taken back with it. */
 const historySettled = () => new Promise<void>(resolve => {
@@ -225,7 +226,8 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
       </div>
 
       <CatatSheet key={catatRound} open={sheet?.kind === "catat"} preset={sheet?.kind === "catat" ? sheet.preset : null} onClose={close} onSaved={() => { catatSaved.current = true; }} />
-      <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} />
+      <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} onEdit={activity => void show({ kind: "edit", activity })} />
+      <EditActivitySheet activity={sheet?.kind === "edit" ? sheet.activity : null} onClose={close} />
       {/* Strava closed for now (18 Nov 2026): no sheet, so nothing asks the server about it. */}
       {STRAVA_OPEN && <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />}
       <ThemeSheet open={sheet?.kind === "theme"} onClose={close} />

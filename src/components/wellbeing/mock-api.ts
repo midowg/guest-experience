@@ -1,5 +1,6 @@
 "use client";
 
+import { canEditActivity } from "@/lib/wellbeing/app-types";
 import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbClaim, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbReward, WbRewards, WbRules, WbSaldo, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
 import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, earliestDate, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type Delivery, type DimensionId, type Limit, type RewardKind } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
@@ -149,21 +150,25 @@ function seedActivities(today: string, stravaTwin: boolean): WbMyActivity[] {
   };
   const base = (daysBack: number) => {
     const date = addDays(today, -daysBack);
-    return { id: `act-${String(list.length + 1).padStart(4, "0")}`, date, time: null as string | null, source: (daysBack > 10 ? "import" : "manual") as WbMyActivity["source"], createdAt: createdAt(date), note: "", reason: null, status: "approved" as const, distanceM: null, minutes: null, steps: null, kcal: null };
+    return { id: `act-${String(list.length + 1).padStart(4, "0")}`, date, time: null as string | null, source: (daysBack > 10 ? "import" : "manual") as WbMyActivity["source"], createdAt: createdAt(date), note: "", reason: null, status: "approved" as const, distanceM: null, minutes: null, steps: null, kcal: null,
+      // The admin has checked what is older than two days; the last two days still wait (so they can be changed, 25 Nov 2026).
+      checked: daysBack > 2, photoKeys: [] as string[] };
   };
   const addDaily = (daysBack: number, code: string, extra: Partial<WbMyActivity> & { photoCount?: number } = {}) => {
     const type = typeOf(code)!;
     const { photoCount = 1, ...rest } = extra;
     const claimed = type.mode === "steps" ? claimedPoints("steps", 0, { steps: rest.steps ?? 0 }, RULES) : type.points;
+    const proof = photos(photoCount, type.name, list.length);
     list.push({ ...base(daysBack), typeCode: code, typeName: type.name, kind: "daily", dimension: type.dimension, title: type.name,
-      photos: photos(photoCount, type.name, list.length), pointsClaimed: claimed, points: claimed, ...rest });
+      photos: proof, photoKeys: proof, pointsClaimed: claimed, points: claimed, ...rest });
   };
   const addSport = (daysBack: number, sport: string, title: string, kcal: number, extra: Partial<WbMyActivity> = {}) => {
     const type = SPORTS.find(item => item.code === `sport.${sport}`)!;
     const claimed = Math.min(kcal, RULES.maxKcal);
     const isStrava = extra.source === "strava";
+    const proof = isStrava ? [] : photos(1, title, list.length);
     list.push({ ...base(daysBack), typeCode: type.code, typeName: type.name, kind: "sport", dimension: "physical", title, kcal,
-      photos: isStrava ? [] : photos(1, title, list.length), pointsClaimed: claimed, points: claimed, ...extra });
+      photos: proof, photoKeys: proof, pointsClaimed: claimed, points: claimed, ...extra });
   };
 
   // The last week, by hand: every state the screens show.
@@ -370,7 +375,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       if (input.photos.length > RULES.maxPhotos) throw new WellbeingApiError(`Maksimal ${RULES.maxPhotos} foto.`, 422, { photos: [`Maksimal ${RULES.maxPhotos} foto.`] });
       const note = input.note.trim().slice(0, 300);
       let activity: WbMyActivity;
-      const common = { id: `act-new-${Date.now()}`, date: input.date, time: input.time ?? null, source: "manual" as const, note, reason: null, status: "approved" as const, distanceM: null, createdAt: new Date().toISOString() };
+      const common = { id: `act-new-${Date.now()}`, date: input.date, time: input.time ?? null, source: "manual" as const, note, reason: null, status: "approved" as const, distanceM: null, createdAt: new Date().toISOString(), checked: false };
       if (dailyType) {
         if (dailyType.limit === "month" && limitReached("month", input.date, loggedDates(dailyType.code))) throw new WellbeingApiError(`${dailyType.name}: sudah dicatat bulan itu.`, 409, { code: ["limit"] });
         // One per day for every daily type.
@@ -378,8 +383,9 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
         const steps = dailyType.mode === "steps" ? Number(input.steps) : null;
         if (steps !== null && !(Number.isInteger(steps) && steps >= MIN_STEPS && steps <= RULES.maxSteps)) throw new WellbeingApiError("Jumlah langkah tidak valid.", 422, { steps: [`Langkah minimal ${MIN_STEPS}, paling banyak ${RULES.maxSteps.toLocaleString("id-ID")}.`] });
         const points = claimedPoints(dailyType.mode, dailyType.points, { steps }, RULES);
+        const proof = photos(input.photos.length, dailyType.name, activities.length);
         activity = { ...common, typeCode: dailyType.code, typeName: dailyType.name, kind: "daily", dimension: dailyType.dimension, title: dailyType.name, steps, kcal: null, minutes: null,
-          photos: photos(input.photos.length, dailyType.name, activities.length), pointsClaimed: points, points };
+          photos: proof, photoKeys: proof, pointsClaimed: points, points };
       } else {
         const type = sportType!;
         const kcal = Number(input.kcal);
@@ -387,12 +393,38 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
         const twin = counted().find(item => item.source === "strava" && item.date === input.date && item.typeCode === type.code);
         if (twin && !input.force) throw new WellbeingApiError(`Sudah ada "${twin.title}" dari Strava di tanggal ini (${twin.points.toLocaleString("id-ID")} poin). Kalau itu aktivitas yang sama, tidak perlu dicatat lagi.`, 409, { code: ["strava_twin"] });
         const points = claimedPoints("kcal", 0, { kcal }, RULES);
+        const proof = photos(input.photos.length, type.name, activities.length);
         activity = { ...common, typeCode: type.code, typeName: type.name, kind: "sport", dimension: "physical", title: type.name, steps: null, kcal, minutes: input.minutes ?? null,
-          photos: photos(input.photos.length, type.name, activities.length), pointsClaimed: points, points };
+          photos: proof, photoKeys: proof, pointsClaimed: points, points };
       }
       activities.push(activity);
       return { activity, totals: totals() };
     }, 0.2, request),
+    // Ubah (25 Nov 2026): as the server, only my own Catat entries the admin has not checked.
+    updateActivity: (id, input, request) => call(() => {
+      const at = activities.findIndex(item => item.id === id);
+      if (at < 0) throw new WellbeingApiError("Aktivitas tidak ditemukan.", 404);
+      const current = activities[at];
+      if (!canEditActivity(current)) throw new WellbeingApiError("Aktivitas ini sudah diperiksa admin, jadi tidak bisa diubah lagi.", 409);
+      const datePro = dateProblem(input.date, today, RULES.backdateDays, RULES.programStart);
+      if (datePro) throw new WellbeingApiError(datePro, 422, { date: [datePro] });
+      const dailyType = DAILY.find(item => item.code === input.code), sportType = SPORTS.find(item => item.code === input.code);
+      if (!dailyType && !sportType) throw new WellbeingApiError("Kegiatan ini sudah tidak tersedia. Pilih kegiatan lain.", 422, { code: ["Pilih kegiatan lain."] });
+      const others = counted().filter(item => item.id !== id && item.typeCode === input.code).map(item => item.date);
+      if (dailyType && others.includes(input.date)) throw new WellbeingApiError("Kegiatan ini sudah kamu catat pada tanggal itu.", 409, { code: ["same_day"] });
+      const steps = dailyType?.mode === "steps" ? Number(input.steps) : null;
+      if (steps !== null && !(Number.isInteger(steps) && steps >= MIN_STEPS && steps <= RULES.maxSteps)) throw new WellbeingApiError("Jumlah langkah tidak valid.", 422, { steps: [`Langkah minimal ${MIN_STEPS}, paling banyak ${RULES.maxSteps.toLocaleString("id-ID")}.`] });
+      const kcal = sportType ? Number(input.kcal) : null;
+      if (kcal !== null && !(Number.isInteger(kcal) && kcal >= 1 && kcal <= RULES.maxKcal)) throw new WellbeingApiError("Kalori tidak valid.", 422, { kcal: [`Isi kalori 1 sampai ${RULES.maxKcal.toLocaleString("id-ID")}.`] });
+      const points = dailyType ? claimedPoints(dailyType.mode, dailyType.points, { steps }, RULES) : claimedPoints("kcal", 0, { kcal }, RULES);
+      const name = dailyType?.name ?? sportType!.name;
+      const kept = input.photos.filter(photo => !("token" in photo)).map(photo => photo.key);
+      const proof = [...kept, ...photos(input.photos.length - kept.length, name, at)];
+      activities[at] = { ...current, typeCode: input.code, typeName: name, kind: dailyType ? "daily" : "sport", dimension: dailyType?.dimension ?? "physical", title: name,
+        date: input.date, time: input.time ?? null, steps, kcal, minutes: sportType ? input.minutes ?? null : null, note: input.note.trim().slice(0, 500),
+        photos: proof, photoKeys: proof, pointsClaimed: points, points };
+      return { activity: activities[at], totals: totals() };
+    }, 0.15, request),
     leaderboard: (period, dim) => call(() => notReady ? { migrated: false, period, dim, items: [], me: null, of: 0, lastMonthChampion: null, near: [], ahead: null, unranked: [] } : board(period, dim)),
     ledger: () => call<WbLedger>(() => {
       if (notReady) return { migrated: false, items: [], total: 0 };

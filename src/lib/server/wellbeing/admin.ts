@@ -5,6 +5,7 @@ import type { WbActivity, WbActivityPage, WbBatchResult, WbCatalog, WbCatalogIte
 import { currentAdmin } from "../admin-actor";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
+import { removeObjects } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { afterCursor, cursorOf, missing, readSettingsRow, readTotals, timeOf, waiting, withPhotoUrls, withTime, withTimeColumn, type Totals } from "./shared";
 
@@ -150,6 +151,21 @@ export async function reviewActivity(id: string, input: ReviewInput, actor: Acto
   if (!data) throw new ServiceError(404, "Aktivitas tidak ditemukan.");
   const [activity] = await signPhotos([toActivity(data as unknown as Row)]);
   return activity;
+}
+
+/**
+ * Hapus (25 Nov 2026): an activity taken out for good (a double, a test, a wrong person); its points
+ * leave the totals at once. The proof photos in our storage go too (links to the old app's storage are
+ * left alone). An activity from the old app has its legacy_id: an import run again would bring it back.
+ */
+export async function deleteActivity(id: string): Promise<{ id: string; employeeId: string; imported: boolean }> {
+  const { data, error } = await db().from("wb_activities").delete().eq("id", id).select("id,employee_id,photos,source");
+  if (error) fail(error);
+  const row = (data ?? [])[0] as Row | undefined;
+  if (!row) throw new ServiceError(404, "Aktivitas tidak ditemukan. Mungkin sudah dihapus.");
+  const own = ((row.photos as string[] | null) ?? []).filter(key => key.startsWith("wellbeing/"));
+  if (own.length) await removeObjects(own).catch(() => undefined);
+  return { id, employeeId: row.employee_id as string, imported: row.source === "import" };
 }
 
 /* ---------- Karyawan ---------- */

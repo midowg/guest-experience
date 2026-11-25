@@ -171,6 +171,13 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
       Object.assign(item, { status: next.status, points: next.points, reason: next.reason, checked: next.checked, reviewedBy: "Admin (pratinjau)" });
       return ok(item, next.status === "rejected" ? "Aktivitas ditolak." : next.status === "adjusted" ? "Poin diubah." : "Ditandai sudah diperiksa.");
     }
+    // Hapus (25 Nov 2026).
+    if (one && method === "DELETE") {
+      const at = activities.findIndex(entry => entry.id === one[1]);
+      if (at < 0) return refuse(404, "Aktivitas tidak ditemukan. Mungkin sudah dihapus.");
+      const [gone] = activities.splice(at, 1);
+      return ok({ id: gone.id, employeeId: gone.employeeId, imported: gone.source === "import" }, "Aktivitas dihapus.");
+    }
     if (path === "/people") { const period = url.searchParams.get("period") === "all" ? "all" : "month"; return ok({ migrated: true, period, from: period === "month" ? month.from : null, to: period === "month" ? month.to : null, rows: rows(period), departments: [...new Set(people.map(person => person.department))].sort() } satisfies WbPeople); }
     const person = /^\/people\/([0-9a-f-]+)$/.exec(path);
     if (person) {

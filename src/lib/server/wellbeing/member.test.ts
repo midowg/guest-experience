@@ -15,7 +15,7 @@ let verifyFails = false;
 
 function query(table: string) {
   const filters: ((row: Row) => boolean)[] = [];
-  let op: "select" | "insert" = "select";
+  let op: "select" | "insert" | "update" = "select";
   let payload: Row | null = null;
   let single = false;
   let slice: [number, number] | null = null;
@@ -32,6 +32,8 @@ function query(table: string) {
       return { data: row, error: null };
     }
     let found = rows.filter(row => filters.every(test => test(row)));
+    // Ubah (25 Nov 2026): the rows that pass the filters take the patch.
+    if (op === "update") { for (const row of found) Object.assign(row, payload); return { data: single ? found[0] ?? null : found, error: null }; }
     if (slice) found = found.slice(slice[0], slice[1] + 1);
     return { data: single ? found[0] ?? null : found, error: null };
   };
@@ -46,6 +48,7 @@ function query(table: string) {
     range: (from: number, to: number) => { slice = [from, to]; return builder; },
     limit: (count: number) => { slice = [0, count - 1]; return builder; },
     insert: (row: Row) => { op = "insert"; payload = row; return builder; },
+    update: (patch: Row) => { op = "update"; payload = patch; return builder; },
     single: () => { single = true; return builder; }, maybeSingle: () => { single = true; return builder; },
     then: (resolve: (result: unknown) => unknown) => Promise.resolve(run()).then(resolve),
   };
@@ -75,10 +78,10 @@ vi.mock("../r2", () => ({
   verifyUpload: vi.fn(async () => { if (verifyFails) throw Object.assign(new Error("Berkas belum terunggah. Coba unggah ulang."), { status: 422 }); return "jpeg"; }),
 }));
 
-const { home, leaderboard, logActivity, myActivities, startUpload } = await import("./member");
+const { home, leaderboard, logActivity, myActivities, startUpload, updateMyActivity } = await import("./member");
 const { resetTimeColumn } = await import("./shared");
 const { ServiceError } = await import("../config");
-const { logSchema } = await import("@/lib/wellbeing/rules");
+const { editSchema, logSchema } = await import("@/lib/wellbeing/rules");
 const { myExportWorkbook, myExportSchema, fileSlug } = await import("./member-export");
 const { readXlsx } = await import("../xlsx");
 
@@ -119,6 +122,34 @@ beforeEach(() => {
       { id: other.id, full_name: "Contoh Dua", nickname: "Dua", department: "HR", active: true },
     ],
   };
+});
+
+describe("Ubah (25 Nov 2026)", () => {
+  it("changes my own unchecked activity: the values, the points, the photos kept and new; the dropped photo leaves storage", async () => {
+    const first = await log(me, { code: "physical.steps", steps: 9128 });
+    const oldKey = first.activity.photoKeys[0];
+    expect(first.activity).toMatchObject({ checked: false, photoKeys: [expect.stringMatching(/^wellbeing\//)] });
+    const fresh = await photoFor(me);
+    const result = await updateMyActivity(me, first.activity.id, editSchema.parse({ code: "physical.steps", date: "2026-11-16", steps: 10450, note: "Jalan sore", photos: [fresh] }), now);
+    expect(result.activity).toMatchObject({ date: "2026-11-16", steps: 10450, points: 1045, pointsClaimed: 1045, note: "Jalan sore", photoKeys: [fresh.key] });
+    expect(removed).toContainEqual([oldKey]);
+    // Keeping a photo by its key works; someone else's key, or a key not on it, does not.
+    const kept = await updateMyActivity(me, first.activity.id, editSchema.parse({ code: "physical.steps", date: "2026-11-16", steps: 12000, note: "", photos: [{ key: fresh.key }] }), now);
+    expect(kept.activity).toMatchObject({ steps: 12000, photoKeys: [fresh.key] });
+    expect(await refusal(updateMyActivity(me, first.activity.id, editSchema.parse({ code: "physical.steps", date: "2026-11-16", steps: 12000, note: "", photos: [{ key: "wellbeing/other/x.jpg" }] }), now))).toMatchObject({ status: 422 });
+    expect(await refusal(updateMyActivity(other, first.activity.id, editSchema.parse({ code: "physical.steps", date: "2026-11-16", steps: 12000, note: "", photos: [{ key: fresh.key }] }), now))).toMatchObject({ status: 404 });
+  });
+
+  it("refuses once the admin has checked it, and keeps Catat's rules (once a day, this activity left out)", async () => {
+    const a = await log(me, { code: "emotional.meditasi", date: "2026-11-16" });
+    const b = await log(me, { code: "emotional.meditasi", date: "2026-11-17" });
+    const keep = (activity: typeof a.activity) => ({ code: "emotional.meditasi", note: "", photos: [{ key: activity.photoKeys[0] }] });
+    // The same day as the other one: refused; its own day again: fine.
+    expect(await refusal(updateMyActivity(me, b.activity.id, editSchema.parse({ ...keep(b.activity), date: "2026-11-16" }), now))).toMatchObject({ status: 409, fieldErrors: { code: ["same_day"] } });
+    expect((await updateMyActivity(me, b.activity.id, editSchema.parse({ ...keep(b.activity), date: "2026-11-17", note: "Pagi" }), now)).activity.note).toBe("Pagi");
+    tables.wb_activities.find(row => row.id === a.activity.id)!.checked = true;
+    expect(await refusal(updateMyActivity(me, a.activity.id, editSchema.parse({ ...keep(a.activity), date: "2026-11-16" }), now))).toMatchObject({ status: 409, message: expect.stringMatching(/sudah diperiksa admin/) });
+  });
 });
 
 describe("Unduh rekap saya (19 Nov 2026)", () => {
