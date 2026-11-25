@@ -1,0 +1,53 @@
+/* "Tag orang": the bottom sheet of the photo editor (KONTRAK §40). Tokens only; words wrap; every target is at least 44 tall. */
+.sheet { height: min(85dvh, calc(var(--mw-vvh, 100dvh) - 24px)); }
+.sheet > :first-child { height: 100%; }
+.body { display: flex; flex-direction: column; gap: var(--mw-space-8); }
+.ask { border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); padding: var(--mw-space-8) var(--mw-space-12); }
+
+/* The search, the count and the chosen chips stay in view while the list scrolls under them. */
+.sticky { position: sticky; top: 0; z-index: 1; display: flex; flex-direction: column; gap: var(--mw-space-8); padding: var(--mw-space-4) 0 var(--mw-space-8); background: var(--mw-surface-raised); }
+.search { display: flex; align-items: center; gap: var(--mw-space-8); min-height: 48px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-full); background: var(--mw-surface-2); color: var(--mw-text-2); }
+.search:focus-within { box-shadow: inset 0 0 0 2px var(--mw-focus); }
+.search > svg { flex: none; width: 18px; height: 18px; }
+.search input { flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; outline: 0; background: none; color: var(--mw-text-1); font: var(--mw-type-body); }
+.search input::placeholder { color: var(--mw-text-2); }
+.countRow { display: flex; justify-content: flex-end; }
+.count { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
+
+.chosen { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); max-height: 92px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.chip {
+  position: relative; display: inline-flex; align-items: center; gap: var(--mw-space-8); max-width: 100%; min-height: 36px; padding: 4px var(--mw-space-12) 4px 4px; border-radius: 18px; cursor: pointer; text-align: left;
+  border: 1px solid var(--mw-outline); background: var(--mw-surface); color: var(--mw-text-1); font: 600 13px/16px var(--mw-font-sans); -webkit-tap-highlight-color: transparent;
+}
+.chip::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.chip > span { min-width: 0; overflow-wrap: anywhere; }
+.chip > svg { flex: none; width: 12px; height: 12px; color: var(--mw-text-2); }
+
+.people { display: flex; flex-direction: column; margin: 0; padding: 0 var(--mw-space-8); list-style: none; border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); }
+.people > li + li { border-top: 1px solid var(--mw-outline); }
+.person { width: 100%; display: flex; align-items: center; gap: var(--mw-space-12); min-height: 56px; padding: var(--mw-space-8) var(--mw-space-4); border: 0; background: none; color: var(--mw-text-1); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.person[aria-checked="true"] { background: var(--mw-gold-soft); }
+.personText { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.personText b { font: 700 14px/18px var(--mw-font-sans); overflow-wrap: anywhere; }
+.personText small { font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.bod { flex: none; padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-full); background: var(--mw-gold-soft); box-shadow: inset 0 0 0 1px var(--mw-gold-line); color: var(--mw-gold-ink); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); }
+.mark { flex: none; width: 24px; height: 24px; border-radius: var(--mw-radius-full); border: 2px solid var(--mw-outline-2); display: inline-flex; align-items: center; justify-content: center; }
+.person[aria-checked="true"] .mark { background: var(--mw-success); border-color: var(--mw-success); color: var(--mw-on-primary); }
+.mark > svg { width: 14px; height: 14px; }
+.none { margin: 0; padding: var(--mw-space-12) var(--mw-space-4); font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+
+/* A person: the photo when there is one, else the first letter on a tint (a container and its ink from the kit's tokens). */
+.avatar { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; font-family: var(--mw-display-font); font-weight: 800; line-height: 1; text-transform: uppercase; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.avatar[data-tint="primary"] { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
+.avatar[data-tint="success"] { background: var(--mw-success-container); color: var(--mw-on-success-container); }
+.avatar[data-tint="warning"] { background: var(--mw-warning-container); color: var(--mw-on-warning-container); }
+.avatar[data-tint="momen"] { background: var(--mw-momen-container); color: var(--mw-on-momen-container); }
+.avatar[data-tint="awarding"] { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
+
+/* Short phones: the chosen chips take one row (they scroll), so the list keeps its room. */
+@media (max-height: 700px) {
+  .sheet { height: min(92dvh, calc(var(--mw-vvh, 100dvh) - 24px)); }
+  .chosen { max-height: 44px; }
+  .ask { padding: var(--mw-space-4) var(--mw-space-12); }
+}

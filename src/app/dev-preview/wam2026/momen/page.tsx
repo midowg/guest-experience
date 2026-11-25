@@ -34,7 +34,7 @@ const LAYAR = [
   "M02-dari-galeri", "M03", "M04",
   "M05", "M05-status", "M05-kosong", "M05-ditandai", "M05-ditandai-kosong", "M05-ditandai-banyak", "M05-memuat",
   "M06", "M06-fotoku", "M06-fotoku-status", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
-  "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp", "U-editor", "U-editor-memuat", "U-editor-banyak", "U-editor-tag", "U-editor-cari", "U-editor-mati", "U-editor-galeri", "U-lokasi", "U-diajukan", "U-saran",
+  "U01", "U01-umum", "U02", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp", "U-editor", "U-editor-memuat", "U-editor-warna", "U-editor-banyak", "U-editor-banyak-warna", "U-editor-tag", "U-editor-sheet", "U-editor-cari", "U-editor-mati", "U-editor-galeri", "U-lokasi", "U-diajukan", "U-saran",
   "P01-kartu", "P04-baris", "M01-memuat-halaman",
 ] as const;
 
@@ -154,23 +154,30 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "U05": return at(kamera, camera({ phase: "kamera", live: "ditolak" }), "teamBuilding");
     case "U-hp": return at(kamera, camera({ phase: "kamera", live: "hp" }), "teamBuilding");
     case "O04": return at(kamera, camera({ phase: "izin" }), "pagi");
-    // "Periksa fotomu" (KONTRAK §40): one photo, the frame still being made, several photos, many people tagged (tag + BOD chips), a search, "Tanya setiap foto" off (folded), a gallery pick.
-    case "U-editor": case "U-editor-memuat": case "U-editor-banyak": case "U-editor-tag": case "U-editor-cari": case "U-editor-mati": case "U-editor-galeri": {
+    // "Periksa fotomu" (KONTRAK §40): one photo (the Sign panel open), the frame still being made, the Warna panel, several photos (Sign or Warna panel, with "Terapkan ke semua foto"),
+    // people tagged (a count and avatars on the Tag tool), the Tag sheet open (with 10 chosen, and with a search), "Tanya setiap foto" on (the sheet opens by itself), a gallery pick.
+    // The sheet opens by itself only where "Tanya setiap foto" is on: the other states have it off, so the editor itself can be looked at.
+    case "U-editor": case "U-editor-memuat": case "U-editor-warna": case "U-editor-banyak": case "U-editor-banyak-warna": case "U-editor-tag": case "U-editor-sheet": case "U-editor-cari": case "U-editor-mati": case "U-editor-galeri": {
       const people = editorPeople();
       const named = (...names: string[]) => names.flatMap(name => people.find(person => person.name === name)?.id ?? []);
-      const demo: EditorDemo = layar === "U-editor-memuat" ? { photos: 0, pending: 1 }
-        : layar === "U-editor-banyak" ? { photos: 4, cur: 1, all: false, looks: [{ sign: "simpel", tone: "emas" }, { sign: "jaringan", tone: "asli" }, { sign: "tanpa", tone: "mono" }, { sign: "polaroid", tone: "fajar" }] }
-          : layar === "U-editor-tag" ? { photos: 1, looks: [{ sign: "simpel", tone: "emas" }], tags: named("Arman", "Wulan", "Sari", "Dewi", "Bima", "Ayu", "Raka", "Lina", "Tari", "Wawan") }
-            : layar === "U-editor-cari" ? { photos: 1, query: "ke", tags: named("Arman", "Sari") }
-              : layar === "U-editor-mati" ? { photos: 1, ask: false }
-                : layar === "U-editor-galeri" ? { photos: 5, gallery: true, looks: [{ sign: "emas", tone: "asli" }] } : { photos: 1 };
+      const ten = named("Arman", "Wulan", "Sari", "Dewi", "Bima", "Ayu", "Raka", "Lina", "Tari", "Wawan");
+      const many = [{ sign: "simpel" as const, tone: "emas" as const }, { sign: "jaringan" as const, tone: "asli" as const }, { sign: "tanpa" as const, tone: "mono" as const }, { sign: "polaroid" as const, tone: "fajar" as const }];
+      const demo: EditorDemo = layar === "U-editor-memuat" ? { photos: 0, pending: 1, ask: false }
+        : layar === "U-editor-warna" ? { photos: 1, ask: false, panel: "warna", looks: [{ sign: "simpel", tone: "emas" }] }
+          : layar === "U-editor-banyak" ? { photos: 4, cur: 1, ask: false, looks: many }
+            : layar === "U-editor-banyak-warna" ? { photos: 4, cur: 1, ask: false, panel: "warna", all: true, looks: many }
+              : layar === "U-editor-tag" ? { photos: 1, ask: false, looks: [{ sign: "simpel", tone: "emas" }], tags: ten }
+                : layar === "U-editor-sheet" ? { photos: 1, ask: true, tags: ten.slice(0, 6) }
+                  : layar === "U-editor-cari" ? { photos: 1, ask: true, query: "ke", tags: named("Arman", "Sari") }
+                    : layar === "U-editor-mati" ? { photos: 1, ask: false, tags: [] }
+                      : layar === "U-editor-galeri" ? { photos: 5, gallery: true, ask: false, looks: [{ sign: "emas", tone: "asli" }] } : { photos: 1, ask: false };
       return at(kamera, <CameraScreen sessions={sessions} nowIso={teamNow.toISOString()} absen migrated initialSession={null} candidates={people} detect
         demo={{ phase: "kamera", live: "contoh", geo: params.lokasi === "aktif" ? "aktif" : params.lokasi === "ditolak" ? "ditolak" : "mati", editor: demo }} />, "teamBuilding");
     }
     // Detection of missions from Momen photos (KONTRAK §13): the location switch, the toast "otomatis diajukan" (also at /dev-preview/wam2026/misi?layar=kamera|toast).
     case "U-lokasi": case "U-diajukan": case "U-saran": {
       const extras = <CameraScreen sessions={sessions} nowIso={teamNow.toISOString()} absen migrated initialSession={null} candidates={sampleTagCandidates(samplePeople.rani.id)} detect
-        demo={{ phase: "kamera", live: "contoh", geo: layar === "U-lokasi" ? "aktif" : "mati", ...(layar === "U-lokasi" ? { editor: { photos: 1 } } : {}) }} />;
+        demo={{ phase: "kamera", live: "contoh", geo: layar === "U-lokasi" ? "aktif" : "mati", ...(layar === "U-lokasi" ? { editor: { photos: 1, ask: false } } : {}) }} />;
       const found = layar === "U-saran"
         ? { text: t(lang, "misi.auto.suggest", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.suggestSub", { points: "400" }), action: t(lang, "misi.auto.submit") }
         : { text: t(lang, "misi.auto.sent", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.sentSub", { points: "400" }), action: t(lang, "misi.auto.takeBack") };

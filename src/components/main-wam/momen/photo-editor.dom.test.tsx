@@ -10,9 +10,10 @@ import { mainWamPath } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /*
- * "Periksa fotomu" (docs/main-wam/KONTRAK.md §40): the editor between the shutter and Kirim. It opens at once, shows the sign and the tone live over the
- * plain picture, draws them only at Kirim, applies a look to all photos on request, tags people without a limit (a search, BOD chips), folds the tag
- * block when "Tanya setiap foto" is off, keeps the original on the phone (not for gallery pictures) and gives Ulangi and Batal.
+ * "Periksa fotomu" (docs/main-wam/KONTRAK.md §40): the editor between the shutter and Kirim, drawn to fit one screen: a compact top bar (back = Ulangi, ✕ = Batal),
+ * the photo, ONE row of tools (Sign, Warna, Tag, Lokasi, Simpan asli) with ONE small panel, and Kirim alone at the bottom. It opens at once, shows the sign and the
+ * tone live over the plain picture, draws them only at Kirim, applies a look to all photos on request, tags people without a limit in a bottom sheet (a search,
+ * BOD chips; "Tanya setiap foto" opens it by itself), and keeps the original on the phone (not for gallery pictures).
  */
 
 const push = vi.fn();
@@ -67,16 +68,66 @@ beforeAll(() => {
 beforeEach(() => { queue.added = []; saved.files = []; saved.fail = false; compress.looks = []; compress.frame = null; push.mockClear(); back.mockClear(); window.localStorage.clear(); window.localStorage.setItem("mw-momen-kamera", "izin"); });
 afterEach(() => { cleanup(); setActiveLang("id"); });
 
-/** `stored`: not a preview, so what this phone chose before (browser storage) is read. */
-const camera = (props: { candidates?: TagCandidate[]; detect?: boolean; stored?: boolean } = {}) => <LangProvider lang="id"><ToastProvider>
-  <CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} demo={props.stored ? undefined : { phase: "kamera", live: "hp" }} candidates={props.candidates ?? []} detect={props.detect ?? false} />
-</ToastProvider></LangProvider>;
+/** Not a preview, so what this phone chose before (browser storage) is read; `ask` false = "Tanya setiap foto" off (the Tag sheet does not open by itself). */
+const camera = (props: { candidates?: TagCandidate[]; detect?: boolean; ask?: boolean } = {}) => {
+  if (props.ask === false) window.localStorage.setItem("mw-momen-tag", "tidak");
+  return <LangProvider lang="id"><ToastProvider>
+    <CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={props.candidates ?? []} detect={props.detect ?? false} />
+  </ToastProvider></LangProvider>;
+};
+const mount = async (props: Parameters<typeof camera>[0] = {}) => { const view = render(camera(props)); await act(async () => undefined); return view; };
 const file = (name = "foto.jpg") => new File(["x"], name, { type: "image/jpeg" });
 const shoot = async () => { await act(async () => { fireEvent.change(document.querySelector<HTMLInputElement>("input[type=file][capture]")!, { target: { files: [file()] } }); }); };
 const pick = async (count: number) => { await act(async () => { fireEvent.change(document.querySelector<HTMLInputElement>("input[type=file][multiple]")!, { target: { files: Array.from({ length: count }, (_, index) => file(`g${index}.jpg`)) } }); }); };
 const editor = () => screen.getByRole("dialog", { name: "Periksa fotomu" });
-const send = async () => { await act(async () => { fireEvent.click(within(editor()).getByRole("button", { name: /^Kirim/ })); }); };
-const frame = (container: HTMLElement) => container.querySelector("[data-momen-editor] img[alt^='Pratinjau']") as HTMLImageElement;
+const tool = (name: string | RegExp) => within(editor()).getByRole("button", { name });
+const send = async () => { await act(async () => { fireEvent.click(tool(/^Kirim/)); }); };
+const tagSheet = () => screen.getByRole("dialog", { name: "Tag orang" });
+/** The photo itself (the big one): its picture and the sign drawn over it. */
+const frame = () => document.querySelector("[data-momen-editor] img[alt^='Pratinjau']") as HTMLImageElement;
+const overlay = () => document.querySelector("[data-momen-editor] [class*='_frame_'] svg[data-sign]") as SVGElement | null;
+const signs = () => within(editor()).getByRole("radiogroup", { name: "Sign foto" });
+const tones = () => within(editor()).getByRole("radiogroup", { name: "Warna foto" });
+
+describe("the layout", () => {
+  it("is one screen: a top bar (back = Ulangi, a small title, ✕ = Batal), the photo, ONE row of tools, ONE panel, and Kirim alone at the bottom", async () => {
+    await mount({ candidates: MANY, detect: true, ask: false });
+    await shoot();
+    const dialog = editor();
+    expect(within(dialog).getByRole("heading", { name: "Periksa fotomu" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Ulangi, kembali ke kamera" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Batal" })).toBeTruthy();
+    const row = within(dialog).getByRole("toolbar", { name: "Alat foto" });
+    expect(within(row).getAllByRole("button").map(button => button.textContent)).toEqual(["Sign", "Warna", "Tag", "Lokasi", "Simpan asli"]);
+    // only one panel at a time: Sign by default, then Warna instead of it
+    expect(within(dialog).getAllByRole("radiogroup")).toHaveLength(1);
+    expect(within(row).getByRole("button", { name: "Sign" }).getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(within(row).getByRole("button", { name: "Warna" }));
+    expect(within(dialog).getAllByRole("radiogroup")).toHaveLength(1);
+    expect(tones()).toBeTruthy();
+    expect(within(row).getByRole("button", { name: "Warna" }).getAttribute("aria-expanded")).toBe("true");
+    expect(within(row).getByRole("button", { name: "Sign" }).getAttribute("aria-expanded")).toBe("false");
+    // no long explanations and no other button at the bottom than Kirim (one photo: no counter, no strip, no "Terapkan ke semua foto")
+    expect(within(dialog).queryByText(/Salinan asli|Lokasi hanya|Dilipat|Orang yang kamu tandai/)).toBeNull();
+    expect(within(dialog).queryByText("Terapkan ke semua foto")).toBeNull();
+    expect(within(dialog).queryByRole("group", { name: "Foto yang akan dikirim" })).toBeNull();
+    expect(within(dialog).queryByText("Batal")).toBeNull();
+    expect(within(dialog).queryByText("Ulangi")).toBeNull();
+    expect(within(dialog).getAllByRole("button").filter(button => /^Kirim/.test(button.textContent ?? ""))).toHaveLength(1);
+  });
+
+  it("the Sign panel shows the same photo with each sign (a tile and its name), the Warna panel the same photo in each tone", async () => {
+    await mount();
+    await shoot();
+    const names = (group: HTMLElement) => within(group).getAllByRole("radio").map(radio => radio.querySelector("[class*='_tileName_']")!.textContent);
+    expect(names(signs())).toEqual(["Tanpa", "Simpel", "Emas", "Jaringan", "Polaroid"]);
+    expect(within(signs()).getAllByRole("radio").map(radio => radio.querySelector("svg[data-sign]")?.getAttribute("data-sign") ?? null)).toEqual([null, "simpel", "emas", "jaringan", "polaroid"]);
+    expect(within(signs()).getAllByRole("radio").every(radio => radio.querySelector("img"))).toBe(true);
+    fireEvent.click(tool("Warna"));
+    expect(names(tones())).toEqual(["Asli", "Emas", "Fajar", "Mono"]);
+    expect(within(tones()).getAllByRole("radio").map(radio => (radio.querySelector("img") as HTMLImageElement).style.filter)).toEqual(["none", expect.stringContaining("sepia(0.3)"), expect.stringContaining("saturate(0.95)"), expect.stringContaining("grayscale(1)")]);
+  });
+});
 
 describe("opening", () => {
   it("opens at once after a shot with Kirim waiting for the frame: a skeleton, then the photo (the camera captured the plain frame)", async () => {
@@ -87,15 +138,14 @@ describe("opening", () => {
     Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: async () => ({ getTracks: () => [track] }) } });
     Object.defineProperty(navigator, "permissions", { configurable: true, value: { query: async () => ({ state: "granted" }) } });
     HTMLMediaElement.prototype.play = (() => Promise.resolve()) as never;
-    render(<LangProvider lang="id"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[SARI]} /></ToastProvider></LangProvider>);
+    render(<LangProvider lang="id"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[]} /></ToastProvider></LangProvider>);
     const shutter = await screen.findByRole("button", { name: /Ambil foto/ });
     await waitFor(() => expect((shutter as HTMLButtonElement).disabled).toBe(false));
     await waitFor(() => expect(document.querySelector("video")).toBeTruthy());
     await act(async () => { fireEvent.click(shutter); });
     expect(editor()).toBeTruthy();
     expect(within(editor()).getByRole("status", { name: "Menyiapkan foto" })).toBeTruthy();
-    const kirim = within(editor()).getByRole("button", { name: "Menunggu foto" }) as HTMLButtonElement;
-    expect(kirim.disabled).toBe(true);
+    expect((within(editor()).getByRole("button", { name: "Menunggu foto" }) as HTMLButtonElement).disabled).toBe(true);
     expect(queue.added).toEqual([]);
     await act(async () => { finish(file()); });
     expect(within(editor()).getByRole("button", { name: "Kirim" })).toBeTruthy();
@@ -104,27 +154,27 @@ describe("opening", () => {
     expect(track.stop).toHaveBeenCalled(); // the camera rests while the photo is looked at
   });
 
-  it("opens after a shot from the phone's own camera, and after a pick from the gallery (several photos: a strip and the count)", async () => {
-    const { unmount } = render(camera());
+  it("opens after a shot from the phone's own camera, and after a pick from the gallery (several photos: the counter 1/3, a small strip and the count on Kirim)", async () => {
+    const { unmount } = await mount();
     await shoot();
     expect(editor()).toBeTruthy();
     expect(within(editor()).queryByRole("group", { name: "Foto yang akan dikirim" })).toBeNull();
     unmount();
-    render(camera());
+    await mount();
     await pick(3);
-    expect(within(editor()).getByText("Foto 1 dari 3")).toBeTruthy();
+    expect(within(editor()).getByText("1/3")).toBeTruthy();
     expect(within(within(editor()).getByRole("group", { name: "Foto yang akan dikirim" })).getAllByRole("button")).toHaveLength(3);
-    expect(within(editor()).getByRole("button", { name: "Kirim · 3 foto" })).toBeTruthy();
+    expect(tool("Kirim · 3 foto")).toBeTruthy();
   });
 
   it("nothing is sent until Kirim", async () => {
-    render(camera());
+    await mount();
     await shoot();
     expect(queue.added).toEqual([]);
   });
 
   it("a file that is not a photo is left out with the reason, and the editor does not open when none is left", async () => {
-    render(camera());
+    await mount();
     await act(async () => { fireEvent.change(document.querySelector<HTMLInputElement>("input[type=file][multiple]")!, { target: { files: [new File(["x"], "a.pdf", { type: "application/pdf" })] } }); });
     expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
     expect(screen.getByText("Pilih foto JPG, PNG, WebP, atau HEIC.")).toBeTruthy();
@@ -133,39 +183,39 @@ describe("opening", () => {
 
 describe("sign and colour", () => {
   it("start as Tanpa and Asli with nothing drawn; a sign and a tone change the preview apart and combine, over the plain picture", async () => {
-    const { container } = render(camera());
+    await mount();
     await shoot();
-    const signs = within(editor()).getByRole("radiogroup", { name: "Sign foto" });
-    const tones = within(editor()).getByRole("radiogroup", { name: "Warna foto" });
-    expect(within(signs).getAllByRole("radio").map(radio => radio.textContent)).toEqual(["Tanpa", "Simpel", "Emas", "Jaringan", "Polaroid"]);
-    expect(within(tones).getAllByRole("radio").map(radio => radio.textContent)).toEqual(["Asli", "Emas", "Fajar", "Mono"]);
-    expect(within(signs).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("true");
-    expect(within(tones).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
-    expect(container.querySelector("svg[data-sign]")).toBeNull();
-    expect(frame(container).style.filter).toBe("none");
-    fireEvent.click(within(signs).getByRole("radio", { name: "Polaroid" }));
-    const overlay = container.querySelector("svg[data-sign=polaroid]") as SVGElement;
-    expect(overlay.getAttribute("viewBox")).toBe("0 0 400 500");
-    expect(overlay.textContent).toContain("WERKUDARA ANNUAL MEETING 2026");
-    expect(frame(container).style.filter).toBe("none");
-    fireEvent.click(within(tones).getByRole("radio", { name: "Emas" }));
-    expect(frame(container).style.filter).toContain("sepia(0.3)");
-    expect(container.querySelector("svg[data-sign=polaroid]")).toBeTruthy();
-    expect(container.querySelector("svg[data-sign]")!.getAttribute("style") ?? "").not.toMatch(/filter/);
-    fireEvent.click(within(signs).getByRole("radio", { name: "Simpel" }));
-    expect(container.querySelector("svg[data-sign=polaroid]")).toBeNull();
-    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 5–8 Jan 2027");
-    fireEvent.click(within(signs).getByRole("radio", { name: "Tanpa" }));
-    fireEvent.click(within(tones).getByRole("radio", { name: "Asli" }));
-    expect(container.querySelector("svg[data-sign]")).toBeNull();
-    expect(frame(container).style.filter).toBe("none");
+    expect(within(signs()).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("true");
+    expect(overlay()).toBeNull();
+    expect(frame().style.filter).toBe("none");
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Polaroid" }));
+    expect(overlay()!.getAttribute("data-sign")).toBe("polaroid");
+    expect(overlay()!.getAttribute("viewBox")).toBe("0 0 400 500");
+    expect(overlay()!.textContent).toContain("WERKUDARA ANNUAL MEETING 2026");
+    expect(frame().style.filter).toBe("none");
+    fireEvent.click(tool("Warna"));
+    expect(within(tones()).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(within(tones()).getByRole("radio", { name: "Emas" }));
+    expect(frame().style.filter).toContain("sepia(0.3)");
+    expect(overlay()!.getAttribute("data-sign")).toBe("polaroid");
+    expect(overlay()!.getAttribute("style") ?? "").not.toMatch(/filter/);
+    fireEvent.click(tool("Sign"));
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Simpel" }));
+    expect(overlay()!.getAttribute("data-sign")).toBe("simpel");
+    expect(overlay()!.textContent).toContain("WAM 2026 · Kota Batu · 5–8 Jan 2027");
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Tanpa" }));
+    fireEvent.click(tool("Warna"));
+    fireEvent.click(within(tones()).getByRole("radio", { name: "Asli" }));
+    expect(overlay()).toBeNull();
+    expect(frame().style.filter).toBe("none");
   });
 
   it("are drawn only when Kirim is pressed (tone first, then the sign), and the queue gets the result", async () => {
-    render(camera());
+    await mount();
     await shoot();
-    fireEvent.click(within(within(editor()).getByRole("radiogroup", { name: "Sign foto" })).getByRole("radio", { name: "Jaringan" }));
-    fireEvent.click(within(within(editor()).getByRole("radiogroup", { name: "Warna foto" })).getByRole("radio", { name: "Mono" }));
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Jaringan" }));
+    fireEvent.click(tool("Warna"));
+    fireEvent.click(within(tones()).getByRole("radio", { name: "Mono" }));
     expect(compress.looks).toEqual([]);
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
@@ -173,27 +223,27 @@ describe("sign and colour", () => {
     expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
   });
 
-  it("with several photos the change goes to the chosen photo only, and Terapkan ke semua foto copies it to all and keeps applying", async () => {
-    const { container } = render(camera());
+  it("with several photos the change goes to the chosen photo only; the chip Terapkan ke semua foto (in the panel) copies it to all and keeps applying", async () => {
+    await mount();
     await pick(3);
     const strip = within(editor()).getByRole("group", { name: "Foto yang akan dikirim" });
-    const signs = () => within(editor()).getByRole("radiogroup", { name: "Sign foto" });
-    const tones = () => within(editor()).getByRole("radiogroup", { name: "Warna foto" });
     fireEvent.click(within(signs()).getByRole("radio", { name: "Emas" }));
     fireEvent.click(within(strip).getByRole("button", { name: "Foto 2" }));
-    expect(within(editor()).getByText("Foto 2 dari 3")).toBeTruthy();
+    expect(within(editor()).getByText("2/3")).toBeTruthy();
     expect(within(signs()).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("true");
-    expect(container.querySelector("svg[data-sign]")).toBeNull();
+    expect(overlay()).toBeNull();
+    fireEvent.click(tool("Warna"));
     fireEvent.click(within(tones()).getByRole("radio", { name: "Mono" }));
-    // photo 3 has nothing; now apply photo 2's look to all
     const all = within(editor()).getByRole("switch", { name: "Terapkan ke semua foto" });
     expect(all.getAttribute("aria-checked")).toBe("false");
     fireEvent.click(all);
     expect(all.getAttribute("aria-checked")).toBe("true");
     fireEvent.click(within(strip).getByRole("button", { name: "Foto 3" }));
     expect(within(tones()).getByRole("radio", { name: "Mono" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(tool("Sign"));
     expect(within(signs()).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("true");
-    // while it is on, a change goes to every photo
+    // the chip is in the Sign panel too; while it is on, a change goes to every photo
+    expect(within(editor()).getByRole("switch", { name: "Terapkan ke semua foto" }).getAttribute("aria-checked")).toBe("true");
     fireEvent.click(within(signs()).getByRole("radio", { name: "Polaroid" }));
     fireEvent.click(within(strip).getByRole("button", { name: "Foto 1" }));
     expect(within(signs()).getByRole("radio", { name: "Polaroid" }).getAttribute("aria-checked")).toBe("true");
@@ -203,47 +253,56 @@ describe("sign and colour", () => {
     expect(queue.added[0]).toHaveLength(3);
   });
 
-  it("without the switch the photos keep their own looks", async () => {
-    render(camera());
+  it("without the chip the photos keep their own looks", async () => {
+    await mount();
     await pick(2);
-    fireEvent.click(within(within(editor()).getByRole("radiogroup", { name: "Sign foto" })).getByRole("radio", { name: "Simpel" }));
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Simpel" }));
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect(compress.looks).toEqual([["simpel", "asli"], ["tanpa", "asli"]]);
   });
 });
 
-describe("tag orang", () => {
-  it("is one list of everyone with BOD first and a BOD chip, avatar (photo or initials), name and department", async () => {
-    render(camera({ candidates: MANY }));
+describe("Tag orang (a bottom sheet)", () => {
+  it("is not on the editor itself: the Tag tool shows only a count, and tapping it opens the sheet", async () => {
+    await mount({ candidates: MANY, ask: false });
     await shoot();
-    const list = within(editor()).getByRole("list", { name: "Semua orang" });
+    expect(screen.queryByRole("dialog", { name: "Tag orang" })).toBeNull();
+    expect(within(editor()).queryByRole("searchbox")).toBeNull();
+    expect(tool("Tag orang").textContent).toBe("Tag");
+    fireEvent.click(tool("Tag orang"));
+    expect(tagSheet()).toBeTruthy();
+    expect(within(tagSheet()).getByRole("button", { name: "Selesai" })).toBeTruthy();
+  });
+
+  it("holds one list of everyone with BOD first and a BOD chip, avatar (photo or initials), name and department", async () => {
+    await mount({ candidates: MANY, ask: false });
+    await shoot();
+    fireEvent.click(tool("Tag orang"));
+    const list = within(tagSheet()).getByRole("list", { name: "Semua orang" });
     const rows = within(list).getAllByRole("checkbox");
     expect(rows).toHaveLength(MANY.length);
-    expect(rows.slice(0, 2).map(row => row.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("Arman"), expect.stringContaining("Wulan")]));
     expect(rows.slice(0, 2).every(row => row.textContent?.includes("BOD"))).toBe(true);
     expect(rows.slice(2).every(row => !within(row).queryByText("BOD", { selector: "span" }))).toBe(true);
     expect(within(rows[0]).getByText("BOD", { selector: "span" })).toBeTruthy();
     expect(within(rows[2]).getByText("Finance")).toBeTruthy(); // Bima: after the BOD, by name
-    // a person with a photo shows it; one without has the initial
     expect(list.querySelector("img[src='/wam/demo/foto-01.svg']")).toBeTruthy();
     expect(within(list.querySelectorAll("li")[0] as HTMLElement).getByText("A", { selector: "span" })).toBeTruthy();
   });
 
-  it("has no limit: more than six people can be chosen, they show as chips (tap to remove) with the count, and Kirim says how many", async () => {
-    render(camera({ candidates: MANY }));
+  it("has no limit: more than six people can be chosen, they show as chips (tap to remove) with the count; the tool and Kirim say how many", async () => {
+    await mount({ candidates: MANY, ask: false });
     await shoot();
-    const list = within(editor()).getByRole("list", { name: "Semua orang" });
-    const boxes = within(list).getAllByRole("checkbox");
-    for (const box of boxes.slice(0, 9)) fireEvent.click(box);
-    expect(within(editor()).getByText("9 dipilih")).toBeTruthy();
-    expect(within(editor()).getAllByRole("checkbox", { checked: true })).toHaveLength(9);
-    const chips = within(within(editor()).getByRole("list", { name: "Orang yang dipilih" })).getAllByRole("button");
-    expect(chips).toHaveLength(9);
-    expect(within(editor()).getByRole("button", { name: "Kirim · 9 tag" })).toBeTruthy();
-    fireEvent.click(within(editor()).getByRole("button", { name: "Lepas Arman" }));
-    expect(within(editor()).getByText("8 dipilih")).toBeTruthy();
-    expect(within(editor()).getByRole("button", { name: "Kirim · 8 tag" })).toBeTruthy();
+    fireEvent.click(tool("Tag orang"));
+    for (const box of within(within(tagSheet()).getByRole("list", { name: "Semua orang" })).getAllByRole("checkbox").slice(0, 9)) fireEvent.click(box);
+    expect(within(tagSheet()).getByText("9 dipilih")).toBeTruthy();
+    expect(within(within(tagSheet()).getByRole("list", { name: "Orang yang dipilih" })).getAllByRole("button")).toHaveLength(9);
+    fireEvent.click(within(tagSheet()).getByRole("button", { name: "Lepas Arman" }));
+    expect(within(tagSheet()).getByText("8 dipilih")).toBeTruthy();
+    fireEvent.click(within(tagSheet()).getByRole("button", { name: "Selesai" }));
+    expect(screen.queryByRole("list", { name: "Semua orang" })).toBeNull();
+    expect(tool("Tag orang, 8 dipilih").textContent).toContain("8");
+    expect(tool("Kirim · 8 tag")).toBeTruthy();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     const tags = (queue.added[0][0] as QueueItem).tags!;
@@ -253,80 +312,86 @@ describe("tag orang", () => {
   });
 
   it("every photo of a gallery pick gets the same people", async () => {
-    render(camera({ candidates: [SARI, BIMA] }));
+    await mount({ candidates: [SARI, BIMA], ask: false });
     await pick(2);
-    fireEvent.click(within(editor()).getByRole("checkbox", { name: /Sari/ }));
-    expect(within(editor()).getByRole("button", { name: "Kirim · 2 foto · 1 tag" })).toBeTruthy();
+    fireEvent.click(tool("Tag orang"));
+    fireEvent.click(within(tagSheet()).getByRole("checkbox", { name: /Sari/ }));
+    fireEvent.click(within(tagSheet()).getByRole("button", { name: "Selesai" }));
+    expect(tool("Kirim · 2 foto · 1 tag")).toBeTruthy();
     await send();
     await waitFor(() => expect(queue.added[0]).toHaveLength(2));
     expect((queue.added[0] as QueueItem[]).map(item => item.tags)).toEqual([[SARI.id], [SARI.id]]);
   });
 
   it("is searched by name or department over the whole list, and says when nothing matches", async () => {
-    render(camera({ candidates: MANY }));
+    await mount({ candidates: MANY, ask: false });
     await shoot();
-    const search = within(editor()).getByRole("searchbox", { name: "Cari nama peserta" });
+    fireEvent.click(tool("Tag orang"));
+    const search = within(tagSheet()).getByRole("searchbox", { name: "Cari nama peserta" });
+    const rows = () => within(within(tagSheet()).getByRole("list", { name: "Semua orang" })).getAllByRole("checkbox");
     fireEvent.change(search, { target: { value: "hrga" } });
-    expect(within(within(editor()).getByRole("list", { name: "Semua orang" })).getAllByRole("checkbox").map(row => row.textContent)).toEqual([expect.stringContaining("Sari")]);
+    expect(rows().map(row => row.textContent)).toEqual([expect.stringContaining("Sari")]);
     fireEvent.change(search, { target: { value: "bod" } });
-    expect(within(within(editor()).getByRole("list", { name: "Semua orang" })).getAllByRole("checkbox")).toHaveLength(2);
+    expect(rows()).toHaveLength(2);
     fireEvent.change(search, { target: { value: "zzzz" } });
-    expect(within(editor()).getByText("Tidak ada nama yang cocok.")).toBeTruthy();
-    expect(within(editor()).queryByRole("list", { name: "Semua orang" })).toBeNull();
+    expect(within(tagSheet()).getByText("Tidak ada nama yang cocok.")).toBeTruthy();
+    expect(within(tagSheet()).queryByRole("list", { name: "Semua orang" })).toBeNull();
   });
 
-  it("with Tanya setiap foto off the editor still opens, but the tag block is folded into one dashed row with Buka (and Lipat folds it back)", async () => {
-    window.localStorage.setItem("mw-momen-tag", "tidak");
-    render(camera({ candidates: MANY, stored: true }));
-    await act(async () => undefined);
+  it("Tanya setiap foto on (the default): the sheet opens by itself when the editor does; off: it opens only from the Tag tool (editor still opens)", async () => {
+    const { unmount } = await mount({ candidates: MANY });
     await shoot();
     expect(editor()).toBeTruthy();
-    expect(within(editor()).getByText("Tag orang")).toBeTruthy();
-    expect(within(editor()).getByText(/Dilipat karena "Tanya setiap foto" mati/)).toBeTruthy();
-    expect(within(editor()).queryByRole("list", { name: "Semua orang" })).toBeNull();
-    expect(within(editor()).getByRole("switch", { name: "Tanya setiap foto" }).getAttribute("aria-checked")).toBe("false");
-    fireEvent.click(within(editor()).getByRole("button", { name: "Buka" }));
-    expect(within(editor()).getByRole("list", { name: "Semua orang" })).toBeTruthy();
-    fireEvent.click(within(editor()).getByRole("button", { name: "Lipat" }));
-    expect(within(editor()).queryByRole("list", { name: "Semua orang" })).toBeNull();
+    expect(tagSheet()).toBeTruthy();
+    fireEvent.click(within(tagSheet()).getByRole("button", { name: "Selesai" }));
+    expect(screen.queryByRole("dialog", { name: "Tag orang" })).toBeNull();
+    unmount();
+    cleanup();
+    window.localStorage.setItem("mw-momen-tag", "tidak");
+    await mount({ candidates: MANY });
+    await shoot();
+    expect(editor()).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Tag orang" })).toBeNull();
     // the photo still goes with no tags
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect((queue.added[0][0] as QueueItem).tags).toEqual([]);
   });
 
-  it("the switch Tanya setiap foto folds or opens the block at once and is remembered on this phone", async () => {
-    render(camera({ candidates: MANY, stored: true }));
+  it("the switch Tanya setiap foto sits at the top of the sheet and is remembered on this phone", async () => {
+    await mount({ candidates: MANY, ask: false });
     await shoot();
-    expect(within(editor()).getByRole("list", { name: "Semua orang" })).toBeTruthy();
-    fireEvent.click(within(editor()).getByRole("switch", { name: "Tanya setiap foto" }));
-    expect(window.localStorage.getItem("mw-momen-tag")).toBe("tidak");
-    expect(within(editor()).queryByRole("list", { name: "Semua orang" })).toBeNull();
-    fireEvent.click(within(editor()).getByRole("switch", { name: "Tanya setiap foto" }));
+    fireEvent.click(tool("Tag orang"));
+    const ask = within(tagSheet()).getByRole("switch", { name: "Tanya setiap foto" });
+    expect(ask.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(ask);
     expect(window.localStorage.getItem("mw-momen-tag")).toBe("ya");
-    expect(within(editor()).getByRole("list", { name: "Semua orang" })).toBeTruthy();
+    fireEvent.click(within(tagSheet()).getByRole("switch", { name: "Tanya setiap foto" }));
+    expect(window.localStorage.getItem("mw-momen-tag")).toBe("tidak");
   });
 });
 
 describe("Simpan asli di HP", () => {
-  it("is on by default; turned off it is remembered on this phone", async () => {
-    render(camera({ stored: true }));
+  it("is a toggle in the tool row, on by default; turned off it is remembered on this phone, and a one-line note says what it does when it is turned on", async () => {
+    await mount();
     await shoot();
-    const keep = within(editor()).getByRole("switch", { name: "Simpan asli di HP" });
-    expect(keep.getAttribute("aria-checked")).toBe("true");
-    fireEvent.click(keep);
+    expect(tool("Simpan asli di HP").getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(tool("Simpan asli di HP"));
     expect(window.localStorage.getItem("mw-momen-asli")).toBe("tidak");
+    expect(tool("Simpan asli di HP").getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(tool("Simpan asli di HP"));
+    expect(within(editor()).getByRole("status").textContent).toBe("Salinan asli (tanpa sign dan warna) disimpan di HP-mu.");
+    fireEvent.click(tool("Simpan asli di HP"));
     cleanup();
-    render(camera({ stored: true }));
-    await act(async () => undefined);
+    await mount();
     await shoot();
-    expect(within(editor()).getByRole("switch", { name: "Simpan asli di HP" }).getAttribute("aria-checked")).toBe("false");
+    expect(tool("Simpan asli di HP").getAttribute("aria-pressed")).toBe("false");
   });
 
   it("saves the plain capture (no sign, no colour) to the phone when Kirim is pressed, and the original is not what is uploaded", async () => {
-    render(camera());
+    await mount();
     await shoot();
-    fireEvent.click(within(within(editor()).getByRole("radiogroup", { name: "Sign foto" })).getByRole("radio", { name: "Emas" }));
+    fireEvent.click(within(signs()).getByRole("radio", { name: "Emas" }));
     expect(saved.files).toEqual([]);
     await send();
     await waitFor(() => expect(saved.files).toHaveLength(1));
@@ -336,20 +401,19 @@ describe("Simpan asli di HP", () => {
     expect(compress.looks).toEqual([["emas", "asli"]]);
   });
 
-  it("is not saved when the switch is off", async () => {
+  it("is not saved when it is off", async () => {
     window.localStorage.setItem("mw-momen-asli", "tidak");
-    render(camera({ stored: true }));
-    await act(async () => undefined);
+    await mount();
     await shoot();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect(saved.files).toEqual([]);
   });
 
-  it("is not saved for pictures picked from the gallery (they live on the phone already): no switch either", async () => {
-    render(camera());
+  it("is not saved for pictures picked from the gallery (they live on the phone already): the tool is hidden", async () => {
+    await mount();
     await pick(2);
-    expect(within(editor()).queryByRole("switch", { name: "Simpan asli di HP" })).toBeNull();
+    expect(within(editor()).queryByRole("button", { name: "Simpan asli di HP" })).toBeNull();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect(saved.files).toEqual([]);
@@ -357,7 +421,7 @@ describe("Simpan asli di HP", () => {
 
   it("a failed save says so calmly and never blocks the sending", async () => {
     saved.fail = true;
-    render(camera());
+    await mount();
     await shoot();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
@@ -366,10 +430,10 @@ describe("Simpan asli di HP", () => {
 });
 
 describe("Ulangi and Batal", () => {
-  it("Ulangi drops the photo and goes back to the camera: nothing is sent or saved", async () => {
-    render(camera());
+  it("the back arrow (Ulangi) drops the photo and goes back to the camera: nothing is sent or saved", async () => {
+    await mount();
     await shoot();
-    await act(async () => { fireEvent.click(within(editor()).getByRole("button", { name: "Ulangi" })); });
+    await act(async () => { fireEvent.click(tool("Ulangi, kembali ke kamera")); });
     expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
     expect(screen.getByRole("button", { name: /Ambil foto/ })).toBeTruthy();
     expect(queue.added).toEqual([]);
@@ -379,21 +443,18 @@ describe("Ulangi and Batal", () => {
     expect(editor()).toBeTruthy();
   });
 
-  it("the back arrow at the top is Ulangi too, and so is Esc", async () => {
-    render(camera());
-    await shoot();
-    await act(async () => { fireEvent.click(within(editor()).getByRole("button", { name: "Ulangi, kembali ke kamera" })); });
-    expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
+  it("Esc is Ulangi too", async () => {
+    await mount();
     await shoot();
     await act(async () => { fireEvent.keyDown(editor(), { key: "Escape" }); });
     expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
     expect(queue.added).toEqual([]);
   });
 
-  it("Batal leaves the camera (to Momen) with nothing sent or saved", async () => {
-    render(camera());
+  it("✕ (Batal) leaves the camera (to Momen) with nothing sent or saved", async () => {
+    await mount();
     await shoot();
-    await act(async () => { fireEvent.click(within(editor()).getByRole("button", { name: "Batal" })); });
+    await act(async () => { fireEvent.click(tool("Batal")); });
     expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
     // back to where the camera was opened from (Momen when there is no history to go back to)
     expect(back.mock.calls.length + push.mock.calls.filter(call => call[0] === mainWamPath.moments()).length).toBe(1);
@@ -404,7 +465,7 @@ describe("Ulangi and Batal", () => {
 
 describe("the unchanged parts", () => {
   it("after Kirim the toast still says it went, with Batalkan", async () => {
-    render(camera());
+    await mount();
     await shoot();
     await send();
     expect(await screen.findByRole("button", { name: "Batalkan" })).toBeTruthy();

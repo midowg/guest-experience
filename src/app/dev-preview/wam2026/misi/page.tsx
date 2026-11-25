@@ -62,7 +62,7 @@ export default async function PreviewMisi({ searchParams }: { searchParams: Prom
     ? { text: t(lang, "misi.auto.suggest", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.suggestSub", { points: "400" }), action: t(lang, "misi.auto.submit") }
     : { text: t(lang, "misi.auto.sent", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.sentSub", { points: "400" }), action: t(lang, "misi.auto.takeBack") };
   const cameraScreen = <CameraScreen sessions={sampleSessions} nowIso="2027-01-05T10:00:00+07:00" absen migrated initialSession={null} candidates={candidates} detect
-    demo={{ phase: "kamera", live: "contoh", geo, ...(params.langkah === "tag" && layar === "kamera" ? { editor: { photos: 1, tags: candidates.filter(candidate => candidate.bod).slice(0, 2).map(candidate => candidate.id) } } : {}) }} />;
+    demo={{ phase: "kamera", live: "contoh", geo, ...(params.langkah === "tag" && layar === "kamera" ? { editor: { photos: 1, ask: false, tags: candidates.filter(candidate => candidate.bod).slice(0, 2).map(candidate => candidate.id) } } : {}) }} />;
   return <MainWamTheme mode={params.mode === "dark" ? "dark" : "light"}>
     <LangProvider lang={lang}>
       <MainWamShell screen={mainWamScreen(path, lang)} unread={0} greeting={homeGreeting(now, "Rani", sampleSettings().event, undefined, lang)}>

@@ -1,6 +1,6 @@
 /*
- * "Periksa fotomu" (KONTRAK §40): a full-screen dialog over the camera. The photo on top, a scrolling panel in the middle, the bar (Batal, Ulangi, Kirim)
- * always in view at the bottom. Tokens only (--mw-*); words wrap and the bar wraps on a narrow phone, so nothing is cut at 320.
+ * "Periksa fotomu" (KONTRAK §40): a full-screen dialog over the camera that fits ONE screen, no scrolling: a compact top bar, the photo taking the space that
+ * is left, a thumbnail strip, one row of tools, ONE small panel, and Kirim. Tokens only (--mw-*); words wrap; every target is at least 44.
  */
 .editor {
   box-sizing: border-box; position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0;
@@ -9,108 +9,89 @@
 .editor:not([open]) { display: none; }
 .inner { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: var(--mw-column); margin: 0 auto; padding: var(--mw-safe-top) var(--mw-space-16) 0; }
 
-.head { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-4) var(--mw-space-12); min-height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
-.title { flex: 1 1 120px; min-width: 0; margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; outline: none; }
-.counter { flex: none; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); padding-right: var(--mw-space-8); }
+.head { flex: none; display: flex; align-items: center; gap: var(--mw-space-8); min-height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
+.title { flex: 1 1 0; min-width: 0; margin: 0; font: 800 20px/22px var(--mw-display-font); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; outline: none; }
+.counter { flex: none; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); color: var(--mw-text-2); }
 
-/* The photo: 4:5, as tall as the screen allows (a third of it), centred. The look is drawn over the plain picture. */
-.stage { flex: none; display: flex; justify-content: center; height: clamp(132px, calc(52dvh - 150px), 300px); margin-top: var(--mw-space-4); }
-.frame { position: relative; height: 100%; aspect-ratio: 4 / 5; max-width: 100%; border-radius: var(--mw-radius-16); overflow: hidden; background: var(--mw-photo-bg); }
+/* The photo: 4:5, as big as the space left (a size container), centred; the look is drawn over the plain picture. */
+.stage { position: relative; flex: 1 1 0; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
+.view { position: relative; width: min(100cqw, calc(100cqh * 0.8)); aspect-ratio: 4 / 5; }
+.frame { position: absolute; inset: 0; border-radius: var(--mw-radius-16); overflow: hidden; background: var(--mw-photo-bg); }
 .picture { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .skeleton { position: absolute; inset: 0; display: block; }
 .skeletonFill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
+/* The one-line note of Lokasi or Simpan asli, over the foot of the photo for a moment. */
+.note { position: absolute; left: var(--mw-space-8); right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 2; margin: 0 auto; max-width: 320px; padding: var(--mw-space-8) var(--mw-space-12); border-radius: var(--mw-radius-12); background: var(--mw-select-bg); color: var(--mw-select-fg); font: var(--mw-type-caption); text-align: center; overflow-wrap: anywhere; box-shadow: var(--mw-elev-2, none); }
+@media (prefers-reduced-motion: no-preference) { .note { animation: mw-ed-note 160ms var(--mw-ease-decelerate, ease-out); } }
+@keyframes mw-ed-note { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-.thumbs { flex: none; display: flex; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; padding: 3px; margin-top: var(--mw-space-8); }
+/* Several photos: a small strip right under the photo. */
+.thumbs { flex: none; display: flex; justify-content: safe center; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; padding: var(--mw-space-8) 3px 3px; }
 .thumbs::-webkit-scrollbar { display: none; }
-.thumb, .thumbWait { position: relative; flex: none; width: 44px; height: 55px; padding: 0; border: 2px solid transparent; border-radius: var(--mw-radius-12); overflow: hidden; }
+.thumb, .thumbWait { position: relative; flex: none; width: 36px; height: 45px; padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; }
 .thumb { cursor: pointer; background: var(--mw-photo-bg); -webkit-tap-highlight-color: transparent; }
+.thumb::after { content: ""; position: absolute; inset: -4px -2px; }
 .thumb[aria-pressed="true"] { border-color: var(--mw-gold); }
 .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumbWait { background: var(--mw-surface-2); }
 
-.panel { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--mw-space-12); padding: var(--mw-space-12) 0 var(--mw-space-16); }
-.panel > * { flex: none; }
-
-.label { margin: 0; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
-.chips { display: flex; flex-direction: column; gap: var(--mw-space-8); }
-.chipRow { display: flex; flex-wrap: wrap; gap: var(--mw-space-16) var(--mw-space-8); }
-/* 36 tall, answering a touch 44 tall (the same rule as the kit's chips). */
-.choice {
-  position: relative; flex: none; min-height: 36px; max-width: 100%; padding: 6px var(--mw-space-16); border: 0; border-radius: 18px; cursor: pointer; overflow-wrap: anywhere;
-  font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; background: var(--mw-surface); color: var(--mw-text-1);
-  box-shadow: inset 0 0 0 1px var(--mw-outline); -webkit-tap-highlight-color: transparent;
+/* ONE row of tools: icon over a short label. */
+.tools { flex: none; display: flex; gap: var(--mw-space-4); padding: var(--mw-space-8) 0 var(--mw-space-4); }
+.tool {
+  position: relative; flex: 1 1 0; min-width: 44px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px;
+  border: 0; border-radius: var(--mw-radius-12); background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.choice::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
-.choice[aria-checked="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
-.choice:disabled { color: var(--mw-disabled-fg); cursor: default; }
-.choice[aria-checked="true"]:disabled { opacity: 0.7; }
+.tool[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--mw-outline), inset 0 -3px 0 var(--mw-gold); }
+.tool[aria-pressed="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
+.tool[data-blocked] { color: var(--mw-text-2); }
+.tool:disabled { color: var(--mw-disabled-fg); cursor: default; }
+.toolIcon { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 24px; }
+.toolIcon > svg { width: 22px; height: 22px; }
+.toolLabel { font: 600 11px/13px var(--mw-font-sans); text-align: center; overflow-wrap: anywhere; }
+.badge { position: absolute; top: -6px; right: -14px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--mw-gold); color: var(--mw-on-gold); font: 800 11px/18px var(--mw-font-sans); text-align: center; }
+.stack { display: inline-flex; }
+.stack > * { box-shadow: 0 0 0 1.5px var(--mw-surface); }
+.stack > * + * { margin-left: -6px; }
 
-/* Rows with a switch: a bordered card, like the prototype's. */
-.card { border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); padding: var(--mw-space-8) var(--mw-space-12); }
+/* The one panel under the row: swipeable tiles that preview the same photo with each choice. */
+.panel { flex: none; display: flex; flex-direction: column; justify-content: center; gap: var(--mw-space-4); height: 92px; }
+.panel[data-many] { height: 130px; }
+.tiles { display: flex; justify-content: safe center; align-items: flex-start; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 3px 2px; margin: 0 -2px; }
+.tiles::-webkit-scrollbar { display: none; }
+.tile { flex: none; width: 64px; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); padding: 0; border: 0; background: none; color: var(--mw-text-1); cursor: pointer; scroll-snap-align: center; -webkit-tap-highlight-color: transparent; }
+.tilePic { position: relative; width: 56px; height: 70px; border-radius: 10px; overflow: hidden; background: var(--mw-photo-bg); box-shadow: inset 0 0 0 1px var(--mw-outline); }
+.tilePic[data-round] { height: 56px; border-radius: 50%; }
+.tilePic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.tileOverlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.tile[aria-checked="true"] .tilePic { outline: 2px solid var(--mw-gold); outline-offset: 1px; }
+.tileName { font: var(--mw-type-caption); color: var(--mw-text-2); text-align: center; overflow-wrap: anywhere; }
+.tile[aria-checked="true"] .tileName { font: var(--mw-type-caption-strong); color: var(--mw-text-1); }
+.tile:disabled { opacity: 0.6; cursor: default; }
+@media (prefers-reduced-motion: no-preference) { .tilePic, .tileName { transition: outline-color 120ms ease-out; } }
 
-.folded { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--mw-space-8) var(--mw-space-12); padding: var(--mw-space-12); border: 1px dashed var(--mw-outline-2); border-radius: var(--mw-radius-16); }
-.foldedIcon { flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--mw-text-2); }
-.foldedText { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
-.foldedText b { font: var(--mw-type-body-strong); }
-.foldedText span { font: var(--mw-type-body-small); color: var(--mw-text-2); }
-.link { align-self: center; min-height: var(--mw-touch); padding: 0 var(--mw-space-8); border: 0; background: none; color: var(--mw-primary); font: 700 14px/20px var(--mw-font-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.link:disabled { color: var(--mw-disabled-fg); }
-.tags .link { align-self: flex-start; }
+/* "Terapkan ke semua foto": a small chip in the panel. */
+.all { position: relative; align-self: center; min-height: 32px; padding: 4px var(--mw-space-16); border: 0; border-radius: 16px; cursor: pointer; background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); font: var(--mw-type-label); text-align: center; overflow-wrap: anywhere; -webkit-tap-highlight-color: transparent; }
+.all::after { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+.all[aria-checked="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
+.all:disabled { color: var(--mw-disabled-fg); cursor: default; }
 
-.tags { display: flex; flex-direction: column; gap: var(--mw-space-8); }
-.tagHead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--mw-space-4) var(--mw-space-12); }
-.count { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
-.note { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
-.none { margin: 0; padding: var(--mw-space-12) var(--mw-space-4); font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
-
-.chosen { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); margin: 0; padding: 0; list-style: none; }
-.chip {
-  position: relative; display: inline-flex; align-items: center; gap: var(--mw-space-8); max-width: 100%; min-height: 36px; padding: 4px var(--mw-space-12) 4px 4px; border-radius: 18px; cursor: pointer; text-align: left;
-  border: 1px solid var(--mw-outline); background: var(--mw-surface); color: var(--mw-text-1); font: 600 13px/16px var(--mw-font-sans); -webkit-tap-highlight-color: transparent;
-}
-.chip::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
-.chip > span { min-width: 0; overflow-wrap: anywhere; }
-.chip > svg { flex: none; width: 12px; height: 12px; color: var(--mw-text-2); }
-
-.search { display: flex; align-items: center; gap: var(--mw-space-8); min-height: 48px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-full); background: var(--mw-surface-2); color: var(--mw-text-2); }
-.search:focus-within { box-shadow: inset 0 0 0 2px var(--mw-focus); }
-.search > svg { flex: none; width: 18px; height: 18px; }
-.search input { flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; outline: 0; background: none; color: var(--mw-text-1); font: var(--mw-type-body); }
-.search input::placeholder { color: var(--mw-text-2); }
-
-.people { display: flex; flex-direction: column; max-height: 260px; margin: 0; padding: 0 var(--mw-space-8); overflow-y: auto; overscroll-behavior: contain; list-style: none; border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); }
-.people > li + li { border-top: 1px solid var(--mw-outline); }
-.person { width: 100%; display: flex; align-items: center; gap: var(--mw-space-12); min-height: 56px; padding: var(--mw-space-8) var(--mw-space-4); border: 0; background: none; color: var(--mw-text-1); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.person[aria-checked="true"] { background: var(--mw-gold-soft); }
-.person:disabled { cursor: default; }
-.personText { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.personText b { font: 700 14px/18px var(--mw-font-sans); overflow-wrap: anywhere; }
-.personText small { font: 400 12px/16px var(--mw-font-sans); color: var(--mw-text-2); overflow-wrap: anywhere; }
-.bod { flex: none; padding: 2px var(--mw-space-8); border-radius: var(--mw-radius-full); background: var(--mw-gold-soft); box-shadow: inset 0 0 0 1px var(--mw-gold-line); color: var(--mw-gold-ink); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); }
-.mark { flex: none; width: 24px; height: 24px; border-radius: var(--mw-radius-full); border: 2px solid var(--mw-outline-2); display: inline-flex; align-items: center; justify-content: center; }
-.person[aria-checked="true"] .mark { background: var(--mw-success); border-color: var(--mw-success); color: var(--mw-on-primary); }
-.mark > svg { width: 14px; height: 14px; }
-
-/* A person: the photo when there is one, else the first letter on a tint (a container and its ink from the kit's tokens). */
-.avatar { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; font-family: var(--mw-display-font); font-weight: 800; line-height: 1; text-transform: uppercase; }
-.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.avatar[data-tint="primary"] { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
-.avatar[data-tint="success"] { background: var(--mw-success-container); color: var(--mw-on-success-container); }
-.avatar[data-tint="warning"] { background: var(--mw-warning-container); color: var(--mw-on-warning-container); }
-.avatar[data-tint="momen"] { background: var(--mw-momen-container); color: var(--mw-on-momen-container); }
-.avatar[data-tint="awarding"] { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
-
-/* Batal, Ulangi, Kirim: always in view. Kirim takes the rest of the row and drops under the other two when it does not fit (320). */
-.bar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-8); padding: var(--mw-space-8) 0 calc(var(--mw-safe-bottom) + var(--mw-space-12)); box-shadow: 0 -1px 0 var(--mw-outline); background: var(--mw-bg); }
-.bar .barSide { flex: 0 0 auto; min-height: 48px; padding: var(--mw-space-4) var(--mw-space-12); }
-.bar .barSend { flex: 1 1 150px; min-width: 0; min-height: 48px; padding: var(--mw-space-4) var(--mw-space-12); gap: var(--mw-space-8); }
-
-/* The narrowest phones: a smaller title (one line); Batal and Ulangi share a row, Kirim has the row under it. */
-@media (max-width: 359.98px) {
-  .title { font: 800 20px/22px var(--mw-display-font); }
-  .bar .barSide { flex: 1 1 0; min-width: 0; }
-  .bar .barSend { flex: 1 1 100%; }
-}
+/* Kirim, full width, always in view. */
+.bar { flex: none; padding: var(--mw-space-8) 0 calc(var(--mw-safe-bottom) + var(--mw-space-12)); }
+.bar .send { width: 100%; min-height: 52px; }
 
 .editor :focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+
+/* Short phones (360 x 640, 320 x 568): the same screen, a little tighter, so the photo keeps most of the height. */
+@media (max-height: 700px) {
+  .head { min-height: 48px; }
+  .tools { padding-top: var(--mw-space-4); }
+  .tool { min-height: 52px; }
+  .panel { height: 88px; }
+  .panel[data-many] { height: 126px; }
+  .tilePic { width: 46px; height: 58px; }
+  .tilePic[data-round] { height: 46px; }
+  .tile { width: 58px; }
+  .thumbs { padding-top: var(--mw-space-4); }
+  .bar { padding-top: var(--mw-space-4); }
+}

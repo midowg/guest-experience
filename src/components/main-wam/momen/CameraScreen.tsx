@@ -51,7 +51,7 @@ import css from "./camera.module.css";
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
 /** Preview only: the editor open, with how many photos, how many still being made, who is tagged, and the look of each. */
-export type EditorDemo = { photos?: number; pending?: number; tags?: string[]; query?: string; ask?: boolean; keep?: boolean; cur?: number; all?: boolean; gallery?: boolean; looks?: { sign: SignId; tone: CameraToneId }[] };
+export type EditorDemo = { photos?: number; pending?: number; tags?: string[]; query?: string; ask?: boolean; keep?: boolean; cur?: number; all?: boolean; gallery?: boolean; looks?: { sign: SignId; tone: CameraToneId }[]; panel?: "sign" | "warna" };
 export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara"; geo?: ShareMode; editor?: EditorDemo };
 
 const PERMISSION_KEY = "mw-momen-kamera";
@@ -464,7 +464,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
     {edit && <PhotoEditor photos={edit.photos} pending={edit.pending} candidates={candidates} lang={lang} ask={tagAsk} onAskChange={askTags} keep={keep} onKeepChange={keepOriginal}
       canKeep={!edit.fromGallery} geo={detect && !edit.fromGallery ? { mode: geo.mode, toggle: geo.toggle } : null} sending={edit.sending}
-      demo={demo?.editor ? { tags: demo.editor.tags, query: demo.editor.query, cur: demo.editor.cur, all: demo.editor.all, looks: demo.editor.looks } : undefined}
+      demo={demo?.editor ? { tags: demo.editor.tags, query: demo.editor.query, cur: demo.editor.cur, all: demo.editor.all, looks: demo.editor.looks, panel: demo.editor.panel } : undefined}
       onSend={sendEdit} onRetake={() => dismiss("kamera")} onCancel={() => dismiss("tutup")} />}
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
       <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
