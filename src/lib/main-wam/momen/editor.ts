@@ -3,7 +3,7 @@ import { DEFAULT_CAMERA_TONE, type CameraToneId } from "./camera-filters";
 import { DEFAULT_SIGN, type SignId } from "./camera-templates";
 
 /*
- * The rules of "Periksa fotomu" (docs/main-wam/KONTRAK.md §38), the editor between the shutter and Kirim. Pure and tested:
+ * The rules of "Periksa fotomu" (docs/main-wam/KONTRAK.md §40), the editor between the shutter and Kirim. Pure and tested:
  * the look (sign + tone) of each photo and "Terapkan ke semua foto", the one list of people (BOD first, a search over name
  * and department, no limit on how many are chosen) and the name of the original saved on the phone.
  */

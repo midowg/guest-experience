@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { ArrowDown, ArrowUp, Ban, Check, Pause, Sparkles, Target, Volume2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, Check, Pause, Sparkles, Target, Trophy, Volume2, Zap } from "lucide-react";
 import { PODIUM, PODIUM_LAND_AT, PODIUM_SPIN_AT, boardRequiredBefore, podiumPlaceOpen, podiumState, soalState } from "@/lib/main-wam/kuis/flow";
 import { OPTION_LETTERS, captionText, gameElapsed, isPaused, levelLabels, levelMs, secondsText } from "@/lib/main-wam/kuis/rules";
 import type { BoardRow, PodiumEntry, QuizLevel, RunView, ScreenSnapshot } from "@/lib/main-wam/kuis/types";
 import { cx } from "@/components/main-wam/ui";
 import { Confetti } from "./confetti";
+import { OptionShape } from "./OptionShape";
 import { KuisSound } from "./sound";
 import { TokohAvatar } from "./TokohAvatar";
 import { useNow, usePoll, useReducedMotion, useServerClock } from "./live";
@@ -18,7 +19,8 @@ import css from "./stage.module.css";
  * drum, the bars of the spread without the right answer, then the right answer lit with a caption, the
  * scoreboard where rows swap places, and the podium where each winner's tokoh shows first and then turns
  * like a coin, slowing, onto the name. Everything on the server's clock, so the room and every phone play
- * the same moment. Sound here only (Web Audio); "kurangi gerak": no spin, no hops, a fade.
+ * the same moment. Sound here only (Web Audio); "kurangi gerak": no spin, no hops, a fade. The theme's
+ * colours only (stage.module.css); confetti only when a winner lands, short, in gold and primary.
  */
 
 const STAGE_W = 1920;
@@ -28,7 +30,11 @@ const SPIN_DEG = 6 * 360 + 180;
 const fmt = (value: number) => new Intl.NumberFormat("id-ID").format(Math.abs(Math.round(value)));
 const plain = (value: number) => (value < 0 ? `−${fmt(value)}` : fmt(value));
 const signed = (value: number) => (value > 0 ? `+${fmt(value)}` : value < 0 ? `−${fmt(value)}` : "0");
-const levelClass = (level: QuizLevel) => css[`lv${level}`];
+
+/** Where a level sits among the four (decorative: the level's name is written beside it). */
+function LevelDots({ level, large = false }: { level: QuizLevel; large?: boolean }) {
+  return <span className={cx(css.dots, large && css.dotsLg)} aria-hidden="true">{[1, 2, 3, 4].map(step => <i key={step} data-on={step <= level ? "" : undefined} />)}</span>;
+}
 
 const subscribeSize = (change: () => void) => { window.addEventListener("resize", change); return () => window.removeEventListener("resize", change); };
 const fitScale = () => Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
@@ -78,11 +84,7 @@ export function BigScreen({ initial, feedUrl, preview }: { initial: ScreenSnapsh
         if (soal?.stage === "jalan") once(`${run.id}:${run.index}:bed`, () => s.bed(level));
         if (soal?.stage === "habis") once(`${run.id}:${run.index}:habis`, () => { s.stop(); s.timeUp(); });
         if (soal?.stage === "sebaran") once(`${run.id}:${run.index}:sebaran`, () => { s.stop(); s.whoosh(); });
-        if (soal?.stage === "buka" && snap.spread) once(`${run.id}:${run.index}:buka`, () => {
-          const all = snap.captions.some(caption => caption.kind === "semua");
-          s.reveal(all);
-          if (all && !reduced) fx.current?.rain(240);
-        });
+        if (soal?.stage === "buka" && snap.spread) once(`${run.id}:${run.index}:buka`, () => s.reveal(snap.captions.some(caption => caption.kind === "semua")));
         break;
       case "batal": s.stop(); s.cutRoll(); break;
       case "skor": once(`${run.id}:${run.index}:skor`, () => { s.stop(); s.board(); }); break;
@@ -139,7 +141,7 @@ function Head({ right }: { right: ReactNode }) {
 function QuestionChips({ snap, run }: { snap: ScreenSnapshot; run: RunView }) {
   const level = run.levels[run.index];
   return <>
-    <span className={cx(css.chip, css.chipLv, levelClass(level))}>{levelLabels[level]}</span>
+    <span className={cx(css.chip, css.chipLv)}><LevelDots level={level} />{levelLabels[level]}</span>
     <span className={css.chip}>Soal {run.index + 1} dari {run.count}</span>
     <span className={css.chip}>{snap.players} pemain</span>
   </>;
@@ -158,8 +160,8 @@ function Idle({ snap }: { snap: ScreenSnapshot }) {
       <h1 className={css.hero}>{snap.quiz.title}</h1>
       <p className={css.lead}>{count ? `${count} soal dari Mudah sampai Sangat sulit. ` : ""}Jawab lewat aplikasi WAM di HP-mu, tampil sebagai tokohmu.</p>
       <div className={css.rules}>
-        <div className={cx(css.rule, css.ruleOk)}><b>300–500</b><span>benar, makin cepat makin besar</span></div>
-        <div className={cx(css.rule, css.ruleBad)}><b>−100</b><span>salah</span></div>
+        <div className={css.rule}><b>300–500</b><span>benar, makin cepat makin besar</span></div>
+        <div className={css.rule}><b>−100</b><span>salah</span></div>
         <div className={css.rule}><b>0</b><span>tidak menjawab</span></div>
       </div>
     </div>
@@ -188,7 +190,7 @@ function Lobby({ snap }: { snap: ScreenSnapshot }) {
 }
 
 function LevelFace({ level, index, count }: { level: QuizLevel; index: number; count: number }) {
-  return <><div className={css.lvKicker}>Soal {index + 1} dari {count}</div><div className={css.lvName}>{levelLabels[level]}</div><div className={css.lvMeta}>{levelMs(level) / 1000} detik per soal · benar 300–500</div></>;
+  return <><div className={css.lvKicker}>Soal {index + 1} dari {count}</div><div className={css.lvName}>{levelLabels[level]}</div><LevelDots level={level} large /><div className={css.lvMeta}>{levelMs(level) / 1000} detik per soal · benar 300–500</div></>;
 }
 
 function Ready({ snap, run, flipped }: { snap: ScreenSnapshot; run: RunView; flipped: boolean }) {
@@ -198,14 +200,12 @@ function Ready({ snap, run, flipped }: { snap: ScreenSnapshot; run: RunView; fli
   return <div className={css.view}>
     <Head right={<QuestionChips snap={snap} run={run} />} />
     <div className={css.ready}>
-      <div className={cx(css.flip, (!turns || flipped) && css.flipped)}>
-        <div className={css.flipInner}>
-          <div className={cx(css.face, css.front, previous && turns ? levelClass(previous) : !turns ? levelClass(level) : undefined)}>
-            {turns && !previous ? <><div className={css.lvKicker}>{run.count} soal</div><div className={css.lvName}>Siap?</div><div className={css.lvMeta}>Mudah, Sedang, Sulit, lalu Sangat sulit</div></>
-              : <LevelFace level={turns && previous ? previous : level} index={run.index} count={run.count} />}
-          </div>
-          <div className={cx(css.face, css.back, levelClass(level))}><LevelFace level={level} index={run.index} count={run.count} /></div>
+      <div className={cx(css.levelCard, (!turns || flipped) && css.turned)}>
+        <div className={cx(css.face, css.front)}>
+          {turns && !previous ? <><div className={css.lvKicker}>{run.count} soal</div><div className={css.lvName}>Siap?</div><div className={css.lvMeta}>Mudah, Sedang, Sulit, lalu Sangat sulit</div></>
+            : <LevelFace level={turns && previous ? previous : level} index={run.index} count={run.count} />}
         </div>
+        <div className={cx(css.face, css.back)}><LevelFace level={level} index={run.index} count={run.count} /></div>
       </div>
       <div className={css.readyQ}>Soal {run.index + 1} dari {run.count}</div>
       <div className={css.readySub}>Bersiap. Makin cepat menjawab, makin besar nilainya.</div>
@@ -237,17 +237,17 @@ function Question({ snap, run, now }: { snap: ScreenSnapshot; run: RunView; now:
     <Head right={<QuestionChips snap={snap} run={run} />} />
     <div className={css.qrow}>
       <h2 className={css.qtext}>{question.body}</h2>
-      <div className={cx(css.sec, hot && css.secHot)}>{Math.ceil(state.leftMs / 1000)}</div>
+      <div className={cx(css.sec, hot && css.secHot)}><b>{Math.ceil(state.leftMs / 1000)}</b><small>detik</small></div>
     </div>
     <div className={cx(css.timer, hot && css.timerHot)}><i style={{ transform: `scaleX(${state.leftMs / state.durMs})` }} /></div>
     <div className={css.opts} style={{ opacity: state.stage === "habis" ? 0.55 : 1 }}>
       {question.options.map((text, i) => <div key={i} className={cx(css.opt, css[`opt${i}`], lit && question.correct === i && css.ok, lit && question.correct !== i && css.no)}
         style={{ "--kz-fill": bars && spread!.answered ? spread!.counts[i] / spread!.answered : 0 } as CSSProperties}>
         <div className={css.bar} />
-        <span className={css.letter}>{OPTION_LETTERS[i]}</span>
+        <span className={css.letter}><OptionShape index={i} className={css.shape} /><span className={css.letterChar}>{OPTION_LETTERS[i]}</span></span>
         <span className={css.otext}>{text}</span>
-        {lit && question.correct === i && <span className={css.okmark}><Check size={44} strokeWidth={3} aria-label="Jawaban benar" /></span>}
         {bars && <span className={css.pct}><b>{spread!.percents[i]}%</b><small>{spread!.counts[i]} orang</small></span>}
+        {lit && question.correct === i && <span className={css.okTag}><Check size={36} strokeWidth={3} aria-hidden />Benar</span>}
       </div>)}
     </div>
     <div className={css.foot}>
@@ -387,8 +387,7 @@ function Podium({ snap, run, clock, now, sound, fx, reduced, preview }: {
           const box = card.getBoundingClientRect();
           const stage = card.closest(`.${css.canvas}`)!.getBoundingClientRect();
           const k = stage.width / STAGE_W;
-          fx.current?.burst((box.left - stage.left + box.width / 2) / k, (box.top - stage.top + box.height * 0.4) / k, opening === 1 ? 220 : 140, { speed: 1300, size: 16, spread: Math.PI * 0.8, gravity: 1500, life: 3 });
-          if (opening === 1) fx.current?.rain(260);
+          fx.current?.burst((box.left - stage.left + box.width / 2) / k, (box.top - stage.top + box.height * 0.4) / k, opening === 1 ? 120 : 80, { speed: 1100, size: 14, spread: Math.PI * 0.8, gravity: 1500, life: 1.8 });
         }
       }
       if (t < PODIUM.spin + PODIUM.settle) frame = requestAnimationFrame(step);
@@ -417,7 +416,7 @@ function Podium({ snap, run, clock, now, sound, fx, reduced, preview }: {
             <div className={css.podScore}>{current ? <CountTo from={0} to={entry.total} start={run.phaseAt + PODIUM.lead} duration={1_800} clock={clock} /> : plain(entry.total)}<small>poin</small></div>
           </div>
           <div className={cx(css.podFace, css.podBack, reduced && css.back2)} style={reduced ? { opacity: settled ? 1 : 0 } : undefined}>
-            <span className={css.medal}>Juara {rank}</span>
+            <span className={css.medal}><Trophy size={24} aria-hidden />Juara {rank}</span>
             <span className={css.initial} aria-hidden="true">{name.slice(0, 1)}</span>
             <div className={css.podName}>{name}</div>
             <div className={css.podMeta}>{entry.alias.name} · {plain(entry.total)} poin</div>

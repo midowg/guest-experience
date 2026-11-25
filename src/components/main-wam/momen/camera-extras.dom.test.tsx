@@ -12,7 +12,7 @@ import { mainWamPath } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /*
- * The Momen photo's two optional extras (docs/main-wam/KONTRAK.md §13, §38), now in "Periksa fotomu": "Tandai lokasi" (off until the browser
+ * The Momen photo's two optional extras (docs/main-wam/KONTRAK.md §13, §40), now in "Periksa fotomu": "Tandai lokasi" (off until the browser
  * allows it, on with a clear sign when it already does, off for one photo with one tap) and the people tagged, and the toast that says what
  * detection found after Kirim: "Fotomu otomatis diajukan ..." with Tarik, or a suggestion with Ajukan. The editor itself: photo-editor.dom.test.tsx.
  */

@@ -25,7 +25,7 @@ describe("the camera's signs", () => {
   it("Simpel is one small line at the bottom left and a small mark in the top right", () => {
     const ops = templateLayout("simpel", 400, 500, "id");
     const texts = ops.filter((op): op is Extract<TemplateOp, { k: "text" }> => op.k === "text");
-    expect(texts.map(text => text.text)).toEqual(["WAM 2026 · Kota Batu · 4–7 Jan 2027"]);
+    expect(texts.map(text => text.text)).toEqual(["WAM 2026 · Kota Batu · 5–8 Jan 2027"]);
     expect(texts[0].align).toBe("start");
     expect(texts[0].size).toBeLessThanOrEqual(11);
     expect(texts[0].x).toBeLessThan(40);
@@ -58,8 +58,8 @@ describe("the camera's signs", () => {
 
   it("the date line follows the language", () => {
     const text = (lang: "id" | "en") => templateLayout("polaroid", 400, 500, lang).filter(op => op.k === "text").map(op => (op as { text: string }).text).join("|");
-    expect(text("id")).toContain("4–7 JANUARI 2027 · KOTA BATU");
-    expect(text("en")).toContain("4–7 JANUARY 2027 · KOTA BATU");
+    expect(text("id")).toContain("5–8 JANUARI 2027 · KOTA BATU");
+    expect(text("en")).toContain("5–8 JANUARY 2027 · KOTA BATU");
   });
 });
 

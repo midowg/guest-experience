@@ -13,9 +13,9 @@ import type { Lang } from "@/lib/main-wam/i18n";
  */
 
 export const TEMPLATE_TITLE = "Werkudara Annual Meeting 2026";
-/** Simpel's one line: "WAM 2026 · Kota Batu · 4–7 Jan 2027". */
-export const SIMPLE_LINE = "WAM 2026 · Kota Batu · 4–7 Jan 2027";
-export const TEMPLATE_DATE: Record<Lang, string> = { id: "4–7 Januari 2027 · Kota Batu", en: "4–7 January 2027 · Kota Batu" };
+/** Simpel's one line: "WAM 2026 · Kota Batu · 5–8 Jan 2027". */
+export const SIMPLE_LINE = "WAM 2026 · Kota Batu · 5–8 Jan 2027";
+export const TEMPLATE_DATE: Record<Lang, string> = { id: "5–8 Januari 2027 · Kota Batu", en: "5–8 January 2027 · Kota Batu" };
 export const LOGO_SRC = "/werkudara-mark.png";
 export const NET_SRC = "/wam/pegasus-jaringan-gelap.svg";
 /** The mark's aspect (width / height) and the network art's (public/werkudara-mark.png 419x477, public/wam/pegasus-jaringan-gelap.svg 474x560). */

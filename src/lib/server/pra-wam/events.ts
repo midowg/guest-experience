@@ -53,7 +53,7 @@ export async function currentPhase(today: string): Promise<Phase | null> {
   const { events, migrated } = await listEvents();
   const list = migrated ? events : [
     { kind: "pra_wam" as const, name: "Pra WAM", startDate: "2026-10-28", endDate: "2026-12-23", status: "aktif" as const },
-    { kind: "wam" as const, name: "WAM 2026", startDate: "2027-01-04", endDate: "2027-01-07", status: "disiapkan" as const },
+    { kind: "wam" as const, name: "WAM 2026", startDate: "2027-01-05", endDate: "2027-01-08", status: "disiapkan" as const },
   ];
   const wam = list.find(event => event.kind === "wam");
   const daysToWam = wam && today < wam.startDate ? Math.round((Date.parse(`${wam.startDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) : null;

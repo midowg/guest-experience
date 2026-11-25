@@ -490,7 +490,7 @@ export const praWamMissionApi = "/api/admin/wam/misi-perjalanan";
 export const praWamMissionSessionsApi = "/api/admin/wam/misi-perjalanan/sesi";
 
 /*
- * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside
+ * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (5–8 Jan 2027), inside
  * /wam with the same account and the same session, hidden until Admin WAM → Main WAM → Pengaturan
  * turns it on. Every page and API of every screen is listed here at once, so the agents building the
  * screens never edit this file: a new address is a change to the contract (KONTRAK §5).

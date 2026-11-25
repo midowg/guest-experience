@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { ArrowUp, Ban, Check, CloudOff, Flame, Gamepad2, Hourglass, Info, Lock, Pause, Sparkles, Trophy, Tv, Users, X } from "lucide-react";
+import { ArrowUp, Ban, Check, CloudOff, Flame, Gamepad2, Hourglass, Info, Lock, Pause, Sparkles, Target, Trophy, Tv, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { number } from "@/lib/main-wam/i18n";
 import { PODIUM_LAND_AT, boardRequiredBefore, podiumPlaceOpen, podiumState, soalState } from "@/lib/main-wam/kuis/flow";
@@ -13,7 +13,8 @@ import { ScreenContent, ShellChrome } from "@/components/main-wam/shell";
 import { hasTrail } from "@/components/main-wam/shell/trail";
 import { Banner, Button, EmptyState, EyebrowLabel, PulseDot, SrOnly, cx, useToast } from "@/components/main-wam/ui";
 import { Confetti } from "./confetti";
-import { LevelCard, levelClass, levelKey } from "./LevelCard";
+import { LevelCard, LevelDots, levelKey } from "./LevelCard";
+import { OptionShape } from "./OptionShape";
 import { TokohAvatar } from "./TokohAvatar";
 import { KuisRequestError, kuisRequest, plain, signed, useNow, usePoll, useReducedMotion, useServerClock, vibrate } from "./live";
 import css from "./play.module.css";
@@ -22,17 +23,10 @@ import css from "./play.module.css";
  * Kuis live on a player's phone (rancangan §4, §4a; prototype revisi 2). Ikut, the lobby with one's tokoh,
  * the level card, a question with the time bar and the value falling from 500 to 300, the tap that locks it
  * ("Terkunci · 437", no right or wrong yet), time up, the spread, then one's result, all on the server's
- * clock so the room reacts at once; the scoreboard with one's place and neighbours; the podium (gold when
- * one wins). Phones are silent: they buzz and move ("kurangi gerak" respected).
+ * clock so the room reacts at once; the scoreboard with one's place and neighbours; the podium (a gold
+ * outline when one wins). The theme's colours only, calm, so the question stays in front. Phones are
+ * silent: they buzz and move a little ("kurangi gerak" respected).
  */
-
-/** The four answer shapes (prototipe qA..qD: triangle, diamond, circle, square). Decoration next to the letter, so colour is never the only cue. */
-function OptionShape({ index }: { index: number }) {
-  const d = ["M12 3 22 20H2Z", "M12 2 22 12 12 22 2 12Z", "", "M4 4h16v16H4Z"][index];
-  return <svg className={css.shape} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    {index === 2 ? <circle cx="12" cy="12" r="10" fill="currentColor" /> : <path d={d} fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />}
-  </svg>;
-}
 
 type Lock = { runId: string; index: number; choice: number; value: number };
 /** For previews: a fixed moment, no asking. */
@@ -118,20 +112,20 @@ export function PlayScreen({ quizId, initial, preview }: { quizId: string; initi
     switch (run.phase) {
       case "lobi": return <Lobby alias={me.alias} players={snap.lobby?.players ?? me.players} />;
       case "bersiap": return <Ready run={run} flipped={now - run.phaseAt >= 650} />;
-      case "soal": return <Question snap={snap} run={run} now={now} answer={answer} paused={paused} fx={fx} reduced={reduced} fmt={fmt} onTap={tap} />;
+      case "soal": return <Question snap={snap} run={run} now={now} answer={answer} paused={paused} reduced={reduced} fmt={fmt} onTap={tap} />;
       case "batal": return <div className={css.center}><Ban size={48} aria-hidden /><h2 className={css.h2}>{t("kuis.canceled", { n: run.index + 1 })}</h2><p className={css.sub}>{t("kuis.canceledBody", { total: plain(me.total, fmt) })}</p></div>;
       case "skor": return <MyBoardView snap={snap} run={run} fmt={fmt} />;
       case "podium": case "selesai": return <End snap={snap} run={run} now={now} fx={fx} reduced={reduced} fmt={fmt} />;
     }
   })();
 
-  // The head (prototipe .qtop): a gold label for where the game is, ✕ on the right. A question draws its own.
+  // The head (prototipe .qtop): a quiet label for where the game is, ✕ on the right. A question draws its own.
   const board = run?.phase === "skor" && snap.board ? t("kuis.board.kicker", { n: run.index + 1, count: run.count }) : null;
   const head = gone || !run || run.phase === "siap" ? null
-    : !me ? <QuizHead>{run.phase === "podium" || run.phase === "selesai" ? null : <EyebrowLabel tone="gold">{snap.quiz.title}</EyebrowLabel>}</QuizHead>
-      : run.phase === "lobi" ? <QuizHead><EyebrowLabel tone="gold"><PulseDot />{t("kuis.lobby.kicker")}</EyebrowLabel></QuizHead>
-        : run.phase === "skor" ? <QuizHead>{board && <EyebrowLabel tone="gold">{board}</EyebrowLabel>}</QuizHead>
-          : run.phase === "podium" || run.phase === "selesai" ? <QuizHead><EyebrowLabel tone="gold">{t("kuis.final.kicker")}</EyebrowLabel></QuizHead>
+    : !me ? <QuizHead>{run.phase === "podium" || run.phase === "selesai" ? null : <EyebrowLabel>{snap.quiz.title}</EyebrowLabel>}</QuizHead>
+      : run.phase === "lobi" ? <QuizHead><EyebrowLabel><PulseDot />{t("kuis.lobby.kicker")}</EyebrowLabel></QuizHead>
+        : run.phase === "skor" ? <QuizHead>{board && <EyebrowLabel>{board}</EyebrowLabel>}</QuizHead>
+          : run.phase === "podium" || run.phase === "selesai" ? <QuizHead><EyebrowLabel>{t("kuis.final.kicker")}</EyebrowLabel></QuizHead>
             : run.phase === "bersiap" || run.phase === "batal" ? <QuizHead />
               : null;
   return <ScreenContent>
@@ -188,7 +182,7 @@ function Lobby({ alias, players }: { alias: Alias; players: number }) {
   const t = useT();
   return <div className={css.center}>
     <EyebrowLabel>{t("kuis.lobby.asKicker")}</EyebrowLabel>
-    <TokohAvatar alias={alias} size={186} card breathe />
+    <TokohAvatar alias={alias} size={186} card />
     <h2 className={css.name}><SrOnly>{t("kuis.lobby.as", { name: aliasName(alias, t) })}</SrOnly><span aria-hidden>{aliasName(alias, t)}</span></h2>
     <span className={css.meta} role="status"><Users aria-hidden />{t("kuis.lobby.count", { n: players })}</span>
     <p className={css.metaNote}><Info aria-hidden /><span>{alias.mystery ? t("kuis.lobby.mystery") : `${alias.persona}. ${t("kuis.lobby.hidden")}`}</span></p>
@@ -228,8 +222,8 @@ function useCountUp(to: number, active: boolean, duration = 750, reduced = false
 
 type Fx = RefObject<Confetti | null>;
 
-function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
-  snap: PlaySnapshot; run: RunView; now: number; answer: { choice: number; value: number } | null; paused: boolean; fx: Fx; reduced: boolean; fmt: (n: number) => string; onTap: (choice: number) => void;
+function Question({ snap, run, now, answer, paused, reduced, fmt, onTap }: {
+  snap: PlaySnapshot; run: RunView; now: number; answer: { choice: number; value: number } | null; paused: boolean; reduced: boolean; fmt: (n: number) => string; onTap: (choice: number) => void;
 }) {
   const t = useT();
   const state = soalState(run, now);
@@ -242,9 +236,6 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
   const showBars = (state.stage === "sebaran" || state.stage === "buka") && !!spread;
   const lit = state.stage === "buka" && question?.correct !== null && question?.correct !== undefined;
   const result = lit ? me.result : null;
-  const options = useRef<HTMLDivElement | null>(null);
-  const [mood, setMood] = useState<"ok" | "bad" | null>(null);
-  const [burst, setBurst] = useState<{ x: number; y: number } | null>(null);
   const points = useCountUp(result?.correct ? result.points : 0, !!result?.correct, 750, reduced);
   // The total takes this question in only when its answer lights (during the spread it would tell too early).
   const total = state.stage === "buka" || !me.result ? me.total : me.total - me.result.points;
@@ -263,29 +254,16 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
     if (stage === "habis" && seenTimeUp.current !== key) { seenTimeUp.current = key; vibrate(40); }
   }, [stage, run.id, run.index]);
 
-  // The answer opens: a burst and confetti from the chosen button when right; a short shake when not (≤ 1.5 s).
+  // The answer opens: a buzz; a short shake of the options (once, as the class arrives) when not right. No burst, no confetti: those are for winners.
   const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!result || !answer) return;
     const key = `${run.id}:${run.index}`;
     if (shown.current === key) return;
     shown.current = key;
-    if (result.correct) {
-      vibrate([30, 40, 70]);
-      const button = options.current?.children[answer.choice] as HTMLElement | undefined;
-      if (button && !reduced) {
-        const box = button.getBoundingClientRect();
-        setBurst({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
-        fx.current?.burst(box.left + box.width / 2, box.top + box.height / 2, 90, { speed: 760, spread: Math.PI * 1.1, size: 9 });
-        window.setTimeout(() => setBurst(null), 1_000);
-      }
-      setMood("ok");
-    } else {
-      vibrate(110);
-      setMood("bad");
-      window.setTimeout(() => setMood(null), 1_400);
-    }
-  }, [result, answer, run.id, run.index, fx, reduced]);
+    vibrate(result.correct ? [30, 40, 70] : 110);
+  }, [result, answer, run.id, run.index]);
+  const shake = !!result && !!answer && !result.correct && !reduced;
 
   const remaining = snap.remaining;
   const encourage = remaining > 0 ? t((["kuis.left", "kuis.leftChase", "kuis.leftChance"] as const)[run.index % 3], { n: remaining }) : t("kuis.last");
@@ -297,7 +275,7 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
   } else if (state.stage === "jalan" && !answer) {
     stageView = <div className={css.stageIn} key="nilai"><span className={css.label}>{t("kuis.value")}</span><span className={css.hero}>{fmt(correctPoints(state.elapsedMs, state.durMs))}</span><span className={css.small}>{t("kuis.valueSub", { s: seconds })}</span></div>;
   } else if (state.stage === "jalan" && answer) {
-    stageView = <div className={css.stageIn} key="kunci"><TokohAvatar alias={me.alias} size={56} breathe /><span className={css.lockChip} role="status"><Lock size={18} aria-hidden />{t("kuis.locked")} · {fmt(answer.value)}</span><span className={css.small}>{t("kuis.lockedSub")}</span></div>;
+    stageView = <div className={css.stageIn} key="kunci"><TokohAvatar alias={me.alias} size={56} /><span className={css.lockChip} role="status"><Lock size={18} aria-hidden />{t("kuis.locked")} · {fmt(answer.value)}</span><span className={css.small}>{t("kuis.lockedSub")}</span></div>;
   } else if (state.stage === "habis" || (state.stage === "sebaran" && !spread)) {
     stageView = <div className={css.stageIn} key="habis"><span className={css.timeUp}>{t("kuis.timeUp")}</span><span className={css.small}>{t("kuis.timeUpSub")}</span></div>;
   } else if (!result && !(lit && !answer)) {
@@ -307,46 +285,54 @@ function Question({ snap, run, now, answer, paused, fx, reduced, fmt, onTap }: {
   } else if (result?.correct) {
     const up = me.rankBefore !== null && me.rank !== null && me.rank < me.rankBefore ? me.rankBefore - me.rank : 0;
     stageView = <div className={css.stageIn} key="benar">
-      <span className={cx(css.resHead, css.resOk)}><Check size={24} aria-hidden />{t("kuis.right")}</span>
-      <span className={cx(css.points, css.pointsOk)}>{signed(points, fmt)}</span>
+      <span className={cx(css.resHead, css.resOk)}><Check size={22} aria-hidden />{t("kuis.right")}</span>
+      <span className={css.points}>{signed(points, fmt)}</span>
       <span className={css.meta}><span>{t("kuis.total", { total: plain(total, fmt) })}</span><span>·</span>{up ? <span className={css.up}>{t("kuis.rankUp", { n: up })}</span> : me.rank ? <span>{t("kuis.rank", { n: me.rank })}</span> : null}</span>
       {me.streak >= 2 && <span className={css.streak}><Flame size={16} aria-hidden />{t("kuis.streak", { n: me.streak })}</span>}
     </div>;
   } else {
-    stageView = <div className={css.stageIn} key="salah"><span className={css.resHead}>{t("kuis.wrong")}</span><span className={cx(css.points, css.pointsBad)}>{signed(result?.points ?? -100, fmt)}</span><span className={css.meta}><span>{encourage}</span></span></div>;
+    stageView = <div className={css.stageIn} key="salah"><span className={cx(css.resHead, css.resBad)}><X size={22} aria-hidden />{t("kuis.wrong")}</span><span className={cx(css.points, css.pointsBad)}>{signed(result?.points ?? -100, fmt)}</span><span className={css.meta}><span>{encourage}</span></span></div>;
   }
 
   const open = state.stage !== "hitung";
-  return <div className={cx(css.question, hot && css.hot, mood === "bad" && !reduced && css.shake, mood === "bad" && css.wrong)}>
+  return <div className={cx(css.question, hot && css.hot)}>
     <div className={css.top}>
-      <span className={cx(css.lvChip, levelClass(level))}><Trophy aria-hidden />{t(levelKey(level))}</span>
+      <span className={css.lvChip}><LevelDots level={level} small />{t(levelKey(level))}</span>
       <span className={css.qn}>{t("kuis.question", { n: run.index + 1, count: run.count })}</span>
       <span className={css.total}><TokohAvatar alias={me.alias} size={28} />{plain(total, fmt)}</span>
       <ExitButton />
     </div>
-    <div className={css.timer} role="progressbar" aria-label={t("kuis.timerLabel")} aria-valuemin={0} aria-valuemax={state.durMs / 1000} aria-valuenow={Math.round(state.leftMs / 1000)}>
-      <i style={{ transform: `scaleX(${state.stage === "hitung" ? 1 : state.leftMs / state.durMs})` }} />
+    <div className={css.timerRow}>
+      <div className={css.timer} role="progressbar" aria-label={t("kuis.timerLabel")} aria-valuemin={0} aria-valuemax={state.durMs / 1000} aria-valuenow={Math.round(state.leftMs / 1000)}>
+        <i style={{ transform: `scaleX(${state.stage === "hitung" ? 1 : state.leftMs / state.durMs})` }} />
+      </div>
+      {hot && <span className={css.timerLeft} aria-hidden="true">{t("kuis.secondsLeft", { s: seconds })}</span>}
     </div>
     <div className={css.stage}>{stageView}</div>
     {open && question && <>
       <p className={css.qhint}><Tv aria-hidden />{t("kuis.readScreen")}</p>
-      <div className={css.options} ref={options}>
+      <div className={cx(css.options, shake && css.shake)}>
         {question.options.map((text, i) => {
           const picked = answer?.choice === i;
           const ok = lit && question.correct === i;
-          const no = lit && question.correct !== i;
+          const bad = lit && picked && !ok;
+          const quiet = lit ? !ok && !picked : !!answer && !picked;
           const fill = showBars && spread && spread.answered ? spread.counts[i] / spread.answered : 0;
-          return <button key={i} type="button" className={cx(css.option, css[`opt${i}`], picked && css.picked, !lit && answer && !picked && css.dim, ok && css.ok, no && css.no)}
+          return <button key={i} type="button" className={cx(css.option, !lit && picked && css.picked, quiet && css.quiet, ok && css.ok, bad && css.bad)}
             disabled={!canTap} aria-pressed={picked} onClick={() => onTap(i)} style={{ "--kz-fill": fill } as CSSProperties}>
             <span className={css.bar} aria-hidden="true" />
-            <span className={css.letter} aria-hidden={ok ? undefined : "true"}>{ok ? <Check size={24} aria-label={t("kuis.right")} /> : <><OptionShape index={i} /><span className={css.letterChar}>{OPTION_LETTERS[i]}</span></>}</span>
-            <span className={css.optionText}>{text}{picked && showBars && <span className={css.tag}>{t("kuis.yourPick")}</span>}</span>
+            <span className={css.letter} aria-hidden="true"><OptionShape index={i} className={css.shape} /><span className={css.letterChar}>{OPTION_LETTERS[i]}</span></span>
+            <span className={css.optionText}>{text}
+              {ok ? <span className={cx(css.tag, css.tagOk)}><Check aria-hidden /><span>{t("kuis.right")}</span>{picked && <><span aria-hidden="true">·</span><span>{t("kuis.yourPick")}</span></>}</span>
+                : bad ? <span className={cx(css.tag, css.tagBad)}><X aria-hidden /><span>{t("kuis.yourPick")}</span><span aria-hidden="true">·</span><span>{t("kuis.wrong")}</span></span>
+                  : picked && showBars ? <span className={css.tag}><span>{t("kuis.yourPick")}</span></span> : null}
+            </span>
             {showBars && <span className={css.pct}>{spread!.percents[i]}%</span>}
+            {picked && !showBars && <Lock className={css.lockMark} aria-hidden />}
           </button>;
         })}
       </div>
     </>}
-    {burst && <span className={css.burst} style={{ left: burst.x, top: burst.y }} aria-hidden="true" />}
   </div>;
 }
 
@@ -378,7 +364,7 @@ function MyBoardView({ snap, run, fmt }: { snap: PlaySnapshot; run: RunView; fmt
         <span className={css.nScore}>{plain(row.total, fmt)}</span>
       </div>)}
     </div>
-    {next < run.count && boardRequiredBefore(run.levels, next) && <div className={css.teaser}>{t("kuis.board.final", { s: levelMs(4) / 1000 })}</div>}
+    {next < run.count && boardRequiredBefore(run.levels, next) && <div className={css.teaser}><Target aria-hidden /><span>{t("kuis.board.final", { s: levelMs(4) / 1000 })}</span></div>}
   </div>;
 }
 
@@ -387,28 +373,30 @@ function End({ snap, run, now, fx, reduced, fmt }: { snap: PlaySnapshot; run: Ru
   const me = snap.me!;
   const final = snap.final;
   const state = podiumState(run, run.winners, now);
-  // My place on the podium lands with the coin on the big screen: the phone turns gold at that moment.
+  // My place on the podium lands with the coin on the big screen: the phone shows the win at that moment (a short gold-and-primary burst).
   const landed = !!final?.winner && (run.phase === "selesai" || (podiumPlaceOpen(run, run.winners, final.rank) && (state.opening !== final.rank || now - run.phaseAt >= PODIUM_LAND_AT || state.stage === "diam" || state.stage === "mendarat")));
   const celebrated = useRef(false);
   useEffect(() => {
     if (!landed || celebrated.current || run.phase !== "podium") return;
     celebrated.current = true;
     vibrate([80, 60, 80, 60, 200]);
-    if (!reduced) fx.current?.burst(window.innerWidth / 2, window.innerHeight * 0.35, 120, { speed: 820, spread: Math.PI * 1.2, size: 10 });
+    if (!reduced) fx.current?.burst(window.innerWidth / 2, window.innerHeight * 0.3, 70, { speed: 720, spread: Math.PI * 1.1, size: 9, life: 1.4 });
   }, [landed, run.phase, fx, reduced]);
-  if (!final) return <div className={css.center}><TokohAvatar alias={me.alias} size={96} breathe /><h2 className={css.h2}>{t("kuis.podium.title")}</h2></div>;
+  if (!final) return <div className={css.center}><TokohAvatar alias={me.alias} size={96} /><h2 className={css.h2}>{t("kuis.podium.title")}</h2></div>;
   if (landed) {
-    return <div className={cx(css.center, css.gold)}>
-      <span className={css.kicker}>{t("kuis.gold.kicker")}</span>
-      <TokohAvatar alias={me.alias} size={132} />
-      <span className={css.goldTitle}>{t("kuis.gold.title", { n: final.rank })}</span>
-      <span className={css.h2}>{t("kuis.gold.stage")}</span>
-      <span className={css.sub}>{t("kuis.gold.meta", { total: plain(final.total, fmt), name: aliasName(me.alias, t) })}</span>
+    return <div className={css.center}>
+      <div className={css.gold}>
+        <span className={css.medal}><Trophy aria-hidden />{t("kuis.gold.kicker")}</span>
+        <TokohAvatar alias={me.alias} size={120} className={css.goldAvatar} />
+        <span className={css.goldTitle}>{t("kuis.gold.title", { n: final.rank })}</span>
+        <span className={css.h2}>{t("kuis.gold.stage")}</span>
+        <span className={css.sub}>{t("kuis.gold.meta", { total: plain(final.total, fmt), name: aliasName(me.alias, t) })}</span>
+      </div>
     </div>;
   }
   if (run.phase === "podium") {
     return <div className={css.center}>
-      <TokohAvatar alias={me.alias} size={96} breathe />
+      <TokohAvatar alias={me.alias} size={96} />
       <h2 className={css.h2}>{t("kuis.podium.title")}</h2>
       <p className={css.sub}>{t("kuis.podium.body")}</p>
       <span className={css.pill}>{t("kuis.podium.score", { total: plain(final.total, fmt) })}</span>

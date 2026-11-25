@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/* grabFrame is plain (KONTRAK §38); applyLook, at Kirim: the colour tone is drawn into the picture first, the sign over it afterwards (so its words and mark are never toned); nothing chosen = the picture as it is. */
+/* grabFrame is plain (KONTRAK §40); applyLook, at Kirim: the colour tone is drawn into the picture first, the sign over it afterwards (so its words and mark are never toned); nothing chosen = the picture as it is. */
 const calls: string[] = [];
 const drawTemplate = vi.fn(() => { calls.push("sign"); });
 vi.mock("@/lib/main-wam/momen/camera-template-draw", () => ({ drawTemplate: (...args: unknown[]) => (drawTemplate as unknown as (...a: unknown[]) => void)(...args), loadTemplateAssets: async () => ({ logo: null, net: null }) }));

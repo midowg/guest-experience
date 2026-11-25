@@ -101,6 +101,7 @@ export const idKuis = {
   "kuis.pausedSub": "Waktu dan nilai berhenti sebentar",
   "kuis.offline": "Koneksi terputus. Mencoba lagi…",
   "kuis.timerLabel": "Sisa waktu",
+  "kuis.secondsLeft": "{s} detik",
 
   // What the server says (exactly as it writes it: translateKnown finds them)
   "srv.kuis.joinFirst": "Ketuk Ikut dulu untuk bermain.",

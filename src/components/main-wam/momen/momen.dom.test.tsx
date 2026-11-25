@@ -413,7 +413,7 @@ describe("the camera", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("keeps only the shutter, the flip and the gallery button under the viewfinder: Sign and Warna moved to the editor (KONTRAK §38), and nothing is drawn over the picture", () => {
+  it("keeps only the shutter, the flip and the gallery button under the viewfinder: Sign and Warna moved to the editor (KONTRAK §40), and nothing is drawn over the picture", () => {
     const { container } = render(camera({ phase: "kamera", live: "contoh" }));
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByRole("radio")).toBeNull();

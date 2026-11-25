@@ -15,7 +15,7 @@ import type { ShareMode } from "./useShareLocation";
 import css from "./photo-editor.module.css";
 
 /*
- * "Periksa fotomu" (docs/main-wam/KONTRAK.md §38): the screen between the shutter (or the gallery pick) and Kirim. The photo is shown big with the
+ * "Periksa fotomu" (docs/main-wam/KONTRAK.md §40): the screen between the shutter (or the gallery pick) and Kirim. The photo is shown big with the
  * sign and the colour tone drawn live over the plain picture (nothing is changed in it: the look is drawn only when Kirim is pressed). Below it: Sign,
  * Warna, "Terapkan ke semua foto" (several photos, a strip of thumbnails), Tag orang (one list of everyone, a search, the people chosen as chips,
  * no limit), Tandai lokasi, Tanya setiap foto and Simpan asli di HP. At the bottom, always in view: Batal, Ulangi (back to the camera) and Kirim.

@@ -20,7 +20,7 @@ describe("photoStartSchema's extras", () => {
     expect(photoConfirmSchema.parse({ ...base, ...extras, token: `1767000000.${"a".repeat(64)}` })).toMatchObject(extras);
   });
 
-  it("has no limit on how many people one photo tags (KONTRAK §38): a whole department, and more than the old six", () => {
+  it("has no limit on how many people one photo tags (KONTRAK §40): a whole department, and more than the old six", () => {
     const ids = Array.from({ length: 120 }, (_, index) => `33333333-3333-4333-8333-${String(index).padStart(12, "0")}`);
     expect(photoStartSchema.parse({ ...base, tags: ids.slice(0, 7) }).tags).toHaveLength(7);
     expect(photoStartSchema.parse({ ...base, tags: ids }).tags).toHaveLength(120);

@@ -1,5 +1,5 @@
 /*
- * "Periksa fotomu" (KONTRAK §38): a full-screen dialog over the camera. The photo on top, a scrolling panel in the middle, the bar (Batal, Ulangi, Kirim)
+ * "Periksa fotomu" (KONTRAK §40): a full-screen dialog over the camera. The photo on top, a scrolling panel in the middle, the bar (Batal, Ulangi, Kirim)
  * always in view at the bottom. Tokens only (--mw-*); words wrap and the bar wraps on a narrow phone, so nothing is cut at 320.
  */
 .editor {

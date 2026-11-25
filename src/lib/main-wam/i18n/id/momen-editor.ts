@@ -1,5 +1,5 @@
 /*
- * "Periksa fotomu" (docs/main-wam/KONTRAK.md §38): the screen between the shutter (or the gallery pick) and Kirim, where the sign and the
+ * "Periksa fotomu" (docs/main-wam/KONTRAK.md §40): the screen between the shutter (or the gallery pick) and Kirim, where the sign and the
  * colour are chosen, the people in the photo are tagged, and the original is kept on the phone. Indonesian is the source.
  */
 export const idMomenEditor = {

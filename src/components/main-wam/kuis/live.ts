@@ -161,8 +161,8 @@ const subscribeMotion = (change: () => void) => {
   query.addEventListener?.("change", change);
   return () => query.removeEventListener?.("change", change);
 };
-/** The device's "kurangi gerak". */
-export const useReducedMotion = (): boolean => useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCE).matches, () => false);
+/** "Kurangi gerak": the device's, or the app's own switch (Pengaturan, data-mw-reduce on the theme root). */
+export const useReducedMotion = (): boolean => useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCE).matches || !!document.querySelector("[data-mw-reduce]"), () => false);
 
 /** A short buzz (Android; iPhone's web has none). Only after the person touched the page. */
 export function vibrate(pattern: number | number[]) {

@@ -33,7 +33,7 @@ import css from "./camera.module.css";
 
 /*
  * U01–U05 and O04: the camera. It keeps only the shutter, the flip, the gallery button (and the header with the Galeri icon). A shot, or the pictures picked
- * from the gallery (up to ten), open "Periksa fotomu" at once (PhotoEditor, KONTRAK §38): sign and colour are chosen there, over the plain picture, and the
+ * from the gallery (up to ten), open "Periksa fotomu" at once (PhotoEditor, KONTRAK §40): sign and colour are chosen there, over the plain picture, and the
  * look is drawn only when Kirim is pressed. No chip and no sheet to choose a session: a photo is tagged behind the scenes with the session running when
  * it is taken (no tag when none runs, or when the address names one: ?sesi=). Every photo is for everyone.
  *
@@ -112,7 +112,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   const tag = initialSession !== null ? (initialSession === UMUM ? null : initialSession) : autoTag(sessions, now)?.id ?? null;
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
   const [last, setLast] = useState<string | null>(null);
-  // Optional extras (KONTRAK §13, §38): the position of the photo and the people in it, both chosen in the editor and both can be left off.
+  // Optional extras (KONTRAK §13, §40): the position of the photo and the people in it, both chosen in the editor and both can be left off.
   const geo = useShareLocation(detect && !demo, demo?.geo);
   const [tagAsk, setTagAsk] = useState(demo?.editor?.ask ?? true);
   const [keep, setKeep] = useState(demo?.editor?.keep ?? true);

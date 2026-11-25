@@ -100,7 +100,7 @@ export const photoStartSchema = z.object({
   size: size(MAX_LARGE_BYTES),
   thumbSize: size(MAX_THUMB_BYTES),
   tileSize: size(MAX_TILE_BYTES),
-  /** Optional: the people in the photo (employee ids), chosen in "Periksa fotomu". No limit on how many (KONTRAK §38); the server keeps each person once. */
+  /** Optional: the people in the photo (employee ids), chosen in "Periksa fotomu". No limit on how many (KONTRAK §40); the server keeps each person once. */
   tags: z.array(z.string().regex(UUID, "Orang yang ditandai tidak dikenali.")).default([]),
   /** Optional: the coarse position, kept only for matching missions. */
   geo: photoGeoSchema.nullable().default(null),

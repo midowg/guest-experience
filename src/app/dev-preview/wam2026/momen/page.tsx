@@ -154,7 +154,7 @@ export default async function DevMomen({ searchParams }: { searchParams: Promise
     case "U05": return at(kamera, camera({ phase: "kamera", live: "ditolak" }), "teamBuilding");
     case "U-hp": return at(kamera, camera({ phase: "kamera", live: "hp" }), "teamBuilding");
     case "O04": return at(kamera, camera({ phase: "izin" }), "pagi");
-    // "Periksa fotomu" (KONTRAK §38): one photo, the frame still being made, several photos, many people tagged (tag + BOD chips), a search, "Tanya setiap foto" off (folded), a gallery pick.
+    // "Periksa fotomu" (KONTRAK §40): one photo, the frame still being made, several photos, many people tagged (tag + BOD chips), a search, "Tanya setiap foto" off (folded), a gallery pick.
     case "U-editor": case "U-editor-memuat": case "U-editor-banyak": case "U-editor-tag": case "U-editor-cari": case "U-editor-mati": case "U-editor-galeri": {
       const people = editorPeople();
       const named = (...names: string[]) => names.flatMap(name => people.find(person => person.name === name)?.id ?? []);

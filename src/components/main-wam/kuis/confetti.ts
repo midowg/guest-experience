@@ -1,13 +1,13 @@
 "use client";
 
 /*
- * Light confetti on a canvas (rancangan §8: "konfeti dengan canvas ringan"), from the prototype. Its
- * colours are the theme's own tokens, read from the page (no colour is written here). Nothing with
- * "kurangi gerak" on: the caller does not start it.
+ * Light confetti on a canvas (rancangan §8: "konfeti dengan canvas ringan"), only for a winner's moment:
+ * a short burst in the theme's gold and primary, read from the page (no colour is written here). Nothing
+ * with "kurangi gerak" on: the caller does not start it.
  */
 
 type Part = { x: number; y: number; vx: number; vy: number; r: number; vr: number; s: number; color: string; life: number; g: number; round: boolean };
-const TOKENS = ["--mw-kuis-a", "--mw-kuis-b", "--mw-kuis-c", "--mw-kuis-d", "--mw-primary", "--mw-success", "--mw-kuis-medal-1"];
+const TOKENS = ["--mw-gold", "--mw-primary"];
 
 export class Confetti {
   private parts: Part[] = [];
@@ -29,15 +29,7 @@ export class Confetti {
     for (let i = 0; i < count; i += 1) {
       const angle = (options.angle ?? -Math.PI / 2) + (Math.random() - 0.5) * (options.spread ?? Math.PI * 0.9);
       const speed = (options.speed ?? 900) * (0.45 + Math.random() * 0.75);
-      this.parts.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 14, s: (options.size ?? 10) * (0.6 + Math.random() * 0.7), color: this.color(), life: (options.life ?? 2.4) * (0.7 + Math.random() * 0.5), g: options.gravity ?? 1300, round: Math.random() < 0.25 });
-    }
-    this.start();
-  }
-
-  /** Confetti falling over the whole screen. */
-  rain(count: number, size = 16) {
-    for (let i = 0; i < count; i += 1) {
-      this.parts.push({ x: Math.random() * this.width, y: -20 - Math.random() * this.height * 0.6, vx: (Math.random() - 0.5) * 120, vy: 150 + Math.random() * 260, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 10, s: size * (0.6 + Math.random() * 0.7), color: this.color(), life: 6, g: 120, round: Math.random() < 0.25 });
+      this.parts.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 14, s: (options.size ?? 10) * (0.6 + Math.random() * 0.7), color: this.color(), life: (options.life ?? 1.6) * (0.7 + Math.random() * 0.5), g: options.gravity ?? 1300, round: Math.random() < 0.25 });
     }
     this.start();
   }

@@ -10,7 +10,7 @@ import { mainWamPath } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /*
- * "Periksa fotomu" (docs/main-wam/KONTRAK.md §38): the editor between the shutter and Kirim. It opens at once, shows the sign and the tone live over the
+ * "Periksa fotomu" (docs/main-wam/KONTRAK.md §40): the editor between the shutter and Kirim. It opens at once, shows the sign and the tone live over the
  * plain picture, draws them only at Kirim, applies a look to all photos on request, tags people without a limit (a search, BOD chips), folds the tag
  * block when "Tanya setiap foto" is off, keeps the original on the phone (not for gallery pictures) and gives Ulangi and Batal.
  */
@@ -154,7 +154,7 @@ describe("sign and colour", () => {
     expect(container.querySelector("svg[data-sign]")!.getAttribute("style") ?? "").not.toMatch(/filter/);
     fireEvent.click(within(signs).getByRole("radio", { name: "Simpel" }));
     expect(container.querySelector("svg[data-sign=polaroid]")).toBeNull();
-    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 4–7 Jan 2027");
+    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 5–8 Jan 2027");
     fireEvent.click(within(signs).getByRole("radio", { name: "Tanpa" }));
     fireEvent.click(within(tones).getByRole("radio", { name: "Asli" }));
     expect(container.querySelector("svg[data-sign]")).toBeNull();
