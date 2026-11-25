@@ -23,6 +23,7 @@ vi.mock("@/lib/server/pra-wam/session", () => ({ currentMember: async () => null
 vi.mock("./common", async importOriginal => ({ ...(await importOriginal<typeof import("./common")>()), limitPerPerson: async () => undefined }));
 vi.mock("./rundown", () => ({ rundownLiveData: async () => ({}), changeSession: async () => ({ changed: 1, notified: false, recipients: 0, versions: {} }), rundownHistory: async () => ({ migrated: true, history: [] }) }));
 vi.mock("./attendance", () => ({ attendanceData: async () => ({ session: null }), sessionRows: async () => ({ rows: [], migrated: true }), setAttendance: async () => ({ rows: [] }) }));
+vi.mock("./face-tablet", () => ({ tabletData: async () => ({ migrated: true, sessions: [], sessionId: null, rows: [], enrolled: 0, now: "2027-01-05T03:00:00.000Z" }), identifyFaces: async () => ({ faces: [{ kind: "tidak-dikenali" }], present: 0, total: 0 }) }));
 vi.mock("./announce", () => ({ announceData: async () => ({}), listSent: async () => ({ migrated: true, sent: [] }), sendAnnouncement: async () => 3, unpinAnnouncement: async () => undefined, removeAnnouncement: async () => undefined }));
 vi.mock("./moderation", () => ({ moderationData: async () => ({}), moderatePhoto: async () => undefined, waitingCount: async () => 0 }));
 vi.mock("./summary", () => ({ bodSummary: async () => ({ migrated: true, rows: [] }), attendanceDay: async () => ({}), panitiaHome: async () => ({ tiles: [], attention: [], reported: 0, running: [] }) }));
@@ -45,6 +46,8 @@ const announceRoute = await import("@/app/api/wam/acara/kelola/pengumuman/route"
 const announcementRoute = await import("@/app/api/wam/acara/kelola/pengumuman/[id]/route");
 const moderationRoute = await import("@/app/api/wam/acara/kelola/moderasi/route");
 const moderateRoute = await import("@/app/api/wam/acara/kelola/moderasi/[id]/route");
+const faceRoute = await import("@/app/api/wam/acara/kelola/absen/wajah/route");
+const unitFace = Array.from({ length: 128 }, (_, index) => (index === 0 ? 1 : 0));
 
 /** Every panitia API, called as a well-formed request. */
 const panitiaCalls: [string, () => Promise<Response>][] = [
@@ -52,6 +55,7 @@ const panitiaCalls: [string, () => Promise<Response>][] = [
   ["GET riwayat", () => historyRoute.GET()],
   ["GET absen", () => absenRoute.GET(new Request(url), params("sesiId"))],
   ["POST absen", () => absenRoute.POST(json("POST", { employeeId: ID, present: true }), params("sesiId"))],
+  ["POST absen wajah (tablet)", () => faceRoute.POST(json("POST", { sessionId: ID, faces: [{ embedding: unitFace }] }))],
   ["GET pengumuman", () => announceRoute.GET()],
   ["POST pengumuman", () => announceRoute.POST(json("POST", { title: "Kumpul", audience: { type: "semua" } }))],
   ["PATCH pengumuman", () => announcementRoute.PATCH(json("PATCH", { pinnedUntil: null }), params("id"))],
@@ -79,6 +83,7 @@ describe("area C's APIs", () => {
   it("Absen manual does not exist while module Absen QR is off", async () => {
     viewer = PEOPLE.panitia;
     withModules({ absen: false });
+    expect((await faceRoute.POST(json("POST", { sessionId: ID, faces: [{ embedding: unitFace }] }))).status).toBe(404);
     expect((await absenRoute.GET(new Request(url), params("sesiId"))).status).toBe(404);
     expect((await absenRoute.POST(json("POST", { employeeId: ID, present: true }), params("sesiId"))).status).toBe(404);
   });
@@ -90,6 +95,19 @@ describe("area C's APIs", () => {
     expect((await rundownRoute.PATCH(json("PATCH", { action: "hapus" }), params("id"))).status).toBe(422);
     expect((await moderateRoute.POST(json("POST", { action: "blokir", from: "tampil" }), params("id"))).status).toBe(422);
   });
+
+  it("Absen mode tablet takes only numbers: another site, a picture, a wrong size or too many faces are refused", async () => {
+    viewer = PEOPLE.panitia;
+    const body = { sessionId: ID, faces: [{ embedding: unitFace }] };
+    const foreign = new Request(url, { method: "POST", headers: { "Content-Type": "application/json", Origin: "https://example.invalid" }, body: JSON.stringify(body) });
+    expect((await faceRoute.POST(foreign)).status).toBe(403);
+    expect((await faceRoute.POST(json("POST", { ...body, image: "data:image/jpeg;base64,/9j/4AAQ" }))).status).toBe(422);
+    expect((await faceRoute.POST(json("POST", { sessionId: ID, faces: [{ embedding: [1, 0, 0] }] }))).status).toBe(422);
+    expect((await faceRoute.POST(json("POST", { sessionId: ID, faces: Array(7).fill({ embedding: unitFace }) }))).status).toBe(422);
+    expect((await faceRoute.POST(json("POST", { sessionId: ID, faces: [{ embedding: unitFace }], pad: "x".repeat(50_000) }))).status).toBe(413);
+    const text = new Request(url, { method: "POST", headers: { "Content-Type": "text/plain", Origin: "http://localhost:3100" }, body: "x" });
+    expect((await faceRoute.POST(text)).status).toBe(415);
+  });
 });
 
 describe("area C's pages", () => {
@@ -98,6 +116,7 @@ describe("area C's pages", () => {
     hub: async () => (await import("@/app/wam/acara/(app)/kelola/page")).default(),
     rundown: async () => (await import("@/app/wam/acara/(app)/kelola/rundown/page")).default(search()),
     absen: async () => (await import("@/app/wam/acara/(app)/kelola/absen/page")).default(search()),
+    tablet: async () => (await import("@/app/wam/acara/(app)/kelola/absen/tablet/page")).default(search()),
     pengumuman: async () => (await import("@/app/wam/acara/(app)/kelola/pengumuman/page")).default(),
     moderasi: async () => (await import("@/app/wam/acara/(app)/kelola/moderasi/page")).default(search()),
   };
@@ -120,9 +139,10 @@ describe("area C's pages", () => {
     }
   });
 
-  it("Absen sesi is not found while Absen QR is off", async () => {
+  it("Absen sesi and Absen mode tablet are not found while Absen QR is off", async () => {
     withModules({ absen: false });
     viewer = PEOPLE.panitia;
     expect(await outcome(pages.absen())).toBe("NOT_FOUND");
+    expect(await outcome(pages.tablet())).toBe("NOT_FOUND");
   });
 });

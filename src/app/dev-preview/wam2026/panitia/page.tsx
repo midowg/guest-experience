@@ -14,8 +14,9 @@ import { mainWamPath } from "@/lib/routes";
 import { previewHome } from "../peserta/sample";
 import { AbsenStandIn, MomenStandIn } from "../peserta/standins";
 import { PreviewApi } from "./PreviewApi";
+import { TabletPreview, type TabletVariant } from "./TabletPreview";
 import {
-  announceSample, attendanceData, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays,
+  announceSample, attendanceData, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays, tabletSample,
 } from "./sample";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ type Screen = { path: string; peran: string; waktu?: string; body: ReactNode };
 
 /**
  * Area C (panitia) in the real frame, sample data, no sign-in, 404 in production:
- * ?layar=hub|beranda|k02|k05|k06|k08 &varian=… (see each case). Buttons answer through a stand-in API.
+ * ?layar=hub|beranda|k02|k05|k05t|k06|k08 &varian=… (see each case). Buttons answer through a stand-in API.
  */
 export default async function DevMainWamPanitia({ searchParams }: { searchParams: Promise<{ layar?: string; varian?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -62,6 +63,11 @@ export default async function DevMainWamPanitia({ searchParams }: { searchParams
       return { path: mainWamPath.attendanceManual(), peran: "panitia", body: <PreviewApi rows={data.rows}>
         <AbsenManual {...data} initialTab={varian === "hadir" ? "hadir" : "belum"} />
       </PreviewApi> };
+    },
+    // K05b Absen mode tablet, a fake camera with made-up faces. ?varian=intro, ditolak, tanpa-wajah, belum-terdaftar, offline, belum-dibuka, ditutup, tanpa-sesi.
+    k05t: () => {
+      const data = tabletSample(varian === "belum-dibuka" ? "belum" : varian === "ditutup" ? "tutup" : "buka", varian === "tanpa-sesi");
+      return { path: mainWamPath.attendanceTablet(), peran: "panitia", body: <TabletPreview data={data} rows={data.rows} variant={varian as TabletVariant} /> };
     },
     k06: () => varian === "memuat"
       ? { path: mainWamPath.announce, peran: "panitia", body: <AnnounceSkeleton /> }

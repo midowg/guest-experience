@@ -1,0 +1,152 @@
+/*
+ * Absen mode tablet (KONTRAK §9 #39). Full screen, landscape first: the camera on the left, a
+ * 320 px panel on the right, the "Baru saja" strip over the bottom of the camera. Upright (768 x 1024)
+ * and on a phone the panel goes under the camera. Kit tokens only; the live picture is the one thing
+ * that is not themed, so anything drawn over it uses the media tokens (white on a dark scrim).
+ * Text is never cut off: names and labels wrap, the strip scrolls sideways instead of clipping.
+ */
+
+.tablet {
+  position: fixed; inset: 0; z-index: 40; display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr);
+  padding: var(--mw-safe-top) var(--mw-safe-right) var(--mw-safe-bottom) var(--mw-safe-left);
+  background: var(--mw-bg); color: var(--mw-text-1); font: var(--mw-type-body); overflow: hidden;
+}
+@media not all and (min-width: 900px) and (min-height: 480px) and (orientation: landscape) {
+  .tablet { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; overflow-y: auto; }
+}
+
+/* ── Before the camera runs ───────────────────────────────────────────────────────────────── */
+.intro { grid-column: 1 / -1; grid-row: 1 / -1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; padding: var(--mw-space-24) var(--mw-space-16); }
+.card { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: var(--mw-space-16); padding: var(--mw-space-24); border-radius: var(--mw-radius-28); background: var(--mw-surface); border: 1px solid var(--mw-outline); box-shadow: var(--mw-elev-card); margin: auto 0; }
+.kicker { display: inline-flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
+.kicker > svg { width: 18px; height: 18px; }
+.title { margin: 0; font: var(--mw-type-display); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
+.lead { margin: 0; font: var(--mw-type-body-long); color: var(--mw-text-2); }
+.phone { display: none; margin: 0; padding: var(--mw-space-12) var(--mw-space-16); border-radius: var(--mw-radius-16); background: var(--mw-gold-soft); border: 1px solid var(--mw-gold-line); font: var(--mw-type-body-small); color: var(--mw-text-1); }
+@media (max-width: 699px) { .phone { display: block; } }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-12); margin: 0; }
+.stats > div { padding: var(--mw-space-12) var(--mw-space-16); border-radius: var(--mw-radius-16); background: var(--mw-surface-2); }
+.stats dt { font: var(--mw-type-caption); color: var(--mw-text-2); }
+.stats dd { margin: 0; font: var(--mw-type-body-strong); color: var(--mw-text-1); overflow-wrap: anywhere; }
+@media (max-width: 380px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.actions { display: flex; flex-wrap: wrap; gap: var(--mw-space-12); }
+.actions > * { flex: 1 1 200px; }
+.limits { margin: 0; padding: var(--mw-space-16) var(--mw-space-16) var(--mw-space-16) var(--mw-space-32); border-radius: var(--mw-radius-16); background: var(--mw-surface-2); display: flex; flex-direction: column; gap: var(--mw-space-8); font: var(--mw-type-body-small); color: var(--mw-text-1); }
+.limits li { overflow-wrap: anywhere; }
+.problem { display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-16); border-radius: var(--mw-radius-16); background: var(--mw-error-container); color: var(--mw-on-error-container); }
+.problem > svg { flex: none; width: 24px; height: 24px; }
+.problem strong { font: var(--mw-type-body-strong); }
+.problem p { margin: var(--mw-space-4) 0 0; font: var(--mw-type-body-small); }
+.note { display: flex; align-items: flex-start; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.note > svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+
+/* ── The session button (a picker: title, then day, time and state) ───────────────────────── */
+.sessionButton { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); width: 100%; min-height: 56px; padding: var(--mw-space-8) var(--mw-space-16); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); color: var(--mw-text-1); font: inherit; text-align: left; cursor: pointer; }
+.sessionButton > svg { flex: none; width: 20px; height: 20px; }
+.sessionButton:disabled { background: var(--mw-disabled-bg); color: var(--mw-disabled-fg); cursor: default; }
+.sessionText { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; text-align: left; flex: 1 1 120px; }
+.sessionText strong { font: var(--mw-type-body-strong); overflow-wrap: anywhere; }
+.sessionText small { font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.sessionList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--mw-space-8); }
+.sessionOption { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-12); width: 100%; min-height: 64px; padding: var(--mw-space-12) var(--mw-space-16); border: 1px solid var(--mw-outline); border-radius: var(--mw-radius-16); background: var(--mw-surface); color: var(--mw-text-1); font: inherit; text-align: left; cursor: pointer; }
+.sessionOption[aria-current="true"] { border-color: var(--mw-gold); box-shadow: inset 0 0 0 1px var(--mw-gold); }
+.sessionOption > svg { flex: none; width: 24px; height: 24px; color: var(--mw-success); }
+
+/* ── The stage: the camera, the boxes, what is said over it ───────────────────────────────── */
+/* The whole picture fits (contain): a face at the edge of the camera is never cut off. The bands above and below hold the session button and the strip. */
+.stage { position: relative; min-height: 0; overflow: hidden; background: var(--mw-inverse-surface); }
+.stage > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.mirror { transform: scaleX(-1); }
+.boxes { position: absolute; inset: 0; pointer-events: none; }
+.top { position: absolute; z-index: 3; top: var(--mw-space-16); left: var(--mw-space-16); max-width: min(420px, calc(100% - 32px)); }
+.top .sessionButton { width: auto; background: var(--mw-media-scrim); color: var(--mw-media-on); border-color: var(--mw-media-on-2); }
+.top .sessionText small { color: var(--mw-media-on-2); }
+
+/* A face: four corner brackets (gold: recognised, grey: not), its label under the box. */
+.box { position: absolute; left: 0; top: 0; transition: transform 120ms linear, width 120ms linear, height 120ms linear; --bracket: var(--mw-media-on-2); }
+.box > i { position: absolute; width: 22%; max-width: 40px; min-width: 16px; aspect-ratio: 1; border: 4px solid var(--bracket); filter: drop-shadow(0 1px 2px var(--mw-media-scrim)); }
+.box > i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--mw-radius-8); }
+.box > i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: var(--mw-radius-8); }
+.box > i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: var(--mw-radius-8); }
+.box > i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: var(--mw-radius-8); }
+.kenal { --bracket: var(--mw-gold); }
+.baca { --bracket: var(--mw-media-on); }
+.antre { --bracket: var(--mw-media-on); }
+.antre > i { border-style: dashed; }
+.lacak, .asing { --bracket: var(--mw-media-on-2); }
+.label {
+  position: absolute; left: 50%; top: calc(100% + var(--mw-space-8)); transform: translateX(-50%); display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-8);
+  width: max-content; max-width: min(320px, 90vw); padding: var(--mw-space-8) var(--mw-space-16); border-radius: var(--mw-radius-full);
+  background: var(--mw-media-scrim); color: var(--mw-media-on); border: 1px solid var(--mw-media-on-2); font: var(--mw-type-body-strong); text-align: center; overflow-wrap: anywhere;
+}
+.kenal .label { border-color: var(--mw-gold); }
+.label > svg { flex: none; width: 20px; height: 20px; color: var(--mw-inverse-success); }
+
+/* What is said over the camera. */
+.idle, .hint, .offline, .cover {
+  position: absolute; z-index: 2; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--mw-space-12);
+  padding: var(--mw-space-12) var(--mw-space-20); border-radius: var(--mw-radius-20); background: var(--mw-media-scrim); color: var(--mw-media-on); font: var(--mw-type-body-strong);
+}
+.idle { top: 50%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100% - 48px); }
+.idle > svg, .hint > svg, .offline > svg, .cover > svg { flex: none; width: 24px; height: 24px; }
+.hint { bottom: 132px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100% - 32px); font: var(--mw-type-body); }
+.hintButton { flex: none; min-height: 44px; padding: var(--mw-space-8) var(--mw-space-16); border: 1px solid var(--mw-media-on-2); border-radius: var(--mw-radius-full); background: transparent; color: var(--mw-media-on); font: var(--mw-type-label); cursor: pointer; }
+.offline { top: 88px; width: max-content; max-width: calc(100% - 32px); align-items: flex-start; font: var(--mw-type-body); }
+.offline strong { font: var(--mw-type-body-strong); }
+.cover { top: 50%; transform: translate(-50%, -50%); flex-direction: column; text-align: center; padding: var(--mw-space-24) var(--mw-space-32); width: max-content; max-width: calc(100% - 32px); }
+.cover strong { font: var(--mw-type-headline); text-transform: uppercase; }
+.cover span { font: var(--mw-type-body); color: var(--mw-media-on-2); }
+
+/* Baru saja: the latest check-ins, newest first, over the bottom of the camera. */
+.strip { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: var(--mw-space-12); padding: var(--mw-space-12) var(--mw-space-16); background: var(--mw-media-scrim); color: var(--mw-media-on); }
+.strip h2 { margin: 0; flex: none; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-media-on-2); }
+.strip p { margin: 0; font: var(--mw-type-body-small); color: var(--mw-media-on-2); }
+.strip ol { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--mw-space-8); overflow-x: auto; min-width: 0; }
+.strip li { flex: none; display: flex; align-items: center; gap: var(--mw-space-8); padding: var(--mw-space-4) var(--mw-space-16) var(--mw-space-4) var(--mw-space-4); border-radius: var(--mw-radius-full); border: 1px solid var(--mw-media-on-2); max-width: 260px; }
+.strip li .sessionText strong { font: var(--mw-type-label); color: var(--mw-media-on); }
+.strip li .sessionText small { color: var(--mw-media-on-2); }
+.strip li.queued { border-style: dashed; }
+
+/* ── The panel: Hadir N dari M, Catat manual, full screen, leave ──────────────────────────── */
+.panel { display: flex; flex-direction: column; gap: var(--mw-space-16); padding: var(--mw-space-16); overflow-y: auto; background: var(--mw-surface); border-left: 1px solid var(--mw-outline); }
+@media not all and (min-width: 900px) and (min-height: 480px) and (orientation: landscape) {
+  .panel { border-left: 0; border-top: 1px solid var(--mw-outline); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .panel > .count { grid-column: 1 / -1; }
+}
+/* A phone: the panel is compact so the camera keeps most of the height. */
+@media (max-width: 520px) {
+  .panel { grid-template-columns: minmax(0, 1fr); padding: var(--mw-space-12); gap: var(--mw-space-8); }
+  .count { padding: var(--mw-space-12); gap: var(--mw-space-4); }
+  .big strong { font: var(--mw-type-stat-xl); }
+  .big small { font: var(--mw-type-subtitle); }
+  .tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-8); }
+  .tools > :last-child { grid-column: 1 / -1; }
+  .stage { min-height: 300px; }
+  /* The hint goes under the session button (Catat manual is the big button right below), and the offline note under it. */
+  .hint { top: 80px; bottom: auto; padding: var(--mw-space-8) var(--mw-space-12); font: var(--mw-type-caption); gap: var(--mw-space-8); max-width: calc(100% - 24px); }
+  .hint > svg { width: 20px; height: 20px; }
+  .hint > .hintButton { display: none; }
+  .offline { top: 132px; padding: var(--mw-space-8) var(--mw-space-12); font: var(--mw-type-caption); }
+}
+.count { display: flex; flex-direction: column; gap: var(--mw-space-8); padding: var(--mw-space-16); border-radius: var(--mw-radius-22); border: 1px solid var(--mw-outline); background: var(--mw-surface-raised); }
+.cap { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
+.big { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--mw-space-8); }
+.big strong { font: var(--mw-type-hero); color: var(--mw-gold-ink); font-variant-numeric: tabular-nums; }
+.big small { font: var(--mw-type-headline); color: var(--mw-text-2); }
+.bar { height: 8px; border-radius: var(--mw-radius-full); background: var(--mw-surface-2); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--mw-gold); transition: width var(--mw-motion-base); }
+.caption { display: flex; align-items: flex-start; gap: var(--mw-space-8); font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
+.caption > svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.tools { display: flex; flex-direction: column; gap: var(--mw-space-8); margin-top: auto; }
+@media not all and (min-width: 900px) and (min-height: 480px) and (orientation: landscape) { .tools { margin-top: 0; } }
+
+/* ── Catat manual (a sheet) ───────────────────────────────────────────────────────────────── */
+.manual { display: flex; flex-direction: column; gap: var(--mw-space-12); }
+.people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.people li { display: flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-12); padding: var(--mw-space-12) 0; border-bottom: 1px solid var(--mw-outline); }
+.in { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-label); color: var(--mw-on-success-container); margin-left: auto; }
+.in > svg { width: 18px; height: 18px; color: var(--mw-success); }
+
+@media (prefers-reduced-motion: reduce) {
+  .box, .bar > span { transition: none; }
+}

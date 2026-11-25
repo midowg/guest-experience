@@ -1,8 +1,9 @@
 import type { AttendeeRow } from "@/lib/main-wam/panitia/attendance";
+import type { TabletData } from "@/lib/main-wam/panitia/face-tablet";
 import { attentionItems, kelolaTiles, runningSessions } from "@/lib/main-wam/panitia/attention";
 import type { ModerationCard } from "@/lib/main-wam/panitia/moderation";
 import { liveOfDay, type LiveSession } from "@/lib/main-wam/panitia/rundown";
-import { timeRange, wibDate } from "@/lib/main-wam/rundown";
+import { checkInWindow, timeRange, wibDate } from "@/lib/main-wam/rundown";
 import { sampleNotifications, samplePeople, sampleSession, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings, sampleSilentQuestion } from "@/lib/main-wam/sample";
 import type { MwSession } from "@/lib/main-wam/types";
 import type { AnnounceData } from "@/lib/server/main-wam/panitia/announce";
@@ -79,6 +80,23 @@ export function attendanceData(allPresent = false): AttendanceData {
     migrated: true, now: at(D2, "10:15"), rows: attendanceRows(allPresent),
     sessions: sessions.map(session => ({ id: session.id, title: session.title, time: timeRange(session), day: ["Sen, 4 Jan", "Sel, 5 Jan", "Rab, 6 Jan", "Kam, 7 Jan"][["2027-01-04", "2027-01-05", "2027-01-06", "2027-01-07"].indexOf(wibDate(session.startsAt))], required: session.required })),
     session: { id: pemaparan.id, title: pemaparan.title, label: `${pemaparan.title} · ${timeRange(pemaparan)}`, caption: "Absen dibuka sampai 12.30", canRecord: true },
+  };
+}
+
+/* ── K05b Absen mode tablet ──────────────────────────────────────────────────────────────────── */
+
+/** The tablet's page at a moment: 54 of 120 in (the made-up Zaki rows past the 54th are still out), Bima not yet. */
+export function tabletSample(clock: "buka" | "belum" | "tutup" = "buka", none = false): TabletData {
+  const sessions = sampleSessions.filter(session => session.usesAttendance);
+  const pemaparan = sampleSession("pemaparan");
+  const rows = attendanceRows().map((row, index) => (index > 54 ? { ...row, checkedInAt: null, method: null } : row)).map(row => (row.name === "Bima" ? { ...row, checkedInAt: null, method: null } : row));
+  return {
+    migrated: true, enrolled: 96, now: at(D2, clock === "belum" ? "07:00" : clock === "tutup" ? "13:30" : "10:15"),
+    sessions: none ? [] : sessions.map(session => ({
+      id: session.id, title: session.title, time: timeRange(session), day: ["Sen, 4 Jan", "Sel, 5 Jan", "Rab, 6 Jan", "Kam, 7 Jan"][["2027-01-04", "2027-01-05", "2027-01-06", "2027-01-07"].indexOf(wibDate(session.startsAt))],
+      required: session.required, ...checkInWindow(session),
+    })),
+    sessionId: none ? null : pemaparan.id, rows: none ? [] : rows,
   };
 }
 

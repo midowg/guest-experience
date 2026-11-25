@@ -107,6 +107,14 @@ describe("Main WAM's frame, from the address alone", () => {
     expect(at(mainWamPath.scan)?.camera).toBeUndefined();
   });
 
+  it("Absen mode tablet draws no bars at all (full screen, the camera is the screen), and Absen sesi keeps its own", () => {
+    expect(at(mainWamPath.attendanceTablet())).toMatchObject({ tab: "panitia", level: "tugas", camera: true, back: { href: mainWamPath.attendanceManual() } });
+    expect(at(mainWamPath.attendanceTablet("s1"))?.camera).toBe(true);
+    expect(showsBottomBar(at(mainWamPath.attendanceTablet()))).toBe(false);
+    expect(at(mainWamPath.attendanceManual())).toMatchObject({ level: "detail", title: "Absen sesi" });
+    expect(at(mainWamPath.attendanceManual())?.camera).toBeUndefined();
+  });
+
   it("draws no frame outside Main WAM, or on its sign-in page", () => {
     expect(mainWamScreen("/wam")).toBeNull();
     expect(mainWamScreen("/wam/agenda")).toBeNull();

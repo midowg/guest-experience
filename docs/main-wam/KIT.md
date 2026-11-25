@@ -389,6 +389,23 @@ Sheet pilih sesi (contoh di galeri):
 
 **Gerak dan gulir (21 Nov 2026).** Semua scrollbar disembunyikan di aplikasi (halaman dan area gulir dalam; layar tetap bisa digulir dengan sentuhan, roda, dan tombol). Pengaturan, Kurangi gerak (cookie `mw_motion`, atribut `data-mw-reduce` di akar tema) memotong semua animasi dan transisi, di atas `prefers-reduced-motion` yang tetap dihormati. Sakelar di baris yang punya keterangan sejajar dengan judul barisnya, bukan tengah dua baris.
 
+### Layar penuh dengan kamera dan wajah (Absen mode tablet, 25 Nov 2026)
+
+`components/main-wam/panitia/FaceTablet.tsx` (+ `face-tablet.module.css`, `fullscreen.ts`) bukan komponen kit tetapi memakai kit
+(`Button`, `Sheet`, `Segmented`, `Avatar`, `Banner`, `TextField`, toast) dan token tema saja. Pola yang boleh dicontoh layar kamera lain:
+- **Layar yang menggambar bilahnya sendiri**: `screen.ts` memberi `camera: true` (kerangka tanpa bilah atas dan bawah); akar layar
+  `position: fixed; inset: 0; z-index: 40` (toast di 60 tetap di atasnya), padding area aman, `h1` sendiri (sr-only saat kamera menyala).
+- **Apa pun di atas gambar langsung** memakai `--mw-media-scrim`, `--mw-media-on`, `--mw-media-on-2`; latar kamera `--mw-inverse-surface`
+  (sama di dua mode); kurung wajah: emas `--mw-gold` (dikenali), `--mw-media-on-2` (tidak dikenali), `--mw-media-on` (membaca, antre bergaris putus).
+  Panel dan kartu pengantar mengikuti tema seperti layar lain.
+- **Tata letak**: landscape ≥ 900 × 480 = kamera + panel 320 px; selain itu (tegak, HP) panel di bawah kamera (`@media not all and (min-width: 900px) and
+  (min-height: 480px) and (orientation: landscape)`). Gambar `object-fit: contain`. Tidak ada teks yang dipotong (nama, label kotak, jam sesi membungkus;
+  strip "Baru saja" menggulir ke samping). Ukuran teks dari token (label kotak `--mw-type-body-strong`, angka Hadir `--mw-type-hero`).
+- **Bahasa**: kunci `tablet.*` (`i18n/id/tablet.ts`, `i18n/en/tablet.ts`); tes kamus menjaga keduanya sama.
+- **Tes**: `FaceTablet.dom.test.tsx` (mesin wajah, kamera, dan server dipalsukan: banyak wajah, dedupe, offline, izin ditolak, sesi belum/ sudah tutup, Catat manual),
+  `face-tablet-css.test.ts` (tata letak), `lib/main-wam/panitia/face-tablet.test.ts` (aturan pencocokan), `lib/server/main-wam/panitia/face-tablet.test.ts`
+  (server) dan `access.test.ts` (gate). Pratinjau dengan kamera dan wajah palsu: `/dev-preview/wam2026/panitia?layar=k05t` (`&varian=…`, lihat KONTRAK §9 #39).
+
 ## 5. Tes
 
 - `colors.test.ts`: tanpa warna literal, blok Gelap = blok Sistem, kontras teks di kedua mode.

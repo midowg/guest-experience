@@ -555,6 +555,8 @@ export const mainWamPath = {
   rundownLive: (day?: number) => `${MAIN_WAM_PATH}/kelola/rundown${mwQuery({ hari: day })}`,
   /** K05 Absen sesi: who is present, Catat hadir. */
   attendanceManual: (sessionId?: string) => `${MAIN_WAM_PATH}/kelola/absen${mwQuery({ sesi: sessionId })}`,
+  /** K05b Absen mode tablet: face check-in on panitia's tablet, full screen, several faces at once (module Absen QR). */
+  attendanceTablet: (sessionId?: string) => `${MAIN_WAM_PATH}/kelola/absen/tablet${mwQuery({ sesi: sessionId })}`,
   /** K06 Kirim pengumuman. */
   announce: `${MAIN_WAM_PATH}/kelola/pengumuman`,
   /** K08 Moderasi Momen: Dilaporkan (default) or Disembunyikan. */
@@ -638,6 +640,8 @@ export const mainWamApi = {
   rundownLog: `${MAIN_WAM_API}/kelola/rundown/riwayat`,
   /** GET: who is present at a session; POST {employeeId, present}: Catat hadir (K05). */
   attendance: (sessionId: string) => `${MAIN_WAM_API}/kelola/absen/${enc(sessionId)}`,
+  /** POST {sessionId, faces: [{embedding, seenAt?}]}: who the faces in view are (only their numbers, never a picture), recorded as present (Absen mode tablet; panitia). */
+  attendanceFace: `${MAIN_WAM_API}/kelola/absen/wajah`,
   /** GET: sent announcements; POST: send one (K06). */
   announcements: `${MAIN_WAM_API}/kelola/pengumuman`,
   /** PATCH {pinnedUntil}: unpin; DELETE: remove. */

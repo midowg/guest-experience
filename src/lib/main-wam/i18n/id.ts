@@ -10,6 +10,7 @@ import { idMomenEditor } from "./id/momen-editor";
 import { idMomen } from "./id/momen";
 import { idMomenViewer } from "./id/momen-viewer";
 import { idPeserta } from "./id/peserta";
+import { idTablet } from "./id/tablet";
 
 /*
  * Main WAM's texts in Indonesian: the source of every text and the language every screen is written
@@ -17,6 +18,6 @@ import { idPeserta } from "./id/peserta";
  * are `area.name`. en.ts holds the same keys in English (a test keeps them the same). Never change
  * an Indonesian text here without changing the tests that read it.
  */
-export const id = { ...idCommon, ...idPeserta, ...idMomen, ...idMomenViewer, ...idModul, ...idDemo, ...idKuis, ...idCeklis, ...idMisi, ...idMisiAturan, ...idMisiDeteksi, ...idMomenEditor } as const;
+export const id = { ...idCommon, ...idPeserta, ...idMomen, ...idMomenViewer, ...idModul, ...idDemo, ...idKuis, ...idCeklis, ...idMisi, ...idMisiAturan, ...idMisiDeteksi, ...idMomenEditor, ...idTablet } as const;
 
 export type MessageKey = keyof typeof id;

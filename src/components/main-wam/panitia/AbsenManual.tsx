@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useId, useMemo, useRef, useState } from "react";
-import { CircleCheck, QrCode, Search, UserCheck } from "lucide-react";
+import { CircleCheck, QrCode, ScanFace, Search, UserCheck } from "lucide-react";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Avatar, Banner, Button, ConfirmDialog, EmptyState, IconButton, List, ListRow, Segmented, SelectField, Sheet, SrOnly, Text, TextField, useToast } from "@/components/main-wam/ui";
 import { attendeeLine, mayUndo, presentLine, searchAttendees, splitAttendance, type AttendeeRow } from "@/lib/main-wam/panitia/attendance";
@@ -75,6 +75,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
     {(!online || stale) && <Banner tone="offline" title="Tidak ada koneksi">Daftar hadir mungkin belum yang terbaru.</Banner>}
     {!props.migrated && <Banner tone="info" title="Menunggu pembaruan sistem">Absen sesi aktif setelah pembaruan sistem dijalankan.</Banner>}
     <SelectField label="Sesi" className={css.noLabel} value={session.label} onClick={() => setPicking(true)} expanded={picking} />
+    <Button variant="tonal" icon={ScanFace} block href={mainWamPath.attendanceTablet(session.id)}>Mode tablet</Button>
     <div className={css.summary}>
       <Text as="h2" variant="title">{count(present.length)} dari {count(total)} hadir</Text>
       <Bar value={percent} label={`${percent}% hadir`} />

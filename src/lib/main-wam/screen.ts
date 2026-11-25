@@ -89,6 +89,8 @@ export function mainWamScreen(pathname: string, lang: Lang = "id"): MainWamScree
       const hub = { href: mainWamPath.committee, title: say("screen.committee") };
       if (!second) return { tab: "panitia", level: "akar", title: say("screen.committee") };
       if (second === "pengumuman") return { tab: "panitia", level: "tugas", title: "Pengumuman baru", back: hub };
+      // Absen mode tablet draws its own bars (the tablet is full screen, the camera is the screen): no top bar, no bottom bar.
+      if (second === "absen" && third === "tablet") return { tab: "panitia", level: "tugas", title: say("tablet.title"), back: { href: mainWamPath.attendanceManual(), title: "Absen sesi" }, camera: true };
       const titles: Record<string, string> = { rundown: "Rundown live", absen: "Absen sesi", moderasi: "Moderasi Momen" };
       return { tab: "panitia", level: "detail", title: titles[second] ?? say("screen.committee"), back: hub };
     }

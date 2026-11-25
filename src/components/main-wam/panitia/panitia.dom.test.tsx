@@ -217,6 +217,14 @@ describe("Absen sesi (K05)", () => {
   });
 });
 
+describe("Absen sesi: Mode tablet", () => {
+  it("offers Mode tablet for the session on screen, a link to the tablet screen", () => {
+    const data = attendanceData();
+    withApi(fakeApi(), <AbsenManual {...data} />);
+    expect(screen.getByRole("link", { name: "Mode tablet" }).getAttribute("href")).toBe(mainWamPath.attendanceTablet(data.session!.id));
+  });
+});
+
 describe("Absen sesi: Batalkan hadir (audit L8)", () => {
   it("offers Batalkan hadir only for someone panitia recorded, never for a QR scan", async () => {
     const data = attendanceData();
