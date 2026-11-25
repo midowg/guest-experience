@@ -37,8 +37,8 @@ describe("the Sekarang card", () => {
     expect(view(at("2027-01-05", "07:52"))).toMatchObject({ title: "Pemaparan departemen", status: "present", statusText: "Hadir 07.52", when: "8 menit lagi", absen: false });
   });
 
-  it("pemaparan (10.05): running, Hadir 07.52 beside it", () => {
-    expect(view(sampleTime("pemaparan"))).toMatchObject({ title: "Pemaparan departemen", status: "live", when: "Hadir 07.52", absen: false });
+  it("pemaparan (10.05): running, Hadir 07.52 as the check-in line of the foot (not beside the pill)", () => {
+    expect(view(sampleTime("pemaparan"))).toMatchObject({ title: "Pemaparan departemen", status: "live", statusText: "Hadir 07.52", when: null, absen: false });
   });
 
   it("silent (13.45, after the 10.20 change): Silent Meeting running, absen open", () => {

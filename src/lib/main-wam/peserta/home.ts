@@ -26,9 +26,9 @@ export type NowView =
     place: string;
     /** The pill on the left: Berikutnya, Sedang berlangsung, Hadir 07.52, or Selesai (ended, absen still open). */
     status: "next" | "live" | "present" | "done";
-    /** Words of the pill when it says more than its preset ("Hadir 07.52"). */
+    /** The check-in line in the card's foot ("Hadir 07.52", prototipe .foot); null when the person has not checked in. */
     statusText: string | null;
-    /** The caption on the right: "20 menit lagi" (or "Hadir 07.52" beside a live pill). */
+    /** The caption on the right: "20 menit lagi". */
     when: string | null;
     /** The instant "20 menit lagi" counts to (the screen keeps counting); null for words that do not change. */
     whenAt: string | null;
@@ -87,7 +87,7 @@ export function nowView({ sessions, now, event, absenOn, checkedIn, lang = "id" 
     return { ...base, status: running ? "live" : "next", statusText: null, when: running ? null : untilLabel(now, session.startsAt, lang), whenAt: running ? null : session.startsAt, absen: true, absenCloses: hhmm(checkInWindow(session).closes, lang) };
   }
   if (card.kind === "berlangsung") {
-    return { ...base, status: "live", statusText: null, when: at ? t(lang, "peserta.home.present", { time: hhmm(at, lang) }) : null, whenAt: null, absen: false };
+    return { ...base, status: "live", statusText: at ? t(lang, "peserta.home.present", { time: hhmm(at, lang) }) : null, when: null, whenAt: null, absen: false };
   }
   return at
     ? { ...base, status: "present", statusText: t(lang, "peserta.home.present", { time: hhmm(at, lang) }), when: untilLabel(now, session.startsAt, lang), whenAt: session.startsAt, absen: false }

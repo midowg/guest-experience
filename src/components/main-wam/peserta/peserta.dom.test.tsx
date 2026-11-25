@@ -51,6 +51,10 @@ describe("Kartu Sekarang", () => {
     render(<NowCard serverNow={NOW} view={{ ...base, status: "present", statusText: "Hadir 07.52", when: "8 menit lagi", whenAt: null, absen: false }} absen={<button type="button">Absen</button>} />);
     expect(screen.getByText("Hadir 07.52")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Absen" })).toBeNull();
+    // B10: the check-in is a line in the foot; the eyebrow stays Berikutnya, so the Sesi pill keeps its place beside it.
+    expect(screen.getByText("Berikutnya").closest("span")?.textContent).not.toMatch(/Hadir/);
+    expect(screen.getByText("Hadir 07.52").closest("div")?.className).toMatch(/foot/);
+    expect(screen.getByText("Sesi")).toBeTruthy();
   });
 
   it("the day is done: tomorrow's first session, opening that day of the agenda", () => {
@@ -152,6 +156,11 @@ describe("Saya", () => {
     expect(screen.queryByText("Tokoh WAM-mu")).toBeNull();
     expect(document.body.textContent).not.toMatch(/kuis|Tipe Pemikir/i);
     expect(screen.getByRole("link", { name: /Misi dan poin.*340 poin/ }).getAttribute("href")).toBe(mainWamPath.missions);
+  });
+
+  it("writes the Misi points with the thousands dot, like the Misi page (3.400, not 3400)", () => {
+    render(<SayaScreen {...props} points={3400} />);
+    expect(screen.getByRole("link", { name: /Misi dan poin.*3\.400 poin/ })).toBeTruthy();
   });
 
   it("Bantuan is a page of its own (a link, not a sheet)", () => {

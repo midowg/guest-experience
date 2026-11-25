@@ -37,14 +37,13 @@ export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; abs
     </Card>;
   }
   const live = view.status === "live";
-  const eyebrow = view.status === "present"
-    ? <EyebrowLabel tone="gold" icon={<CircleCheck />}>{view.statusText}</EyebrowLabel>
-    : live
-      ? <EyebrowLabel tone="gold"><PulseDot />{t("pill.live")}</EyebrowLabel>
-      : view.status === "done"
-        ? <EyebrowLabel tone="gold">{t("pill.done")}</EyebrowLabel>
-        : <EyebrowLabel tone="gold"><PulseDot />{t("pill.next")}</EyebrowLabel>;
-  const when = view.when && (view.status === "live" || view.status === "present" || !view.whenAt)
+  // Checked in ("Hadir 07.52") is a line in the foot, not in the eyebrow (prototipe .foot): the eyebrow stays Berikutnya / Sedang berlangsung, so the Sesi tag keeps its place on the first row.
+  const eyebrow = live
+    ? <EyebrowLabel tone="gold"><PulseDot />{t("pill.live")}</EyebrowLabel>
+    : view.status === "done"
+      ? <EyebrowLabel tone="gold">{t("pill.done")}</EyebrowLabel>
+      : <EyebrowLabel tone="gold"><PulseDot />{t("pill.next")}</EyebrowLabel>;
+  const when = view.when && (view.status === "live" || !view.whenAt)
     ? view.when
     : view.when && view.whenAt ? <Until at={view.whenAt} serverNow={serverNow} initial={view.when} /> : null;
   const kind = view.sessionKind ?? "sesi";
@@ -71,6 +70,7 @@ export function NowCard({ view, absen, serverNow, ceklis }: { view: NowView; abs
       </div>
       <div className={css.absen}>{absen}</div>
     </div>}
+    {!view.absen && view.statusText && <div className={css.foot}><span className={css.here}><CircleCheck aria-hidden />{view.statusText}</span></div>}
   </BracketCard>;
 }
 
