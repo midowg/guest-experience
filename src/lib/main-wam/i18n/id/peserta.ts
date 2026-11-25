@@ -106,6 +106,7 @@ export const idPeserta = {
   "peserta.slides.live": "Sedang berlangsung",
   "peserta.slides.next": "Berikutnya",
   "peserta.slides.upcoming": "Akan datang",
+  "peserta.slides.starts": "Mulai",
   "peserta.slides.detail": "Detail sesi",
   "peserta.waiting.title": "Menunggu pembaruan sistem",
   "peserta.waiting.home": "Isi acara tampil setelah pembaruan selesai.",

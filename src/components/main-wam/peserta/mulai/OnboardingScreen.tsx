@@ -8,7 +8,7 @@ import type { ModuleSwitches } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
-import { ActionBar, Banner, Button, IconBox, Sheet } from "@/components/main-wam/ui";
+import { ActionBar, Banner, Button, IconBox, Sheet, useToast } from "@/components/main-wam/ui";
 import { InstallSteps } from "../InstallSteps";
 import { usePushDevice, type PushState } from "../usePushDevice";
 import css from "../peserta.module.css";
@@ -36,6 +36,7 @@ export function OnboardingScreen({ name, modules, preview }: {
 }) {
   const router = useRouter();
   const t = useT();
+  const toast = useToast();
   const { lang } = useLang();
   const push = usePushDevice({ preview: preview ? preview.push ?? "off" : undefined });
   const [guide, setGuide] = useState(!!preview?.guide);
@@ -46,7 +47,8 @@ export function OnboardingScreen({ name, modules, preview }: {
 
   async function allow() {
     if (push.state === "ios-install") { setGuide(true); return; }
-    if (push.state === "off" || push.state === "on") await push.enable();
+    // Prototipe: "Izinkan" ends in a toast on Beranda ("Notifikasi aktif di HP ini"); the toast lives in the shell, so it outlasts the page change.
+    if ((push.state === "off" || push.state === "on") && await push.enable()) toast.show({ text: t("peserta.push.enabled") });
     home();
   }
 

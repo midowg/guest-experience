@@ -76,6 +76,8 @@
 .here { display: inline-flex; align-items: center; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-label); color: var(--mw-on-success-container); overflow-wrap: anywhere; }
 .here > svg { flex: none; width: 20px; height: 20px; color: var(--mw-success); }
 
+.nextStart { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nextLabel { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
 .nextTime { flex: none; min-width: 54px; font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; }
 
 /* The pair of tiles under Misi: Jejak karbon and Momen side by side (prototipe .pair2); one alone fills the row. */

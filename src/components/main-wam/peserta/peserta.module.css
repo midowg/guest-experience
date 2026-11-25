@@ -176,7 +176,7 @@
 .sheetMeta { margin: 0; font: var(--mw-type-caption); color: var(--mw-text-2); }
 
 /* ── Masuk (O02) ── */
-.pageTitle { margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); font-family: var(--mw-display-font, inherit); }
+.pageTitle { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-display); text-transform: uppercase; overflow-wrap: anywhere; }
 .form { display: flex; flex-direction: column; gap: var(--mw-space-16); }
 .eye {
   flex: none; width: 44px; height: 44px; margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-12)) calc(-1 * var(--mw-space-8)) 0;
@@ -193,7 +193,9 @@
 /* ── Izin notifikasi (O03) ── */
 .onboard { display: flex; flex-direction: column; gap: var(--mw-space-24); padding: calc(var(--mw-safe-top) + var(--mw-space-16)) var(--mw-space-16) var(--mw-space-24); }
 .welcome { display: flex; flex-direction: column; gap: var(--mw-space-4); }
-.welcomeKicker { margin: 0; font: var(--mw-type-subtitle); color: var(--mw-primary-strong); }
+/* The heading like Beranda's (prototipe .cap + h1): a gold eyebrow with a short rule before it, then the big Barlow capitals. */
+.welcomeKicker { display: flex; align-items: center; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-cap-lg); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); overflow-wrap: anywhere; }
+.welcomeKicker::before { content: ""; flex: none; width: 24px; height: 2px; border-radius: 2px; background: var(--mw-gold); }
 .previewWrap { padding: var(--mw-space-16); border-radius: var(--mw-radius-16); background: var(--mw-surface-2); }
 .preview { display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: var(--mw-space-12); border-radius: var(--mw-radius-16); background: var(--mw-surface); border: 1px solid var(--mw-outline); }
 .previewApp { flex: none; width: 40px; height: 40px; border-radius: var(--mw-radius-12); display: flex; align-items: center; justify-content: center; background: var(--mw-accent); color: var(--mw-on-accent); font: var(--mw-type-caption-strong); }

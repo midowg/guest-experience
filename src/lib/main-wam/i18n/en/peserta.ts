@@ -106,6 +106,7 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.slides.live": "In progress",
   "peserta.slides.next": "Up next",
   "peserta.slides.upcoming": "Coming up",
+  "peserta.slides.starts": "Starts",
   "peserta.slides.detail": "Session details",
   "peserta.waiting.title": "Waiting for a system update",
   "peserta.waiting.home": "Event content appears once the update is done.",

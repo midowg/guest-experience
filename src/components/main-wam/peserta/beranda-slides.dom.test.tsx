@@ -80,6 +80,9 @@ describe("Slide kartu utama Beranda", () => {
     expect(within(cards[2]).queryByRole("button", { name: "Absen" })).toBeNull();
     expect(within(cards[2]).getByRole("link", { name: /Detail sesi: Makan siang/ }).getAttribute("href")).toBe(mainWamPath.session("s4"));
     expect(within(cards[2]).getByText("09.00")).toBeTruthy();
+    // B15: the big time says what it is ("Mulai"), only on the coming card.
+    expect(within(cards[2]).getByText("Mulai")).toBeTruthy();
+    expect(within(cards[0]).queryByText("Mulai")).toBeNull();
   });
 
   it("the indicator is in the head: three segments named with their state, the Sekarang card in view; the day is a visible label", () => {

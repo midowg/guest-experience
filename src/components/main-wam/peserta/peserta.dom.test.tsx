@@ -280,6 +280,22 @@ describe("Izin notifikasi (T-P02): only modules that are on", () => {
   });
 });
 
+describe("Izin notifikasi: Izinkan ends in a toast (O02)", () => {
+  it("after the phone says yes: 'Notifikasi aktif di HP ini' is shown, then Beranda opens", async () => {
+    vi.resetModules();
+    const enable = vi.fn(async () => true);
+    vi.doMock("./usePushDevice", () => ({ usePushDevice: () => ({ state: "off", busy: false, message: null, enable, disable: vi.fn(), test: vi.fn() }) }));
+    const { OnboardingScreen } = await import("./mulai/OnboardingScreen");
+    const { ToastProvider } = await import("@/components/main-wam/ui");
+    render(<ToastProvider><OnboardingScreen name="Rani" modules={{ absen: true, silent: false }} /></ToastProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Izinkan" }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith(mainWamPath.home));
+    expect(enable).toHaveBeenCalled();
+    expect(screen.getByText("Notifikasi aktif di HP ini.")).toBeTruthy();
+    vi.doUnmock("./usePushDevice");
+  });
+});
+
 describe("RefreshAt (S6): the server's clock, spread out, set again after each refresh", () => {
   it("a phone 2 minutes fast still refreshes when the session really starts, 0–20 s late", async () => {
     const { RefreshAt } = await import("./Live");

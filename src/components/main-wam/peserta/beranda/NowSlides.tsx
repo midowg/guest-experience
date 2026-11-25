@@ -49,7 +49,7 @@ function SideCard({ slot, session }: { slot: "done" | "upcoming"; session: Slide
     </div>
     <div className={`${css.link} ${css.sideBody}`}>{body}</div>
     <div className={css.sideFoot}>
-      {!done && <span className={css.nextTime}>{session.time.split("–")[0]}</span>}
+      {!done && <span className={css.nextStart}><span className={css.nextLabel}>{t("peserta.slides.starts")}</span><span className={css.nextTime}>{session.time.split("–")[0]}</span></span>}
       <Link href={mainWamPath.session(session.sessionId)} className={css.detailLink} aria-label={`${t("peserta.slides.detail")}: ${session.title}`}>
         {t("peserta.slides.detail")}<ChevronRight aria-hidden />
       </Link>
