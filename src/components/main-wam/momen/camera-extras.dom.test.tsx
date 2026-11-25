@@ -12,7 +12,7 @@ import { mainWamPath } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /*
- * The Momen photo's two optional extras (docs/main-wam/KONTRAK.md §13, §40), now in "Periksa fotomu": "Tandai lokasi" (off until the browser
+ * The Momen photo's two optional extras (docs/main-wam/KONTRAK.md §13, §40), now in "Foto baru": "Tandai lokasi" (off until the browser
  * allows it, on with a clear sign when it already does, off for one photo with one tap) and the people tagged, and the toast that says what
  * detection found after Kirim: "Fotomu otomatis diajukan ..." with Tarik, or a suggestion with Ajukan. The editor itself: photo-editor.dom.test.tsx.
  */
@@ -82,7 +82,7 @@ const shoot = async () => {
 /** A shot and Kirim, with the editor's defaults. */
 const shootAndSend = async () => {
   await shoot();
-  await act(async () => { fireEvent.click(within(screen.getByRole("dialog", { name: "Periksa fotomu" })).getByRole("button", { name: /^Kirim/ })); });
+  await act(async () => { fireEvent.click(within(screen.getByRole("dialog", { name: "Foto baru" })).getByRole("button", { name: /^Kirim/ })); });
 };
 
 describe("the extras of a photo", () => {
@@ -90,32 +90,30 @@ describe("the extras of a photo", () => {
     render(camera({ candidates: [SARI], detect: true, demo: { phase: "kamera", live: "hp", geo: "mati" } }));
     expect(screen.queryByRole("group", { name: "Pilihan untuk misi" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Tag teman" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Tandai lokasi" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.getByText("Sign, warna, dan tag diatur di langkah berikutnya.")).toBeTruthy();
   });
 
-  it("when no mission takes detection the editor has no Lokasi tool, and with nobody to tag it has no Tag tool", async () => {
+  it("when no mission takes detection the editor has no Tandai lokasi chip, and with nobody to tag it has no Tag orang chip", async () => {
     render(camera({ candidates: [], detect: false, demo: { phase: "kamera", live: "hp" } }));
     await shoot();
-    const editor = screen.getByRole("dialog", { name: "Periksa fotomu" });
-    expect(within(editor).queryByRole("button", { name: "Tandai lokasi" })).toBeNull();
-    expect(within(editor).queryByRole("button", { name: /^Tag/ })).toBeNull();
-    expect(within(editor).getByRole("button", { name: "Simpan asli di HP" })).toBeTruthy();
+    const editor = screen.getByRole("dialog", { name: "Foto baru" });
+    expect(within(editor).queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
+    expect(within(editor).queryByRole("button", { name: /^Tag orang/ })).toBeNull();
+    expect(within(editor).getByRole("switch", { name: "Simpan asli di HP" })).toBeTruthy();
   });
 
-  it("Tandai lokasi is off until the browser allows it, and turning it on asks the browser then, from the tap (a one-line note says who sees it)", async () => {
+  it("Tandai lokasi is off until the browser allows it, and turning it on asks the browser then, from the tap (it shows a check when on)", async () => {
     render(camera({ candidates: [], detect: true, demo: undefined }));
     await act(async () => undefined);
     expect(watchers).toHaveLength(0);
     await shoot();
-    const location = screen.getByRole("button", { name: "Tandai lokasi" });
-    expect(location.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.queryByText(/Lokasi hanya untuk/)).toBeNull();
+    const location = screen.getByRole("switch", { name: "Tandai lokasi" });
+    expect(location.getAttribute("aria-checked")).toBe("false");
     fireEvent.click(location);
     expect(watchers).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Tandai lokasi" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(screen.getByRole("dialog", { name: "Periksa fotomu" })).getByRole("status").textContent).toBe("Lokasi hanya untuk mencocokkan misi. Tidak terlihat peserta lain, dan dihapus bersama fotomu.");
+    expect(screen.getByRole("switch", { name: "Tandai lokasi" }).getAttribute("aria-checked")).toBe("true");
   });
 
   it("when the browser already allows the location it starts on (no long text on the screen: the note is the tooltip), and one tap turns it off (remembered)", async () => {
@@ -123,24 +121,24 @@ describe("the extras of a photo", () => {
     render(camera({ candidates: [SARI], detect: true }));
     await act(async () => undefined);
     await shoot();
-    const location = screen.getByRole("button", { name: "Tandai lokasi" });
-    expect(location.getAttribute("aria-pressed")).toBe("true");
+    const location = screen.getByRole("switch", { name: "Tandai lokasi" });
+    expect(location.getAttribute("aria-checked")).toBe("true");
     expect(location.getAttribute("title")).toMatch(/^Lokasi hanya untuk mencocokkan misi/);
     expect(screen.queryByText(/Lokasi hanya untuk/)).toBeNull();
     fireEvent.click(location);
-    expect(screen.getByRole("button", { name: "Tandai lokasi" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("switch", { name: "Tandai lokasi" }).getAttribute("aria-checked")).toBe("false");
     expect(cleared).toHaveBeenCalled();
     expect(window.localStorage.getItem("mw-momen-lokasi")).toBe("mati");
   });
 
-  it("says plainly when the browser blocks the location (when it is tapped), and the photo goes without it", async () => {
+  it("says plainly when the browser blocks the location (the chip reads Izin lokasi ditolak, the tooltip says what to do), and the photo goes without it", async () => {
     geolocation("denied");
     render(camera({ candidates: [], detect: true, demo: undefined }));
     await act(async () => undefined);
     await shoot();
-    expect(screen.getByRole("button", { name: "Tandai lokasi" }).getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(screen.getByRole("button", { name: "Tandai lokasi" }));
-    expect(screen.getByText(/Izin lokasi ditolak di peramban ini/)).toBeTruthy();
+    const blocked = screen.getByRole("switch", { name: "Izin lokasi ditolak" });
+    expect(blocked.getAttribute("aria-checked")).toBe("false");
+    expect(blocked.getAttribute("title")).toMatch(/Izin lokasi ditolak di peramban ini/);
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect((queue.added[0][0] as QueueItem).geo).toBeNull();
@@ -155,7 +153,7 @@ describe("the extras of a photo", () => {
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect((queue.added[0][0] as QueueItem).geo).toEqual(GEO);
     await shoot();
-    fireEvent.click(screen.getByRole("button", { name: "Tandai lokasi" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Tandai lokasi" }));
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
     await waitFor(() => expect(queue.added).toHaveLength(2));
     expect((queue.added[1][0] as QueueItem).geo).toBeNull();
@@ -168,7 +166,7 @@ describe("the extras of a photo", () => {
     await fix(Date.now());
     const picker = document.querySelector<HTMLInputElement>("input[type=file][multiple]")!;
     await act(async () => { fireEvent.change(picker, { target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] } }); });
-    expect(screen.queryByRole("button", { name: "Tandai lokasi" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect(queue.added[0][0]).toMatchObject({ gallery: true, geo: null });
@@ -254,9 +252,10 @@ describe("accessibility", () => {
     unmount();
     setActiveLang("en");
     render(<LangProvider lang="en"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[SARI, BIMA]} detect demo={{ phase: "kamera", live: "hp", geo: "ditolak", editor: { photos: 1, ask: false } }} /></ToastProvider></LangProvider>);
-    expect(screen.getByRole("dialog", { name: "Check your photo" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tag location" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Keep the original on my phone" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "New photo" })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Location blocked" })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Keep the original on my phone" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Tag people" })).toBeTruthy();
     expect(await violations()).toEqual([]);
   });
 

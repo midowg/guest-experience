@@ -8,15 +8,15 @@ const photos = (): (Look & { id: string })[] => [{ id: "a", ...DEFAULT_LOOK }, {
 describe("the look of each photo", () => {
   it("starts with Tanpa and Asli, and a change goes to the chosen photo only", () => {
     expect(DEFAULT_LOOK).toEqual({ sign: "tanpa", tone: "asli" });
-    const next = changeLook(photos(), 1, { sign: "simpel" }, false);
-    expect(next.map(photo => photo.sign)).toEqual(["tanpa", "simpel", "tanpa"]);
+    const next = changeLook(photos(), 1, { sign: "tanda" }, false);
+    expect(next.map(photo => photo.sign)).toEqual(["tanpa", "tanda", "tanpa"]);
     expect(next.map(photo => photo.tone)).toEqual(["asli", "asli", "asli"]);
   });
 
   it("with Terapkan ke semua foto the change goes to every photo, and switching it on copies the chosen look to all", () => {
     expect(changeLook(photos(), 0, { tone: "mono" }, true).map(photo => photo.tone)).toEqual(["mono", "mono", "mono"]);
-    const own = changeLook(photos(), 2, { sign: "polaroid", tone: "emas" }, false);
-    expect(lookToAll(own, 2).map(photo => [photo.sign, photo.tone])).toEqual([["polaroid", "emas"], ["polaroid", "emas"], ["polaroid", "emas"]]);
+    const own = changeLook(photos(), 2, { sign: "polaroid", tone: "hangat" }, false);
+    expect(lookToAll(own, 2).map(photo => [photo.sign, photo.tone])).toEqual([["polaroid", "hangat"], ["polaroid", "hangat"], ["polaroid", "hangat"]]);
     expect(lookToAll([], 0)).toEqual([]);
   });
 

@@ -1,6 +1,6 @@
 import { centerCrop, fitSide, halvingSteps, LARGE_RULE, squareCrop, THUMB_RULE, TILE_RULE, type Rect } from "@/lib/main-wam/momen/image";
 import { activeLang, t } from "@/lib/main-wam/i18n";
-import { applyFilterToPixels, cssFilter, DEFAULT_CAMERA_TONE, type CameraToneId } from "@/lib/main-wam/momen/camera-filters";
+import { applyFilterToPixels, cssFilter, DEFAULT_CAMERA_TONE, toneTint, type CameraToneId } from "@/lib/main-wam/momen/camera-filters";
 import { drawTemplate, loadTemplateAssets } from "@/lib/main-wam/momen/camera-template-draw";
 import { DEFAULT_SIGN, templateLayout, type SignId } from "@/lib/main-wam/momen/camera-templates";
 import { MAX_LARGE_BYTES } from "@/lib/main-wam/momen/filters";
@@ -79,10 +79,11 @@ export async function frameFile(video: HTMLVideoElement): Promise<File> {
 }
 
 /**
- * The look chosen in the editor drawn into the photo that is sent: cut to 4:5 like the preview, the tone first, then the sign over it (so its
- * words and mark keep their colours). Nothing chosen = the picture as it is. The picture given is closed once its look is drawn.
+ * The look chosen in the editor drawn into the photo that is sent: cut to 4:5 like the preview, the filter first (and the thin colour layer of Sejuk
+ * or Pudar), then the sign over it (so its words and mark keep their colours). Nothing chosen = the picture as it is. The picture given is closed
+ * once its look is drawn. `taken` = when it was taken (the signs print the date and time).
  */
-export async function applyLook(picture: Picture, sign: SignId = DEFAULT_SIGN, tone: CameraToneId = DEFAULT_CAMERA_TONE): Promise<Picture> {
+export async function applyLook(picture: Picture, sign: SignId = DEFAULT_SIGN, tone: CameraToneId = DEFAULT_CAMERA_TONE, taken?: string): Promise<Picture> {
   if (sign === DEFAULT_SIGN && tone === DEFAULT_CAMERA_TONE) return picture;
   const crop = centerCrop(picture.width, picture.height);
   const size = fitSide(crop.width, crop.height, 2000);
@@ -90,7 +91,7 @@ export async function applyLook(picture: Picture, sign: SignId = DEFAULT_SIGN, t
   canvas.width = size.width; canvas.height = size.height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return picture;
-  // The preview's tone, drawn into the photo that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
+  // The preview's filter, drawn into the photo that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
   const toned = tone !== DEFAULT_CAMERA_TONE;
   const native = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
   if (toned && native) context.filter = cssFilter(tone);
@@ -101,11 +102,14 @@ export async function applyLook(picture: Picture, sign: SignId = DEFAULT_SIGN, t
     applyFilterToPixels(pixels.data, tone);
     context.putImageData(pixels, 0, 0);
   }
+  // The thin colour layer some filters lay over the picture (the preview lays the same one), under the sign.
+  const tint = toneTint(tone);
+  if (tint) { context.fillStyle = tint; context.fillRect(0, 0, size.width, size.height); }
   // The sign (frame, words, mark) over the toned photo; a mark that did not load, or a drawing that fails, never costs the photo.
   if (sign !== DEFAULT_SIGN) {
     try {
       const assets = await loadTemplateAssets();
-      drawTemplate(context, templateLayout(sign, size.width, size.height, activeLang()), assets);
+      drawTemplate(context, templateLayout(sign, size.width, size.height, activeLang(), taken), assets);
     } catch { /* the toned photo goes without the sign */ }
   }
   picture.close();

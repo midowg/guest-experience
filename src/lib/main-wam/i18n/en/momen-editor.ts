@@ -1,7 +1,7 @@
 /** English of id/momen-editor.ts: the same keys and {variables}. */
 export const enMomenEditor = {
   "momen.cam.nextNote": "Frame, tone and tags are set in the next step.",
-  "momen.edit.title": "Check your photo",
+  "momen.edit.title": "New photo",
   "momen.edit.back": "Retake, back to the camera",
   "momen.edit.photoOf": "Photo {n} of {total}",
   "momen.edit.photo": "Preview of your photo",
@@ -31,9 +31,8 @@ export const enMomenEditor = {
   "momen.edit.sendTags": "{label} · {n} tagged",
   "momen.edit.sending": "Getting the photos ready",
   "momen.edit.waitPhoto": "Waiting for the photo",
-  "momen.edit.tools": "Photo tools",
-  "momen.edit.toolTag": "Tag",
-  "momen.edit.toolGeo": "Location",
-  "momen.edit.toolKeep": "Keep original",
   "momen.edit.done": "Done",
+  "momen.edit.segments": "Photo style",
+  "momen.edit.tagChip": "Tag people · {n}",
+  "momen.edit.geoBlocked": "Location blocked",
 } as const;

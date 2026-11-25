@@ -1,77 +1,84 @@
 /*
- * The colour tones of the camera (Momen only; the Misi camera has none), apart from the sign (frame, words and
- * mark: camera-templates.ts): a tone only changes the colours of the picture, a sign only adds things on top.
- * The two are chosen separately and combined as tone first, then the sign drawn over the toned photo, so the
- * words and the mark keep their own colours. One list holds the numbers; from it come the CSS `filter` of the
- * live viewfinder, the same filter drawn into the photo that is sent (canvas `ctx.filter`), and a pixel
- * fallback with the equivalent matrices for browsers whose canvas ignores `ctx.filter` (Safari before 18).
- * Pure. "asli" is the default every time the camera opens and changes nothing.
+ * The photo filters of Momen's editor ("Periksa fotomu", KONTRAK §40; the Misi camera has none), apart from the sign (frame, words and mark:
+ * camera-templates.ts): a filter only changes the colours of the picture, a sign only adds things on top. Asli, Cerah, Hangat, Sejuk, Pudar, Mono,
+ * from the final prototype (`TF` and `TINT` in prototipe-wam.html). One list holds the recipes; from it come the CSS `filter` of the preview, the same
+ * filter drawn into the photo that is sent (canvas `ctx.filter`), a pixel fallback with the same steps for browsers whose canvas ignores `ctx.filter`
+ * (Safari before 18), and the thin colour layer two of the filters lay over the picture (Sejuk: brand blue; Pudar: white, it lifts the blacks).
+ * Pure. "asli" is the default every time the editor opens and changes nothing.
  */
 
-export const CAMERA_TONE_IDS = ["asli", "emas", "fajar", "mono"] as const;
+export const CAMERA_TONE_IDS = ["asli", "cerah", "hangat", "sejuk", "pudar", "mono"] as const;
 export type CameraToneId = (typeof CAMERA_TONE_IDS)[number];
 export const DEFAULT_CAMERA_TONE: CameraToneId = "asli";
 
-/** One tone: CSS filter functions in the fixed order sepia, hue (degrees), saturate, grayscale, contrast, brightness. */
-export type FilterOps = { sepia?: number; hue?: number; saturate?: number; grayscale?: number; contrast?: number; brightness?: number };
+/** One CSS filter function: its name and its amount (degrees for hue-rotate). */
+export type FilterStep = readonly [name: "brightness" | "contrast" | "saturate" | "sepia" | "hue-rotate" | "grayscale", amount: number];
 
-export const CAMERA_TONES: Record<CameraToneId, FilterOps> = {
-  asli: {},
-  emas: { sepia: 0.3, saturate: 1.2, contrast: 1.03, brightness: 1.05 },
-  fajar: { saturate: 0.95, contrast: 0.97, brightness: 1.06 },
-  mono: { grayscale: 1, contrast: 1.04, brightness: 1.02 },
+/** The recipes, each in the order the prototype writes them (the order is part of the look). */
+export const CAMERA_TONES: Record<CameraToneId, readonly FilterStep[]> = {
+  asli: [],
+  cerah: [["brightness", 1.06], ["contrast", 1.05], ["saturate", 1.12]],
+  hangat: [["sepia", 0.18], ["saturate", 1.08], ["hue-rotate", -8], ["brightness", 1.03]],
+  sejuk: [["saturate", 0.95], ["hue-rotate", 8], ["brightness", 1.02], ["contrast", 1.03]],
+  pudar: [["contrast", 0.9], ["saturate", 0.85], ["brightness", 1.06]],
+  mono: [["grayscale", 1], ["contrast", 1.08]],
+};
+
+/** The thin layer over the filtered picture (before the sign): a colour and its opacity. The colours are the brand blue and white. */
+export const TONE_TINTS: Partial<Record<CameraToneId, { rgb: readonly [number, number, number]; alpha: number }>> = {
+  sejuk: { rgb: [47, 111, 235], alpha: 0.08 },
+  pudar: { rgb: [255, 255, 255], alpha: 0.06 },
 };
 
 export const isCameraTone = (value: unknown): value is CameraToneId => typeof value === "string" && (CAMERA_TONE_IDS as readonly string[]).includes(value);
+/** A remembered or sent id that is not a filter any more (the old Emas and Fajar) becomes Asli. */
+export const toCameraTone = (value: unknown): CameraToneId => (isCameraTone(value) ? value : DEFAULT_CAMERA_TONE);
 
 /** The CSS/canvas filter string of a tone ("none" for Asli). */
 export function cssFilter(id: CameraToneId): string {
-  const o = CAMERA_TONES[id];
-  const parts: string[] = [];
-  if (o.sepia !== undefined) parts.push(`sepia(${o.sepia})`);
-  if (o.hue !== undefined) parts.push(`hue-rotate(${o.hue}deg)`);
-  if (o.saturate !== undefined) parts.push(`saturate(${o.saturate})`);
-  if (o.grayscale !== undefined) parts.push(`grayscale(${o.grayscale})`);
-  if (o.contrast !== undefined) parts.push(`contrast(${o.contrast})`);
-  if (o.brightness !== undefined) parts.push(`brightness(${o.brightness})`);
-  return parts.length ? parts.join(" ") : "none";
+  const steps = CAMERA_TONES[id];
+  return steps.length ? steps.map(([name, amount]) => `${name}(${name === "hue-rotate" ? `${amount}deg` : amount})`).join(" ") : "none";
 }
 
-type Matrix = [number, number, number, number, number, number, number, number, number];
-const mul = (a: Matrix, b: Matrix): Matrix => {
-  const out = new Array<number>(9).fill(0);
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) for (let k = 0; k < 3; k++) out[r * 3 + c] += a[r * 3 + k] * b[k * 3 + c];
-  return out as Matrix;
-};
-
-const sepiaM = (a: number): Matrix => { const s = 1 - a; return [0.393 + 0.607 * s, 0.769 - 0.769 * s, 0.189 - 0.189 * s, 0.349 - 0.349 * s, 0.686 + 0.314 * s, 0.168 - 0.168 * s, 0.272 - 0.272 * s, 0.534 - 0.534 * s, 0.131 + 0.869 * s]; };
-const grayM = (a: number): Matrix => { const s = 1 - a; return [0.2126 + 0.7874 * s, 0.7152 - 0.7152 * s, 0.0722 - 0.0722 * s, 0.2126 - 0.2126 * s, 0.7152 + 0.2848 * s, 0.0722 - 0.0722 * s, 0.2126 - 0.2126 * s, 0.7152 - 0.7152 * s, 0.0722 + 0.9278 * s]; };
-const satM = (s: number): Matrix => [0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s, 0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s, 0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s];
-const hueM = (deg: number): Matrix => {
-  const r = (deg * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r);
-  return [0.213 + c * 0.787 - s * 0.213, 0.715 - c * 0.715 - s * 0.715, 0.072 - c * 0.072 + s * 0.928,
-    0.213 - c * 0.213 + s * 0.143, 0.715 + c * 0.285 + s * 0.14, 0.072 - c * 0.072 - s * 0.283,
-    0.213 - c * 0.213 - s * 0.787, 0.715 - c * 0.715 + s * 0.715, 0.072 + c * 0.928 + s * 0.072];
-};
-
-/** The colour part (a 3x3 matrix) and the contrast and brightness of a filter, as the pixel fallback applies them. */
-export function filterTransform(id: CameraToneId): { matrix: Matrix; contrast: number; brightness: number } {
-  const o = CAMERA_TONES[id];
-  let m: Matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-  if (o.sepia !== undefined) m = mul(sepiaM(o.sepia), m);
-  if (o.hue !== undefined) m = mul(hueM(o.hue), m);
-  if (o.saturate !== undefined) m = mul(satM(o.saturate), m);
-  if (o.grayscale !== undefined) m = mul(grayM(o.grayscale), m);
-  return { matrix: m, contrast: o.contrast ?? 1, brightness: o.brightness ?? 1 };
+/** The colour layer of a tone as a CSS colour ("rgba(47, 111, 235, 0.08)"), or null. */
+export function toneTint(id: CameraToneId): string | null {
+  const tint = TONE_TINTS[id];
+  return tint ? `rgba(${tint.rgb[0]}, ${tint.rgb[1]}, ${tint.rgb[2]}, ${tint.alpha})` : null;
 }
 
-/** The fallback: the filter applied to RGBA pixels in place (alpha untouched). */
+type Rgb = [number, number, number];
+const matrix = (m: readonly number[], c: Rgb): Rgb => [m[0] * c[0] + m[1] * c[1] + m[2] * c[2], m[3] * c[0] + m[4] * c[1] + m[5] * c[2], m[6] * c[0] + m[7] * c[1] + m[8] * c[2]];
+const clamp = (c: Rgb): Rgb => [Math.min(255, Math.max(0, c[0])), Math.min(255, Math.max(0, c[1])), Math.min(255, Math.max(0, c[2]))];
+
+/** One CSS filter function on a pixel (0-255), as the Filter Effects spec writes it. */
+function step([name, amount]: FilterStep, c: Rgb): Rgb {
+  switch (name) {
+    case "brightness": return [c[0] * amount, c[1] * amount, c[2] * amount];
+    case "contrast": return [(c[0] - 127.5) * amount + 127.5, (c[1] - 127.5) * amount + 127.5, (c[2] - 127.5) * amount + 127.5];
+    case "saturate": return matrix([0.213 + 0.787 * amount, 0.715 - 0.715 * amount, 0.072 - 0.072 * amount, 0.213 - 0.213 * amount, 0.715 + 0.285 * amount, 0.072 - 0.072 * amount, 0.213 - 0.213 * amount, 0.715 - 0.715 * amount, 0.072 + 0.928 * amount], c);
+    case "sepia": { const s = 1 - amount; return matrix([0.393 + 0.607 * s, 0.769 - 0.769 * s, 0.189 - 0.189 * s, 0.349 - 0.349 * s, 0.686 + 0.314 * s, 0.168 - 0.168 * s, 0.272 - 0.272 * s, 0.534 - 0.534 * s, 0.131 + 0.869 * s], c); }
+    case "grayscale": { const s = 1 - amount; return matrix([0.2126 + 0.7874 * s, 0.7152 - 0.7152 * s, 0.0722 - 0.0722 * s, 0.2126 - 0.2126 * s, 0.7152 + 0.2848 * s, 0.0722 - 0.0722 * s, 0.2126 - 0.2126 * s, 0.7152 - 0.7152 * s, 0.0722 + 0.9278 * s], c); }
+    case "hue-rotate": {
+      const r = (amount * Math.PI) / 180, cos = Math.cos(r), sin = Math.sin(r);
+      return matrix([0.213 + cos * 0.787 - sin * 0.213, 0.715 - cos * 0.715 - sin * 0.715, 0.072 - cos * 0.072 + sin * 0.928,
+        0.213 - cos * 0.213 + sin * 0.143, 0.715 + cos * 0.285 + sin * 0.14, 0.072 - cos * 0.072 - sin * 0.283,
+        0.213 - cos * 0.213 - sin * 0.787, 0.715 - cos * 0.715 + sin * 0.715, 0.072 + cos * 0.928 + sin * 0.072], c);
+    }
+  }
+}
+
+/** The filter on one pixel (0-255 each): every step of the recipe in order, kept inside 0-255 after each, like the browser's own chain. */
+export function filterPixel(id: CameraToneId, rgb: readonly [number, number, number]): [number, number, number] {
+  let c: Rgb = [rgb[0], rgb[1], rgb[2]];
+  for (const one of CAMERA_TONES[id]) c = clamp(step(one, c));
+  return c;
+}
+
+/** The fallback: the filter applied to RGBA pixels in place (alpha untouched); the colour layer is drawn apart. */
 export function applyFilterToPixels(data: Uint8ClampedArray, id: CameraToneId): void {
   if (id === "asli") return;
-  const { matrix: m, contrast, brightness } = filterTransform(id);
   for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const mix = [m[0] * r + m[1] * g + m[2] * b, m[3] * r + m[4] * g + m[5] * b, m[6] * r + m[7] * g + m[8] * b];
-    for (let k = 0; k < 3; k++) data[i + k] = ((mix[k] - 127.5) * contrast + 127.5) * brightness; // Uint8ClampedArray clamps
+    const [r, g, b] = filterPixel(id, [data[i], data[i + 1], data[i + 2]]);
+    data[i] = r; data[i + 1] = g; data[i + 2] = b; // Uint8ClampedArray rounds
   }
 }

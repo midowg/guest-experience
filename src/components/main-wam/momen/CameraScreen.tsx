@@ -51,7 +51,7 @@ import css from "./camera.module.css";
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
 /** Preview only: the editor open, with how many photos, how many still being made, who is tagged, and the look of each. */
-export type EditorDemo = { photos?: number; pending?: number; tags?: string[]; query?: string; ask?: boolean; keep?: boolean; cur?: number; all?: boolean; gallery?: boolean; looks?: { sign: SignId; tone: CameraToneId }[]; panel?: "sign" | "warna" };
+export type EditorDemo = { photos?: number; pending?: number; tags?: string[]; query?: string; ask?: boolean; keep?: boolean; cur?: number; all?: boolean; gallery?: boolean; looks?: { sign: SignId; tone: CameraToneId }[]; panel?: "sign" | "filter" };
 export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara"; geo?: ShareMode; editor?: EditorDemo };
 
 const PERMISSION_KEY = "mw-momen-kamera";
@@ -259,7 +259,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     for (const [index, shot] of session.photos.entries()) {
       const look = result.looks[index];
       try {
-        const prepared = await prepareInTurn(async () => prepareMomenPhoto(await applyLook(await decodeFile(shot.file!), look?.sign, look?.tone)));
+        const prepared = await prepareInTurn(async () => prepareMomenPhoto(await applyLook(await decodeFile(shot.file!), look?.sign, look?.tone, session.takenAt)));
         const [besar, kecil, ubin] = await Promise.all([prepared.besar.arrayBuffer(), prepared.kecil.arrayBuffer(), prepared.ubin.arrayBuffer()]);
         thumb ??= URL.createObjectURL(prepared.kecil);
         ready.push({
@@ -462,7 +462,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
-    {edit && <PhotoEditor photos={edit.photos} pending={edit.pending} candidates={candidates} lang={lang} ask={tagAsk} onAskChange={askTags} keep={keep} onKeepChange={keepOriginal}
+    {edit && <PhotoEditor photos={edit.photos} pending={edit.pending} candidates={candidates} lang={lang} taken={edit.takenAt} ask={tagAsk} onAskChange={askTags} keep={keep} onKeepChange={keepOriginal}
       canKeep={!edit.fromGallery} geo={detect && !edit.fromGallery ? { mode: geo.mode, toggle: geo.toggle } : null} sending={edit.sending}
       demo={demo?.editor ? { tags: demo.editor.tags, query: demo.editor.query, cur: demo.editor.cur, all: demo.editor.all, looks: demo.editor.looks, panel: demo.editor.panel } : undefined}
       onSend={sendEdit} onRetake={() => dismiss("kamera")} onCancel={() => dismiss("tutup")} />}

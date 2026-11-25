@@ -2,20 +2,21 @@
 
 import { useId } from "react";
 import type { Lang } from "@/lib/main-wam/i18n";
-import { FONT_STACK, hasTemplate, hexRgb, LOGO_SRC, NET_SRC, withAlpha, SHADOW, templateLayout, type SignId } from "@/lib/main-wam/momen/camera-templates";
+import { FONT_CSS, hasTemplate, hexRgb, LOGO_SRC, NET_SRC, withAlpha, SHADOW, templateLayout, type SignId } from "@/lib/main-wam/momen/camera-templates";
 
 /*
  * The live preview of a camera sign: the same ops the sent photo draws (templateLayout), as an SVG over
- * the 4:5 viewfinder. The viewBox is the 4:5 design (400 x 500) and stretches to the viewfinder, so the
- * preview is the result. Nothing for Tanpa. The tone is not here: it is a CSS filter on the video, under this. The colours come from the template list (src/lib), not from here.
+ * the 4:5 preview. The viewBox is the 4:5 design (400 x 500) and stretches to the preview, so the
+ * preview is the result. Nothing for Tanpa. The filter is not here: it is a CSS filter on the picture, under this. The colours come from the template list (src/lib), not from here.
+ * `taken` = when the photo was taken (Tanda, Bingkai, Film, Label and Polaroid print the date and time).
  */
 
 export const TEMPLATE_VIEW = { width: 400, height: 500 } as const;
 
-export function TemplateOverlay({ sign, lang, className }: { sign: SignId; lang: Lang; className?: string }) {
+export function TemplateOverlay({ sign, lang, taken, className }: { sign: SignId; lang: Lang; taken?: string; className?: string }) {
   const uid = useId().replace(/:/g, "");
   if (!hasTemplate(sign)) return null;
-  const ops = templateLayout(sign, TEMPLATE_VIEW.width, TEMPLATE_VIEW.height, lang);
+  const ops = templateLayout(sign, TEMPLATE_VIEW.width, TEMPLATE_VIEW.height, lang, taken);
   return <svg className={className} data-sign={sign} viewBox={`0 0 ${TEMPLATE_VIEW.width} ${TEMPLATE_VIEW.height}`} preserveAspectRatio="none" aria-hidden focusable="false">
     <defs>
       <filter id={`${uid}-shadow`} x="-10%" y="-30%" width="120%" height="170%">
@@ -48,10 +49,12 @@ export function TemplateOverlay({ sign, lang, className }: { sign: SignId; lang:
     </defs>
     {ops.map((op, i) => {
       switch (op.k) {
-        case "rect": return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} fill={op.fill} fillOpacity={op.opacity ?? 1} />;
+        case "rect": return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} rx={op.r} fill={op.fill} fillOpacity={op.opacity ?? 1} stroke={op.stroke?.color} strokeWidth={op.stroke?.w} strokeOpacity={op.stroke?.opacity} />;
+        case "path": return <path key={i} d={op.points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x} ${y}`).join(" ")} fill="none" stroke={op.color} strokeWidth={op.line} strokeLinecap="square" strokeLinejoin="miter" />;
         case "grad": return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} fill={`url(#${uid}-g${i})`} />;
         case "frame": return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} fill="none" stroke={op.color} strokeWidth={op.line} strokeOpacity={op.opacity ?? 1} />;
-        case "text": return <text key={i} x={op.x} y={op.y} fontFamily={FONT_STACK} fontSize={op.size} fontWeight={op.weight} fill={op.color} textAnchor={op.align} letterSpacing={op.ls * op.size} filter={op.shadow ? `url(#${uid}-shadow)` : undefined}>{op.text}</text>;
+        case "text": return <text key={i} x={op.x} y={op.y} style={{ fontFamily: FONT_CSS[op.font] }} fontSize={op.size} fontWeight={op.weight} fill={op.color} opacity={op.opacity} textAnchor={op.align} letterSpacing={op.ls * op.size}
+          transform={op.rotate ? `rotate(${op.rotate} ${op.x} ${op.y})` : undefined} textLength={op.stretchW} lengthAdjust={op.stretchW ? "spacingAndGlyphs" : undefined} filter={op.shadow ? `url(#${uid}-shadow)` : undefined}>{op.text}</text>;
         case "logo": return <image key={i} href={LOGO_SRC} x={op.x} y={op.y} width={op.w} height={op.h} filter={`url(#${uid}-t${i})`} data-logo="" />;
         case "net": return <image key={i} href={NET_SRC} x={op.x} y={op.y} width={op.w} height={op.h} opacity={op.opacity} preserveAspectRatio="none" />;
       }

@@ -4,7 +4,7 @@
  */
 export const idMomenEditor = {
   "momen.cam.nextNote": "Sign, warna, dan tag diatur di langkah berikutnya.",
-  "momen.edit.title": "Periksa fotomu",
+  "momen.edit.title": "Foto baru",
   "momen.edit.back": "Ulangi, kembali ke kamera",
   "momen.edit.photoOf": "Foto {n} dari {total}",
   "momen.edit.photo": "Pratinjau fotomu",
@@ -34,9 +34,8 @@ export const idMomenEditor = {
   "momen.edit.sendTags": "{label} · {n} tag",
   "momen.edit.sending": "Menyiapkan foto",
   "momen.edit.waitPhoto": "Menunggu foto",
-  "momen.edit.tools": "Alat foto",
-  "momen.edit.toolTag": "Tag",
-  "momen.edit.toolGeo": "Lokasi",
-  "momen.edit.toolKeep": "Simpan asli",
   "momen.edit.done": "Selesai",
+  "momen.edit.segments": "Gaya foto",
+  "momen.edit.tagChip": "Tag orang · {n}",
+  "momen.edit.geoBlocked": "Izin lokasi ditolak",
 } as const;
