@@ -1,97 +1,158 @@
 /*
- * "Periksa fotomu" (KONTRAK §40): a full-screen dialog over the camera that fits ONE screen, no scrolling: a compact top bar, the photo taking the space that
- * is left, a thumbnail strip, one row of tools, ONE small panel, and Kirim. Tokens only (--mw-*); words wrap; every target is at least 44.
+ * "Periksa fotomu" (KONTRAK §40): one screen, no scrolling, on a DARK stage (always: the editor is a dark theme root of its own, like the camera and the
+ * splash). The photo is the star: large corners, one soft shadow, a blurred copy of itself glowing behind it. The chrome is glass (a thin dark tint with a
+ * blur; a solid tint where the blur is missing), gold is only for the active tool, the chosen tile and Kirim. Tokens only (--mw-*); words wrap; every target
+ * is at least 44. Motion is short and only with `prefers-reduced-motion: no-preference` (the theme root cuts it for "Kurangi gerak").
  */
 .editor {
   box-sizing: border-box; position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0;
-  background: var(--mw-bg); color: var(--mw-text-1); font: var(--mw-type-body); overflow: hidden;
+  background: transparent; overflow: hidden;
 }
 .editor:not([open]) { display: none; }
-.inner { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: var(--mw-column); margin: 0 auto; padding: var(--mw-safe-top) var(--mw-space-16) 0; }
+/* The dark theme root fills the dialog and paints the stage. */
+.theme { position: absolute; inset: 0; overflow: hidden; background: var(--mw-bg); color: var(--mw-text-1); font: var(--mw-type-body); }
+.contents { display: contents; }
 
-.head { flex: none; display: flex; align-items: center; gap: var(--mw-space-8); min-height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
-.title { flex: 1 1 0; min-width: 0; margin: 0; font: 800 20px/22px var(--mw-display-font); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; outline: none; }
-.counter { flex: none; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); color: var(--mw-text-2); }
+/* Glass: a thin dark tint over the glow, blurred; a solid tint where backdrop-filter is missing. */
+.round, .counter, .tools, .thumbs {
+  background: color-mix(in srgb, var(--mw-bg) 82%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-text-1) 14%, transparent);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .round, .counter, .tools, .thumbs { background: color-mix(in srgb, var(--mw-bg) 42%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+}
 
-/* The photo: 4:5, as big as the space left (a size container), centred; the look is drawn over the plain picture. */
+/* The ambient: the same photo, blurred large and saturated, behind everything; it follows the photo and the tone. */
+.glow { position: absolute; inset: -12%; pointer-events: none; overflow: hidden; }
+.glow::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, color-mix(in srgb, var(--mw-bg) 78%, transparent)); }
+.glowImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(40px) saturate(1.7); transform: scale(1.15); }
+
+.inner { position: relative; display: flex; flex-direction: column; height: 100%; width: 100%; max-width: var(--mw-column); margin: 0 auto; padding: var(--mw-safe-top) var(--mw-space-12) 0; }
+
+/* Top bar: two round glass buttons, the small title between them, "2/4" as a small pill. */
+.head { flex: none; display: flex; align-items: center; gap: var(--mw-space-8); min-height: var(--mw-topbar-h); }
+.head .round { width: 44px; height: 44px; color: var(--mw-text-1); }
+.title { flex: 1 1 0; min-width: 0; margin: 0; text-align: center; font: 700 14px/18px var(--mw-display-font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; outline: none; }
+.counter { flex: none; display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-full); font: 700 13px/16px var(--mw-display-font); letter-spacing: 0.08em; color: var(--mw-text-1); }
+
+/* The photo: 4:5, as big as the space left, large corners and the one shadow of the screen. */
 .stage { position: relative; flex: 1 1 0; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
 .view { position: relative; width: min(100cqw, calc(100cqh * 0.8)); aspect-ratio: 4 / 5; }
-.frame { position: absolute; inset: 0; border-radius: var(--mw-radius-16); overflow: hidden; background: var(--mw-photo-bg); }
+.frame { position: absolute; inset: 0; border-radius: var(--mw-radius-24); overflow: hidden; background: var(--mw-surface); box-shadow: 0 22px 44px -10px var(--mw-overlay-scrim); }
+.layer { position: absolute; inset: 0; display: block; }
 .picture { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .skeleton { position: absolute; inset: 0; display: block; }
 .skeletonFill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
-/* The one-line note of Lokasi or Simpan asli, over the foot of the photo for a moment. */
-.note { position: absolute; left: var(--mw-space-8); right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 2; margin: 0 auto; max-width: 320px; padding: var(--mw-space-8) var(--mw-space-12); border-radius: var(--mw-radius-12); background: var(--mw-select-bg); color: var(--mw-select-fg); font: var(--mw-type-caption); text-align: center; overflow-wrap: anywhere; box-shadow: var(--mw-elev-2, none); }
-@media (prefers-reduced-motion: no-preference) { .note { animation: mw-ed-note 160ms var(--mw-ease-decelerate, ease-out); } }
-@keyframes mw-ed-note { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* The one-line note of Lokasi or Simpan asli, over the foot of the photo for a moment (gold on ink: readable over any photo). */
+.note { position: absolute; left: var(--mw-space-8); right: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 2; margin: 0 auto; max-width: 320px; padding: var(--mw-space-8) var(--mw-space-12); border-radius: var(--mw-radius-12); background: var(--mw-select-bg); color: var(--mw-select-fg); font: var(--mw-type-caption); text-align: center; overflow-wrap: anywhere; box-shadow: var(--mw-elev-2); }
 
-/* Several photos: a small strip right under the photo. */
-.thumbs { flex: none; display: flex; justify-content: safe center; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; padding: var(--mw-space-8) 3px 3px; }
+/* Several photos: a small glass pill under the photo, the chosen thumbnail ringed in gold. */
+.thumbsRow { flex: none; display: flex; justify-content: center; padding-top: var(--mw-space-8); }
+.thumbs { display: flex; gap: var(--mw-space-8); max-width: 100%; overflow-x: auto; scrollbar-width: none; padding: 5px var(--mw-space-8); border-radius: var(--mw-radius-full); }
 .thumbs::-webkit-scrollbar { display: none; }
-.thumb, .thumbWait { position: relative; flex: none; width: 36px; height: 45px; padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; }
-.thumb { cursor: pointer; background: var(--mw-photo-bg); -webkit-tap-highlight-color: transparent; }
-.thumb::after { content: ""; position: absolute; inset: -4px -2px; }
-.thumb[aria-pressed="true"] { border-color: var(--mw-gold); }
+.thumb, .thumbWait { position: relative; flex: none; width: 32px; height: 40px; padding: 0; border: 0; border-radius: 8px; overflow: hidden; }
+.thumb { cursor: pointer; background: var(--mw-surface); -webkit-tap-highlight-color: transparent; opacity: 0.75; }
+.thumb::after { content: ""; position: absolute; inset: -4px -3px; }
+.thumb[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--mw-gold); }
 .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumbWait { background: var(--mw-surface-2); }
 
-/* ONE row of tools: icon over a short label. */
-.tools { flex: none; display: flex; gap: var(--mw-space-4); padding: var(--mw-space-8) 0 var(--mw-space-4); }
+/* The tool dock: one floating glass pill, thin line icons (22) over 11px labels; the active tool has a gold icon and a small gold dot. */
+.tools { flex: none; display: flex; gap: 2px; margin-top: var(--mw-space-8); padding: 4px; border-radius: var(--mw-radius-24); }
 .tool {
   position: relative; flex: 1 1 0; min-width: 44px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px;
-  border: 0; border-radius: var(--mw-radius-12); background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  border: 0; border-radius: 20px; background: none; color: var(--mw-text-2); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.tool[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--mw-outline), inset 0 -3px 0 var(--mw-gold); }
-.tool[aria-pressed="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
-.tool[data-blocked] { color: var(--mw-text-2); }
-.tool:disabled { color: var(--mw-disabled-fg); cursor: default; }
 .toolIcon { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 24px; }
-.toolIcon > svg { width: 22px; height: 22px; }
+.toolIcon > svg { width: 22px; height: 22px; stroke-width: 1.5; }
 .toolLabel { font: 600 11px/13px var(--mw-font-sans); text-align: center; overflow-wrap: anywhere; }
-.badge { position: absolute; top: -6px; right: -14px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--mw-gold); color: var(--mw-on-gold); font: 800 11px/18px var(--mw-font-sans); text-align: center; }
+.tool[aria-expanded="true"] { color: var(--mw-text-1); }
+.tool[aria-expanded="true"] .toolIcon { color: var(--mw-gold); }
+.tool[aria-expanded="true"]::after { content: ""; position: absolute; left: 50%; bottom: 1px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--mw-gold); }
+.tool[aria-pressed="true"] { color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-gold-line); }
+.tool[aria-pressed="true"] .toolIcon { color: var(--mw-gold); }
+.tool[data-blocked] { opacity: 0.7; }
+.tool:disabled { color: var(--mw-disabled-fg); cursor: default; }
+.badge { position: absolute; top: -6px; right: -14px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--mw-gold); color: var(--mw-on-gold); font: 800 10px/16px var(--mw-font-sans); text-align: center; }
 .stack { display: inline-flex; }
-.stack > * { box-shadow: 0 0 0 1.5px var(--mw-surface); }
+.stack > * { box-shadow: 0 0 0 1.5px var(--mw-bg); }
 .stack > * + * { margin-left: -6px; }
 
-/* The one panel under the row: swipeable tiles that preview the same photo with each choice. */
-.panel { flex: none; display: flex; flex-direction: column; justify-content: center; gap: var(--mw-space-4); height: 92px; }
-.panel[data-many] { height: 130px; }
-.tiles { display: flex; justify-content: safe center; align-items: flex-start; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 3px 2px; margin: 0 -2px; }
+/* The one panel: swipeable preview tiles of the same photo; the chosen one is ringed in gold and a little larger, the others a little dim. */
+.panel { flex: none; display: flex; flex-direction: column; justify-content: center; gap: var(--mw-space-4); height: 110px; }
+.panel[data-many] { height: 146px; }
+.slide { min-width: 0; }
+.tiles { display: flex; justify-content: safe center; align-items: flex-start; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 6px 4px 2px; margin: 0 -4px; }
 .tiles::-webkit-scrollbar { display: none; }
-.tile { flex: none; width: 64px; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-4); padding: 0; border: 0; background: none; color: var(--mw-text-1); cursor: pointer; scroll-snap-align: center; -webkit-tap-highlight-color: transparent; }
-.tilePic { position: relative; width: 56px; height: 70px; border-radius: 10px; overflow: hidden; background: var(--mw-photo-bg); box-shadow: inset 0 0 0 1px var(--mw-outline); }
-.tilePic[data-round] { height: 56px; border-radius: 50%; }
+.tile { flex: none; width: 68px; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--mw-text-2); cursor: pointer; scroll-snap-align: center; opacity: 0.8; -webkit-tap-highlight-color: transparent; }
+.tilePic { position: relative; width: 64px; height: 80px; border-radius: 16px; overflow: hidden; background: var(--mw-surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-text-1) 14%, transparent); }
+.tilePic[data-round] { height: 64px; }
 .tilePic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .tileOverlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-.tile[aria-checked="true"] .tilePic { outline: 2px solid var(--mw-gold); outline-offset: 1px; }
-.tileName { font: var(--mw-type-caption); color: var(--mw-text-2); text-align: center; overflow-wrap: anywhere; }
-.tile[aria-checked="true"] .tileName { font: var(--mw-type-caption-strong); color: var(--mw-text-1); }
-.tile:disabled { opacity: 0.6; cursor: default; }
-@media (prefers-reduced-motion: no-preference) { .tilePic, .tileName { transition: outline-color 120ms ease-out; } }
+.tileName { font: 500 11px/14px var(--mw-font-sans); text-align: center; overflow-wrap: anywhere; }
+.tile[aria-checked="true"] { opacity: 1; color: var(--mw-text-1); }
+.tile[aria-checked="true"] .tilePic { outline: 2px solid var(--mw-gold); outline-offset: 1px; transform: scale(1.05); }
+.tile[aria-checked="true"] .tileName { font-weight: 800; }
+.tile:disabled { opacity: 0.5; cursor: default; }
 
-/* "Terapkan ke semua foto": a small chip in the panel. */
-.all { position: relative; align-self: center; min-height: 32px; padding: 4px var(--mw-space-16); border: 0; border-radius: 16px; cursor: pointer; background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline); font: var(--mw-type-label); text-align: center; overflow-wrap: anywhere; -webkit-tap-highlight-color: transparent; }
+/* "Terapkan ke semua foto": a small glass chip in the panel. */
+.all { position: relative; align-self: center; min-height: 32px; padding: 4px var(--mw-space-16); border: 0; border-radius: 16px; cursor: pointer; background: color-mix(in srgb, var(--mw-bg) 60%, transparent); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mw-text-1) 18%, transparent); font: var(--mw-type-label); text-align: center; overflow-wrap: anywhere; -webkit-tap-highlight-color: transparent; }
 .all::after { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
-.all[aria-checked="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
+.all[aria-checked="true"] { color: var(--mw-gold); box-shadow: inset 0 0 0 1px var(--mw-gold-line); background: var(--mw-gold-soft); }
 .all:disabled { color: var(--mw-disabled-fg); cursor: default; }
 
-/* Kirim, full width, always in view. */
+/* Kirim: a full-width gold pill with a soft gold glow under it; pressed it shrinks a little; waiting it shimmers; sent, the plane flies out. */
 .bar { flex: none; padding: var(--mw-space-8) 0 calc(var(--mw-safe-bottom) + var(--mw-space-12)); }
-.bar .send { width: 100%; min-height: 52px; }
+.sendWrap { position: relative; border-radius: var(--mw-radius-full); }
+.bar .send {
+  width: 100%; min-height: 56px; border-radius: var(--mw-radius-full); padding: 4px var(--mw-space-20); gap: var(--mw-space-8);
+  font: 800 20px/24px var(--mw-display-font); letter-spacing: 0.06em; text-transform: uppercase;
+  box-shadow: 0 10px 26px -4px color-mix(in srgb, var(--mw-gold) 45%, transparent);
+}
+.bar .send:disabled { background: var(--mw-surface-2); color: var(--mw-text-2); box-shadow: none; }
+.bar .send > svg { transition: transform 200ms ease-in, opacity 200ms ease-in; }
+.bar .send.sending > svg { transform: translate(60px, -28px); opacity: 0; }
+.sendWrap[data-waiting]::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background-size: 220% 100%;
+  background-image: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--mw-text-1) 16%, transparent) 50%, transparent 65%);
+}
 
 .editor :focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+
+/* Motion: the photo rises from the shutter, the layers crossfade, the panel slides a little, a chosen tile springs, Kirim presses and shimmers. */
+@media (prefers-reduced-motion: no-preference) {
+  .picture { transition: filter 160ms ease-out; }
+  .view { animation: mw-ed-rise 220ms var(--mw-ease-decelerate) both; }
+  .in { animation: mw-ed-in 160ms linear both; }
+  .out { animation: mw-ed-out 160ms linear both; }
+  .glowImg.in { animation: mw-ed-glow-in 260ms linear both; }
+  .glowImg.out { animation: mw-ed-glow-out 260ms linear both; }
+  .slide { animation: mw-ed-slide 140ms var(--mw-ease-decelerate) both; }
+  .tile .tilePic { transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), outline-color 120ms ease-out; }
+  .bar .send:not(:disabled):active { transform: scale(0.97); }
+  .sendWrap[data-waiting]::after { animation: mw-ed-shimmer 1.6s linear infinite; }
+  .note { animation: mw-ed-in 160ms linear both; }
+}
+@keyframes mw-ed-rise { from { opacity: 0; transform: translateY(28px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes mw-ed-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mw-ed-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mw-ed-glow-in { from { opacity: 0; } to { opacity: 0.35; } }
+@keyframes mw-ed-glow-out { from { opacity: 0.35; } to { opacity: 0; } }
+@keyframes mw-ed-slide { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes mw-ed-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 
 /* Short phones (360 x 640, 320 x 568): the same screen, a little tighter, so the photo keeps most of the height. */
 @media (max-height: 700px) {
   .head { min-height: 48px; }
-  .tools { padding-top: var(--mw-space-4); }
   .tool { min-height: 52px; }
-  .panel { height: 88px; }
-  .panel[data-many] { height: 126px; }
-  .tilePic { width: 46px; height: 58px; }
-  .tilePic[data-round] { height: 46px; }
+  .panel { height: 94px; }
+  .panel[data-many] { height: 130px; }
   .tile { width: 58px; }
-  .thumbs { padding-top: var(--mw-space-4); }
-  .bar { padding-top: var(--mw-space-4); }
+  .tilePic { width: 52px; height: 65px; border-radius: 14px; }
+  .tilePic[data-round] { height: 52px; }
+  .thumbsRow { padding-top: var(--mw-space-4); }
+  .tools { margin-top: var(--mw-space-4); }
+  .bar { padding-top: var(--mw-space-4); padding-bottom: calc(var(--mw-safe-bottom) + var(--mw-space-8)); }
+  .bar .send { min-height: 52px; }
 }

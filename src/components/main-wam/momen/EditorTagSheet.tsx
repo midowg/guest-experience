@@ -9,7 +9,7 @@ import { listPeople, toggleId } from "@/lib/main-wam/momen/editor";
 import css from "./editor-tag-sheet.module.css";
 
 /** The five colours a person without a photo gets (container and ink of the kit's own tokens), by the first letter of the name. */
-const TINTS = ["primary", "success", "warning", "momen", "awarding"] as const;
+const TINTS = ["primary", "success", "warning", "neutral", "awarding"] as const;
 const tintOf = (name: string) => TINTS[(name.codePointAt(0) ?? 0) % TINTS.length];
 
 /** A person: the profile photo when there is one, else the first letter on a tint. */
@@ -65,7 +65,7 @@ export function EditorTagSheet({ open, onClose, candidates, tags, onTags, ask, o
         ? <ul className={css.people} aria-label={t("momen.edit.people")}>
           {list.map(person => { const on = tags.includes(person.id); return <li key={person.id}>
             <button type="button" role="checkbox" aria-checked={on} className={css.person} onClick={() => onTags(toggleId(tags, person.id))}>
-              <Person person={person} size={38} />
+              <Person person={person} size={40} />
               <span className={css.personText}><b>{person.name}</b><small>{person.department || "–"}</small></span>
               {person.bod && <span className={css.bod}>{t("momen.edit.bod")}</span>}
               <span className={css.mark} aria-hidden>{on ? <Check /> : null}</span>

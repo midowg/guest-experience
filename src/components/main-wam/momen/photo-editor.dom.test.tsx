@@ -85,7 +85,8 @@ const send = async () => { await act(async () => { fireEvent.click(tool(/^Kirim/
 const tagSheet = () => screen.getByRole("dialog", { name: "Tag orang" });
 /** The photo itself (the big one): its picture and the sign drawn over it. */
 const frame = () => document.querySelector("[data-momen-editor] img[alt^='Pratinjau']") as HTMLImageElement;
-const overlay = () => document.querySelector("[data-momen-editor] [class*='_frame_'] svg[data-sign]") as SVGElement | null;
+/** The sign over the current picture (the layer that is fading out, for a moment after a change, is under it and is not asked). */
+const overlay = () => document.querySelector("[data-momen-editor] [class*='_frame_'] > span:last-child svg[data-sign]") as SVGElement | null;
 const signs = () => within(editor()).getByRole("radiogroup", { name: "Sign foto" });
 const tones = () => within(editor()).getByRole("radiogroup", { name: "Warna foto" });
 
