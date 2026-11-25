@@ -44,7 +44,7 @@ beforeAll(() => {
 beforeEach(() => { window.history.replaceState(null, "", "/wam2026/misi"); Object.values(router).forEach(fn => fn.mockClear()); });
 afterEach(() => { cleanup(); setActiveLang("id"); vi.unstubAllGlobals(); });
 
-const NOW = new Date("2027-01-05T10:00:00+07:00");
+const NOW = new Date("2027-01-06T10:00:00+07:00");
 const ME = "00000000-0000-4000-8001-000000000001";
 
 function viewOf(completions = sampleCompletions(ME), over: Partial<MisiView> = {}, missions: readonly MwMission[] = sampleMissions): MisiView {
