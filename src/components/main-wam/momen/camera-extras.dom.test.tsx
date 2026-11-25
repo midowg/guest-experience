@@ -101,7 +101,7 @@ describe("the extras of a photo", () => {
     const editor = screen.getByRole("dialog", { name: "Foto baru" });
     expect(within(editor).queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
     expect(within(editor).queryByRole("button", { name: /^Tag orang/ })).toBeNull();
-    expect(within(editor).getByRole("switch", { name: "Simpan asli di HP" })).toBeTruthy();
+    expect(within(editor).getByRole("button", { name: "Simpan asli di HP" })).toBeTruthy();
   });
 
   it("Tandai lokasi is off until the browser allows it, and turning it on asks the browser then, from the tap (it shows a check when on)", async () => {
@@ -254,7 +254,7 @@ describe("accessibility", () => {
     render(<LangProvider lang="en"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[SARI, BIMA]} detect demo={{ phase: "kamera", live: "hp", geo: "ditolak", editor: { photos: 1, ask: false } }} /></ToastProvider></LangProvider>);
     expect(screen.getByRole("dialog", { name: "New photo" })).toBeTruthy();
     expect(screen.getByRole("switch", { name: "Location blocked" })).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "Keep the original on my phone" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep the original on my phone" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Tag people" })).toBeTruthy();
     expect(await violations()).toEqual([]);
   });

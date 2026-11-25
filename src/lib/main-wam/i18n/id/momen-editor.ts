@@ -28,7 +28,6 @@ export const idMomenEditor = {
   "momen.edit.keep": "Simpan asli di HP",
   "momen.edit.keepSub": "Salinan asli (tanpa sign dan warna) disimpan di HP-mu.",
   "momen.edit.keepFailed": "Foto asli belum bisa disimpan di HP. Fotomu tetap terkirim.",
-  "momen.edit.cancel": "Batal",
   "momen.edit.send": "Kirim",
   "momen.edit.sendMany": "Kirim · {n} foto",
   "momen.edit.sendTags": "{label} · {n} tag",
@@ -36,6 +35,7 @@ export const idMomenEditor = {
   "momen.edit.waitPhoto": "Menunggu foto",
   "momen.edit.done": "Selesai",
   "momen.edit.segments": "Gaya foto",
-  "momen.edit.tagChip": "Tag orang · {n}",
+  "momen.edit.tagChip": "{n} orang ditandai",
+  "momen.edit.tagChipOne": "1 orang ditandai",
   "momen.edit.geoBlocked": "Izin lokasi ditolak",
 } as const;

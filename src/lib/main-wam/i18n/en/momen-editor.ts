@@ -25,7 +25,6 @@ export const enMomenEditor = {
   "momen.edit.keep": "Keep the original on my phone",
   "momen.edit.keepSub": "The original (no frame or tone) is kept on your phone.",
   "momen.edit.keepFailed": "The original could not be kept on your phone. Your photo is still sent.",
-  "momen.edit.cancel": "Cancel",
   "momen.edit.send": "Send",
   "momen.edit.sendMany": "Send · {n} photos",
   "momen.edit.sendTags": "{label} · {n} tagged",
@@ -33,6 +32,7 @@ export const enMomenEditor = {
   "momen.edit.waitPhoto": "Waiting for the photo",
   "momen.edit.done": "Done",
   "momen.edit.segments": "Photo style",
-  "momen.edit.tagChip": "Tag people · {n}",
+  "momen.edit.tagChip": "{n} people tagged",
+  "momen.edit.tagChipOne": "1 person tagged",
   "momen.edit.geoBlocked": "Location blocked",
 } as const;

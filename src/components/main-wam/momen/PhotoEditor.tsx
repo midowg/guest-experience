@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, Download, MapPin, Send, Tag, X } from "lucide-react";
+import { Check, ChevronLeft, Download, MapPin, Send, Tag } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { Button, IconButton, Segmented, Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import { useModal } from "@/components/main-wam/ui/useModal";
@@ -18,12 +18,12 @@ import css from "./photo-editor.module.css";
 /*
  * "Foto baru" (docs/main-wam/KONTRAK.md §40): the screen between the shutter (or the gallery pick) and Kirim, in the style of a posting app, on the app's own
  * theme (light or dark), drawn to fit one screen with no scrolling:
- *   top bar     back arrow = Ulangi (back to the camera, the photo dropped), the title, "2/4" when there are several photos, ✕ = Batal
+ *   top bar     back arrow = Ulangi (back to the camera, the photo dropped), the title, "2/4" when there are several photos, the "Simpan asli di HP" toggle (a download icon, tonal when on; none for gallery files)
  *   the photo   as big as the space left (4:5, small corners), the sign and the filter drawn live over the plain picture (nothing is changed in it: the
  *               look is drawn only when Kirim is pressed); several photos: a small strip of thumbnails under it (the shown one ringed in gold)
  *   style       a small [Sign | Filter] switch (and the chip "Terapkan ke semua foto" beside it when there are several photos) over ONE row of preview
  *               tiles to swipe: your photo with each sign or each filter, the chosen one ringed in gold
- *   chips       [Tag orang] (opens the bottom sheet, EditorTagSheet), [Tandai lokasi] and [Simpan asli di HP] (toggles; the first only when it is relevant,
+ *   chips       [Tag orang] (opens the bottom sheet, EditorTagSheet), and [Tandai lokasi] (a toggle, only when it is relevant,
  *               the last not for pictures from the gallery)
  *   bottom bar  Kirim, full width, gold, always in view ("Kirim · 4 foto · 7 tag")
  * A full-screen dialog (useModal: focus kept inside, Esc and the phone's Back button give Ulangi). It opens at once after the shutter: while the frame is
@@ -35,7 +35,7 @@ export type EditorResult = { /** One look per photo, in the order of `photos`. *
 export type EditorGeo = { mode: ShareMode; toggle: () => void };
 type Panel = "sign" | "filter";
 
-export function PhotoEditor({ photos, pending, candidates, lang, taken, ask, onAskChange, keep, onKeepChange, canKeep, geo, sending, demo, onSend, onRetake, onCancel }: {
+export function PhotoEditor({ photos, pending, candidates, lang, taken, ask, onAskChange, keep, onKeepChange, canKeep, geo, sending, demo, onSend, onRetake }: {
   /** The photos ready to look at (the plain pictures). */
   photos: readonly EditorPhoto[];
   /** How many more are still being made (a skeleton each; Kirim waits). */
@@ -62,8 +62,6 @@ export function PhotoEditor({ photos, pending, candidates, lang, taken, ask, onA
   onSend: (result: EditorResult) => void;
   /** Ulangi (also the back arrow, Esc and the phone's Back button): back to the camera, these photos dropped. */
   onRetake: () => void;
-  /** Batal (✕): leave the camera, these photos dropped. */
-  onCancel: () => void;
 }) {
   const t = useT();
   const { dialogRef, titleRef, onKeyDown, onCancel: onDialogCancel } = useModal({ open: true, onClose: onRetake, locked: sending });
@@ -106,7 +104,7 @@ export function PhotoEditor({ photos, pending, candidates, lang, taken, ask, onA
           <IconButton icon={ChevronLeft} label={t("momen.edit.back")} onClick={onRetake} disabled={sending} />
           <h2 id="momen-edit-title" ref={titleRef} tabIndex={-1} className={css.title}>{t("momen.edit.title")}</h2>
           {total > 1 && <span className={css.counter} role="status" aria-label={t("momen.edit.photoOf", { n: Math.min(at + 1, total), total })}>{Math.min(at + 1, total)}/{total}</span>}
-          <IconButton icon={X} label={t("momen.edit.cancel")} onClick={onCancel} disabled={sending} />
+          {canKeep && <IconButton icon={Download} label={t("momen.edit.keep")} title={t("momen.edit.keepSub")} pressed={keep} variant={keep ? "tonal" : "standard"} onClick={() => onKeepChange(!keep)} disabled={sending} />}
         </div>
 
         <div className={css.main}>
@@ -150,15 +148,12 @@ export function PhotoEditor({ photos, pending, candidates, lang, taken, ask, onA
 
           <div className={css.chips}>
             {hasTags && <button type="button" className={css.chip} data-on={chosen.length ? "" : undefined} aria-haspopup="dialog" disabled={sending} onClick={() => setSheet(true)}>
-              <Tag aria-hidden />{chosen.length ? t("momen.edit.tagChip", { n: chosen.length }) : t("momen.edit.tag")}
+              <Tag aria-hidden />{chosen.length ? t(chosen.length === 1 ? "momen.edit.tagChipOne" : "momen.edit.tagChip", { n: chosen.length }) : t("momen.edit.tag")}
               {chosen.length > 0 && <span className={css.stack} aria-hidden>{chosen.slice(0, 3).map(id => <Person key={id} person={byId.get(id)!} size={20} />)}</span>}
             </button>}
             {geo && <button type="button" role="switch" aria-checked={geo.mode === "aktif"} className={css.chip} data-on={geo.mode === "aktif" ? "" : undefined} disabled={sending}
               title={geo.mode === "ditolak" ? t("momen.cam.geo.blockedNote") : t("momen.cam.geo.note")} onClick={geo.toggle}>
               {geo.mode === "aktif" ? <Check aria-hidden /> : <MapPin aria-hidden />}{geoLabel}
-            </button>}
-            {canKeep && <button type="button" role="switch" aria-checked={keep} className={css.chip} data-on={keep ? "" : undefined} disabled={sending} title={t("momen.edit.keepSub")} onClick={() => onKeepChange(!keep)}>
-              {keep ? <Check aria-hidden /> : <Download aria-hidden />}{t("momen.edit.keep")}
             </button>}
           </div>
         </div>

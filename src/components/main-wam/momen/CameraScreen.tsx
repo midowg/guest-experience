@@ -465,7 +465,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     {edit && <PhotoEditor photos={edit.photos} pending={edit.pending} candidates={candidates} lang={lang} taken={edit.takenAt} ask={tagAsk} onAskChange={askTags} keep={keep} onKeepChange={keepOriginal}
       canKeep={!edit.fromGallery} geo={detect && !edit.fromGallery ? { mode: geo.mode, toggle: geo.toggle } : null} sending={edit.sending}
       demo={demo?.editor ? { tags: demo.editor.tags, query: demo.editor.query, cur: demo.editor.cur, all: demo.editor.all, looks: demo.editor.looks, panel: demo.editor.panel } : undefined}
-      onSend={sendEdit} onRetake={() => dismiss("kamera")} onCancel={() => dismiss("tutup")} />}
+      onSend={sendEdit} onRetake={() => dismiss("kamera")} />}
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
       <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
         action={<Button icon={Settings} onClick={() => setSheet("cara")}>{t("momen.cam.openSettings")}</Button>} />

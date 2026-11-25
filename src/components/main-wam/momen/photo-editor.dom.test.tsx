@@ -96,13 +96,14 @@ const tones = () => within(editor()).getByRole("radiogroup", { name: "Filter fot
 const names = (group: HTMLElement) => within(group).getAllByRole("radio").map(radio => radio.querySelector("[class*='_tileName_']")!.textContent);
 
 describe("the layout", () => {
-  it("is one screen in the style of a posting app: a plain top bar (back = Ulangi, the title, ✕ = Batal), the photo, [Sign | Filter] over ONE row of tiles, the chips, and Kirim alone at the bottom", async () => {
+  it("is one screen in the style of a posting app: a plain top bar (back = Ulangi, the title, the Simpan asli di HP toggle at the right), the photo, [Sign | Filter] over ONE row of tiles, the chips, and Kirim alone at the bottom", async () => {
     await mount({ candidates: MANY, detect: true, ask: false });
     await shoot();
     const dialog = editor();
     expect(within(dialog).getByRole("heading", { name: "Foto baru" })).toBeTruthy();
     expect(control("Ulangi, kembali ke kamera")).toBeTruthy();
-    expect(control("Batal")).toBeTruthy();
+    expect(control("Simpan asli di HP").getAttribute("aria-pressed")).toBe("true");
+    expect(within(dialog).queryByRole("button", { name: "Batal" })).toBeNull(); // no ✕: back is the way out
     const segments = within(dialog).getByRole("radiogroup", { name: "Gaya foto" });
     expect(within(segments).getAllByRole("radio").map(radio => radio.textContent)).toEqual(["Sign", "Filter"]);
     expect(within(segments).getByRole("radio", { name: "Sign" }).getAttribute("aria-checked")).toBe("true");
@@ -112,10 +113,9 @@ describe("the layout", () => {
     expect(within(dialog).getAllByRole("radiogroup")).toHaveLength(2);
     expect(tones()).toBeTruthy();
     expect(within(dialog).queryByRole("radiogroup", { name: "Sign foto" })).toBeNull();
-    // the chips: Tag orang opens the sheet, the two toggles are switches
+    // the chips: Tag orang opens the sheet, Tandai lokasi is a switch (Simpan asli is the toggle in the top bar)
     expect(control("Tag orang").getAttribute("aria-haspopup")).toBe("dialog");
     expect(toggle("Tandai lokasi").getAttribute("aria-checked")).toBe("false");
-    expect(toggle("Simpan asli di HP").getAttribute("aria-checked")).toBe("true");
     // no long explanations; the only button at the bottom is Kirim (one photo: no counter, no strip, no "Terapkan ke semua foto")
     expect(within(dialog).queryByText(/Salinan asli|Lokasi hanya|Dilipat|Orang yang kamu tandai/)).toBeNull();
     expect(within(dialog).queryByText("Terapkan ke semua foto")).toBeNull();
@@ -333,7 +333,7 @@ describe("Tag orang (a bottom sheet)", () => {
     expect(within(tagSheet()).getByText("8 dipilih")).toBeTruthy();
     fireEvent.click(within(tagSheet()).getByRole("button", { name: "Selesai" }));
     expect(screen.queryByRole("list", { name: "Semua orang" })).toBeNull();
-    expect(control(/^Tag orang · 8/)).toBeTruthy();
+    expect(control(/^8 orang ditandai/)).toBeTruthy();
     expect(control("Kirim · 8 tag")).toBeTruthy();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
@@ -404,17 +404,17 @@ describe("Tag orang (a bottom sheet)", () => {
 });
 
 describe("Simpan asli di HP", () => {
-  it("is a chip toggle, on by default (a check); turned off it is remembered on this phone", async () => {
+  it("is a toggle in the top bar, on by default (pressed); turned off it is remembered on this phone", async () => {
     await mount();
     await shoot();
-    expect(toggle("Simpan asli di HP").getAttribute("aria-checked")).toBe("true");
-    fireEvent.click(toggle("Simpan asli di HP"));
+    expect(control("Simpan asli di HP").getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(control("Simpan asli di HP"));
     expect(window.localStorage.getItem("mw-momen-asli")).toBe("tidak");
-    expect(toggle("Simpan asli di HP").getAttribute("aria-checked")).toBe("false");
+    expect(control("Simpan asli di HP").getAttribute("aria-pressed")).toBe("false");
     cleanup();
     await mount();
     await shoot();
-    expect(toggle("Simpan asli di HP").getAttribute("aria-checked")).toBe("false");
+    expect(control("Simpan asli di HP").getAttribute("aria-pressed")).toBe("false");
   });
 
   it("saves the plain capture (no sign, no filter) to the phone when Kirim is pressed, and the original is not what is uploaded", async () => {
@@ -439,10 +439,10 @@ describe("Simpan asli di HP", () => {
     expect(saved.files).toEqual([]);
   });
 
-  it("is not saved for pictures picked from the gallery (they live on the phone already): the chip is hidden", async () => {
+  it("is not saved for pictures picked from the gallery (they live on the phone already): the toggle is hidden", async () => {
     await mount();
     await pick(2);
-    expect(within(editor()).queryByRole("switch", { name: "Simpan asli di HP" })).toBeNull();
+    expect(within(editor()).queryByRole("button", { name: "Simpan asli di HP" })).toBeNull();
     await send();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect(saved.files).toEqual([]);
@@ -458,7 +458,7 @@ describe("Simpan asli di HP", () => {
   });
 });
 
-describe("Ulangi and Batal", () => {
+describe("Ulangi", () => {
   it("the back arrow (Ulangi) drops the photo and goes back to the camera: nothing is sent or saved", async () => {
     await mount();
     await shoot();
@@ -478,17 +478,6 @@ describe("Ulangi and Batal", () => {
     await act(async () => { fireEvent.keyDown(editor(), { key: "Escape" }); });
     expect(screen.queryByRole("dialog", { name: "Foto baru" })).toBeNull();
     expect(queue.added).toEqual([]);
-  });
-
-  it("✕ (Batal) leaves the camera (to Momen) with nothing sent or saved", async () => {
-    await mount();
-    await shoot();
-    await act(async () => { fireEvent.click(control("Batal")); });
-    expect(screen.queryByRole("dialog", { name: "Foto baru" })).toBeNull();
-    // back to where the camera was opened from (Momen when there is no history to go back to)
-    expect(back.mock.calls.length + push.mock.calls.filter(call => call[0] === mainWamPath.moments()).length).toBe(1);
-    expect(queue.added).toEqual([]);
-    expect(saved.files).toEqual([]);
   });
 });
 
