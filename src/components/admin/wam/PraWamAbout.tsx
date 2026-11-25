@@ -95,7 +95,7 @@ export function PraWamAbout({ initial, crumbs = [], title = "Apa itu WAM" }: { i
           <textarea id="about-body" className="textarea" rows={10} value={draft.body} disabled={locked} onChange={set("body")}
             aria-invalid={!!error("body")} aria-describedby={describedBy("body")} />
         </Field>
-        <Field label="Poin penting (boleh kosong)" name="about-points" error={error("points")} hint={`Satu poin per baris, maksimal ${ABOUT_LIMITS.points}. Tulis "Label: isi" untuk label kecil di atasnya, misalnya "Kapan: 4–7 Jan 2027".`}>
+        <Field label="Poin penting (boleh kosong)" name="about-points" error={error("points")} hint={`Satu poin per baris, maksimal ${ABOUT_LIMITS.points}. Tulis "Label: isi" untuk label kecil di atasnya, misalnya "Kapan: 5–8 Jan 2027".`}>
           <textarea id="about-points" className="textarea" rows={5} value={draft.points} disabled={locked} onChange={set("points")}
             aria-invalid={!!error("points")} aria-describedby={describedBy("points")} />
         </Field>
