@@ -18,6 +18,7 @@ Di aplikasi WAM, kuis ini satu **modul Main WAM** (`kuis`) yang dinyalakan dari 
 | 19 Nov | Garis waktu yang terus mundur, dengan **nilai saat ini** yang ikut turun. Nilai yang tertera saat menjawab adalah nilai yang didapat bila jawabannya benar. |
 | 19 Nov | Juara dibuka namanya di podium (buka topeng). Pemain lain tetap anonim. |
 | 19 Nov | Jawaban dibuka bersama saat waktu habis, dengan persen tiap pilihan tanpa nama (§4a). |
+| 25 Nov | Tampilan ikut tema aplikasi, bersih dan minimalis supaya peserta fokus ke soal: hanya warna tema; opsi A–D satu gaya (bentuk + huruf yang membedakan); tanpa gradien, glow, ledakan, dan konfeti warna-warni (konfeti singkat emas + primary hanya saat juara mendarat); kartu level netral dengan 4 titik dan crossfade; layar juara bergaris emas, bukan bidang kuning. Efek di tabel §4 yang bertentangan (ledakan hijau, konfeti saat benar, kartu membalik, tokoh bernapas, layar emas) diganti oleh ini; rinciannya `docs/main-wam/KONTRAK.md` §9 #38. |
 
 ## 1. Referensi
 
