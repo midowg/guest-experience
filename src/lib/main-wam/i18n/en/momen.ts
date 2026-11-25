@@ -134,7 +134,6 @@ export const enMomen: Record<keyof typeof idMomen, string> = {
   "momen.cam.later": "Later",
   "momen.cam.cancelledMany": "{n} photos cancelled",
   "momen.cam.cancelledOne": "Photo cancelled",
-  "momen.cam.sendingPhoto": "Sending photo",
   "momen.cam.sendsOnline": "Will be sent when you are online",
   "momen.cam.undo": "Undo",
   "momen.cam.sentSession": "Session: {title}",

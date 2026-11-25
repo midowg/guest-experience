@@ -34,7 +34,7 @@ export async function loadTagPool(context: Pick<MainWamContext, "viewer">): Prom
   for (const id of event.accounts) {
     const person = people.get(id);
     if (id === meId || !person || !person.active) continue;
-    pool.set(id, { id, name: person.name, department: person.department, bod: event.bod.has(id), seatmate: seatmates.has(id), roommate: roommates.has(id) });
+    pool.set(id, { id, name: person.name, department: person.department, bod: event.bod.has(id), seatmate: seatmates.has(id), roommate: roommates.has(id), photo: person.photo ?? null });
   }
   return pool;
 }

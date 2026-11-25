@@ -1,28 +1,12 @@
 /*
- * Detection of missions from Momen photos (docs/main-wam/KONTRAK.md §13): the camera's two optional extras
- * (Tag teman, Tandai lokasi), the toast "otomatis diajukan", the Misi page's "Dari fotomu", the switch "Deteksi misi
+ * Detection of missions from Momen photos (docs/main-wam/KONTRAK.md §13): the two optional extras of
+ * "Periksa fotomu" (Tag orang, Tandai lokasi), the toast "otomatis diajukan", the Misi page's "Dari fotomu", the switch "Deteksi misi
  * otomatis", and the texts the server sends back (`srv.misi.auto.*`). Indonesian is the source.
  */
 export const idMisiDeteksi = {
-  "momen.cam.optionsLabel": "Misi",
-  "momen.cam.options": "Pilihan untuk misi",
   "momen.cam.geo.off": "Tandai lokasi",
-  "momen.cam.geo.on": "Lokasi aktif",
-  "momen.cam.geo.blocked": "Izin lokasi ditolak",
   "momen.cam.geo.note": "Lokasi hanya untuk mencocokkan misi. Tidak terlihat peserta lain, dan dihapus bersama fotomu.",
   "momen.cam.geo.blockedNote": "Izin lokasi ditolak di peramban ini. Buka pengaturan situs untuk mengizinkannya, atau kirim foto tanpa lokasi.",
-  "momen.cam.geo.hint": "Foto dikirim tanpa lokasi. Misi di suatu tempat tetap bisa kamu ajukan sendiri nanti.",
-  "momen.cam.tagChip": "Tag teman",
-  "momen.tag.title": "Ada siapa di foto ini?",
-  "momen.tag.lead": "Boleh dilewati. Orang yang kamu tandai mendapat pemberitahuan dan bisa melepas tag.",
-  "momen.tag.count": "{n} dari {max} dipilih",
-  "momen.tag.full": "Paling banyak {max} orang. Hapus satu untuk mengganti.",
-  "momen.tag.skip": "Lewati",
-  "momen.tag.send": "Kirim",
-  "momen.tag.sendWith": "Kirim · {n} tag",
-  "momen.tag.ask": "Tanya setiap foto",
-  "momen.tag.askSub": "Matikan bila kamu ingin foto langsung terkirim. Tombol Tag teman di kamera menyalakannya lagi.",
-  "momen.tag.photo": "Foto yang akan dikirim",
   "misi.auto.group": "Misi",
   "misi.auto.sent": "Fotomu otomatis diajukan untuk misi {title}",
   "misi.auto.sentSub": "+{points} poin · menunggu pemeriksaan",

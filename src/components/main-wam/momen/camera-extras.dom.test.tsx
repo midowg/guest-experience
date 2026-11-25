@@ -12,9 +12,9 @@ import { mainWamPath } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
 /*
- * The Momen camera's two optional extras (docs/main-wam/KONTRAK.md §13): "Ada siapa di foto ini?" after the shutter (skippable) and
- * "Tandai lokasi" (off until the browser allows it, on with a clear sign when it already does, off for one photo with one tap), and the
- * toast that says what detection found: "Fotomu otomatis diajukan ..." with Tarik, or a suggestion with Ajukan.
+ * The Momen photo's two optional extras (docs/main-wam/KONTRAK.md §13, §38), now in "Periksa fotomu": "Tandai lokasi" (off until the browser
+ * allows it, on with a clear sign when it already does, off for one photo with one tap) and the people tagged, and the toast that says what
+ * detection found after Kirim: "Fotomu otomatis diajukan ..." with Tarik, or a suggestion with Ajukan. The editor itself: photo-editor.dom.test.tsx.
  */
 
 const push = vi.fn();
@@ -27,12 +27,14 @@ vi.mock("./upload/compress", () => {
   return {
     PhotoProblem: class extends Error {},
     decodeFile: async () => ({ source: {}, width: 1200, height: 1500, close: () => undefined }),
-    grabFrame: async () => ({ source: {}, width: 1200, height: 1500, close: () => undefined }),
+    frameFile: async () => new File(["x"], "momen.jpg", { type: "image/jpeg" }),
+    applyLook: async (picture: unknown) => picture,
     prepareInTurn: <T,>(work: () => Promise<T>) => work(),
     prepareMomenPhoto: async () => ({ besar: blob("b"), kecil: blob("k"), ubin: blob("u"), width: 1200, height: 1500 }),
   };
 });
 const queue = vi.hoisted(() => ({ added: [] as unknown[][], cancelled: [] as string[], sent: "photo-1" as string | null }));
+vi.mock("./saveFile", () => ({ saveOriginal: async () => "diunduh", saveFile: () => undefined }));
 vi.mock("./upload/sender", () => ({
   momenQueue: () => ({
     add: async (items: unknown[]) => { queue.added.push(items); }, cancel: async (id: string) => { queue.cancelled.push(id); },
@@ -77,30 +79,54 @@ const shoot = async () => {
   const input = document.querySelector<HTMLInputElement>("input[type=file][capture]")!;
   await act(async () => { fireEvent.change(input, { target: { files: [new File(["x"], "foto.jpg", { type: "image/jpeg" })] } }); });
 };
+/** A shot and Kirim, with the editor's defaults. */
+const shootAndSend = async () => {
+  await shoot();
+  await act(async () => { fireEvent.click(within(screen.getByRole("dialog", { name: "Periksa fotomu" })).getByRole("button", { name: /^Kirim/ })); });
+};
 
-describe("the two extras in the camera", () => {
-  it("show nothing when there is nothing to tag and no mission takes detection", () => {
-    render(camera({ demo: { phase: "kamera", live: "hp" } }));
-    expect(screen.queryByRole("group", { name: "Pilihan untuk misi" })).toBeNull();
-  });
-
-  it("offer Tag teman (on) and Tandai lokasi (off until the browser allows it)", () => {
+describe("the extras of a photo", () => {
+  it("the camera itself offers neither: no Tag teman, no Tandai lokasi, no strips (they live in the editor)", () => {
     render(camera({ candidates: [SARI], detect: true, demo: { phase: "kamera", live: "hp", geo: "mati" } }));
-    const options = screen.getByRole("group", { name: "Pilihan untuk misi" });
-    expect(within(options).getByRole("button", { name: "Tag teman" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(options).getByRole("button", { name: "Tandai lokasi" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.queryByText(/Lokasi hanya untuk/)).toBeNull();
+    expect(screen.queryByRole("group", { name: "Pilihan untuk misi" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tag teman" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.getByText("Sign, warna, dan tag diatur di langkah berikutnya.")).toBeTruthy();
   });
 
-  it("when the browser already allows the location it starts on with a clear sign and a note about who sees it, and one tap turns it off", async () => {
+  it("when no mission takes detection the editor has no Tandai lokasi, and with nobody to tag it has no tag block and no Tanya setiap foto", async () => {
+    render(camera({ candidates: [], detect: false, demo: { phase: "kamera", live: "hp" } }));
+    await shoot();
+    const editor = screen.getByRole("dialog", { name: "Periksa fotomu" });
+    expect(within(editor).queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
+    expect(within(editor).queryByText("Tag orang")).toBeNull();
+    expect(within(editor).queryByRole("switch", { name: "Tanya setiap foto" })).toBeNull();
+  });
+
+  it("Tandai lokasi is off until the browser allows it, and turning it on asks the browser then, from the tap", async () => {
+    render(camera({ candidates: [], detect: true, demo: undefined }));
+    await act(async () => undefined);
+    expect(watchers).toHaveLength(0);
+    await shoot();
+    const location = screen.getByRole("switch", { name: "Tandai lokasi" });
+    expect(location.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByText(/Lokasi hanya untuk/)).toBeNull();
+    fireEvent.click(location);
+    expect(watchers).toHaveLength(1);
+    expect(screen.getByRole("switch", { name: "Tandai lokasi" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("when the browser already allows the location it starts on with a note about who sees it, and one tap turns it off (remembered)", async () => {
     geolocation("granted");
     render(camera({ candidates: [SARI], detect: true }));
-    // The camera is waiting for its first paint of the state read from the browser.
-    const chip = await screen.findByRole("button", { name: "Lokasi aktif" });
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => undefined);
+    await shoot();
+    const location = screen.getByRole("switch", { name: "Tandai lokasi" });
+    expect(location.getAttribute("aria-checked")).toBe("true");
     expect(screen.getByText("Lokasi hanya untuk mencocokkan misi. Tidak terlihat peserta lain, dan dihapus bersama fotomu.")).toBeTruthy();
-    fireEvent.click(chip);
-    expect(screen.getByRole("button", { name: "Tandai lokasi" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(location);
+    expect(screen.getByRole("switch", { name: "Tandai lokasi" }).getAttribute("aria-checked")).toBe("false");
     expect(cleared).toHaveBeenCalled();
     expect(screen.queryByText(/Lokasi hanya untuk/)).toBeNull();
     expect(window.localStorage.getItem("mw-momen-lokasi")).toBe("mati");
@@ -109,87 +135,41 @@ describe("the two extras in the camera", () => {
   it("says plainly when the browser blocks the location, and the photo goes without it", async () => {
     geolocation("denied");
     render(camera({ candidates: [], detect: true, demo: undefined }));
-    const chip = await screen.findByRole("button", { name: "Izin lokasi ditolak" });
-    expect(chip.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByText(/Izin lokasi ditolak di peramban ini/)).toBeTruthy();
-  });
-
-  it("turning the location on asks the browser then, from the tap", async () => {
-    render(camera({ candidates: [SARI], detect: true }));
     await act(async () => undefined);
-    expect(watchers).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "Tandai lokasi" }));
-    expect(watchers).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Lokasi aktif" })).toBeTruthy();
-  });
-});
-
-describe("the tag step after the shutter", () => {
-  it("asks 'Ada siapa di foto ini?' with the suggestions first, and sends the photo with the people chosen", async () => {
-    render(camera({ candidates: [BIMA, SARI], detect: false, demo: { phase: "kamera", live: "hp" } }));
     await shoot();
-    const sheet = screen.getByRole("dialog", { name: "Ada siapa di foto ini?" });
-    expect(queue.added).toEqual([]);
-    expect(within(sheet).getByText("Boleh dilewati. Orang yang kamu tandai mendapat pemberitahuan dan bisa melepas tag.")).toBeTruthy();
-    const names = within(sheet).getAllByRole("button", { pressed: false }).map(button => button.getAttribute("aria-label")).filter(Boolean);
-    expect(names.indexOf("Pilih Sari")).toBeLessThan(names.indexOf("Pilih Bima"));
-    expect(within(sheet).getByText("Sekamar")).toBeTruthy();
-    fireEvent.click(within(sheet).getByRole("button", { name: "Pilih Sari" }));
-    expect(within(sheet).getByText("1 dari 6 dipilih")).toBeTruthy();
-    fireEvent.click(within(sheet).getByRole("button", { name: "Kirim · 1 tag" }));
+    expect(screen.getByRole("switch", { name: "Tandai lokasi" }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText(/Izin lokasi ditolak di peramban ini/)).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
     await waitFor(() => expect(queue.added).toHaveLength(1));
-    expect((queue.added[0][0] as QueueItem).tags).toEqual([SARI.id]);
-    expect((queue.added[0][0] as QueueItem).gallery).toBe(false);
+    expect((queue.added[0][0] as QueueItem).geo).toBeNull();
   });
 
-  it("is skippable: Lewati sends the photo as it is", async () => {
-    render(camera({ candidates: [SARI], demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
-    fireEvent.click(within(screen.getByRole("dialog", { name: "Ada siapa di foto ini?" })).getByRole("button", { name: "Lewati" }));
-    await waitFor(() => expect(queue.added).toHaveLength(1));
-    expect((queue.added[0][0] as QueueItem).tags).toEqual([]);
-  });
-
-  it("leaving the screen with the step open still sends the photo (nothing is lost)", async () => {
-    const { unmount } = render(camera({ candidates: [SARI], demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
-    expect(queue.added).toEqual([]);
-    unmount();
-    expect(queue.added).toHaveLength(1);
-  });
-
-  it("turned off, the photo goes at once, and the choice is remembered on this phone", async () => {
-    render(camera({ candidates: [SARI], demo: { phase: "kamera", live: "hp" } }));
-    fireEvent.click(screen.getByRole("button", { name: "Tag teman" }));
-    expect(screen.getByRole("button", { name: "Tag teman" }).getAttribute("aria-pressed")).toBe("false");
-    expect(window.localStorage.getItem("mw-momen-tag")).toBe("tidak");
-    await shoot();
-    expect(screen.queryByRole("dialog", { name: "Ada siapa di foto ini?" })).toBeNull();
-    await waitFor(() => expect(queue.added).toHaveLength(1));
-  });
-
-  it("is not asked for a picture picked from the gallery, which is marked as one and carries no position", async () => {
-    geolocation("granted");
-    render(camera({ candidates: [SARI], detect: true, demo: { phase: "kamera", live: "hp" } }));
-    const picker = document.querySelector<HTMLInputElement>("input[type=file][multiple]")!;
-    await act(async () => { fireEvent.change(picker, { target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] } }); });
-    await waitFor(() => expect(queue.added).toHaveLength(1));
-    expect(screen.queryByRole("dialog", { name: "Ada siapa di foto ini?" })).toBeNull();
-    expect(queue.added[0][0]).toMatchObject({ gallery: true, geo: null });
-  });
-
-  it("puts the position of the moment of the photo on it only while Tandai lokasi is on", async () => {
+  it("puts the position of the moment of the photo on it only while Tandai lokasi is on (the editor's switch decides at Kirim)", async () => {
     geolocation("granted");
     render(camera({ candidates: [], detect: true, demo: undefined }));
-    await screen.findByRole("button", { name: "Lokasi aktif" });
+    await act(async () => undefined);
     await fix(Date.now());
-    await shoot();
+    await shootAndSend();
     await waitFor(() => expect(queue.added).toHaveLength(1));
     expect((queue.added[0][0] as QueueItem).geo).toEqual(GEO);
-    fireEvent.click(screen.getByRole("button", { name: "Lokasi aktif" }));
     await shoot();
+    fireEvent.click(screen.getByRole("switch", { name: "Tandai lokasi" }));
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
     await waitFor(() => expect(queue.added).toHaveLength(2));
     expect((queue.added[1][0] as QueueItem).geo).toBeNull();
+  });
+
+  it("a picture picked from the gallery carries no position, and the editor offers no Tandai lokasi for it", async () => {
+    geolocation("granted");
+    render(camera({ candidates: [SARI], detect: true, demo: undefined }));
+    await act(async () => undefined);
+    await fix(Date.now());
+    const picker = document.querySelector<HTMLInputElement>("input[type=file][multiple]")!;
+    await act(async () => { fireEvent.change(picker, { target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] } }); });
+    expect(screen.queryByRole("switch", { name: "Tandai lokasi" })).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^Kirim/ })); });
+    await waitFor(() => expect(queue.added).toHaveLength(1));
+    expect(queue.added[0][0]).toMatchObject({ gallery: true, geo: null });
   });
 });
 
@@ -199,7 +179,7 @@ describe("what detection found, told after the photo is sent", () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     request.mockResolvedValue({ data: answer, message: "" });
     render(camera({ candidates: [], detect: true, demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
+    await shootAndSend();
     await act(async () => { await vi.advanceTimersByTimeAsync(7000); });
   }
 
@@ -239,7 +219,7 @@ describe("what detection found, told after the photo is sent", () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     request.mockResolvedValueOnce({ data: { pending: true, items: [] }, message: "" }).mockResolvedValue({ data: found({}), message: "" });
     render(camera({ candidates: [], detect: true, demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
+    await shootAndSend();
     await act(async () => { await vi.advanceTimersByTimeAsync(7000); });
     expect(screen.queryByText(/Fotomu otomatis/)).toBeNull();
     await act(async () => { await vi.advanceTimersByTimeAsync(6500); });
@@ -248,7 +228,7 @@ describe("what detection found, told after the photo is sent", () => {
     cleanup();
     request.mockReset(); request.mockRejectedValue(new Error("offline"));
     render(camera({ candidates: [], detect: true, demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
+    await shootAndSend();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(request).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/Fotomu/)).toBeNull();
@@ -257,7 +237,7 @@ describe("what detection found, told after the photo is sent", () => {
   it("does not ask at all when no mission takes detection", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     render(camera({ candidates: [], detect: false, demo: { phase: "kamera", live: "hp" } }));
-    await shoot();
+    await shootAndSend();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(request).not.toHaveBeenCalled();
   });
@@ -266,15 +246,15 @@ describe("what detection found, told after the photo is sent", () => {
 describe("accessibility", () => {
   const violations = async () => (await axe.run(document.body, { rules: { "color-contrast": { enabled: false }, region: { enabled: false } } })).violations.map(item => `${item.id}: ${item.nodes.map(node => node.html.slice(0, 120)).join(" | ")}`);
 
-  it("the options row and the tag step have no violation, in Indonesian and English", async () => {
-    const { unmount } = render(camera({ candidates: [SARI, BIMA], detect: true, demo: { phase: "kamera", live: "hp", geo: "aktif", sheet: "tag" } }));
+  it("the editor (its switches, the tag list and the bar) has no violation, in Indonesian and English", async () => {
+    const { unmount } = render(camera({ candidates: [SARI, BIMA], detect: true, demo: { phase: "kamera", live: "hp", geo: "aktif", editor: { photos: 3, tags: [SARI.id] } } }));
     expect(await violations()).toEqual([]);
     unmount();
     setActiveLang("en");
-    render(<LangProvider lang="en"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[SARI, BIMA]} detect demo={{ phase: "kamera", live: "hp", geo: "ditolak", sheet: "tag" }} /></ToastProvider></LangProvider>);
-    expect(screen.getByRole("dialog", { name: "Who is in this photo?" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Location blocked" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tag friends" })).toBeTruthy();
+    render(<LangProvider lang="en"><ToastProvider><CameraScreen sessions={sampleSessions} nowIso="2027-01-05T15:20:00+07:00" absen migrated initialSession={null} candidates={[SARI, BIMA]} detect demo={{ phase: "kamera", live: "hp", geo: "ditolak", editor: { photos: 1 } }} /></ToastProvider></LangProvider>);
+    expect(screen.getByRole("dialog", { name: "Check your photo" })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Tag location" })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Keep the original on my phone" })).toBeTruthy();
     expect(await violations()).toEqual([]);
   });
 });

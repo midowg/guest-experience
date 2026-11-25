@@ -39,38 +39,10 @@ export async function decodeFile(file: File): Promise<Picture> {
   }
 }
 
-/** The frame the live viewfinder shows now (getUserMedia path); with a tone or a sign: cut to 4:5 like the viewfinder, toned first, then the sign drawn over it (so its words and mark keep their colours). */
-export async function grabFrame(video: HTMLVideoElement, sign: SignId = DEFAULT_SIGN, tone: CameraToneId = DEFAULT_CAMERA_TONE): Promise<Picture> {
+/** The frame the live viewfinder shows now, plain: no tone and no sign (those are chosen in "Periksa fotomu" and drawn when the photo is sent: applyLook). */
+export async function grabFrame(video: HTMLVideoElement): Promise<Picture> {
   const width = video.videoWidth, height = video.videoHeight;
   if (!width || !height) throw new PhotoProblem(t(activeLang(), "srv.momen.cameraNotReady"));
-  if (sign !== DEFAULT_SIGN || tone !== DEFAULT_CAMERA_TONE) {
-    const crop = centerCrop(width, height);
-    const size = fitSide(crop.width, crop.height, 2000);
-    const canvas = document.createElement("canvas");
-    canvas.width = size.width; canvas.height = size.height;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (context) {
-      // The viewfinder's tone, drawn into the frame that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
-      const toned = tone !== DEFAULT_CAMERA_TONE;
-      const native = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
-      if (toned && native) context.filter = cssFilter(tone);
-      context.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, size.width, size.height);
-      if (toned && native) context.filter = "none";
-      else if (toned) {
-        const pixels = context.getImageData(0, 0, size.width, size.height);
-        applyFilterToPixels(pixels.data, tone);
-        context.putImageData(pixels, 0, 0);
-      }
-      // The sign (frame, words, mark) over the toned photo; a mark that did not load, or a drawing that fails, never costs the photo.
-      if (sign !== DEFAULT_SIGN) {
-        try {
-          const assets = await loadTemplateAssets();
-          drawTemplate(context, templateLayout(sign, size.width, size.height, activeLang()), assets);
-        } catch { /* the toned photo goes without the sign */ }
-      }
-      return { source: canvas, width: size.width, height: size.height, close: () => { canvas.width = 0; canvas.height = 0; } };
-    }
-  }
   try {
     const bitmap = await createImageBitmap(video);
     return { source: bitmap, width, height, close: () => bitmap.close() };
@@ -80,6 +52,64 @@ export async function grabFrame(video: HTMLVideoElement, sign: SignId = DEFAULT_
     canvas.getContext("2d")?.drawImage(video, 0, 0, width, height);
     return { source: canvas, width, height, close: () => { canvas.width = 0; canvas.height = 0; } };
   }
+}
+
+/** The longest side of the original kept from the live viewfinder (the camera's own size, at most this). */
+const RAW_SIDE = 2560;
+
+/**
+ * The plain frame as a JPEG file (the original: no sign, no tone, not cut): what "Periksa fotomu" shows and what "Simpan asli di HP"
+ * keeps. A file, so the editor can show it (an object URL) and the sending can read it again like a picked photo.
+ */
+export async function frameFile(video: HTMLVideoElement): Promise<File> {
+  const picture = await grabFrame(video);
+  try {
+    const size = fitSide(picture.width, picture.height, RAW_SIDE);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width; canvas.height = size.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new PhotoProblem(t(activeLang(), "srv.momen.cannotShrink"));
+    context.drawImage(picture.source, 0, 0, size.width, size.height);
+    const blob = await jpeg(canvas, 0.92);
+    canvas.width = 0; canvas.height = 0;
+    return new File([blob], "momen.jpg", { type: "image/jpeg" });
+  } finally {
+    picture.close();
+  }
+}
+
+/**
+ * The look chosen in the editor drawn into the photo that is sent: cut to 4:5 like the preview, the tone first, then the sign over it (so its
+ * words and mark keep their colours). Nothing chosen = the picture as it is. The picture given is closed once its look is drawn.
+ */
+export async function applyLook(picture: Picture, sign: SignId = DEFAULT_SIGN, tone: CameraToneId = DEFAULT_CAMERA_TONE): Promise<Picture> {
+  if (sign === DEFAULT_SIGN && tone === DEFAULT_CAMERA_TONE) return picture;
+  const crop = centerCrop(picture.width, picture.height);
+  const size = fitSide(crop.width, crop.height, 2000);
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width; canvas.height = size.height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return picture;
+  // The preview's tone, drawn into the photo that is sent: canvas `filter` where the browser has it, else the same matrices on the pixels.
+  const toned = tone !== DEFAULT_CAMERA_TONE;
+  const native = typeof CanvasRenderingContext2D !== "undefined" && "filter" in CanvasRenderingContext2D.prototype;
+  if (toned && native) context.filter = cssFilter(tone);
+  context.drawImage(picture.source, crop.x, crop.y, crop.width, crop.height, 0, 0, size.width, size.height);
+  if (toned && native) context.filter = "none";
+  else if (toned) {
+    const pixels = context.getImageData(0, 0, size.width, size.height);
+    applyFilterToPixels(pixels.data, tone);
+    context.putImageData(pixels, 0, 0);
+  }
+  // The sign (frame, words, mark) over the toned photo; a mark that did not load, or a drawing that fails, never costs the photo.
+  if (sign !== DEFAULT_SIGN) {
+    try {
+      const assets = await loadTemplateAssets();
+      drawTemplate(context, templateLayout(sign, size.width, size.height, activeLang()), assets);
+    } catch { /* the toned photo goes without the sign */ }
+  }
+  picture.close();
+  return { source: canvas, width: size.width, height: size.height, close: () => { canvas.width = 0; canvas.height = 0; } };
 }
 
 function canvasOf(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {

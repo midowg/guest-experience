@@ -29,8 +29,8 @@ export const dynamic = "force-dynamic";
  * &misi=<judul, bagian awal>  (foto: which mission; default the BOD one)  &tag=wulan,arman  (people already tagged)
  * &lembar=<judul misi, bagian awal>  (the mission's sheet open on Misi)  &status=semua|kosong|batas
  * &mode=dark  &lang=en
- * Detection from Momen photos (KONTRAK §13): ?layar=kamera (the Momen camera with Tag teman and Tandai lokasi; &langkah=tag opens
- * "Ada siapa di foto ini?", &lokasi=aktif|mati|ditolak), ?layar=toast (the toast "otomatis diajukan" with Tarik; &jenis=saran for a
+ * Detection from Momen photos (KONTRAK §13): ?layar=kamera (the Momen camera; &langkah=tag opens "Periksa fotomu" with two people
+ * tagged and Tandai lokasi, &lokasi=aktif|mati|ditolak), ?layar=toast (the toast "otomatis diajukan" with Tarik; &jenis=saran for a
  * suggestion with Ajukan), ?layar=misi shows "Dari fotomu" (&status=kosong: nothing yet; &otomatis=mati: the switch off).
  */
 export default async function PreviewMisi({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -62,7 +62,7 @@ export default async function PreviewMisi({ searchParams }: { searchParams: Prom
     ? { text: t(lang, "misi.auto.suggest", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.suggestSub", { points: "400" }), action: t(lang, "misi.auto.submit") }
     : { text: t(lang, "misi.auto.sent", { title: "Selfie dengan teman sekamar" }), sub: t(lang, "misi.auto.sentSub", { points: "400" }), action: t(lang, "misi.auto.takeBack") };
   const cameraScreen = <CameraScreen sessions={sampleSessions} nowIso="2027-01-05T10:00:00+07:00" absen migrated initialSession={null} candidates={candidates} detect
-    demo={{ phase: "kamera", live: "contoh", geo, ...(params.langkah === "tag" && layar === "kamera" ? { sheet: "tag" as const } : {}) }} />;
+    demo={{ phase: "kamera", live: "contoh", geo, ...(params.langkah === "tag" && layar === "kamera" ? { editor: { photos: 1, tags: candidates.filter(candidate => candidate.bod).slice(0, 2).map(candidate => candidate.id) } } : {}) }} />;
   return <MainWamTheme mode={params.mode === "dark" ? "dark" : "light"}>
     <LangProvider lang={lang}>
       <MainWamShell screen={mainWamScreen(path, lang)} unread={0} greeting={homeGreeting(now, "Rani", sampleSettings().event, undefined, lang)}>

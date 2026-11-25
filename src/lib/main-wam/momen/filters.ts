@@ -90,9 +90,6 @@ export const photoGeoSchema = z.object({
   accuracy: z.number("Lokasi belum terbaca.").min(0).max(100_000),
 }).strict();
 export type PhotoGeo = z.infer<typeof photoGeoSchema>;
-/** How many friends one photo may tag (the same limit as a mission photo). */
-export const PHOTO_TAG_MAX = 6;
-
 const size = (max: number) => z.number().int().min(1, "Berkas kosong.").max(max, "Foto terlalu besar. Ambil ulang fotonya.");
 export const photoStartSchema = z.object({
   clientId: z.string().regex(UUID, "Foto tidak dikenali. Ambil ulang fotonya."),
@@ -103,8 +100,8 @@ export const photoStartSchema = z.object({
   size: size(MAX_LARGE_BYTES),
   thumbSize: size(MAX_THUMB_BYTES),
   tileSize: size(MAX_TILE_BYTES),
-  /** Optional: the friends in the photo (employee ids), "Ada siapa di foto ini?". */
-  tags: z.array(z.string().regex(UUID, "Orang yang ditandai tidak dikenali.")).max(PHOTO_TAG_MAX, `Paling banyak ${PHOTO_TAG_MAX} orang.`).default([]),
+  /** Optional: the people in the photo (employee ids), chosen in "Periksa fotomu". No limit on how many (KONTRAK §38); the server keeps each person once. */
+  tags: z.array(z.string().regex(UUID, "Orang yang ditandai tidak dikenali.")).default([]),
   /** Optional: the coarse position, kept only for matching missions. */
   geo: photoGeoSchema.nullable().default(null),
   /** Picked from the gallery (not the camera): never a "foto langsung", and no position is kept. */

@@ -12,7 +12,7 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 
 /**
  * U01–U05 and O04: the camera (photo sent when taken, Batalkan 5 s, queue offline, gallery). Area B. Two optional extras ride
- * along (KONTRAK §13): "Ada siapa di foto ini?" (friends to tag) and "Tandai lokasi", for the missions a photo may meet.
+ * along (KONTRAK §13, §38) in "Periksa fotomu": the people to tag and "Tandai lokasi", for the missions a photo may meet.
  */
 export default async function KameraPage({ searchParams }: { searchParams: Promise<Search> }) {
   const search = await searchParams;

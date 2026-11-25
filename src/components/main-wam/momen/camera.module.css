@@ -10,7 +10,7 @@
   background: var(--mw-bg); color: var(--mw-text-1);
 }
 /* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
-:global(:root):has(.screen) { --mw-toast-bottom: 276px; }
+:global(:root):has(.screen) { --mw-toast-bottom: 200px; }
 
 .bar { display: flex; align-items: center; gap: var(--mw-space-12); height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
 .stage { position: relative; flex: 1 1 auto; min-height: 220px; }
@@ -32,8 +32,6 @@
 .video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .mirror { transform: scaleX(-1); }
 .fill { position: absolute; inset: 0; }
-/* The chosen template over the viewfinder (the same drawing the sent photo gets); it never takes a touch. */
-.overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .off {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
   padding: var(--mw-space-24); text-align: center; background: var(--mw-surface-2); color: var(--mw-text-1);
@@ -61,31 +59,8 @@
 .shutter:active::before, .shutter[aria-busy="true"]::before { transform: scale(0.86); }
 .shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-text-1) 28%, transparent); cursor: default; }
 .shutter:disabled::before { background: color-mix(in srgb, var(--mw-text-1) 20%, transparent); }
-/* Two strips above the shutter, Sign then Warna (tone), each with a small label: chips scroll sideways on a narrow phone and keep the chosen one in view; the swipe on the viewfinder steps the tone. */
-.view { touch-action: pan-y; }
-.pickers { align-self: stretch; display: flex; flex-direction: column; gap: var(--mw-space-4); margin-bottom: calc(-1 * var(--mw-space-8)); }
-.row { display: flex; align-items: center; gap: var(--mw-space-8); padding: 0 var(--mw-space-16); min-width: 0; }
-.rowLabel { flex: none; width: 44px; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
-.filters { flex: 1 1 auto; min-width: 0; display: flex; justify-content: safe flex-start; gap: var(--mw-space-8); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 2px 0; }
-.filters::-webkit-scrollbar { display: none; }
-.filter {
-  flex: none; scroll-snap-align: center; min-height: 32px; padding: 0 var(--mw-space-12); border: 0; border-radius: var(--mw-radius-full); cursor: pointer; -webkit-tap-highlight-color: transparent;
-  font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; white-space: nowrap; background: var(--mw-surface-2); color: var(--mw-text-1);
-  box-shadow: inset 0 0 0 1px var(--mw-outline);
-}
-.filter[aria-checked="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
-.filter:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
-/* The two optional extras (Tag teman, Tandai lokasi) are switches, not a choice among many: pressed = on. */
-.filter { display: inline-flex; align-items: center; gap: var(--mw-space-4); }
-.filter > svg { width: 14px; height: 14px; flex: none; }
-.filter[aria-pressed="true"] { background: var(--mw-select-bg); color: var(--mw-select-fg); box-shadow: none; }
-.filter[data-blocked] { color: var(--mw-text-2); }
-.options { align-self: stretch; display: flex; flex-direction: column; gap: var(--mw-space-4); margin-bottom: calc(-1 * var(--mw-space-8)); }
-.options .filters { flex-wrap: wrap; overflow: visible; }
-.options .filter { padding: 0 10px; }
-/* On the narrowest phones the label gives way, so both chips stay on one line (the icons say what they are). */
-@media (max-width: 359.98px) { .options .rowLabel { display: none; } }
-.geoNote { margin: 0; padding: 0 var(--mw-space-16); font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; }
+/* One quiet line under the controls: where the sign, the colour and the tags are set. */
+.next { margin: calc(-1 * var(--mw-space-8)) 0 0; padding: 0 var(--mw-space-16); text-align: center; font: var(--mw-type-caption); color: var(--mw-text-2); overflow-wrap: anywhere; text-wrap: balance; }
 .hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* O04: the pre-permission, in the app's theme, before the camera. */

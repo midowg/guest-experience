@@ -413,55 +413,16 @@ describe("the camera", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("offers two strips under the viewfinder, Sign and Warna: Tanpa and Asli are chosen every time with nothing drawn; a sign and a tone are picked apart and combine; none without a live picture", () => {
-    const { unmount, container } = render(camera({ phase: "kamera", live: "contoh" }));
-    const signs = screen.getByRole("radiogroup", { name: "Sign foto" });
-    const tones = screen.getByRole("radiogroup", { name: "Warna foto" });
-    expect(within(signs).getAllByRole("radio").map(radio => radio.textContent)).toEqual(["Tanpa", "Simpel", "Emas", "Jaringan", "Polaroid"]);
-    expect(within(tones).getAllByRole("radio").map(radio => radio.textContent)).toEqual(["Asli", "Emas", "Fajar", "Mono"]);
-    expect(screen.queryByRole("radio", { name: "Biru" })).toBeNull();
-    expect(within(signs).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("true");
-    expect(within(tones).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
-    expect(container.querySelector("svg[data-sign]")).toBeNull();
-    const picture = () => container.querySelector("[role=img]") as HTMLElement;
-    expect(picture().style.filter).toBe("none");
-    // a sign alone: the overlay, no tone on the picture
-    fireEvent.click(within(signs).getByRole("radio", { name: "Polaroid" }));
-    expect(within(signs).getByRole("radio", { name: "Polaroid" }).getAttribute("aria-checked")).toBe("true");
-    expect(within(signs).getByRole("radio", { name: "Tanpa" }).getAttribute("aria-checked")).toBe("false");
-    expect(within(tones).getByRole("radio", { name: "Asli" }).getAttribute("aria-checked")).toBe("true");
-    expect(picture().style.filter).toBe("none");
-    const overlay = container.querySelector("svg[data-sign=polaroid]") as SVGElement;
-    expect(overlay.getAttribute("viewBox")).toBe("0 0 400 500");
-    expect(overlay.textContent).toContain("WERKUDARA ANNUAL MEETING 2026");
-    expect(overlay.textContent).toContain("4–7 JANUARI 2027 · KOTA BATU");
-    const logo = overlay.querySelector("image[data-logo]") as SVGElement;
-    expect(logo.getAttribute("href")).toBe("/werkudara-mark.png");
-    expect(Number(logo.getAttribute("x")) + Number(logo.getAttribute("width"))).toBeLessThanOrEqual(400);
-    expect(Number(logo.getAttribute("x"))).toBeGreaterThan(200);
-    expect(Number(logo.getAttribute("y"))).toBeLessThan(60);
-    // the overlay follows the sign
-    fireEvent.click(within(signs).getByRole("radio", { name: "Simpel" }));
-    expect(container.querySelector("svg[data-sign=polaroid]")).toBeNull();
-    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 4–7 Jan 2027");
-    // both together: the tone on the picture, the sign over it, neither changes the other
-    fireEvent.click(within(tones).getByRole("radio", { name: "Emas" }));
-    expect(picture().style.filter).toContain("sepia(0.3)");
-    expect(container.querySelector("svg[data-sign=simpel]")).toBeTruthy();
-    expect(within(signs).getByRole("radio", { name: "Simpel" }).getAttribute("aria-checked")).toBe("true");
-    // the overlay itself holds no tone: the words keep their own colour
-    expect(container.querySelector("svg[data-sign]")!.getAttribute("style") ?? "").not.toMatch(/filter/);
-    // a tone alone
-    fireEvent.click(within(signs).getByRole("radio", { name: "Tanpa" }));
-    expect(container.querySelector("svg[data-sign]")).toBeNull();
-    expect(picture().style.filter).toContain("sepia(0.3)");
-    fireEvent.click(within(tones).getByRole("radio", { name: "Mono" }));
-    expect(picture().style.filter).toContain("grayscale(1)");
-    fireEvent.click(within(tones).getByRole("radio", { name: "Asli" }));
-    expect(picture().style.filter).toBe("none");
-    unmount();
-    render(camera({ phase: "kamera", live: "hp" }));
+  it("keeps only the shutter, the flip and the gallery button under the viewfinder: Sign and Warna moved to the editor (KONTRAK §38), and nothing is drawn over the picture", () => {
+    const { container } = render(camera({ phase: "kamera", live: "contoh" }));
     expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(container.querySelector("svg[data-sign]")).toBeNull();
+    expect((container.querySelector("[role=img]") as HTMLElement).style.filter).toBe("");
+    expect(screen.getByRole("button", { name: "Pilih dari galeri" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Balik kamera" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ambil foto/ })).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Periksa fotomu" })).toBeNull();
   });
 
   it("without permission: the shutter waits, the gallery still works, Izinkan asks again (U05)", () => {

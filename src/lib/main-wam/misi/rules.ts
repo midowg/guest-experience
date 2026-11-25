@@ -143,7 +143,7 @@ export const ruleDisplays = (rules: readonly PublicRule[], lang: Lang = "id") =>
 /* ── The checks the server can make without AI ───────────────────────────────────────────────── */
 
 /** A person who could be tagged, with what is known about them (the server fills it; nothing private). */
-export type TagCandidate = { id: string; name: string; department: string; bod: boolean; seatmate: boolean; roommate: boolean };
+export type TagCandidate = { id: string; name: string; department: string; bod: boolean; seatmate: boolean; roommate: boolean; /** The WAM profile photo when there is one (signed address); the initials show without it. */ photo?: string | null };
 export type RuleCheck = {
   type: RuleType;
   /** true / false, or null: not for this check (the verifier reads it: pose). */

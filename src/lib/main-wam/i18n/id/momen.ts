@@ -133,7 +133,6 @@ export const idMomen = {
   "momen.cam.later": "Nanti",
   "momen.cam.cancelledMany": "{n} foto dibatalkan",
   "momen.cam.cancelledOne": "Foto dibatalkan",
-  "momen.cam.sendingPhoto": "Mengirim foto",
   "momen.cam.sendsOnline": "Akan terkirim saat online",
   "momen.cam.undo": "Batalkan",
   "momen.cam.sentSession": "Sesi: {title}",

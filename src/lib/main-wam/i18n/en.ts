@@ -6,6 +6,7 @@ import { enModul } from "./en/modul";
 import { enMisi } from "./en/misi";
 import { enMisiAturan } from "./en/misi-aturan";
 import { enMisiDeteksi } from "./en/misi-deteksi";
+import { enMomenEditor } from "./en/momen-editor";
 import { enMomen } from "./en/momen";
 import { enMomenViewer } from "./en/momen-viewer";
 import { enPeserta } from "./en/peserta";
@@ -17,4 +18,4 @@ import type { MessageKey } from "./id";
  * Group; Check in; Mosaic; Silent Meeting; Awarding. Texts that admins write (session titles,
  * announcements, guides) are never in here.
  */
-export const en: Record<MessageKey, string> = { ...enCommon, ...enPeserta, ...enMomen, ...enMomenViewer, ...enModul, ...enDemo, ...enKuis, ...enCeklis, ...enMisi, ...enMisiAturan, ...enMisiDeteksi };
+export const en: Record<MessageKey, string> = { ...enCommon, ...enPeserta, ...enMomen, ...enMomenViewer, ...enModul, ...enDemo, ...enKuis, ...enCeklis, ...enMisi, ...enMisiAturan, ...enMisiDeteksi, ...enMomenEditor };

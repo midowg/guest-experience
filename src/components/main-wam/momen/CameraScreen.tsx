@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, MapPin, QrCode, Settings, SwitchCamera, Users, X } from "lucide-react";
+import { Camera, CameraOff, CloudOff, Hourglass, Image as ImageIcon, Lock, QrCode, Settings, SwitchCamera, X } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ShellChrome } from "@/components/main-wam/shell";
-import { ActionBar, Button, EmptyState, IconBox, IconButton, LoadingDialog, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
-import { CAMERA_TONE_IDS, cssFilter, DEFAULT_CAMERA_TONE, type CameraToneId } from "@/lib/main-wam/momen/camera-filters";
+import { ActionBar, Button, EmptyState, IconBox, IconButton, Pill, PhotoFill, Sheet, useToast } from "@/components/main-wam/ui";
 import { loadTemplateAssets } from "@/lib/main-wam/momen/camera-template-draw";
-import { DEFAULT_SIGN, SIGN_IDS, type SignId } from "@/lib/main-wam/momen/camera-templates";
+import type { SignId } from "@/lib/main-wam/momen/camera-templates";
+import type { CameraToneId } from "@/lib/main-wam/momen/camera-filters";
+import { originalName } from "@/lib/main-wam/momen/editor";
+import { demoPicture } from "@/lib/main-wam/momen/viewer";
+import { sourceProblem } from "@/lib/pra-wam/photo";
 import { GALLERY_PICK_MAX } from "@/lib/main-wam/momen/filters";
 import { UMUM } from "@/lib/main-wam/momen/types";
 import type { QueueItem } from "@/lib/main-wam/momen/queue";
@@ -20,17 +23,18 @@ import { misiDetectApi } from "@/lib/main-wam/misi/detect-routes";
 import type { FromPhoto } from "@/lib/main-wam/misi/missions";
 import type { TagCandidate } from "@/lib/main-wam/misi/rules";
 import { errorText, misiRequest } from "@/components/main-wam/misi/request";
-import { decodeFile, grabFrame, PhotoProblem, prepareInTurn, prepareMomenPhoto, type Picture } from "./upload/compress";
-import { TemplateOverlay } from "./TemplateOverlay";
-import { MomenTagSheet } from "./MomenTagSheet";
-import { useShareLocation, type ShareMode } from "./useShareLocation";
+import { applyLook, decodeFile, frameFile, PhotoProblem, prepareInTurn, prepareMomenPhoto } from "./upload/compress";
+import { PhotoEditor, type EditorPhoto, type EditorResult } from "./PhotoEditor";
+import { saveOriginal } from "./saveFile";
+import { useShareLocation, type ShareMode, type SharedFix } from "./useShareLocation";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
 import css from "./camera.module.css";
 
 /*
- * U01–U05 and O04: the camera, Instagram Instants style: one press = one photo sent, no review, no
- * form. No chip and no sheet to choose a session: a photo is tagged behind the scenes with the session running when
+ * U01–U05 and O04: the camera. It keeps only the shutter, the flip, the gallery button (and the header with the Galeri icon). A shot, or the pictures picked
+ * from the gallery (up to ten), open "Periksa fotomu" at once (PhotoEditor, KONTRAK §38): sign and colour are chosen there, over the plain picture, and the
+ * look is drawn only when Kirim is pressed. No chip and no sheet to choose a session: a photo is tagged behind the scenes with the session running when
  * it is taken (no tag when none runs, or when the address names one: ?sesi=). Every photo is for everyone.
  *
  * The camera itself (RISET §1): on a home-screen iPhone a web page's camera permission is asked
@@ -46,11 +50,15 @@ import css from "./camera.module.css";
  */
 
 type Live = "memuat" | "menyala" | "hp" | "ditolak" | "menunggu";
-export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara" | "tag"; geo?: ShareMode };
+/** Preview only: the editor open, with how many photos, how many still being made, who is tagged, and the look of each. */
+export type EditorDemo = { photos?: number; pending?: number; tags?: string[]; query?: string; ask?: boolean; keep?: boolean; cur?: number; all?: boolean; gallery?: boolean; looks?: { sign: SignId; tone: CameraToneId }[] };
+export type CameraDemo = { phase?: "izin" | "kamera"; live?: "contoh" | "ditolak" | "hp" | "menunggu"; pill?: number; offline?: boolean; sheet?: "galeri" | "cara"; geo?: ShareMode; editor?: EditorDemo };
 
 const PERMISSION_KEY = "mw-momen-kamera";
-/** "Tag teman": whether the step "Ada siapa di foto ini?" is asked after each photo ("tidak" = no). */
+/** "Tanya setiap foto": whether the tag part of "Periksa fotomu" is open for each photo ("tidak" = folded). */
 const TAG_KEY = "mw-momen-tag";
+/** "Simpan asli di HP": whether the plain capture is kept on the phone when Kirim is pressed ("tidak" = no; on by default). */
+const KEEP_KEY = "mw-momen-asli";
 /** The phone's clock (kept out of the component body: it runs when a photo is made, never while drawing). */
 const nowMs = () => Date.now();
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -63,6 +71,14 @@ function store(kind: "local" | "session", key: string, value?: string): string |
   } catch { /* not kept: private window, blocked storage */ }
   return null;
 }
+/** A shot in the editor: the plain picture as a file (shown by an object URL, kept for the sending and for "Simpan asli"). */
+type Shot = EditorPhoto & { file: File | null };
+/** Photos being looked at before Kirim. `pending` = still being made (a skeleton in the editor); `at`/`where` = when and where the shutter was pressed. */
+type Edit = { key: string; photos: Shot[]; pending: number; fromGallery: boolean; takenAt: string; where: SharedFix | null; sending: boolean };
+const demoEdit = (demo: EditorDemo): Edit => ({
+  key: "demo", pending: demo.pending ?? 0, fromGallery: demo.gallery ?? false, takenAt: "2027-01-05T15:20:00+07:00", where: null, sending: false,
+  photos: Array.from({ length: demo.photos ?? 1 }, (_, index) => ({ id: `demo-${index}`, url: demoPicture(index === 0 ? 4 : index * 2 + 1), fromGallery: demo.gallery ?? false, file: null })),
+});
 const newId = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID()
   : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (Number(c) ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (Number(c) / 4)))).toString(16)));
 
@@ -75,9 +91,9 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   initialSession: string | null;
   /** Dev preview only: a fixed state to look at. */
   demo?: CameraDemo;
-  /** The people the person may tag ("Ada siapa di foto ini?"): active participants, with the room, seat and BOD hints. None = no tag step. */
+  /** The people the person may tag in "Periksa fotomu": active participants (with their profile photo when there is one). None = no tag block. */
   candidates?: readonly TagCandidate[];
-  /** Some mission takes detection from Momen photos: the camera offers "Tandai lokasi" and follows what detection found. */
+  /** Some mission takes detection from Momen photos: the editor offers "Tandai lokasi" and the camera follows what detection found. */
   detect?: boolean;
 }) {
   const router = useRouter();
@@ -95,22 +111,20 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   // The tag, out of sight: the session the address names ("umum" = none), else the session running now (it follows the clock).
   const tag = initialSession !== null ? (initialSession === UMUM ? null : initialSession) : autoTag(sessions, now)?.id ?? null;
   const [sheet, setSheet] = useState<CameraDemo["sheet"] | null>(demo?.sheet ?? null);
-  const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
-  // The sign (frame, words and mark; Tanpa = none) and the colour tone (Asli = none) are chosen apart and combined; both are default every time the camera opens.
-  const [sign, setSign] = useState<SignId>(DEFAULT_SIGN);
-  const [tone, setTone] = useState<CameraToneId>(DEFAULT_CAMERA_TONE);
-  // Optional extras (KONTRAK §13): the position of the photo, and the friends in it. Both can be left off.
+  // Optional extras (KONTRAK §13, §38): the position of the photo and the people in it, both chosen in the editor and both can be left off.
   const geo = useShareLocation(detect && !demo, demo?.geo);
-  const [tagAsk, setTagAsk] = useState(true);
-  const [stash, setStash] = useState<{ items: QueueItem[]; thumb: string | null; problem: string | null } | null>(demo?.sheet === "tag" ? { items: [], thumb: "/wam/demo/foto-05.svg", problem: null } : null);
-  const stashRef = useRef(stash);
-  useEffect(() => { stashRef.current = stash; });
+  const [tagAsk, setTagAsk] = useState(demo?.editor?.ask ?? true);
+  const [keep, setKeep] = useState(demo?.editor?.keep ?? true);
+  // "Periksa fotomu": the photos between the shutter and Kirim (none = the camera).
+  const [edit, setEdit] = useState<Edit | null>(demo?.editor ? demoEdit(demo.editor) : null);
+  const editRef = useRef(edit);
+  /** What the editor shows, set at once (the ref is what the async steps read; the state is what draws). */
+  const put = (next: Edit | null) => { editRef.current = next; setEdit(next); };
   // eslint-disable-next-line react-hooks/set-state-in-effect -- what this phone chose before (browser storage), known only after the first paint
-  useEffect(() => { if (!demo && store("local", TAG_KEY) === "tidak") setTagAsk(false); }, [demo]);
-  // A photo that waits for its tag step is never lost: leaving the screen sends it as it is.
-  useEffect(() => () => { const waiting = stashRef.current; if (waiting?.items.length) void momenQueue().add(waiting.items); }, []);
-  const swipe = useRef<number | null>(null);
+  useEffect(() => { if (!demo) { if (store("local", TAG_KEY) === "tidak") setTagAsk(false); if (store("local", KEEP_KEY) === "tidak") setKeep(false); } }, [demo]);
+  // Leaving the screen while the editor is open drops what it shows (the pictures are only here, nothing was sent).
+  useEffect(() => () => { editRef.current?.photos.forEach(shot => { if (!demo) URL.revokeObjectURL(shot.url); }); }, [demo]);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const shutterInput = useRef<HTMLInputElement>(null);
@@ -174,7 +188,7 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "hidden") stop();
-      else if (wantLive.current && !stream.current) void start(facing, false);
+      else if (wantLive.current && !stream.current && !editRef.current) void start(facing, false);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => { document.removeEventListener("visibilitychange", onVisible); stop(); };
@@ -203,39 +217,81 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
 
   const tagSession = sessions.find(session => session.id === tag) ?? null;
 
-  /* Taking and sending. */
-  async function send(pictures: (() => Promise<Picture>)[], fromGallery: boolean) {
-    if (!pictures.length) return;
-    setBusy(true);
+  /* Taking: the editor opens at once (the frame is still being made: a skeleton), the shot is only a plain picture until Kirim. */
+  function begin(count: number, fromGallery: boolean): string {
+    const key = newId();
+    put({ key, photos: [], pending: count, fromGallery, takenAt: new Date(nowMs() + clockOffset.current).toISOString(), where: fromGallery ? null : geo.fixNow(), sending: false });
+    return key;
+  }
+  /** Leaves the editor: the pictures it showed are dropped, the camera comes back (Ulangi) or the screen closes (Batal, Kirim). */
+  function dismiss(back: "kamera" | "tutup" | "kirim") {
+    editRef.current?.photos.forEach(shot => URL.revokeObjectURL(shot.url));
+    put(null);
+    if (back === "tutup") close();
+    else if (wantLive.current && !stream.current) void start(facing, false);
+  }
+  /** The pictures made for a session that is still the one on screen (a session dropped meanwhile ignores them). */
+  function addShots(key: string, files: File[], failed: number, problem: string | null) {
+    const current = editRef.current;
+    if (!current || current.key !== key) return;
+    const shots: Shot[] = files.map(file => ({ id: newId(), url: URL.createObjectURL(file), fromGallery: current.fromGallery, file }));
+    if (!shots.length) {
+      // Nothing could be read: back to the camera, with the reason.
+      dismiss("kamera");
+      toast.show({ text: problem ?? t("momen.cam.unreadableShort"), tone: "error" });
+      return;
+    }
+    put({ ...current, photos: [...current.photos, ...shots], pending: Math.max(0, current.pending - shots.length - failed) });
+    if (problem) toast.show({ text: problem, tone: "error" });
+  }
+
+  /** Kirim: the original is kept on the phone (from this tap), then each photo gets its look drawn, is made ready (4:5, three sizes) and queued with the people chosen. */
+  async function sendEdit(result: EditorResult) {
+    const session = editRef.current;
+    if (!session || session.sending || !session.photos.length) return;
+    put({ ...session, sending: true });
+    if (keep && !session.fromGallery) void keepOriginals(session);
     const batch = newId();
-    const where = fromGallery ? null : geo.fixNow();
+    const where = session.fromGallery || geo.mode !== "aktif" ? null : geo.fixNow() ?? session.where;
     const ready: QueueItem[] = [];
     let thumb: string | null = null;
     let problem: string | null = null;
-    for (const picture of pictures) {
+    for (const [index, shot] of session.photos.entries()) {
+      const look = result.looks[index];
       try {
-        const prepared = await prepareInTurn(async () => prepareMomenPhoto(await picture()));
+        const prepared = await prepareInTurn(async () => prepareMomenPhoto(await applyLook(await decodeFile(shot.file!), look?.sign, look?.tone)));
         const [besar, kecil, ubin] = await Promise.all([prepared.besar.arrayBuffer(), prepared.kecil.arrayBuffer(), prepared.ubin.arrayBuffer()]);
         thumb ??= URL.createObjectURL(prepared.kecil);
         ready.push({
-          clientId: newId(), batch, sessionId: tag, takenAt: new Date(nowMs() + clockOffset.current).toISOString(), createdAt: nowMs() + ready.length,
+          clientId: newId(), batch, sessionId: tag, takenAt: session.takenAt, createdAt: nowMs() + ready.length,
           width: prepared.width, height: prepared.height, besar, kecil, ubin, state: "antre", attempts: 0, nextAt: 0, error: null, offline: false, photoId: null,
-          deferred: navigator.onLine === false, tags: [], geo: where, gallery: fromGallery,
+          deferred: navigator.onLine === false, tags: result.tags, geo: where, gallery: session.fromGallery,
         });
       } catch (error) {
         problem = error instanceof PhotoProblem ? error.message : t("momen.cam.unreadable");
       }
     }
-    setBusy(false);
+    dismiss("kirim");
     if (!ready.length) {
-      if (fromGallery) setSheet("galeri");
+      if (session.fromGallery) setSheet("galeri");
       else toast.show({ text: problem ?? t("momen.cam.unreadableShort"), tone: "error" });
       return;
     }
     if (thumb) { setLast(previous => { if (previous) URL.revokeObjectURL(previous); return thumb; }); }
-    // One photo from the camera and the step switched on: ask "Ada siapa di foto ini?" before it goes (skippable; a gallery batch is never asked).
-    if (!fromGallery && ready.length === 1 && tagAsk && candidates.length > 0) { setStash({ items: ready, thumb, problem }); return; }
     await deliver(ready, thumb, problem);
+  }
+
+  /**
+   * "Simpan asli di HP": the plain capture goes to the phone (a share sheet on an iPhone, a download elsewhere), started from the tap on Kirim.
+   * Never blocks the sending: a failure is one calm toast, and a closed share sheet says nothing.
+   */
+  async function keepOriginals(session: Edit) {
+    try {
+      const at = new Date(session.takenAt);
+      for (const [index, shot] of session.photos.entries()) {
+        if (shot.file) await saveOriginal(new File([shot.file], originalName(at, index), { type: shot.file.type || "image/jpeg" }));
+      }
+    } catch { toast.show({ text: t("momen.edit.keepFailed"), tone: "info" }); }
   }
 
   /** The photo goes (the queue keeps it until it is sent), with the toast "Terkirim · Batalkan", and what detection finds is told after. */
@@ -263,14 +319,8 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     if (detect) void follow(ids[0]);
   }
 
-  /** The tag step is done (or skipped): the photo goes with the people chosen. */
-  function tagDone(ids: string[]) {
-    const waiting = stash;
-    setStash(null);
-    if (!waiting?.items.length) return;
-    void deliver(waiting.items.map(item => ({ ...item, tags: ids })), waiting.thumb, waiting.problem);
-  }
   function askTags(ask: boolean) { setTagAsk(ask); store("local", TAG_KEY, ask ? "ya" : "tidak"); }
+  function keepOriginal(on: boolean) { setKeep(on); store("local", KEEP_KEY, on ? "ya" : "tidak"); }
 
   /*
    * After a photo is sent: the server looks for missions it meets (it waits for the photo to show to others first), so ask a few
@@ -310,28 +360,45 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
   }
 
   async function shutter() {
-    if (busy) return;
-    if (live === "menyala" && video.current && stream.current) { await send([() => grabFrame(video.current!, sign, tone)], false); return; }
+    if (editRef.current) return;
+    if (live === "menyala" && video.current && stream.current) {
+      const key = begin(1, false);
+      const here = () => editRef.current?.key === key;
+      try {
+        const file = await frameFile(video.current);
+        stop(); // the camera rests while the photo is looked at; Ulangi and Kirim bring it back
+        addShots(key, [file], 0, null);
+      } catch (error) {
+        if (here()) { dismiss("kamera"); toast.show({ text: error instanceof PhotoProblem ? error.message : t("momen.cam.unreadableShort"), tone: "error" }); }
+      }
+      return;
+    }
     shutterInput.current?.click();
+  }
+  /** Files from the phone's own camera or the gallery: the editor opens at once; a file that is not a photo is left out, with the reason. */
+  function open(files: File[], fromGallery: boolean) {
+    if (!files.length || editRef.current) return;
+    const key = begin(files.length, fromGallery);
+    const problems = files.map(file => sourceProblem(file));
+    const good = files.filter((_, index) => !problems[index]);
+    addShots(key, good, files.length - good.length, problems.find(Boolean) ?? null);
   }
   function onShot(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) void send([() => decodeFile(file)], false);
+    if (file) open([file], false);
   }
   function onPicked(event: ChangeEvent<HTMLInputElement>) {
     const files = [...(event.target.files ?? [])];
     event.target.value = "";
     if (files.length > GALLERY_PICK_MAX) toast.show({ text: t("momen.cam.pickMax", { max: GALLERY_PICK_MAX }), tone: "info" });
-    void send(files.slice(0, GALLERY_PICK_MAX).map(file => () => decodeFile(file)), true);
+    open(files.slice(0, GALLERY_PICK_MAX), true);
   }
   async function flip() {
     const side = facing === "environment" ? "user" : "environment";
     setFacing(side);
     if (live === "menyala") await start(side, false);
   }
-  // A swipe on the viewfinder steps the colour tone (the sign is chosen on its strip).
-  const stepTone = (by: number) => setTone(now => CAMERA_TONE_IDS[Math.min(CAMERA_TONE_IDS.length - 1, Math.max(0, CAMERA_TONE_IDS.indexOf(now) + by))]);
   function close() {
     stop();
     if (window.history.length > 1) router.back(); else router.push(mainWamPath.moments());
@@ -355,14 +422,10 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div>
 
     <div className={css.stage}><div className={css.stageInner}>
-      <div className={css.view} onPointerDown={event => { swipe.current = event.clientX; }}
-        onPointerUp={event => { const from = swipe.current; swipe.current = null; if (live === "menyala" && from !== null && Math.abs(event.clientX - from) > 50) stepTone(event.clientX < from ? 1 : -1); }}
-        onPointerCancel={() => { swipe.current = null; }}>
-        {/* The corner marks give way to a sign: its words and mark sit in the corners. */}
-        {sign === DEFAULT_SIGN && <><i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden /></>}
-        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} style={{ filter: cssFilter(tone) }} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
-        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")} style={{ filter: cssFilter(tone) }}><PhotoFill tone={5} className={css.fill} /></span>}
-        {live === "menyala" && <TemplateOverlay sign={sign} lang={lang} className={css.overlay} />}
+      <div className={css.view}>
+        <i className={`${css.hud} ${css.hudA}`} aria-hidden /><i className={`${css.hud} ${css.hudB}`} aria-hidden /><i className={`${css.hud} ${css.hudC}`} aria-hidden /><i className={`${css.hud} ${css.hudD}`} aria-hidden />
+        {live === "menyala" && !demo && <video ref={video} className={`${css.video} ${facing === "user" ? css.mirror : ""}`} playsInline muted autoPlay aria-label={facing === "user" ? t("momen.cam.viewfinderFront") : t("momen.cam.viewfinderBack")} />}
+        {(live === "menyala" && demo) && <span role="img" aria-label={t("momen.cam.viewfinderBack")}><PhotoFill tone={5} className={css.fill} /></span>}
         {live === "hp" && (last
           // eslint-disable-next-line @next/next/no-img-element -- a photo on this phone (object URL)
           ? <img className={css.still} src={last} alt={t("momen.cam.lastSent")} />
@@ -384,21 +447,6 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
     </div></div>
 
     <div className={css.dock}>
-      {live === "menyala" && <div className={css.pickers}>
-        <ChipRow label={t("momen.cam.signLabel")} name={t("momen.cam.signs")} ids={SIGN_IDS} value={sign} onPick={setSign} word={id => t(`momen.cam.sign.${id}`)} />
-        <ChipRow label={t("momen.cam.toneLabel")} name={t("momen.cam.tones")} ids={CAMERA_TONE_IDS} value={tone} onPick={setTone} word={id => t(`momen.cam.tone.${id}`)} />
-      </div>}
-      {(live === "menyala" || live === "hp") && (candidates.length > 0 || detect) && <div className={css.options}>
-        <div className={css.row}>
-          <span className={css.rowLabel} aria-hidden>{t("momen.cam.optionsLabel")}</span>
-          <div className={css.filters} role="group" aria-label={t("momen.cam.options")}>
-            {candidates.length > 0 && <button type="button" className={css.filter} aria-pressed={tagAsk} onClick={() => askTags(!tagAsk)}><Users aria-hidden />{t("momen.cam.tagChip")}</button>}
-            {detect && <button type="button" className={css.filter} aria-pressed={geo.mode === "aktif"} data-blocked={geo.mode === "ditolak" ? "" : undefined} onClick={geo.toggle}>
-              <MapPin aria-hidden />{geo.mode === "aktif" ? t("momen.cam.geo.on") : geo.mode === "ditolak" ? t("momen.cam.geo.blocked") : t("momen.cam.geo.off")}</button>}
-          </div>
-        </div>
-        {detect && geo.mode !== "mati" && <p className={css.geoNote} role="status">{geo.mode === "aktif" ? t("momen.cam.geo.note") : t("momen.cam.geo.blockedNote")}</p>}
-      </div>}
       <div className={css.controls}>
         <button type="button" className={css.gallery} aria-label={t("momen.cam.pickGallery")} onClick={() => galleryInput.current?.click()} disabled={live === "menunggu"}>
           {last
@@ -406,16 +454,18 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
             ? <img className={css.galleryImg} src={last} alt="" />
             : <PhotoFill tone={1} className={css.fill} />}
         </button>
-        <button type="button" className={css.shutter} aria-label={shutterLabel} aria-busy={busy || undefined} disabled={!canShoot} onClick={shutter} />
+        <button type="button" className={css.shutter} aria-label={shutterLabel} disabled={!canShoot} onClick={shutter} />
         <IconButton variant="tonal" icon={SwitchCamera} label={t("momen.cam.flip")} pressed={facing === "user"} disabled={!canShoot} onClick={flip} />
       </div>
+      {(live === "menyala" || live === "hp") && <p className={css.next}>{t("momen.cam.nextNote")}</p>}
       <input ref={shutterInput} className={css.hidden} type="file" accept="image/*" capture={facing} onChange={onShot} tabIndex={-1} aria-hidden />
       <input ref={galleryInput} className={css.hidden} type="file" accept="image/*" multiple onChange={onPicked} tabIndex={-1} aria-hidden />
     </div>
 
-    <MomenTagSheet open={stash !== null} thumb={stash?.thumb ?? null} candidates={candidates} ask={tagAsk} onAskChange={askTags} onDone={tagDone} />
-    {/* Making the photo ready to send (the pictures are shrunk on the phone first): a dialog, so nothing is tapped twice. */}
-    <LoadingDialog open={busy} title={t("momen.cam.sendingPhoto")} />
+    {edit && <PhotoEditor photos={edit.photos} pending={edit.pending} candidates={candidates} lang={lang} ask={tagAsk} onAskChange={askTags} keep={keep} onKeepChange={keepOriginal}
+      canKeep={!edit.fromGallery} geo={detect && !edit.fromGallery ? { mode: geo.mode, toggle: geo.toggle } : null} sending={edit.sending}
+      demo={demo?.editor ? { tags: demo.editor.tags, query: demo.editor.query, cur: demo.editor.cur, all: demo.editor.all, looks: demo.editor.looks } : undefined}
+      onSend={sendEdit} onRetake={() => dismiss("kamera")} onCancel={() => dismiss("tutup")} />}
     <Sheet open={sheet === "galeri"} onClose={() => setSheet(null)} title={t("momen.gallery")} history={live !== "menyala"}>
       <EmptyState size="s" icon={ImageIcon} title={t("momen.cam.noAccess")} headingLevel={3}
         action={<Button icon={Settings} onClick={() => setSheet("cara")}>{t("momen.cam.openSettings")}</Button>} />
@@ -428,18 +478,6 @@ export function CameraScreen({ sessions, nowIso, absen, migrated, initialSession
       </ol>
       <p className={css.note}>{t("momen.cam.stillWorks")}</p>
     </Sheet>
-  </div>;
-}
-
-/** One strip of small choices with its label: a radio group, scrolled so the chosen chip is in view. */
-function ChipRow<Id extends string>({ label, name, ids, value, onPick, word }: { label: string; name: string; ids: readonly Id[]; value: Id; onPick: (id: Id) => void; word: (id: Id) => string }) {
-  const chosen = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => { chosen.current?.scrollIntoView?.({ inline: "center", block: "nearest" }); }, [value]);
-  return <div className={css.row}>
-    <span className={css.rowLabel} aria-hidden>{label}</span>
-    <div className={css.filters} role="radiogroup" aria-label={name}>
-      {ids.map(id => <button key={id} ref={node => { if (node && value === id) chosen.current = node; }} type="button" role="radio" aria-checked={value === id} className={css.filter} onClick={() => onPick(id)}>{word(id)}</button>)}
-    </div>
   </div>;
 }
 
