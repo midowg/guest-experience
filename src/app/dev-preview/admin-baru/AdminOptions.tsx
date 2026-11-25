@@ -15,7 +15,7 @@ type Event = { id: string; title: string; kind: string; date: string; status: "T
 const A = "/panduan-ke-werkudara/assets/";
 const apps: App[] = [
   { key: "wam", name: "Pra WAM", what: "Aplikasi karyawan", logo: "/wam/icon-192.png", tone: "#1f4fd1", mark: "W", status: "WAM 45 hari lagi", waiting: "2 reset password" },
-  { key: "wam_acara", name: "WAM 2026", what: "Selama acara", tone: "#0b1f4d", mark: "26", status: "4–7 Jan 2027" },
+  { key: "wam_acara", name: "WAM 2026", what: "Selama acara", tone: "#0b1f4d", mark: "26", status: "5–8 Jan 2027" },
   { key: "hr", name: "WG People", what: "HR karyawan", logo: "/people/icon-192.png", tone: "#0d9488", mark: "P", status: "Absen hari ini 38/51", waiting: "3 foto wajah" },
   { key: "booking", name: "Booking Kantor", what: "Ruang meeting", tone: "#0d9488", mark: "B", status: "6 booking hari ini" },
   { key: "tv", name: "TV kantor", what: "Signage", tone: "#ea580c", mark: "TV", status: "3 layar menyala" },
