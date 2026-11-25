@@ -31,14 +31,16 @@ const index = 2;
 const times = soalTimes(SAMPLE_QUESTIONS[index].level);
 const run = sampleRun({ phase: "soal", index, phaseAt: SAMPLE_T0, rev: 4 });
 const correct = SAMPLE_QUESTIONS[index].correct;
-const mine = (withAnswer: boolean) => ({
+const wrong = (correct + 1) % 4;
+const mine = (withAnswer: boolean, pick?: { choice: number; ms: number }) => ({
   alias: sampleAlias(0), joinedAt: SAMPLE_T0,
-  answers: [0, 1, ...(withAnswer ? [index] : [])].flatMap(i => sampleAnswers(i).filter(answer => answer.employeeId === SAMPLE_ME)),
+  answers: [0, 1, ...(withAnswer ? [index] : [])].flatMap(i => sampleAnswers(i, SAMPLE_PLAYERS, i === index && pick ? pick : undefined).filter(answer => answer.employeeId === SAMPLE_ME)),
 });
-function phone(now: number, withAnswer: boolean, lang: Lang = "id") {
+function phone(now: number, withAnswer: boolean, lang: Lang = "id", pick?: { choice: number; ms: number }) {
   const open = now >= SAMPLE_T0 + times.reveal;
-  const snap = buildPlay({ quiz: QUIZ, run, now, players: SAMPLE_PLAYERS, mine: mine(withAnswer), employeeId: SAMPLE_ME, tallies: open ? sampleTallies(index, index - 1) : null, answers: open ? sampleAnswers(index) : null });
-  return render(<LangProvider lang={lang}><ToastProvider><PlayScreen quizId={QUIZ.id} initial={snap} preview={{ now }} /></ToastProvider></LangProvider>);
+  const snap = buildPlay({ quiz: QUIZ, run, now, players: SAMPLE_PLAYERS, mine: mine(withAnswer, pick), employeeId: SAMPLE_ME, tallies: open ? sampleTallies(index, index - 1) : null, answers: open ? sampleAnswers(index, SAMPLE_PLAYERS, pick) : null });
+  const lock = pick && withAnswer ? { choice: pick.choice, value: 400 } : undefined;
+  return render(<LangProvider lang={lang}><ToastProvider><PlayScreen quizId={QUIZ.id} initial={snap} preview={{ now, lock }} /></ToastProvider></LangProvider>);
 }
 
 describe("a player's phone", () => {
@@ -72,6 +74,25 @@ describe("a player's phone", () => {
     } finally { window.matchMedia = motion; }
   });
 
+  it("a wrong pick once open: a cross and words on it (not colour alone), the right one marked Benar", () => {
+    phone(SAMPLE_T0 + times.light + 1_000, true, "id", { choice: wrong, ms: 4_000 });
+    expect(screen.getAllByText("Belum tepat").length).toBe(2);
+    const mineButton = screen.getByRole("button", { pressed: true });
+    expect(mineButton.textContent).toContain(SAMPLE_QUESTIONS[index].options[wrong]);
+    expect(mineButton.textContent).toContain("Pilihanmu");
+    expect(mineButton.textContent).toContain("Belum tepat");
+    const rightButton = screen.getAllByRole("button").find(button => button.textContent?.includes(SAMPLE_QUESTIONS[index].options[correct]))!;
+    expect(rightButton.textContent).toContain("Benar");
+  });
+
+  it("the last five seconds: the seconds written beside the time bar", () => {
+    phone(SAMPLE_T0 + times.close - 3_400, false);
+    expect(screen.getByText("4 detik")).toBeTruthy();
+    cleanup();
+    phone(SAMPLE_T0 + times.open + 6_000, false);
+    expect(screen.queryByText(/^\d+ detik$/)).toBeNull();
+  });
+
   it("in English", () => {
     phone(SAMPLE_T0 + times.open + 6_000, false, "en");
     expect(screen.getByText("Points now")).toBeTruthy();
@@ -89,6 +110,7 @@ describe("the MC's control", () => {
     expect(screen.queryByText(/Jawaban benar/)).toBeNull();
     cleanup();
     control(SAMPLE_T0 + times.light + 500);
+    expect(screen.getByText("Jawaban benar")).toBeTruthy();
     const next = screen.getByRole("button", { name: /Lanjut: Bersiap soal 4/ }) as HTMLButtonElement;
     expect(next.disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: /Batalkan soal/ }));

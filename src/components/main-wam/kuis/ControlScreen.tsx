@@ -9,6 +9,7 @@ import { mainWamApi } from "@/lib/routes";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { Banner, Button, Card, ConfirmDialog, ProgressBar, cx, useToast } from "@/components/main-wam/ui";
 import { KuisRequestError, kuisRequest, useNow, usePoll, useServerClock } from "./live";
+import { OptionShape } from "./OptionShape";
 import css from "./control.module.css";
 
 /*
@@ -96,7 +97,9 @@ export function ControlScreen({ quizId, initial, preview }: { quizId: string; in
       <p className={css.qbody}>{question.body}</p>
       <ol className={css.options}>
         {question.options.map((text, i) => <li key={i} className={cx(css.option, question.correct === i && css.ok)}>
-          <span className={cx(css.letter, css[`opt${i}`])}>{question.correct === i ? <Check size={16} aria-label="Jawaban benar" /> : OPTION_LETTERS[i]}</span>{text}
+          <span className={css.letter}><OptionShape index={i} className={css.shape} />{OPTION_LETTERS[i]}</span>
+          <span className={css.optionText}>{text}</span>
+          {question.correct === i && <span className={css.okTag}><Check aria-hidden />Jawaban benar</span>}
         </li>)}
       </ol>
       {state && state.stage === "jalan" && <ProgressBar value={snap.answered ?? 0} max={Math.max(1, snap.players)} label="Sudah menjawab" valueText={`${snap.answered ?? 0} dari ${snap.players}`} thin />}

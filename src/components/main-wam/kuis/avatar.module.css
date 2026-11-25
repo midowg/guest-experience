@@ -1,4 +1,8 @@
-/* A tokoh in a circle (Kuis live). Colours: the persona's two (set by the component), or the theme's. */
+/*
+ * A tokoh in a circle (Kuis live): the figure on the theme's second surface with a thin outline, the same
+ * for every persona (no persona colours, no gradient, no glow). The lobby's big tokoh is a rounded card
+ * with a primary ring.
+ */
 .avatar {
   --kz-size: 48px;
   position: relative;
@@ -9,16 +13,18 @@
   height: var(--kz-size);
   border-radius: 50%;
   overflow: hidden;
-  user-select: none;
-}
-.persona {
-  background: linear-gradient(140deg, var(--kz-c1), var(--kz-c2));
-  box-shadow: inset 0 0 0 calc(var(--kz-size) * 0.045) color-mix(in srgb, var(--mw-media-on) 22%, transparent);
-}
-.mystery {
   background: var(--mw-surface-2);
   color: var(--mw-text-3);
-  box-shadow: inset 0 0 0 calc(var(--kz-size) * 0.045) var(--mw-outline);
+  user-select: none;
+}
+/* The ring above the picture (an inset shadow would sit under it). */
+.avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--mw-outline);
+  pointer-events: none;
 }
 .avatar img {
   width: 100%;
@@ -29,17 +35,12 @@
 }
 .initials {
   font: 800 calc(var(--kz-size) * 0.36) / 1 var(--mw-font-sans);
-  color: var(--mw-media-on);
+  color: var(--mw-text-1);
 }
 .silhouette {
   width: 64%;
   height: 64%;
   fill: currentColor;
 }
-.card { width: calc(var(--kz-size) * 0.806); border-radius: 22px; box-shadow: 0 0 40px color-mix(in srgb, var(--mw-gold) 40%, transparent); }
-.card.persona { box-shadow: 0 0 40px color-mix(in srgb, var(--mw-gold) 40%, transparent); }
-.breathe { animation: breathe 3.4s ease-in-out infinite; }
-@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
-@media (prefers-reduced-motion: reduce) {
-  .breathe { animation: none; }
-}
+.card { width: calc(var(--kz-size) * 0.806); border-radius: var(--mw-radius-22); background: var(--mw-surface); }
+.card::after { box-shadow: inset 0 0 0 3px var(--mw-primary); }

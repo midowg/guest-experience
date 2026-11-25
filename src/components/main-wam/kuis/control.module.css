@@ -1,31 +1,36 @@
-/* The MC's control of Kuis live (on a phone or a laptop; it follows the app's theme). */
+/*
+ * The MC's control of Kuis live (on a phone or a laptop; it follows the app's theme). The same rules as the
+ * phone and the big screen: the theme's colours only, the four options in one look (shape and letter tell
+ * them apart), the key in green only with a ✓ and the word Benar.
+ */
 .status { display: flex; flex-direction: column; gap: var(--mw-space-8); }
 .statusRow { display: flex; align-items: flex-start; gap: var(--mw-space-12); }
+/* The state as a dot beside its words (the words carry it): quiet, running (primary), waiting for the MC (a primary ring), paused. */
 .dot { flex: none; width: 12px; height: 12px; margin-top: 6px; border-radius: 50%; background: var(--mw-text-3); }
-.run { background: var(--mw-success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-success) 18%, transparent); }
-.wait { background: var(--mw-warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-warning) 18%, transparent); }
-.pause { background: var(--mw-error); }
+.run { background: var(--mw-primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mw-primary) 18%, transparent); }
+.wait { background: transparent; box-shadow: inset 0 0 0 3px var(--mw-primary); }
+.pause { background: var(--mw-warning); }
 .statusText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .main { font: var(--mw-type-subtitle); color: var(--mw-text-1); overflow-wrap: anywhere; }
 .sub { font: var(--mw-type-body-small); color: var(--mw-text-2); overflow-wrap: anywhere; }
-.title { font: var(--mw-type-caption); color: var(--mw-text-3); }
+.title { font: var(--mw-type-caption); color: var(--mw-text-2); }
 .buttons { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
 .next { flex: 1 1 240px; min-height: 64px; }
 .jeda { flex: 0 1 auto; min-height: 64px; }
 .jedaOn { box-shadow: inset 0 0 0 2px var(--mw-warning); }
-.keys { font: var(--mw-type-caption); color: var(--mw-text-3); }
+.keys { font: var(--mw-type-caption); color: var(--mw-text-2); }
 .secondary { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
 .question { display: flex; flex-direction: column; gap: var(--mw-space-8); }
 .qhead { font: var(--mw-type-label); color: var(--mw-text-2); }
 .qbody { font: var(--mw-type-subtitle); color: var(--mw-text-1); overflow-wrap: anywhere; }
 .options { display: flex; flex-direction: column; gap: 6px; }
-.option { display: flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-body); color: var(--mw-text-1); padding: 4px; border-radius: var(--mw-radius-8); }
-.ok { background: var(--mw-success-container); color: var(--mw-on-success-container); font-weight: 600; }
-.letter { flex: none; width: 28px; height: 28px; border-radius: var(--mw-radius-8); display: grid; place-items: center; font: 800 14px / 1 var(--mw-font-sans); color: var(--mw-on-kuis); }
-.opt0 { background: var(--mw-kuis-a); }
-.opt1 { background: var(--mw-kuis-b); }
-.opt2 { background: var(--mw-kuis-c); }
-.opt3 { background: var(--mw-kuis-d); }
-.ok .letter { background: var(--mw-success); color: var(--mw-on-primary); }
-.hint { font: var(--mw-type-caption); color: var(--mw-text-3); }
+.option { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 44px; font: var(--mw-type-body); color: var(--mw-text-1); padding: 4px 12px 4px 4px; border-radius: var(--mw-radius-12); box-shadow: inset 0 0 0 1px var(--mw-outline); }
+.optionText { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ok { box-shadow: inset 0 0 0 2px var(--mw-success); font-weight: 600; }
+.letter { flex: none; width: 36px; height: 36px; border-radius: var(--mw-radius-8); display: flex; align-items: center; justify-content: center; gap: 3px; background: var(--mw-primary-container); color: var(--mw-on-primary-container); font: 800 14px / 1 var(--mw-font-sans); }
+.shape { width: 10px; height: 10px; }
+.ok .letter { background: var(--mw-success-container); color: var(--mw-on-success-container); }
+.okTag { flex: none; display: inline-flex; align-items: center; gap: 4px; font: var(--mw-type-label); color: var(--mw-on-success-container); }
+.okTag > svg { flex: none; width: 16px; height: 16px; color: var(--mw-success); }
+.hint { font: var(--mw-type-caption); color: var(--mw-text-2); }
 @media (max-width: 599px) { .keys { display: none; } }

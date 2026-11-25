@@ -21,7 +21,8 @@ export const dynamic = "force-dynamic";
 /*
  * Kuis live with sample data, no sign-in, 404 in production (KONTRAK §7): the phone (?layar=hp-…), the MC's
  * control (?layar=kendali-…) and the big screen (?layar=layar-…), each frozen at one moment of the game.
- * ?mode=dark for the phone and the control; ?lang=en for the phone.
+ * ?mode=dark for the phone and the control (light by default); ?mode=light for the big screen (dark by
+ * default, as /kuis/{kunci}); ?lang=en for the phone.
  */
 
 const QUIZ = { id: "00000000-0000-4000-a000-0000000000aa", title: "Kuis WAM 2026" };
@@ -107,7 +108,7 @@ export default async function DevMainWamKuis({ searchParams }: { searchParams: P
       title: QUIZ.title, run, now: NOW, players, joined: run.phase === "lobi" ? Array.from({ length: 38 }, (_, i) => sampleAlias(i)) : null,
       answered: run.phase === "soal" ? 21 : null, tallies, answers, names: new Map([...names].filter(([id]) => open.has(id))),
     });
-    return <MainWamTheme mode="dark"><BigScreen initial={snap} feedUrl="" preview={{ now: NOW }} /></MainWamTheme>;
+    return <MainWamTheme mode={params.mode === "light" ? "light" : "dark"}><BigScreen initial={snap} feedUrl="" preview={{ now: NOW }} /></MainWamTheme>;
   }
   if (surface === "kendali") {
     const snap = buildControl({ quiz: QUIZ, run: runOrNone, now: NOW, players, answered: run.phase === "soal" ? 21 : null, answers });

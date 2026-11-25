@@ -82,17 +82,10 @@
   --mw-on-eco: #FFFFFF;
   --mw-eco-bar: #86EFAC;
 
-  /* 1.7 Kuis live: pilihan A–D (huruf + warna, teks --mw-on-kuis) dan medali podium (teks --mw-on-kuis-medal). */
-  --mw-kuis-a: #6D28D9;
-  --mw-kuis-b: #0F766E;
-  --mw-kuis-c: #B45309;
+  /* 1.7 Tanda kuis di Modul dan Agenda (label "Kuis", teks --mw-on-kuis). Kuis live sendiri hanya memakai warna tema:
+     netral, primary, emas untuk nilai atau juara milikmu, hijau/merah hanya untuk benar/salah (selalu dengan ikon dan teks). */
   --mw-kuis-d: #BE185D;
   --mw-on-kuis: #FFFFFF;
-  --mw-kuis-medal-1: #F2B24C;
-  --mw-kuis-win-container: #FFE29A;
-  --mw-kuis-medal-2: #D6DEEB;
-  --mw-kuis-medal-3: #E7A977;
-  --mw-on-kuis-medal: #2A1A00;
 
   /* 1.5 Acara (slot tema KV), inverse, media */
   --mw-accent: var(--mw-kv-accent, #1E3A5F);
@@ -308,16 +301,8 @@
   --mw-awarding: #FDBA74;
   --mw-awarding-container: #4A2A14;
   --mw-on-awarding-container: #FFDCC4;
-  --mw-kuis-a: #A78BFA;
-  --mw-kuis-b: #2DD4BF;
-  --mw-kuis-c: #FBBF24;
   --mw-kuis-d: #F472B6;
   --mw-on-kuis: #0A1430;
-  --mw-kuis-medal-1: #FFD36E;
-  --mw-kuis-win-container: #FFD36E;
-  --mw-kuis-medal-2: #D6DEEB;
-  --mw-kuis-medal-3: #E7A977;
-  --mw-on-kuis-medal: #2A1A00;
   --mw-wellbeing: #8AB4F8;
   --mw-wellbeing-container: #1E3A6E;
   --mw-on-wellbeing-container: #D6E3FC;
@@ -427,16 +412,8 @@
     --mw-awarding: #FDBA74;
     --mw-awarding-container: #4A2A14;
     --mw-on-awarding-container: #FFDCC4;
-    --mw-kuis-a: #A78BFA;
-    --mw-kuis-b: #2DD4BF;
-    --mw-kuis-c: #FBBF24;
     --mw-kuis-d: #F472B6;
     --mw-on-kuis: #0A1430;
-    --mw-kuis-medal-1: #FFD36E;
-    --mw-kuis-win-container: #FFD36E;
-    --mw-kuis-medal-2: #D6DEEB;
-    --mw-kuis-medal-3: #E7A977;
-    --mw-on-kuis-medal: #2A1A00;
     --mw-wellbeing: #8AB4F8;
     --mw-wellbeing-container: #1E3A6E;
     --mw-on-wellbeing-container: #D6E3FC;
