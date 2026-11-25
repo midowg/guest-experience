@@ -129,7 +129,7 @@ describe("halaman Misi", () => {
     expect(container.textContent).toContain("3.400");
     expect(container.textContent).toContain("Peringkat 7 dari 118");
     expect(screen.getByRole("img", { name: "2 dari 12 misi selesai" })).toBeTruthy();
-    const todo = screen.getByRole("region", { name: /Belum · 8/ });
+    const todo = screen.getByRole("region", { name: /Belum selesai · 8/ });
     const waiting = screen.getByRole("region", { name: /Menunggu · 2/ });
     const done = screen.getByRole("region", { name: /Selesai · 2/ });
     expect(todo.compareDocumentPosition(waiting) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -173,17 +173,17 @@ describe("halaman Misi", () => {
     const chips = screen.getByRole("group", { name: "Saring misi" });
     expect(within(chips).getByRole("button", { name: "Semua 12" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(within(chips).getByRole("button", { name: "Berhasil 2" }));
-    expect(screen.queryByRole("region", { name: /Belum ·/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /Belum selesai ·/ })).toBeNull();
     expect(screen.getByRole("region", { name: /Selesai · 2/ })).toBeTruthy();
     fireEvent.click(within(chips).getByRole("button", { name: "Belum 10" }));
     expect(screen.queryByRole("region", { name: /Selesai/ })).toBeNull();
-    expect(screen.getByRole("region", { name: /Belum · 8/ })).toBeTruthy();
+    expect(screen.getByRole("region", { name: /Belum selesai · 8/ })).toBeTruthy();
     expect(screen.getByRole("region", { name: /Menunggu · 2/ })).toBeTruthy();
   });
 
   it("orders by points, highest first (the BOD photo), and the other way from the sort sheet", () => {
     render(<MisiScreen view={viewOf()} />);
-    const titles = () => within(screen.getByRole("region", { name: /Belum ·/ })).getAllByRole("button").map(row => row.textContent ?? "");
+    const titles = () => within(screen.getByRole("region", { name: /Belum selesai ·/ })).getAllByRole("button").map(row => row.textContent ?? "");
     expect(titles()[0]).toContain(BOD);
     fireEvent.click(screen.getByRole("button", { name: /Urutkan poin/ }));
     fireEvent.click(screen.getByRole("button", { name: "Terendah dulu" }));
@@ -216,6 +216,9 @@ describe("halaman Misi", () => {
     expect(sheet.textContent).toContain("Ditolak");
     expect(sheet.textContent).toContain("Alasan: Hanya satu anggota BOD yang ditandai. Tandai keduanya.");
     expect(sheet.textContent).toContain("Percobaan 1 dari 3");
+    // G2-31: a rejection reads red (an alert), like the same mission's card in the list. G2-30: "Misi n dari 12" is the kicker beside the close button, the title is drawn in the body.
+    expect(within(sheet).getByRole("alert").textContent).toContain("Ditolak");
+    expect(within(sheet).getByText(/^Misi \d+ dari 12$/)).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "Kirim ulang" }).getAttribute("href")).toBe(mainWamPath.missionDo(sampleMissionOf("bod-berdua").id));
   });
 
@@ -629,5 +632,19 @@ describe("check-in misi (an older kind, still working)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Check-in/ }));
     expect(await screen.findByText(/Contoh: tidak disimpan/)).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("Misi: tata letak lengket dan kartu (audit prototipe vs aplikasi)", () => {
+  it("my row in Peringkat sticks under the sticky top bar, not behind it (G2-26)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync("src/components/main-wam/misi/misi.module.css", "utf8");
+    expect(css).toMatch(/\.rankMe \{[^}]*position: sticky; top: calc\(var\(--mw-safe-top\) \+ var\(--mw-topbar-h\)\)/);
+  });
+
+  it("the progress bar on Beranda's Misi card is the gold one, not the awarding orange (B11)", () => {
+    render(<MisiCard view={viewOf()} />);
+    // ProgressBar paints `.awarding .bar` only for tone="awarding"; the default carries no tone class.
+    expect(document.querySelector('[role="progressbar"]')?.className).not.toMatch(/awarding/);
   });
 });

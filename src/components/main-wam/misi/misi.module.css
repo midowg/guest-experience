@@ -71,8 +71,10 @@
 
 /* The sheet of one mission */
 .sheetBody { display: flex; flex-direction: column; gap: var(--mw-space-12); }
-.sheetPoints { display: flex; align-items: baseline; gap: 6px; margin: 0; }
-.sheetPoints b { font: 800 44px/38px var(--mw-display-font); color: var(--mw-gold-ink); }
+.sheetHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--mw-space-4) var(--mw-space-12); }
+.sheetTitle { flex: 1 1 160px; min-width: 0; margin: 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
+.sheetPoints { flex: none; display: flex; align-items: baseline; gap: 6px; margin: 0 0 0 auto; }
+.sheetPoints b { font: 800 32px/30px var(--mw-display-font); color: var(--mw-gold-ink); }
 .sheetPoints span { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
 .rules { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .rule { display: flex; align-items: flex-start; gap: var(--mw-space-12); padding: 12px 0; border-top: 1px solid var(--mw-outline); }
@@ -86,7 +88,7 @@
 .rank { margin: 0; padding: 0; list-style: none; }
 .rankRow { display: flex; align-items: center; gap: var(--mw-space-12); min-height: 56px; padding: 10px 6px; border-top: 1px solid var(--mw-outline); }
 .rankRow:first-child { border-top: 0; }
-.rankMe { position: sticky; top: 0; bottom: 0; background: color-mix(in srgb, var(--mw-gold) 18%, var(--mw-surface)); border-radius: var(--mw-radius-12); border-top-color: transparent; }
+.rankMe { position: sticky; top: calc(var(--mw-safe-top) + var(--mw-topbar-h)); bottom: 0; z-index: 1; background: color-mix(in srgb, var(--mw-gold) 18%, var(--mw-surface)); border-radius: var(--mw-radius-12); border-top-color: transparent; }
 .rankNo { flex: none; width: 34px; display: inline-flex; align-items: center; gap: 2px; font: 800 20px/1 var(--mw-display-font); font-variant-numeric: tabular-nums; color: var(--mw-text-2); }
 .rankMedal > svg { width: 16px; height: 16px; }
 .rank li:nth-child(1) .rankMedal { color: var(--mw-gold); }
@@ -121,6 +123,9 @@
 .noGallery > svg { flex: none; width: 14px; height: 14px; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--mw-space-12); }
 .actions > * { flex: 1 1 140px; }
+/* Back at its own width, the send button takes the rest and keeps its words on one line ("Kirim · +1.500 poin"); narrower than both fit, they wrap, each full width. */
+.actions > :first-child:not(:only-child) { flex: 0 1 auto; }
+.actions > :last-child:not(:only-child) { flex: 1 1 auto; }
 .shutterRow { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-16); }
 .shutterSide { flex: 1 1 0; display: flex; justify-content: flex-end; min-width: 44px; }
 .shutterSide:first-child { justify-content: flex-start; }

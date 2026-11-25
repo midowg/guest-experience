@@ -187,7 +187,7 @@ export function MissionCamera({ item, demo = false, candidates = [], viewer = { 
           </div>
         </>
         : <>
-          <SummaryStep rules={item.rules} checks={summary.checks} tags={people} points={item.points} />
+          <SummaryStep rules={item.rules} checks={summary.checks} tags={people} points={item.points} tries={item.maxAttempts ? { n: Math.min(item.maxAttempts, Math.max(0, item.attempts) + 1), max: item.maxAttempts } : null} />
           <div className={css.actions}>
             <Button variant="secondary" disabled={phase === "kirim"} onClick={() => setPhase(tagRule ? "tag" : "bidik")}>{t("misi.step.back")}</Button>
             <Button icon={<Send />} loading={phase === "kirim"} loadingLabel={t("misi.cam.sending")} disabled={!summary.ok} onClick={() => void send()}>{t("misi.sum.send", { points: num(item.points) })}</Button>

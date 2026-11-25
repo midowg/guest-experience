@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Check, CheckCircle2, ChevronRight, Hourglass, ListFilter, Medal, Tag, Target } from "lucide-react";
+import { Camera, Check, CheckCircle2, ChevronRight, Hourglass, ListFilter, Lock, Medal, Tag, Target } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Banner, Button, EmptyState, EyebrowLabel, IconBox, List, ListRow, Pill, Sheet, SrOnly, Text } from "@/components/main-wam/ui";
@@ -180,20 +180,24 @@ function MissionSheet({ item, index, total, onClose, lang }: { item: MissionItem
   else if (item.status === "pending") action = <Button block disabled icon={<Hourglass />}>{t("misi.sheet.pending")}</Button>;
   else if (item.status === "review") action = <Button block disabled icon={<Hourglass />}>{t("misi.sheet.review")}</Button>;
   else if (item.status === "rejected" && !resendable) action = <Button block disabled>{t("misi.sheet.noResend")}</Button>;
-  else if (item.availability === "tutup") action = <Button block disabled>{t("misi.sheet.closed")}</Button>;
-  else if (item.availability === "belum") action = <Button block disabled>{t("misi.sheet.soon", { when: item.opensAt ? whenOf(item.opensAt, lang) : "" })}</Button>;
+  else if (item.availability === "tutup") action = <Button block disabled icon={<Lock />}>{t("misi.sheet.closed")}</Button>;
+  else if (item.availability === "belum") action = <Button block disabled icon={<Lock />}>{t("misi.sheet.soon", { when: item.opensAt ? whenOf(item.opensAt, lang) : "" })}</Button>;
   else if (item.kind === "sesi") action = item.sessionId
     ? <Button block icon={<Target />} href={mainWamPath.session(item.sessionId)}>{t("misi.sheet.do")}</Button>
     : <Button block disabled>{t("misi.sheet.noSession")}</Button>;
-  else if (canStart(item)) action = <Button block icon={<Target />} href={mainWamPath.missionDo(item.id)}>{t(item.status === "rejected" ? "misi.sheet.resend" : "misi.sheet.do")}</Button>;
-  return <Sheet open onClose={onClose} title={item.title} subtitle={t("misi.sheet.kicker", { n: index, total })} footer={action}>
+  else if (canStart(item)) action = <Button block icon={<Camera />} href={mainWamPath.missionDo(item.id)}>{t(item.status === "rejected" ? "misi.sheet.resend" : "misi.sheet.do")}</Button>;
+  // Like Detail sesi (prototipe .dsh): "Misi 1 dari 12" is the kicker beside the ✕; the title is drawn large in the body with the points at its right (hideTitle keeps it as the dialog's name).
+  return <Sheet open onClose={onClose} title={item.title} hideTitle kicker={<Pill>{t("misi.sheet.kicker", { n: index, total })}</Pill>} footer={action}>
     <div className={css.sheetBody}>
-      <p className={css.sheetPoints}><b aria-hidden>+{num(item.points)}</b><span aria-hidden>{t("misi.page.points")}</span><SrOnly>{t("misi.sheet.points", { points: num(item.points) })}</SrOnly></p>
+      <div className={css.sheetHead}>
+        <p className={css.sheetTitle} aria-hidden>{item.title}</p>
+        <p className={css.sheetPoints}><b aria-hidden>+{num(item.points)}</b><span aria-hidden>{t("misi.page.points")}</span><SrOnly>{t("misi.sheet.points", { points: num(item.points) })}</SrOnly></p>
+      </div>
       {item.description && <Text variant="body-long" color="2">{item.description}</Text>}
       {item.status === "pending" && <Banner tone="info" title={t("misi.status.pending")}>{t("misi.sheet.pendingBody")}</Banner>}
       {item.status === "review" && <Banner tone="info" title={t("misi.status.review")}>{t("misi.sheet.reviewBody")}</Banner>}
       {item.status === "done" && <Banner tone="success" title={t("misi.status.approved", { points: num(item.points) })} />}
-      {item.status === "rejected" && <Banner tone="warning" title={t("misi.status.rejected")}>
+      {item.status === "rejected" && <Banner tone="error" title={t("misi.status.rejected")}>
         {item.rejectedNote ? `${t("misi.status.rejectedWhy", { why: item.rejectedNote })} ` : ""}
         {resendable ? t("misi.sheet.rejectedAgain") : t("misi.status.noResend")}
         {item.maxAttempts ? ` ${t("misi.status.tries", { n: item.attempts, max: item.maxAttempts })}` : ""}

@@ -69,7 +69,7 @@ export function checkOf(rules: readonly PublicRule[], input: { inside: boolean |
   return { checks, ok };
 }
 
-export function SummaryStep({ rules, checks, tags, points }: { rules: readonly PublicRule[]; checks: readonly RuleCheck[]; tags: readonly TagCandidate[]; points: number }) {
+export function SummaryStep({ rules, checks, tags, points, tries }: { rules: readonly PublicRule[]; checks: readonly RuleCheck[]; tags: readonly TagCandidate[]; points: number; /** Which try this send is ("Percobaan 2 dari 3"; prototipe camMisi); left out when the mission has no limit. */ tries?: { n: number; max: number } | null }) {
   const t = useT();
   const num = useNum();
   const { lang } = useLang();
@@ -96,6 +96,7 @@ export function SummaryStep({ rules, checks, tags, points }: { rules: readonly P
       })}
     </ul>
     {unmet > 0 && <Banner tone="warning">{t("misi.sum.lead")}</Banner>}
+    {tries && <p className={css.stepLead}><b>{t("misi.status.tries", { n: tries.n, max: tries.max })}</b></p>}
     <p className={css.stepLead}>{t("misi.sheet.how")}</p>
     <SrOnly>{t("misi.sum.send", { points: num(points) })}</SrOnly>
   </div>;

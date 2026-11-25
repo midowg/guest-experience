@@ -9,7 +9,7 @@
 .state { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
 .when { color: var(--mw-gold-ink); }
 .link { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; color: inherit; text-decoration: none; border-radius: var(--mw-radius-12); -webkit-tap-highlight-color: transparent; }
-.title { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
+.title { margin: 0; font: var(--mw-type-card); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; color: var(--mw-text-1); overflow-wrap: anywhere; }
 .meta { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
 .metaItem { display: flex; align-items: flex-start; gap: var(--mw-space-8); min-width: 0; font: var(--mw-type-body); color: var(--mw-text-2); }
 .metaItem > svg { flex: none; width: 18px; height: 18px; margin-top: 3px; color: var(--mw-primary); }
@@ -86,7 +86,7 @@
 
 /* A contextual card that is not an announcement (prototipe .mc / .quizcard): eyebrow, big title, one line, one gold button. */
 .ctx { gap: var(--mw-space-8); }
-.ctxTitle { margin: 0; font: var(--mw-type-display); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; }
+.ctxTitle { margin: 0; font: var(--mw-type-card); letter-spacing: var(--mw-ls-headline); text-transform: uppercase; overflow-wrap: anywhere; }
 .ctxSub { font: var(--mw-type-body); color: var(--mw-text-2); overflow-wrap: anywhere; }
 .ctxLead { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); flex-wrap: wrap; }
 .ctxAction { margin-top: var(--mw-space-4); padding-top: var(--mw-space-12); border-top: 1px solid var(--mw-outline); }

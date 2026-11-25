@@ -5,7 +5,7 @@
 .action > svg { flex: none; width: 18px; height: 18px; }
 .main { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--mw-space-4) var(--mw-space-16); }
 .points { display: flex; align-items: baseline; gap: var(--mw-space-8); color: var(--mw-gold-ink); }
-.points b { font: var(--mw-type-stat-l); font-size: 48px; line-height: 42px; letter-spacing: var(--mw-ls-stat-l); font-variant-numeric: tabular-nums; }
+.points b { font: var(--mw-type-stat-xl); letter-spacing: var(--mw-ls-stat-xl); font-variant-numeric: tabular-nums; }
 .points span { font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-text-2); }
 .place { display: inline-flex; align-items: center; gap: var(--mw-space-8); font: var(--mw-type-label-lg); color: var(--mw-text-1); }
 .place > svg { flex: none; width: 18px; height: 18px; color: var(--mw-primary); }

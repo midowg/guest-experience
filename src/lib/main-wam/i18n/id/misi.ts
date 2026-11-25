@@ -38,7 +38,7 @@ export const idMisi = {
   "misi.sort.low": "Terendah dulu",
   "misi.sort.buttonHigh": "Poin, tertinggi dulu",
   "misi.sort.buttonLow": "Poin, terendah dulu",
-  "misi.section.todo": "Belum · {n}",
+  "misi.section.todo": "Belum selesai · {n}",
   "misi.section.waiting": "Menunggu · {n}",
   "misi.section.todoAvailable": "+{points} poin tersedia",
   "misi.section.done": "Selesai · {n}",

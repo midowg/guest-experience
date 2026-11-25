@@ -32,7 +32,7 @@ export function MisiCard({ view }: { view: MisiView }) {
       {place && <span className={css.place}><Medal aria-hidden />{t("misi.card.rank", { rank: num(place.rank), total: num(place.of) })}</span>}
     </span>
     {hint && <span className={css.hint}>{hint}</span>}
-    {summary.total > 0 && <ProgressBar thin tone="awarding" value={summary.done} max={summary.total} label={t("misi.card.progressLabel")}
+    {summary.total > 0 && <ProgressBar thin value={summary.done} max={summary.total} label={t("misi.card.progressLabel")}
       valueText={t("misi.card.done", { done: num(summary.done), total: num(summary.total) })} />}
   </Card>;
 }

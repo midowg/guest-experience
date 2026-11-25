@@ -133,6 +133,8 @@
   --mw-font-condensed: var(--mw-font-barlow, "Barlow Condensed"), "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --mw-display-font: var(--mw-kv-display-font, var(--mw-font-condensed));
   --mw-type-display: 800 40px/40px var(--mw-display-font);
+  /* Judul kartu Beranda (kartu Sekarang, sisi carousel, kartu kontekstual): prototipe .mc h2, 34/34. */
+  --mw-type-card: 800 34px/34px var(--mw-display-font);
   --mw-type-title: 800 30px/32px var(--mw-display-font);
   --mw-type-headline: 800 24px/28px var(--mw-display-font);
   --mw-type-subtitle: 700 17px/24px var(--mw-font-sans);

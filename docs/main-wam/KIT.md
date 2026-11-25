@@ -154,6 +154,7 @@ isi **Plus Jakarta Sans**. Sudut kartu 22 (kartu sesi 28), tombol 16, pil penuh.
 | `--mw-elev-card`, `--mw-elev-hero` | bayangan tipis | cahaya biru/emas | kartu biasa dan kartu emas |
 | `--mw-radius-20/22/28` | 20/22/28 | sama | daftar, kartu, kartu emas dan sheet |
 | `--mw-type-cap`, `--mw-type-cap-lg`, `--mw-type-hero` + `--mw-ls-cap`, `--mw-ls-cap-tight` | Barlow 700 12/14 px, 76 px | sama | label kapital (selalu bersama `text-transform: uppercase`) dan angka hero |
+| `--mw-type-card` | Barlow 800 34/34 px | sama | judul kartu Beranda (Sekarang, sisi carousel, kartu kontekstual; pemilik 25 Nov: ikut prototipe). Angka poin kartu Misi = `--mw-type-stat-xl` (64/56) |
 
 Gelar lama tetap: `--mw-type-display/title/headline/stat-*` sekarang Barlow Condensed (judul kapital lewat
 `<Text>`, TopBar, SectionHeader, Sheet). `--mw-nav-h` jadi 68. Slot tema admin tidak berubah: `primary` mengatur
