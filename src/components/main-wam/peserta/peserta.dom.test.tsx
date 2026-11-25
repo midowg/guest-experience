@@ -118,6 +118,15 @@ describe("Notifikasi", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(mainWamApi.notifications, expect.objectContaining({ method: "POST" })));
   });
 
+  it("a mission note (kind lain, pointing at Misi) shows the mission target, not the generic bell (N05)", () => {
+    vi.stubGlobal("fetch", answer(200, { ok: true, data: null }));
+    const row = { ...grouped.today[0], id: "m1", kind: "lain" as const, line: "Misi Plank disetujui", body: "800 poin masuk.", href: mainWamPath.missions, unread: false };
+    const { container } = render(<NotificationsScreen migrated today={[row]} earlier={[]} unread={0} preview={{ push: "on" }} />);
+    const link = screen.getByRole("link", { name: /Misi Plank disetujui/ });
+    expect(link.querySelector("svg.lucide-target")).toBeTruthy();
+    expect(container.querySelector("svg.lucide-bell")).toBeNull();
+  });
+
   it("nothing yet: says so", () => {
     vi.stubGlobal("fetch", answer(200, { ok: true, data: null }));
     render(<NotificationsScreen migrated today={[]} earlier={[]} unread={0} preview={{ push: "on" }} />);

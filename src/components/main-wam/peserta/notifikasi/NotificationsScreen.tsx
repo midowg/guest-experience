@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { Bell, BellOff, CalendarClock, CircleCheck, ClipboardList, Gamepad2, Heart, Hourglass, KeyRound, Lock, Megaphone, Trophy, type LucideIcon } from "lucide-react";
+import { Bell, BellOff, CalendarClock, CircleCheck, ClipboardList, Gamepad2, Heart, Hourglass, KeyRound, Lock, Megaphone, Target, Trophy, type LucideIcon } from "lucide-react";
 import { noteHash, type NotificationRow } from "@/lib/main-wam/peserta/notifications";
 import type { NoteKind } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
@@ -19,6 +19,8 @@ import { PegasusMark } from "../PegasusMark";
 const ICON: Record<NoteKind, LucideIcon> = {
   pengumuman: Megaphone, jadwal: CalendarClock, absen: CircleCheck, momen: Heart, kamar: KeyRound, silent: Lock, voting: Trophy, survei: ClipboardList, lain: Bell, kuis: Gamepad2,
 };
+/** A mission note (tagged in a photo, approved, rejected) is sent as kind "lain" and points at Misi: it gets the mission's target, not the generic bell (prototipe N05). */
+const iconOf = (row: NotificationRow): LucideIcon => row.kind === "lain" && row.href?.startsWith(mainWamPath.missions) ? Target : ICON[row.kind];
 const TONE: Partial<Record<NoteKind, IconBoxTone>> = { jadwal: "warning", absen: "success" };
 
 const subscribeHash = (onChange: () => void) => {
@@ -71,7 +73,7 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
       <h2 className={own.head}>{title}</h2>
       <div className={own.list}>
         {rows.map(row => {
-          const Icon = ICON[row.kind];
+          const Icon = iconOf(row);
           const inner = <>
             <IconBox icon={<Icon />} tone={TONE[row.kind]} smallIcon />
             <span className={own.text}>
