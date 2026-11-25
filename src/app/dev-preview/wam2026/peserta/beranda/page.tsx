@@ -20,7 +20,6 @@ import { MozaikCard } from "@/components/main-wam/momen/BerandaMozaik";
 import { letterCells } from "@/lib/main-wam/momen/mosaic";
 import { number } from "@/lib/main-wam/i18n";
 import { MisiCard } from "@/components/main-wam/misi/MisiCard";
-import { KuisLiveCard } from "@/components/main-wam/kuis/BerandaKuis";
 import { missionItems, summarize, type MisiView } from "@/lib/main-wam/misi/missions";
 import { sampleCompletions, sampleMissions } from "@/lib/main-wam/misi/sample";
 import { samplePeople, sampleSessionIds } from "@/lib/main-wam/sample";
@@ -35,7 +34,7 @@ export const dynamic = "force-dynamic";
  * the slide's conditions are real times: ?hari=2&jam=10:05 (three sessions), ?hari=2&jam=06:00 (nothing has ended), ?hari=2&jam=20:30 (a later day: "Sampai jumpa besok"),
  * ?hari=4&jam=16:00 (nothing after it), ?hari=2&jam=22:30 (Hari ini selesai), ?status=kosong (nothing published); ?slide=sendiri: only the Sekarang card (a placeholder on both sides).
  * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet),
- * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off), ?kuis=buka (the live-quiz card).
+ * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off).
  */
 /** The Mozaik card with a sample: "WAM 2026" on 50 × 36, most letter cells already holding a photo. */
 function MozaikStandIn({ lang }: { lang: Lang }) {
@@ -73,7 +72,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
   return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang} unread={params.waktu === "berangkat" ? 0 : 3}>
     <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(new Date(now.getTime() - 2 * 60_000).toISOString(), lang)} live={false} forceOffline={params.status === "offline"}
       slots={{ absen: <AbsenStandIn home />, misi: misiStandIn(now, params.misi),
-        kuis: params.kuis === "buka" ? <KuisLiveCard lang={lang} title={lang === "en" ? "WAM live quiz" : "Kuis live WAM"} joined={false} href={mainWamPath.quiz("contoh")} /> : null, momen: <MomenCard photos={[demoPicture(5), demoPicture(0), demoPicture(2)]} unseen={params.waktu === "berangkat" ? 3 : 12} by={uploadedByText("Sari", "Aula Utama", new Date(now.getTime() - 2 * 60_000).toISOString(), now, lang)} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
+        momen: <MomenCard photos={[demoPicture(5), demoPicture(0), demoPicture(2)]} unseen={params.waktu === "berangkat" ? 3 : 12} by={uploadedByText("Sari", "Aula Utama", new Date(now.getTime() - 2 * 60_000).toISOString(), now, lang)} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
         mozaik: params.mozaik === "mati" ? null : <MozaikStandIn lang={lang} />,
         carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonPageView(params.karbon === "belum" ? null : samplePersonalCarbon(), sampleCarbon(), now, lang).mine} /> }} />
   </Frame>;

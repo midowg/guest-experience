@@ -4,7 +4,6 @@ import { BerandaMisi } from "@/components/main-wam/misi/BerandaMisi";
 import { BerandaMomen } from "@/components/main-wam/momen/BerandaMomen";
 import { BerandaMozaik } from "@/components/main-wam/momen/BerandaMozaik";
 import { BerandaCarbon } from "@/components/main-wam/peserta/karbon/BerandaCarbon";
-import { BerandaKuis } from "@/components/main-wam/kuis/BerandaKuis";
 import { moduleOn } from "@/lib/main-wam/modules";
 import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
@@ -32,6 +31,5 @@ export default async function HomePage() {
     misi: <BerandaMisi context={context} now={now} />,
     mozaik: moduleOn(context.settings.modules, "mozaik") ? <BerandaMozaik context={context} now={now} /> : null,
     carbon: <BerandaCarbon context={context} now={now} />,
-    kuis: <BerandaKuis context={context} />,
   }} />;
 }

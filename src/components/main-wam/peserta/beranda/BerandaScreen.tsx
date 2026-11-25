@@ -13,8 +13,8 @@ import { PegasusMark } from "../PegasusMark";
 import css from "./beranda.module.css";
 
 /**
- * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: Kuis live's card first while a game is on, the main card, a slide of at most three (Selesai, Sekarang, Akan datang; the Sekarang one is the gold
- * bracket card), one contextual
+ * Beranda (P01/P02; prototipe SC.beranda), the head being the shell's: first the carousel of three (Selesai, Sekarang, Akan datang; the Sekarang one is the gold
+ * bracket card; nothing sits above it, not even Kuis live, owner 25 Nov), one contextual
  * card, Misi, the pair Jejak karbon (green, while its module is on) and Momen side by side, and the Mozaik card
  * (module Mozaik). Other areas come in as slots, already rendered by the page. The pegasus watermark sits behind.
  */
@@ -24,7 +24,7 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
   serverNow: string;
   /** "07.38": when the data was read, for the offline banner. */
   since: string;
-  slots: { absen?: ReactNode; momen?: ReactNode; carbon?: ReactNode; kuis?: ReactNode; misi?: ReactNode; mozaik?: ReactNode };
+  slots: { absen?: ReactNode; momen?: ReactNode; carbon?: ReactNode; misi?: ReactNode; mozaik?: ReactNode };
   /** Refresh by itself when a card changes (off in previews, where time stands still). */
   live?: boolean;
   forceOffline?: boolean;
@@ -34,8 +34,6 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     <PegasusMark />
     <OfflineBanner since={since} force={forceOffline} />
     {data.failed && <RetryBanner>{t("peserta.live.agendaFailed")}</RetryBanner>}
-    {/* Kuis live (module kuis): "Kuis dimulai · Ikut" first while a game is open, it is for now. */}
-    {slots.kuis}
     {!data.migrated
       ? <Card as="article"><CardHead icon={<Hourglass />} title={t("peserta.waiting.title")} sub={t("peserta.waiting.home")} /></Card>
       : !data.failed && <NowSlides data={data} absen={slots.absen} serverNow={serverNow} />}
