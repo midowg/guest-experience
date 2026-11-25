@@ -50,3 +50,11 @@ export const GROUP_LABEL: Record<QuotaGroup, string> = { karyawan: "Karyawan", g
 export function optionsLabel(temperature: Temperature, sugar: Sugar, ice: Ice) {
   return temperature === "es" ? `Es · gula ${sugar} · es ${ice}` : `Panas · gula ${sugar}`;
 }
+
+/** Catat manual only: a drink outside the menu, with its name typed in. */
+export const OTHER_DRINK = "lainnya";
+const bySlug = new Map(DRINKS.map(drink => [drink.slug, drink]));
+export const drinkBySlug = (slug: string): Drink | undefined => bySlug.get(slug);
+/** The drink's name as written on the menu; a typed one for "lainnya" ("Lainnya" when nothing was typed). */
+export const drinkLabel = (slug: string, other?: string | null) =>
+  slug === OTHER_DRINK ? other?.trim() || "Lainnya" : bySlug.get(slug)?.name ?? slug;

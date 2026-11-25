@@ -28,6 +28,7 @@ const appLooks: Record<StandaloneApp["key"], { logo?: string; mark: string; tone
   wam: { logo: "/wam/icon-192.png", mark: "W", tone: "#1f4fd1" },
   wam_acara: { logo: "/wam/pegasus-jaringan-terang.svg", mark: "26", tone: "#0b1f4d" },
   hr: { logo: "/people/icon-192.png", mark: "P", tone: "#2f6feb" },
+  coffee: { mark: "C", tone: "#1c1917" },
   booking: { mark: "B", tone: "#0d9488" },
   tv: { mark: "TV", tone: "#ea580c" },
   wellbeing: { logo: "/wlm/icon-192.png", mark: "WLM", tone: "#e0457b" },

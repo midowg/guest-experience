@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, kuisScreenApi, kuisScreenPath, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, mainWamAdminApi, mainWamAdminPath, mainWamApi, mainWamPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
+import { DRINKS } from "./coffee/menu";
+import { COFFEE_ADMIN, COFFEE_PATH, JUMPSTART_URL, coffeeAdminApi, coffeeAdminPath, coffeeApi, coffeePath, FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, kuisScreenApi, kuisScreenPath, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, mainWamAdminApi, mainWamAdminPath, mainWamApi, mainWamPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -148,6 +149,51 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
   it("keep Pra WAM's Beranda reachable while Main WAM is on", () => {
     expect(praWamPath.homePra).toBe("/wam?versi=pra");
     expect(praWamPath.home).toBe("/wam");
+  });
+});
+
+describe("Werkudara Coffee addresses (25 Nov 2026)", () => {
+  it("put the employee app under /coffee, with its own sign-in, tablet, photos and PWA files", () => {
+    expect(COFFEE_PATH).toBe("/coffee");
+    expect(coffeePath).toMatchObject({ home: "/coffee", orders: "/coffee/pesanan", ga: "/coffee/ga", gaDenied: "/coffee?pesan=ga", forgot: "/coffee/lupa-password",
+      manifest: "/coffee/manifest.webmanifest", serviceWorker: "/coffee/sw.js", scope: "/coffee/" });
+    expect(coffeePath.login()).toBe("/coffee/masuk");
+    expect(coffeePath.login("/coffee/ga")).toBe("/coffee/masuk?next=%2Fcoffee%2Fga");
+    expect(coffeePath.newPassword("/coffee")).toBe("/coffee/password-baru?next=%2Fcoffee");
+    expect(coffeePath.photo("cafe-latte")).toBe("/coffee/drinks/cafe-latte.jpg");
+    expect(coffeePath.icon("icon-192.png")).toBe("/coffee/icon-192.png");
+  });
+
+  it("give every drink of the menu a photo in public/coffee/drinks", () => {
+    const folder = new URL("../../public/coffee/drinks/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+    expect(readdirSync(decodeURIComponent(folder)).sort()).toEqual(DRINKS.map(drink => `${drink.slug}.jpg`).sort());
+  });
+
+  it("keep the employee APIs under /api/coffee and the pengelola's under /admin/coffee and /api/admin/coffee", () => {
+    expect(coffeeApi.claim("k1")).toBe("/api/coffee/claims/k1");
+    for (const value of Object.values(coffeeApi)) expect((typeof value === "function" ? value("x") : value).startsWith("/api/coffee/")).toBe(true);
+    expect(COFFEE_ADMIN).toBe("/admin/coffee");
+    expect(coffeeAdminPath).toMatchObject({ home: "/admin/coffee", manual: "/admin/coffee?catat=1", settings: "/admin/coffee/pengaturan" });
+    expect(coffeeAdminPath.recap()).toBe("/admin/coffee/rekap");
+    expect(coffeeAdminPath.recap("2026-11")).toBe("/admin/coffee/rekap?bulan=2026-11");
+    expect(coffeeAdminApi.finish("o1")).toBe("/api/admin/coffee/orders/o1/selesai");
+    expect(coffeeAdminApi.reject("o1")).toBe("/api/admin/coffee/orders/o1/tolak");
+    expect(coffeeAdminApi.reopen("o1")).toBe("/api/admin/coffee/orders/o1/urungkan");
+    expect(coffeeAdminApi.people()).toBe("/api/admin/coffee/people");
+    expect(coffeeAdminApi.people("2026-11")).toBe("/api/admin/coffee/people?bulan=2026-11");
+    expect(coffeeAdminApi.recap({ dari: "2026-11-01", sampai: "2026-11-30", jenis: undefined, q: "kopi susu" })).toBe("/api/admin/coffee/rekap?dari=2026-11-01&sampai=2026-11-30&q=kopi+susu");
+    expect(coffeeAdminApi.recapExport("xlsx", { dari: "2026-11-01", sampai: "2026-11-30" })).toBe("/api/admin/coffee/rekap/export?format=xlsx&dari=2026-11-01&sampai=2026-11-30");
+    for (const path of [coffeeAdminApi.queue, coffeeAdminApi.manual, coffeeAdminApi.settings, coffeeAdminApi.push]) expect(path.startsWith("/api/admin/coffee/")).toBe(true);
+    expect(JUMPSTART_URL).toBe("https://jumpstart.id/outlet/menu");
+  });
+
+  it("write Coffee's addresses only in routes.ts (dev previews aside)", () => {
+    const root = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+    const offenders = sources(root)
+      .filter(path => !path.endsWith(join("lib", "routes.ts")))
+      .filter(path => /[`"']\/(?:api\/(?:admin\/)?coffee|admin\/coffee|coffee)(?:[/?"'`]|$)/m.test(readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "")))
+      .map(path => relative(root, path));
+    expect(offenders).toEqual([]);
   });
 });
 

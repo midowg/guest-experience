@@ -406,3 +406,61 @@ Peninjau mengisi satu salinan per fase. Tiap baris: **Lulus / Gagal / Tidak diuj
 10. **Kunci VAPID.** Anggapan: memakai kunci WAM yang sudah ada di server (`WAM_VAPID_*`), tanpa kunci baru.
 11. **Database uji.** Anggapan: tidak ada untuk agen; UI diperiksa di `/dev-preview/coffee/nyata/*`, uji balapan jatah dijalankan setelah pemilik menjalankan migrasi.
 12. **Double shot, printer thermal, "Sudah saya ambil", foto asli.** Anggapan: di luar versi pertama.
+
+---
+
+## Catatan pelaksanaan F0 (25 Nov 2026)
+
+F0 selesai di cabang `feat/werkudara-coffee`. Yang berbeda dari rencana, dan yang perlu diketahui fase berikutnya:
+
+**Sudah dicek sebelum menulis migrasi:** migrasi terakhir memang `202611300003`, jadi nama `202612010001_coffee.sql` dipakai apa
+adanya; daftar `admin_grants_apps_check` disalin dari `202611200703_admin_grants_hr.sql` lalu ditambah `'coffee'`.
+
+**Belum diuji (apa adanya):**
+- Migrasi **belum pernah dijalankan** di Postgres mana pun (aturan: agen tidak menjalankan migrasi). Tiga fungsi SQL
+  (`coffee_submit_claim`, `coffee_submit_meeting`, `coffee_reopen`) hanya ditinjau dengan dibaca; tes server memakai tiruan
+  di memori (`src/lib/server/coffee/fake-db.ts`) yang menulis ulang aturan yang sama dalam JavaScript. Salah ketik SQL baru
+  ketahuan saat pemilik menjalankan migrasi; uji balapan jatah (F5) tetap wajib.
+- Cek browser F0 (`/admin/akses` menampilkan kotak baru, `/api/coffee/state` 401) tidak dilakukan: agen tidak menjalankan
+  server dev. Gantinya tes: `AdminGrants.dom.test.tsx` tetap lulus, dan 401/403/422/503 tiap route ada di
+  `src/app/api/coffee/coffee-guards.test.ts` dan `src/app/api/admin/coffee/coffee-admin-guards.test.ts`.
+
+**Selisih dari rencana:**
+1. `src/components/admin/events/EventList.tsx` disentuh satu baris (`appLooks.coffee`: huruf "C" di atas warna gelap).
+   Tipe di sana menuntut tampilan untuk setiap kunci `StandaloneApp`, jadi kartu baru tidak lolos `tsc` tanpanya. Belum ada
+   logo; F2 boleh menggantinya dengan `logo: coffeePath.icon("icon-192.png")`.
+2. Alamat: tambah `coffeePath.gaDenied` (`/coffee?pesan=ga`, tujuan `requireGaPage` untuk yang tidak berhak; F2 menampilkan
+   pesannya). `coffeeAdminApi.people` adalah fungsi `(month?)`, bukan teks. `/coffee/hr` dan `/coffee/hr/*` dialihkan
+   sementara (`permanent: false`).
+3. Kode galat database tambahan: `COFFEE_NOT_FOUND` (404, pesanan induk atau pesanan yang diurungkan tidak ada) dan
+   `COFFEE_INVALID` (422, isi yang lolos dari zod tetapi ditolak fungsi, mis. waktu di masa depan).
+4. `manualSchema` punya `key` opsional (kirim ganda = satu baris). `meetingSchema.spot` diterima tetapi tidak dipercaya:
+   server mengisi `room_spot` dari nama ruangan (`roomSpot`). Catat manual "tim": orang itu sendiri dicatat sebagai PIC.
+5. `readSettings()` mengembalikan nilai awal sebelum migrasi (sesuai rencana), tetapi `GET /api/admin/coffee/settings`
+   memakai `readSettings(true)` supaya menjawab 503 seperti route lain.
+6. `queue(actor)` menerima aktor dan menandai `undoable` pada "Baru diproses" (pemrosesnya sendiri, belum lewat 5 menit,
+   bukan catat manual). `today.diproses` = semua yang menunggu; `selesai`/`ditolak` = yang **diproses** hari ini (WIB).
+   Jawaban Selesai/Tolak/Urungkan/Catat manual berisi pesanan lengkap (`claimNo`, `quota`, `used`, `undoable`).
+7. Membatalkan klaim orang lain menjawab 409 dengan kalimat yang sama seperti "sudah diproses" (tidak membocorkan ada/tidaknya).
+8. `coffeeActor()` membaca nama panggilan dari `employees` (aktor admin hanya membawa nama lengkap); tanpa nama panggilan
+   dipakai kata pertama nama. Super admin: `employeeId null`, label "Super admin".
+9. Rekap: "Klaim ke-" dihitung dari seluruh klaim bulan terkait, bukan hanya rentang yang dibuka. Putaran rapat
+   (`T-0113`, `T-0113-2`) dihitung satu rapat, dan jumlah tamu dihitung sekali per rapat. Orang di baris rekap yang sudah
+   tidak aktif tetap masuk ringkasan. Lembar Ringkasan menulis angka sebagai sel angka.
+10. Baris rapat juga menyimpan `person_group` PIC; `person_name` wajib isi. Batas waktu: fungsi menolak `ordered_at` lebih
+    dari 5 menit di depan.
+11. Berkas tambahan: `src/lib/coffee/fixtures.ts` (data contoh tes logika murni), `src/lib/server/coffee/fake-db.ts`,
+    `session.test.ts`, dan dua tes penjaga route. `push.ts`/`push.test.ts` memang bagian F4.
+
+**Untuk F1 (admin/pengelola):**
+- Tipe jawaban ada di `src/lib/coffee/types.ts`: `QueueState`, `QueueOrder` (kartu klaim: `person`, `claimNo`, `quota`,
+  `used`; rapat: `room`, `person` = PIC, `guest`, `items[].for`), `RecapRow`, `CoffeeSettings`, `CoffeePerson`.
+  `GET …/people` menjawab `{ people, month }`; `GET …/rekap` `{ rows, summary, title }`; `GET/PUT …/settings`
+  `{ settings, holders }`. Teks "Salin rincian": `orderText(order)` di `copy-text.ts`.
+- 409 pada Selesai/Tolak = "Pesanan ini sudah diproses orang lain. Antrean diperbarui."; pada Urungkan = "Sudah lewat
+  batas waktu untuk mengurungkan." atau "Jatah bulan ini sudah habis."; 503 = menunggu migrasi (tampilkan sebagai `Notice`).
+- `recapQuerySchema` meminta `dari` dan `sampai` (YYYY-MM-DD, WIB, paling lama 366 hari); halaman Rekap menerjemahkan
+  `?bulan=` ke rentang itu. Tautan unduh: `coffeeAdminApi.recapExport("csv" | "xlsx", filter)` (GET biasa, tanpa fetch).
+- Foto minuman: `coffeePath.photo(slug)` (`public/coffee/drinks/`). Tes penjaga di `routes.test.ts` menolak alamat
+  `/coffee…` yang ditulis tangan di luar `routes.ts` (kecuali `dev-preview`).
+- Kutipan jatah per orang di ringkasan memakai jatah bulanan; untuk rentang lebih dari sebulan F1 perlu memutuskan cara menampilkannya.

@@ -11,3 +11,6 @@ export const ROOMS = [
 export const OTHER_ROOM = "Lainnya";
 /** Where the JumpStart machine stands. */
 export const MACHINE_SPOT = "pantry";
+
+/** The floor-plan spot of a listed room; null for "Lainnya" and any typed name. */
+export const roomSpot = (name: string): string | null => ROOMS.find(room => room.name === name.trim())?.spot ?? null;

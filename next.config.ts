@@ -39,6 +39,9 @@ const config: NextConfig = {
       // WG People moved from /hr to /people (21 Nov 2026, the owner's ask); old links and installs keep working.
       { source: "/hr", destination: "/people", permanent: true },
       { source: "/hr/:path*", destination: "/people/:path*", permanent: true },
+      // Werkudara Coffee: the pengelola page was first planned at /coffee/hr; it lives in Journey Admin (25 Nov 2026).
+      { source: "/coffee/hr", destination: "/admin/coffee", permanent: false },
+      { source: "/coffee/hr/:path*", destination: "/admin/coffee", permanent: false },
       { source: "/panduan-ke-werkudara", destination: "/your-visit", permanent: false },
       // The app was first published as /pra-wam with Indonesian paths; it is WAM now (Pra WAM is a
       // phase inside it). Old links and printed QR codes keep working.

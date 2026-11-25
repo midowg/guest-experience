@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { adminAuthConfig, readSession, SESSION_COOKIE } from "@/lib/admin-token";
-import { ADMIN_APPS, ADMIN_GRANTS_MIGRATION, ADMIN_HR_MIGRATION, ADMIN_KUESIONER_MIGRATION, ADMIN_WAM_ACARA_MIGRATION, ADMIN_WELLBEING_MIGRATION, mayOpenEvent, WAM_EVENT_ADMIN_LABEL, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
+import { ADMIN_APPS, ADMIN_COFFEE_MIGRATION, ADMIN_GRANTS_MIGRATION, ADMIN_HR_MIGRATION, ADMIN_KUESIONER_MIGRATION, ADMIN_WAM_ACARA_MIGRATION, ADMIN_WELLBEING_MIGRATION, mayOpenEvent, WAM_EVENT_ADMIN_LABEL, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
 import { isEmailLike } from "@/lib/pra-wam/login-name";
 import { createPrivilegedClient, createPublicClient } from "./supabase/admin";
 import { databaseError } from "./http";
@@ -178,6 +178,8 @@ export async function saveGrant(employeeId: string, input: AdminGrantInput): Pro
     if (error.code === "23514" && grant.apps.includes("wam_acara")) throw new ServiceError(503, `Akses ${WAM_EVENT_ADMIN_LABEL} menunggu migrasi ${ADMIN_WAM_ACARA_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
     // Before 202611200703 the apps check does not know WG People (only the super admin opens it till then).
     if (error.code === "23514" && grant.apps.includes("hr")) throw new ServiceError(503, `Akses WG People menunggu migrasi ${ADMIN_HR_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
+    // Before 202612010001 the apps check does not know Werkudara Coffee (only the super admin opens it till then).
+    if (error.code === "23514" && grant.apps.includes("coffee")) throw new ServiceError(503, `Akses Werkudara Coffee menunggu migrasi ${ADMIN_COFFEE_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
     databaseError(error);
   }
   return fromRow(data as GrantRow);

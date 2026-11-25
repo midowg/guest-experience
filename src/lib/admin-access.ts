@@ -17,18 +17,20 @@ export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 // "wam_acara" (20 Nov 2026, migration 202611200603): Admin WAM 2026, the admin of the WAM event itself (Main WAM:
 // rundown, modules, Kuis live, penguji, Panitia WAM) at /admin/wam2026, given apart from Admin Pra WAM ("wam").
 // "hr" (20 Nov 2026, migration 202611200703): Admin WG People at /admin/hr (absensi, wajah, titik kantor).
-export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr"] as const;
+// "coffee" (25 Nov 2026, migration 202612010001): Pengelola Werkudara Coffee at /admin/coffee (antrean, rekap, jatah).
+export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr", "coffee"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
 export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
 export const ADMIN_WELLBEING_MIGRATION = "202611160050_wellbeing.sql";
 export const ADMIN_WAM_ACARA_MIGRATION = "202611200603_admin_wam_acara.sql";
 export const ADMIN_HR_MIGRATION = "202611200703_admin_grants_hr.sql";
+export const ADMIN_COFFEE_MIGRATION = "202612010001_coffee.sql";
 /** The two WAM admin doors' names, each in one place (change them here). */
 export const PRA_WAM_ADMIN_LABEL = "Admin Pra WAM";
 export const WAM_EVENT_ADMIN_LABEL = "WAM";
 export const adminAppLabels: Record<AdminApp, string> = {
   acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: PRA_WAM_ADMIN_LABEL, kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
-  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People",
+  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People", coffee: "Werkudara Coffee",
 };
 export const adminAppHints: Record<AdminApp, string> = {
   acara: "Undangan, kartu, e-guide, dan kunjungan: membuat acara dan membuka acara yang dipilih di bawah.",
@@ -39,6 +41,7 @@ export const adminAppHints: Record<AdminApp, string> = {
   tv: "TV kantor: layar, tayangan, dan tampilan.",
   wellbeing: "Program wellbeing kantor: periksa aktivitas, poin karyawan, tambah poin ke banyak orang, katalog kegiatan.",
   hr: "Admin WG People: absensi karyawan (yang perlu dicek, absen harian, catat manual), wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",
+  coffee: "Pengelola Werkudara Coffee: antrean klaim dan pesanan rapat (selesai diproses, tolak, catat manual), rekap bulanan, dan jatah. Pemegangnya juga bisa membuka Mode GA.",
   wam_acara: "Admin aplikasi acara WAM 2026: pengaturan, penguji, rundown, kamar, perjalanan, panduan, info acara, Awarding, Silent Meeting, Kuis live, dan Panitia WAM. Terpisah dari Admin Pra WAM.",
 };
 /** Opens the WAM questionnaire: only with its own grant. */
@@ -83,6 +86,7 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/admin\/tv(\/|$)/, "tv"],
   [/^\/admin\/(wlm|wellbeing)(\/|$)/, "wellbeing"],
   [/^\/admin\/hr(\/|$)/, "hr"],
+  [/^\/admin\/coffee(\/|$)/, "coffee"],
   [/^\/admin\/friday-sharing(\/|$)/, "friday_sharing"],
   [/^\/admin\/your-visit(\/|$)/, "your_visit"],
   [/^\/admin\/(acara|checkin|events|hero-preview|pratinjau-langsung)(\/|$)/, "events"],
@@ -90,6 +94,7 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/api\/admin\/wam\/tv(\/|$)/, "tv"],
   [/^\/api\/admin\/wellbeing(\/|$)/, "wellbeing"],
   [/^\/api\/admin\/hr(\/|$)/, "hr"],
+  [/^\/api\/admin\/coffee(\/|$)/, "coffee"],
   [/^\/api\/admin\/wam\/questionnaire(\/|$)/, "kuesioner"],
   [/^\/api\/admin\/wam(\/|$)/, "wam"],
   [/^\/api\/admin\/(events|featured|photos|poster-designs|staff)(\/|$)/, "events"],
@@ -136,6 +141,7 @@ export function showsAppCard(grant: Pick<AdminGrant, "apps"> | null, key: string
   if (key === "wellbeing") return grant.apps.includes("wellbeing");
   if (key === "wam_acara") return grant.apps.includes("wam_acara");
   if (key === "hr") return grant.apps.includes("hr");
+  if (key === "coffee") return grant.apps.includes("coffee");
   return key === "tv" && grant.apps.includes("tv");
 }
 
