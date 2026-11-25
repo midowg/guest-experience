@@ -20,7 +20,11 @@ const config: NextConfig = {
   // Panduan ke Werkudara: the office's public guide for every visitor, a finished page served as it
   // was designed (public/panduan-ke-werkudara), not an event.
   async rewrites() {
-    return [{ source: "/wam2026", destination: "/wam/acara" }, { source: "/wam2026/:path*", destination: "/wam/acara/:path*" }];
+    // beforeFiles, not the default afterFiles: Next adds the intercepting routes ((app)/@sheet/(.)agenda/[id], Detail sesi as a
+    // sheet over the screen) as beforeFiles rewrites whose source is the folder's address (/wam/acara/agenda/:id). The address
+    // /wam2026/agenda/x must already be /wam/acara/agenda/x when they are tried, else the sheet is never intercepted: a tap on a
+    // session went to the full Agenda page (its skeleton behind the sheet, and Beranda left behind).
+    return { beforeFiles: [{ source: "/wam2026", destination: "/wam/acara" }, { source: "/wam2026/:path*", destination: "/wam/acara/:path*" }] };
   },
   async redirects() {
     return [
