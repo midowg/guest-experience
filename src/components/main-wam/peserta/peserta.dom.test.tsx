@@ -343,8 +343,8 @@ describe("O01 Splash", () => {
 
   it("opens the app (server page): pill with name, dates and place, the tagline, and Masuk lifts it", async () => {
     const { splash, root, container } = await hydrate();
-    expect(splash()?.textContent).toBe("WAM 2026 · 4–7 Januari 2027 · Kota BatuShaping for tomorrowWerkudara Annual Meeting 2026Masuk");
-    expect(splash()?.querySelector("h1")?.textContent).toBe("Shaping for tomorrow");
+    expect(splash()?.textContent).toBe("WAM 2026 · 4–7 Januari 2027 · Kota BatuShaping tomorrowWerkudara Annual Meeting 2026Masuk");
+    expect(splash()?.querySelector("h1")?.textContent).toBe("Shaping tomorrow");
     // It does not leave by itself, nor by a tap on the art: only Masuk.
     fireEvent.pointerDown(splash()!);
     expect(splash()).toBeTruthy();

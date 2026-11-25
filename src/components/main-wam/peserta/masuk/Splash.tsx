@@ -23,7 +23,7 @@ const noSubscription = () => () => undefined;
 
 /**
  * O01 Splash, over Masuk when the app opens (mode semua): always dark, the pegasus of dots with its
- * gold path, a pill with the event's name, dates and place, "Shaping for tomorrow" (the last word in
+ * gold path, a pill with the event's name, dates and place, "Shaping tomorrow" (the last word in
  * gold), "Werkudara Annual Meeting" and the Masuk button, which lifts it onto the sign-in beneath
  * (that is already there and ready). Or Admin WAM's splash image (the theme's `splash` slot) in place
  * of the art and words, with the same button. Once per browser session; not after an in-app

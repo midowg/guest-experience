@@ -176,7 +176,7 @@ export const idPeserta = {
   "peserta.login.email": "Email",
   "peserta.login.forgotLine": "Lupa password? Minta panitia untuk reset.",
   "peserta.login.signingIn": "Sedang masuk",
-  "peserta.splash.tagline": "Shaping for tomorrow",
+  "peserta.splash.tagline": "Shaping tomorrow",
   "peserta.splash.caption": "Werkudara Annual Meeting",
   "peserta.login.hide": "Sembunyikan password",
   "peserta.login.show": "Tampilkan password",

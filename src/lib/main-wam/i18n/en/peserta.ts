@@ -176,7 +176,7 @@ export const enPeserta: Record<keyof typeof idPeserta, string> = {
   "peserta.login.email": "Email",
   "peserta.login.forgotLine": "Forgot your password? Ask the committee to reset it.",
   "peserta.login.signingIn": "Signing in",
-  "peserta.splash.tagline": "Shaping for tomorrow",
+  "peserta.splash.tagline": "Shaping tomorrow",
   "peserta.splash.caption": "Werkudara Annual Meeting",
   "peserta.login.hide": "Hide password",
   "peserta.login.show": "Show password",
