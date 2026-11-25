@@ -44,7 +44,7 @@ export const negotiateVersion = (asked: unknown): string =>
 
 export const MCP_SERVER_INFO = { name: "wam-werkudara", title: "WAM Werkudara", version: "1.0.0" } as const;
 export const MCP_INSTRUCTIONS = [
-  "Data aplikasi WAM Werkudara (Pra WAM November–Desember 2026 dan WAM 2026, 4–7 Januari 2027), hanya baca.",
+  "Data aplikasi WAM Werkudara (Pra WAM November–Desember 2026 dan WAM 2026, 5–8 Januari 2027), hanya baca.",
   "Semua jam dalam WIB. Jawaban mengikuti hak akses pemilik tautan: yang tidak boleh ia lihat di aplikasi juga tidak muncul di sini.",
   "Hasil survei selalu tanpa nama. Jawab dalam Bahasa Indonesia yang ringkas.",
 ].join(" ");

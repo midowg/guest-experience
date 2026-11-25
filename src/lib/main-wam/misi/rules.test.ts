@@ -188,7 +188,7 @@ describe("the templates and the mission schema", () => {
     expect(missionSchema.safeParse({ title: "Check-in", kind: "checkin", points: 5, latitude: 1, longitude: 2, rules: [{ type: "foto_langsung" }] }).success).toBe(false);
     const plank = MISSION_TEMPLATES.find(template => template.key === "plank-jatim-park")!;
     const row = missionRow(missionSchema.parse({ title: plank.title, kind: "foto", points: plank.points, rules: plank.rules }));
-    expect(row).toMatchObject({ place_name: "Jatim Park, Batu (contoh)", latitude: -7.8856, radius_m: 150, opens_at: expect.stringContaining("2027-01-05"), rules: plank.rules });
+    expect(row).toMatchObject({ place_name: "Jatim Park, Batu (contoh)", latitude: -7.8856, radius_m: 150, opens_at: expect.stringContaining("2027-01-06"), rules: plank.rules });
     // No rules: the row has no `rules` key, so it saves before the migration too.
     expect(missionRow(missionSchema.parse({ title: "Foto tim", kind: "foto", points: 10 }))).not.toHaveProperty("rules");
   });

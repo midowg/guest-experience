@@ -452,7 +452,7 @@ Diatur di **Admin WAM → TV Announcement**; migrasi `202611100003_pw_tv.sql`.
 
 ## 11. Main WAM (17–18 Nov 2026, dibangun lengkap, tersembunyi)
 
-Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang sama. Kontrak lengkap:
+Aplikasi selama acara WAM (5–8 Jan 2027) di `/wam/acara`, akun dan sesi yang sama. Kontrak lengkap:
 `docs/main-wam/KONTRAK.md`; komponen: `docs/main-wam/KIT.md`; status dan langkah menyalakan:
 `docs/main-wam/STATUS.md`. Desain sumber: `D:\projects\events\2027-01-werkudara-wam\aplikasi\` (prototipe, SPEC,
 `ANALISA_FITUR_16NOV.md`).

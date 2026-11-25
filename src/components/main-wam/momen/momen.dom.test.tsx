@@ -434,7 +434,7 @@ describe("the camera", () => {
     const overlay = container.querySelector("svg[data-sign=polaroid]") as SVGElement;
     expect(overlay.getAttribute("viewBox")).toBe("0 0 400 500");
     expect(overlay.textContent).toContain("WERKUDARA ANNUAL MEETING 2026");
-    expect(overlay.textContent).toContain("4–7 JANUARI 2027 · KOTA BATU");
+    expect(overlay.textContent).toContain("5–8 JANUARI 2027 · KOTA BATU");
     const logo = overlay.querySelector("image[data-logo]") as SVGElement;
     expect(logo.getAttribute("href")).toBe("/werkudara-mark.png");
     expect(Number(logo.getAttribute("x")) + Number(logo.getAttribute("width"))).toBeLessThanOrEqual(400);
@@ -443,7 +443,7 @@ describe("the camera", () => {
     // the overlay follows the sign
     fireEvent.click(within(signs).getByRole("radio", { name: "Simpel" }));
     expect(container.querySelector("svg[data-sign=polaroid]")).toBeNull();
-    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 4–7 Jan 2027");
+    expect((container.querySelector("svg[data-sign=simpel]") as SVGElement).textContent).toContain("WAM 2026 · Kota Batu · 5–8 Jan 2027");
     // both together: the tone on the picture, the sign over it, neither changes the other
     fireEvent.click(within(tones).getByRole("radio", { name: "Emas" }));
     expect(picture().style.filter).toContain("sepia(0.3)");

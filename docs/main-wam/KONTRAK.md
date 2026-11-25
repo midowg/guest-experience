@@ -1,7 +1,7 @@
 # Kontrak Main WAM (fondasi)
 
 Kontrak kerja untuk semua agen yang membangun **Main WAM**: aplikasi selama acara WAM 2026
-(4–7 Jan 2027, Kota Batu) di dalam aplikasi WAM Journey (`/wam`), dengan akun yang sama, tersembunyi
+(5–8 Jan 2027, Kota Batu) di dalam aplikasi WAM Journey (`/wam`), dengan akun yang sama, tersembunyi
 sampai admin menyalakannya. Ditulis agen fondasi, 17 Nov 2026.
 
 - Acuan produk: brief tim (§5 keputusan produk), `D:\projects\events\2027-01-werkudara-wam\aplikasi\`
@@ -656,7 +656,7 @@ Setelah ditampilkan: semuanya kembali seperti sebelumnya (§2, §3, §4.1). Tes:
 
 ## 15. Dua pintu admin dan Panitia WAM (20 Nov 2026)
 
-**Nama yang terlihat** (keputusan pemilik, 20 Nov 2026): acaranya bernama **WAM 2026** (diadakan 4–7 Jan 2027). Semua
+**Nama yang terlihat** (keputusan pemilik, 20 Nov 2026): acaranya bernama **WAM 2026** (diadakan 5–8 Jan 2027). Semua
 teks yang dilihat orang memakai "WAM 2026" (aplikasi acara, mode "WAM 2026 (uji)/(semua)", tombol "Buka WAM 2026" dan
 "Tampilkan WAM 2026", label "Penguji WAM 2026") dan pintu adminnya **Admin WAM 2026** di `/admin/wam2026`. "Main WAM"
 hanya nama internal: kode (`mainWam*`, `MainWam*`), folder `src/lib/main-wam` dan `src/components/main-wam`, tabel `mw_*`,
