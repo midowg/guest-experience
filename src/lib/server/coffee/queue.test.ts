@@ -7,7 +7,7 @@ let db = fakeDb();
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
 
-const { finishOrder, queue, recordManual, rejectOrder, reopenOrder, waitingCount, UNDO_WINDOW_SECONDS } = await import("./queue");
+const { cancelManual, finishOrder, queue, recordManual, rejectOrder, reopenOrder, waitingCount, UNDO_WINDOW_SECONDS } = await import("./queue");
 const dewi = { employeeId: PEOPLE.dewi, label: "Dewi" };
 const raka = { employeeId: null, label: "Super admin" };
 const now = new Date("2026-11-25T03:00:00Z");
@@ -15,9 +15,10 @@ const later = (seconds: number) => new Date(now.getTime() + seconds * 1000);
 const drink = { slug: "cafe-latte", temperature: "panas", sugar: "Normal", ice: "Normal" };
 const NOBODY = "00000000-0000-4000-8000-999999999999";
 let n = 0;
-const claim = async (employee: string, at = "2026-11-25T02:00:00.000Z") => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: at, p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: `k${++n}` })).data as string;
-const meeting = async () => (await db.client.rpc("coffee_submit_meeting", { p_order: { pic_id: PEOPLE.rina, room: "Vasuki Room", room_spot: "vasuki", actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-25T02:30:00.000Z" }, p_items: [{ for: "tamu", ...drink, qty: 2 }], p_key: `m${++n}` })).data as string;
-const manual = (more: object) => manualSchema.parse({ kind: "klaim", employeeId: PEOPLE.rina, date: "2026-11-24", time: "10:00", ...drink, ...more });
+const key = (value: number) => `cccccccc-cccc-4ccc-8ccc-${String(value).padStart(12, "0")}`;
+const claim = async (employee: string, at = "2026-11-25T02:00:00.000Z") => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: at, p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: key(++n) })).data as string;
+const meeting = async () => (await db.client.rpc("coffee_submit_meeting", { p_order: { pic_id: PEOPLE.rina, room: "Vasuki Room", room_spot: "vasuki", actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-25T02:30:00.000Z" }, p_items: [{ for: "tamu", ...drink, qty: 2 }], p_key: key(++n) })).data as string;
+const manual = (more: object) => manualSchema.parse({ kind: "klaim", employeeId: PEOPLE.rina, date: "2026-11-24", time: "10:00", ...drink, key: key(++n), ...more });
 
 beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = now; n = 0; });
 
@@ -80,6 +81,35 @@ describe("Urungkan", () => {
     await expect(reopenOrder(NOBODY, dewi, now)).rejects.toMatchObject({ status: 404 });
   });
 
+  // Audit: cases that had no test.
+  it("puts a meeting order back too, and lets the super admin undo what the super admin processed", async () => {
+    const id = await meeting();
+    const done = await finishOrder(id, raka, now);
+    expect(done).toMatchObject({ kind: "rapat", status: "selesai", undoable: true, processed: { employeeId: null, label: "Super admin" } });
+    await expect(reopenOrder(id, dewi, later(10))).rejects.toMatchObject({ status: 409 });
+    db.state.now = later(20);
+    expect(await reopenOrder(id, raka, later(20))).toMatchObject({ status: "diproses", processed: null, room: "Vasuki Room" });
+    expect((await queue(raka, later(20))).waiting.map(order => order.id)).toEqual([id]);
+    await rejectOrder(id, "Salah ruangan.", raka, later(30));
+    db.state.now = later(40);
+    expect(await reopenOrder(id, raka, later(40))).toMatchObject({ status: "diproses", rejectNote: "" });
+  });
+
+  // Audit B-3: an order its owner cancelled is not "processed by someone else".
+  it("says that the claimant cancelled when Selesai or Tolak comes too late", async () => {
+    const id = await claim(PEOPLE.rina);
+    await finishOrder(id, dewi, now);
+    db.state.now = later(30);
+    await reopenOrder(id, dewi, later(30));
+    // The claimant cancels after it came back to the queue.
+    Object.assign(db.rows("coffee_orders")[0], { status: "batal" });
+    const cancelled = { status: 409, message: "Pengajuan ini sudah dibatalkan pemesannya. Antrean diperbarui." };
+    await expect(finishOrder(id, dewi, later(40))).rejects.toMatchObject(cancelled);
+    await expect(rejectOrder(id, "Terlambat.", dewi, later(40))).rejects.toMatchObject(cancelled);
+    await expect(reopenOrder(id, dewi, later(40))).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders")[0]).toMatchObject({ status: "batal", processed_at: null });
+  });
+
   it("is refused for a refused claim when the quota filled up meanwhile", async () => {
     const id = await claim(PEOPLE.fajar);
     await rejectOrder(id, "Mesin mati.", dewi, now);
@@ -122,6 +152,92 @@ describe("Catat manual", () => {
   });
 });
 
+// Audit B-2: sending Catat manual twice.
+describe("Catat manual sent twice", () => {
+  it("answers with the first record for the same key, whatever is sent the second time", async () => {
+    const first = await recordManual(manual({ key: key(900) }), dewi, now);
+    const again = await recordManual(manual({ key: key(900), slug: "americano", time: "11:00" }), dewi, later(5));
+    expect(again.order.id).toBe(first.order.id);
+    expect(again.message).toBe(first.message);
+    expect(again.message).toBe("Contoh · Café Latte · klaim ke-1 dari 4.");
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    const guest = await recordManual(manual({ kind: "tamu", qty: 3, key: key(901) }), dewi, now);
+    const guestAgain = await recordManual(manual({ kind: "tamu", qty: 9, slug: "americano", key: key(901) }), dewi, now);
+    expect(guestAgain.order.id).toBe(guest.order.id);
+    expect(guestAgain.message).toBe("Tamu · 3× Café Latte · PIC Contoh.");
+    expect(db.rows("coffee_orders")).toHaveLength(2);
+  });
+
+  it("answers with the first record when both sendings meet at the unique index, never with words about a slug", async () => {
+    const claimed = await recordManual(manual({ key: key(900) }), dewi, now);
+    const team = await recordManual(manual({ kind: "tim", qty: 2, key: key(901) }), dewi, now);
+    db.state.race = true;
+    expect(await recordManual(manual({ key: key(900) }), dewi, now)).toMatchObject({ order: { id: claimed.order.id }, message: claimed.message });
+    expect(await recordManual(manual({ kind: "tim", qty: 2, key: key(901) }), dewi, now)).toMatchObject({ order: { id: team.order.id }, message: "Tim · rapat · 2× Café Latte · Contoh." });
+    expect(db.rows("coffee_orders")).toHaveLength(2);
+  });
+
+  it("refuses a key that belongs to another kind of sending, or to a record already cancelled", async () => {
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu." };
+    const id = await claim(PEOPLE.rina);
+    const appKey = db.rows("coffee_orders")[0].idempotency_key as string;
+    await expect(recordManual(manual({ key: appKey }), dewi, now)).rejects.toMatchObject(reused);
+    await expect(recordManual(manual({ kind: "tamu", key: appKey }), dewi, now)).rejects.toMatchObject(reused);
+    const { order } = await recordManual(manual({ key: key(900) }), dewi, now);
+    await cancelManual(order.id, dewi, now);
+    await expect(recordManual(manual({ key: key(900) }), dewi, now)).rejects.toMatchObject(reused);
+    db.state.race = true;
+    await expect(recordManual(manual({ key: key(900) }), dewi, now)).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders").map(row => [row.id === id, row.status])).toEqual([[true, "diproses"], [false, "batal"]]);
+  });
+});
+
+// Audit B-1 (owner's decision): a pengelola may cancel a record made by hand.
+describe("Batalkan catatan", () => {
+  it("turns a claim recorded by hand into batal, with who cancelled it and when, and frees its place in the quota", async () => {
+    await recordManual(manual({ employeeId: PEOPLE.fajar }), dewi, now);
+    const wrong = await recordManual(manual({ employeeId: PEOPLE.fajar, time: "11:00" }), dewi, now);
+    await expect(recordManual(manual({ employeeId: PEOPLE.fajar, time: "12:00" }), dewi, now)).rejects.toMatchObject({ status: 409 });
+    expect((await queue(dewi, now)).today.selesai).toBe(2);
+    db.state.now = later(3600);
+    // Another pengelola may cancel it, an hour later: no window, no "only the one who recorded it".
+    const { order, message } = await cancelManual(wrong.order.id, raka, later(3600));
+    expect(message).toBe("Catatan dibatalkan. Jatah Contoh dikembalikan.");
+    expect(order).toMatchObject({ status: "batal", manual: true, undoable: false, used: 1, quota: 2, sentBy: "Dewi", processed: { employeeId: null, label: "Super admin", at: later(3600).toISOString() } });
+    expect(order.claimNo).toBeUndefined();
+    expect(db.rows("coffee_orders").find(row => row.id === wrong.order.id)).toMatchObject({ status: "batal", created_by: PEOPLE.dewi, created_label: "Dewi", processed_by: null, processed_label: "Super admin" });
+    const state = await queue(dewi, later(3600));
+    expect(state.today).toEqual({ diproses: 0, selesai: 1, ditolak: 0 });
+    expect(state.recent.map(item => item.id)).not.toContain(wrong.order.id);
+    // The place is free again.
+    expect((await recordManual(manual({ employeeId: PEOPLE.fajar, time: "12:00" }), dewi, later(3600))).order).toMatchObject({ claimNo: 2, used: 2 });
+  });
+
+  it("cancels a guest's or a team member's record with all its drinks", async () => {
+    const guest = await recordManual(manual({ kind: "tamu", qty: 3, room: "Vasuki Room", guest: "Contoh Bank", guestCount: 4 }), dewi, now);
+    const { order, message } = await cancelManual(guest.order.id, dewi, now);
+    expect(message).toBe("Catatan dibatalkan.");
+    expect(order).toMatchObject({ kind: "rapat", status: "batal", manual: true, processed: { label: "Dewi" } });
+    expect(order.items).toMatchObject([{ for: "tamu", qty: 3 }]);
+  });
+
+  it("is for records made by hand only, once, and never for an order made in the app", async () => {
+    const mine = await claim(PEOPLE.rina);
+    const room = await meeting();
+    const notManual = { status: 409, message: "Hanya catatan manual yang bisa dibatalkan." };
+    await expect(cancelManual(mine, dewi, now)).rejects.toMatchObject(notManual);
+    await finishOrder(mine, dewi, now);
+    await expect(cancelManual(mine, dewi, now)).rejects.toMatchObject(notManual);
+    await expect(cancelManual(room, dewi, now)).rejects.toMatchObject(notManual);
+    expect(db.rows("coffee_orders").map(row => row.status)).toEqual(["selesai", "diproses"]);
+    const { order } = await recordManual(manual({}), dewi, now);
+    await cancelManual(order.id, dewi, now);
+    await expect(cancelManual(order.id, dewi, now)).rejects.toMatchObject({ status: 409, message: "Catatan ini sudah dibatalkan." });
+    await expect(reopenOrder(order.id, dewi, now)).rejects.toMatchObject({ status: 409 });
+    await expect(cancelManual(NOBODY, dewi, now)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
   const waits = { status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." };
@@ -131,4 +247,5 @@ it("answers 503 with the migration's name before it runs", async () => {
   await expect(rejectOrder(NOBODY, "Catatan.", dewi, now)).rejects.toMatchObject(waits);
   await expect(reopenOrder(NOBODY, dewi, now)).rejects.toMatchObject(waits);
   await expect(recordManual(manual({}), dewi, now)).rejects.toMatchObject(waits);
+  await expect(cancelManual(NOBODY, dewi, now)).rejects.toMatchObject(waits);
 });

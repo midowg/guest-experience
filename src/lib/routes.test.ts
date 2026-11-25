@@ -175,6 +175,7 @@ describe("Werkudara Coffee addresses (25 Nov 2026)", () => {
     expect(COFFEE_ADMIN).toBe("/admin/coffee");
     expect(coffeeAdminPath).toMatchObject({ home: "/admin/coffee", manual: "/admin/coffee?catat=1", settings: "/admin/coffee/pengaturan" });
     expect(coffeeAdminPath.recap()).toBe("/admin/coffee/rekap");
+    expect(coffeeAdminApi.cancelManual("k1")).toBe("/api/admin/coffee/orders/k1/batalkan");
     expect(coffeeAdminPath.recap("2026-11")).toBe("/admin/coffee/rekap?bulan=2026-11");
     expect(coffeeAdminApi.finish("o1")).toBe("/api/admin/coffee/orders/o1/selesai");
     expect(coffeeAdminApi.reject("o1")).toBe("/api/admin/coffee/orders/o1/tolak");

@@ -15,7 +15,15 @@ import { Layer } from "./Layer";
 import { PersonPicker } from "./PersonPicker";
 import css from "./coffee-admin.module.css";
 
-const newKey = () => typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "00000000-0000-4000-8000-000000000000";
+/** One key per opened sheet: sending the same record twice answers with the first one. randomUUID is missing on plain http, so the key is then drawn by hand. */
+export function newKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  const hex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16));
+  hex[12] = "4";
+  hex[16] = "89ab"[Math.floor(Math.random() * 4)];
+  const text = hex.join("");
+  return `${text.slice(0, 8)}-${text.slice(8, 12)}-${text.slice(12, 16)}-${text.slice(16, 20)}-${text.slice(20)}`;
+}
 
 /**
  * Catat manual: a request made outside the app, saved as done and marked "Dicatat manual". A

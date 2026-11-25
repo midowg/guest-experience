@@ -14,7 +14,7 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
   const rows: RecapRow[] = [];
   for (const order of orders) {
     const shared = {
-      at: order.orderedAt, no: order.no, status: order.status, reason: order.rejectNote,
+      orderId: order.id, at: order.orderedAt, no: order.no, status: order.status, reason: order.rejectNote,
       doneBy: order.processed?.label ?? "", doneAt: order.processed?.at ?? "", manual: order.manual,
     };
     for (const item of order.items) {
@@ -45,11 +45,13 @@ export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis",
   "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-", "Dicatat manual"] as const;
 
 const sheetDate = (iso: string) => wibDay(iso).split("-").reverse().join("/");
+/** The status as Rekap words it: a record made by hand and cancelled by a pengelola reads "Dibatalkan". */
+export const rowStatus = (row: Pick<RecapRow, "status" | "manual">): string => row.status === "batal" && row.manual ? "Dibatalkan" : STATUS_LABEL[row.status];
 /** A row's 22 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. */
 export const detailCells = (row: RecapRow): string[] => [
   sheetDate(row.at), wibClock(row.at), row.no, KIND_LABEL[row.kind], row.name, row.group, row.position, row.bu,
   row.pic, row.guest, row.guestCount && row.kind === "tamu" ? String(row.guestCount) : "", row.room, row.drink,
-  row.temperature === "es" ? "Es" : "Panas", row.sugar, row.temperature === "es" ? row.ice : "", STATUS_LABEL[row.status], row.reason,
+  row.temperature === "es" ? "Es" : "Panas", row.sugar, row.temperature === "es" ? row.ice : "", rowStatus(row), row.reason,
   row.doneBy, row.doneAt ? wibClock(row.doneAt) : "", row.claimNo ? String(row.claimNo) : "", row.manual ? "Ya" : "",
 ];
 
@@ -95,16 +97,17 @@ export function summarize(rows: RecapRow[], people: RecapPerson[], settings: Cof
     };
   }).sort((a, b) => b.used / Math.max(b.quota, 1) - a.used / Math.max(a.quota, 1) || a.person.name.localeCompare(b.person.name, "id"));
 
-  const picMap = new Map<string, { pic: string; meetings: Set<string>; guests: number; drinks: number }>();
+  // A meeting's guests are counted once: the largest count among its rounds (a later round may carry none).
+  const picMap = new Map<string, { pic: string; meetings: Map<string, number>; drinks: number }>();
   for (const row of live.filter(row => row.kind === "tamu")) {
     const key = row.employeeId ?? row.pic;
-    const entry = picMap.get(key) ?? { pic: row.pic, meetings: new Set<string>(), guests: 0, drinks: 0 };
+    const entry = picMap.get(key) ?? { pic: row.pic, meetings: new Map<string, number>(), drinks: 0 };
     const meeting = meetingOf(row.no);
-    if (!entry.meetings.has(meeting)) { entry.meetings.add(meeting); entry.guests += row.guestCount ?? 0; }
+    entry.meetings.set(meeting, Math.max(entry.meetings.get(meeting) ?? 0, row.guestCount ?? 0));
     entry.drinks += 1;
     picMap.set(key, entry);
   }
-  const pics = [...picMap.values()].map(entry => ({ pic: entry.pic, meetings: entry.meetings.size, guests: entry.guests, drinks: entry.drinks }))
+  const pics = [...picMap.values()].map(entry => ({ pic: entry.pic, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), drinks: entry.drinks }))
     .sort((a, b) => b.drinks - a.drinks || a.pic.localeCompare(b.pic, "id"));
 
   const buMap = new Map<string, Record<ItemFor, number>>();

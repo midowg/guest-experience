@@ -80,7 +80,9 @@ async function decide(id: string, patch: { status: "selesai" | "ditolak"; reject
     .eq("id", id).eq("status", "diproses").select("id");
   if (error) coffeeError(error);
   if (!data?.length) {
-    if (!(await orderById(id))) throw new ServiceError(404, "Pesanan tidak ditemukan. Muat ulang halaman.");
+    const order = await orderById(id);
+    if (!order) throw new ServiceError(404, "Pesanan tidak ditemukan. Muat ulang halaman.");
+    if (order.status === "batal") throw new ServiceError(409, order.manual ? "Catatan ini sudah dibatalkan. Antrean diperbarui." : "Pengajuan ini sudah dibatalkan pemesannya. Antrean diperbarui.");
     throw new ServiceError(409, "Pesanan ini sudah diproses orang lain. Antrean diperbarui.");
   }
   return shown(id, actor, now);
@@ -99,9 +101,22 @@ export async function reopenOrder(id: string, actor: CoffeeActor, now = new Date
 }
 
 /**
+ * Batalkan catatan: a record made by hand that turned out wrong (the wrong person, the wrong
+ * month). Any pengelola may cancel it; orders made in the app are never touched. The row stays as
+ * "batal" with who cancelled it and when, and a claim's place in the quota is free again.
+ */
+export async function cancelManual(id: string, actor: CoffeeActor, now = new Date()): Promise<{ order: QueueOrder; message: string }> {
+  const { error } = await db().rpc("coffee_cancel_manual", { p_order: id, p_actor: actor.employeeId, p_actor_label: actor.label.slice(0, 120) });
+  if (error) coffeeError(error);
+  const order = await shown(id, actor, now);
+  return { order, message: order.kind === "klaim" ? `Catatan dibatalkan. Jatah ${firstName(order.person.name)} dikembalikan.` : "Catatan dibatalkan." };
+}
+
+/**
  * Catat manual: a request made outside the app, saved as done and marked "Dicatat manual". A claim
  * goes through the same function as the app's, so a full quota still refuses it. Not further back
- * than the start of last month (WIB).
+ * than the start of last month (WIB). The sheet's key makes a second sending of the same record
+ * answer with the first one instead of saving it twice.
  */
 export async function recordManual(input: ManualInput, actor: CoffeeActor, now = new Date()): Promise<{ order: QueueOrder; message: string }> {
   const at = manualAt(input.date, input.time);
@@ -111,21 +126,31 @@ export async function recordManual(input: ManualInput, actor: CoffeeActor, now =
   const label = actor.label.slice(0, 120);
   const drink = { slug: input.slug, other: input.other ?? null, temperature: input.temperature, sugar: input.sugar, ice: input.ice };
   const { data, error } = input.kind === "klaim"
-    ? await db().rpc("coffee_submit_claim", { p_employee: input.employeeId, p_item: drink, p_at: at, p_manual: true, p_actor: actor.employeeId, p_actor_label: label, p_key: input.key ?? null })
+    ? await db().rpc("coffee_submit_claim", { p_employee: input.employeeId, p_item: drink, p_at: at, p_manual: true, p_actor: actor.employeeId, p_actor_label: label, p_key: input.key })
     : await db().rpc("coffee_submit_meeting", {
       p_order: {
         pic_id: input.employeeId, room: input.room ?? null, room_spot: input.room ? roomSpot(input.room) : null, guest: input.guest ?? null, guest_count: input.guestCount ?? null,
         parent_id: null, actor_id: actor.employeeId, actor_label: label, ordered_at: at, manual: true,
       },
       p_items: [{ ...drink, for: input.kind, person_id: input.kind === "tim" ? input.employeeId : null, qty: input.qty }],
-      p_key: input.key ?? null,
+      p_key: input.key,
     });
-  if (error) coffeeError(error);
-  const order = await shown(data as string, actor, now);
+  let id = data as string | null;
+  if (error) {
+    // Two sendings of the same key met at the unique index: the first one is the record.
+    const { data: first } = error.code === "23505"
+      ? await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).eq("manual", true).eq("status", "selesai").maybeSingle()
+      : { data: null };
+    if (!first) coffeeError(error);
+    id = (first as { id: string }).id;
+  }
+  const order = await shown(id as string, actor, now);
+  // The words come from what is saved: a repeated key answers with the first record, whatever was sent now.
   const who = firstName(order.person.name);
-  const name = drinkLabel(input.slug, input.other);
-  const message = input.kind === "klaim"
+  const item = order.items[0];
+  const name = item ? drinkLabel(item.slug, item.other) : drinkLabel(input.slug, input.other);
+  const message = order.kind === "klaim"
     ? `${who} · ${name} · klaim ke-${order.claimNo ?? order.used ?? 1} dari ${order.quota ?? 0}.`
-    : `${KIND_LABEL[input.kind]} · ${input.qty}× ${name} · ${input.kind === "tamu" ? "PIC " : ""}${who}.`;
+    : `${KIND_LABEL[item?.for ?? input.kind]} · ${item?.qty ?? input.qty}× ${name} · ${(item?.for ?? input.kind) === "tamu" ? "PIC " : ""}${who}.`;
   return { order, message };
 }

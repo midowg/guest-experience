@@ -44,7 +44,7 @@ const routes = async () => {
 const body = async (response: Response) => await response.json() as { ok: boolean; message: string; data?: Record<string, unknown>; fieldErrors?: Record<string, string[]> };
 
 beforeEach(() => {
-  db = fakeDb(); seedPeople(db);
+  db = fakeDb(); seedPeople(db); db.state.now = new Date();
   state.member = rina;
   process.env.RATE_LIMIT_SECRET = "x".repeat(40);
   process.env.WAM_SESSION_SECRET = "y".repeat(40);
@@ -133,4 +133,46 @@ it("answers 409 when the quota is full, and takes a meeting order from GA", asyn
   expect((await body(full)).message).toBe("Jatah bulan ini sudah habis.");
   expect(await body(await all.gaMeeting())).toMatchObject({ ok: true, message: "Pesanan terkirim ke pengelola.", data: { order: { no: "T-0113", sentBy: "Bagas", pic: { id: PEOPLE.rina } } } });
   expect((await body(await all.gaState())).data).toMatchObject({ today: [{ no: "T-0113" }] });
+});
+
+// Audit L-1: the office shares one address, so each person is counted, not the address.
+it("limits each person, not the office's one address", async () => {
+  const all = await routes();
+  const keyOf = (n: number) => KEY.replace(/000000000001$/, String(n).padStart(12, "0"));
+  const fajar = { id: PEOPLE.fajar, name: "Contoh Fajar Nugroho", nickname: "Fajar", category: "intern", roles: [] };
+  const dewi = { id: PEOPLE.dewi, name: "Contoh Dewi Lestari", nickname: "Dewi", category: "karyawan", roles: [] };
+  // Forty-eight sendings from one address in ten minutes, twelve each: nobody is told to wait (a full quota answers 409).
+  let n = 100;
+  for (let round = 0; round < 12; round++) {
+    for (const member of [rina, bagas, fajar, dewi]) {
+      state.member = member;
+      expect((await all.claim({ ...claim, key: keyOf(++n) })).status).not.toBe(429);
+    }
+  }
+  // One person alone is stopped at twenty; the next person is not.
+  state.member = rina;
+  for (let more = 13; more <= 20; more++) expect((await all.claim({ ...claim, key: keyOf(++n) })).status).toBe(409);
+  const stopped = await all.claim({ ...claim, key: keyOf(++n) });
+  expect(stopped.status).toBe(429);
+  expect((await body(stopped)).message).toBe("Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi.");
+  state.member = dewi;
+  expect((await all.claim({ ...claim, key: keyOf(++n) })).status).toBe(409);
+  // The tablet's own count is apart from the claims'.
+  state.member = bagas;
+  expect((await all.gaMeeting({ ...meeting, key: keyOf(++n) })).status).toBe(200);
+  for (let more = 2; more <= 60; more++) expect((await all.gaMeeting({ ...meeting, key: keyOf(++n) })).status).toBe(200);
+  expect((await all.gaMeeting({ ...meeting, key: keyOf(++n) })).status).toBe(429);
+});
+
+it("is told when the whole address sends far more than an office does", async () => {
+  const all = await routes();
+  const { COFFEE_NETWORK_LIMIT } = await import("@/lib/server/coffee/rate");
+  expect(COFFEE_NETWORK_LIMIT).toBeGreaterThanOrEqual(200);
+  // The address's counter is already at its limit.
+  const [addressKey] = await (async () => { await all.claim(); return [...db.state.rate.keys()]; })();
+  db.state.rate.set(addressKey, COFFEE_NETWORK_LIMIT);
+  state.member = bagas;
+  const response = await all.claim({ ...claim, key: KEY.replace(/1$/, "7") });
+  expect(response.status).toBe(429);
+  expect((await body(response)).message).toBe("Terlalu banyak permintaan. Tunggu sepuluh menit sebelum mencoba kembali.");
 });

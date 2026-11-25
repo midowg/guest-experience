@@ -1,5 +1,6 @@
 import { claimSchema } from "@/lib/coffee/schemas";
 import { submitClaim } from "@/lib/server/coffee/claims";
+import { COFFEE_NETWORK_LIMIT, limitCoffeePerson } from "@/lib/server/coffee/rate";
 import { checkOrigin, enforceRateLimit, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 
@@ -10,7 +11,9 @@ export async function POST(request: Request) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
-    await enforceRateLimit(request, "coffee-klaim", 30);
+    // The office shares one address: each person is counted, the address only as an outer wall.
+    await enforceRateLimit(request, "coffee-klaim", COFFEE_NETWORK_LIMIT);
+    await limitCoffeePerson("klaim", member.id, 20);
     const input = validate(claimSchema, await readJson(request, 2_000));
     return success(await submitClaim(member, input), "Pengajuan terkirim.");
   });

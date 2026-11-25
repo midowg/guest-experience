@@ -1051,6 +1051,8 @@ export const coffeeAdminApi = {
   reject: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/tolak`,
   /** POST: Urungkan, back to the queue (the processor only, within five minutes). */
   reopen: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/urungkan`,
+  /** POST: Batalkan catatan, for a record made by hand (Catat manual) only. */
+  cancelManual: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/batalkan`,
   /** POST: Catat manual. */
   manual: `${COFFEE_ADMIN_API}/manual`,
   /** GET ?bulan=YYYY-MM: the active employees to pick from, with the claims used that month. */

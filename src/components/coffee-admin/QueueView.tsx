@@ -4,18 +4,21 @@ import { Inbox, PenLine } from "lucide-react";
 import { ConsoleButton, PageHeader } from "@/components/console";
 import { wibClock } from "@/lib/coffee/quota";
 import { STATUS_LABEL, type QueueOrder, type QueueState } from "@/lib/coffee/types";
-import { STATUS_TONE, canUndo, orderTitle } from "./format";
+import type { CancelTarget } from "./api";
+import { STATUS_TONE, canCancel, canUndo, cancelOfOrder, orderTitle } from "./format";
 import { QueueCard } from "./QueueCard";
 import { coffeeAdminSection } from "./sections";
 import css from "./coffee-admin.module.css";
 
 /**
  * Antrean: what waits (oldest first), today's numbers, and the last six processed. New orders come
- * in without a reload. "Baru diproses" offers Urungkan to whoever processed the order, for five minutes.
+ * in without a reload. "Baru diproses" offers Urungkan to whoever processed the order, for five
+ * minutes, and Batalkan catatan on a record made by hand.
  */
-export function QueueView({ queue, error, now, phone, actorName, undoing, onRetry, onFinish, onRefuse, onUndo, onManual }: {
+export function QueueView({ queue, error, now, phone, actorName, undoing, onRetry, onFinish, onRefuse, onUndo, onManual, onCancel }: {
   queue: QueueState | null; error: string; now: number; phone: boolean; actorName: string; undoing: string | null;
   onRetry: () => void; onFinish: (order: QueueOrder) => void; onRefuse: (order: QueueOrder) => void; onUndo: (order: QueueOrder) => void; onManual: () => void;
+  onCancel: (target: CancelTarget) => void;
 }) {
   const section = coffeeAdminSection("antrean");
   return (
@@ -70,6 +73,11 @@ export function QueueView({ queue, error, now, phone, actorName, undoing, onRetr
                     {canUndo(order, now) && (
                       <button type="button" className={css.textButton} disabled={undoing === order.id} onClick={() => onUndo(order)}>
                         {undoing === order.id ? "Mengurungkan…" : "Urungkan"}<span className={css.srOnly}> {orderTitle(order)}</span>
+                      </button>
+                    )}
+                    {canCancel(order) && (
+                      <button type="button" className={css.textButton} onClick={() => onCancel(cancelOfOrder(order))}>
+                        Batalkan catatan<span className={css.srOnly}> {orderTitle(order)}</span>
                       </button>
                     )}
                   </li>

@@ -519,3 +519,26 @@ F1 (pengelola, `/admin/coffee`) selesai di cabang `feat/werkudara-coffee`. Tidak
   `/dev-preview/coffee/nyata` dan tes.
 - Tes yang berkedip: `src/components/main-wam/ui/modal.dom.test.tsx` gagal 2 tes sekali saat seluruh suite dijalankan
   (lulus sendiri dan lulus pada putaran kedua); bukan bagian Coffee.
+
+---
+
+## Catatan perbaikan audit F0 (25 Nov 2026)
+
+Temuan `docs/coffee/AUDIT-F0.md` diperbaiki (kolom Status di sana). Yang berubah untuk fase berikutnya:
+
+- **Migrasi `202612010001_coffee.sql` diubah di tempat** (belum pernah dijalankan): fungsi baru
+  `coffee_cancel_manual(p_order, p_actor, p_actor_label)`, indeks `coffee_orders_processed`, aturan kunci, dan Tambah lagi
+  yang menyalin data putaran pertama. **Tetap belum pernah dijalankan di Postgres.**
+- **Batalkan catatan** (keputusan PM): `POST /api/admin/coffee/orders/[id]/batalkan` (`coffeeAdminApi.cancelManual`), hanya
+  catatan manual berstatus selesai, pengelola mana pun, tanpa batas waktu. Baris menjadi `batal`; `processed_*` = yang
+  membatalkan. Rekap menulis "Dibatalkan" (`rowStatus`), batal oleh pemesan tetap "Batal". `RecapRow.orderId` baru.
+- **Kode galat baru** (`store.ts`): `COFFEE_KEY_REUSED` 409, `COFFEE_PARENT_CLOSED` 409 ("Pesanan awal sudah tidak bisa
+  ditambah. Buat pesanan baru."), `COFFEE_NOT_MANUAL` 409, `COFFEE_ALREADY_CANCELLED` 409.
+- **Kunci (F2, F3):** satu kunci uuid baru tiap kali sheet/kiriman dibuka; jangan dipakai ulang setelah batal atau ditolak
+  (409). `manualSchema.key` wajib. `crypto.randomUUID` tidak ada di http biasa: pakai `newKey()` di `ManualSheet.tsx`.
+- **Tambah lagi (F3):** server memakai PIC, ruangan, tamu, jumlah tamu putaran pertama; kiriman klien untuk itu tidak
+  dibaca. Induk harus pesanan rapat hari ini (WIB), bukan ditolak/batal. Tablet yang dibiarkan semalam akan mendapat 409.
+- **Batas kirim:** per orang (`limitCoffeePerson` di `src/lib/server/coffee/rate.ts`): klaim 20, rapat 60 per 10 menit;
+  per alamat 300. Pesan 429 per orang: "Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi."
+- Selesai/Tolak pada pesanan yang dibatalkan pemesannya: 409 "Pengajuan ini sudah dibatalkan pemesannya. Antrean diperbarui."
+

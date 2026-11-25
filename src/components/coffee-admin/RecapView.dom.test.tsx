@@ -128,3 +128,32 @@ it("is a list, not a table, on a phone", async () => {
   expect(screen.getAllByRole("listitem").length).toBeGreaterThan(5);
   expect(screen.getByRole("button", { name: /^Filter/ }).getAttribute("aria-haspopup")).toBe("dialog");
 });
+
+// Audit B-1: Rekap → Detail offers Batalkan catatan on a record made by hand, and words a cancelled one "Dibatalkan".
+it("offers Batalkan catatan on records made by hand only, and shows a cancelled one as Dibatalkan", async () => {
+  for (const phone of [false, true]) {
+    const server = createSampleServer();
+    const manual = server.seedManual();
+    const query = monthQuery("2026-11");
+    const onCancel = vi.fn();
+    const view = (version: number, data: Awaited<ReturnType<typeof server.api.recap>>) =>
+      <div className={css.root}><RecapView api={server.api} initial={{ query, data }} today="2026-11-25" phone={phone} active version={version} onCancel={onCancel} /></div>;
+    const { rerender } = render(view(0, await server.api.recap(query)));
+    fireEvent.click(screen.getByRole("tab", { name: /^Detail/ }));
+    const buttons = screen.getAllByRole("button", { name: /Batalkan catatan/ });
+    expect(buttons).toHaveLength(1);
+    const line = buttons[0].closest(phone ? "li" : "tr")!;
+    expect(line.textContent).toMatch(/Arief Hidayat \(contoh\)/);
+    expect(line.textContent).toMatch(/SelesaiDicatat manual/);
+    fireEvent.click(buttons[0]);
+    expect(onCancel).toHaveBeenCalledWith({ id: manual.id, title: `Klaim · Arief · Kopi Susu · ${manual.no}`, claim: true });
+
+    await server.api.cancelManual(manual.id);
+    rerender(view(1, await server.api.recap(query)));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Batalkan catatan/ })).toBeNull());
+    const cancelled = screen.getByText("Dibatalkan").closest(phone ? "li" : "tr")!;
+    expect(cancelled.textContent).toMatch(/Arief Hidayat \(contoh\)/);
+    expect(cancelled.textContent).toMatch(/DibatalkanDicatat manual/);
+    cleanup();
+  }
+});

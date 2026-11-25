@@ -114,5 +114,12 @@ export function useQueue(api: CoffeeAdminApi, initial: QueueState | null, onNew:
   /** Catat manual saved an order as done: it joins "Baru diproses" at once. */
   const recorded = useCallback((order: QueueOrder) => { epoch.current += 1; change(processed(order)); }, []);
 
-  return { state, error, refresh, finish, reject, reopen, recorded };
+  /** Batalkan catatan took a record made by hand back: it leaves "Baru diproses", and today's numbers are read again. */
+  const cancelled = useCallback((order: QueueOrder) => {
+    epoch.current += 1;
+    change(current => ({ ...current, recent: current.recent.filter(item => item.id !== order.id) }));
+    void refresh();
+  }, [refresh]);
+
+  return { state, error, refresh, finish, reject, reopen, recorded, cancelled };
 }

@@ -143,3 +143,52 @@ it("says the queue is empty in the plan's words", async () => {
   render(<CoffeeAdminApp view="antrean" initial={{ queue: { ...queue, waiting: [] } }} now={NOW} api={server.api} routing="memory" />);
   expect(screen.getByRole("heading", { name: "Antrean kosong" }).parentElement!.textContent).toMatch(/Pesanan baru muncul di sini tanpa memuat ulang halaman\./);
 });
+
+// Audit B-1: a record made by hand that was wrong can be cancelled, after a question.
+it("Batalkan catatan: only on a record made by hand, asks first, then the record leaves Baru diproses", async () => {
+  let manual = "";
+  const cancelManual = vi.fn();
+  const server = createSampleServer();
+  manual = server.seedManual().id;
+  const api = { ...server.api, cancelManual: cancelManual.mockImplementation(server.api.cancelManual) };
+  render(<CoffeeAdminApp view="antrean" initial={{ queue: await server.api.queue() }} now={NOW} personName={SAMPLE_ACTOR.name} api={api} routing="memory" />);
+  const rows = () => within(recent()).getAllByRole("listitem");
+  const row = () => rows().find(item => /Arief · Kopi Susu/.test(item.textContent ?? ""))!;
+  expect(row().textContent).toMatch(/Dicatat manual/);
+  // Orders made in the app never offer it.
+  expect(rows().filter(item => within(item).queryByRole("button", { name: /Batalkan catatan/ }))).toHaveLength(1);
+  expect(within(row()).queryByRole("button", { name: /Urungkan/ })).toBeNull();
+  expect(screen.getByText("Selesai", { selector: "dt" }).nextElementSibling?.textContent).toBe("3");
+
+  fireEvent.click(within(row()).getByRole("button", { name: /Batalkan catatan/ }));
+  const dialog = screen.getByRole("dialog", { name: "Batalkan catatan manual ini?" });
+  expect(dialog.textContent).toMatch(/Arief · Kopi Susu · K-\d+/);
+  expect(dialog.textContent).toMatch(/Jatah orangnya dikembalikan/);
+  expect(cancelManual).not.toHaveBeenCalled();
+  // Kembali changes nothing.
+  fireEvent.click(within(dialog).getByRole("button", { name: "Kembali" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(cancelManual).not.toHaveBeenCalled();
+  expect(row()).toBeTruthy();
+
+  fireEvent.click(within(row()).getByRole("button", { name: /Batalkan catatan/ }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Batalkan catatan" }));
+  await waitFor(() => expect(screen.getByText("Catatan dibatalkan", { selector: "strong" })).toBeTruthy());
+  expect(cancelManual).toHaveBeenCalledTimes(1);
+  expect(cancelManual).toHaveBeenCalledWith(manual);
+  expect(screen.getByText("Catatan dibatalkan", { selector: "strong" }).parentElement!.textContent).toMatch(/Jatah Arief dikembalikan/);
+  await waitFor(() => expect(recent().textContent).not.toMatch(/Arief · Kopi Susu/));
+  await waitFor(() => expect(screen.getByText("Selesai", { selector: "dt" }).nextElementSibling?.textContent).toBe("2"));
+  expect(server.orders.find(order => order.id === manual)).toMatchObject({ status: "batal", manual: true, processed: { label: "Dewi" } });
+});
+
+it("says so when the record was already cancelled in another window", async () => {
+  const server = createSampleServer();
+  const manual = server.seedManual().id;
+  render(<CoffeeAdminApp view="antrean" initial={{ queue: await server.api.queue() }} now={NOW} personName={SAMPLE_ACTOR.name} api={server.api} routing="memory" />);
+  await server.api.cancelManual(manual);
+  fireEvent.click(within(recent()).getByRole("button", { name: /Batalkan catatan/ }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Batalkan catatan" }));
+  await waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/Catatan ini sudah dibatalkan\./));
+  await waitFor(() => expect(within(recent()).queryByRole("button", { name: /Batalkan catatan/ })).toBeNull());
+});

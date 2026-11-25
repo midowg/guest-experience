@@ -6,7 +6,7 @@ import { errorMessage } from "@/components/admin/shared/api";
 import { ConsoleButton, ConsoleButtonLink, PageHeader } from "@/components/console";
 import { GROUP_LABEL } from "@/lib/coffee/menu";
 import { ITEM_KINDS, KIND_LABEL, STATUS_LABEL, type ItemFor, type Status } from "@/lib/coffee/types";
-import type { CoffeeAdminApi, RecapData, RecapQuery } from "./api";
+import type { CancelTarget, CoffeeAdminApi, RecapData, RecapQuery } from "./api";
 import { DetailTable } from "./DetailTable";
 import { monthEnd, monthName, recentMonths } from "./format";
 import { Layer } from "./Layer";
@@ -36,10 +36,12 @@ function rangeProblem(query: RecapQuery): string {
  * was opened is kept: it shows at once when asked again and is refreshed quietly; while a new one
  * is read the old numbers stay, dimmed.
  */
-export function RecapView({ api, initial, today, phone, active, version }: {
+export function RecapView({ api, initial, today, phone, active, version, onCancel }: {
   api: CoffeeAdminApi; initial?: { query: RecapQuery; data: RecapData }; today: string; phone: boolean; active: boolean;
   /** Raised when an order changed, so what is kept is read again the next time Rekap is on screen. */
   version: number;
+  /** Batalkan catatan on a record made by hand (the screen that holds Rekap asks first, then cancels). */
+  onCancel?: (target: CancelTarget) => void;
 }) {
   const uid = useId();
   const section = coffeeAdminSection("rekap");
@@ -310,7 +312,7 @@ export function RecapView({ api, initial, today, phone, active, version }: {
             </div>
           ) : (
             <div id={`${uid}-panel-detail`} role="tabpanel" aria-labelledby={`${uid}-tab-detail`} className={css.panel}>
-              <DetailTable key={key} rows={rows} phone={phone} />
+              <DetailTable key={key} rows={rows} phone={phone} onCancel={onCancel} />
             </div>
           )}
         </div>

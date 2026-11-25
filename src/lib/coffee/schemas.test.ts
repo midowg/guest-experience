@@ -66,7 +66,7 @@ describe("Tolak", () => {
 });
 
 describe("Catat manual", () => {
-  const manual = { kind: "klaim", employeeId: PERSON, date: "2026-11-20", time: "09:30", ...drink };
+  const manual = { kind: "klaim", employeeId: PERSON, date: "2026-11-20", time: "09:30", ...drink, key: KEY };
   it("records a claim as one drink, without meeting fields", () => {
     expect(manualSchema.parse({ ...manual, qty: 4, room: "Vasuki Room", guest: "Contoh Tamu", guestCount: 3 })).toMatchObject({ kind: "klaim", qty: 1, room: undefined, guest: undefined, guestCount: undefined });
     expect(manualSchema.parse({ ...manual, kind: "tamu", qty: 4, room: "Vasuki Room", guest: "Contoh Tamu", guestCount: 3 })).toMatchObject({ qty: 4, room: "Vasuki Room", guest: "Contoh Tamu", guestCount: 3 });
@@ -85,6 +85,22 @@ describe("Catat manual", () => {
     expect(fields(manualSchema.safeParse({ ...manual, date: "2999-01-01" }))).toEqual({ date: "Tanggal dan jam tidak boleh di masa depan." });
     expect(manualSchema.safeParse({ ...manual, date: "2026-02-30" }).success).toBe(false);
     expect(manualSchema.safeParse({ ...manual, time: "24:00" }).success).toBe(false);
+  });
+  // Audit V-1: a date or a clock that is not one used to throw inside the check for the future (503 instead of 422).
+  it("names the field for an empty or impossible date or clock, and never throws", () => {
+    expect(fields(manualSchema.safeParse({ ...manual, time: "" }))).toEqual({ time: "Jam tidak dikenali." });
+    expect(fields(manualSchema.safeParse({ ...manual, time: "aa:bb" }))).toEqual({ time: "Jam tidak dikenali." });
+    expect(fields(manualSchema.safeParse({ ...manual, time: undefined }))).toEqual({ time: "Isi jam." });
+    expect(fields(manualSchema.safeParse({ ...manual, date: "2026-13-45" }))).toEqual({ date: "Tanggal tidak dikenali." });
+    expect(fields(manualSchema.safeParse({ ...manual, date: "" }))).toEqual({ date: "Tanggal tidak dikenali." });
+    expect(fields(manualSchema.safeParse({ ...manual, date: undefined, time: null }))).toEqual({ date: "Isi tanggal.", time: "Isi jam." });
+    expect(fields(manualSchema.safeParse({ ...manual, date: "2026-02-30", time: "9:5" }))).toEqual({ date: "Tanggal tidak dikenali.", time: "Jam tidak dikenali." });
+  });
+  // Audit B-2: without a key a second sending is a second record.
+  it("needs the sheet's key", () => {
+    expect(fields(manualSchema.safeParse({ ...manual, key: undefined }))).toHaveProperty("key");
+    expect(fields(manualSchema.safeParse({ ...manual, key: "" }))).toHaveProperty("key");
+    expect(manualSchema.parse(manual).key).toBe(KEY);
   });
 });
 

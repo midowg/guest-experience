@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { claim, item, meeting, person } from "./fixtures";
-import { DETAIL_HEAD, detailCells, expandRows, filterRows, recapTitle, summarize, summarySheet } from "./recap";
+import { DETAIL_HEAD, detailCells, expandRows, filterRows, recapTitle, rowStatus, summarize, summarySheet } from "./recap";
 
 const rina = person("e1", "Contoh Rina Putri");
 const dimas = person("e2", "Contoh Dimas Pratama", "karyawan", "TEE", "Contoh Account Executive");
@@ -13,7 +13,8 @@ const orders = [
   claim("k2", 416, rina, "americano", { status: "ditolak", rejectNote: "Susu segar sedang habis.", processed: done }),
   claim("k3", 417, rina, "kopi-susu", { orderedAt: "2026-11-25T03:00:00.000Z" }),
   meeting("m1", 112, dimas, [item("a", "tamu", "kopi-susu", { qty: 3 }), item("b", "tim", "americano", { person: andi })], { status: "selesai", processed: done }),
-  meeting("m2", 112, dimas, [item("c", "tamu", "cappuccino", { qty: 2 })], { round: 2, parentId: "m1" }),
+  // "Tambah lagi" sent without a guest count (audit R-1): the meeting still has its five guests.
+  meeting("m2", 112, dimas, [item("c", "tamu", "cappuccino", { qty: 2 })], { round: 2, parentId: "m1", guestCount: null }),
   meeting("m3", 113, dimas, [item("d", "tamu", "classic-tea", { qty: 4 })], { status: "ditolak", rejectNote: "Dobel.", guestCount: 9 }),
 ];
 
@@ -45,6 +46,16 @@ describe("Rekap's rows", () => {
     expect(detailCells(rows.find(row => row.kind === "tim")!)[10]).toBe("");
     expect(detailCells({ ...rows[1], manual: true }).slice(16)).toEqual(["Ditolak", "Susu segar sedang habis.", "Dewi", "09:30", "", "Ya"]);
   });
+  it("carry the order's id, and word a cancelled record made by hand as Dibatalkan", () => {
+    expect(rows.filter(row => row.no === "T-0112" && row.kind === "tamu").map(row => row.orderId)).toEqual(["m1", "m1", "m1"]);
+    const [cancelled] = expandRows([claim("k8", 420, rina, "americano", { status: "batal", manual: true, processed: done })]);
+    expect(rowStatus(cancelled)).toBe("Dibatalkan");
+    expect(detailCells(cancelled).slice(16)).toEqual(["Dibatalkan", "", "Dewi", "09:30", "", "Ya"]);
+    expect(cancelled.claimNo).toBeUndefined();
+    // The claimant's own cancelling keeps its word.
+    expect(rowStatus(expandRows([claim("k7", 421, rina, "americano", { status: "batal" })])[0])).toBe("Batal");
+    expect(summarize([cancelled], [rina], settings)).toMatchObject({ total: 0, klaim: 0, people: [{ used: 0 }] });
+  });
   it("filter by day, kind, status and a word", () => {
     expect(filterRows(rows, { jenis: "tim" })).toHaveLength(1);
     expect(filterRows(rows, { status: "ditolak" })).toHaveLength(5);
@@ -64,6 +75,17 @@ describe("Rekap's summary", () => {
   });
   it("counts a meeting's guests once for its PIC, also over its rounds", () => {
     expect(summary.pics).toEqual([{ pic: "Contoh Dimas Pratama", meetings: 1, guests: 5, drinks: 5 }]);
+  });
+  it("takes the largest guest count among a meeting's rounds, whichever round comes first", () => {
+    const rounds = [
+      meeting("r1", 120, dimas, [item("a", "tamu", "kopi-susu")], { guestCount: 2 }),
+      meeting("r2", 120, dimas, [item("b", "tamu", "kopi-susu")], { round: 2, parentId: "r1", guestCount: 7 }),
+      meeting("r3", 120, dimas, [item("c", "tamu", "kopi-susu")], { round: 3, parentId: "r1", guestCount: null }),
+      meeting("s1", 121, dimas, [item("d", "tamu", "kopi-susu")], { guestCount: 3 }),
+    ];
+    for (const order of [rounds, [...rounds].reverse()]) {
+      expect(summarize(expandRows(order), [], settings).pics).toEqual([{ pic: "Contoh Dimas Pratama", meetings: 2, guests: 10, drinks: 4 }]);
+    }
   });
   it("lists everyone against their quota, those who have not claimed and those no longer active too", () => {
     expect(summary.people.map(entry => [entry.person.name, entry.used, entry.quota, entry.team, entry.refused])).toEqual([

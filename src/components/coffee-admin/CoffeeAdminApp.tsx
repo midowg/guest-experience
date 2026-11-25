@@ -9,7 +9,8 @@ import { consoleThemeClass } from "@/components/console";
 import { firstName } from "@/lib/coffee/access";
 import { wibDay } from "@/lib/coffee/quota";
 import type { QueueOrder, QueueState } from "@/lib/coffee/types";
-import { coffeeAdminClient, type CoffeeAdminApi, type Done, type RecapData, type RecapQuery, type SettingsData } from "./api";
+import { coffeeAdminClient, type CancelTarget, type CoffeeAdminApi, type Done, type RecapData, type RecapQuery, type SettingsData } from "./api";
+import { CancelDialog } from "./CancelDialog";
 import { CoffeeAdminNav } from "./CoffeeAdminNav";
 import { orderTitle } from "./format";
 import { usePhone } from "./Layer";
@@ -92,6 +93,8 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
   // A sheet or a dialog takes the screen: a message left over from before would cover its buttons.
   const openManualSheet = () => { setToast(null); setManual(true); };
   const openRefuse = (order: QueueOrder) => { setToast(null); setRefuse(order); };
+  const [cancel, setCancel] = useState<CancelTarget | null>(null);
+  const openCancel = (target: CancelTarget) => { setToast(null); setCancel(target); };
 
   // Pengaturan's data: also what Catat manual reads the quotas from.
   const [settings, setSettings] = useState<SettingsData | null>(initial.settings ?? null);
@@ -158,6 +161,19 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
       ? { tone: "success", title: "Ditolak", body: `${orderTitle(order)}. Catatannya dibaca ${order.kind === "klaim" ? "pemesan. Jatah tidak terpakai." : "GA dan PIC."}`, undo: result.order }
       : { tone: "error", title: result.message });
   };
+  /** Batalkan catatan, after the question: the record leaves "Baru diproses" and Rekap reads again. */
+  const cancelRecord = async (target: CancelTarget) => {
+    setCancel(null);
+    try {
+      const done = await api.cancelManual(target.id);
+      queue.cancelled(done.order);
+      notify({ tone: "success", title: "Catatan dibatalkan", body: `${target.title}.${target.claim ? ` Jatah ${firstName(done.order.person.name)} dikembalikan.` : ""}` });
+    } catch (problem) {
+      void queue.refresh();
+      notify({ tone: "error", title: errorMessage(problem) });
+    }
+    setVersion(value => value + 1);
+  };
   const saved = (done: Done) => {
     setManual(false);
     queue.recorded(done.order);
@@ -186,13 +202,13 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
           <div className={css.view} hidden={view !== "antrean"}>
             <QueueView
               queue={queue.state} error={queue.error} now={now} phone={phone} actorName={actorName} undoing={undoing}
-              onRetry={() => void queue.refresh()} onFinish={order => void finish(order)} onRefuse={openRefuse} onUndo={order => void undo(order)} onManual={openManualSheet}
+              onRetry={() => void queue.refresh()} onFinish={order => void finish(order)} onRefuse={openRefuse} onUndo={order => void undo(order)} onManual={openManualSheet} onCancel={openCancel}
             />
           </div>
         )}
         {opened.includes("rekap") && (
           <div className={css.view} hidden={view !== "rekap"}>
-            <RecapView api={api} initial={initial.recap} today={today} phone={phone} active={view === "rekap"} version={version} />
+            <RecapView api={api} initial={initial.recap} today={today} phone={phone} active={view === "rekap"} version={version} onCancel={openCancel} />
           </div>
         )}
         {opened.includes("pengaturan") && (
@@ -214,6 +230,7 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
       </nav>
 
       {manual && <ManualSheet api={api} now={now} actorName={actorName} settings={settings?.settings ?? null} onClose={() => setManual(false)} onSaved={saved} />}
+      {cancel && <CancelDialog target={cancel} onClose={() => setCancel(null)} onConfirm={() => void cancelRecord(cancel)} />}
       {refuse && <RefuseDialog order={refuse} onClose={() => setRefuse(null)} onRefuse={note => void reject(refuse, note)} />}
 
       <div className={css.toastRegion}>

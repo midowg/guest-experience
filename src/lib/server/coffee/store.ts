@@ -14,9 +14,11 @@ import { createPrivilegedClient } from "../supabase/admin";
 export const COFFEE_MIGRATION = "202612010001_coffee.sql";
 type DbError = { code?: string; message?: string };
 
-/** The table, function or column is not there yet. A broken rule (23xxx) names a coffee_ constraint too, and is not this. */
-export const missing = (error: DbError): boolean =>
-  ["42P01", "PGRST205", "42883", "PGRST202"].includes(error.code ?? "") || (!/^23/.test(error.code ?? "") && /coffee_/.test(error.message ?? ""));
+/**
+ * The table or the function is not there yet, by the database's own code. Anything else that names
+ * a coffee_ table (no permission, a mistyped column, a broken rule) is a fault, not a waiting migration.
+ */
+export const missing = (error: DbError): boolean => ["42P01", "PGRST205", "42883", "PGRST202"].includes(error.code ?? "");
 export const waitingForMigration = () => new ServiceError(503, `Werkudara Coffee menunggu migrasi ${COFFEE_MIGRATION}.`);
 
 const known: Record<string, [number, string]> = {
@@ -25,6 +27,10 @@ const known: Record<string, [number, string]> = {
   COFFEE_UNDO_EXPIRED: [409, "Sudah lewat batas waktu untuk mengurungkan."],
   COFFEE_NOT_FOUND: [404, "Pesanan tidak ditemukan. Muat ulang halaman."],
   COFFEE_INVALID: [422, "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi."],
+  COFFEE_KEY_REUSED: [409, "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu."],
+  COFFEE_PARENT_CLOSED: [409, "Pesanan awal sudah tidak bisa ditambah. Buat pesanan baru."],
+  COFFEE_NOT_MANUAL: [409, "Hanya catatan manual yang bisa dibatalkan."],
+  COFFEE_ALREADY_CANCELLED: [409, "Catatan ini sudah dibatalkan."],
 };
 /** A database error as the answer the person reads. */
 export function coffeeError(error: DbError): never {

@@ -48,6 +48,7 @@ describe("a claim", () => {
     await expect(submitClaim(fajar, { ...latte, key: key(2) }, now)).rejects.toMatchObject({ status: 409 });
     // 30 Nov 17.00 UTC is 1 Dec 00.00 WIB.
     const december = new Date("2026-11-30T17:00:00Z");
+    db.state.now = december;
     const { me } = await submitClaim(fajar, { ...latte, key: key(3) }, december);
     expect(me).toMatchObject({ month: "2026-12", used: 1, left: 0 });
   });
@@ -62,6 +63,39 @@ describe("a claim", () => {
     expect(state.orders[1]).toMatchObject({ rejectNote: "Susu habis.", processedLabel: "Dewi" });
     const c = await submitClaim(fajar, { ...latte, key: key(3) }, now);
     expect(c.order.claimNo).toBe(2);
+  });
+
+  // Audit: the 23505 branch was never run (the stand-in had no unique index).
+  it("is one claim when two sendings of one key meet at the unique index", async () => {
+    const first = await submitClaim(rina, { ...latte, key: key(1) }, now);
+    db.state.race = true;
+    const second = await submitClaim(rina, { ...latte, key: key(1) }, now);
+    expect(second.order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+  });
+
+  // Audit S-2: a key belongs to one sending of one person.
+  it("never answers with someone else's claim, nor with one already cancelled, for a key used before", async () => {
+    const { order } = await submitClaim(rina, { ...latte, key: key(1) }, now);
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu." };
+    await expect(submitClaim(fajar, { ...latte, key: key(1) }, now)).rejects.toMatchObject(reused);
+    db.state.race = true;
+    const raced = await submitClaim(fajar, { ...latte, key: key(1) }, now).catch((problem: unknown) => problem);
+    expect(raced).toMatchObject({ status: 409 });
+    expect(JSON.stringify(raced)).not.toContain("Rina");
+    db.state.race = false;
+    await cancelClaim(rina, order.id, now);
+    await expect(submitClaim(rina, { ...latte, key: key(1) }, now)).rejects.toMatchObject(reused);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    expect((await myState(rina, now)).me.used).toBe(0);
+  });
+
+  it("is refused by the database when its time lies ahead, or its drink is off the menu", async () => {
+    await expect(submitClaim(rina, { ...latte, key: key(1) }, new Date(now.getTime() + 6 * 60_000))).rejects.toMatchObject({ status: 422, message: "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi." });
+    // "lainnya" is for Catat manual only (audit S-6): the function refuses it even when zod is not in front.
+    const sent = await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.rina, p_item: { slug: "lainnya", other: "Teh tarik", temperature: "panas", sugar: "Normal" }, p_at: now.toISOString(), p_manual: false, p_actor: PEOPLE.rina, p_actor_label: "Rina", p_key: key(2) });
+    expect(sent.error).toMatchObject({ message: "COFFEE_INVALID" });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
   });
 
   it("is refused for someone no longer active", async () => {

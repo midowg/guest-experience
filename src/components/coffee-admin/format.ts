@@ -1,6 +1,7 @@
 import { firstName } from "@/lib/coffee/access";
 import { drinkLabel } from "@/lib/coffee/menu";
-import type { QueueOrder, Status } from "@/lib/coffee/types";
+import { KIND_LABEL, type QueueOrder, type RecapRow, type Status } from "@/lib/coffee/types";
+import type { CancelTarget } from "./api";
 
 /* Small words the pengelola's screens share. Pure. */
 
@@ -42,6 +43,12 @@ export function orderTitle(order: QueueOrder): string {
 }
 /** "T-0113 · tambahan ke-2" for a later round of a meeting. */
 export const orderNumber = (order: QueueOrder) => order.round > 1 ? `${order.no.replace(/-\d+$/, "")} · tambahan ke-${order.round}` : order.no;
+
+/** A record made by hand that is still in force: the only kind "Batalkan catatan" is offered for. */
+export const canCancel = (order: Pick<QueueOrder, "manual" | "status">) => order.manual && order.status === "selesai";
+export const cancelOfOrder = (order: QueueOrder): CancelTarget => ({ id: order.id, title: `${orderTitle(order)} · ${order.no}`, claim: order.kind === "klaim" });
+export const cancelOfRow = (row: RecapRow): CancelTarget =>
+  ({ id: row.orderId, title: `${KIND_LABEL[row.kind]} · ${firstName(row.name)} · ${row.drink} · ${row.no}`, claim: row.kind === "klaim" });
 
 /** The Urungkan window (the server's UNDO_WINDOW_SECONDS); the server has the last word. */
 export const UNDO_MS = 300_000;

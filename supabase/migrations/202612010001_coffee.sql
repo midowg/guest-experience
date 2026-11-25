@@ -8,11 +8,14 @@
 --      changes when Data karyawan does.
 --   2. The quota is decided in one place only, coffee_submit_claim, under a lock per person and
 --      month, so two quick taps (or twenty) never pass it together.
---   3. admin_grants.apps gains 'coffee'. Until this runs only the super admin opens /admin/coffee,
+--   3. A pengelola may cancel a record made by hand (Catat manual) with coffee_cancel_manual: the
+--      row stays, as 'batal', with who cancelled it and when, and its place in the quota is free again.
+--   4. admin_grants.apps gains 'coffee'. Until this runs only the super admin opens /admin/coffee,
 --      and every Coffee API answers "menunggu migrasi".
 -- Server only, like every pw_* table: RLS on, no policy, service_role alone.
 --
 -- ROLLBACK (by hand):
+--   drop function if exists public.coffee_cancel_manual(uuid, uuid, text);
 --   drop function if exists public.coffee_reopen(uuid, uuid, text, integer);
 --   drop function if exists public.coffee_submit_meeting(jsonb, jsonb, uuid);
 --   drop function if exists public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid);
@@ -76,6 +79,8 @@ create index if not exists coffee_orders_waiting on public.coffee_orders (ordere
 create index if not exists coffee_orders_quota on public.coffee_orders (employee_id, quota_month) where kind = 'klaim' and status in ('diproses', 'selesai');
 create index if not exists coffee_orders_day on public.coffee_orders (ordered_at desc);
 create index if not exists coffee_orders_person on public.coffee_orders (employee_id, ordered_at desc);
+-- The queue's "Baru diproses" and today's numbers are read every ten seconds.
+create index if not exists coffee_orders_processed on public.coffee_orders (processed_at desc) where status in ('selesai', 'ditolak');
 
 create table if not exists public.coffee_order_items (
   id uuid primary key default gen_random_uuid(),
@@ -113,6 +118,7 @@ set search_path = public, pg_temp
 as $$
 declare
   saved uuid;
+  again record;
   person record;
   cfg record;
   grp text;
@@ -122,10 +128,18 @@ declare
   is_manual boolean := coalesce(p_manual, false);
 begin
   if p_key is not null then
-    select id into saved from coffee_orders where idempotency_key = p_key;
-    if saved is not null then return saved; end if;
+    select o.id, o.kind, o.employee_id, o.manual, o.status into again from coffee_orders o where o.idempotency_key = p_key;
+    if found then
+      -- The key belongs to one sending: not to someone else's, another kind's, or one already refused or cancelled.
+      if again.kind <> 'klaim' or again.employee_id <> p_employee or again.manual <> is_manual or again.status in ('ditolak', 'batal') then
+        raise exception 'COFFEE_KEY_REUSED';
+      end if;
+      return again.id;
+    end if;
   end if;
   if at_time > now() + interval '5 minutes' then raise exception 'COFFEE_INVALID'; end if;
+  -- A drink off the menu ("lainnya") only exists in Catat manual.
+  if not is_manual and p_item->>'slug' = 'lainnya' then raise exception 'COFFEE_INVALID'; end if;
   select e.id, e.full_name, e.position, e.business_unit, e.category into person
     from employees e where e.id = p_employee and e.active;
   if not found then raise exception 'COFFEE_NOT_EMPLOYEE'; end if;
@@ -136,8 +150,13 @@ begin
   perform pg_advisory_xact_lock(hashtext('coffee:' || p_employee::text || ':' || bulan));
   -- The same request sent twice at once: the second one waited on the lock and finds the first here.
   if p_key is not null then
-    select id into saved from coffee_orders where idempotency_key = p_key;
-    if saved is not null then return saved; end if;
+    select o.id, o.kind, o.employee_id, o.manual, o.status into again from coffee_orders o where o.idempotency_key = p_key;
+    if found then
+      if again.kind <> 'klaim' or again.employee_id <> p_employee or again.manual <> is_manual or again.status in ('ditolak', 'batal') then
+        raise exception 'COFFEE_KEY_REUSED';
+      end if;
+      return again.id;
+    end if;
   end if;
   if (select count(*) from coffee_orders
        where employee_id = p_employee and kind = 'klaim' and quota_month = bulan and status in ('diproses', 'selesai')) >= quota then
@@ -161,6 +180,9 @@ end $$;
  * room_spot, guest, guest_count, parent_id ("Tambah lagi": the same number, the next round),
  * actor_id, actor_label, ordered_at, manual (saved as done at once). p_items: an array of
  * { for: 'tamu' | 'tim', person_id (tim), slug, other, temperature, sugar, ice, qty }.
+ * With parent_id the PIC, room, guest and guest count are the first round's: what the sender put
+ * in p_order for them is not read. The first round must be of today (WIB), sent from the tablet,
+ * and neither refused nor cancelled.
  */
 create or replace function public.coffee_submit_meeting(p_order jsonb, p_items jsonb, p_key uuid) returns uuid
 language plpgsql
@@ -168,9 +190,20 @@ set search_path = public, pg_temp
 as $$
 declare
   saved uuid;
+  again record;
   pic record;
   parent record;
+  first_round record;
   who record;
+  pic_id uuid;
+  pic_name text;
+  pic_group text;
+  pic_position text;
+  pic_bu text;
+  the_room text;
+  the_spot text;
+  the_guest text;
+  the_guest_count smallint;
   item jsonb;
   place integer;
   root uuid;
@@ -182,33 +215,54 @@ declare
   actor_label text := left(p_order->>'actor_label', 120);
 begin
   if p_key is not null then
-    select id into saved from coffee_orders where idempotency_key = p_key;
-    if saved is not null then return saved; end if;
+    select o.id, o.kind, o.manual, o.status into again from coffee_orders o where o.idempotency_key = p_key;
+    if found then
+      if again.kind <> 'rapat' or again.manual <> is_manual or again.status in ('ditolak', 'batal') then
+        raise exception 'COFFEE_KEY_REUSED';
+      end if;
+      return again.id;
+    end if;
   end if;
-  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) not between 1 and 40 then raise exception 'COFFEE_INVALID'; end if;
+  -- Two checks, not one "or": SQL does not promise which side of an "or" is worked out first.
+  if jsonb_typeof(p_items) is distinct from 'array' then raise exception 'COFFEE_INVALID'; end if;
+  if jsonb_array_length(p_items) not between 1 and 40 then raise exception 'COFFEE_INVALID'; end if;
   if at_time > now() + interval '5 minutes' then raise exception 'COFFEE_INVALID'; end if;
-  select e.id, e.full_name, e.position, e.business_unit, e.category into pic
-    from employees e where e.id = (p_order->>'pic_id')::uuid and e.active;
-  if not found then raise exception 'COFFEE_NOT_EMPLOYEE'; end if;
   if nullif(p_order->>'parent_id', '') is not null then
+    if is_manual then raise exception 'COFFEE_INVALID'; end if;
     select o.id, o.number, o.parent_id into parent from coffee_orders o where o.id = (p_order->>'parent_id')::uuid and o.kind = 'rapat';
     if not found then raise exception 'COFFEE_NOT_FOUND'; end if;
     root := coalesce(parent.parent_id, parent.id);
+    select o.employee_id, o.person_name, o.person_group, o.person_position, o.person_bu, o.room, o.room_spot, o.guest, o.guest_count,
+           o.status, o.manual, o.ordered_at
+      into first_round from coffee_orders o where o.id = root and o.kind = 'rapat';
+    if not found then raise exception 'COFFEE_NOT_FOUND'; end if;
+    if first_round.manual or first_round.status in ('ditolak', 'batal')
+       or to_char(first_round.ordered_at at time zone 'Asia/Jakarta', 'YYYY-MM-DD') <> to_char(now() at time zone 'Asia/Jakarta', 'YYYY-MM-DD') then
+      raise exception 'COFFEE_PARENT_CLOSED';
+    end if;
+    pic_id := first_round.employee_id; pic_name := first_round.person_name; pic_group := first_round.person_group;
+    pic_position := first_round.person_position; pic_bu := first_round.person_bu;
+    the_room := first_round.room; the_spot := first_round.room_spot; the_guest := first_round.guest; the_guest_count := first_round.guest_count;
     order_no := parent.number;
     -- Two "Tambah lagi" at once take turns, so each gets its own round.
     perform pg_advisory_xact_lock(hashtext('coffee:rapat:' || order_no::text));
     select coalesce(max(o.round), 0) + 1 into rnd from coffee_orders o where o.kind = 'rapat' and o.number = order_no;
     if rnd > 50 then raise exception 'COFFEE_INVALID'; end if;
   else
+    select e.id, e.full_name, e.position, e.business_unit, e.category into pic
+      from employees e where e.id = (p_order->>'pic_id')::uuid and e.active;
+    if not found then raise exception 'COFFEE_NOT_EMPLOYEE'; end if;
+    pic_id := pic.id; pic_name := pic.full_name; pic_position := pic.position; pic_bu := pic.business_unit;
+    pic_group := case pic.category when 'intern' then 'intern' when 'dw' then 'ga' when 'ga' then 'ga' else 'karyawan' end;
+    the_room := nullif(btrim(coalesce(p_order->>'room', '')), ''); the_spot := nullif(p_order->>'room_spot', '');
+    the_guest := nullif(btrim(coalesce(p_order->>'guest', '')), ''); the_guest_count := (p_order->>'guest_count')::smallint;
     order_no := nextval('coffee_meeting_no');
   end if;
   insert into coffee_orders (kind, number, round, parent_id, employee_id, person_name, person_group, person_position, person_bu,
       room, room_spot, guest, guest_count, status, processed_by, processed_label, processed_at,
       created_by, created_label, manual, ordered_at, quota_month, idempotency_key)
-  values ('rapat', order_no, rnd, root, pic.id, pic.full_name,
-      case pic.category when 'intern' then 'intern' when 'dw' then 'ga' when 'ga' then 'ga' else 'karyawan' end, pic.position, pic.business_unit,
-      nullif(btrim(coalesce(p_order->>'room', '')), ''), nullif(p_order->>'room_spot', ''), nullif(btrim(coalesce(p_order->>'guest', '')), ''),
-      (p_order->>'guest_count')::smallint,
+  values ('rapat', order_no, rnd, root, pic_id, pic_name, pic_group, pic_position, pic_bu,
+      the_room, the_spot, the_guest, the_guest_count,
       case when is_manual then 'selesai' else 'diproses' end,
       case when is_manual then actor end, case when is_manual then actor_label end, case when is_manual then now() end,
       actor, actor_label, is_manual, at_time, to_char(at_time at time zone 'Asia/Jakarta', 'YYYY-MM'), p_key)
@@ -272,6 +326,27 @@ begin
    where id = p_order;
 end $$;
 
+/*
+ * Batalkan catatan: a record made by hand (Catat manual) that turned out wrong (the wrong person,
+ * the wrong month). Any pengelola may cancel it. The row stays, as 'batal', and processed_* now
+ * say who cancelled it and when (created_* still say who recorded it). A cancelled claim no longer
+ * counts in the quota, so nothing needs the quota's lock. Orders made in the app are never touched.
+ */
+create or replace function public.coffee_cancel_manual(p_order uuid, p_actor uuid, p_actor_label text) returns void
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  found_order record;
+begin
+  select o.id, o.status, o.manual into found_order from coffee_orders o where o.id = p_order for update;
+  if not found then raise exception 'COFFEE_NOT_FOUND'; end if;
+  if not found_order.manual then raise exception 'COFFEE_NOT_MANUAL'; end if;
+  if found_order.status <> 'selesai' then raise exception 'COFFEE_ALREADY_CANCELLED'; end if;
+  update coffee_orders set status = 'batal', processed_by = p_actor, processed_label = left(p_actor_label, 120), processed_at = now()
+   where id = p_order;
+end $$;
+
 alter table public.coffee_settings enable row level security;
 alter table public.coffee_orders enable row level security;
 alter table public.coffee_order_items enable row level security;
@@ -280,11 +355,13 @@ revoke all on sequence public.coffee_claim_no, public.coffee_meeting_no from pub
 revoke all on function public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid) from public, anon, authenticated;
 revoke all on function public.coffee_submit_meeting(jsonb, jsonb, uuid) from public, anon, authenticated;
 revoke all on function public.coffee_reopen(uuid, uuid, text, integer) from public, anon, authenticated;
+revoke all on function public.coffee_cancel_manual(uuid, uuid, text) from public, anon, authenticated;
 grant select, insert, update, delete on public.coffee_settings, public.coffee_orders, public.coffee_order_items to service_role;
 grant usage, select on sequence public.coffee_claim_no, public.coffee_meeting_no to service_role;
 grant execute on function public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid) to service_role;
 grant execute on function public.coffee_submit_meeting(jsonb, jsonb, uuid) to service_role;
 grant execute on function public.coffee_reopen(uuid, uuid, text, integer) to service_role;
+grant execute on function public.coffee_cancel_manual(uuid, uuid, text) to service_role;
 
 -- The apps check of 202611200703 plus 'coffee' (Pengelola Werkudara Coffee, /admin/coffee).
 alter table public.admin_grants drop constraint if exists admin_grants_apps_check;

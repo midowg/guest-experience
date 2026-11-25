@@ -88,6 +88,7 @@ export function createSampleServer(clock: () => number = Date.now) {
     const claimNo = claimNumbers(counted()).get(order.id);
     return { ...order, undoable, ...(claimNo ? { claimNo } : {}), quota: settings[order.person.group ?? "karyawan"], used: usedOf(order.person.id, wibMonth(order.orderedAt)) };
   };
+  const keys = new Map<string, { order: QueueOrder; message: string }>();
   const find = (id: string) => {
     const index = orders.findIndex(order => order.id === id);
     if (index < 0) throw refusal(404, "Pesanan tidak ditemukan. Muat ulang halaman.");
@@ -125,7 +126,18 @@ export function createSampleServer(clock: () => number = Date.now) {
       orders[index] = { ...order, status: "diproses", rejectNote: "", processed: null };
       return { order: shown(orders[index]), message: "Dikembalikan ke antrean." };
     },
+    async cancelManual(id) {
+      const index = find(id);
+      const order = orders[index];
+      if (!order.manual) throw refusal(409, "Hanya catatan manual yang bisa dibatalkan.");
+      if (order.status !== "selesai") throw refusal(409, "Catatan ini sudah dibatalkan.");
+      orders[index] = { ...order, status: "batal", processed: { employeeId: SAMPLE_ACTOR.employeeId, label: SAMPLE_ACTOR.label, at: iso(0) } };
+      return { order: shown(orders[index]), message: order.kind === "klaim" ? `Catatan dibatalkan. Jatah ${firstName(order.person.name)} dikembalikan.` : "Catatan dibatalkan." };
+    },
     async manual(body) {
+      // The same key again is the same record, as on the server.
+      const again = keys.get(body.key);
+      if (again) return again;
       const who = byId.get(body.employeeId);
       if (!who) throw refusal(422, "Periksa kembali isian formulir.", { employeeId: [body.kind === "tamu" ? "Pilih PIC tamu." : "Pilih nama karyawan."] });
       const at = manualAt(body.date, body.time);
@@ -144,12 +156,14 @@ export function createSampleServer(clock: () => number = Date.now) {
       orders.push(done(order, SAMPLE_ACTOR, 0));
       const saved = shown(orders[orders.length - 1]);
       const name = drinkLabel(body.slug, body.other);
-      return {
+      const answer = {
         order: saved,
         message: body.kind === "klaim"
           ? `${firstName(who.name)} · ${name} · klaim ke-${saved.claimNo ?? 1} dari ${saved.quota ?? 0}.`
           : `${KIND_LABEL[body.kind]} · ${body.qty ?? 1}× ${name} · ${body.kind === "tamu" ? "PIC " : ""}${firstName(who.name)}.`,
       };
+      keys.set(body.key, answer);
+      return answer;
     },
     async people(month) {
       const asked = month ?? wibMonth(new Date(clock()).toISOString());
@@ -187,5 +201,11 @@ export function createSampleServer(clock: () => number = Date.now) {
       return first ? decide(first.id, OTHER_ACTOR, "selesai") : null;
     },
     lastMonth: () => previousMonth(wibMonth(new Date(clock()).toISOString())),
+    /** A claim recorded by hand a few minutes ago (the preview shows "Batalkan catatan" on it). */
+    seedManual(): QueueOrder {
+      const order = done(claim(nextId(), claimSeq++, arief, "kopi-susu", { orderedAt: iso(40 * minute), manual: true, sentBy: SAMPLE_ACTOR.label }), SAMPLE_ACTOR, 8 * minute);
+      orders.push(order);
+      return order;
+    },
   };
 }

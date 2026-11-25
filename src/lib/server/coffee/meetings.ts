@@ -27,7 +27,11 @@ export async function gaState(_member: Member, now = new Date()): Promise<GaStat
   };
 }
 
-/** One sending of a meeting order; with `parentId` ("Tambah lagi") it is the next round of the same meeting. */
+/**
+ * One sending of a meeting order; with `parentId` ("Tambah lagi") it is the next round of the same
+ * meeting. For a next round the database takes the PIC, room, guest and guest count from the first
+ * round (of today, not refused): what is sent for them here is not read.
+ */
 export async function submitMeeting(member: Member, input: MeetingInput, now = new Date()): Promise<{ order: MeetingOrder }> {
   const { data, error } = await db().rpc("coffee_submit_meeting", {
     p_order: {
@@ -40,7 +44,7 @@ export async function submitMeeting(member: Member, input: MeetingInput, now = n
   let id = data as string | null;
   if (error) {
     // Two sendings of the same key met at the unique index: the first one is the order.
-    const { data: first } = error.code === "23505" ? await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).maybeSingle() : { data: null };
+    const { data: first } = error.code === "23505" ? await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).eq("kind", "rapat").in("status", ["diproses", "selesai"]).maybeSingle() : { data: null };
     if (!first) coffeeError(error);
     id = (first as { id: string }).id;
   }

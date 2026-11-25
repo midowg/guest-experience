@@ -2,7 +2,7 @@ import "server-only";
 import { quotaGroupOf } from "@/lib/coffee/quota";
 import type { CoffeePerson } from "@/lib/coffee/types";
 import { databaseError } from "../http";
-import { countingClaims, db } from "./store";
+import { coffeeError, countingClaims, db } from "./store";
 
 /* The people Werkudara Coffee's pickers offer, and who holds its admin grant. */
 
@@ -24,8 +24,11 @@ export type CoffeeHolder = { id: string; name: string; position: string };
 /** Who holds the Werkudara Coffee grant (Pengaturan shows them; F4 notifies them). Changed in Super admin → Akses admin. */
 export async function holders(): Promise<CoffeeHolder[]> {
   const { data: grants, error } = await db().from("admin_grants").select("employee_id").contains("apps", ["coffee"]).limit(500);
-  if (error || !grants?.length) return [];
+  // Before the grants table exists there is nobody to show; any other fault is said, not shown as "nobody".
+  if (error) { if (["42P01", "PGRST205"].includes(error.code ?? "")) return []; coffeeError(error); }
+  if (!grants?.length) return [];
   const ids = (grants as { employee_id: string }[]).map(row => row.employee_id);
-  const { data: people } = await db().from("employees").select("id,full_name,position").in("id", ids).eq("active", true).order("full_name");
+  const { data: people, error: failed } = await db().from("employees").select("id,full_name,position").in("id", ids).eq("active", true).order("full_name");
+  if (failed) coffeeError(failed);
   return ((people ?? []) as { id: string; full_name: string; position: string | null }[]).map(person => ({ id: person.id, name: person.full_name, position: person.position ?? "" }));
 }

@@ -107,6 +107,8 @@ export type QueueState = { waiting: QueueOrder[]; recent: QueueOrder[]; today: {
 /** One recap row: one drink (a line of three is three rows). */
 export type RecapRow = {
   key: string;
+  /** The order the drink belongs to (a line of three shares one). */
+  orderId: string;
   at: string;
   no: string;
   kind: ItemFor;

@@ -8,7 +8,7 @@ import type { CoffeeAdminSectionKey } from "@/components/coffee-admin/sections";
 
 /** The real screen on the make-believe server, with two buttons that play the other people: an employee who claims, and a second pengelola. */
 export function AdminPreview({ view, now, routing }: { view: CoffeeAdminSectionKey; now: string; routing: "history" | "memory" }) {
-  const [server] = useState(() => createSampleServer());
+  const [server] = useState(() => { const made = createSampleServer(); made.seedManual(); return made; });
   const [note, setNote] = useState("Data contoh, tidak tersimpan.");
   const tools = (
     <div className={css.preview}>

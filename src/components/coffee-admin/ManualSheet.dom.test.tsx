@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AdminApiError } from "@/components/admin/shared/api";
 import { MONTHLY_QUOTA } from "@/lib/coffee/menu";
-import { ManualSheet } from "./ManualSheet";
+import { ManualSheet, newKey } from "./ManualSheet";
 import { createSampleServer } from "./sample";
 import css from "./coffee-admin.module.css";
 
@@ -128,4 +128,43 @@ it("sends a guest's drinks with the PIC, the room, the guest and the count", asy
   expect(api.manual).toHaveBeenCalledWith(expect.objectContaining({ kind: "tamu", employeeId: "p-sari", qty: 4, room: "Vasuki Room", guest: "PT Mitra (contoh)", guestCount: 4 }));
   expect(onSaved.mock.calls[0][0].message).toBe("Tamu · 4× Kopi Susu · PIC Sari.");
   expect(within(screen.getByRole("dialog")).queryByRole("status")).toBeNull(); // no quota line for a guest
+});
+
+// Audit B-2: one key per opened sheet, so a second Simpan (a slow network, a retry) is the same record.
+it("sends one key per opened sheet, a new one for the next sheet, also where randomUUID is missing", async () => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const { api, onSaved } = open();
+  api.manual.mockRejectedValueOnce(new AdminApiError("Layanan belum dapat memproses permintaan.", undefined, 503));
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(api.manual).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByRole("button", { name: /Simpan/ }).hasAttribute("disabled")).toBe(false));
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const [first, second] = api.manual.mock.calls.map(call => call[0].key);
+  expect(first).toMatch(uuid);
+  expect(second).toBe(first);
+  cleanup();
+  const next = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(next.api.manual).toHaveBeenCalledTimes(1));
+  expect(next.api.manual.mock.calls[0][0].key).toMatch(uuid);
+  expect(next.api.manual.mock.calls[0][0].key).not.toBe(first);
+
+  // Plain http (an office address) has no crypto.randomUUID: the key is still a fresh uuid each time.
+  vi.stubGlobal("crypto", {});
+  const drawn = new Set(Array.from({ length: 50 }, () => newKey()));
+  vi.unstubAllGlobals();
+  expect(drawn.size).toBe(50);
+  for (const key of drawn) expect(key).toMatch(uuid);
+});
+
+it("answers with the first record when the same sheet is sent twice (the make-believe server, as the real one)", async () => {
+  const server = createSampleServer();
+  const body = { kind: "klaim" as const, employeeId: "p-arief", date: "2026-11-25", time: "09:00", slug: "kopi-susu", temperature: "panas" as const, sugar: "Normal" as const, ice: "Normal" as const, key: "dddddddd-dddd-4ddd-8ddd-000000000001" };
+  const first = await server.api.manual(body);
+  const again = await server.api.manual({ ...body, slug: "americano" });
+  expect(again.order.id).toBe(first.order.id);
+  expect(server.orders.filter(order => order.manual)).toHaveLength(1);
 });

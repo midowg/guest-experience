@@ -42,11 +42,64 @@ describe("a meeting order", () => {
     await expect(submitMeeting(bagas, order(5, { parentId: key(99) }), now)).rejects.toMatchObject({ status: 404 });
   });
 
+  // Audit S-1: the PIC, room, guest and guest count of a next round are the first round's, whatever is sent.
+  it("takes the PIC, room, guest and count of Tambah lagi from the first round, not from the sender", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    const second = await submitMeeting(bagas, order(2, { parentId: first.order.id, picId: PEOPLE.dewi, room: "Vasuki Room", guest: "Contoh Orang Lain", guestCount: 99 }), now);
+    expect(second.order).toMatchObject({ no: "T-0113-2", room: "Kaliya Limasan", spot: "limasan", guest: "Contoh PT Sinar", guestCount: 5, pic: { id: PEOPLE.rina, name: "Contoh Rina Putri" } });
+    expect(db.rows("coffee_orders")[1]).toMatchObject({ employee_id: PEOPLE.rina, person_bu: "WNS", person_group: "karyawan", room_spot: "limasan" });
+    // Sent without a guest count, and with a PIC who has left meanwhile: still the first round's.
+    const third = await submitMeeting(bagas, order(3, { parentId: second.order.id, picId: PEOPLE.keluar, guest: undefined, guestCount: undefined }), now);
+    expect(third.order).toMatchObject({ no: "T-0113-3", guest: "Contoh PT Sinar", guestCount: 5, pic: { id: PEOPLE.rina } });
+  });
+
+  it("refuses Tambah lagi on a meeting that was refused, is not of today, or is not a meeting order from the tablet", async () => {
+    const closed = { status: 409, message: "Pesanan awal sudah tidak bisa ditambah. Buat pesanan baru." };
+    const first = await submitMeeting(bagas, order(1), now);
+    const second = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);
+    Object.assign(db.rows("coffee_orders")[0], { status: "ditolak", reject_note: "Dobel." });
+    await expect(submitMeeting(bagas, order(3, { parentId: first.order.id }), now)).rejects.toMatchObject(closed);
+    // The round asked for is fine, but its first round is the refused one.
+    await expect(submitMeeting(bagas, order(4, { parentId: second.order.id }), now)).rejects.toMatchObject(closed);
+    Object.assign(db.rows("coffee_orders")[0], { status: "selesai", reject_note: null });
+    expect((await submitMeeting(bagas, order(5, { parentId: first.order.id }), now)).order.no).toBe("T-0113-3");
+    // 25 Nov 17.00 UTC is 26 Nov 00.00 WIB: yesterday's meeting, and last month's, take no more rounds.
+    const tomorrow = new Date("2026-11-25T17:00:00Z");
+    db.state.now = tomorrow;
+    await expect(submitMeeting(bagas, order(6, { parentId: first.order.id }), tomorrow)).rejects.toMatchObject(closed);
+    db.state.now = new Date("2026-12-20T03:00:00Z");
+    await expect(submitMeeting(bagas, order(7, { parentId: first.order.id }), db.state.now)).rejects.toMatchObject(closed);
+    db.state.now = now;
+    // A record made by hand, and a claim, are not meetings to add to.
+    Object.assign(db.rows("coffee_orders")[0], { manual: true });
+    await expect(submitMeeting(bagas, order(8, { parentId: first.order.id }), now)).rejects.toMatchObject(closed);
+    Object.assign(db.rows("coffee_orders")[0], { manual: false, kind: "klaim" });
+    await expect(submitMeeting(bagas, order(9, { parentId: first.order.id }), now)).rejects.toMatchObject({ status: 404 });
+    expect(db.rows("coffee_orders")).toHaveLength(3);
+  });
+
   it("is one order when the same key is sent twice", async () => {
     const first = await submitMeeting(bagas, order(1), now);
     const again = await submitMeeting(bagas, order(1), now);
     expect(again.order.id).toBe(first.order.id);
     expect(db.rows("coffee_orders")).toHaveLength(1);
+  });
+
+  it("is one order when two sendings of one key meet at the unique index, and a key of another kind is refused", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    db.state.race = true;
+    expect((await submitMeeting(bagas, order(1), now)).order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    db.state.race = false;
+    await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.rina, p_item: drink, p_at: now.toISOString(), p_manual: false, p_actor: PEOPLE.rina, p_actor_label: "Rina", p_key: key(2) });
+    await expect(submitMeeting(bagas, order(2), now)).rejects.toMatchObject({ status: 409, message: expect.stringContaining("sudah pernah diproses") });
+    db.state.race = true;
+    await expect(submitMeeting(bagas, order(2), now)).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders").filter(row => row.kind === "rapat")).toHaveLength(1);
+  });
+
+  it("is refused by the database when its time lies ahead", async () => {
+    await expect(submitMeeting(bagas, order(1), new Date(now.getTime() + 6 * 60_000))).rejects.toMatchObject({ status: 422, message: "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi." });
   });
 
   it("needs an active PIC and active team members; a typed room has no spot", async () => {

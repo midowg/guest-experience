@@ -19,12 +19,16 @@ export type ManualBody = {
   temperature: Temperature; sugar: Sugar; ice: Ice; qty?: number; room?: string; guest?: string; guestCount?: number; key: string;
 };
 export type Done = { order: QueueOrder; message: string };
+/** A record made by hand that the pengelola is about to cancel: its order, and the words the question shows. */
+export type CancelTarget = { id: string; title: string; claim: boolean };
 
 export type CoffeeAdminApi = {
   queue(): Promise<QueueState>;
   finish(id: string): Promise<Done>;
   reject(id: string, note: string): Promise<Done>;
   reopen(id: string): Promise<Done>;
+  /** Batalkan catatan: a record made by hand only. */
+  cancelManual(id: string): Promise<Done>;
   manual(body: ManualBody): Promise<Done>;
   people(month?: string): Promise<{ people: CoffeePerson[]; month: string }>;
   recap(query: RecapQuery): Promise<RecapData>;
@@ -50,6 +54,7 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   finish: id => act(coffeeAdminApi.finish(id)),
   reject: (id, note) => act(coffeeAdminApi.reject(id), { note }),
   reopen: id => act(coffeeAdminApi.reopen(id)),
+  cancelManual: id => act(coffeeAdminApi.cancelManual(id)),
   manual: body => act(coffeeAdminApi.manual, body),
   people: month => read(coffeeAdminApi.people(month)),
   recap: query => read<RecapData>(coffeeAdminApi.recap(filterOf(query))),

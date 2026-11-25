@@ -50,7 +50,7 @@ export async function submitClaim(member: Member, input: ClaimInput, now = new D
   if (error) {
     // Two sendings of the same key met at the unique index: the first one is the claim.
     if (error.code === "23505") {
-      const { data: first } = await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).eq("employee_id", member.id).maybeSingle();
+      const { data: first } = await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).eq("employee_id", member.id).eq("kind", "klaim").in("status", ["diproses", "selesai"]).maybeSingle();
       if (first) return answer(member, (first as { id: string }).id, now);
     }
     coffeeError(error);

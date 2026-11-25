@@ -118,8 +118,9 @@
 .tally dt { font-size: 13px; font-weight: 700; }
 .tally dd { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.recent li { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-.recentText { display: grid; flex: 1; min-width: 0; font-size: 14px; }
+.recent li { position: relative; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+/* a basis, so a long action (Batalkan catatan) moves to its own line instead of squeezing the text */
+.recentText { display: grid; flex: 1 1 150px; min-width: 0; font-size: 14px; }
 .recentText strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recentText span { color: var(--ink-3); }
 .recent .textButton { margin-left: auto; }
@@ -234,7 +235,8 @@
 .tabsNote { margin-left: auto; color: var(--ink-3); font-size: 14px; }
 .summaryGrid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .peoplePanel { grid-row: span 3; }
-.tableBox { overflow: auto; border-radius: 12px; }
+/* relative: what is positioned inside (the screen-reader text of a row's button) stays in the scroll box instead of widening the page */
+.tableBox { position: relative; overflow: auto; border-radius: 12px; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th, .table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .table thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); color: var(--ink-2); font-weight: 700; font-size: 13px; }
@@ -263,6 +265,9 @@
 .cardListMain { display: grid; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .cardListMain strong { font-size: 16px; }
 .cardListMain span { color: var(--ink-2); font-size: 15px; }
+/* a row's own action (Batalkan catatan) sits under its text, at the start */
+.cardListMain .textButton { justify-self: start; margin-left: -8px; white-space: nowrap; }
+.detailList .statusCell { display: grid; justify-items: end; }
 .cardListSide { display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--ink-2); font-size: 15px; }
 .cardListSide strong { color: var(--ink); font-size: 18px; }
 .detailList li { align-items: flex-start; }

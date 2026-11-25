@@ -36,7 +36,7 @@ it("lists the active people by name with their quota group, and the month's use 
   expect(people[0].used).toBeUndefined();
   const item = { slug: "espresso", temperature: "panas", sugar: "Normal", ice: "Normal" };
   for (const [key, at] of [["a", "2026-11-03T02:00:00.000Z"], ["b", "2026-11-04T02:00:00.000Z"], ["c", "2026-10-04T02:00:00.000Z"]]) {
-    await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.rina, p_item: item, p_at: at, p_manual: false, p_actor: PEOPLE.rina, p_actor_label: "Rina", p_key: key });
+    await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.rina, p_item: item, p_at: at, p_manual: false, p_actor: PEOPLE.rina, p_actor_label: "Rina", p_key: `eeeeeeee-eeee-4eee-8eee-00000000000${key}` });
   }
   db.rows("coffee_orders")[1].status = "batal";
   expect((await activePeople("2026-11")).map(person => person.used)).toEqual([0, 0, 0, 1]);

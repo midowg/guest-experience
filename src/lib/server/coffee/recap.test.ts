@@ -9,14 +9,17 @@ vi.mock("server-only", () => ({}));
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
 
 const { recap, recapFiles, recapRows } = await import("./recap");
+const { cancelManual, recordManual } = await import("./queue");
+const key = (value: number) => `cccccccc-cccc-4ccc-8ccc-${String(value).padStart(12, "0")}`;
 const november = recapQuerySchema.parse({ dari: "2026-11-01", sampai: "2026-11-30" });
 const drink = { slug: "cafe-latte", temperature: "es", sugar: "Sedikit", ice: "Ekstra" };
 let n = 0;
-const claim = async (employee: string, at: string) => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: at, p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: `k${++n}` })).data as string;
+const claim = async (employee: string, at: string) => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: at, p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: key(++n) })).data as string;
 
 // November (WIB) holds K-418, K-419 (refused), K-420 and the meeting T-0113; K-421 is 31 Oct 23.59 WIB, K-422 is 1 Dec 00.00 WIB.
 beforeEach(async () => {
   db = fakeDb(); seedPeople(db); n = 0;
+  db.state.now = new Date("2026-12-01T03:00:00Z");
   await claim(PEOPLE.rina, "2026-11-03T02:00:00.000Z");
   const refused = await claim(PEOPLE.rina, "2026-11-10T02:00:00.000Z");
   await claim(PEOPLE.rina, "2026-11-20T02:00:00.000Z");
@@ -25,7 +28,7 @@ beforeEach(async () => {
   Object.assign(db.rows("coffee_orders").find(row => row.id === refused)!, { status: "ditolak", reject_note: "=SUM(A1) habis", processed_by: PEOPLE.dewi, processed_label: "Dewi", processed_at: "2026-11-10T02:30:00.000Z" });
   await db.client.rpc("coffee_submit_meeting", {
     p_order: { pic_id: PEOPLE.dewi, room: "Vasuki Room", room_spot: "vasuki", guest: "Contoh PT Sinar", guest_count: 5, actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-12T03:00:00.000Z" },
-    p_items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 3 }, { for: "tim", person_id: PEOPLE.fajar, slug: "americano", temperature: "panas", sugar: "Tanpa", ice: "Normal", qty: 1 }], p_key: "m1",
+    p_items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 3 }, { for: "tim", person_id: PEOPLE.fajar, slug: "americano", temperature: "panas", sugar: "Tanpa", ice: "Normal", qty: 1 }], p_key: key(100),
   });
 });
 
@@ -102,4 +105,25 @@ it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
   await expect(recap(november)).rejects.toMatchObject({ status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." });
   await expect(recapFiles(november)).rejects.toMatchObject({ status: 503 });
+});
+
+// Audit B-1: a record made by hand that was cancelled stays in Rekap, worded "Dibatalkan", and counts nowhere.
+it("keeps a cancelled record made by hand as Dibatalkan, out of the totals and of the person's quota", async () => {
+  const dewi = { employeeId: PEOPLE.dewi, label: "Dewi" };
+  const now = new Date("2026-12-01T03:00:00Z");
+  const { manualSchema } = await import("@/lib/coffee/schemas");
+  const { order } = await recordManual(manualSchema.parse({ kind: "klaim", employeeId: PEOPLE.bagas, date: "2026-11-21", time: "10:00", slug: "cafe-latte", temperature: "panas", sugar: "Normal", key: key(200) }), dewi, now);
+  const before = await recap(november);
+  expect(before.summary.klaim).toBe(3);
+  expect(before.summary.people.find(entry => entry.person.id === PEOPLE.bagas)).toMatchObject({ used: 1 });
+  await cancelManual(order.id, { employeeId: null, label: "Super admin" }, now);
+  const after = await recap(november);
+  expect(after.rows.find(row => row.orderId === order.id)).toMatchObject({ status: "batal", manual: true, doneBy: "Super admin", name: "Contoh Bagas Saputra" });
+  expect(after.rows.find(row => row.orderId === order.id)?.claimNo).toBeUndefined();
+  expect(after.summary.klaim).toBe(2);
+  expect(after.summary.people.find(entry => entry.person.id === PEOPLE.bagas)).toMatchObject({ used: 0 });
+  const { csv } = await recapFiles(november);
+  const line = csv.split("\r\n").find(text => text.includes("K-423"))!;
+  expect(line).toContain("Dibatalkan");
+  expect(line).toContain('"Dibatalkan","","Super admin","10:00","","Ya"');
 });

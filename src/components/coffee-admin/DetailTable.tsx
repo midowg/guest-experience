@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { wibClock, wibDay } from "@/lib/coffee/quota";
-import { DETAIL_HEAD } from "@/lib/coffee/recap";
-import { KIND_LABEL, STATUS_LABEL, type RecapRow } from "@/lib/coffee/types";
-import { STATUS_TONE } from "./format";
+import { DETAIL_HEAD, rowStatus } from "@/lib/coffee/recap";
+import { KIND_LABEL, type RecapRow } from "@/lib/coffee/types";
+import type { CancelTarget } from "./api";
+import { STATUS_TONE, canCancel, cancelOfRow } from "./format";
 import css from "./coffee-admin.module.css";
 
 const PAGE = 100;
@@ -15,9 +16,10 @@ const clock = (iso: string) => wibClock(iso).replace(":", ".");
 /**
  * Rekap → Detail: one row per drink, the same columns as the files. The table scrolls inside its
  * own box with the name held in place; on a phone it is a list. A hundred rows at a time; the
- * files always hold all of them.
+ * files always hold all of them. A record made by hand offers Batalkan catatan; once cancelled it
+ * stays, as "Dibatalkan".
  */
-export function DetailTable({ rows, phone }: { rows: RecapRow[]; phone: boolean }) {
+export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone: boolean; onCancel?: (target: CancelTarget) => void }) {
   const [newest, setNewest] = useState(true);
   const [limit, setLimit] = useState(PAGE);
   if (!rows.length) return <p className={css.small}>Tidak ada baris untuk filter ini.</p>;
@@ -27,9 +29,14 @@ export function DetailTable({ rows, phone }: { rows: RecapRow[]; phone: boolean 
   const more = rows.length - shown.length;
   const status = (row: RecapRow) => (
     <span className={css.statusCell}>
-      <span className={css.pill} data-tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</span>
+      <span className={css.pill} data-tone={STATUS_TONE[row.status]}>{rowStatus(row)}</span>
       {row.manual && <span className={css.pill} data-tone="off">Dicatat manual</span>}
     </span>
+  );
+  const cancel = (row: RecapRow) => onCancel && canCancel(row) && (
+    <button type="button" className={css.textButton} onClick={() => onCancel(cancelOfRow(row))}>
+      Batalkan catatan<span className={css.srOnly}> {row.no} {row.name}</span>
+    </button>
   );
   const foot = more > 0 && (
     <div className={css.moreRow}>
@@ -51,6 +58,7 @@ export function DetailTable({ rows, phone }: { rows: RecapRow[]; phone: boolean 
               <span>{row.name} · {KIND_LABEL[row.kind]}{row.claimNo ? ` ke-${row.claimNo}` : ""}{row.guest ? ` · ${row.guest}` : ""}{row.room ? ` · ${row.room}` : ""}</span>
               <span>{sheetDate(row.at)} {clock(row.at)} · {row.no}{row.doneBy ? ` · oleh ${row.doneBy}` : ""}</span>
               {row.reason && <span>Catatan tolak: {row.reason}</span>}
+              {cancel(row)}
             </span>
             <span className={css.cardListSide}>{status(row)}</span>
           </li>
@@ -93,7 +101,7 @@ export function DetailTable({ rows, phone }: { rows: RecapRow[]; phone: boolean 
                 <td>{row.temperature === "es" ? "Es" : "Panas"}</td>
                 <td>{row.sugar}</td>
                 <td>{row.temperature === "es" ? row.ice : "–"}</td>
-                <td>{status(row)}</td>
+                <td><span className={css.statusCell}>{status(row)}{cancel(row)}</span></td>
                 <td>{row.reason || "–"}</td>
                 <td>{row.doneBy || "–"}</td>
                 <td className={css.num}>{row.doneAt ? clock(row.doneAt) : "–"}</td>

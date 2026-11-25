@@ -69,15 +69,22 @@ export const rejectSchema = z.object({
   note: z.string("Tulis catatan untuk pemesan, minimal 3 huruf.").trim().min(3, "Tulis catatan untuk pemesan, minimal 3 huruf.").max(300, "Catatan paling panjang 300 huruf."),
 });
 
-const isoDate = z.string("Isi tanggal.").regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak dikenali.")
-  .refine(value => { const at = Date.parse(`${value}T00:00:00Z`); return !Number.isNaN(at) && new Date(at).toISOString().slice(0, 10) === value; }, "Tanggal tidak dikenali.");
-/** The moment of a WIB date and clock. */
+/** One check, so a date that is not one is said once. */
+const isoDate = z.string("Isi tanggal.").refine(value => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const at = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(at) && new Date(at).toISOString().slice(0, 10) === value;
+}, "Tanggal tidak dikenali.");
+/** The moment of a WIB date and clock. Only for a date and a clock that are real ones (`manualMoment` says). */
 export const manualAt = (date: string, time: string): string => new Date(`${date}T${time}:00+07:00`).toISOString();
+/** The same moment in milliseconds, or NaN when the date or the clock is not one: never throws. */
+const manualMoment = (date: string, time: string): number => Date.parse(`${date}T${time}:00+07:00`);
 
 /**
  * Catat manual: a request made outside the app, recorded by a pengelola as done. `employeeId` is
  * the claimant (klaim), the team member (tim) or the PIC (tamu). The drink may be off the menu
- * ("lainnya" with its name).
+ * ("lainnya" with its name). `key`: one per opened sheet, so a second sending of the same record
+ * answers with the first one.
  */
 export const manualSchema = z.object({
   kind: z.enum(ITEM_KINDS, "Pilih jenis catatan."),
@@ -93,12 +100,14 @@ export const manualSchema = z.object({
   room: optionalText(80, "Nama ruangan paling panjang 80 huruf."),
   guest: optionalText(120, "Nama tamu atau instansi paling panjang 120 huruf."),
   guestCount,
-  key: z.preprocess(blank, key.optional()),
+  key,
 }).superRefine((value, ctx) => {
   if (!z.uuid().safeParse(value.employeeId).success) ctx.addIssue({ code: "custom", message: value.kind === "tamu" ? "Pilih PIC tamu." : "Pilih nama karyawan.", path: ["employeeId"] });
   if (value.slug === OTHER_DRINK) { if (!value.other) ctx.addIssue({ code: "custom", message: "Tulis nama minumannya.", path: ["other"] }); }
   else checkDrink(value, ctx);
-  if (Date.parse(manualAt(value.date, value.time)) > Date.now() + 60_000) ctx.addIssue({ code: "custom", message: "Tanggal dan jam tidak boleh di masa depan.", path: ["date"] });
+  // A date or a clock that is not one already has its own message; there is no moment to compare.
+  const at = manualMoment(String(value.date), String(value.time));
+  if (!Number.isNaN(at) && at > Date.now() + 60_000) ctx.addIssue({ code: "custom", message: "Tanggal dan jam tidak boleh di masa depan.", path: ["date"] });
 }).transform(value => tidyIce({
   ...value,
   other: value.slug === OTHER_DRINK ? value.other : undefined,
