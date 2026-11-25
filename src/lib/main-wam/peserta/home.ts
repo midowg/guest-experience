@@ -106,20 +106,33 @@ export type SlideSession = {
   sessionKind: MwSession["kind"];
 };
 
-/** The cards beside the Sekarang card: the session that has just ended, and the one after the Sekarang card. */
-export type HomeSlides = { done: SlideSession | null; upcoming: SlideSession | null };
+/** Why a side slot has no session: nothing has ended today, nothing follows today, nothing follows today but a later day has sessions. */
+export type SlideEmpty = "noDone" | "noUpcoming" | "tomorrow";
+export type SlideName = "done" | "now" | "upcoming";
+
+/** One of the three places on the slide. "now" is the Sekarang card (its content is the NowView); a side place holds a session, or says why it is empty. */
+export type SlideSlot = { slot: SlideName; session: SlideSession | null; empty: SlideEmpty | null };
+
+/** Always three places, in order: Selesai, Sekarang (index 1, always the middle one), Akan datang. */
+export type HomeSlides = { slots: readonly [SlideSlot, SlideSlot, SlideSlot] };
+
+/** The slide when nothing is known: the Sekarang card alone in the middle, a calm placeholder on each side. */
+export const EMPTY_SLIDES: HomeSlides = { slots: [{ slot: "done", session: null, empty: "noDone" }, { slot: "now", session: null, empty: null }, { slot: "upcoming", session: null, empty: "noUpcoming" }] };
 
 const slideSession = (session: MwSession, lang: Lang): SlideSession =>
   ({ sessionId: session.id, title: session.title, time: timeRange(session, lang), place: placeLine(session, lang), sessionKind: session.kind });
 
 /**
- * The main card of Beranda is a slide of at most three cards: the session that has just ended (the
- * last one of today to end), the Sekarang card (`view`), and the one that comes after it (the first
- * of its day to start later). `sessions` is what the person may see (visibleSessions: no drafts, no
- * Persiapan with module Ceklis off), already loaded for the Sekarang card, so this reads nothing more.
- * A side card is null when there is none: nothing has ended today, or nothing follows. Without a
- * Sekarang session ("Hari ini selesai", nothing published) there is nothing after it; its
- * "Hari ini selesai" card already points at tomorrow.
+ * The main card of Beranda is a slide of exactly three places (owner, 25 Nov): the session that has
+ * just ended (the last one of today to end), the Sekarang card (`view`, always the middle one), and
+ * the one that comes after it (the first of its day to start later). `sessions` is what the person
+ * may see (visibleSessions: no drafts, no Persiapan with module Ceklis off), already loaded for the
+ * Sekarang card, so this reads nothing more. A side place without a session is not dropped (the
+ * Sekarang card must never slide to an edge): it says why it is empty, "noDone" (nothing has ended
+ * today), "tomorrow" (nothing follows today, a later day has sessions) or "noUpcoming". Without a
+ * Sekarang session ("Hari ini selesai", nothing published) nothing follows it on the slide.
+ * A session that overlaps the Sekarang card in time is neither (done needs it to have ended, upcoming
+ * needs it to start after the Sekarang card has started and after now).
  */
 export function homeSlides(sessions: readonly MwSession[], now: Date, view: NowView, lang: Lang = "id"): HomeSlides {
   const live = sessions.filter(isLive);
@@ -129,7 +142,13 @@ export function homeSlides(sessions: readonly MwSession[], now: Date, view: NowV
     .sort((a, b) => Date.parse(sessionEnd(b)) - Date.parse(sessionEnd(a)) || Date.parse(b.startsAt) - Date.parse(a.startsAt) || b.sort - a.sort)[0];
   const upcoming = current ? live.filter(session => session.id !== current.id && Date.parse(session.startsAt) > Date.parse(current.startsAt) && Date.parse(session.startsAt) > now.getTime() && wibDate(session.startsAt) === wibDate(current.startsAt))
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.sort - b.sort)[0] : undefined;
-  return { done: done ? slideSession(done, lang) : null, upcoming: upcoming ? slideSession(upcoming, lang) : null };
+  const day = current ? wibDate(current.startsAt) : today;
+  const laterDay = live.some(session => wibDate(session.startsAt) > day);
+  return { slots: [
+    { slot: "done", session: done ? slideSession(done, lang) : null, empty: done ? null : "noDone" },
+    { slot: "now", session: null, empty: null },
+    { slot: "upcoming", session: upcoming ? slideSession(upcoming, lang) : null, empty: upcoming ? null : laterDay ? "tomorrow" : "noUpcoming" },
+  ] };
 }
 
 /** How soon a real session must start to take the card from a meal that is on (P01__status: 07.10 Pemaparan, not Sarapan). */
@@ -317,7 +336,7 @@ export type HomeData = {
   /** False before Main WAM's migration: "menunggu pembaruan sistem". */
   migrated: boolean;
   now: NowView;
-  /** The cards beside it on the slide: the session that has just ended, and the one after it. Left out: none. */
+  /** The three places of the slide: Selesai, Sekarang, Akan datang. Left out: both sides empty. */
   slides?: HomeSlides;
   /** The Sekarang card's session (for agen D's SessionAbsen), when it has one. */
   session: MwSession | null;

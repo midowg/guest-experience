@@ -7,7 +7,7 @@ import { hhmm } from "@/lib/main-wam/peserta/format";
 import type { Lang } from "@/lib/main-wam/i18n";
 import { mainWamPath } from "@/lib/routes";
 import { BerandaSkeleton } from "@/components/main-wam/peserta/Skeletons";
-import { announcementCandidates, homeCardView } from "@/lib/main-wam/peserta/home";
+import { announcementCandidates, EMPTY_SLIDES, homeCardView } from "@/lib/main-wam/peserta/home";
 import { previewHome, previewTime, previewViewer, type PreviewCard } from "../sample";
 import { AbsenStandIn } from "../standins";
 import { uploadedByText } from "@/lib/main-wam/momen/stack";
@@ -32,6 +32,8 @@ export const dynamic = "force-dynamic";
  * ?waktu=berangkat|pagi|pemaparan|silent|teamBuilding|bod (or ?hari=2&jam=07:10), ?peran=peserta|panitia|bod,
  * ?kartu=pengumuman|silent|voting|berangkat|survei|tanpa (force the contextual card),
  * ?status=memuat|offline|kosong|migrasi|gagal|kumpul (P02__status: a pinned "Kumpul jadi 05.30", a warning),
+ * the slide's conditions are real times: ?hari=2&jam=10:05 (three sessions), ?hari=2&jam=06:00 (nothing has ended), ?hari=2&jam=20:30 (a later day: "Sampai jumpa besok"),
+ * ?hari=4&jam=16:00 (nothing after it), ?hari=2&jam=22:30 (Hari ini selesai), ?status=kosong (nothing published); ?slide=sendiri: only the Sekarang card (a placeholder on both sides).
  * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet),
  * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off), ?kuis=buka (the live-quiz card).
  */
@@ -62,11 +64,12 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
   const viewer = previewViewer(params.peran);
   if (params.status === "memuat") return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang}><BerandaSkeleton /></Frame>;
   const base = previewHome(now, viewer, undefined, (params.kartu as PreviewCard | undefined) ?? null, params.survei === "terisi", lang);
-  const data = params.status === "kosong" ? { ...base, now: { kind: "kosong" as const }, card: null }
-    : params.status === "migrasi" ? { ...base, migrated: false, card: null }
-      : params.status === "gagal" ? { ...base, failed: true }
-        : params.status === "kumpul" ? { ...base, card: gatheringMoved(now, lang) }
-          : base;
+  const alone = params.slide === "sendiri" ? { ...base, slides: EMPTY_SLIDES } : base;
+  const data = params.status === "kosong" ? { ...alone, now: { kind: "kosong" as const }, slides: EMPTY_SLIDES, card: null }
+    : params.status === "migrasi" ? { ...alone, migrated: false, card: null }
+      : params.status === "gagal" ? { ...alone, failed: true }
+        : params.status === "kumpul" ? { ...alone, card: gatheringMoved(now, lang) }
+          : alone;
   return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang} unread={params.waktu === "berangkat" ? 0 : 3}>
     <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(new Date(now.getTime() - 2 * 60_000).toISOString(), lang)} live={false} forceOffline={params.status === "offline"}
       slots={{ absen: <AbsenStandIn home />, misi: misiStandIn(now, params.misi),

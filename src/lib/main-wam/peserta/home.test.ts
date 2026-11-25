@@ -167,68 +167,80 @@ describe("the slide of three cards (homeSlides)", () => {
   const mk = (id: string, start: string, end: string, extra: Partial<MwSession> = {}): MwSession =>
     ({ ...sampleSessions[0], id, title: `Sesi ${id}`, startsAt: at(D, start).toISOString(), endsAt: at(D, end).toISOString(), sort: Number(id.replace(/\D/g, "")) || 0, status: "terbit", kind: "sesi", place: "Aula", optional: false, ...extra });
   const list = [mk("a1", "08:00", "09:00"), mk("a2", "09:00", "10:00"), mk("a3", "10:00", "11:00"), mk("a4", "11:00", "12:00")];
-  const slides = (now: Date, sessions: readonly MwSession[] = list) =>
-    homeSlides(sessions, now, nowView({ sessions, now, event, absenOn: false, checkedIn: new Map() }));
+  const view = (now: Date, sessions: readonly MwSession[]) => nowView({ sessions, now, event, absenOn: false, checkedIn: new Map() });
+  const slides = (now: Date, sessions: readonly MwSession[] = list) => homeSlides(sessions, now, view(now, sessions));
+  /** The session id (or the reason it is empty) on each of the three places. */
+  const names = (result: ReturnType<typeof slides>) => result.slots.map(slot => slot.session?.sessionId ?? slot.empty ?? "now");
+  const tomorrowOf = (id: string) => mk(id, "08:00", "09:00", { startsAt: at("2027-01-06", "08:00").toISOString(), endsAt: at("2027-01-06", "09:00").toISOString() });
+
+  it("always three places, Sekarang the middle one, in every situation", () => {
+    for (const [now, sessions] of [[at(D, "10:30"), list], [at(D, "07:30"), list], [at(D, "11:30"), list], [at(D, "20:00"), list], [at(D, "08:30"), [list[0]]], [at(D, "08:30"), []]] as const) {
+      const result = slides(now, sessions);
+      expect(result.slots.map(slot => slot.slot)).toEqual(["done", "now", "upcoming"]);
+      expect(result.slots[1]).toEqual({ slot: "now", session: null, empty: null });
+    }
+  });
 
   it("a session is running: the one that has just ended before it, the one after it behind", () => {
     const result = slides(at(D, "10:30"));
-    expect(result.done).toMatchObject({ sessionId: "a2", title: "Sesi a2", time: "09.00–10.00", place: "Aula", sessionKind: "sesi" });
-    expect(result.upcoming).toMatchObject({ sessionId: "a4", title: "Sesi a4" });
+    expect(result.slots[0].session).toMatchObject({ sessionId: "a2", title: "Sesi a2", time: "09.00–10.00", place: "Aula", sessionKind: "sesi" });
+    expect(result.slots[2].session).toMatchObject({ sessionId: "a4", title: "Sesi a4" });
+    expect(names(result)).toEqual(["a2", "now", "a4"]);
   });
 
-  it("nothing has ended yet (before the first session of the day): no Selesai card, the Sekarang card is the next one", () => {
+  it("nothing has ended yet (before the first session of the day): Selesai is a placeholder, the Sekarang card is the next one", () => {
     const result = slides(at(D, "07:30"));
-    expect(result.done).toBeNull();
-    expect(result.upcoming).toMatchObject({ sessionId: "a2" });
+    expect(result.slots[0]).toEqual({ slot: "done", session: null, empty: "noDone" });
+    expect(result.slots[2].session).toMatchObject({ sessionId: "a2" });
   });
 
   it("between sessions, no one running: the nearest next one is the Sekarang card, the one after it comes behind", () => {
     const gap = [mk("a1", "08:00", "09:00"), mk("a2", "10:00", "11:00"), mk("a3", "12:00", "13:00")];
     const now = at(D, "09:30");
-    expect(nowView({ sessions: gap, now, event, absenOn: false, checkedIn: new Map() })).toMatchObject({ kind: "sesi", sessionId: "a2", status: "next" });
-    const result = slides(now, gap);
-    expect(result.done).toMatchObject({ sessionId: "a1" });
-    expect(result.upcoming).toMatchObject({ sessionId: "a3" });
+    expect(view(now, gap)).toMatchObject({ kind: "sesi", sessionId: "a2", status: "next" });
+    expect(names(slides(now, gap))).toEqual(["a1", "now", "a3"]);
   });
 
-  it("the last session of the day is running: the one before it, none after (tomorrow is not on the slide)", () => {
-    const result = slides(at(D, "11:30"));
-    expect(result.done).toMatchObject({ sessionId: "a3" });
-    expect(result.upcoming).toBeNull();
+  it("the last session of the day is running: the one before it, a placeholder after it (noUpcoming without a later day)", () => {
+    expect(names(slides(at(D, "11:30")))).toEqual(["a3", "now", "noUpcoming"]);
   });
 
-  it("the day is over: the last one to end is the Selesai card beside 'Hari ini selesai', nothing after", () => {
-    const tomorrow = mk("b1", "08:00", "09:00");
-    tomorrow.startsAt = at("2027-01-06", "08:00").toISOString(); tomorrow.endsAt = at("2027-01-06", "09:00").toISOString();
-    const sessions = [...list, tomorrow];
+  it("the last session of the day, a later day has sessions: the placeholder says tomorrow", () => {
+    expect(names(slides(at(D, "11:30"), [...list, tomorrowOf("b1")]))).toEqual(["a3", "now", "tomorrow"]);
+  });
+
+  it("the day is over: the last one to end is the Selesai card beside 'Hari ini selesai', a placeholder after", () => {
+    const sessions = [...list, tomorrowOf("b1")];
     const now = at(D, "20:00");
-    expect(nowView({ sessions, now, event, absenOn: false, checkedIn: new Map() })).toMatchObject({ kind: "selesai" });
-    const result = slides(now, sessions);
-    expect(result.done).toMatchObject({ sessionId: "a4" });
-    expect(result.upcoming).toBeNull();
+    expect(view(now, sessions)).toMatchObject({ kind: "selesai" });
+    expect(names(slides(now, sessions))).toEqual(["a4", "now", "tomorrow"]);
+    expect(names(slides(now))).toEqual(["a4", "now", "noUpcoming"]);
   });
 
-  it("a single session: the Sekarang card alone", () => {
-    expect(slides(at(D, "08:30"), [list[0]])).toEqual({ done: null, upcoming: null });
-    expect(slides(at(D, "08:30"), [])).toEqual({ done: null, upcoming: null });
+  it("a single session, or none: the Sekarang card in the middle, a placeholder on each side", () => {
+    expect(names(slides(at(D, "08:30"), [list[0]]))).toEqual(["noDone", "now", "noUpcoming"]);
+    expect(view(at(D, "08:30"), [])).toEqual({ kind: "kosong" });
+    expect(names(slides(at(D, "08:30"), []))).toEqual(["noDone", "now", "noUpcoming"]);
   });
 
   it("yesterday's sessions do not make a Selesai card in the morning", () => {
     const yesterday = mk("y1", "20:00", "21:00");
     yesterday.startsAt = at("2027-01-04", "20:00").toISOString(); yesterday.endsAt = at("2027-01-04", "21:00").toISOString();
-    expect(slides(at(D, "07:30"), [yesterday, ...list]).done).toBeNull();
+    expect(slides(at(D, "07:30"), [yesterday, ...list]).slots[0].empty).toBe("noDone");
   });
 
   it("drafts are left out (only published sessions count), and a session without an end counts for 30 minutes", () => {
     const draft = mk("d1", "10:30", "10:45", { status: "draf" });
-    expect(slides(at(D, "10:50"), [...list, draft]).done).toMatchObject({ sessionId: "a2" });
+    expect(slides(at(D, "10:50"), [...list, draft]).slots[0].session).toMatchObject({ sessionId: "a2" });
     const point = mk("p1", "09:00", "09:00", { endsAt: null });
-    expect(slides(at(D, "09:40"), [list[0], point, list[2]]).done).toMatchObject({ sessionId: "p1" });
+    expect(slides(at(D, "09:40"), [list[0], point, list[2]]).slots[0].session).toMatchObject({ sessionId: "p1" });
   });
 
-  it("the session that is the Sekarang card is never also on a side", () => {
-    const now = at(D, "10:30");
-    const result = slides(now);
-    expect([result.done?.sessionId, result.upcoming?.sessionId]).not.toContain("a3");
+  it("the session that is the Sekarang card is never also on a side, and one that overlaps it in time is on neither", () => {
+    const result = slides(at(D, "10:30"));
+    expect(result.slots.map(slot => slot.session?.sessionId)).not.toContain("a3");
+    const overlap = mk("o1", "10:00", "10:45");
+    const withOverlap = slides(at(D, "10:30"), [...list, overlap]);
+    expect(withOverlap.slots.map(slot => slot.session?.sessionId)).not.toContain("o1");
   });
 });
