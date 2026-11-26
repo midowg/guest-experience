@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { Check, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
-import { DRINKS, ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, drinkBySlug, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, offered, type CoffeeOptions, type Drink, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
 import { previousMonth, wibClock, wibDay } from "@/lib/coffee/quota";
 import { OTHER_ROOM, ROOMS } from "@/lib/coffee/rooms";
 import { manualAt } from "@/lib/coffee/schemas";
@@ -32,10 +32,18 @@ export function newKey(): string {
  * claim still counts against that month's quota and is refused when it is full (the server
  * decides; the line under the name only says what to expect). Not further back than the start of
  * last month. A panel from the side; a sheet from the bottom on a phone.
+ *
+ * F6: the drinks are the pengelola's menu (`menu`, the shown ones; "Lainnya" for anything else),
+ * and Suhu, Gula and Takaran es are asked only as far as Pengaturan asks them of the kind chosen
+ * (`options`: a claim, a guest's drink, the team's). Both come with Pengaturan's data; until that
+ * has arrived the code's menu and the starting options stand in, and the server has the last word.
  */
-export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }: {
-  api: CoffeeAdminApi; now: number; actorName: string; settings: CoffeeSettings | null; onClose: () => void; onSaved: (done: Done) => void;
+export function ManualSheet({ api, now, actorName, settings, menu, options, onClose, onSaved }: {
+  api: CoffeeAdminApi; now: number; actorName: string; settings: CoffeeSettings | null; menu?: readonly Drink[] | null; options?: CoffeeOptions | null;
+  onClose: () => void; onSaved: (done: Done) => void;
 }) {
+  const drinks = offered(menu ?? DRINKS);
+  const firstSlug = drinks[0]?.slug ?? OTHER_DRINK;
   const titleId = useId();
   const uid = useId();
   const [start] = useState(() => new Date(now).toISOString());
@@ -50,7 +58,9 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
   const [guestCount, setGuestCount] = useState("");
   const [room, setRoom] = useState<string>(ROOMS[0].name);
   const [roomOther, setRoomOther] = useState("");
-  const [slug, setSlug] = useState(DRINKS[0].slug);
+  const [picked, setSlug] = useState<string | null>(null);
+  // The first drink of the menu until one is picked; a pick that has left the menu meanwhile falls back to it too.
+  const slug = picked !== null && (picked === OTHER_DRINK || drinks.some(item => item.slug === picked)) ? picked : firstSlug;
   const [other, setOther] = useState("");
   const [qty, setQty] = useState("1");
   const [temperature, setTemperature] = useState<Temperature>("panas");
@@ -74,9 +84,12 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
     return () => { live = false; };
   }, [api, month, attempt]);
 
-  const drink = drinkBySlug(slug);
+  const drink = drinkIn(drinks, slug);
   const temps: Temperature[] = drink ? drink.temperatures : ["panas", "es"];
-  const temp = temps.includes(temperature) ? temperature : temps[0];
+  // What the kind chosen is asked, and the choice made whole for it (null where not asked: nothing is sent for it).
+  const asked = (options ?? DEFAULT_OPTIONS)[kind];
+  const choice = fillChoice({ temperature, sugar, ice }, drink, asked);
+  const temp = choice.temperature;
   const monthLabel = month ? MONTHS[Number(month.slice(5)) - 1] : "";
   const quota = person && settings ? settings[person.group] : null;
   const used = person && people?.month === month ? people.list.find(item => item.id === person.id)?.used ?? null : null;
@@ -92,7 +105,7 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
     guestCount: kind === "tamu" && guestCount.trim() && (!Number.isInteger(Number(guestCount)) || Number(guestCount) < 1 || Number(guestCount) > 500) ? "Jumlah tamu 1 sampai 500, angka bulat." : "",
   };
   // Anything typed or chosen here that closing would throw away (audit F1-07).
-  const touched = !!person || !!guest.trim() || !!guestCount.trim() || !!roomOther.trim() || !!other.trim() || kind !== "klaim" || slug !== DRINKS[0].slug
+  const touched = !!person || !!guest.trim() || !!guestCount.trim() || !!roomOther.trim() || !!other.trim() || kind !== "klaim" || slug !== firstSlug
     || qty !== "1" || temperature !== "panas" || sugar !== "Normal" || ice !== "Normal" || room !== ROOMS[0].name || day !== wibDay(start) || time !== wibClock(start);
   const [asking, setAsking] = useState(false);
   /** Escape, a press outside, the X, Batal, the back gesture: nothing closes while saving, and typed input is asked about first. */
@@ -114,7 +127,8 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
     setServerErrors({});
     try {
       const done = await api.manual({
-        kind, employeeId: person.id, date: day, time, slug, other: slug === OTHER_DRINK ? other.trim() : undefined, temperature: temp, sugar, ice, key,
+        kind, employeeId: person.id, date: day, time, slug, other: slug === OTHER_DRINK ? other.trim() : undefined,
+        temperature: choice.temperature ?? undefined, sugar: choice.sugar ?? undefined, ice: choice.ice ?? undefined, key,
         ...(kind === "klaim" ? {} : { qty: count, room: room === OTHER_ROOM ? roomOther.trim() || OTHER_ROOM : room }),
         ...(kind === "tamu" ? { guest: guest.trim() || undefined, guestCount: Number(guestCount) > 0 ? Number(guestCount) : undefined } : {}),
       });
@@ -215,8 +229,8 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
             <div className={css.field}>
               <label htmlFor={`${uid}-drink`}>Minuman</label>
               <select id={`${uid}-drink`} value={slug} onChange={event => setSlug(event.target.value)}>
-                <optgroup label="Kopi">{DRINKS.filter(item => item.group === "kopi").map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</optgroup>
-                <optgroup label="Non-kopi">{DRINKS.filter(item => item.group === "non-kopi").map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</optgroup>
+                {drinks.some(item => item.group === "kopi") && <optgroup label="Kopi">{drinks.filter(item => item.group === "kopi").map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</optgroup>}
+                {drinks.some(item => item.group === "non-kopi") && <optgroup label="Non-kopi">{drinks.filter(item => item.group === "non-kopi").map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</optgroup>}
                 <option value={OTHER_DRINK}>Lainnya (tulis sendiri)</option>
               </select>
             </div>
@@ -238,6 +252,7 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
             </div>
           )}
 
+          {asked.suhu && (
           <fieldset className={css.fieldset}>
             <legend>Suhu</legend>
             <div className={css.segmented}>
@@ -249,6 +264,8 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
               ))}
             </div>
           </fieldset>
+          )}
+          {asked.gula && (
           <fieldset className={css.fieldset}>
             <legend>Gula</legend>
             <div className={css.chips}>
@@ -259,7 +276,9 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
               ))}
             </div>
           </fieldset>
-          {temp === "es" && (
+          )}
+          {!asked.suhu && !asked.gula && <p className={css.small}>{kind === "klaim" ? "Klaim karyawan" : kind === "tamu" ? "Minuman tamu" : "Minuman tim"} dicatat tanpa suhu dan gula (diatur di Pengaturan → Opsi minuman).</p>}
+          {asksIce(asked) && temp === "es" && (
             <fieldset className={css.fieldset}>
               <legend>Takaran es</legend>
               <div className={css.chips}>

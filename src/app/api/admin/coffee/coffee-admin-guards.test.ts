@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
+import { forgetMenu } from "@/lib/server/coffee/store";
 
 /*
  * Every pengelola route of WG Coffee: no admin session 401, no grant 403, a foreign origin
@@ -31,6 +32,9 @@ const drink = { slug: "cafe-latte", temperature: "panas", sugar: "Normal", ice: 
 const KEY = "dddddddd-dddd-4ddd-8ddd-000000000001";
 const manual = { kind: "klaim", employeeId: PEOPLE.rina, date: "2026-11-20", time: "09:30", ...drink, key: KEY };
 const span = "dari=2026-11-01&sampai=2026-11-30";
+const ALL = { suhu: true, gula: true, es: true }, NONE = { suhu: false, gula: false, es: false };
+/** Pengaturan → Opsi minuman, changed from the defaults: claims are asked their sugar. */
+const OPTIONS = { klaim: { suhu: false, gula: true, es: false }, tim: ALL, tamu: ALL };
 const send = (path: string, method = "GET", body?: unknown, headers: Record<string, string> = {}) => new Request(`${SITE}${path}`, {
   method, headers: { ...(method === "GET" ? {} : { origin: SITE }), ...(body === undefined ? {} : { "content-type": "application/json" }), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
 });
@@ -39,10 +43,10 @@ const body = async (response: Response) => await response.json() as { ok: boolea
 
 const load = () => Promise.all([
   import("./queue/route"), import("./orders/[id]/selesai/route"), import("./orders/[id]/tolak/route"), import("./orders/[id]/urungkan/route"),
-  import("./manual/route"), import("./people/route"), import("./rekap/route"), import("./rekap/export/route"), import("./settings/route"), import("./orders/[id]/batalkan/route"), import("./settings/pin/route"),
+  import("./manual/route"), import("./people/route"), import("./rekap/route"), import("./rekap/export/route"), import("./settings/route"), import("./orders/[id]/batalkan/route"), import("./settings/pin/route"), import("./settings/opsi/route"),
 ]);
 const routes = async (headers: Record<string, string> = {}) => {
-  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel, pin] = await load();
+  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel, pin, options] = await load();
   const order = (name: string, id: string) => `/api/admin/coffee/orders/${id}/${name}`;
   return {
     reads: {
@@ -60,13 +64,14 @@ const routes = async (headers: Record<string, string> = {}) => {
       manual: (input: unknown = manual) => manualRoute.POST(send("/api/admin/coffee/manual", "POST", input, headers)),
       settings: (input: unknown = { karyawan: 5, ga: 2, intern: 2 }) => settings.PUT(send("/api/admin/coffee/settings", "PUT", input, headers)),
       pin: (input: unknown = { pin: "4821" }) => pin.PUT(send("/api/admin/coffee/settings/pin", "PUT", input, headers)),
+      options: (input: unknown = OPTIONS) => options.PUT(send("/api/admin/coffee/settings/opsi", "PUT", input, headers)),
     },
   };
 };
 const everyCall = (all: Awaited<ReturnType<typeof routes>>) => [...Object.values(all.reads), ...Object.values(all.writes)] as (() => Promise<Response>)[];
 const claim = async (employee: string = PEOPLE.rina) => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: new Date(Date.now() - 60_000 + db.rows("coffee_orders").length).toISOString(), p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: KEY.replace(/1$/, String(db.rows("coffee_orders").length + 2)) })).data as string;
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = new Date(); state.admin = "person"; process.env.RATE_LIMIT_SECRET = "x".repeat(40); });
+beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); db.state.now = new Date(); state.admin = "person"; process.env.RATE_LIMIT_SECRET = "x".repeat(40); });
 
 it("answers 401 without an admin session and 403 without the grant, on every route", async () => {
   const all = await routes();
@@ -78,12 +83,14 @@ it("answers 401 without an admin session and 403 without the grant, on every rou
   }
   expect(db.rows("coffee_orders")).toMatchObject([{ status: "diproses" }]);
   expect(db.rows("coffee_settings")[0].quota_karyawan).toBe(4);
+  expect(db.rows("coffee_settings")[0].opt_klaim_gula).toBe(false);
 });
 
 it("refuses a write from another site, and a download asked for by another site", async () => {
   const id = await claim();
   const foreign = await routes({ origin: "https://evil.test" });
-  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings, foreign.writes.pin]) expect((await call()).status).toBe(403);
+  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings, foreign.writes.pin, foreign.writes.options]) expect((await call()).status).toBe(403);
+  expect(db.rows("coffee_settings")[0].opt_klaim_gula).toBe(false);
   expect(db.rows("coffee_settings")[0].ga_pin_hash).toBeUndefined();
   expect((await foreign.reads.exported(undefined, { "sec-fetch-site": "cross-site" })).status).toBe(403);
   expect(db.rows("coffee_orders")).toMatchObject([{ status: "diproses" }]);
@@ -143,10 +150,12 @@ it("sets the PIN GA as four digits, keeps only its hash, and never hands it out 
 
 it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
-  for (const call of everyCall(await routes())) {
+  const all = await routes();
+  for (const call of everyCall(all)) {
     const response = await call();
     expect(response.status).toBe(503);
-    expect((await body(response)).message).toBe("WG Coffee menunggu migrasi 202612010001_coffee.sql.");
+    // The option switches belong to the later migration, and say so.
+    expect((await body(response)).message).toBe(call === all.writes.options ? "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql." : "WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   }
 });
 
@@ -174,7 +183,10 @@ it("records by hand, changes the quotas, lists the people, and hands out the rec
   expect(await body(await all.writes.settings({ karyawan: 1, ga: 2, intern: 2 }))).toMatchObject({ message: "Jatah disimpan.", data: { settings: { karyawan: 1 }, holders: [{ id: PEOPLE.dewi }] } });
   const full = await all.writes.manual({ ...today, time: "00:01", key: KEY.replace(/1$/, "9") });
   expect(full.status).toBe(409);
-  expect((await body(await all.reads.settings())).data).toEqual({ settings: { karyawan: 1, ga: 2, intern: 2 }, holders: [{ id: PEOPLE.dewi, name: "Contoh Dewi Lestari", position: "Contoh karyawan" }], gaPin: false });
+  const read = (await body(await all.reads.settings())).data as { menu: { slug: string }[] } & Record<string, unknown>;
+  expect(read).toMatchObject({ settings: { karyawan: 1, ga: 2, intern: 2 }, holders: [{ id: PEOPLE.dewi, name: "Contoh Dewi Lestari", position: "Contoh karyawan" }], gaPin: false, optionsReady: true, options: { klaim: NONE, tim: ALL, tamu: ALL } });
+  expect(Object.keys(read).sort()).toEqual(["gaPin", "holders", "menu", "options", "optionsReady", "settings"]);
+  expect(read.menu).toHaveLength(15);
   const people = (await body(await all.reads.people())).data as { month: string; people: { id: string; used: number }[] };
   expect(people.month).toBe(month);
   expect(people.people.find(person => person.id === PEOPLE.rina)?.used).toBe(1);
@@ -215,4 +227,43 @@ it("cancels a record made by hand after it was saved twice with one key, and not
   const recap = (await body(await all.reads.recap(`?dari=${month}-01&sampai=${month}-28&status=batal`))).data as { rows: object[]; summary: object };
   expect(recap).toMatchObject({ rows: [{ no: "K-418", orderId: id, status: "batal", manual: true, doneBy: "Super admin" }], summary: { total: 0, klaim: 0 } });
   expect(recap.rows).toHaveLength(1);
+});
+
+// F6: which options each audience is asked with a drink.
+it("saves the option switches, names what is wrong with them, and hands them out with the settings", async () => {
+  const all = await routes();
+  for (const wrong of [{}, { klaim: NONE, tim: ALL }, { ...OPTIONS, tamu: { suhu: "ya", gula: true, es: true } }, { ...OPTIONS, klaim: { suhu: true } }]) {
+    const response = await all.writes.options(wrong);
+    expect(response.status, JSON.stringify(wrong)).toBe(422);
+  }
+  expect(db.rows("coffee_settings")[0].opt_klaim_gula).toBe(false);
+  const saved = await all.writes.options({ ...OPTIONS, tamu: { suhu: false, gula: true, es: true } });
+  expect(await body(saved)).toEqual({ ok: true, message: "Opsi minuman disimpan. Berlaku mulai pesanan berikutnya.", data: { options: { klaim: { suhu: false, gula: true, es: false }, tim: ALL, tamu: { suhu: false, gula: true, es: false } } } });
+  expect(saved.headers.get("cache-control")).toBe("no-store");
+  expect(db.rows("coffee_settings")[0]).toMatchObject({ opt_klaim_gula: true, opt_tamu_suhu: false, opt_tamu_es: false, options_label: "Dewi", quota_karyawan: 4 });
+  expect((await body(await all.reads.settings())).data).toMatchObject({ options: { klaim: { gula: true }, tamu: { suhu: false, es: false } } });
+  // Catat manual follows at once: a claim now carries its sugar, a guest's drink no temperature.
+  const month = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date()).slice(0, 7);
+  await all.writes.manual({ ...manual, date: `${month}-01`, time: "00:00", sugar: "Tanpa" });
+  expect(db.rows("coffee_order_items").at(-1)).toMatchObject({ temperature: null, sugar: "Tanpa", ice: null });
+  await all.writes.manual({ ...manual, kind: "tamu", date: `${month}-01`, time: "00:00", key: KEY.replace(/1$/, "8") });
+  expect(db.rows("coffee_order_items").at(-1)).toMatchObject({ for_whom: "tamu", temperature: null, sugar: "Normal", ice: null });
+});
+
+it("before migration 202612020001: the settings still read (everything asked, the code's menu), the switches answer 503, and the rest works", async () => {
+  db.state.menuMigrated = false;
+  db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+  delete db.state.tables.coffee_drinks;
+  const all = await routes();
+  const read = (await body(await all.reads.settings())).data as { menu: unknown[] };
+  expect(read).toMatchObject({ optionsReady: false, options: { klaim: ALL, tim: ALL, tamu: ALL }, settings: { karyawan: 4 } });
+  expect(read.menu).toHaveLength(15);
+  const refused = await all.writes.options();
+  expect(refused.status).toBe(503);
+  expect((await body(refused)).message).toBe("Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.");
+  const id = await claim();
+  for (const call of [all.reads.queue, () => all.reads.recap(), () => all.writes.finish(id), all.writes.settings, () => all.reads.people()]) expect((await call()).status).toBe(200);
+  const month = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date()).slice(0, 7);
+  expect((await all.writes.manual({ ...manual, employeeId: PEOPLE.fajar, date: `${month}-01`, time: "00:00" })).status).toBe(200);
+  expect(db.rows("coffee_order_items").at(-1)).toMatchObject({ temperature: "panas", sugar: "Normal", ice: "Normal" });
 });

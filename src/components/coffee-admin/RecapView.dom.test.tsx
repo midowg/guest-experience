@@ -218,3 +218,17 @@ it("marks the name as the row's header and dates a processing that fell on anoth
   expect(names.filter(name => name === "Budi (contoh)")).toHaveLength(2);
   expect(names.every(name => name === "–" || name === "Budi (contoh)")).toBe(true);
 });
+
+// F6: Suhu, Gula and Takaran es are empty for a drink that was asked nothing.
+it("F6 leaves the option cells of the Detail table empty for a drink ordered without options", async () => {
+  const server = createSampleServer();
+  const month = new Date(NOW).toISOString().slice(0, 7);
+  await server.api.manual({ kind: "klaim", employeeId: "p-arief", date: `${month}-25`, time: "09:00", slug: "espresso", key: "eeeeeeee-eeee-4eee-8eee-000000000001" });
+  const query = monthQuery("2026-11");
+  render(<div className={css.root}><RecapView api={server.api} initial={{ query, data: await server.api.recap(query) }} today="2026-11-25" phone={false} active version={0} /></div>);
+  fireEvent.click(screen.getByRole("tab", { name: /^Detail/ }));
+  const head = screen.getAllByRole("columnheader").map(cell => cell.textContent?.replace(/, urutkan.*/, ""));
+  const row = screen.getAllByRole("row").find(item => /Arief/.test(item.textContent ?? "") && /Espresso/.test(item.textContent ?? "") && /Dicatat manual/.test(item.textContent ?? ""))!;
+  const cells = [...row.querySelectorAll("th, td")].map(cell => cell.textContent);
+  expect([cells[head.indexOf("Minuman")], cells[head.indexOf("Suhu")], cells[head.indexOf("Gula")], cells[head.indexOf("Takaran es")]]).toEqual(["Espresso", "–", "–", "–"]);
+});

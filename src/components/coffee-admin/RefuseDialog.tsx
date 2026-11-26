@@ -3,7 +3,7 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { firstName } from "@/lib/coffee/access";
-import { drinkLabel } from "@/lib/coffee/menu";
+import { drinkName } from "@/lib/coffee/menu";
 import type { QueueOrder } from "@/lib/coffee/types";
 import { Layer } from "./Layer";
 import css from "./coffee-admin.module.css";
@@ -27,7 +27,7 @@ export function RefuseDialog({ order, onClose, onRefuse }: { order: QueueOrder; 
   };
   const claim = order.kind === "klaim";
   const item = order.items[0];
-  const what = claim ? `klaim ${firstName(order.person.name)}${item ? ` (${drinkLabel(item.slug, item.other)})` : ""}` : `pesanan rapat ${order.room || order.no}`;
+  const what = claim ? `klaim ${firstName(order.person.name)}${item ? ` (${drinkName(item)})` : ""}` : `pesanan rapat ${order.room || order.no}`;
   return (
     <Layer onClose={onClose} labelledBy={titleId}>
       <form onSubmit={submit} noValidate>

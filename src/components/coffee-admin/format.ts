@@ -1,5 +1,5 @@
 import { firstName } from "@/lib/coffee/access";
-import { drinkLabel } from "@/lib/coffee/menu";
+import { drinkName } from "@/lib/coffee/menu";
 import { KIND_LABEL, type QueueOrder, type RecapRow, type Status } from "@/lib/coffee/types";
 import type { CancelTarget } from "./api";
 
@@ -37,7 +37,7 @@ export const drinkCount = (order: QueueOrder) => order.items.reduce((sum, item) 
 export function orderTitle(order: QueueOrder): string {
   if (order.kind === "klaim") {
     const item = order.items[0];
-    return `${firstName(order.person.name)} · ${item ? drinkLabel(item.slug, item.other) : "Minuman"}`;
+    return `${firstName(order.person.name)} · ${item ? drinkName(item) : "Minuman"}`;
   }
   return `${order.room || "Tanpa ruangan"} · ${drinkCount(order)} minuman`;
 }

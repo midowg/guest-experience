@@ -2,6 +2,7 @@ import { inflateRawSync } from "node:zlib";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { recapQuerySchema } from "@/lib/coffee/schemas";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
 
 /* Rekap and its files against the in-memory stand-in (fake-db.ts). Made-up people. */
 let db = fakeDb();
@@ -18,6 +19,7 @@ const claim = async (employee: string, at: string) => (await db.client.rpc("coff
 
 // November (WIB) holds K-418, K-419 (refused), K-420 and the meeting T-0113; K-421 is 31 Oct 23.59 WIB, K-422 is 1 Dec 00.00 WIB.
 beforeEach(async () => {
+  forgetMenu(true);
   db = fakeDb(); seedPeople(db); n = 0;
   db.state.now = new Date("2026-12-01T03:00:00Z");
   await claim(PEOPLE.rina, "2026-11-03T02:00:00.000Z");
@@ -135,4 +137,38 @@ it("keeps a cancelled record made by hand as Dibatalkan, out of the totals and o
   const line = csv.split("\r\n").find(text => text.includes("K-423"))!;
   expect(line).toContain("Dibatalkan");
   expect(line).toContain('"Dibatalkan","","Super admin","10:00","","Ya"');
+});
+
+describe("Rekap after F6 (options per audience, the drink's kept name)", () => {
+  it("leaves Suhu, Gula and Takaran es empty for a drink that was asked nothing, on screen and in the files", async () => {
+    await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.dewi, p_item: { slug: "espresso" }, p_at: "2026-11-21T02:00:00.000Z", p_manual: false, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: key(200) });
+    const [row] = await recapRows(recapQuerySchema.parse({ dari: "2026-11-21", sampai: "2026-11-21" }));
+    expect(row).toMatchObject({ no: "K-423", drink: "Espresso", temperature: null, sugar: null, ice: null });
+    const { csv } = await recapFiles(recapQuerySchema.parse({ dari: "2026-11-21", sampai: "2026-11-21" }));
+    const cells = csv.split("\r\n")[1].split(",");
+    expect(cells.slice(13, 17)).toEqual(['"Espresso"', '""', '""', '""']);
+    // An old row (stored before F6 with every option) still reads in full.
+    const old = (await recapRows(november)).find(found => found.no === "K-420")!;
+    expect(old).toMatchObject({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+  });
+
+  it("keeps the name a drink was ordered under after it is renamed, hidden or deleted", async () => {
+    const menu = db.rows("coffee_drinks");
+    Object.assign(menu.find(drink => drink.slug === "cafe-latte")!, { name: "Latte Susu", active: false });
+    db.state.tables.coffee_drinks = menu.filter(drink => drink.slug !== "americano");
+    forgetMenu();
+    const rows = await recapRows(november);
+    expect(rows.find(row => row.no === "K-420")?.drink).toBe("Café Latte");
+    expect(rows.find(row => row.kind === "tim")?.drink).toBe("Americano");
+    expect((await recap(november)).summary.drinks.map(drink => drink.drink).sort()).toEqual(["Americano", "Café Latte", "Kopi Susu"]);
+  });
+
+  it("before migration 202612020001 reads the old columns only and names drinks from the code's menu", async () => {
+    db.state.menuMigrated = false;
+    for (const item of db.rows("coffee_order_items")) delete item.drink_name;
+    forgetMenu(true);
+    const rows = await recapRows(november);
+    expect(rows.map(row => row.drink)).toEqual(["Café Latte", "Kopi Susu", "Kopi Susu", "Kopi Susu", "Americano", "Café Latte", "Café Latte"]);
+    expect(rows[0]).toMatchObject({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+  });
 });

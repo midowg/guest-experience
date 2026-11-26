@@ -1,13 +1,14 @@
 import { firstName } from "./access";
-import { GROUP_LABEL, drinkLabel, optionsLabel } from "./menu";
+import { GROUP_LABEL, drinkName, optionsTail } from "./menu";
 import type { QueueItem, QueueOrder } from "./types";
 
 /*
  * "Salin rincian": an order as plain text, for the pengelola to keep beside JumpStart while buying
- * by hand. The same words as the approved prototype.
+ * by hand. The same words as the approved prototype. An option that was not asked (F6) is simply
+ * not written: "1× Café Latte", never an invented "Panas · gula Normal".
  */
 
-const line = (item: QueueItem) => `${item.qty}× ${drinkLabel(item.slug, item.other)} · ${optionsLabel(item.temperature, item.sugar, item.ice)}`;
+const line = (item: QueueItem) => `${item.qty}× ${drinkName(item)}${optionsTail(item.temperature, item.sugar, item.ice)}`;
 
 export function claimText(order: QueueOrder): string {
   const group = order.person.group ? ` (${GROUP_LABEL[order.person.group]})` : "";

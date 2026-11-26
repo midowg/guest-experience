@@ -41,7 +41,8 @@ const newestFirst = (a: MyOrder, b: MyOrder) => Date.parse(b.orderedAt) - Date.p
 const merged = (done: ClaimDone) => (state: MyState): MyState =>
   ({ ...state, me: done.me, orders: [done.order, ...state.orders.filter(order => order.id !== done.order.id)].sort(newestFirst) });
 const statuses = (orders: MyOrder[]) => new Map<string, Status>(orders.map(order => [order.id, order.status]));
-const choiceOf = ({ slug, temperature, sugar, ice }: ClaimChoice) => `${slug}|${temperature}|${sugar}|${temperature === "es" ? ice : "Normal"}`;
+// Options that were not asked are null on both sides (F6); ice only tells two claims apart for a cold drink.
+const choiceOf = ({ slug, temperature, sugar, ice }: ClaimChoice) => `${slug}|${temperature ?? ""}|${sugar ?? ""}|${temperature === "es" ? ice ?? "" : ""}`;
 const sameChoice = (order: MyOrder, choice: ClaimChoice) => !order.manual && choiceOf(order) === choiceOf(choice);
 
 /** A claim whose answer never came back: its key, and the claims that were already there when it was sent. */

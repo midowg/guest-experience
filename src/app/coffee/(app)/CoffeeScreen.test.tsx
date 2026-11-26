@@ -34,7 +34,7 @@ vi.mock("next/headers", () => ({
 }));
 
 const { CoffeeScreen } = await import("./CoffeeScreen");
-const sample: MyState = { me: { id: "p-rina", name: "Rina (contoh)", group: "karyawan", quota: 4, used: 0, left: 4, month: "2026-11" }, orders: [], ga: false, pengelola: false };
+const sample: MyState = { me: { id: "p-rina", name: "Rina (contoh)", group: "karyawan", quota: 4, used: 0, left: 4, month: "2026-11" }, orders: [], ga: false, pengelola: false, menu: [], options: { suhu: false, gula: false, es: false } };
 const draw = (tab: "menu" | "pesanan" = "menu") => CoffeeScreen({ here: tab === "menu" ? coffeePath.home : coffeePath.orders, tab }) as Promise<ReactElement<Record<string, unknown>>>;
 
 beforeEach(() => { Object.assign(mocks, { calls: [], configured: true, state: sample, grant: false, cookie: undefined }); });

@@ -16,10 +16,11 @@ function open(port: Port | null, more: { held?: boolean; openId?: string } = {})
   const server = createSampleGa({ seeded: true });
   const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
   const initial = server.initial();
-  render(<GaApp initial={more.held ? { today: [], people: [], rooms: [], pin: false } : initial} me={{ name: SAMPLE_GA }} api={api} push={port} {...more} tools={<p>kotak pratinjau</p>} />);
+  render(<GaApp initial={more.held ? server.held() : initial} me={{ name: SAMPLE_GA }} api={api} push={port} {...more} tools={<p>kotak pratinjau</p>} />);
   rest();
   return { server, api, initial };
 }
+const SLOW = { timeout: 5000 };
 const press = (name: string | RegExp) => { fireEvent.click(screen.getByRole("button", { name })); rest(); };
 const news = (data: unknown) => act(() => { navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data })); });
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
@@ -50,12 +51,14 @@ it("offers Matikan beside Notifikasi aktif, and the focus follows both presses",
   open(port);
   const on = await topbar().findByRole("button", { name: "Nyalakan notifikasi" });
   fireEvent.click(on);
-  const off = await topbar().findByRole("button", { name: "Matikan notifikasi di tablet ini" });
+  // Generous waits: nothing here races (the focus moves in an effect once the press has settled), but under a
+  // loaded machine the whole suite running at once made the one-second default run out (F6).
+  const off = await topbar().findByRole("button", { name: "Matikan notifikasi di tablet ini" }, SLOW);
   expect(off.textContent).toBe("Matikan");
-  await waitFor(() => expect(document.activeElement).toBe(off));
+  await waitFor(() => expect(document.activeElement).toBe(off), SLOW);
   fireEvent.click(off);
-  const again = await topbar().findByRole("button", { name: "Nyalakan notifikasi" });
-  await waitFor(() => expect(document.activeElement).toBe(again));
+  const again = await topbar().findByRole("button", { name: "Nyalakan notifikasi" }, SLOW);
+  await waitFor(() => expect(document.activeElement).toBe(again), SLOW);
   expect(port.calls.slice(-2)).toEqual(["remove:https://push.example/contoh", "unsubscribe"]);
   expect(port.saved()).toBe(false);
   expect(await screen.findByText("Notifikasi dimatikan di tablet ini")).toBeTruthy();
@@ -135,7 +138,7 @@ it("opens the status of the order the address names, tidies the address, and ign
   expect(screen.getByRole("heading", { level: 1, name: "Pesanan rapat hari ini" })).toBeTruthy();
   cleanup(); forget();
   // A page loaded in guest mode never opens it: the book stays.
-  render(<GaApp held initial={{ today: [], people: [], rooms: [], pin: false }} me={{ name: SAMPLE_GA }} api={server.api} push={null} openId={done.id} />);
+  render(<GaApp held initial={server.held()} me={{ name: SAMPLE_GA }} api={server.api} push={null} openId={done.id} />);
   rest();
   expect(document.querySelector("[data-guest]")).toBeTruthy();
 });

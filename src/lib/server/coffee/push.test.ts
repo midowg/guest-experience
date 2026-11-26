@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
 
 /*
  * Web push against the in-memory stand-in (fake-db.ts): who is told what, that the same news goes
@@ -49,7 +50,7 @@ async function afterResponse() { const work = web.later ?? []; web.later = []; f
 const meetingInput = (more: object = {}) => ({ room: "Vasuki Room", picId: PEOPLE.rina, items: [{ for: "tamu" as const, ...drink, qty: 2, guestName: "RAHASIA-TAMU" }], key: key(), ...more }) as never;
 const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-beforeEach(() => {
+beforeEach(() => { forgetMenu(true);
   db = fakeDb(); seedPeople(db); db.state.now = now; n = 0;
   db.state.tables.admin_grants.push({ employee_id: PEOPLE.fajar, apps: ["coffee"] }, { employee_id: PEOPLE.keluar, apps: ["coffee"] }, { employee_id: PEOPLE.bagas, apps: ["hr"] });
   web.sent = []; web.fails = new Map(); web.later = [];

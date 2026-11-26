@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
 
 /* PIN GA (audit F3-04) against the in-memory stand-in: only a salted hash is kept, and nothing but yes or no is ever told. */
 let db = fakeDb();
@@ -10,7 +11,7 @@ const { checkGaPin, gaPinSet, hashPin, pinGate, pinMatches, pinWait, saveGaPin, 
 const { readSettings, saveSettings } = await import("./settings");
 const dewi = { employeeId: PEOPLE.dewi, label: "Dewi" };
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); process.env.RATE_LIMIT_SECRET = "x".repeat(40); });
+beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); process.env.RATE_LIMIT_SECRET = "x".repeat(40); });
 
 it("keeps a salted hash, never the PIN, and tells only whether one is set", async () => {
   expect(await gaPinSet()).toBe(false);

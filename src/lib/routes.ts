@@ -1076,6 +1076,8 @@ export const coffeeAdminApi = {
   settings: `${COFFEE_ADMIN_API}/settings`,
   /** PUT {pin}: the pengelola sets the PIN GA. */
   gaPin: `${COFFEE_ADMIN_API}/settings/pin`,
+  /** PUT: which options (temperature, sugar, ice) each audience is asked with a drink (F6). */
+  options: `${COFFEE_ADMIN_API}/settings/opsi`,
   /** Web push for the pengelola (F4). */
   push: `${COFFEE_ADMIN_API}/push`,
 };

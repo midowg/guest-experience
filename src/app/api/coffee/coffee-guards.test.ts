@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
+import { forgetMenu } from "@/lib/server/coffee/store";
 
 /*
  * Every employee route of WG Coffee: no session 401, a foreign origin 403, Mode GA only for
@@ -44,7 +45,7 @@ const routes = async () => {
 };
 const body = async (response: Response) => await response.json() as { ok: boolean; message: string; data?: Record<string, unknown>; fieldErrors?: Record<string, string[]> };
 
-beforeEach(() => {
+beforeEach(() => { forgetMenu(true);
   db = fakeDb(); seedPeople(db); db.state.now = new Date();
   state.member = rina;
   process.env.RATE_LIMIT_SECRET = "x".repeat(40);
@@ -88,9 +89,15 @@ it("keeps Mode GA for the GA group, Admin Booking and holders of the Coffee gran
 it("names the field when the body is wrong", async () => {
   state.member = bagas;
   const all = await routes();
+  // By default a claim is asked nothing, so a temperature that does not fit is not even read; once the pengelola asks for it, it is.
+  Object.assign(db.rows("coffee_settings")[0], { opt_klaim_suhu: true, opt_klaim_gula: true, opt_klaim_es: true });
   const wrongDrink = await all.claim({ ...claim, slug: "espresso" });
   expect(wrongDrink.status).toBe(422);
   expect((await body(wrongDrink)).fieldErrors).toEqual({ temperature: ["Espresso hanya tersedia panas."] });
+  expect((await body(await all.claim({ ...claim, sugar: "Banyak" }))).fieldErrors).toEqual({ sugar: ["Pilih takaran gula."] });
+  const wrongLine = await all.gaMeeting({ ...meeting, items: [meeting.items[0], { ...meeting.items[0], slug: "cucumber-ice" }] });
+  expect(wrongLine.status).toBe(422);
+  expect((await body(wrongLine)).fieldErrors).toEqual({ "items.1.temperature": ["Cucumber Ice hanya tersedia dingin (es)."] });
   expect((await body(await all.claim({ ...claim, key: undefined }))).fieldErrors).toHaveProperty("key");
   expect((await all.cancel("bukan-uuid")).status).toBe(422);
   const noPic = await all.gaMeeting({ ...meeting, picId: "", items: [{ ...meeting.items[0], for: "tim" }] });
@@ -250,4 +257,41 @@ it("is told when the whole address sends far more than an office does", async ()
   const response = await all.claim({ ...claim, key: KEY.replace(/1$/, "7") });
   expect(response.status).toBe(429);
   expect((await body(response)).message).toBe("Terlalu banyak permintaan. Tunggu sepuluh menit sebelum mencoba kembali.");
+});
+
+// F6: the options a drink is asked with, and the menu, as the routes hand them out and take them.
+it("hands the phone and the tablet the menu and their options, and drops options that are not asked", async () => {
+  const all = await routes();
+  const mine = (await body(await all.state())).data as { menu: unknown[]; options: unknown };
+  expect(mine.options).toEqual({ suhu: false, gula: false, es: false });
+  expect(mine.menu).toHaveLength(15);
+  const sent = await all.claim();
+  expect(sent.status).toBe(200);
+  expect((await body(sent)).data).toMatchObject({ order: { slug: "cafe-latte", name: "Café Latte", temperature: null, sugar: null, ice: null } });
+  expect((await all.claim({ slug: "cafe-latte", key: KEY.replace(/1$/, "2") })).status).toBe(200);
+  const gone = await all.claim({ slug: "tidak-ada", key: KEY.replace(/1$/, "3") });
+  expect(gone.status).toBe(409);
+  expect((await body(gone)).message).toBe("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.");
+  state.member = bagas;
+  const tablet = (await body(await all.gaState())).data as { menu: unknown[]; options: Record<string, unknown> };
+  expect(Object.keys(tablet.options).sort()).toEqual(["tamu", "tim"]);
+  expect(tablet.menu).toHaveLength(15);
+  const order = await all.gaMeeting({ ...meeting, key: KEY.replace(/1$/, "4") });
+  expect((await body(order)).data).toMatchObject({ order: { items: [{ name: "Kopi Susu", temperature: "panas", sugar: "Normal", ice: null }] } });
+});
+
+it("works before migration 202612020001 as it did: every option asked, the code's menu", async () => {
+  db.state.menuMigrated = false;
+  db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+  delete db.state.tables.coffee_drinks;
+  const all = await routes();
+  const mine = (await body(await all.state())).data as { menu: unknown[]; options: unknown };
+  expect(mine.options).toEqual({ suhu: true, gula: true, es: true });
+  expect(mine.menu).toHaveLength(15);
+  expect((await body(await all.claim())).data).toMatchObject({ order: { name: "Café Latte", temperature: "es", sugar: "Sedikit", ice: "Normal" } });
+  expect((await all.cancel((db.rows("coffee_orders")[0] as { id: string }).id)).status).toBe(200);
+  state.member = bagas;
+  expect((await all.gaState()).status).toBe(200);
+  expect((await all.gaMeeting({ ...meeting, key: KEY.replace(/1$/, "5") })).status).toBe(200);
+  expect(db.rows("coffee_order_items").at(-1)).toMatchObject({ temperature: "panas", sugar: "Normal", ice: "Normal" });
 });

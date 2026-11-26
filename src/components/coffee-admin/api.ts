@@ -1,6 +1,6 @@
 import { AdminApiError, adminRequest } from "@/components/admin/shared/api";
 import { browserDevice, type PushApi, type PushPort } from "@/components/coffee/usePush";
-import type { Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import type { CoffeeOptions, Drink, Ice, Sugar, Temperature } from "@/lib/coffee/menu";
 import type { CoffeePushInfo } from "@/lib/coffee/notify";
 import type { RecapSummary } from "@/lib/coffee/recap";
 import type { CoffeePerson, CoffeeSettings, ItemFor, QueueOrder, QueueState, RecapRow, Status } from "@/lib/coffee/types";
@@ -15,11 +15,16 @@ import { coffeeAdminApi } from "@/lib/routes";
 export type RecapQuery = { dari: string; sampai: string; jenis?: ItemFor; status?: Status; q?: string };
 export type RecapData = { rows: RecapRow[]; summary: RecapSummary; title: string };
 export type CoffeeHolder = { id: string; name: string; position: string };
-/** `gaPin`: a PIN GA is set (the PIN itself never reaches the browser). */
-export type SettingsData = { settings: CoffeeSettings; holders: CoffeeHolder[]; gaPin: boolean };
+/**
+ * `gaPin`: a PIN GA is set (the PIN itself never reaches the browser). `options`: what each
+ * audience is asked with a drink; `optionsReady` false while migration 202612020001 has not run
+ * (everyone is then asked everything and the switches cannot be saved). `menu`: the drinks, for
+ * Catat manual.
+ */
+export type SettingsData = { settings: CoffeeSettings; holders: CoffeeHolder[]; gaPin: boolean; options: CoffeeOptions; optionsReady: boolean; menu: Drink[] };
 export type ManualBody = {
   kind: ItemFor; employeeId: string; date: string; time: string; slug: string; other?: string;
-  temperature: Temperature; sugar: Sugar; ice: Ice; qty?: number; room?: string; guest?: string; guestCount?: number; key: string;
+  temperature?: Temperature; sugar?: Sugar; ice?: Ice; qty?: number; room?: string; guest?: string; guestCount?: number; key: string;
 };
 export type Done = { order: QueueOrder; message: string };
 /** A record made by hand that the pengelola is about to cancel: its order, and the words the question shows. */
@@ -37,6 +42,8 @@ export type CoffeeAdminApi = {
   recap(query: RecapQuery): Promise<RecapData>;
   settings(): Promise<SettingsData>;
   saveSettings(input: CoffeeSettings): Promise<SettingsData & { message: string }>;
+  /** Pengaturan → Opsi minuman: which options each audience is asked from the next order on. */
+  saveOptions(input: CoffeeOptions): Promise<{ options: CoffeeOptions; message: string }>;
   /** Sets or replaces the PIN GA (four digits) the tablet asks for when the guest menu book is left. */
   saveGaPin(pin: string): Promise<{ message: string }>;
   /** The address of the file with the same filter (a plain download, no fetch). */
@@ -67,6 +74,10 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   async saveSettings(input) {
     const result = await adminRequest<SettingsData>(coffeeAdminApi.settings, { method: "PUT", body: JSON.stringify(input) });
     return { ...result.data!, message: result.message };
+  },
+  async saveOptions(input) {
+    const result = await adminRequest<{ options: CoffeeOptions }>(coffeeAdminApi.options, { method: "PUT", body: JSON.stringify(input) });
+    return { options: result.data!.options, message: result.message };
   },
   async saveGaPin(pin) {
     const result = await adminRequest<{ gaPin: boolean }>(coffeeAdminApi.gaPin, { method: "PUT", body: JSON.stringify({ pin }) });

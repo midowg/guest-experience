@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
+import { forgetMenu } from "@/lib/server/coffee/store";
 
 /*
  * The push routes of the employee app and GA's tablet (F4): no session 401, a foreign origin 403, a
@@ -40,7 +41,7 @@ const routes = async () => {
 const body = async (response: Response) => await response.json() as { ok: boolean; message: string; data?: Record<string, unknown>; fieldErrors?: Record<string, string[]> };
 const devices = () => db.rows("coffee_push_subscriptions");
 
-beforeEach(() => {
+beforeEach(() => { forgetMenu(true);
   db = fakeDb(); seedPeople(db); db.state.now = new Date();
   state.member = rina; state.sent = []; state.fail = 0;
   process.env.RATE_LIMIT_SECRET = "x".repeat(40);

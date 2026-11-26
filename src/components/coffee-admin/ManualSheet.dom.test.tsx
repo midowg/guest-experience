@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AdminApiError } from "@/components/admin/shared/api";
-import { MONTHLY_QUOTA } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MONTHLY_QUOTA, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { ManualSheet, newKey } from "./ManualSheet";
 import { createSampleServer } from "./sample";
 import css from "./coffee-admin.module.css";
@@ -13,11 +13,14 @@ import css from "./coffee-admin.module.css";
  */
 const NOW = Date.parse("2026-11-25T03:00:00.000Z");
 
-function open() {
+/** `options`: what each kind is asked (Pengaturan). The tests below ask everything of everyone unless they say otherwise; the F6 tests at the end use the real defaults. */
+function open(more: { options?: CoffeeOptions | null; menu?: Drink[] | null } = {}) {
   const server = createSampleServer();
   const api = { ...server.api, manual: vi.fn(server.api.manual) };
   const onSaved = vi.fn(), onClose = vi.fn();
-  render(<div className={css.root}><ManualSheet api={api} now={NOW} actorName="Dewi" settings={{ ...MONTHLY_QUOTA }} onClose={onClose} onSaved={onSaved} /></div>);
+  // The make-believe server asks what the sheet asks (it settles a record with its own options, like the real one).
+  void server.api.saveOptions("options" in more && more.options ? more.options : LEGACY_OPTIONS);
+  render(<div className={css.root}><ManualSheet api={api} now={NOW} actorName="Dewi" settings={{ ...MONTHLY_QUOTA }} menu={"menu" in more ? more.menu : DRINKS} options={"options" in more ? more.options : LEGACY_OPTIONS} onClose={onClose} onSaved={onSaved} /></div>);
   return { server, api, onSaved, onClose };
 }
 async function pick(label: string, word: string, name: RegExp) {
@@ -235,4 +238,56 @@ it("holds back a guest count that is not a whole number from 1 to 500", async ()
   save();
   expect(await screen.findByText("Jumlah tamu 1 sampai 500, angka bulat.")).toBeTruthy();
   expect(api.manual).not.toHaveBeenCalled();
+});
+
+// F6: the options follow the kind chosen, and the drinks are the pengelola's menu.
+it("F6 records a claim without Suhu and Gula by default, and asks them once the kind is a guest's or the team's", async () => {
+  const { server, api, onSaved } = open({ options: DEFAULT_OPTIONS });
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(screen.queryByRole("group", { name })).toBeNull();
+  expect(screen.getByText("Klaim karyawan dicatat tanpa suhu dan gula (diatur di Pengaturan → Opsi minuman).")).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  expect(screen.getByRole("group", { name: "Suhu" })).toBeTruthy();
+  expect(screen.getByRole("group", { name: "Gula" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Klaim" }));
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const sent = api.manual.mock.calls[0][0];
+  expect(sent).toMatchObject({ kind: "klaim", slug: "kopi-susu" });
+  expect([sent.temperature, sent.sugar, sent.ice]).toEqual([undefined, undefined, undefined]);
+  expect(server.orders.at(-1)?.items[0]).toMatchObject({ slug: "kopi-susu", temperature: null, sugar: null, ice: null });
+  expect(onSaved.mock.calls[0][0].message).toBe("Arief · Kopi Susu · klaim ke-2 dari 4.");
+});
+
+it("F6 sends a guest's drink with what guests are asked, and nothing made up for the rest", async () => {
+  const { api, onSaved } = open({ options: { klaim: { suhu: false, gula: false, es: false }, tim: { suhu: false, gula: false, es: false }, tamu: { suhu: true, gula: false, es: true } } });
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  expect(screen.queryByRole("group", { name: "Gula" })).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "Es" }));
+  fireEvent.click(within(screen.getByRole("group", { name: "Takaran es" })).getByRole("radio", { name: "Sedikit" }));
+  await pick("PIC tamu", "sari", /Sari Wulandari/);
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const sent = api.manual.mock.calls[0][0];
+  expect(sent).toMatchObject({ kind: "tamu", temperature: "es", ice: "Sedikit" });
+  expect(sent.sugar).toBeUndefined();
+});
+
+it("F6 offers the drinks the pengelola shows, in their order, with Lainnya last", () => {
+  const menu: Drink[] = [
+    { slug: "teh-tarik", name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], photo: null, active: true },
+    ...DRINKS.slice(0, 2), { ...DRINKS[2], active: false },
+  ];
+  open({ menu });
+  const select = screen.getByLabelText("Minuman") as HTMLSelectElement;
+  expect([...select.options].map(option => option.textContent)).toEqual(["Kopi Susu", "Cappuccino", "Teh Tarik", "Lainnya (tulis sendiri)"]);
+  expect(select.value).toBe("teh-tarik");
+  // Teh Tarik only comes hot.
+  expect((screen.getByRole("radio", { name: "Es" }) as HTMLInputElement).disabled).toBe(true);
+});
+
+it("F6 stands on the code's menu and the starting options until Pengaturan's data has arrived", () => {
+  open({ menu: null, options: null });
+  expect((screen.getByLabelText("Minuman") as HTMLSelectElement).options).toHaveLength(16);
+  expect(screen.queryByRole("group", { name: "Gula" })).toBeNull();
 });

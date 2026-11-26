@@ -6,6 +6,12 @@
  * catatan for records made by hand). `migrated = false` answers like a database without the
  * migration. `race = true` plays two sendings of one key that both passed the first look: the
  * second meets the unique index (23505), as in Postgres. Made-up people only.
+ *
+ * F6: `menuMigrated` is migration 202612020001 (the menu in coffee_drinks, the option switches,
+ * drink_name on every item, options stored as NULL when absent, and the three menu functions).
+ * With it false the stand-in answers like the database before that migration: no coffee_drinks,
+ * the old functions (no drink check, ice "Normal" when none is sent). No imports here: the SQL
+ * harness (scripts/coffee-sql-check.mjs) loads this file with plain Node.
  */
 type Row = Record<string, unknown>;
 type Failure = { code?: string; message: string };
@@ -14,6 +20,17 @@ type Result = { data: unknown; error: Failure | null };
 const COFFEE_TABLES = ["coffee_orders", "coffee_order_items", "coffee_settings", "coffee_pin_tries"];
 /** Migration 202612010002 (web push): there or not on its own, whatever the first migration's state. */
 const PUSH_TABLES = ["coffee_push_subscriptions", "coffee_push_sent"];
+/** Migration 202612020001 (the menu and the options). */
+const MENU_TABLES = ["coffee_drinks"];
+const MENU_FUNCTIONS = ["coffee_delete_drink", "coffee_sort_drinks", "coffee_drink_usage"];
+/** The 15 drinks the migration seeds (slug, name, group, hot and cold or one of them); a test holds this against src/lib/coffee/menu.ts. */
+export const SEED_DRINKS: [string, string, "kopi" | "non-kopi", string[]][] = [
+  ["kopi-susu", "Kopi Susu", "kopi", ["panas", "es"]], ["cappuccino", "Cappuccino", "kopi", ["panas", "es"]], ["cafe-latte", "Café Latte", "kopi", ["panas", "es"]],
+  ["cafe-mocha", "Café Mocha", "kopi", ["panas", "es"]], ["piccolo-latte", "Piccolo Latte", "kopi", ["panas", "es"]], ["cappuccino-double-shot", "Cappuccino Double Shot", "kopi", ["panas", "es"]],
+  ["matcha-espresso", "Matcha Espresso", "kopi", ["panas", "es"]], ["kopi-hitam", "Kopi Hitam", "kopi", ["panas", "es"]], ["americano", "Americano", "kopi", ["panas", "es"]],
+  ["espresso", "Espresso", "kopi", ["panas"]], ["milk-chocolate", "Milk Chocolate", "non-kopi", ["panas", "es"]], ["matcha-latte", "Matcha Latte", "non-kopi", ["panas", "es"]],
+  ["dark-chocolate", "Dark Chocolate", "non-kopi", ["panas", "es"]], ["cucumber-ice", "Cucumber Ice", "non-kopi", ["es"]], ["classic-tea", "Classic Tea", "non-kopi", ["panas", "es"]],
+];
 const groupOf = (category: unknown) => category === "intern" ? "intern" : category === "dw" || category === "ga" ? "ga" : "karyawan";
 const wib = (iso: string) => new Date(Date.parse(iso) + 7 * 3_600_000).toISOString();
 const wibMonth = (iso: string) => wib(iso).slice(0, 7);
@@ -26,6 +43,8 @@ export function fakeDb() {
     migrated: true,
     /** The web push migration ran (coffee_push_subscriptions, coffee_push_sent). */
     pushMigrated: true,
+    /** The menu migration ran (coffee_drinks, the option switches, drink_name, NULL options). */
+    menuMigrated: true,
     /** Skip the functions' first look for the key, so a repeated key meets the unique index. */
     race: false,
     /** consume_rate_limit's counters, by key. */
@@ -37,7 +56,7 @@ export function fakeDb() {
   };
   const rows = (table: string) => (state.tables[table] ??= []);
   const uuid = () => `00000000-0000-4000-8000-${String(++state.seq.id).padStart(12, "0")}`;
-  const absent = (what: string): Result => ({ data: null, error: { code: what.startsWith("coffee_") && !COFFEE_TABLES.includes(what) && !PUSH_TABLES.includes(what) ? "PGRST202" : "PGRST205", message: `Could not find '${what}' in the schema cache` } });
+  const absent = (what: string): Result => ({ data: null, error: { code: what.startsWith("coffee_") && !COFFEE_TABLES.includes(what) && !PUSH_TABLES.includes(what) && !MENU_TABLES.includes(what) ? "PGRST202" : "PGRST205", message: `Could not find '${what}' in the schema cache` } });
   const fail = (message: string): Result => ({ data: null, error: { code: "P0001", message } });
   const withItems = (row: Row): Row => ({ ...row, coffee_order_items: rows("coffee_order_items").filter(item => item.order_id === row.id) });
 
@@ -52,8 +71,17 @@ export function fakeDb() {
       state.calls.push(`${mode.kind}:${table}`);
       if (!state.migrated && COFFEE_TABLES.includes(table)) return absent(table);
       if (!state.pushMigrated && PUSH_TABLES.includes(table)) return absent(table);
+      // Migration 3 stands on migration 1: without either, there is no menu.
+      if ((!state.menuMigrated || !state.migrated) && MENU_TABLES.includes(table)) return absent(table);
       if (mode.kind === "insert") {
         const { row } = mode;
+        // coffee_drinks' primary key: one drink per slug.
+        if (table === "coffee_drinks") {
+          if (rows(table).some(item => item.slug === row.slug)) return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_drinks_pkey"' } };
+          const saved = { sort: 0, active: true, description: "", photo_url: null, photo_key: null, ...row };
+          rows(table).push(saved);
+          return { data: single ? { ...saved } : [{ ...saved }], error: null };
+        }
         // coffee_push_sent's primary key: the same news is one row.
         if (table === "coffee_push_sent" && rows(table).some(item => item.order_id === row.order_id && item.event === row.event && item.stamp === row.stamp)) {
           return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_push_sent_pkey"' } };
@@ -80,7 +108,8 @@ export function fakeDb() {
       let found = rows(table).filter(row => filters.every(test => test(row)));
       if (mode.kind === "update") { const { patch } = mode; found.forEach(row => Object.assign(row, patch)); return { data: single ? found[0] ?? null : found.map(row => ({ ...row })), error: null }; }
       for (const [column, ascending] of [...orders].reverse()) {
-        found = [...found].sort((a, b) => (String(a[column] ?? "") < String(b[column] ?? "") ? -1 : String(a[column] ?? "") > String(b[column] ?? "") ? 1 : 0) * (ascending ? 1 : -1));
+        const rank = (a: unknown, b: unknown) => typeof a === "number" && typeof b === "number" ? a - b : String(a ?? "") < String(b ?? "") ? -1 : String(a ?? "") > String(b ?? "") ? 1 : 0;
+        found = [...found].sort((a, b) => rank(a[column], b[column]) * (ascending ? 1 : -1));
       }
       if (window) found = found.slice(window[0], window[1] + 1);
       found = found.slice(0, limit);
@@ -90,6 +119,7 @@ export function fakeDb() {
     const builder = {
       select: () => builder,
       eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
+      neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
       in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return builder; },
       gte: (key: string, value: string) => { filters.push(row => row[key] != null && String(row[key]) >= value); return builder; },
       lte: (key: string, value: string) => { filters.push(row => row[key] != null && String(row[key]) <= value); return builder; },
@@ -123,10 +153,26 @@ export function fakeDb() {
   };
   const usedBy = (person: unknown, month: unknown) => rows("coffee_orders")
     .filter(row => row.employee_id === person && row.kind === "klaim" && row.quota_month === month && ["diproses", "selesai"].includes(row.status as string)).length;
+  /** The old functions wrote "Normal" for an ice level that was not sent; the new ones keep what comes (NULL when absent) and the drink's name. */
   const itemRow = (orderId: string, item: Row, more: Row, sort: number): Row => ({
     id: uuid(), order_id: orderId, employee_id: null, person_name: null, person_group: null, person_position: null, person_bu: null, guest_name: null,
-    drink_slug: item.slug, drink_other: item.other ?? null, temperature: item.temperature, sugar: item.sugar, ice: item.ice ?? "Normal", qty: item.qty ?? 1, sort, ...more,
+    drink_slug: item.slug, drink_other: item.other ?? null,
+    ...(state.menuMigrated ? { drink_name: item.drink_name ?? null, temperature: item.temperature ?? null, sugar: item.sugar ?? null, ice: item.ice ?? null } : { temperature: item.temperature, sugar: item.sugar, ice: item.ice ?? "Normal" }),
+    qty: item.qty ?? 1, sort, ...more,
   });
+  /**
+   * The drink check of the new functions: on the menu, shown unless recorded by hand, and in a
+   * temperature it comes in. Answers the name to keep with the row, or the function's refusal.
+   */
+  const drinkFor = (item: Row, manual: boolean): { name: string | null } | Result => {
+    if (!state.menuMigrated) return { name: null };
+    if (item.slug === "lainnya") return manual ? { name: null } : fail("COFFEE_INVALID");
+    const drink = rows("coffee_drinks").find(row => row.slug === item.slug);
+    if (!drink || (!drink.active && !manual)) return fail("COFFEE_DRINK_GONE");
+    if (item.temperature != null && !(drink.temperatures as string[]).includes(String(item.temperature))) return fail("COFFEE_INVALID");
+    return { name: drink.name as string };
+  };
+  const refusal = (value: { name: string | null } | Result): value is Result => "error" in value;
   const processed = (manual: boolean, actor: unknown, label: unknown) => manual
     ? { status: "selesai", processed_by: actor ?? null, processed_label: label ?? null, processed_at: state.now.toISOString() }
     : { status: "diproses", processed_by: null, processed_label: null, processed_at: null };
@@ -146,6 +192,8 @@ export function fakeDb() {
       const at = String(args.p_at ?? state.now.toISOString());
       if (tooLate(at)) return fail("COFFEE_INVALID");
       if (!manual && (args.p_item as Row).slug === "lainnya") return fail("COFFEE_INVALID");
+      const drink = drinkFor(args.p_item as Row, manual);
+      if (refusal(drink)) return drink;
       const person = employee(args.p_employee);
       if (!person) return fail("COFFEE_NOT_EMPLOYEE");
       const group = groupOf(person.category);
@@ -159,7 +207,7 @@ export function fakeDb() {
         ...processed(manual, args.p_actor, args.p_actor_label), created_by: args.p_actor ?? null, created_label: args.p_actor_label ?? null, manual,
         ordered_at: at, quota_month: month, idempotency_key: args.p_key ?? null,
       });
-      rows("coffee_order_items").push(itemRow(id, { ...(args.p_item as Row), other: tidy((args.p_item as Row).other) }, { for_whom: "klaim", employee_id: person.id }, 0));
+      rows("coffee_order_items").push(itemRow(id, { ...(args.p_item as Row), other: tidy((args.p_item as Row).other), drink_name: drink.name }, { for_whom: "klaim", employee_id: person.id }, 0));
       return { data: id, error: null };
     },
     coffee_submit_meeting(args) {
@@ -202,9 +250,16 @@ export function fakeDb() {
         number = -1;
       }
       const team = items.map(item => item.for === "tim" ? employee(item.person_id) : null);
-      if (items.some((item, index) => item.for === "tim" && !team[index])) return fail("COFFEE_NOT_EMPLOYEE");
-      if (items.some(item => item.for !== "tim" && item.for !== "tamu")) return fail("COFFEE_INVALID");
-      if (items.some(item => item.for === "tamu" && (tidy(item.guest_name)?.length ?? 0) > 40)) return fail("COFFEE_INVALID");
+      // Line by line, in the function's own order: the drink first, then who it is for.
+      const names: (string | null)[] = [];
+      for (const [index, item] of items.entries()) {
+        const drink = drinkFor(item, manual);
+        if (refusal(drink)) return drink;
+        names.push(drink.name);
+        if (item.for === "tim") { if (!team[index]) return fail("COFFEE_NOT_EMPLOYEE"); }
+        else if (item.for !== "tamu") return fail("COFFEE_INVALID");
+        else if ((tidy(item.guest_name)?.length ?? 0) > 40) return fail("COFFEE_INVALID");
+      }
       if (byKey(args.p_key)) return duplicate();
       if (number < 0) number = state.seq.meeting++;
       const id = uuid();
@@ -215,7 +270,7 @@ export function fakeDb() {
       });
       items.forEach((item, index) => {
         const who = team[index];
-        rows("coffee_order_items").push(itemRow(id, { ...item, other: tidy(item.other) }, who
+        rows("coffee_order_items").push(itemRow(id, { ...item, other: tidy(item.other), drink_name: names[index] }, who
           ? { for_whom: "tim", employee_id: who.id, person_name: who.full_name, person_group: groupOf(who.category), person_position: who.position, person_bu: who.business_unit }
           : { for_whom: "tamu", guest_name: tidy(item.guest_name) }, index + 1));
       });
@@ -239,9 +294,32 @@ export function fakeDb() {
       return { data: null, error: null };
     },
   };
-  const rpc = async (name: string, args: Record<string, unknown>): Promise<Result> => {
+  Object.assign(functions, {
+    coffee_delete_drink(args: Record<string, unknown>): Result {
+      const drink = rows("coffee_drinks").find(row => row.slug === args.p_slug);
+      if (!drink) return fail("COFFEE_DRINK_NOT_FOUND");
+      if (rows("coffee_order_items").some(item => item.drink_slug === args.p_slug)) return fail("COFFEE_DRINK_USED");
+      state.tables.coffee_drinks = rows("coffee_drinks").filter(row => row !== drink);
+      return { data: drink.photo_key ?? null, error: null };
+    },
+    coffee_sort_drinks(args: Record<string, unknown>): Result {
+      let placed = 0;
+      (args.p_slugs as string[]).forEach((slug, index) => {
+        const drink = rows("coffee_drinks").find(row => row.slug === slug);
+        if (drink) { drink.sort = (index + 1) * 10; placed++; }
+      });
+      return { data: placed, error: null };
+    },
+    coffee_drink_usage(): Result {
+      const orders = new Map<string, Set<unknown>>();
+      for (const item of rows("coffee_order_items")) if (item.drink_slug !== "lainnya") orders.set(item.drink_slug as string, (orders.get(item.drink_slug as string) ?? new Set()).add(item.order_id));
+      return { data: [...orders].map(([slug, set]) => ({ slug, orders: set.size })), error: null };
+    },
+  });
+  const rpc = async (name: string, args: Record<string, unknown> = {}): Promise<Result> => {
     state.calls.push(`rpc:${name}`);
     if (!state.migrated && name.startsWith("coffee_")) return absent(name);
+    if (!state.menuMigrated && MENU_FUNCTIONS.includes(name)) return absent(name);
     return functions[name] ? functions[name](args) : absent(name);
   };
 
@@ -267,7 +345,14 @@ export function seedPeople(db: ReturnType<typeof fakeDb>) {
     person(PEOPLE.dewi, "Contoh Dewi Lestari", "Dewi", "karyawan", "TEE"),
     person(PEOPLE.keluar, "Contoh Sudah Keluar", "Keluar", "karyawan", "WNS", false),
   ];
-  db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+  // The option switches at the migration's defaults: a claim asks nothing, the team and guests everything.
+  db.state.tables.coffee_settings = [{
+    id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2,
+    opt_klaim_suhu: false, opt_klaim_gula: false, opt_klaim_es: false, opt_tim_suhu: true, opt_tim_gula: true, opt_tim_es: true, opt_tamu_suhu: true, opt_tamu_gula: true, opt_tamu_es: true,
+  }];
+  db.state.tables.coffee_drinks = SEED_DRINKS.map(([slug, name, drink_group, temperatures], index) => ({
+    slug, name, description: "", drink_group, temperatures: [...temperatures], photo_url: ["", "coffee", "drinks", `${slug}.jpg`].join("/"), photo_key: null, sort: (index + 1) * 10, active: true,
+  }));
   db.state.tables.admin_grants = [{ employee_id: PEOPLE.dewi, apps: ["coffee", "hr"] }];
   db.state.tables.coffee_orders = [];
   db.state.tables.coffee_order_items = [];

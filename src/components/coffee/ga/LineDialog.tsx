@@ -2,24 +2,26 @@
 
 import { useId, useRef, useState } from "react";
 import { Flame, Snowflake, X } from "lucide-react";
-import { ICE_LEVELS, SUGAR_LEVELS, drinkBySlug } from "@/lib/coffee/menu";
+import { ICE_LEVELS, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, type Drink } from "@/lib/coffee/menu";
 import { Layer } from "../Layer";
-import { MAX_QTY, matches, type Draft, type GaPerson, type Line } from "./model";
+import { MAX_QTY, matches, type Draft, type GaOptions, type GaPerson, type Line } from "./model";
 import { Option, Photo, Stepper, raiseOnFocus } from "./parts";
 import css from "./ga.module.css";
 
 const SHOWN = 4;
 
 /**
- * One row of the order: hot or cold, how many, sugar, ice, and who it is for. A team member's drink
+ * One row of the order: how many, who it is for, and hot or cold, sugar and ice as far as that
+ * audience is asked them (`options`, from Pengaturan: a guest's row and a team member's may differ,
+ * and the controls follow "Untuk" as it is changed). A team member's drink
  * needs the person, picked from the employees (it is recorded under their name, without touching
  * their quota); the PIC is offered first. The focus starts on the drink’s name, not in the search
  * field: on the tablet that would throw the keyboard over the names to pick from.
  */
-export function LineDialog({ line, isNew, pic, people, onClose, onSave, onRemove }: {
-  line: Line; isNew: boolean; pic: Draft["pic"]; people: GaPerson[]; onClose: () => void; onSave: (line: Line) => void; onRemove: () => void;
+export function LineDialog({ line, isNew, pic, people, menu, options, onClose, onSave, onRemove }: {
+  line: Line; isNew: boolean; pic: Draft["pic"]; people: GaPerson[]; menu: readonly Drink[]; options: GaOptions; onClose: () => void; onSave: (line: Line) => void; onRemove: () => void;
 }) {
-  const drink = drinkBySlug(line.slug);
+  const drink = drinkIn(menu, line.slug);
   const [next, setNext] = useState<Line>(line);
   const [query, setQuery] = useState("");
   const [tried, setTried] = useState(false);
@@ -30,25 +32,28 @@ export function LineDialog({ line, isNew, pic, people, onClose, onSave, onRemove
   const offered = [...people.filter(person => person.id === pic.id), ...people.filter(person => person.id !== pic.id)].filter(person => matches(person, query));
   const done = () => {
     if (needsPerson) { setTried(true); search.current?.focus(); return; }
-    onSave({ ...next, person: next.for === "tim" ? next.person : undefined, guestName: next.for === "tamu" ? next.guestName : undefined, ice: next.temperature === "es" ? next.ice : "Normal" });
+    onSave({ ...next, ...shown, person: next.for === "tim" ? next.person : undefined, guestName: next.for === "tamu" ? next.guestName : undefined });
   };
   if (!drink) return null;
+  // What this row's audience is asked now, and the row's values made whole for it (a row that was a guest's may lack what the team is asked).
+  const asked = options[next.for];
+  const shown = fillChoice(next, drink, asked);
 
   return (
     <Layer kind="dialog" labelledBy={titleId} onClose={onClose} rootClass={css.ga} panelClass={css.lineDialog}>
       <div className={css.dialogHead}>
-        <Photo slug={line.slug} width={64} height={64} />
+        <Photo src={drink.photo} width={64} height={64} />
         <div className={css.grow}><h2 id={titleId} tabIndex={-1} data-autofocus>{drink.name}</h2><p className={css.mutedSmall}>{drink.description}</p></div>
         <button type="button" className={css.iconButton} aria-label="Tutup" onClick={onClose}><X aria-hidden size={22} /></button>
       </div>
       <div className={css.dialogBody}>
         <div className={css.dialogCols}>
-          {drink.temperatures.length > 1 && (
+          {asked.suhu && drink.temperatures.length > 1 && (
             <fieldset className={css.field}>
               <legend>Suhu</legend>
               <div className={css.options} data-cols="2">
-                <Option on={next.temperature === "panas"} onClick={() => patch({ temperature: "panas" })}><Flame aria-hidden size={18} />Panas</Option>
-                <Option on={next.temperature === "es"} onClick={() => patch({ temperature: "es" })}><Snowflake aria-hidden size={18} />Es</Option>
+                <Option on={shown.temperature === "panas"} onClick={() => patch({ temperature: "panas" })}><Flame aria-hidden size={18} />Panas</Option>
+                <Option on={shown.temperature === "es"} onClick={() => patch({ temperature: "es" })}><Snowflake aria-hidden size={18} />Es</Option>
               </div>
             </fieldset>
           )}
@@ -57,17 +62,19 @@ export function LineDialog({ line, isNew, pic, people, onClose, onSave, onRemove
             <Stepper value={next.qty} min={1} max={MAX_QTY} onChange={qty => patch({ qty })} labelledBy={qtyId} />
           </div>
         </div>
-        <fieldset className={css.field}>
-          <legend>Gula</legend>
-          <div className={css.options} data-cols="6">
-            {SUGAR_LEVELS.map(level => <Option key={level} on={next.sugar === level} onClick={() => patch({ sugar: level })}>{level}</Option>)}
-          </div>
-        </fieldset>
-        {next.temperature === "es" && (
+        {asked.gula && (
+          <fieldset className={css.field}>
+            <legend>Gula</legend>
+            <div className={css.options} data-cols="6">
+              {SUGAR_LEVELS.map(level => <Option key={level} on={shown.sugar === level} onClick={() => patch({ sugar: level })}>{level}</Option>)}
+            </div>
+          </fieldset>
+        )}
+        {asksIce(asked) && shown.temperature === "es" && (
           <fieldset className={css.field}>
             <legend>Takaran es</legend>
             <div className={css.options} data-cols="3">
-              {ICE_LEVELS.map(level => <Option key={level} on={next.ice === level} onClick={() => patch({ ice: level })}>{level}</Option>)}
+              {ICE_LEVELS.map(level => <Option key={level} on={shown.ice === level} onClick={() => patch({ ice: level })}>{level}</Option>)}
             </div>
           </fieldset>
         )}

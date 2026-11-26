@@ -1,7 +1,7 @@
 "use client";
 
 import { ClipboardList } from "lucide-react";
-import { drinkLabel, optionsLabel } from "@/lib/coffee/menu";
+import { drinkName, optionsTail } from "@/lib/coffee/menu";
 import { wibDay } from "@/lib/coffee/quota";
 import type { MyOrder } from "@/lib/coffee/types";
 import { CurrentOrder, DrinkPhoto } from "./CurrentOrder";
@@ -45,8 +45,8 @@ export function OrdersScreen({ orders, today, cancelling, onCancel, onMenu }: {
           <ul className={css.history}>
             {rest.map(order => (
               <li key={order.id}>
-                <DrinkPhoto slug={order.slug} size={48} />
-                <span><strong>{drinkLabel(order.slug, order.other)}</strong><span>{dayShort(order.orderedAt)} · {clock(order.orderedAt)} · {optionsLabel(order.temperature, order.sugar, order.ice)}</span></span>
+                <DrinkPhoto src={order.photo} size={48} />
+                <span><strong>{drinkName(order)}</strong><span>{dayShort(order.orderedAt)} · {clock(order.orderedAt)}{optionsTail(order.temperature, order.sugar, order.ice)}</span></span>
                 <span className={css.pill} data-tone={HISTORY_PILL[order.status].tone}>{HISTORY_PILL[order.status].label}</span>
               </li>
             ))}

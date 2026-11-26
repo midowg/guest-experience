@@ -298,6 +298,8 @@ textarea.input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 }
 /* A drink outside the menu (Catat manual, "Lainnya") has no photo. */
 .noPhoto { display: grid; place-items: center; flex: none; border-radius: 12px; background: var(--soft); color: var(--ink-2); }
+/* A drink without a photo in the menu's grid: the same square the photos take. */
+.card .noPhoto[data-fill] { display: grid; width: 100%; aspect-ratio: 1; padding: 0; margin-bottom: 8px; border-radius: 0; overflow: visible; }
 
 /* ---------- web push (F4): "Notifikasi" in the Akun sheet */
 .pushBox { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }

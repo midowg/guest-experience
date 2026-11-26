@@ -1,6 +1,7 @@
+import { DEFAULT_OPTIONS, DRINKS, drinkIn, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { wibDay } from "@/lib/coffee/quota";
 import { ROOMS, roomSpot } from "@/lib/coffee/rooms";
-import { meetingSchema } from "@/lib/coffee/schemas";
+import { isDrinkIssue, meetingSchema, settleLine } from "@/lib/coffee/schemas";
 import { orderNo, type GaState, type MeetingOrder, type QueueItem } from "@/lib/coffee/types";
 import { CoffeeApiError, OFFLINE_TEXT } from "../api";
 import type { GaApi, MeetingBody } from "./api";
@@ -38,10 +39,17 @@ type Options = {
   delay?: number;
   /** The PIN GA the make-believe pengelola set ("" or missing: none yet). */
   pin?: string;
+  /** What the team and guests are asked with a drink (Pengaturan); the real defaults (everything) when not given. */
+  options?: Pick<CoffeeOptions, "tim" | "tamu">;
+  /** The menu (the pengelola's); the code's 15 drinks when not given. */
+  menu?: Drink[];
 };
 export type SampleGa = ReturnType<typeof createSampleGa>;
 
-export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pin = "" }: Options = {}) {
+export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pin = "", options: firstOptions = DEFAULT_OPTIONS, menu: firstMenu = DRINKS }: Options = {}) {
+  let options = { tim: { ...firstOptions.tim }, tamu: { ...firstOptions.tamu } };
+  let menu = firstMenu.map(drink => ({ ...drink }));
+  const book = () => ({ menu: menu.map(drink => ({ ...drink })), options: { tim: { ...options.tim }, tamu: { ...options.tamu } } });
   const iso = (msAgo = 0) => new Date(clock() - msAgo).toISOString();
   let number = 113, idSeq = 1, itemSeq = 1;
   const orders: MeetingOrder[] = [];
@@ -75,8 +83,12 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
     const room = root ? root.room : body.room.trim();
     const items: QueueItem[] = body.items.map(item => {
       const who = item.for === "tim" ? SAMPLE_PEOPLE.find(found => found.id === item.personId) : undefined;
+      // As the server: each line keeps only what its audience is asked; the drink's name and photo come from the menu.
+      const drink = drinkIn(menu, item.slug);
+      const choice = settleLine(item, drink, options[item.for]);
       return {
-        id: `item-${itemSeq++}`, for: item.for, qty: item.qty, slug: item.slug, temperature: item.temperature, sugar: item.sugar, ice: item.temperature === "es" ? item.ice : "Normal",
+        id: `item-${itemSeq++}`, for: item.for, qty: item.qty, slug: item.slug, ...(drink ? { name: drink.name, photo: drink.photo } : {}),
+        ...(isDrinkIssue(choice) ? { temperature: null, sugar: null, ice: null } : choice),
         person: who ? { id: who.id, name: who.name, group: "karyawan", position: who.position, bu: who.bu } : null,
         ...(item.for === "tamu" && item.guestName ? { guestName: item.guestName } : {}),
       };
@@ -105,7 +117,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
     async state(): Promise<GaState> {
       calls.state += 1;
       await wait();
-      return { today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) };
+      return { ...book(), today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) };
     },
     async checkPin(typed) {
       calls.pin += 1;
@@ -134,6 +146,10 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
         if (root.status === "ditolak" || root.status === "batal" || wibDay(root.orderedAt) !== wibDay(iso())) throw new CoffeeApiError(PARENT_CLOSED, 409);
       } else if (!SAMPLE_PEOPLE.some(item => item.id === body.picId)) throw new CoffeeApiError("Karyawan tidak ditemukan atau sudah tidak aktif.", 422);
       if (body.items.some(item => item.for === "tim" && !SAMPLE_PEOPLE.some(found => found.id === item.personId))) throw new CoffeeApiError("Karyawan tidak ditemukan atau sudah tidak aktif.", 422);
+      // A drink that left the menu (hidden or deleted) is gone; an option that is asked must be there.
+      if (read.data.items.some(item => !drinkIn(menu, item.slug)?.active)) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
+      const issue = read.data.items.map(item => settleLine(item, drinkIn(menu, item.slug), options[item.for])).find(isDrinkIssue);
+      if (issue) throw new CoffeeApiError("Pilihan minuman berubah. Tutup lalu buka lagi minumannya, kemudian pilih ulang.", 422, { [issue.field]: [issue.message] });
       const order = add(read.data);
       keys.set(body.key, order.id);
       prints.set(body.key, printOf(read.data as MeetingBody));
@@ -145,7 +161,12 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
     api,
     calls,
     orders,
-    initial: (): GaState => ({ today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) }),
+    initial: (): GaState => ({ ...book(), today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) }),
+    /** What a page loaded in guest mode carries: the menu and the options, no GA data. */
+    held: (): GaState => ({ ...book(), today: [], people: [], rooms: [], pin: Boolean(pin) }),
+    /** The pengelola changes what is asked (Pengaturan), or the menu; the next read brings it. */
+    setOptions(next: Pick<CoffeeOptions, "tim" | "tamu">) { options = { tim: { ...next.tim }, tamu: { ...next.tamu } }; },
+    setMenu(next: Drink[]) { menu = next.map(drink => ({ ...drink })); },
     /** A pengelola records a meeting order by hand (Catat manual): it arrives already done, and cannot be added to. */
     recordManual(room = ""): MeetingOrder {
       return add({ room: room || " ", picId: SAMPLE_PEOPLE[0].id, items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 2 }] },

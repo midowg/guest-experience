@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CircleAlert, ClipboardCheck, Coffee, Download, LogOut, RefreshCw, Tablet, WifiOff, X } from "lucide-react";
-import { GROUP_LABEL, drinkLabel, type Drink } from "@/lib/coffee/menu";
+import { ALL_OPTIONS, DRINKS, GROUP_LABEL, drinkName, type Drink } from "@/lib/coffee/menu";
 import { wibMonth } from "@/lib/coffee/quota";
 import { setupCookie, type PhoneKind } from "@/lib/coffee/setup";
 import { coffeeTabLabels, coffeeTabPaths, tabOf, type CoffeeTab } from "@/lib/coffee/tabs";
@@ -94,13 +94,15 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
   const onDecided = useCallback((orders: MyOrder[]) => {
     if (orders.length > 1) { say({ tone: "ok", title: `${orders.length} pengajuan sudah diputuskan`, body: "Lihat hasilnya di Pesanan saya.", onOpen: () => go("pesanan") }); return; }
     const order = orders[0];
-    const drink = drinkLabel(order.slug, order.other), who = order.processedLabel || "pengelola";
+    const drink = drinkName(order), who = order.processedLabel || "pengelola";
     say(order.status === "selesai"
       ? { tone: "ok", title: "Silakan ambil di mesin", body: `${drink} kamu sudah diproses ${who}. Ambil di mesin kopi pantry.`, onOpen: () => go("pesanan") }
       : { tone: "no", title: "Pengajuan tidak bisa diproses", body: `${drink}: lihat catatan dari ${who}. Jatah tidak berkurang.`, onOpen: () => go("pesanan") });
   }, [go, say]);
   const { state, today, claim, cancel, cancelling, stale, retrying, retry, gone, refresh } = useCoffee(api, initial, onDecided);
   const { me, orders } = state;
+  // The menu and what a claim is asked come with the state (F6); the code's menu and "ask everything" only if an answer ever lacks them.
+  const menu = state.menu ?? DRINKS, options = state.options ?? ALL_OPTIONS;
   const push = usePush(port);
   // The service worker pushed something, or a notification was tapped: read now (not at the next tick), and show the tab it names.
   useWorkerNews(news => {
@@ -167,7 +169,7 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
     else if (!result.ignored) {
       // Someone processed it first: one message that says so and what happens now. It stays until
       // closed, and the read that shows the new status does not put its own message over it.
-      const now = result.order, drink = drinkLabel(order.slug, order.other), who = now?.processedLabel || "pengelola";
+      const now = result.order, drink = drinkName(order), who = now?.processedLabel || "pengelola";
       const body = now?.status === "selesai" ? `${drink} sudah diproses ${who} sebelum sempat dibatalkan, jadi jatahnya terpakai. Silakan ambil di mesin pantry.`
         : now?.status === "ditolak" ? `${drink} sudah ditolak ${who} sebelum sempat dibatalkan. Jatah kamu tidak berkurang; catatannya ada di Pesanan saya.`
         : now?.status === "batal" ? `${drink} sudah dibatalkan sebelumnya. Jatah kamu tidak berkurang.`
@@ -230,17 +232,17 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
           </section>
         )}
         {tab === "menu"
-          ? <MenuScreen me={me} note={noteOpen ? note : undefined} onNote={() => setNoteOpen(false)} onPick={pick} />
+          ? <MenuScreen me={me} menu={menu} note={noteOpen ? note : undefined} onNote={() => setNoteOpen(false)} onPick={pick} />
           : <OrdersScreen orders={orders} today={today} cancelling={cancelling} onCancel={ask} onMenu={() => toTab("menu")} />}
       </CoffeeFrame>
       <Toast message={toast} onClose={closeToast} />
 
-      {sheet && <DrinkSheet key={sheet.slug} drink={sheet} me={me} onClose={() => setSheet(null)} onSubmit={submit} />}
+      {sheet && <DrinkSheet key={sheet.slug} drink={sheet} me={me} options={options} onClose={() => setSheet(null)} onSubmit={submit} />}
 
       {asking && (
         <Layer kind="dialog" alert labelledBy={askId} onClose={() => setAsking(null)}>
           <h2 id={askId}>Batalkan pengajuan?</h2>
-          <p>{drinkLabel(asking.slug, asking.other)} belum diproses. Jatah kamu dikembalikan.</p>
+          <p>{drinkName(asking)} belum diproses. Jatah kamu dikembalikan.</p>
           <div className={css.row}>
             <button type="button" className={css.secondary} data-autofocus onClick={() => setAsking(null)}>Tidak jadi</button>
             <button type="button" className={css.danger} onClick={confirmCancel}>Batalkan</button>

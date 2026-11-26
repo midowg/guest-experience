@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, Lock } from "lucide-react";
-import { DRINKS, ICE_LEVELS, SUGAR_LEVELS, drinkLabel, optionsLabel, type Drink, type DrinkGroup, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { ICE_LEVELS, SUGAR_LEVELS, asksIce, drinkIn, drinkLabel, fitChoice, offered, optionsLabel, startChoice, type Drink, type DrinkGroup, type DrinkOptions } from "@/lib/coffee/menu";
 import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import { ExitDialog, type BookExit } from "./ExitDialog";
 import type { BookState, Pick } from "./hold";
@@ -15,15 +15,16 @@ import css from "./ga.module.css";
  * then paper pages. The guest reads "Anda", never a word about quota or free drinks, and no
  * employee data but the name of the PIC GA chose. It is given no API and no list of people: what
  * the guests pick goes back to GA's order panel as Tamu rows, and GA sends. Leaving needs the PIN
- * GA (`exit`; a question while the pengelola has not set one).
+ * GA (`exit`; a question while the pengelola has not set one). `menu` is the pengelola's menu and
+ * `options` what a guest is asked with a drink (Pengaturan): the pages show only those.
  *
  * After the F3 audit: what the guests picked is handed up as it changes (`onKeep`) and given back
  * after a reload (`saved`), so a reload lands on this book again and loses nothing. `locked`: the
  * tablet was reloaded in guest mode and nothing could be restored; only the cover and the way out
  * for the GA officer are left. A long press, a pull or a selection finds nothing to open here.
  */
-export function GuestBook({ room, picName, guest, max, saved, locked = false, exit, onKeep, onDone }: {
-  room: string; picName: string; guest?: string; max: number; saved?: BookState; locked?: boolean; exit: BookExit; onKeep?: (book: BookState) => void; onDone: (lines: Line[]) => void;
+export function GuestBook({ room, picName, guest, max, menu, options, saved, locked = false, exit, onKeep, onDone }: {
+  room: string; picName: string; guest?: string; max: number; menu: readonly Drink[]; options: DrinkOptions; saved?: BookState; locked?: boolean; exit: BookExit; onKeep?: (book: BookState) => void; onDone: (lines: Line[]) => void;
 }) {
   const [open, setOpen] = useState(saved?.open ?? false);
   const [group, setGroup] = useState<DrinkGroup>("kopi");
@@ -44,9 +45,11 @@ export function GuestBook({ room, picName, guest, max, saved, locked = false, ex
   useEffect(() => { keep.current?.({ open, picks }); }, [open, picks]);
 
   const finish = () => onDone(picks.map(pick => ({
-    id: newLineId(), for: "tamu", slug: pick.slug, temperature: pick.temperature, sugar: pick.sugar, ice: pick.temperature === "es" ? pick.ice : "Normal", qty: 1, guestName: pick.name.trim() || undefined,
+    id: newLineId(), for: "tamu", slug: pick.slug, ...fitChoice(pick, options), qty: 1, guestName: pick.name.trim() || undefined,
   })));
-  const drinks = DRINKS.filter(item => item.group === group);
+  const drinks = offered(menu).filter(item => item.group === group);
+  const nameOf = (slug: string) => drinkLabel(slug, null, drinkIn(menu, slug)?.name);
+  const asksAny = options.suhu || options.gula;
   const split = Math.ceil(drinks.length * 0.4);
   const full = picks.length >= max;
   const turn = (action: () => void) => () => { if (settled()) action(); };
@@ -80,9 +83,9 @@ export function GuestBook({ room, picName, guest, max, saved, locked = false, ex
                 <ul className={css.pickList}>
                   {picks.map(pick => (
                     <li key={pick.id}>
-                      <span className={css.grow}><strong>{drinkLabel(pick.slug)}</strong><span>{optionsLabel(pick.temperature, pick.sugar, pick.ice)}</span></span>
+                      <span className={css.grow}><strong>{nameOf(pick.slug)}</strong>{optionsLabel(pick.temperature, pick.sugar, pick.ice) && <span>{optionsLabel(pick.temperature, pick.sugar, pick.ice)}</span>}</span>
                       {pick.name.trim() && <span className={css.pickName}>{pick.name.trim()}</span>}
-                      <button type="button" className={css.bookRemove} onClick={turn(() => setPicks(list => list.filter(item => item.id !== pick.id)))} aria-label={`Hapus ${drinkLabel(pick.slug)}${pick.name.trim() ? ` untuk ${pick.name.trim()}` : ""}`}>Hapus</button>
+                      <button type="button" className={css.bookRemove} onClick={turn(() => setPicks(list => list.filter(item => item.id !== pick.id)))} aria-label={`Hapus ${nameOf(pick.slug)}${pick.name.trim() ? ` untuk ${pick.name.trim()}` : ""}`}>Hapus</button>
                     </li>
                   ))}
                 </ul>
@@ -95,7 +98,7 @@ export function GuestBook({ room, picName, guest, max, saved, locked = false, ex
               </div>
             </>
           ) : drink ? (
-            <GuestOptions key={drink.slug} drink={drink} full={full} onBack={turn(() => setDrink(null))} onPick={pick => { if (!settled() || full) return; setPicks(list => [...list, { ...pick, id: newLineId() }]); setThanks(true); }} />
+            <GuestOptions key={drink.slug} drink={drink} options={options} full={full} onBack={turn(() => setDrink(null))} onPick={pick => { if (!settled() || full) return; setPicks(list => [...list, { ...pick, id: newLineId() }]); setThanks(true); }} />
           ) : (
             <>
               {/* The book’s tabs: on the right page when it lies open, on top when the tablet stands upright. */}
@@ -111,7 +114,7 @@ export function GuestBook({ room, picName, guest, max, saved, locked = false, ex
                 <Ornament />
                 {full
                   ? <p className={css.bookLead} role="status">Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
-                  : <p className={css.bookLead}>Silakan pilih minuman Anda. Ketuk untuk mengatur suhu dan gula.</p>}
+                  : <p className={css.bookLead}>{asksAny ? `Silakan pilih minuman Anda. Ketuk untuk mengatur ${[options.suhu ? "suhu" : "", options.gula ? "gula" : ""].filter(Boolean).join(" dan ")}.` : "Silakan pilih minuman Anda."}</p>}
                 <BookItems drinks={drinks.slice(0, split)} onPick={item => { if (settled()) setDrink(item); }} />
               </div>
               <div className={`${css.page} ${css.pageTabbed}`}>
@@ -147,7 +150,7 @@ function BookItems({ drinks, onPick }: { drinks: Drink[]; onPick: (drink: Drink)
       {drinks.map(drink => (
         <li key={drink.slug}>
           <button type="button" onClick={() => onPick(drink)}>
-            <Photo slug={drink.slug} width={72} height={72} />
+            <Photo src={drink.photo} width={72} height={72} />
             <span><strong>{drink.name}</strong><span>{drink.description}</span></span>
           </button>
         </li>
@@ -156,23 +159,25 @@ function BookItems({ drinks, onPick }: { drinks: Drink[]; onPick: (drink: Drink)
   );
 }
 
-function GuestOptions({ drink, full, onBack, onPick }: { drink: Drink; full: boolean; onBack: () => void; onPick: (pick: Omit<Pick, "id">) => void }) {
-  const [temperature, setTemperature] = useState<Temperature>(drink.temperatures[0]);
-  const [sugar, setSugar] = useState<Sugar>("Normal");
-  const [ice, setIce] = useState<Ice>("Normal");
+function GuestOptions({ drink, options, full, onBack, onPick }: { drink: Drink; options: DrinkOptions; full: boolean; onBack: () => void; onPick: (pick: Omit<Pick, "id">) => void }) {
+  const [start] = useState(() => startChoice(drink, options));
+  const [temperature, setTemperature] = useState(start.temperature);
+  const [sugar, setSugar] = useState(start.sugar ?? "Normal");
+  const [ice, setIce] = useState(start.ice ?? "Normal");
+  const asksAny = options.suhu || options.gula;
   const [name, setName] = useState("");
   return (
     <>
       <div className={css.page}>
         <button type="button" className={css.bookBack} onClick={onBack}><ChevronLeft aria-hidden size={20} />Kembali ke menu</button>
-        <Photo className={css.bookPhoto} slug={drink.slug} alt={drink.name} width={360} height={360} />
+        <Photo className={css.bookPhoto} src={drink.photo} alt={drink.name} width={360} height={360} />
         <h2 className={css.bookTitle}>{drink.name}</h2>
         <Ornament />
         <p className={css.bookLead}>{drink.description}</p>
       </div>
       <div className={css.page}>
-        <h3 className={css.bookHeading}>Atur sesuai selera Anda</h3>
-        {drink.temperatures.length > 1 ? (
+        <h3 className={css.bookHeading}>{asksAny ? "Atur sesuai selera Anda" : "Minuman pilihan Anda"}</h3>
+        {!options.suhu ? null : drink.temperatures.length > 1 ? (
           <fieldset className={css.bookField}>
             <legend>Suhu</legend>
             <div className={css.bookOptions} data-cols="2">
@@ -181,13 +186,15 @@ function GuestOptions({ drink, full, onBack, onPick }: { drink: Drink; full: boo
             </div>
           </fieldset>
         ) : <p className={`${css.bookMeta} ${css.bookNote}`}>Disajikan {drink.temperatures[0] === "es" ? "dingin dengan es" : "panas"}.</p>}
-        <fieldset className={css.bookField}>
-          <legend>Gula</legend>
-          <div className={css.bookOptions} data-cols="3">
-            {SUGAR_LEVELS.map(level => <BookOption key={level} on={sugar === level} onClick={() => setSugar(level)}>{level}</BookOption>)}
-          </div>
-        </fieldset>
-        {temperature === "es" && (
+        {options.gula && (
+          <fieldset className={css.bookField}>
+            <legend>Gula</legend>
+            <div className={css.bookOptions} data-cols="3">
+              {SUGAR_LEVELS.map(level => <BookOption key={level} on={sugar === level} onClick={() => setSugar(level)}>{level}</BookOption>)}
+            </div>
+          </fieldset>
+        )}
+        {asksIce(options) && temperature === "es" && (
           <fieldset className={css.bookField}>
             <legend>Takaran es</legend>
             <div className={css.bookOptions} data-cols="3">
@@ -200,7 +207,7 @@ function GuestOptions({ drink, full, onBack, onPick }: { drink: Drink; full: boo
         <div className={css.bookActions}>
           {full
             ? <p className={css.bookMeta} role="status">Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
-            : <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, temperature, sugar, ice, name })}>Pilih minuman ini</button>}
+            : <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, ...fitChoice({ temperature, sugar, ice }, options), name })}>Pilih minuman ini</button>}
         </div>
       </div>
     </>

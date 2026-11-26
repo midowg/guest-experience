@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { meetingSchema } from "@/lib/coffee/schemas";
 import type { Member } from "../pra-wam/session";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
 
 /* Mode GA's meeting orders against the in-memory stand-in (fake-db.ts). Made-up people. */
 let db = fakeDb();
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
 
-const { gaState, submitMeeting } = await import("./meetings");
+const { gaMenu, gaState, submitMeeting } = await import("./meetings");
 const bagas = { id: PEOPLE.bagas, name: "Contoh Bagas Saputra", nickname: "Bagas", category: "dw", roles: [] } as unknown as Member;
 const now = new Date("2026-11-25T03:00:00Z");
 const key = (n: number) => `bbbbbbbb-bbbb-4bbb-8bbb-${String(n).padStart(12, "0")}`;
@@ -18,7 +19,7 @@ const order = (n: number, more: object = {}) => meetingSchema.parse({
   items: [{ for: "tamu" as const, ...drink, qty: 3 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, slug: "americano", qty: 1 }], ...more,
 });
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = now; });
+beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); db.state.now = now; });
 
 describe("a meeting order", () => {
   it("is one order with all its drinks, under the PIC, with no quota", async () => {
@@ -185,5 +186,66 @@ describe("the tablet's home", () => {
     db.state.migrated = false;
     await expect(gaState(bagas, now)).rejects.toMatchObject({ status: 503, message: expect.stringContaining("202612010001_coffee.sql") });
     await expect(submitMeeting(bagas, order(1), now)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+describe("F6: what the team and guests are asked, and the menu", () => {
+  const ask = (more: object) => Object.assign(db.rows("coffee_settings")[0], more);
+  const lines = () => db.rows("coffee_order_items").map(row => [row.for_whom, row.drink_name, row.temperature, row.sugar, row.ice]);
+
+  it("hands the tablet the menu and both audiences' options; the menu book gets those and nothing else", async () => {
+    const state = await gaState(bagas, now);
+    expect(state.options).toEqual({ tim: { suhu: true, gula: true, es: true }, tamu: { suhu: true, gula: true, es: true } });
+    expect(state.menu).toHaveLength(15);
+    const book = await gaMenu();
+    expect(Object.keys(book).sort()).toEqual(["menu", "options"]);
+    expect(book.options).not.toHaveProperty("klaim");
+  });
+
+  it("keeps on each line only what its own audience is asked", async () => {
+    ask({ opt_tim_suhu: false, opt_tim_gula: false, opt_tim_es: false, opt_tamu_es: false });
+    const { order: sent } = await submitMeeting(bagas, order(1, { items: [
+      { for: "tamu" as const, slug: "kopi-susu", temperature: "es", sugar: "Sedikit", ice: "Ekstra", qty: 2 },
+      { for: "tim" as const, personId: PEOPLE.fajar, slug: "americano", temperature: "es", sugar: "Tanpa", ice: "Ekstra", qty: 1 },
+    ] }), now);
+    expect(lines()).toEqual([["tamu", "Kopi Susu", "es", "Sedikit", null], ["tim", "Americano", null, null, null]]);
+    expect(sent.items.map(item => [item.name, item.temperature, item.sugar, item.ice])).toEqual([["Kopi Susu", "es", "Sedikit", null], ["Americano", null, null, null]]);
+    expect(sent.items[0].photo).toMatch(/kopi-susu\.jpg$/);
+  });
+
+  it("asks for an option that is on, naming the line; a hot drink carries no ice", async () => {
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, slug: "kopi-susu", sugar: "Normal", qty: 1 }, { for: "tamu" as const, slug: "kopi-susu", temperature: "panas", qty: 1 }] }), now))
+      .rejects.toMatchObject({ status: 422, fieldErrors: { "items.0.temperature": ["Pilih panas atau es."] } });
+    await expect(submitMeeting(bagas, order(2, { items: [{ for: "tamu" as const, slug: "espresso", temperature: "es", sugar: "Normal", qty: 1 }] }), now))
+      .rejects.toMatchObject({ status: 422, fieldErrors: { "items.0.temperature": ["Espresso hanya tersedia panas."] } });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+    await submitMeeting(bagas, order(3), now);
+    expect(lines()).toEqual([["tamu", "Kopi Susu", "panas", "Normal", null], ["tim", "Americano", "panas", "Normal", null]]);
+  });
+
+  it("refuses a hidden or unknown drink, and 'lainnya', for the whole order", async () => {
+    Object.assign(db.rows("coffee_drinks").find(item => item.slug === "americano")!, { active: false });
+    await expect(submitMeeting(bagas, order(1), now)).rejects.toMatchObject({ status: 409, message: "Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain." });
+    await expect(submitMeeting(bagas, order(2, { items: [{ for: "tamu" as const, ...drink, slug: "lainnya", qty: 1 }] }), now)).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+  });
+
+  it("the same sending again is the same order even after Pengaturan changed what is asked", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    ask({ opt_tamu_gula: false, opt_tamu_suhu: false, opt_tamu_es: false });
+    const again = await submitMeeting(bagas, order(1), now);
+    expect(again.order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+  });
+
+  it("before migration 202612020001: every option for both, the code's menu, the old columns", async () => {
+    db.state.menuMigrated = false;
+    db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+    delete db.state.tables.coffee_drinks;
+    forgetMenu(true);
+    const { order: sent } = await submitMeeting(bagas, order(1), now);
+    expect(sent.items.map(item => [item.name, item.temperature, item.sugar])).toEqual([["Kopi Susu", "panas", "Normal"], ["Americano", "panas", "Normal"]]);
+    expect(db.rows("coffee_order_items")[0]).not.toHaveProperty("drink_name");
+    expect((await gaState(bagas, now)).options.tamu).toEqual({ suhu: true, gula: true, es: true });
   });
 });

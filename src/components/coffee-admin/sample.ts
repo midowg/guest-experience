@@ -1,11 +1,11 @@
 import { AdminApiError } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
 import { claim, item, meeting, person } from "@/lib/coffee/fixtures";
-import { DRINKS, MONTHLY_QUOTA, drinkLabel } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { claimNumbers, countsForQuota, previousMonth, wibDay, wibMonth } from "@/lib/coffee/quota";
 import { expandRows, filterRows, recapTitle, summarize } from "@/lib/coffee/recap";
 import { roomSpot } from "@/lib/coffee/rooms";
-import { manualAt } from "@/lib/coffee/schemas";
+import { isDrinkIssue, manualAt, settleLine } from "@/lib/coffee/schemas";
 import { KIND_LABEL, orderNo, type CoffeePerson, type CoffeeSettings, type QueueOrder, type QueueState } from "@/lib/coffee/types";
 import { coffeeAdminClient, type CoffeeAdminApi, type CoffeeHolder } from "./api";
 import { UNDO_MS } from "./format";
@@ -48,6 +48,12 @@ export function createSampleServer(clock: () => number = Date.now) {
   const iso = (msAgo: number) => new Date(clock() - msAgo).toISOString();
   const minute = 60_000, day = 86_400_000;
   let settings: CoffeeSettings = { ...MONTHLY_QUOTA };
+  /** What each audience is asked with a drink, at the real defaults, and the menu (the code's 15 drinks). */
+  let options: CoffeeOptions = { klaim: { ...DEFAULT_OPTIONS.klaim }, tim: { ...DEFAULT_OPTIONS.tim }, tamu: { ...DEFAULT_OPTIONS.tamu } };
+  const menu: Drink[] = DRINKS.map(drink => ({ ...drink }));
+  /** An order's drinks as the server sends them: the name kept with the order, the photo of today's menu. */
+  const dressed = (order: QueueOrder): QueueOrder => ({ ...order, items: order.items.map(line => line.slug === OTHER_DRINK ? line : { ...line, name: line.name ?? drinkIn(menu, line.slug)?.name ?? line.slug, photo: drinkIn(menu, line.slug)?.photo ?? null }) });
+  const drinkSettings = () => ({ options, optionsReady: true, menu: menu.map(drink => ({ ...drink })) });
   /** Whether a PIN GA is set (the make-believe keeps no PIN at all). */
   let gaPin = false;
   let claimSeq = 418, meetingSeq = 113, idSeq = 1;
@@ -84,7 +90,8 @@ export function createSampleServer(clock: () => number = Date.now) {
 
   const counted = () => orders.filter(order => order.kind === "klaim").map(order => ({ id: order.id, kind: order.kind, status: order.status, employeeId: order.person.id, orderedAt: order.orderedAt }));
   const usedOf = (employeeId: string | null, month: string) => orders.filter(order => order.kind === "klaim" && order.person.id === employeeId && countsForQuota(order.status) && wibMonth(order.orderedAt) === month).length;
-  const shown = (order: QueueOrder): QueueOrder => {
+  const shown = (raw: QueueOrder): QueueOrder => {
+    const order = dressed(raw);
     const undoable = !order.manual && !!order.processed && order.processed.employeeId === SAMPLE_ACTOR.employeeId && clock() - Date.parse(order.processed.at) < UNDO_MS;
     if (order.kind !== "klaim") return { ...order, undoable };
     const claimNo = claimNumbers(counted()).get(order.id);
@@ -143,7 +150,12 @@ export function createSampleServer(clock: () => number = Date.now) {
       const who = byId.get(body.employeeId);
       if (!who) throw refusal(422, "Periksa kembali isian formulir.", { employeeId: [body.kind === "tamu" ? "Pilih PIC tamu." : "Pilih nama karyawan."] });
       const at = manualAt(body.date, body.time);
-      const drink = { slug: body.slug, other: body.other, temperature: body.temperature, sugar: body.sugar, ice: body.ice };
+      // As the server: the options of the kind recorded, as Pengaturan has them; a drink off the menu only as "lainnya".
+      const onMenu = drinkIn(menu, body.slug);
+      if (body.slug !== OTHER_DRINK && !onMenu) throw refusal(409, "Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.");
+      const choice = settleLine(body, onMenu, options[body.kind]);
+      if (isDrinkIssue(choice)) throw refusal(422, "Pilihan minuman berubah. Tutup lalu buka lagi minumannya, kemudian pilih ulang.", { [choice.field]: [choice.message] });
+      const drink = { slug: body.slug, other: body.other, ...(onMenu ? { name: onMenu.name } : {}), ...choice };
       let order: QueueOrder;
       if (body.kind === "klaim") {
         if (usedOf(who.id, wibMonth(at)) >= settings[who.group]) throw refusal(409, "Jatah bulan ini sudah habis.");
@@ -157,7 +169,7 @@ export function createSampleServer(clock: () => number = Date.now) {
       }
       orders.push(done(order, SAMPLE_ACTOR, 0));
       const saved = shown(orders[orders.length - 1]);
-      const name = drinkLabel(body.slug, body.other);
+      const name = drinkLabel(body.slug, body.other, onMenu?.name);
       const answer = {
         order: saved,
         message: body.kind === "klaim"
@@ -176,11 +188,15 @@ export function createSampleServer(clock: () => number = Date.now) {
       const numbers = claimNumbers(counted());
       const inSpan = orders.filter(order => { const at = wibDay(order.orderedAt); return at >= query.dari && at <= query.sampai; })
         .sort((a, b) => Date.parse(b.orderedAt) - Date.parse(a.orderedAt));
-      const rows = filterRows(expandRows(inSpan, numbers), { jenis: query.jenis, status: query.status, q: query.q });
+      const rows = filterRows(expandRows(inSpan.map(dressed), numbers), { jenis: query.jenis, status: query.status, q: query.q });
       return { rows, summary: summarize(rows, SAMPLE_PEOPLE, settings), title: recapTitle(query.dari, query.sampai) };
     },
-    async settings() { return { settings, holders: HOLDERS, gaPin }; },
-    async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, message: "Jatah disimpan." }; },
+    async settings() { return { settings, holders: HOLDERS, gaPin, ...drinkSettings() }; },
+    async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, ...drinkSettings(), message: "Jatah disimpan." }; },
+    async saveOptions(input) {
+      options = { klaim: { ...input.klaim, es: input.klaim.es && input.klaim.suhu }, tim: { ...input.tim, es: input.tim.es && input.tim.suhu }, tamu: { ...input.tamu, es: input.tamu.es && input.tamu.suhu } };
+      return { options, message: "Opsi minuman disimpan. Berlaku mulai pesanan berikutnya." };
+    },
     async saveGaPin(pin) {
       if (!/^\d{4}$/.test(pin)) throw refusal(422, "Periksa kembali isian formulir.", { pin: ["PIN berupa 4 angka."] });
       gaPin = true;
@@ -192,13 +208,16 @@ export function createSampleServer(clock: () => number = Date.now) {
   return {
     api,
     orders,
+    menu,
     /** A new claim comes in (as if an employee just asked), from whoever still has quota left. */
     addClaim(): QueueOrder | null {
       const month = wibMonth(new Date(clock()).toISOString());
       const who = SAMPLE_PEOPLE.find(entry => usedOf(entry.id, month) < settings[entry.group]);
       if (!who) return null;
-      const drink = DRINKS[claimSeq % DRINKS.length];
-      const order = claim(nextId(), claimSeq++, who, drink.slug, { orderedAt: iso(0), items: [item("a", "klaim", drink.slug, { temperature: drink.temperatures[0] })] });
+      const drink = menu[claimSeq % menu.length] ?? DRINKS[0];
+      // As the app sends it: a claim carries only what Pengaturan asks of one (by default nothing).
+      const choice = settleLine({ slug: drink.slug, temperature: drink.temperatures[0], sugar: "Normal", ice: "Normal" }, drink, options.klaim);
+      const order = claim(nextId(), claimSeq++, who, drink.slug, { orderedAt: iso(0), items: [item("a", "klaim", drink.slug, { name: drink.name, ...(isDrinkIssue(choice) ? {} : choice) })] });
       orders.push(order);
       return order;
     },

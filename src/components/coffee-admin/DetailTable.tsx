@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { wibClock, wibDay } from "@/lib/coffee/quota";
-import { DETAIL_HEAD, rowStatus } from "@/lib/coffee/recap";
+import { optionsLabel } from "@/lib/coffee/menu";
+import { DETAIL_HEAD, iceCell, rowStatus, temperatureCell } from "@/lib/coffee/recap";
 import { KIND_LABEL, type RecapRow } from "@/lib/coffee/types";
 import type { CancelTarget } from "./api";
 import { STATUS_TONE, canCancel, cancelOfRow } from "./format";
@@ -54,7 +55,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
           <li key={row.key}>
             <span className={css.cardListMain}>
               <strong>{row.drink}</strong>
-              <span>{row.temperature === "es" ? `Es · gula ${row.sugar} · es ${row.ice}` : `Panas · gula ${row.sugar}`}</span>
+              {optionsLabel(row.temperature, row.sugar, row.ice) && <span>{optionsLabel(row.temperature, row.sugar, row.ice)}</span>}
               <span>{row.name} · {KIND_LABEL[row.kind]}{row.claimNo ? ` ke-${row.claimNo}` : ""}{row.guest ? ` · ${row.guest}` : ""}{row.room ? ` · ${row.room}` : ""}</span>
               <span>{sheetDate(row.at)} {clock(row.at)} · {row.no}{row.doneBy ? ` · oleh ${row.doneBy}` : ""}</span>
               {row.reason && <span>Catatan tolak: {row.reason}</span>}
@@ -99,9 +100,9 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                 <td className={css.num}>{row.kind === "tamu" && row.guestCount ? row.guestCount : "–"}</td>
                 <td>{row.room || "–"}</td>
                 <td className={css.nameCell}>{row.drink}</td>
-                <td>{row.temperature === "es" ? "Es" : "Panas"}</td>
-                <td>{row.sugar}</td>
-                <td>{row.temperature === "es" ? row.ice : "–"}</td>
+                <td>{temperatureCell(row) || "–"}</td>
+                <td>{row.sugar ?? "–"}</td>
+                <td>{iceCell(row) || "–"}</td>
                 <td><span className={css.statusCell}>{status(row)}{cancel(row)}</span></td>
                 <td>{row.reason || "–"}</td>
                 <td>{row.doneBy || "–"}</td>

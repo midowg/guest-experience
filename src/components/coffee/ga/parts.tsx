@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
-import { ChevronLeft, Minus, Plus } from "lucide-react";
-import { coffeePath } from "@/lib/routes";
+import { ChevronLeft, Coffee, Minus, Plus } from "lucide-react";
 import css from "./ga.module.css";
 
 /* Small pieces every screen of the tablet shares. */
@@ -19,10 +18,14 @@ export function useSettled(mark: unknown = 0): () => boolean {
   return useCallback(() => Date.now() - since.current >= SETTLE_MS, []);
 }
 
-/** A drink of the menu, by its slug. Decorative: the name is always written next to it. */
-export function Photo({ slug, width, height, className, alt = "" }: { slug: string; width: number; height: number; className?: string; alt?: string }) {
-  // eslint-disable-next-line @next/next/no-img-element -- small local photos, sized here
-  return <img className={className} src={coffeePath.photo(slug)} alt={alt} width={width} height={height} loading="lazy" draggable={false} />;
+/**
+ * A drink's photo (`src`: the menu's, a static file or the pengelola's upload). Decorative: the
+ * name is always written next to it. A drink without one gets a cup in the same box.
+ */
+export function Photo({ src, width, height, className, alt = "" }: { src: string | null | undefined; width: number; height: number; className?: string; alt?: string }) {
+  if (!src) return <span className={`${css.noPhoto}${className ? ` ${className}` : ""}`} role={alt ? "img" : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}><Coffee aria-hidden size={Math.round(Math.min(width, height, 120) / 2.4)} /></span>;
+  // eslint-disable-next-line @next/next/no-img-element -- small square photos, sized here
+  return <img className={className} src={src} alt={alt} width={width} height={height} loading="lazy" draggable={false} />;
 }
 
 export function ScreenHead({ title, sub, onBack, backLabel, children }: { title: string; sub?: ReactNode; onBack: () => void; backLabel: string; children?: ReactNode }) {

@@ -1,7 +1,7 @@
 import type { PushPayload, PushSupport } from "@/lib/pra-wam/push";
 import { coffeeAdminPath, coffeePath } from "@/lib/routes";
 import { firstName } from "./access";
-import { drinkLabel } from "./menu";
+import { drinkName } from "./menu";
 import type { QueueOrder } from "./types";
 
 /*
@@ -20,7 +20,7 @@ export type CoffeePushEvent = "klaim_baru" | "rapat_baru" | "selesai" | "ditolak
 export type CoffeePushReader = "pengirim" | "pic";
 
 const drinks = (order: QueueOrder) => order.items.reduce((sum, item) => sum + item.qty, 0);
-const firstDrink = (order: QueueOrder) => order.items[0] ? drinkLabel(order.items[0].slug, order.items[0].other) : "Minuman";
+const firstDrink = (order: QueueOrder) => order.items[0] ? drinkName(order.items[0]) : "Minuman";
 
 export function pushFor(event: CoffeePushEvent, order: QueueOrder, reader: CoffeePushReader = "pengirim"): PushPayload {
   const who = firstName(order.person.name);

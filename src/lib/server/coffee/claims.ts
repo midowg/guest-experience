@@ -5,10 +5,11 @@ import type { ClaimInput } from "@/lib/coffee/schemas";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
 import type { Member } from "../pra-wam/session";
+import { orderRules, settle } from "./lines";
 import { notifyNewOrder } from "./push";
 import { holdsCoffeeGrant } from "./session";
-import { readSettings } from "./settings";
-import { ORDER_COLUMNS, coffeeError, db, toMyOrder, toOrder, type OrderRow } from "./store";
+import { readOptions, readSettings } from "./settings";
+import { coffeeError, db, orderColumns, readMenu, toMyOrder, toOrders, type OrderRow } from "./store";
 
 /*
  * An employee's own claims (/coffee). Whether a claim fits the quota is decided by the database
@@ -19,20 +20,23 @@ import { ORDER_COLUMNS, coffeeError, db, toMyOrder, toOrder, type OrderRow } fro
 /** The person's quota this month and their claims: this month's, and the last twenty of any month. */
 export async function myState(member: Member, now = new Date()): Promise<MyState> {
   const month = wibMonth(now.toISOString());
-  const [settings, found, holds] = await Promise.all([
+  const columns = await orderColumns();
+  const [settings, found, holds, menu, { options }] = await Promise.all([
     readSettings(),
-    db().from("coffee_orders").select(ORDER_COLUMNS).eq("kind", "klaim").eq("employee_id", member.id).order("ordered_at", { ascending: false }).limit(120),
+    db().from("coffee_orders").select(columns).eq("kind", "klaim").eq("employee_id", member.id).order("ordered_at", { ascending: false }).limit(120),
     holdsCoffeeGrant(member.id),
+    readMenu(),
+    readOptions(),
   ]);
   if (found.error) coffeeError(found.error);
-  const claims = ((found.data ?? []) as unknown as OrderRow[]).map(toOrder);
+  const claims = await toOrders((found.data ?? []) as unknown as OrderRow[]);
   const numbers = claimNumbers(claims.map(order => ({ id: order.id, kind: order.kind, status: order.status, employeeId: member.id, orderedAt: order.orderedAt })));
   const group = quotaGroupOf(member.category);
   const quota = quotaFor(group, settings);
   const used = usedInMonth(claims, month);
   const me: CoffeeMe = { id: member.id, name: member.nickname || member.name, group, quota, used, left: Math.max(quota - used, 0), month };
   const orders: MyOrder[] = claims.filter((order, index) => index < 20 || wibMonth(order.orderedAt) === month).map(order => toMyOrder(order, numbers.get(order.id)));
-  return { me, orders, ga: opensGaMode({ category: member.category, roles: member.roles, holdsCoffee: holds }), pengelola: holds };
+  return { me, orders, ga: opensGaMode({ category: member.category, roles: member.roles, holdsCoffee: holds }), pengelola: holds, menu, options: options.klaim };
 }
 
 async function answer(member: Member, id: string, now: Date): Promise<{ order: MyOrder; me: CoffeeMe }> {
@@ -45,10 +49,13 @@ async function answer(member: Member, id: string, now: Date): Promise<{ order: M
 /**
  * One claim. A full quota answers 409; the same key sent twice is one claim. The pengelola are told
  * by web push after the answer has gone (once per claim, however often its key is sent again).
+ * Which options the claim carries is decided here from Pengaturan (by default none: employees
+ * serve themselves at the machine); what the browser sent for an option that is off is dropped.
  */
 export async function submitClaim(member: Member, input: ClaimInput, now = new Date()): Promise<{ order: MyOrder; me: CoffeeMe }> {
+  const choice = settle(input, "klaim", await orderRules());
   const { data, error } = await db().rpc("coffee_submit_claim", {
-    p_employee: member.id, p_item: { slug: input.slug, temperature: input.temperature, sugar: input.sugar, ice: input.ice },
+    p_employee: member.id, p_item: { slug: input.slug, ...choice },
     p_at: now.toISOString(), p_manual: false, p_actor: member.id, p_actor_label: (member.nickname || member.name).slice(0, 120), p_key: input.key,
   });
   if (error) {

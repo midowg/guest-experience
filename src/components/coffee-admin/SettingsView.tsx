@@ -4,7 +4,8 @@ import { useId, useState, type FormEvent } from "react";
 import { Check, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { PageHeader } from "@/components/console";
-import { GROUP_LABEL, type QuotaGroup } from "@/lib/coffee/menu";
+import { AUDIENCES, AUDIENCE_LABEL, GROUP_LABEL, OPTION_KEYS, OPTION_LABEL, type Audience, type CoffeeOptions, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
+import { COFFEE_MENU_MIGRATION_NAME } from "./sections";
 import { OTHER_ROOM, ROOMS } from "@/lib/coffee/rooms";
 import { fieldErrorsOf, type CoffeeAdminApi, type SettingsData } from "./api";
 import { Layer } from "./Layer";
@@ -49,7 +50,7 @@ function QuotaForm({ api, data, onSaved }: { api: CoffeeAdminApi; data: Settings
     setBusy(true); setFailure(""); setServerErrors({});
     try {
       const saved = await api.saveSettings({ karyawan: values.karyawan!, ga: values.ga!, intern: values.intern! });
-      onSaved({ settings: saved.settings, holders: saved.holders, gaPin: saved.gaPin }, saved.message);
+      onSaved({ ...data, settings: saved.settings, holders: saved.holders, gaPin: saved.gaPin }, saved.message);
     } catch (problem) {
       setServerErrors(fieldErrorsOf(problem));
       setFailure(errorMessage(problem));
@@ -88,6 +89,83 @@ function QuotaForm({ api, data, onSaved }: { api: CoffeeAdminApi; data: Settings
           </div>
         </Layer>
       )}
+    </form>
+  );
+}
+
+const AUDIENCE_HINT: Record<Audience, string> = {
+  klaim: "Karyawan mengambil sendiri di mesin, jadi bawaannya tidak ditanya apa pun.",
+  tim: "Minuman tim saat rapat, disiapkan GA.",
+  tamu: "Minuman tamu, disiapkan GA; juga yang tampil di buku menu tamu.",
+};
+const sameOptions = (a: CoffeeOptions, b: CoffeeOptions) => AUDIENCES.every(audience => OPTION_KEYS.every(option => a[audience][option] === b[audience][option]));
+
+/**
+ * Opsi minuman (F6): for each audience, whether a drink is asked its temperature, sugar and ice
+ * level. Saved together with one button, like the quotas; they hold from the next order on, and
+ * orders already made keep what they carry. Takaran es follows the temperature: without Suhu
+ * there is no "Es" to ask the ice of, so its switch rests. `ready` false: the migration has not
+ * run, everyone is asked everything and the switches cannot be saved yet.
+ */
+function OptionsForm({ api, data, onSaved }: { api: CoffeeAdminApi; data: SettingsData; onSaved: (data: SettingsData, message: string) => void }) {
+  const uid = useId();
+  const [draft, setDraft] = useState(data.options);
+  // New values from the server (read again, or saved by another pengelola) replace the switches only while nothing here waits to be saved.
+  const [base, setBase] = useState(data.options);
+  if (!sameOptions(base, data.options)) {
+    const untouched = sameOptions(draft, base);
+    setBase(data.options);
+    if (untouched) setDraft(data.options);
+  }
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  const ready = data.optionsReady;
+  const changed = !sameOptions(draft, data.options);
+  const flip = (audience: Audience, option: keyof DrinkOptions) => setDraft(current => {
+    const next = { ...current[audience], [option]: !current[audience][option] };
+    // Takaran es is only asked together with the temperature.
+    if (!next.suhu) next.es = false;
+    return { ...current, [audience]: next };
+  });
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (busy || !changed || !ready) return;
+    setBusy(true); setFailure("");
+    try {
+      const saved = await api.saveOptions(draft);
+      setDraft(saved.options);
+      onSaved({ ...data, options: saved.options }, saved.message);
+    } catch (problem) {
+      setFailure(errorMessage(problem));
+    } finally { setBusy(false); }
+  };
+  return (
+    <form className={css.quotaForm} onSubmit={submit} noValidate>
+      {!ready && <div className={css.banner} role="status"><span>Menunggu migrasi {COFFEE_MENU_MIGRATION_NAME}. Sampai dijalankan, semua opsi ditanyakan ke semua orang dan belum bisa diubah.</span></div>}
+      <div className={css.optionGroups}>
+        {AUDIENCES.map(audience => (
+          <fieldset key={audience} className={css.optionGroup} disabled={busy || !ready}>
+            <legend>{AUDIENCE_LABEL[audience]}</legend>
+            <p className={css.small}>{AUDIENCE_HINT[audience]}</p>
+            {OPTION_KEYS.map(option => {
+              const rests = option === "es" && !draft[audience].suhu;
+              return (
+                <label key={option} className={css.switchRow} data-rests={rests || undefined}>
+                  <span>{OPTION_LABEL[option]}{rests && <small>Nyalakan Suhu dulu</small>}</span>
+                  <input type="checkbox" role="switch" id={`${uid}-${audience}-${option}`} checked={draft[audience][option]} disabled={rests} onChange={() => flip(audience, option)} />
+                  <span className={css.switch} aria-hidden />
+                  <span className={css.switchWord} aria-hidden>{draft[audience][option] ? "Ditanyakan" : "Tidak"}</span>
+                </label>
+              );
+            })}
+          </fieldset>
+        ))}
+      </div>
+      {failure && <div className={css.banner} data-tone="no" role="alert"><span>{failure}</span></div>}
+      <div className={css.formFoot}>
+        <button type="submit" className={css.primary} disabled={busy || !changed || !ready}><Check size={18} aria-hidden />{busy ? "Menyimpan…" : "Simpan opsi"}</button>
+        <span className={css.small} role="status">{busy || !ready ? "" : changed ? "Belum disimpan." : "Tersimpan."}</span>
+      </div>
     </form>
   );
 }
@@ -140,7 +218,7 @@ function PinForm({ api, set, onSaved }: { api: CoffeeAdminApi; set: boolean; onS
 
 /**
  * Pengaturan: the monthly quotas (the pengelola may change them; they hold from the next claim
- * on), who holds the access (changed in Super admin → Akses admin) and the rooms (read only).
+ * on), which options a drink is asked with per audience (F6), who holds the access (changed in Super admin → Akses admin) and the rooms (read only).
  */
 export function SettingsView({ api, data, error, onRetry, onSaved }: {
   api: CoffeeAdminApi; data: SettingsData | null; error: string; onRetry: () => void; onSaved: (data: SettingsData, message: string) => void;
@@ -167,6 +245,13 @@ export function SettingsView({ api, data, error, onRetry, onSaved }: {
             <div><dt>Tim · rapat</dt><dd>Tanpa jatah, dicatat atas nama orangnya</dd></div>
           </dl>
           <p className={css.small}>Bulan kalender WIB. Klaim yang ditolak atau dibatalkan tidak memakai jatah. Perubahan berlaku mulai klaim berikutnya.</p>
+        </section>
+        <section className={`${css.panel} ${css.panelWide}`} aria-labelledby={`${uid}-options`} aria-busy={!data && !error}>
+          <h2 id={`${uid}-options`}>Opsi minuman</h2>
+          {data
+            ? <OptionsForm api={api} data={data} onSaved={onSaved} />
+            : !error && <span className={css.skeleton} style={{ height: 220 }} />}
+          <p className={css.small} style={{ marginTop: 12 }}>Opsi yang tidak ditanyakan tidak tampil saat memesan dan tidak dicatat. Berlaku mulai pesanan berikutnya; pesanan yang sudah ada tidak berubah.</p>
         </section>
         <section className={css.panel} aria-labelledby={`${uid}-pin`} aria-busy={!data && !error}>
           <h2 id={`${uid}-pin`}>PIN GA</h2>

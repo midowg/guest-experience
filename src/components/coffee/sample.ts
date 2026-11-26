@@ -1,4 +1,5 @@
-import { DRINKS, MONTHLY_QUOTA, drinkBySlug, type QuotaGroup } from "@/lib/coffee/menu";
+import { DRINKS, MONTHLY_QUOTA, NO_OPTIONS, OTHER_DRINK, drinkIn, type Drink, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
+import { isDrinkIssue, settleLine } from "@/lib/coffee/schemas";
 import { claimNumbers, countsForQuota, wibMonth } from "@/lib/coffee/quota";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
 import { CoffeeApiError, OFFLINE_TEXT, type ClaimDone, type CoffeeApi } from "./api";
@@ -30,11 +31,17 @@ type Options = {
   clock?: () => number;
   /** How long every answer takes (the tests use it to press twice before the first answer). */
   delay?: number;
+  /** What a claim is asked (Pengaturan). The default is the real one: nothing, employees serve themselves. */
+  options?: DrinkOptions;
+  /** The menu (the pengelola's); the code's 15 drinks when not given. */
+  menu?: Drink[];
 };
 
 export type SampleCoffee = ReturnType<typeof createSampleCoffee>;
 
-export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, pengelola = false, clock = Date.now, delay = 0 }: Options = {}) {
+export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, pengelola = false, clock = Date.now, delay = 0, options: firstOptions = NO_OPTIONS, menu: firstMenu = DRINKS }: Options = {}) {
+  let options = { ...firstOptions };
+  let menu = firstMenu.map(drink => ({ ...drink }));
   const who = SAMPLE_ME[group];
   const quota = MONTHLY_QUOTA[group];
   const iso = (msAgo = 0) => new Date(clock() - msAgo).toISOString();
@@ -49,10 +56,12 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
   let hang = 0;
 
   const add = (slug: string, more: Partial<MyOrder> = {}): MyOrder => {
-    const drink = drinkBySlug(slug) ?? DRINKS[0];
+    // "lainnya": a drink off the menu, typed in by the pengelola (Catat manual): no photo, its own name.
+    const drink = slug === OTHER_DRINK ? null : drinkIn(menu, slug) ?? menu[0];
     const order: MyOrder = {
       id: `00000000-0000-4000-8000-${String(idSeq++).padStart(12, "0")}`, no: `K-${seq++}`, status: "diproses", orderedAt: iso(), rejectNote: "",
-      processedLabel: "", processedAt: null, manual: false, slug: drink.slug, temperature: drink.temperatures[0], sugar: "Normal", ice: "Normal", ...more,
+      processedLabel: "", processedAt: null, manual: false, slug: drink?.slug ?? OTHER_DRINK, ...(drink ? { name: drink.name } : {}), photo: drink?.photo ?? null,
+      temperature: null, sugar: null, ice: null, ...more,
     };
     orders.unshift(order);
     return order;
@@ -87,7 +96,7 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
     async state(): Promise<MyState> {
       calls.state += 1;
       await wait();
-      return { me: me(), orders: shown(), ga, pengelola };
+      return { me: me(), orders: shown(), ga, pengelola, menu, options };
     },
     async claim(body) {
       calls.claim += 1;
@@ -95,10 +104,13 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
       // The same key again is the same claim, as on the server.
       const again = keys.get(body.key);
       if (again) return sent(answer(again, "Pengajuan terkirim."));
-      const drink = drinkBySlug(body.slug);
-      if (!drink || !drink.temperatures.includes(body.temperature)) throw new CoffeeApiError("Periksa kembali isian formulir.", 422, { slug: ["Pilih minuman."] });
+      // As the server: a hidden or unknown drink is gone (409); options that are off are dropped, ones that are on must be there.
+      const drink = drinkIn(menu, body.slug);
+      if (!drink?.active) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
+      const choice = settleLine(body, drink, options);
+      if (isDrinkIssue(choice)) throw new CoffeeApiError("Pilihan minuman berubah. Tutup lalu buka lagi minumannya, kemudian pilih ulang.", 422, { [choice.field]: [choice.message] });
       if (usedNow() >= quota) throw new CoffeeApiError("Jatah bulan ini sudah habis.", 409);
-      const order = add(body.slug, { temperature: body.temperature, sugar: body.sugar, ice: body.temperature === "es" ? body.ice : "Normal" });
+      const order = add(body.slug, choice);
       keys.set(body.key, order.id);
       return sent(answer(order.id, "Pengajuan terkirim."));
     },
@@ -117,7 +129,10 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
     api,
     calls,
     orders,
-    initial: (): MyState => ({ me: me(), orders: shown(), ga, pengelola }),
+    initial: (): MyState => ({ me: me(), orders: shown(), ga, pengelola, menu, options }),
+    /** The pengelola changes what a claim is asked (Pengaturan), or the menu; the next read brings it. */
+    setOptions(next: DrinkOptions) { options = { ...next }; },
+    setMenu(next: Drink[]) { menu = next.map(drink => ({ ...drink })); },
     /** A pengelola processes the oldest waiting claim (Selesai, or Tolak with a note). */
     settle(status: "selesai" | "ditolak", note = SAMPLE_REFUSAL): MyOrder | null {
       const order = [...orders].reverse().find(item => item.status === "diproses");

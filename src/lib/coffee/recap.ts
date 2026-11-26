@@ -1,4 +1,4 @@
-import { GROUP_LABEL, drinkLabel } from "./menu";
+import { GROUP_LABEL, drinkName } from "./menu";
 import { countsForQuota, nextDay, wibClock, wibDay } from "./quota";
 import { KIND_LABEL, STATUS_LABEL, type CoffeeSettings, type ItemFor, type QueueOrder, type QuotaGroup, type RecapRow, type Status } from "./types";
 
@@ -18,7 +18,7 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
       doneBy: order.processed?.label ?? "", doneAt: order.processed?.at ?? "", manual: order.manual,
     };
     for (const item of order.items) {
-      const drink = { drink: drinkLabel(item.slug, item.other), temperature: item.temperature, sugar: item.sugar, ice: item.ice };
+      const drink = { drink: drinkName(item), temperature: item.temperature, sugar: item.sugar, ice: item.ice };
       if (order.kind === "klaim") {
         const claimNo = countsForQuota(order.status) ? numbers?.get(order.id) ?? order.claimNo : undefined;
         rows.push({
@@ -58,11 +58,14 @@ export const DETAIL_WIDTHS: number[] = DETAIL_HEAD.map(name => DETAIL_WIDTH[name
 const sheetDate = (iso: string) => wibDay(iso).split("-").reverse().join("/");
 /** The status as Rekap words it: a record made by hand and cancelled by a pengelola reads "Dibatalkan". */
 export const rowStatus = (row: Pick<RecapRow, "status" | "manual">): string => row.status === "batal" && row.manual ? "Dibatalkan" : STATUS_LABEL[row.status];
+/** Suhu and Takaran es as the table and the files write them; empty when the option was not asked (F6). */
+export const temperatureCell = (row: Pick<RecapRow, "temperature">): string => row.temperature === "es" ? "Es" : row.temperature === "panas" ? "Panas" : "";
+export const iceCell = (row: Pick<RecapRow, "temperature" | "ice">): string => row.temperature === "es" && row.ice ? row.ice : "";
 /** A row's 23 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. */
 export const detailCells = (row: RecapRow): string[] => [
   sheetDate(row.at), wibClock(row.at), row.no, KIND_LABEL[row.kind], row.name, row.group, row.position, row.bu,
   row.pic, row.guest, row.guestName, row.guestCount && row.kind === "tamu" ? String(row.guestCount) : "", row.room, row.drink,
-  row.temperature === "es" ? "Es" : "Panas", row.sugar, row.temperature === "es" ? row.ice : "", rowStatus(row), row.reason,
+  temperatureCell(row), row.sugar ?? "", iceCell(row), rowStatus(row), row.reason,
   row.doneBy, row.doneAt ? wibClock(row.doneAt) : "", row.claimNo ? String(row.claimNo) : "", row.manual ? "Ya" : "",
 ];
 

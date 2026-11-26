@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { ALL_OPTIONS, DRINKS } from "@/lib/coffee/menu";
 import { coffeeAdminPath, coffeePath } from "@/lib/routes";
 import { CoffeeApiError, OFFLINE_TEXT, TIMEOUT_TEXT } from "./api";
 import { CoffeeApp, type CoffeeAppProps } from "./CoffeeApp";
@@ -75,7 +76,7 @@ it("gives GA and interns their own quota", () => {
 });
 
 it("sends a claim from the sheet, moves to Pesanan saya and takes one place of the quota", async () => {
-  const { api, server } = open({ used: 1 });
+  const { api, server } = open({ used: 1, options: ALL_OPTIONS });
   pick("Café Latte");
   const sheet = within(screen.getByRole("dialog", { name: "Café Latte" }));
   expect(sheet.getByText("Ini klaim ke-2 dari 4 bulan November.")).toBeTruthy();
@@ -195,7 +196,7 @@ it("explains a cancel that met a refusal instead: the quota is not used", async 
 });
 
 it("shows Selesai within fifteen seconds without a reload: who processed it, the pantry, the note about ice", async () => {
-  const { server, api } = open();
+  const { server, api } = open({ options: ALL_OPTIONS });
   pick("Café Latte");
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Es" }));
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
@@ -646,4 +647,57 @@ it("moves between the tabs by address on the real routing, and the back button w
   expect(document.title).toBe("WG Coffee");
   expect(state).not.toHaveBeenCalled();
   window.history.replaceState({}, "", "/");
+});
+
+// F6: by default a claim is asked nothing, and nothing is made up about it afterwards.
+it("F6 claims a drink without options: a simple sheet, and the status and the history name the drink alone", async () => {
+  const { api, server } = open({ used: 1 });
+  pick("Café Latte");
+  const sheet = within(screen.getByRole("dialog", { name: "Café Latte" }));
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(sheet.queryByRole("group", { name })).toBeNull();
+  fireEvent.click(sheet.getByRole("button", { name: "Ajukan klaim" }));
+  await screen.findByRole("heading", { level: 1, name: "Pengajuan sedang diproses" });
+  expect(api.claim.mock.calls[0][0]).toMatchObject({ slug: "cafe-latte", temperature: null, sugar: null, ice: null });
+  const card = screen.getByRole("region", { name: "Café Latte, Diproses" });
+  expect(card.textContent).toMatch(/Café Latte#K-419 · klaim ke-2/);
+  expect(card.textContent).not.toMatch(/Panas|gula|Normal| · es /);
+  const history = screen.getByRole("heading", { level: 2, name: "Sebelumnya" }).parentElement!;
+  expect(history.textContent).toMatch(/Kopi Susu.*Selesai/);
+  expect(history.textContent).not.toMatch(/Panas|gula/);
+  await nextRead(() => { vi.setSystemTime(new Date("2026-11-25T03:14:00.000Z")); server.settle("selesai"); });
+  // Done: no note about ice for a claim that never said "Es".
+  expect(screen.getByRole("region", { name: "Café Latte, Siap diambil" }).textContent).not.toMatch(/Es ditambahkan/);
+});
+
+it("F6 follows the pengelola: options turned on show in the sheet after the next read, a hidden drink leaves the menu but stays in the history", async () => {
+  const { server } = open();
+  await claim("Café Latte");
+  server.setOptions({ suhu: true, gula: true, es: true });
+  server.setMenu(DRINKS.map(drink => drink.slug === "cafe-latte" ? { ...drink, active: false, name: "Latte Susu" } : drink.slug === "espresso" ? { ...drink, photo: null } : drink));
+  await nextRead(() => undefined);
+  fireEvent.click(tab(/Menu/));
+  expect(screen.queryByRole("button", { name: /^Café Latte/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Latte Susu/ })).toBeNull();
+  expect(screen.getByRole("tabpanel").querySelectorAll("li")).toHaveLength(9);
+  // A drink without a photo is drawn with a cup, and can be claimed like any other.
+  expect(screen.getByRole("button", { name: /^Espresso/ }).querySelector("img")).toBeNull();
+  pick("Kopi Susu");
+  expect(within(screen.getByRole("dialog")).getByRole("group", { name: "Gula" })).toBeTruthy();
+  expect(within(screen.getByRole("dialog")).getByRole("group", { name: "Suhu" })).toBeTruthy();
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tutup" }));
+  fireEvent.click(tab(/Pesanan saya/));
+  // The claim made before keeps the name it was ordered under.
+  expect(screen.getByRole("region", { name: "Café Latte, Diproses" })).toBeTruthy();
+});
+
+it("F6 says so when the drink left the menu while its sheet was open, and reads the menu again", async () => {
+  const { server, api } = open();
+  pick("Americano");
+  server.setMenu(DRINKS.filter(drink => drink.slug !== "americano"));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  expect((await within(screen.getByRole("dialog")).findByRole("alert")).textContent).toBe("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.");
+  await waitFor(() => expect(api.state).toHaveBeenCalled());
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tutup" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: /^Americano/ })).toBeNull());
+  expect(server.orders).toHaveLength(0);
 });

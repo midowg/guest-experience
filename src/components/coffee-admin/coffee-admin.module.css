@@ -289,6 +289,26 @@
 .quotaRow input[aria-invalid="true"] { border-color: var(--no); }
 .quotaRow > span { color: var(--ink-2); }
 .formFoot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Pengaturan → Opsi minuman: one group per audience, a switch per option (a checkbox with role="switch"; the track is drawn beside it). */
+.panelWide { grid-column: 1 / -1; }
+.optionGroups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.optionGroup { margin: 0; padding: 12px 14px 6px; border: 1px solid var(--line); border-radius: 12px; min-width: 0; display: grid; align-content: start; }
+.optionGroup legend { padding: 0 6px; margin-left: -6px; font-size: 16px; font-weight: 800; color: var(--ink); }
+.optionGroup > .small { margin-bottom: 4px; }
+.switchRow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.switchRow > span:first-child { flex: 1; min-width: 0; font-weight: 700; display: grid; }
+.switchRow small { font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.switchRow input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.switchRow input:disabled { cursor: not-allowed; }
+.switch { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; background: var(--line-strong); transition: background .15s ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease; }
+.switchRow input:checked + .switch { background: var(--act); }
+.switchRow input:checked + .switch::after { transform: translateX(18px); }
+.switchRow input:focus-visible + .switch { outline: 3px solid var(--act); outline-offset: 2px; }
+.switchWord { flex: none; width: 84px; font-size: 14px; color: var(--ink-2); }
+.switchRow[data-rests], .optionGroup:disabled .switchRow { cursor: not-allowed; }
+.switchRow[data-rests] .switch, .optionGroup:disabled .switch { opacity: .45; }
+.switchRow[data-rests] > span:first-child, .optionGroup:disabled .switchRow > span:first-child { color: var(--ink-3); }
 /* PIN GA: said in words, the colour only underlines it. */
 .pinState { margin: 0; font-weight: 700; color: var(--cs-warn-fg, var(--ink)); }
 .pinState[data-set] { color: var(--cs-ok-fg, var(--ink)); }
@@ -432,7 +452,7 @@
 @keyframes rise { from { transform: translateY(32px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .card, .toast, .scrim, .dialog, .sheet, .skeleton { animation: none !important; }
-  .primary, .secondary, .danger, .dangerText, .stale { transition: none; }
+  .primary, .secondary, .danger, .dangerText, .stale, .switch, .switch::after { transition: none; }
 }
 @media (max-width: 360px) {
   .tallyPanel > h2 { display: none; }

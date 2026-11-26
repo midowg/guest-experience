@@ -1,14 +1,15 @@
 import "server-only";
 import { firstName } from "@/lib/coffee/access";
-import { drinkLabel } from "@/lib/coffee/menu";
+import { drinkLabel, drinkName } from "@/lib/coffee/menu";
 import { claimNumbers, dayStart, monthRange, previousMonth, wibDay, wibMonth } from "@/lib/coffee/quota";
 import { roomSpot } from "@/lib/coffee/rooms";
 import { manualAt, type ManualInput } from "@/lib/coffee/schemas";
 import { KIND_LABEL, type CoffeeSettings, type QueueOrder, type QueueState, type Status } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
+import { orderRules, settle } from "./lines";
 import { notifyDecided } from "./push";
 import { readSettings } from "./settings";
-import { ORDER_COLUMNS, coffeeError, countingClaims, db, orderById, toOrder, type CoffeeActor, type OrderRow } from "./store";
+import { coffeeError, countingClaims, db, orderById, orderColumns, toOrders, type CoffeeActor, type OrderRow } from "./store";
 
 /*
  * The pengelola's queue (/admin/coffee). They buy by hand in JumpStart, then mark the order:
@@ -43,14 +44,15 @@ const undoable = (order: QueueOrder, actor: CoffeeActor | undefined, now: Date) 
 /** What waits (oldest first), the last six processed, and today's numbers. `actor`: marks what they may still Urungkan. */
 export async function queue(actor?: CoffeeActor, now = new Date()): Promise<QueueState> {
   const today = dayStart(wibDay(now.toISOString()));
+  const columns = await orderColumns();
   const [waiting, recent, day] = await Promise.all([
-    db().from("coffee_orders").select(ORDER_COLUMNS).eq("status", "diproses").order("ordered_at").order("id").limit(300),
-    db().from("coffee_orders").select(ORDER_COLUMNS).in("status", ["selesai", "ditolak"]).order("processed_at", { ascending: false }).limit(6),
+    db().from("coffee_orders").select(columns).eq("status", "diproses").order("ordered_at").order("id").limit(300),
+    db().from("coffee_orders").select(columns).in("status", ["selesai", "ditolak"]).order("processed_at", { ascending: false }).limit(6),
     db().from("coffee_orders").select("id,status").in("status", ["selesai", "ditolak"]).gte("processed_at", today).limit(5000),
   ]);
   for (const result of [waiting, recent, day]) if (result.error) coffeeError(result.error);
-  const first = ((waiting.data ?? []) as unknown as OrderRow[]).map(toOrder);
-  const last = ((recent.data ?? []) as unknown as OrderRow[]).map(toOrder);
+  const first = await toOrders((waiting.data ?? []) as unknown as OrderRow[]);
+  const last = await toOrders((recent.data ?? []) as unknown as OrderRow[]);
   const all = await withQuota([...first, ...last]);
   const count = (status: Status) => ((day.data ?? []) as { status: Status }[]).filter(row => row.status === status).length;
   return {
@@ -128,7 +130,8 @@ export async function recordManual(input: ManualInput, actor: CoffeeActor, now =
     throw new ServiceError(422, "Periksa kembali isian formulir.", { date: ["Catat manual paling lama sampai awal bulan lalu."] });
   }
   const label = actor.label.slice(0, 120);
-  const drink = { slug: input.slug, other: input.other ?? null, temperature: input.temperature, sugar: input.sugar, ice: input.ice };
+  // The options of the kind recorded (a claim's, a guest's, the team's), as Pengaturan has them now.
+  const drink = { slug: input.slug, other: input.other ?? null, ...settle(input, input.kind, await orderRules(), { manual: true }) };
   const { data, error } = input.kind === "klaim"
     ? await db().rpc("coffee_submit_claim", { p_employee: input.employeeId, p_item: drink, p_at: at, p_manual: true, p_actor: actor.employeeId, p_actor_label: label, p_key: input.key })
     : await db().rpc("coffee_submit_meeting", {
@@ -152,7 +155,7 @@ export async function recordManual(input: ManualInput, actor: CoffeeActor, now =
   // The words come from what is saved: a repeated key answers with the first record, whatever was sent now.
   const who = firstName(order.person.name);
   const item = order.items[0];
-  const name = item ? drinkLabel(item.slug, item.other) : drinkLabel(input.slug, input.other);
+  const name = item ? drinkName(item) : drinkLabel(input.slug, input.other);
   const message = order.kind === "klaim"
     ? `${who} · ${name} · klaim ke-${order.claimNo ?? order.used ?? 1} dari ${order.quota ?? 0}.`
     : `${KIND_LABEL[item?.for ?? input.kind]} · ${item?.qty ?? input.qty}× ${name} · ${(item?.for ?? input.kind) === "tamu" ? "PIC " : ""}${who}.`;

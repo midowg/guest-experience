@@ -19,7 +19,7 @@ export class CoffeeApiError extends Error {
 }
 
 /** What the person picked in the sheet. The key that makes two sendings one claim is added by useCoffee. */
-export type ClaimChoice = { slug: string; temperature: Temperature; sugar: Sugar; ice: Ice };
+export type ClaimChoice = { slug: string; temperature: Temperature | null; sugar: Sugar | null; ice: Ice | null };
 export type ClaimBody = ClaimChoice & { key: string };
 export type ClaimDone = { order: MyOrder; me: CoffeeMe; message: string };
 

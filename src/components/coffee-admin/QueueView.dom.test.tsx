@@ -198,3 +198,24 @@ it("says so when the record was already cancelled in another window", async () =
   await waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/Catatan ini sudah dibatalkan\./));
   await waitFor(() => expect(within(recent()).queryByRole("button", { name: /Batalkan catatan/ })).toBeNull());
 });
+
+// F6: a claim is asked nothing by default; the card, the copied text and the list show the drink alone.
+it("F6 shows a claim without options as the drink alone, on the card and in the copied text", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  let added = "";
+  await open(server => { added = server.addClaim()!.id; });
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  fireEvent(document, new Event("visibilitychange"));
+  await waitFor(() => expect(cards()).toHaveLength(4));
+  const fresh = cards()[3];
+  const title = within(fresh).getByRole("heading").textContent!;
+  expect(fresh.textContent).not.toMatch(/Panas|Es ·|gula/);
+  expect(fresh.querySelector("img")?.getAttribute("src")).toMatch(/\/coffee\/drinks\/.+\.jpg$/);
+  fireEvent.click(within(fresh).getByRole("button", { name: /Salin/ }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+  expect((writeText.mock.calls[0] as unknown as [string])[0].split("\n")[1]).toBe(`1× ${title}`);
+  expect(added).toBeTruthy();
+  // A row stored before F6 still shows everything it carries.
+  expect(card(/Matcha Latte/).textContent).toMatch(/Es · gula Sedikit/);
+});

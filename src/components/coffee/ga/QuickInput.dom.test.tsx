@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MAX_LINES, type Draft, type Line } from "./model";
+import { ALL_OPTIONS, DEFAULT_OPTIONS, DRINKS, NO_OPTIONS, type Drink } from "@/lib/coffee/menu";
+import { MAX_LINES, type Draft, type GaOptions, type Line } from "./model";
 import { QuickInput } from "./QuickInput";
 import { SAMPLE_PEOPLE } from "./sample";
 import { NOW, rest } from "./testing";
@@ -13,13 +14,13 @@ import { NOW, rest } from "./testing";
 const PIC = SAMPLE_PEOPLE[0], OTHER = SAMPLE_PEOPLE[3];
 const draft: Draft = { room: "Vasuki Room", spot: "vasuki", pic: { id: PIC.id, name: PIC.name }, guest: "PT Sinar Jaya (contoh)", guestCount: 4 };
 
-function open(props: { sending?: boolean; problem?: string; first?: Line[] } = {}) {
+function open(props: { sending?: boolean; problem?: string; first?: Line[]; options?: GaOptions; menu?: Drink[] } = {}) {
   const onSend = vi.fn(), onGuest = vi.fn(), onBack = vi.fn();
   let seen: Line[] = [];
   function Host() {
     const [lines, setLines] = useState<Line[]>(props.first ?? []);
     seen = lines;
-    return <QuickInput draft={draft} lines={lines} setLines={setLines} people={SAMPLE_PEOPLE} sending={props.sending ?? false} problem={props.problem ?? null} onSend={onSend} onGuest={onGuest} onBack={onBack} />;
+    return <QuickInput draft={draft} lines={lines} setLines={setLines} people={SAMPLE_PEOPLE} menu={props.menu ?? DRINKS} options={props.options ?? DEFAULT_OPTIONS} sending={props.sending ?? false} problem={props.problem ?? null} onSend={onSend} onGuest={onGuest} onBack={onBack} />;
   }
   render(<Host />);
   rest();
@@ -58,7 +59,7 @@ it("adds a guest's drink per tap: the same drink twice is one row of two, hot wi
 
 it("ignores the tap that was still on its way from the screen before", () => {
   const onSend = vi.fn();
-  function Host() { const [lines, setLines] = useState<Line[]>([]); return <QuickInput draft={draft} lines={lines} setLines={setLines} people={SAMPLE_PEOPLE} sending={false} problem={null} onSend={onSend} onGuest={vi.fn()} onBack={vi.fn()} />; }
+  function Host() { const [lines, setLines] = useState<Line[]>([]); return <QuickInput draft={draft} lines={lines} setLines={setLines} people={SAMPLE_PEOPLE} menu={DRINKS} options={DEFAULT_OPTIONS} sending={false} problem={null} onSend={onSend} onGuest={vi.fn()} onBack={vi.fn()} />; }
   render(<Host />);
   fireEvent.click(tile("Café Latte"));
   expect(within(order()).getByText("Belum ada minuman")).toBeTruthy();
@@ -239,4 +240,49 @@ it("F3-07 brings the name search to the top when it is typed in, so the names un
   expect(within(block).getByRole("button", { name: `${PIC.name} (PIC)` })).toBeTruthy();
   expect([...block.querySelectorAll("input, button")].indexOf(field)).toBe(0);
   delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+});
+
+// F6: what a row asks follows Pengaturan, per audience.
+it("F6 adds a guest's drink with nothing on it when guests are asked nothing, and says so in the hint", () => {
+  const { lines } = open({ options: { tim: ALL_OPTIONS, tamu: NO_OPTIONS } });
+  expect(within(order()).getByText("Ketuk minuman di menu. Bawaannya untuk Tamu.")).toBeTruthy();
+  fireEvent.click(tile("Café Latte"));
+  fireEvent.click(tile("Café Latte"));
+  expect(lines()).toMatchObject([{ slug: "cafe-latte", for: "tamu", qty: 2, temperature: null, sugar: null, ice: null }]);
+  expect(order().textContent).not.toMatch(/Panas|gula/);
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Café Latte, Tamu" }));
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(within(dialog()).queryByRole("group", { name })).toBeNull();
+  expect(within(dialog()).getByRole("group", { name: "Jumlah" })).toBeTruthy();
+  // The row becomes a team member's: the team is asked everything, so the controls appear with their bawaan.
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Tim · rapat" }));
+  expect(within(dialog()).getByRole("group", { name: "Suhu" })).toBeTruthy();
+  expect(within(within(dialog()).getByRole("group", { name: "Gula" })).getByRole("button", { name: "Normal" }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(within(dialog()).getByRole("button", { name: OTHER.name }));
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
+  expect(lines()).toMatchObject([{ for: "tim", temperature: "panas", sugar: "Normal", ice: null, person: { id: OTHER.id } }]);
+  expect(within(order()).getByText("Panas · gula Normal")).toBeTruthy();
+});
+
+it("F6 drops a row's options when it moves to an audience that is asked nothing", () => {
+  const { lines } = open({ options: { tim: NO_OPTIONS, tamu: ALL_OPTIONS } });
+  expect(within(order()).getByText("Ketuk minuman di menu. Bawaannya Panas · gula Normal, untuk Tamu.")).toBeTruthy();
+  fireEvent.click(tile("Café Latte"));
+  expect(lines()).toMatchObject([{ temperature: "panas", sugar: "Normal", ice: null }]);
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Café Latte, Tamu" }));
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Tim · rapat" }));
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(within(dialog()).queryByRole("group", { name })).toBeNull();
+  fireEvent.click(within(dialog()).getByRole("button", { name: PIC.name + " (PIC)" }));
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
+  expect(lines()).toMatchObject([{ for: "tim", temperature: null, sugar: null, ice: null }]);
+});
+
+it("F6 offers the pengelola's menu: hidden drinks are gone, a new one without a photo shows a cup", () => {
+  const menu: Drink[] = [...DRINKS.map(drink => drink.slug === "americano" ? { ...drink, active: false } : drink), { slug: "teh-tarik", name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], photo: null, active: true }];
+  const { lines } = open({ menu });
+  expect(screen.queryByRole("button", { name: /^Tambah Americano/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Non-kopi" }));
+  expect(tile("Teh Tarik").querySelector("img")).toBeNull();
+  fireEvent.click(tile("Teh Tarik"));
+  expect(lines()).toMatchObject([{ slug: "teh-tarik", temperature: "panas", sugar: "Normal" }]);
+  expect(within(order()).getByText("Teh Tarik")).toBeTruthy();
 });

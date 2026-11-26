@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Bell, BellRing, Coffee, RefreshCw, Smartphone, WifiOff } from "lucide-react";
+import { DEFAULT_OPTIONS, DRINKS } from "@/lib/coffee/menu";
 import { pushNote } from "@/lib/coffee/notify";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
 import { COFFEE_GA_ORDER, coffeePath } from "@/lib/routes";
@@ -122,6 +123,8 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
   }, [open, say]);
   const { state, refresh, send, sending, stale, retry, retrying } = useGa(api, initial, onDecided, guest);
   const { today, people, rooms } = state;
+  // The menu and what the team and guests are asked come with the state (F6); the code's menu and the defaults only if an answer ever lacks them.
+  const menu = state.menu ?? DRINKS, options = state.options ?? DEFAULT_OPTIONS;
   const sent = sentId ? today.find(order => order.id === sentId) : undefined;
 
   // Web push. Paused in guest mode: the device is not asked, the worker not registered, its messages not heard.
@@ -159,13 +162,15 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
 
   // After a reload: back into the book with what was kept; or, when the server saw guest mode but
   // nothing can be restored, locked on the cover until the GA officer leaves it.
+  // What was kept is checked against the menu and options the page came with (a drink that left the menu is dropped).
+  const [holdRules] = useState(() => ({ menu: initial.menu ?? DRINKS, options: initial.options ?? DEFAULT_OPTIONS }));
   useEffect(() => {
-    const kept = readHold();
+    const kept = readHold(holdRules);
     /* eslint-disable react-hooks/set-state-in-effect -- the tab's storage exists only in the browser, after the first paint */
     if (kept) { setDraft(kept.draft); setLines(kept.lines); setBook(kept.book); setGuest(true); setScreen("quick"); }
     setRestored(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [holdRules]);
   // Guest mode is remembered while it lasts, and forgotten the moment the GA officer is back.
   useEffect(() => {
     if (!restored) return;
@@ -325,7 +330,7 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
     <div className={`${css.ga} ${css.stage}`} data-guest>
       {restored
         ? <GuestBook key={draft ? "book" : "locked"} room={draft?.room ?? ""} picName={draft?.pic.name ?? ""} guest={draft?.guest} max={Math.max(MAX_LINES - lines.length, 0)}
-            saved={book} locked={!draft} exit={{ pin: state.pin, check: checkPin }} onKeep={setBook} onDone={backFromGuest} />
+            menu={menu} options={options.tamu} saved={book} locked={!draft} exit={{ pin: state.pin, check: checkPin }} onKeep={setBook} onDone={backFromGuest} />
         // Before the tab's storage was read: the closed cover, the same on the server and in the browser.
         : <div className={css.book} role="region" aria-label="Buku menu tamu"><div className={css.cover} aria-hidden><span className={css.coverFrame} /><span className={css.goldMark} /></div></div>}
     </div>
@@ -365,7 +370,7 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
           <NewOrder initial={draft} rooms={rooms} people={people} onBack={leave} onQuick={next => begin(next, false)} onGuest={next => begin(next, true)} />
         )}
         {screen === "quick" && draft && (
-          <QuickInput draft={draft} lines={lines} setLines={setLines} people={people} sending={sending} problem={problem} onSend={submit}
+          <QuickInput draft={draft} lines={lines} setLines={setLines} people={people} menu={menu} options={options} sending={sending} problem={problem} onSend={submit}
             onGuest={() => { setBook(undefined); setGuest(true); }} onBack={() => { if (sending) return; if (draft.parent) leave(); else { setProblem(null); setScreen("new"); } }} />
         )}
         {screen === "sent" && (sent

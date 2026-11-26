@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AdminApiError } from "@/components/admin/shared/api";
 import type { SettingsData } from "./api";
 import { createSampleServer } from "./sample";
@@ -28,7 +28,14 @@ async function open(change: (api: ReturnType<typeof createSampleServer>["api"]) 
 }
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
 const type = (name: string, value: string) => fireEvent.change(field(name), { target: { value } });
-const save = () => screen.getByRole("button", { name: /Simpan jatah|Menyimpan/ }) as HTMLButtonElement;
+const quotas = () => screen.getByRole("region", { name: "Jatah per bulan" });
+const save = () => within(quotas()).getByRole("button", { name: /Simpan jatah|Menyimpan/ }) as HTMLButtonElement;
+// F6: Opsi minuman.
+const drinks = () => screen.getByRole("region", { name: "Opsi minuman" });
+const group = (name: string) => within(drinks()).getByRole("group", { name });
+const flag = (audience: string, name: RegExp) => within(group(audience)).getByRole("switch", { name }) as HTMLInputElement;
+const flags = (audience: string) => within(group(audience)).getAllByRole("switch").map(input => (input as HTMLInputElement).checked);
+const saveOptions = () => within(drinks()).getByRole("button", { name: /Simpan opsi|Menyimpan/ }) as HTMLButtonElement;
 
 afterEach(cleanup);
 
@@ -36,12 +43,12 @@ it("shows the quotas, the holders and the rooms; Simpan waits for a change", asy
   await open();
   expect([field("Karyawan").value, field("Tim GA").value, field("Intern").value]).toEqual(["4", "2", "2"]);
   expect(save().disabled).toBe(true);
-  expect(screen.getByText("Tersimpan.")).toBeTruthy();
+  expect(within(quotas()).getByText("Tersimpan.")).toBeTruthy();
   expect(screen.getByText("Dewi Lestari (contoh)")).toBeTruthy();
   expect(screen.getByText("Vasuki Room")).toBeTruthy();
   type("Karyawan", "5");
   expect(save().disabled).toBe(false);
-  expect(screen.getByText("Belum disimpan.")).toBeTruthy();
+  expect(within(quotas()).getByText("Belum disimpan.")).toBeTruthy();
   type("Karyawan", "4");
   expect(save().disabled).toBe(true);
 });
@@ -165,4 +172,76 @@ it("says so when the PIN could not be saved, and keeps what was typed for anothe
   expect((await screen.findByRole("alert")).textContent).toMatch(/menunggu migrasi/);
   expect((screen.getByLabelText("PIN") as HTMLInputElement).value).toBe("4821");
   expect(screen.getByText("Belum diatur")).toBeTruthy();
+});
+
+// F6: which options each audience is asked with a drink.
+it("F6 shows three switches per audience at the owner's defaults: a claim nothing, the team and guests everything", async () => {
+  await open();
+  expect(within(drinks()).getAllByRole("group").map(item => item.querySelector("legend")?.textContent)).toEqual(["Karyawan (klaim)", "Tim · rapat", "Tamu"]);
+  expect(flags("Karyawan (klaim)")).toEqual([false, false, false]);
+  expect(flags("Tim · rapat")).toEqual([true, true, true]);
+  expect(flags("Tamu")).toEqual([true, true, true]);
+  expect(within(group("Tamu")).getAllByRole("switch").map(input => input.closest("label")?.textContent)).toEqual(["Suhu (Panas/Es)Ditanyakan", "GulaDitanyakan", "Takaran esDitanyakan"]);
+  // Takaran es rests while Suhu is off: there is no "Es" to ask the ice of.
+  expect(flag("Karyawan (klaim)", /^Takaran es/).disabled).toBe(true);
+  expect(within(group("Karyawan (klaim)")).getByText("Nyalakan Suhu dulu")).toBeTruthy();
+  expect(saveOptions().disabled).toBe(true);
+  expect(within(drinks()).getByText("Tersimpan.")).toBeTruthy();
+});
+
+it("F6 saves the switches together, turns Takaran es off with Suhu, and keeps the quota form untouched", async () => {
+  const { api, onSaved } = await open(real => ({ saveOptions: vi.fn(real.saveOptions) }));
+  const spy = (api as unknown as { saveOptions: ReturnType<typeof vi.fn> }).saveOptions;
+  fireEvent.click(flag("Karyawan (klaim)", /^Gula/));
+  expect(within(drinks()).getByText("Belum disimpan.")).toBeTruthy();
+  expect(save().disabled).toBe(true);
+  fireEvent.click(flag("Tamu", /^Suhu/));
+  expect(flags("Tamu")).toEqual([false, true, false]);
+  expect(flag("Tamu", /^Takaran es/).disabled).toBe(true);
+  // Back on: the ice level stays off until it is asked for again.
+  fireEvent.click(flag("Tim · rapat", /^Takaran es/));
+  expect(flags("Tim · rapat")).toEqual([true, true, false]);
+  fireEvent.click(saveOptions());
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(spy).toHaveBeenCalledWith({ klaim: { suhu: false, gula: true, es: false }, tim: { suhu: true, gula: true, es: false }, tamu: { suhu: false, gula: true, es: false } });
+  expect(onSaved.mock.calls[0][1]).toBe("Opsi minuman disimpan. Berlaku mulai pesanan berikutnya.");
+  expect(onSaved.mock.calls[0][0]).toMatchObject({ options: { klaim: { gula: true } }, settings: { karyawan: 4 } });
+  expect(saveOptions().disabled).toBe(true);
+  expect(within(drinks()).getByText("Tersimpan.")).toBeTruthy();
+  // Flipping back to what is saved is no change.
+  fireEvent.click(flag("Karyawan (klaim)", /^Gula/));
+  fireEvent.click(flag("Karyawan (klaim)", /^Gula/));
+  expect(saveOptions().disabled).toBe(true);
+});
+
+it("F6 shows the server's refusal and keeps what was chosen; new values from the server do not overwrite an unsaved change", async () => {
+  const { push, first } = await open(() => ({ saveOptions: vi.fn(async () => { throw new AdminApiError("Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.", undefined, 503); }) }));
+  fireEvent.click(flag("Karyawan (klaim)", /^Gula/));
+  fireEvent.click(saveOptions());
+  expect((await within(drinks()).findByRole("alert")).textContent).toBe("Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.");
+  expect(flags("Karyawan (klaim)")).toEqual([false, true, false]);
+  expect(saveOptions().disabled).toBe(false);
+  // Another pengelola saved meanwhile (the settings are read again): the unsaved switch stays as chosen.
+  act(() => push({ ...first, options: { ...first.options, tamu: { suhu: true, gula: false, es: true } } }));
+  expect(flags("Karyawan (klaim)")).toEqual([false, true, false]);
+});
+
+it("F6 follows the server while nothing waits to be saved", async () => {
+  const { push, first } = await open();
+  act(() => push({ ...first, options: { ...first.options, klaim: { suhu: true, gula: true, es: true } } }));
+  expect(flags("Karyawan (klaim)")).toEqual([true, true, true]);
+  expect(saveOptions().disabled).toBe(true);
+});
+
+it("F6 says what it waits for before migration 202612020001, with every switch on and resting", async () => {
+  const { push, first } = await open();
+  const all = { suhu: true, gula: true, es: true };
+  act(() => push({ ...first, optionsReady: false, options: { klaim: all, tim: all, tamu: all } }));
+  expect(within(drinks()).getAllByRole("status")[0].textContent).toMatch(/Menunggu migrasi 202612020001_coffee_menu\.sql\. Sampai dijalankan, semua opsi ditanyakan ke semua orang/);
+  expect(flags("Karyawan (klaim)")).toEqual([true, true, true]);
+  expect(within(drinks()).getAllByRole("group").every(item => (item as HTMLFieldSetElement).disabled)).toBe(true);
+  expect(saveOptions().disabled).toBe(true);
+  // The quotas still work.
+  type("Karyawan", "5");
+  expect(save().disabled).toBe(false);
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Info, Plus, X } from "lucide-react";
-import { drinkLabel, optionsLabel } from "@/lib/coffee/menu";
+import { drinkName, optionsLabel } from "@/lib/coffee/menu";
 import type { MeetingOrder } from "@/lib/coffee/types";
 import { DrinkPhoto } from "../CurrentOrder";
 import { clock } from "../format";
@@ -47,10 +47,10 @@ export function Sent({ order, more, onMore, onHome }: { order: MeetingOrder; mor
           <ul className={css.summary}>
             {order.items.map(item => (
               <li key={item.id}>
-                <DrinkPhoto slug={item.slug} size={44} />
+                <DrinkPhoto src={item.photo} size={44} />
                 <span className={css.grow}>
-                  <strong>{item.qty}× {drinkLabel(item.slug, item.other)}</strong>
-                  <span>{optionsLabel(item.temperature, item.sugar, item.ice)}</span>
+                  <strong>{item.qty}× {drinkName(item)}</strong>
+                  {optionsLabel(item.temperature, item.sugar, item.ice) && <span>{optionsLabel(item.temperature, item.sugar, item.ice)}</span>}
                 </span>
                 <span className={css.tag} data-for={item.for === "tim" ? "tim" : "tamu"}>{lineTag(item.for, item.for === "tim" ? item.person?.name : item.guestName)}</span>
               </li>

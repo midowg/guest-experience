@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { manualSchema } from "@/lib/coffee/schemas";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
 
 /* The pengelola's queue against the in-memory stand-in (fake-db.ts). Made-up people. */
 let db = fakeDb();
@@ -20,7 +21,7 @@ const claim = async (employee: string, at = "2026-11-25T02:00:00.000Z") => (awai
 const meeting = async () => (await db.client.rpc("coffee_submit_meeting", { p_order: { pic_id: PEOPLE.rina, room: "Vasuki Room", room_spot: "vasuki", actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-25T02:30:00.000Z" }, p_items: [{ for: "tamu", ...drink, qty: 2 }], p_key: key(++n) })).data as string;
 const manual = (more: object) => manualSchema.parse({ kind: "klaim", employeeId: PEOPLE.rina, date: "2026-11-24", time: "10:00", ...drink, key: key(++n), ...more });
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = now; n = 0; });
+beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); db.state.now = now; n = 0; });
 
 describe("the queue", () => {
   it("lists what waits, oldest first, with each claim's number and quota", async () => {
@@ -248,4 +249,57 @@ it("answers 503 with the migration's name before it runs", async () => {
   await expect(reopenOrder(NOBODY, dewi, now)).rejects.toMatchObject(waits);
   await expect(recordManual(manual({}), dewi, now)).rejects.toMatchObject(waits);
   await expect(cancelManual(NOBODY, dewi, now)).rejects.toMatchObject(waits);
+});
+
+describe("F6: Catat manual and the queue with options and the menu", () => {
+  const ask = (more: object) => Object.assign(db.rows("coffee_settings")[0], more);
+  const lastItem = () => db.rows("coffee_order_items").at(-1)!;
+
+  it("records each kind with what that kind is asked: a claim nothing, a guest's and the team's drink everything", async () => {
+    const claimed = await recordManual(manual({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" }), dewi, now);
+    expect(lastItem()).toMatchObject({ for_whom: "klaim", drink_name: "Café Latte", temperature: null, sugar: null, ice: null });
+    expect(claimed.message).toBe("Contoh · Café Latte · klaim ke-1 dari 4.");
+    await recordManual(manual({ kind: "tamu", temperature: "es", sugar: "Sedikit", ice: "Ekstra", qty: 2 }), dewi, now);
+    expect(lastItem()).toMatchObject({ for_whom: "tamu", temperature: "es", sugar: "Sedikit", ice: "Ekstra", qty: 2 });
+    await recordManual(manual({ kind: "tim" }), dewi, now);
+    expect(lastItem()).toMatchObject({ for_whom: "tim", temperature: "panas", sugar: "Normal", ice: null });
+    // The pengelola asks claims for their sugar: the record follows at once.
+    ask({ opt_klaim_gula: true });
+    await recordManual(manual({ employeeId: PEOPLE.fajar, sugar: "Tanpa" }), dewi, now);
+    expect(lastItem()).toMatchObject({ for_whom: "klaim", temperature: null, sugar: "Tanpa", ice: null });
+    await expect(recordManual(manual({ kind: "tamu", temperature: undefined }), dewi, now)).rejects.toMatchObject({ status: 422, fieldErrors: { temperature: ["Pilih panas atau es."] } });
+  });
+
+  it("may record a hidden drink and one off the menu, but not one that does not exist", async () => {
+    Object.assign(db.rows("coffee_drinks").find(item => item.slug === "cafe-latte")!, { active: false });
+    const hidden = await recordManual(manual({}), dewi, now);
+    expect(hidden.order.items[0]).toMatchObject({ slug: "cafe-latte", name: "Café Latte" });
+    const other = await recordManual(manual({ employeeId: PEOPLE.fajar, slug: "lainnya", other: " Wedang uwuh " }), dewi, now);
+    expect(other.order.items[0]).toMatchObject({ slug: "lainnya", other: "Wedang uwuh" });
+    expect(other.order.items[0].name).toBeUndefined();
+    expect(other.message).toBe("Contoh · Wedang uwuh · klaim ke-1 dari 2.");
+    await expect(recordManual(manual({ employeeId: PEOPLE.dewi, slug: "tidak-ada" }), dewi, now)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("shows every drink in the queue under the name it was ordered with, with today's photo", async () => {
+    const id = await claim(PEOPLE.rina);
+    Object.assign(db.rows("coffee_drinks").find(item => item.slug === "cafe-latte")!, { name: "Latte Susu", photo_url: "https://contoh.test/latte.webp" });
+    forgetMenu();
+    const state = await queue(dewi, now);
+    expect(state.waiting.find(order => order.id === id)?.items[0]).toMatchObject({ name: "Café Latte", photo: "https://contoh.test/latte.webp" });
+    db.state.tables.coffee_drinks = [];
+    forgetMenu();
+    expect((await queue(dewi, now)).waiting[0].items[0]).toMatchObject({ name: "Café Latte", photo: null });
+  });
+
+  it("before migration 202612020001 Catat manual asks every option of every kind, as before", async () => {
+    db.state.menuMigrated = false;
+    db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+    delete db.state.tables.coffee_drinks;
+    forgetMenu(true);
+    const done = await recordManual(manual({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" }), dewi, now);
+    expect(lastItem()).toMatchObject({ for_whom: "klaim", temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+    expect(done.order.items[0]).toMatchObject({ name: "Café Latte", temperature: "es" });
+    expect((await queue(dewi, now)).recent[0].items[0].name).toBe("Café Latte");
+  });
 });

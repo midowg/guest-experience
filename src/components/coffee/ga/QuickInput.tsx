@@ -2,19 +2,20 @@
 
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { BookOpen, CircleAlert, Coffee, CupSoda, Info, Plus, Send } from "lucide-react";
-import { DRINKS, drinkLabel, optionsLabel, type DrinkGroup } from "@/lib/coffee/menu";
+import { drinkIn, drinkLabel, offered, optionsLabel, startChoice, type Drink, type DrinkGroup } from "@/lib/coffee/menu";
 import { LineDialog } from "./LineDialog";
-import { MAX_LINES, MAX_QTY, countLabel, counts, defaultLine, lineTag, type Draft, type GaPerson, type Line, type LineFor } from "./model";
+import { MAX_LINES, MAX_QTY, countLabel, counts, defaultLine, lineTag, type Draft, type GaOptions, type GaPerson, type Line, type LineFor } from "./model";
 import { Photo, ScreenHead, Stepper, useSettled } from "./parts";
 import css from "./ga.module.css";
 
 /**
- * Input cepat: tap a drink to add one (Panas · gula Normal, for a guest); "Ketuk untuk" switches
+ * Input cepat: tap a drink to add one for a guest, with the bawaan of what guests are asked
+ * (Panas · gula Normal while Pengaturan asks both; nothing when it asks nothing); "Ketuk untuk" switches
  * the taps to a team member, who is then asked for by name. Each row can be changed or removed.
  * Kirim sends the whole order to the pengelola once; while it is being sent nothing can be pressed twice.
  */
-export function QuickInput({ draft, lines, setLines, people, sending, problem, onSend, onGuest, onBack }: {
-  draft: Draft; lines: Line[]; setLines: Dispatch<SetStateAction<Line[]>>; people: GaPerson[]; sending: boolean; problem: string | null;
+export function QuickInput({ draft, lines, setLines, people, menu, options, sending, problem, onSend, onGuest, onBack }: {
+  draft: Draft; lines: Line[]; setLines: Dispatch<SetStateAction<Line[]>>; people: GaPerson[]; menu: readonly Drink[]; options: GaOptions; sending: boolean; problem: string | null;
   onSend: () => void; onGuest: () => void; onBack: () => void;
 }) {
   const [group, setGroup] = useState<DrinkGroup>("kopi");
@@ -23,18 +24,22 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
   /** A tap that could not add anything because the order is full: said out loud, not swallowed. */
   const [refused, setRefused] = useState(0);
   const settled = useSettled();
-  const drinks = DRINKS.filter(drink => drink.group === group);
+  const drinks = offered(menu).filter(drink => drink.group === group);
+  // What a tapped drink starts with for a guest, in words ("" when guests are asked nothing).
+  const first = startChoice(undefined, options.tamu);
+  const bawaan = optionsLabel(first.temperature, first.sugar, first.ice);
   const qtyOf = (slug: string) => lines.filter(line => line.slug === slug).reduce((sum, line) => sum + line.qty, 0);
   const { total } = counts(lines);
   const full = lines.length >= MAX_LINES;
 
-  const add = (slug: string) => {
+  const add = (drink: Drink) => {
+    const slug = drink.slug;
     if (sending || !settled()) return;
-    if (tapFor === "tim") { if (full) setRefused(count => count + 1); else setEditing({ line: defaultLine(slug, "tim"), isNew: true }); return; }
-    const base = defaultLine(slug, "tamu");
+    if (tapFor === "tim") { if (full) setRefused(count => count + 1); else setEditing({ line: defaultLine(drink, "tim", options), isNew: true }); return; }
+    const base = defaultLine(drink, "tamu", options);
     // One more of a row only when it is the very same drink: the bawaan options, the ice level included
     // (Cucumber Ice changed to "es Sedikit" is another row), and no guest's name on it.
-    const same = lines.find(line => line.for === "tamu" && !line.guestName && line.slug === slug && line.temperature === base.temperature && line.sugar === base.sugar && line.ice === base.ice && line.qty < MAX_QTY);
+    const same = lines.find(line => line.for === "tamu" && !line.guestName && line.slug === slug && line.temperature === base.temperature && line.sugar === base.sugar && (base.temperature !== "es" || line.ice === base.ice) && line.qty < MAX_QTY);
     if (!same && full) { setRefused(count => count + 1); return; }
     setLines(list => same && list.includes(same) ? list.map(line => line === same ? { ...line, qty: line.qty + 1 } : line) : list.length >= MAX_LINES ? list : [...list, base]);
   };
@@ -64,13 +69,14 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
               <button type="button" aria-pressed={tapFor === "tim"} onClick={() => setTapFor("tim")}>Tim · rapat</button>
             </div>
           </div>
+          {!drinks.length && <p className={css.mutedSmall}>Belum ada minuman {group === "kopi" ? "kopi" : "non-kopi"} di menu.</p>}
           <ul className={css.drinkGrid}>
             {drinks.map(drink => {
               const qty = qtyOf(drink.slug);
               return (
                 <li key={drink.slug}>
-                  <button type="button" className={css.tile} onClick={() => add(drink.slug)} aria-label={`Tambah ${drink.name}${qty ? `, sudah ${qty}` : ""}`}>
-                    <Photo slug={drink.slug} width={200} height={150} />
+                  <button type="button" className={css.tile} onClick={() => add(drink)} aria-label={`Tambah ${drink.name}${qty ? `, sudah ${qty}` : ""}`}>
+                    <Photo src={drink.photo} width={200} height={150} />
                     <span className={css.tileName}>{drink.name}</span>
                     <span className={css.tilePlus} aria-hidden><Plus size={20} /></span>
                     {qty > 0 && <span className={css.tileCount} aria-hidden>{qty}</span>}
@@ -86,19 +92,21 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
           {lines.length === 0 ? (
             <div className={css.orderEmpty}>
               <Coffee aria-hidden size={28} />
-              <p>Ketuk minuman di menu. Bawaannya Panas · gula Normal, untuk Tamu.</p>
+              <p>Ketuk minuman di menu. {bawaan ? `Bawaannya ${bawaan}, untuk Tamu.` : "Bawaannya untuk Tamu."}</p>
             </div>
           ) : (
             <ul className={css.lines}>
               {lines.map(line => {
-                const name = drinkLabel(line.slug);
+                const drink = drinkIn(menu, line.slug);
+                const name = drinkLabel(line.slug, null, drink?.name);
+                const chosen = optionsLabel(line.temperature, line.sugar, line.ice);
                 return (
                   <li key={line.id}>
                     <button type="button" className={css.lineBody} disabled={sending} onClick={() => setEditing({ line, isNew: false })} aria-label={`Ubah ${name}, ${lineTag(line.for, line.for === "tim" ? line.person?.name : line.guestName)}`}>
-                      <Photo slug={line.slug} width={44} height={44} />
+                      <Photo src={drink?.photo} width={44} height={44} />
                       <span className={css.grow}>
                         <strong>{name}</strong>
-                        <span>{optionsLabel(line.temperature, line.sugar, line.ice)}</span>
+                        {chosen && <span>{chosen}</span>}
                         <span className={css.tag} data-for={line.for}>{lineTag(line.for, line.for === "tim" ? line.person?.name : line.guestName)}</span>
                       </span>
                     </button>
@@ -124,7 +132,7 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
           </div>
         </section>
       </div>
-      {editing && <LineDialog line={editing.line} isNew={editing.isNew} pic={draft.pic} people={people} onClose={() => setEditing(null)} onSave={save}
+      {editing && <LineDialog line={editing.line} isNew={editing.isNew} pic={draft.pic} people={people} menu={menu} options={options} onClose={() => setEditing(null)} onSave={save}
         onRemove={() => { setLines(list => list.filter(item => item.id !== editing.line.id)); setEditing(null); }} />}
     </div>
   );

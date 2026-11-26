@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { claimSchema, coffeePushSchema, drinklineSchema, isPushServiceUrl, manualSchema, meetingSchema, recapQuerySchema, rejectSchema, settingsSchema } from "./schemas";
+import { coffeePath } from "../routes";
+import { ALL_OPTIONS, DRINKS, NO_OPTIONS, drinkBySlug } from "./menu";
+import { claimSchema, coffeePushSchema, drinklineSchema, isPushServiceUrl, manualSchema, meetingSchema, optionsSchema, recapQuerySchema, rejectSchema, settingsSchema, settleLine } from "./schemas";
 
 const KEY = "11111111-1111-4111-8111-111111111111";
 const PERSON = "22222222-2222-4222-8222-222222222222";
@@ -8,17 +10,61 @@ const fields = (result: { success: boolean; error?: { issues: { path: PropertyKe
   Object.fromEntries((result.error?.issues ?? []).map(issue => [issue.path.join("."), issue.message]));
 
 describe("a drink", () => {
-  it("must be on the menu and come in the temperature asked for", () => {
+  // F6: the shape only says what a line may look like; the menu and the options decide the rest (settleLine).
+  it("may come with or without its options, but never with a value that is not one", () => {
     expect(drinklineSchema.parse(drink)).toEqual(drink);
-    expect(fields(drinklineSchema.safeParse({ ...drink, slug: "es-teh-manis" }))).toEqual({ slug: "Pilih minuman." });
-    expect(fields(drinklineSchema.safeParse({ ...drink, slug: "espresso" }))).toEqual({ temperature: "Espresso hanya tersedia panas." });
-    expect(fields(drinklineSchema.safeParse({ ...drink, slug: "cucumber-ice", temperature: "panas" }))).toEqual({ temperature: "Cucumber Ice hanya tersedia dingin (es)." });
-    expect(fields(drinklineSchema.safeParse({ ...drink, slug: "lainnya" }))).toEqual({ slug: "Pilih minuman." });
+    expect(drinklineSchema.parse({ slug: "cafe-latte" })).toEqual({ slug: "cafe-latte" });
+    expect(drinklineSchema.parse({ slug: "cafe-latte", temperature: null, sugar: "", ice: null })).toEqual({ slug: "cafe-latte" });
     expect(drinklineSchema.safeParse({ ...drink, sugar: "Banyak" }).success).toBe(false);
+    expect(drinklineSchema.safeParse({ ...drink, temperature: "hangat" }).success).toBe(false);
+    expect(drinklineSchema.safeParse({ ...drink, ice: "Banyak" }).success).toBe(false);
+    expect(fields(drinklineSchema.safeParse({ temperature: "es" }))).toEqual({ slug: "Pilih minuman." });
   });
-  it("carries a normal ice level when hot, whatever was sent", () => {
-    expect(drinklineSchema.parse({ ...drink, temperature: "panas" }).ice).toBe("Normal");
-    expect(drinklineSchema.parse({ slug: "espresso", temperature: "panas", sugar: "Tanpa" }).ice).toBe("Normal");
+  const latte = drinkBySlug("cafe-latte"), espresso = drinkBySlug("espresso"), cucumber = drinkBySlug("cucumber-ice");
+  it("with every option asked: must be on the menu, come in the temperature asked for, and carry its sugar", () => {
+    expect(settleLine(drink, latte, ALL_OPTIONS)).toEqual({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+    expect(settleLine({ ...drink, slug: "es-teh-manis" }, undefined, ALL_OPTIONS)).toEqual({ field: "slug", message: "Pilih minuman." });
+    expect(settleLine({ ...drink, slug: "espresso" }, espresso, ALL_OPTIONS)).toEqual({ field: "temperature", message: "Espresso hanya tersedia panas." });
+    expect(settleLine({ ...drink, slug: "cucumber-ice", temperature: "panas" }, cucumber, ALL_OPTIONS)).toEqual({ field: "temperature", message: "Cucumber Ice hanya tersedia dingin (es)." });
+    expect(settleLine({ slug: "cafe-latte", sugar: "Normal" }, latte, ALL_OPTIONS)).toEqual({ field: "temperature", message: "Pilih panas atau es." });
+    expect(settleLine({ slug: "cafe-latte", temperature: "panas" }, latte, ALL_OPTIONS)).toEqual({ field: "sugar", message: "Pilih takaran gula." });
+    // A drink that comes one way only needs no temperature sent.
+    expect(settleLine({ slug: "espresso", sugar: "Tanpa" }, espresso, ALL_OPTIONS)).toEqual({ temperature: "panas", sugar: "Tanpa", ice: null });
+    expect(settleLine({ slug: "cucumber-ice", sugar: "Normal" }, cucumber, ALL_OPTIONS)).toEqual({ temperature: "es", sugar: "Normal", ice: "Normal" });
+  });
+  it("carries no ice level when hot, whatever was sent", () => {
+    expect(settleLine({ ...drink, temperature: "panas" }, latte, ALL_OPTIONS)).toEqual({ temperature: "panas", sugar: "Sedikit", ice: null });
+  });
+  it("drops what its audience is not asked, whatever the browser sent: null, never a made-up default", () => {
+    expect(settleLine(drink, latte, NO_OPTIONS)).toEqual({ temperature: null, sugar: null, ice: null });
+    expect(settleLine({ slug: "cafe-latte" }, latte, NO_OPTIONS)).toEqual({ temperature: null, sugar: null, ice: null });
+    // An unfitting temperature is not even looked at when the temperature is not asked.
+    expect(settleLine({ ...drink, slug: "espresso" }, espresso, NO_OPTIONS)).toEqual({ temperature: null, sugar: null, ice: null });
+    expect(settleLine(drink, latte, { suhu: false, gula: true, es: false })).toEqual({ temperature: null, sugar: "Sedikit", ice: null });
+    expect(settleLine(drink, latte, { suhu: true, gula: false, es: false })).toEqual({ temperature: "es", sugar: null, ice: null });
+    // Takaran es never counts without the temperature.
+    expect(settleLine(drink, latte, { suhu: false, gula: false, es: true })).toEqual({ temperature: null, sugar: null, ice: null });
+  });
+  it("takes a drink off the menu ('lainnya', Catat manual) in any temperature", () => {
+    expect(settleLine({ ...drink, slug: "lainnya" }, undefined, ALL_OPTIONS)).toEqual({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+    expect(settleLine({ slug: "lainnya" }, undefined, NO_OPTIONS)).toEqual({ temperature: null, sugar: null, ice: null });
+  });
+  it("is seeded as 15 drinks, each with its static photo and shown", () => {
+    expect(DRINKS).toHaveLength(15);
+    expect(DRINKS.every(item => item.active && item.photo === coffeePath.photo(item.slug))).toBe(true);
+  });
+});
+
+describe("Opsi minuman", () => {
+  const all = { suhu: true, gula: true, es: true }, none = { suhu: false, gula: false, es: false };
+  it("takes three switches for each of the three audiences", () => {
+    expect(optionsSchema.parse({ klaim: none, tim: all, tamu: all })).toEqual({ klaim: none, tim: all, tamu: all });
+    expect(optionsSchema.safeParse({ klaim: none, tim: all }).success).toBe(false);
+    expect(optionsSchema.safeParse({ klaim: { ...none, gula: "ya" }, tim: all, tamu: all }).success).toBe(false);
+    expect(optionsSchema.safeParse({ klaim: { suhu: true }, tim: all, tamu: all }).success).toBe(false);
+  });
+  it("never keeps takaran es on without the temperature", () => {
+    expect(optionsSchema.parse({ klaim: { suhu: false, gula: true, es: true }, tim: all, tamu: all }).klaim).toEqual({ suhu: false, gula: true, es: false });
   });
 });
 
@@ -46,7 +92,9 @@ describe("a meeting order", () => {
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tim", ...drink, qty: 1 }] }))).toEqual({ "items.0.personId": "Pilih orangnya." });
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, qty: 0 }] }))).toEqual({ "items.0.qty": "Jumlah minimal 1." });
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, qty: 51 }] }))).toHaveProperty("items.0.qty");
-    expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, slug: "espresso", qty: 1 }] }))).toHaveProperty("items.0.temperature");
+    expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, sugar: "Banyak", qty: 1 }] }))).toHaveProperty("items.0.sugar");
+    // F6: a line may come without options (its audience is not asked them).
+    expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", slug: "espresso", qty: 1 }] }).items[0]).toMatchObject({ slug: "espresso", qty: 1 });
     // The guest's own name (26 Nov): optional, trimmed, 40 letters at most, and only on a guest's drink.
     expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "  Pak Budi " }] }).items[0].guestName).toBe("Pak Budi");
     expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "   " }] }).items[0].guestName).toBeUndefined();
@@ -83,7 +131,9 @@ describe("Catat manual", () => {
     expect(fields(manualSchema.safeParse({ ...manual, slug: "lainnya", other: "  " }))).toEqual({ other: "Tulis nama minumannya." });
     expect(manualSchema.parse({ ...manual, slug: "lainnya", other: " Teh tarik " })).toMatchObject({ slug: "lainnya", other: "Teh tarik" });
     expect(manualSchema.parse({ ...manual, other: "Teh tarik" }).other).toBeUndefined();
-    expect(fields(manualSchema.safeParse({ ...manual, slug: "tidak-ada" }))).toEqual({ slug: "Pilih minuman." });
+    // Whether a drink is on the menu is the server's to say (the menu lives in the database since F6).
+    expect(manualSchema.safeParse({ ...manual, slug: "tidak-ada" }).success).toBe(true);
+    expect(manualSchema.parse({ kind: "klaim", employeeId: PERSON, date: "2026-11-20", time: "09:30", slug: "cafe-latte", key: KEY })).toMatchObject({ slug: "cafe-latte", qty: 1 });
   });
   it("asks for the person in the words of its kind, and refuses the future", () => {
     expect(fields(manualSchema.safeParse({ ...manual, employeeId: "" }))).toEqual({ employeeId: "Pilih nama karyawan." });

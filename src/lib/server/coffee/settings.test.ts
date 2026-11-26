@@ -6,16 +6,19 @@ let db = fakeDb();
 vi.mock("server-only", () => ({}));
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
 
-const { readSettings, saveSettings } = await import("./settings");
+const { drinkSettings, readOptions, readSettings, saveOptions, saveSettings } = await import("./settings");
+const { forgetMenu } = await import("./store");
 const { activePeople, holders } = await import("./people");
 const dewi = { employeeId: PEOPLE.dewi, label: "Dewi" };
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); });
+beforeEach(() => { db = fakeDb(); seedPeople(db); forgetMenu(true); });
 
 it("reads and saves the quotas, with who changed them", async () => {
   expect(await readSettings()).toEqual({ karyawan: 4, ga: 2, intern: 2 });
   expect(await saveSettings({ karyawan: 6, ga: 3, intern: 0 }, dewi, new Date("2026-11-25T03:00:00Z"))).toEqual({ karyawan: 6, ga: 3, intern: 0 });
-  expect(db.rows("coffee_settings")).toEqual([{ id: 1, quota_karyawan: 6, quota_ga: 3, quota_intern: 0, updated_at: "2026-11-25T03:00:00.000Z", updated_label: "Dewi" }]);
+  expect(db.rows("coffee_settings")).toMatchObject([{ id: 1, quota_karyawan: 6, quota_ga: 3, quota_intern: 0, updated_at: "2026-11-25T03:00:00.000Z", updated_label: "Dewi" }]);
+  // The option switches sit in the same row and are not touched by saving the quotas.
+  expect(db.rows("coffee_settings")[0]).toMatchObject({ opt_klaim_suhu: false, opt_tamu_gula: true });
   expect(await readSettings()).toEqual({ karyawan: 6, ga: 3, intern: 0 });
 });
 
@@ -26,6 +29,40 @@ it("falls back to the owner's starting values while the row or the migration is 
   expect(await readSettings()).toEqual({ karyawan: 4, ga: 2, intern: 2 });
   await expect(readSettings(true)).rejects.toMatchObject({ status: 503, message: "WG Coffee menunggu migrasi 202612010001_coffee.sql." });
   await expect(saveSettings({ karyawan: 6, ga: 3, intern: 0 }, dewi)).rejects.toMatchObject({ status: 503 });
+});
+
+const ALL = { suhu: true, gula: true, es: true }, NONE = { suhu: false, gula: false, es: false };
+
+it("F6 reads what each audience is asked: by default a claim nothing, the team and guests everything", async () => {
+  expect(await readOptions()).toEqual({ ready: true, options: { klaim: NONE, tim: ALL, tamu: ALL } });
+  // A row that lacks the switches (or no row at all) reads as the defaults.
+  db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+  expect((await readOptions()).options).toEqual({ klaim: NONE, tim: ALL, tamu: ALL });
+  db.state.tables.coffee_settings = [];
+  expect((await readOptions()).options).toEqual({ klaim: NONE, tim: ALL, tamu: ALL });
+});
+
+it("F6 saves the switches with who changed them, never takaran es without the temperature, and leaves the quotas alone", async () => {
+  const saved = await saveOptions({ klaim: { suhu: false, gula: true, es: true }, tim: NONE, tamu: { suhu: true, gula: false, es: true } }, dewi, new Date("2026-11-26T03:00:00Z"));
+  expect(saved).toEqual({ klaim: { suhu: false, gula: true, es: false }, tim: NONE, tamu: { suhu: true, gula: false, es: true } });
+  expect(db.rows("coffee_settings")[0]).toMatchObject({ opt_klaim_gula: true, opt_klaim_es: false, opt_tim_suhu: false, opt_tamu_gula: false, options_at: "2026-11-26T03:00:00.000Z", options_label: "Dewi", quota_karyawan: 4 });
+  expect((await readOptions()).options).toEqual(saved);
+  // A row someone wrote by hand with es on and suhu off still reads as "es off".
+  Object.assign(db.rows("coffee_settings")[0], { opt_tim_suhu: false, opt_tim_es: true });
+  expect((await readOptions()).options.tim.es).toBe(false);
+});
+
+it("F6 before migration 202612020001: everyone is asked everything, the menu is the code's, and the switches cannot be saved", async () => {
+  db.state.menuMigrated = false;
+  db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+  expect(await readOptions()).toEqual({ ready: false, options: { klaim: ALL, tim: ALL, tamu: ALL } });
+  await expect(saveOptions({ klaim: NONE, tim: ALL, tamu: ALL }, dewi)).rejects.toMatchObject({ status: 503, message: "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql." });
+  const drinks = await drinkSettings();
+  expect(drinks).toMatchObject({ optionsReady: false, options: { klaim: ALL } });
+  expect(drinks.menu.map(drink => drink.slug)).toHaveLength(15);
+  // The quotas still read and save as before.
+  expect(await saveSettings({ karyawan: 5, ga: 2, intern: 2 }, dewi)).toEqual({ karyawan: 5, ga: 2, intern: 2 });
+  expect(db.state.calls.filter(call => call.endsWith(":coffee_drinks")).length).toBe(1);
 });
 
 it("lists the active people by name with their quota group, and the month's use when asked", async () => {

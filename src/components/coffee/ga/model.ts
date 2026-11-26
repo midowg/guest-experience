@@ -1,4 +1,4 @@
-import { drinkBySlug, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { startChoice, type CoffeeOptions, type Drink, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
 import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import type { GaState, ItemFor, MeetingOrder, Status } from "@/lib/coffee/types";
 import { clock } from "../format";
@@ -32,10 +32,13 @@ export type Line = {
   /** tamu: the name a guest typed in the menu book, so the cups are not mixed up. Sent with the order: the pengelola's card and the recap show it. */
   guestName?: string;
   qty: number;
-  temperature: Temperature;
-  sugar: Sugar;
-  ice: Ice;
+  /** Null: not asked of this row's audience (Pengaturan → Opsi minuman), so not sent either. */
+  temperature: Temperature | null;
+  sugar: Sugar | null;
+  ice: Ice | null;
 };
+/** What the team and guests are asked with a drink (GaState.options). */
+export type GaOptions = Pick<CoffeeOptions, "tim" | "tamu">;
 
 export const MAX_LINES = 40;
 export const MAX_QTY = 50;
@@ -44,9 +47,9 @@ export const MAX_GUESTS = 500;
 let lineSeq = 0;
 export const newLineId = () => `l${Date.now().toString(36)}${(lineSeq++).toString(36)}`;
 
-/** A tapped drink: its first temperature, gula Normal. */
-export const defaultLine = (slug: string, who: LineFor): Line => ({
-  id: newLineId(), slug, for: who, qty: 1, temperature: drinkBySlug(slug)?.temperatures[0] ?? "panas", sugar: "Normal", ice: "Normal",
+/** A tapped drink: its first temperature and gula Normal, as far as its audience is asked them. */
+export const defaultLine = (drink: Drink, who: LineFor, options: GaOptions): Line => ({
+  id: newLineId(), slug: drink.slug, for: who, qty: 1, ...startChoice(drink, options[who]),
 });
 
 type Counted = { for: ItemFor; qty: number };
@@ -117,8 +120,8 @@ export function toBody(draft: Draft, lines: readonly Line[], key: string): Meeti
   return {
     room: draft.room, picId: draft.pic.id, guest: draft.guest, guestCount: draft.guestCount, parentId: draft.parent?.id, key,
     items: lines.map(line => ({
-      for: line.for, personId: line.for === "tim" ? line.person?.id : undefined, guestName: line.for === "tamu" ? line.guestName?.trim().slice(0, GUEST_NAME_MAX) || undefined : undefined, slug: line.slug, temperature: line.temperature, sugar: line.sugar,
-      ice: line.temperature === "es" ? line.ice : "Normal", qty: line.qty,
+      for: line.for, personId: line.for === "tim" ? line.person?.id : undefined, guestName: line.for === "tamu" ? line.guestName?.trim().slice(0, GUEST_NAME_MAX) || undefined : undefined, slug: line.slug, temperature: line.temperature ?? undefined, sugar: line.sugar ?? undefined,
+      ice: line.temperature === "es" ? line.ice ?? undefined : undefined, qty: line.qty,
     })),
   };
 }
@@ -135,8 +138,8 @@ export function sameSending(order: MeetingOrder, body: MeetingBody): boolean {
   if (body.parentId ? order.parentId !== body.parentId : order.parentId !== null || order.room !== body.room.trim() || order.pic.id !== body.picId) return false;
   return order.items.length === body.items.length && order.items.every((item, index) => {
     const sent = body.items[index];
-    return item.for === sent.for && item.slug === sent.slug && item.qty === sent.qty && item.temperature === sent.temperature && item.sugar === sent.sugar
-      && (item.temperature !== "es" || item.ice === sent.ice) && (item.person?.id ?? undefined) === (sent.for === "tim" ? sent.personId : undefined) && (item.guestName ?? undefined) === (sent.guestName ?? undefined);
+    return item.for === sent.for && item.slug === sent.slug && item.qty === sent.qty && item.temperature === (sent.temperature ?? null) && item.sugar === (sent.sugar ?? null)
+      && (item.temperature !== "es" || (item.ice ?? "Normal") === (sent.ice ?? "Normal")) && (item.person?.id ?? undefined) === (sent.for === "tim" ? sent.personId : undefined) && (item.guestName ?? undefined) === (sent.guestName ?? undefined);
   });
 }
 

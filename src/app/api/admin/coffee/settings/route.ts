@@ -3,7 +3,7 @@ import { requireApiAdmin } from "@/lib/server/admin-session";
 import { holders } from "@/lib/server/coffee/people";
 import { gaPinSet } from "@/lib/server/coffee/pin";
 import { coffeeActor } from "@/lib/server/coffee/session";
-import { readSettings, saveSettings } from "@/lib/server/coffee/settings";
+import { drinkSettings, readSettings, saveSettings } from "@/lib/server/coffee/settings";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   return handle(async () => {
     await requireApiAdmin();
-    const [settings, people, gaPin] = await Promise.all([readSettings(true), holders(), gaPinSet()]);
-    // `gaPin`: whether a PIN GA is set. The PIN itself is never sent anywhere.
-    return success({ settings, holders: people, gaPin }, "");
+    const [settings, people, gaPin, drinks] = await Promise.all([readSettings(true), holders(), gaPinSet(), drinkSettings()]);
+    // `gaPin`: whether a PIN GA is set. The PIN itself is never sent anywhere. `options`, `menu`: what drinks are asked with, and the drinks (F6).
+    return success({ settings, holders: people, gaPin, ...drinks }, "");
   });
 }
 
@@ -25,6 +25,6 @@ export async function PUT(request: Request) {
     checkOrigin(request);
     const input = validate(settingsSchema, await readJson(request, 1_000));
     const settings = await saveSettings(input, await coffeeActor());
-    return success({ settings, holders: await holders(), gaPin: await gaPinSet() }, "Jatah disimpan.");
+    return success({ settings, holders: await holders(), gaPin: await gaPinSet(), ...(await drinkSettings()) }, "Jatah disimpan.");
   });
 }

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { DRINKS, NO_OPTIONS } from "@/lib/coffee/menu";
 import type { MeetingOrder } from "@/lib/coffee/types";
 import { HOLD_COOKIE, parseHold } from "./hold";
 import { canAddTo, countLabel, counts, doneLine, lineTag, matches, nextDraft, printOf, roomStatuses, rootOf, sameSending, statusOf, toBody, type Draft, type Line } from "./model";
@@ -54,9 +55,13 @@ it("sends what the server reads: ice only for Es, a person only for the team, a 
   ], "kunci");
   expect(body).toMatchObject({ room: "Vasuki Room", picId: "p1", guest: "PT Sinar (contoh)", guestCount: 4, parentId: "a", key: "kunci" });
   expect(body.items).toEqual([
-    { for: "tamu", personId: undefined, guestName: "Budi", slug: "americano", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 1 },
+    { for: "tamu", personId: undefined, guestName: "Budi", slug: "americano", temperature: "panas", sugar: "Normal", ice: undefined, qty: 1 },
     { for: "tim", personId: "p2", guestName: undefined, slug: "americano", temperature: "es", sugar: "Normal", ice: "Sedikit", qty: 3 },
-    { for: "tamu", personId: undefined, guestName: "x".repeat(40), slug: "americano", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 1 },
+    { for: "tamu", personId: undefined, guestName: "x".repeat(40), slug: "americano", temperature: "panas", sugar: "Normal", ice: undefined, qty: 1 },
+  ]);
+  // F6: a row whose audience is asked nothing sends no options at all.
+  expect(toBody(draft, [line({ temperature: null, sugar: null, ice: null })], "k").items).toEqual([
+    { for: "tamu", personId: undefined, guestName: undefined, slug: "americano", temperature: undefined, sugar: undefined, ice: undefined, qty: 1 },
   ]);
 });
 
@@ -77,6 +82,11 @@ it("F3-02 recognises the order a sending became, and nothing else", () => {
     { id: "i2", for: "tim" as const, qty: 1, slug: "kopi-susu", temperature: "panas" as const, sugar: "Normal" as const, ice: "Normal" as const, person: { id: "p2", name: "Rina (contoh)", group: "karyawan" as const, position: "", bu: "" } },
   ];
   expect(sameSending(order("a", { items }), body)).toBe(true);
+  // As the server answers since F6: no ice on a hot drink, and nothing at all where nothing was asked.
+  expect(sameSending(order("a", { items: items.map(item => ({ ...item, ice: null })) }), body)).toBe(true);
+  const bare = toBody(draft, [line({ temperature: null, sugar: null, ice: null })], "k");
+  expect(sameSending(order("a", { items: [{ ...items[0], qty: 1, temperature: null, sugar: null, ice: null }] }), bare)).toBe(true);
+  expect(sameSending(order("a", { items: [{ ...items[0], qty: 1 }] }), bare)).toBe(false);
   expect(sameSending(order("a", { items: [items[0]] }), body)).toBe(false);
   expect(sameSending(order("a", { items: [{ ...items[0], qty: 3 }, items[1]] }), body)).toBe(false);
   expect(sameSending(order("a", { items, room: "CFC Ananta Room" }), body)).toBe(false);
@@ -115,6 +125,11 @@ it("F3-01 reads back what was kept for a reload as untrusted text", () => {
   ]);
   // Cucumber Ice only comes iced: a hot one is put right.
   expect(hold.book).toEqual({ open: true, picks: [{ id: "x1", slug: "cucumber-ice", temperature: "es", sugar: "Sedikit", ice: "Ekstra", name: "Budi" }] });
+  // F6: read back against the menu and the options the page came with. A drink that left the menu is dropped, and each row keeps only what its audience is asked.
+  const rules = { menu: DRINKS.map(drink => drink.slug === "cucumber-ice" ? { ...drink, active: false } : drink), options: { tim: NO_OPTIONS, tamu: { suhu: false, gula: true, es: false } } };
+  const fitted = parseHold(kept, rules)!;
+  expect(fitted.lines.map(item => [item.for, item.temperature, item.sugar, item.ice])).toEqual([["tamu", null, "Normal", null], ["tim", null, null, null], ["tamu", null, "Normal", null]]);
+  expect(fitted.book.picks).toEqual([]);
   for (const bad of [null, "", "{", "[]", "42", JSON.stringify({ draft: { room: "", pic: { id: "p", name: "n" } } }), JSON.stringify({ draft: { room: "x" } }), JSON.stringify({ lines: [] })]) expect(parseHold(bad), String(bad)).toBeNull();
   expect(HOLD_COOKIE).toBe("coffee_ga_tamu");
 });

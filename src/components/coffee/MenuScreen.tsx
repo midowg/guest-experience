@@ -2,19 +2,19 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import { CircleAlert, Coffee, CupSoda, Info, X } from "lucide-react";
-import { DRINKS, GROUP_LABEL, type Drink, type DrinkGroup } from "@/lib/coffee/menu";
+import { GROUP_LABEL, offered, type Drink, type DrinkGroup } from "@/lib/coffee/menu";
 import { monthName, resetDay } from "@/lib/coffee/setup";
 import type { CoffeeMe } from "@/lib/coffee/types";
-import { coffeePath } from "@/lib/routes";
+import { DrinkPhoto } from "./CurrentOrder";
 import css from "./coffee.module.css";
 
 const GROUPS: { key: DrinkGroup; label: string; Icon: typeof Coffee }[] = [{ key: "kopi", label: "Kopi", Icon: Coffee }, { key: "non-kopi", label: "Non-kopi", Icon: CupSoda }];
 
-/** Menu: what is left of this month's quota, and the drinks. Tapping one opens its options. */
-export function MenuScreen({ me, note, onNote, onPick }: { me: CoffeeMe; note?: string; onNote?: () => void; onPick: (drink: Drink) => void }) {
+/** Menu: what is left of this month's quota, and the drinks the pengelola shows (`menu`, in their order). Tapping one opens it. */
+export function MenuScreen({ me, menu, note, onNote, onPick }: { me: CoffeeMe; menu: readonly Drink[]; note?: string; onNote?: () => void; onPick: (drink: Drink) => void }) {
   const [group, setGroup] = useState<DrinkGroup>("kopi");
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
-  const drinks = DRINKS.filter(drink => drink.group === group);
+  const drinks = offered(menu).filter(drink => drink.group === group);
   // One Tab stop for the two kinds; the arrows move between them.
   const onKey = (event: KeyboardEvent) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -66,14 +66,14 @@ export function MenuScreen({ me, note, onNote, onPick }: { me: CoffeeMe; note?: 
         {drinks.map(drink => (
           <li key={drink.slug}>
             <button type="button" className={css.card} onClick={() => onPick(drink)}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- small local photos, sized here */}
-              <img src={coffeePath.photo(drink.slug)} alt="" width={240} height={240} loading="lazy" />
+              <DrinkPhoto src={drink.photo} size={240} fill />
               <strong>{drink.name}</strong>
               <span>{drink.description}</span>
             </button>
           </li>
         ))}
       </ul>
+      {!drinks.length && <p className={css.muted}>Belum ada minuman {group === "kopi" ? "kopi" : "non-kopi"} di menu.</p>}
       </div>
     </>
   );

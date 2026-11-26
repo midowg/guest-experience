@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { coffeePath } from "@/lib/routes";
+import { DEFAULT_OPTIONS, DRINKS, NO_OPTIONS } from "@/lib/coffee/menu";
 import { GaApp } from "./GaApp";
 import { HOLD_REFRESH_MS } from "./hold";
 import { SAMPLE_GA, SAMPLE_PEOPLE, SAMPLE_REFUSAL, createSampleGa } from "./sample";
@@ -119,7 +120,7 @@ it("sends one order for the room: guests under the PIC, a team member under thei
   expect(api.send).toHaveBeenCalledTimes(1);
   const body = api.send.mock.calls[0][0];
   expect(body).toMatchObject({ room: "Vasuki Room", picId: PIC.id, items: [
-    { for: "tamu", slug: "americano", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 2 },
+    { for: "tamu", slug: "americano", temperature: "panas", sugar: "Normal", qty: 2 },
     { for: "tim", personId: TEAM.id, slug: "kopi-susu", qty: 1 },
   ] });
   expect(body.key).toMatch(/^[0-9a-f-]{36}$/);
@@ -311,7 +312,8 @@ it("sends the name a guest gave with that drink, and shows what the server kept"
 
 /* ---------- after the F3 audit (26 Nov 2026) */
 
-const EMPTY = { today: [], people: [], rooms: [], pin: false };
+/** What a page loaded in guest mode carries: the menu and the options, no GA data. */
+const EMPTY = { menu: DRINKS, options: DEFAULT_OPTIONS, today: [], people: [], rooms: [], pin: false };
 const allTimers = () => { vi.useRealTimers(); vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval", "setTimeout", "clearTimeout"] }); vi.setSystemTime(new Date(NOW)); };
 const soon = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 40)); });
 /** Beranda → Pesanan baru → room and PIC → Serahkan ke tamu → the open book. */
@@ -710,4 +712,35 @@ it("F3-13 says how many when several orders were decided in one read", async () 
   expect(said).toMatch(/2 pesanan sudah diputuskan, 1 ditolak/);
   expect(said).toMatch(/#T-0115 Kaliya Limasan: ditolak/);
   expect(said).toMatch(/#T-0114 Vasuki Room: siap diambil/);
+});
+
+// F6: what the team and guests are asked comes with the tablet's state, and follows the pengelola.
+it("F6 sends a guest's drink without options when guests are asked nothing, keeps the team's, and the sent screen names the drink alone", async () => {
+  const { api } = open({ options: { tim: DEFAULT_OPTIONS.tim, tamu: NO_OPTIONS } });
+  start();
+  tile("Americano");
+  expect(order().textContent).not.toMatch(/Panas|gula/);
+  fireEvent.click(screen.getByRole("button", { name: "Tim · rapat" }));
+  tile("Kopi Susu");
+  expect(within(screen.getByRole("dialog")).getByRole("group", { name: "Gula" })).toBeTruthy();
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: TEAM.name }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tambahkan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 2 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  const [guest, team] = api.send.mock.calls[0][0].items;
+  expect([guest.temperature, guest.sugar, guest.ice]).toEqual([undefined, undefined, undefined]);
+  expect(team).toMatchObject({ for: "tim", temperature: "panas", sugar: "Normal" });
+  const rows = within(screen.getByRole("main")).getAllByRole("listitem").filter(item => /1× /.test(item.textContent ?? "")).map(item => item.textContent);
+  expect(rows).toEqual(["1× AmericanoTamu", `1× Kopi SusuPanas · gula NormalTim · rapat · ${TEAM.name}`]);
+});
+
+it("F6 follows the pengelola on the next read: a hidden drink leaves the tiles, and guests are asked what Pengaturan says by then", async () => {
+  const { server } = open();
+  server.setMenu(DRINKS.map(drink => drink.slug === "americano" ? { ...drink, active: false } : drink));
+  server.setOptions({ tim: DEFAULT_OPTIONS.tim, tamu: { suhu: false, gula: true, es: false } });
+  await nextRead(() => undefined);
+  start();
+  expect(screen.queryByRole("button", { name: /^Tambah Americano/ })).toBeNull();
+  tile("Café Latte");
+  expect(within(order()).getByText("gula Normal")).toBeTruthy();
 });

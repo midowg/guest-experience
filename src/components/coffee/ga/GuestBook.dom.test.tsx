@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { ALL_OPTIONS, DRINKS, NO_OPTIONS, type Drink, type DrinkOptions } from "@/lib/coffee/menu";
 import { GaApp } from "./GaApp";
 import { GuestBook } from "./GuestBook";
 import type { Line } from "./model";
@@ -12,9 +13,9 @@ import { forget, NOW, rest } from "./testing";
  */
 const PIC = SAMPLE_PEOPLE[0];
 
-function open(props: { guest?: string; max?: number } = {}) {
+function open(props: { guest?: string; max?: number; options?: DrinkOptions; menu?: Drink[] } = {}) {
   const onDone = vi.fn<(lines: Line[]) => void>();
-  render(<GuestBook room="Vasuki Room" picName={PIC.name} guest={"guest" in props ? props.guest : "PT Sinar Jaya (contoh)"} max={props.max ?? 40} exit={{ pin: false, check: async () => ({ ok: true }) }} onDone={onDone} />);
+  render(<GuestBook room="Vasuki Room" picName={PIC.name} guest={"guest" in props ? props.guest : "PT Sinar Jaya (contoh)"} max={props.max ?? 40} menu={props.menu ?? DRINKS} options={props.options ?? ALL_OPTIONS} exit={{ pin: false, check: async () => ({ ok: true }) }} onDone={onDone} />);
   rest();
   return { onDone };
 }
@@ -207,7 +208,7 @@ it("F3-01 hands up what the guests picked as it changes, and opens where it was 
   const kept: unknown[] = [];
   const onDone = vi.fn<(lines: Line[]) => void>();
   const exit = { pin: false, check: async () => ({ ok: true as const }) };
-  const view = render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} exit={exit} onKeep={book => kept.push(book)} onDone={onDone} />);
+  const view = render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} menu={DRINKS} options={ALL_OPTIONS} exit={exit} onKeep={book => kept.push(book)} onDone={onDone} />);
   rest();
   press("Buka buku menu");
   pick("Americano", "Ani");
@@ -215,7 +216,7 @@ it("F3-01 hands up what the guests picked as it changes, and opens where it was 
   expect(last).toMatchObject({ open: true, picks: [{ slug: "americano", name: "Ani", temperature: "panas", sugar: "Normal" }] });
   expect(last.picks[0].id).toBeTruthy();
   view.unmount();
-  render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} exit={exit} saved={last as never} onDone={onDone} />);
+  render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} menu={DRINKS} options={ALL_OPTIONS} exit={exit} saved={last as never} onDone={onDone} />);
   rest();
   // Open on the menu, with the pick still counted.
   expect(screen.queryByRole("button", { name: "Buka buku menu" })).toBeNull();
@@ -232,4 +233,42 @@ it("F3-17 keeps the focus on the Kopi / Non-kopi tab when it is pressed", () => 
   tab.focus();
   fireEvent.click(tab);
   expect(document.activeElement).toBe(tab);
+});
+
+// F6: what a guest is asked follows Pengaturan → Opsi minuman (the "Tamu" row).
+it("F6 asks a guest nothing but their name when guests are asked nothing, and writes the pick as the drink alone", () => {
+  const { onDone } = open({ options: NO_OPTIONS });
+  press("Buka buku menu");
+  expect(screen.getByText("Silakan pilih minuman Anda.")).toBeTruthy();
+  press(/^Café Latte/);
+  expect(screen.getByRole("heading", { level: 3, name: "Minuman pilihan Anda" })).toBeTruthy();
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(screen.queryByRole("group", { name })).toBeNull();
+  expect(screen.queryByText(/Disajikan/)).toBeNull();
+  fireEvent.change(screen.getByLabelText(/^Nama Anda/), { target: { value: "Budi" } });
+  press("Pilih minuman ini");
+  const picked = screen.getAllByRole("listitem")[0];
+  expect(picked.textContent).toMatch(/^Café LatteBudi/);
+  expect(picked.textContent).not.toMatch(/Panas|gula/);
+  press("Serahkan kembali ke GA");
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Ya, mode GA" }));
+  expect(onDone.mock.calls[0][0]).toMatchObject([{ for: "tamu", slug: "cafe-latte", temperature: null, sugar: null, ice: null, guestName: "Budi", qty: 1 }]);
+});
+
+it("F6 asks only sugar when that is all guests are asked, and shows the pengelola's menu", () => {
+  const menu: Drink[] = [...DRINKS.filter(drink => drink.slug !== "espresso"), { slug: "teh-tarik", name: "Teh Tarik", description: "Teh susu.", group: "kopi", temperatures: ["panas"], photo: null, active: true }, { ...DRINKS[0], slug: "rahasia", name: "Minuman Tersembunyi", active: false }];
+  const { onDone } = open({ options: { suhu: false, gula: true, es: false }, menu });
+  press("Buka buku menu");
+  expect(screen.getByText("Silakan pilih minuman Anda. Ketuk untuk mengatur gula.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Espresso/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Minuman Tersembunyi/ })).toBeNull();
+  press(/^Teh Tarik/);
+  // No photo yet: a cup that still carries the drink's name.
+  expect(screen.getByRole("img", { name: "Teh Tarik" }).tagName).toBe("SPAN");
+  expect(screen.queryByRole("group", { name: "Suhu" })).toBeNull();
+  fireEvent.click(within(screen.getByRole("group", { name: "Gula" })).getByRole("button", { name: "Tanpa" }));
+  press("Pilih minuman ini");
+  expect(screen.getByText("gula Tanpa")).toBeTruthy();
+  press("Serahkan kembali ke GA");
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Ya, mode GA" }));
+  expect(onDone.mock.calls[0][0]).toMatchObject([{ slug: "teh-tarik", temperature: null, sugar: "Tanpa", ice: null }]);
 });

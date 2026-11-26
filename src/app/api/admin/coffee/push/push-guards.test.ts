@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
+import { forgetMenu } from "@/lib/server/coffee/store";
 
 /*
  * The pengelola's push route (F4): no admin session 401, no grant 403, the super admin's and the
@@ -42,7 +43,7 @@ const routes = async () => {
 const body = async (response: Response) => await response.json() as { ok: boolean; message: string; data?: Record<string, unknown> };
 const devices = () => db.rows("coffee_push_subscriptions");
 
-beforeEach(() => {
+beforeEach(() => { forgetMenu(true);
   db = fakeDb(); seedPeople(db); db.state.now = new Date(); state.admin = "person";
   process.env.RATE_LIMIT_SECRET = "x".repeat(40);
   process.env.WAM_VAPID_PUBLIC_KEY = "BContohKunciPublik"; process.env.WAM_VAPID_PRIVATE_KEY = "contoh-kunci-rahasia";

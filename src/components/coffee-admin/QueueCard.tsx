@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Check, Clock, Copy, ExternalLink, User, Users, X } from "lucide-react";
 import { orderText } from "@/lib/coffee/copy-text";
-import { GROUP_LABEL, OTHER_DRINK, drinkLabel, optionsLabel } from "@/lib/coffee/menu";
+import { GROUP_LABEL, drinkName, optionsLabel, optionsTail } from "@/lib/coffee/menu";
 import { wibClock } from "@/lib/coffee/quota";
 import type { QueueOrder } from "@/lib/coffee/types";
-import { JUMPSTART_URL, coffeePath } from "@/lib/routes";
+import { JUMPSTART_URL } from "@/lib/routes";
 import { copyText, drinkCount, orderNumber, waited } from "./format";
 import css from "./coffee-admin.module.css";
 
@@ -46,13 +46,14 @@ export function QueueCard({ order, now, phone, onFinish, onRefuse }: {
       </div>
       {claim ? (
         <div className={css.claimBody}>
-          {item && item.slug !== OTHER_DRINK
-            // eslint-disable-next-line @next/next/no-img-element -- a small static photo of public/coffee/drinks
-            ? <img src={coffeePath.photo(item.slug)} alt="" width={64} height={64} loading="lazy" className={css.thumb} />
+          {item?.photo
+            // eslint-disable-next-line @next/next/no-img-element -- a small square photo of the menu (a static file or the pengelola's upload)
+            ? <img src={item.photo} alt="" width={64} height={64} loading="lazy" className={css.thumb} />
             : <span className={css.thumb} />}
           <div className={css.grow}>
-            <h2 id={titleId}>{item ? drinkLabel(item.slug, item.other) : "Minuman"}</h2>
-            {item && <p className={css.optionsLine}>{optionsLabel(item.temperature, item.sugar, item.ice)}</p>}
+            <h2 id={titleId}>{item ? drinkName(item) : "Minuman"}</h2>
+            {/* Only what the claim carries: by default a claim is asked nothing (employees serve themselves). */}
+            {item && optionsLabel(item.temperature, item.sugar, item.ice) && <p className={css.optionsLine}>{optionsLabel(item.temperature, item.sugar, item.ice)}</p>}
             <p className={css.meta}>
               <strong>{order.person.name}</strong>
               {[order.person.group ? GROUP_LABEL[order.person.group] : "", order.person.position, order.person.bu].filter(Boolean).map(text => ` · ${text}`).join("")}
@@ -78,7 +79,7 @@ export function QueueCard({ order, now, phone, onFinish, onRefuse }: {
               <li key={line.id}>
                 <span className={css.lineFor} data-for={line.for}>{line.for === "tamu" ? `Tamu${line.guestName ? ` · ${line.guestName}` : ""}` : "Tim · rapat"}</span>
                 <span className={css.qty}>{line.qty}×</span>
-                <span className={css.grow}><strong>{drinkLabel(line.slug, line.other)}</strong> · {optionsLabel(line.temperature, line.sugar, line.ice)}</span>
+                <span className={css.grow}><strong>{drinkName(line)}</strong>{optionsTail(line.temperature, line.sugar, line.ice)}</span>
                 {line.person && <span className={css.linePerson}>{line.person.name}</span>}
               </li>
             ))}

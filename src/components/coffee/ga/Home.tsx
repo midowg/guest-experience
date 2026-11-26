@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CircleAlert, Coffee, KeyRound, MapPin, Plus } from "lucide-react";
-import { drinkLabel } from "@/lib/coffee/menu";
+import { drinkName } from "@/lib/coffee/menu";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
 import { clock } from "../format";
 import { FloorMap } from "./FloorMap";
@@ -89,7 +89,7 @@ function MeetingCard({ order, more, onMore, onOpen }: { order: MeetingOrder; mor
         <div><dt>Minuman</dt><dd>{countLabel(order.items)}</dd></div>
       </dl>
       <ul className={css.mini} aria-label="Rincian minuman">
-        {order.items.map(item => <li key={item.id}>{item.qty}× {drinkLabel(item.slug, item.other)}{item.temperature === "es" ? " (Es)" : ""}</li>)}
+        {order.items.map(item => <li key={item.id}>{item.qty}× {drinkName(item)}{item.temperature === "es" ? " (Es)" : ""}</li>)}
       </ul>
       <p className={css.cardStatus} data-tone={status.tone}>
         {order.status === "selesai" ? <Check aria-hidden size={16} /> : order.status === "diproses" ? <span className={css.dot} aria-hidden /> : <CircleAlert aria-hidden size={16} />}

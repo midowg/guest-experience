@@ -211,6 +211,13 @@
 .ga .tile { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; overflow: hidden; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: transform .12s var(--ease), border-color .15s var(--ease); }
 .ga .tile:hover { border-color: #CDBBA2; }
 .ga .tile:active { transform: scale(.97); }
+/* A drink without a photo (added by the pengelola, none uploaded yet): a cup in the box the photo would take. */
+.ga .noPhoto { display: grid; place-items: center; flex: none; background: var(--soft); color: var(--ink-2); }
+.ga .tile .noPhoto { width: 100%; aspect-ratio: 4 / 3; }
+.ga .lineBody .noPhoto { width: 44px; height: 44px; border-radius: 10px; }
+.ga .dialogHead .noPhoto { width: 64px; height: 64px; border-radius: 12px; }
+.ga .bookItems .noPhoto { width: 64px; height: 64px; }
+.ga .noPhoto.bookPhoto { width: 100%; max-width: 360px; aspect-ratio: 1; max-height: 44vh; background: rgba(60, 45, 30, .08); }
 .ga .tile img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--soft); }
 .ga .tileName { display: block; min-height: 52px; padding: 8px 48px 8px 12px; font-size: 16px; font-weight: 600; line-height: 1.25; }
 .ga .tilePlus { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--emp); color: #fff; }

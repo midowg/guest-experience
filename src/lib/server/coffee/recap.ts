@@ -7,7 +7,7 @@ import { csvCell } from "../responses";
 import { writeXlsx } from "../xlsx-write";
 import { activePeople } from "./people";
 import { readSettings } from "./settings";
-import { ORDER_COLUMNS, coffeeError, countingClaims, db, toOrder, type OrderRow } from "./store";
+import { coffeeError, countingClaims, db, orderColumns, toOrders, type OrderRow } from "./store";
 
 /*
  * Rekap (/admin/coffee/rekap): a span of WIB days as one row per drink, its summary, and the same
@@ -20,8 +20,9 @@ export async function recapRows(query: RecapQuery): Promise<RecapRow[]> {
   const from = dayStart(query.dari);
   const to = dayStart(nextDay(query.sampai));
   const orders: OrderRow[] = [];
+  const columns = await orderColumns();
   for (let start = 0; ; start += 1000) {
-    const { data, error } = await db().from("coffee_orders").select(ORDER_COLUMNS).gte("ordered_at", from).lt("ordered_at", to)
+    const { data, error } = await db().from("coffee_orders").select(columns).gte("ordered_at", from).lt("ordered_at", to)
       .order("ordered_at", { ascending: false }).order("id").range(start, start + 999);
     if (error) coffeeError(error);
     orders.push(...((data ?? []) as unknown as OrderRow[]));
@@ -29,7 +30,7 @@ export async function recapRows(query: RecapQuery): Promise<RecapRow[]> {
   }
   // "Klaim ke-" counts from the first claim of the month, also when the span starts mid-month.
   const numbers = claimNumbers(await countingClaims({ fromMonth: query.dari.slice(0, 7), toMonth: query.sampai.slice(0, 7) }));
-  return filterRows(expandRows(orders.map(toOrder), numbers), { jenis: query.jenis, status: query.status, q: query.q });
+  return filterRows(expandRows(await toOrders(orders), numbers), { jenis: query.jenis, status: query.status, q: query.q });
 }
 
 export async function recap(query: RecapQuery): Promise<{ rows: RecapRow[]; summary: RecapSummary; title: string }> {

@@ -1,5 +1,5 @@
 import "server-only";
-import type { Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import { DRINKS, OTHER_DRINK, type Drink, type DrinkGroup, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
 import { orderNo, type MeetingOrder, type MyOrder, type OrderKind, type QueueItem, type QueueOrder, type QuotaGroup, type Status } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -12,6 +12,8 @@ import { createPrivilegedClient } from "../supabase/admin";
  */
 
 export const COFFEE_MIGRATION = "202612010001_coffee.sql";
+/** F6: the menu in the database, the option switches, and the drink's name kept with each order. */
+export const COFFEE_MENU_MIGRATION = "202612020001_coffee_menu.sql";
 type DbError = { code?: string; message?: string };
 
 /**
@@ -31,6 +33,9 @@ const known: Record<string, [number, string]> = {
   COFFEE_PARENT_CLOSED: [409, "Pesanan awal sudah tidak bisa ditambah. Buat pesanan baru."],
   COFFEE_NOT_MANUAL: [409, "Hanya catatan manual yang bisa dibatalkan."],
   COFFEE_ALREADY_CANCELLED: [409, "Catatan ini sudah dibatalkan."],
+  COFFEE_DRINK_GONE: [409, "Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain."],
+  COFFEE_DRINK_NOT_FOUND: [404, "Minuman tidak ditemukan. Muat ulang halaman."],
+  COFFEE_DRINK_USED: [409, "Minuman ini sudah pernah dipesan, jadi tidak bisa dihapus. Sembunyikan saja supaya tidak bisa dipesan lagi."],
 };
 /** A database error as the answer the person reads. */
 export function coffeeError(error: DbError): never {
@@ -44,13 +49,59 @@ export const db = () => createPrivilegedClient();
 /** Who acts as pengelola: their employee row when they have one, and the name the claimant sees. */
 export type CoffeeActor = { employeeId: string | null; label: string };
 
-export const ORDER_COLUMNS = "id,kind,number,round,parent_id,employee_id,person_name,person_group,person_position,person_bu,room,room_spot,guest,guest_count,status,reject_note,processed_by,processed_label,processed_at,created_label,manual,ordered_at,"
-  + "coffee_order_items(id,for_whom,employee_id,person_name,person_group,person_position,person_bu,guest_name,drink_slug,drink_other,temperature,sugar,ice,qty,sort)";
+/*
+ * The app is deployed before migration 202612020001 runs, and must work on both sides of it. One
+ * question decides everything that differs (which columns to ask for, where the menu and the
+ * options come from): is coffee_drinks there? The migration is one transaction, so the table, the
+ * new columns and the new functions arrive together. "Yes" is remembered for good (a migration is
+ * not taken back); "no" is asked again after half a minute, so the app notices by itself once the
+ * owner has run it. Any other fault reads as "no" for now: the old way still works on the new schema.
+ */
+const NOT_READY_FOR = 30_000;
+let menuSchema: { ready: boolean; at: number } | null = null;
+export async function menuReady(now = Date.now()): Promise<boolean> {
+  if (menuSchema && (menuSchema.ready || now - menuSchema.at < NOT_READY_FOR)) return menuSchema.ready;
+  const { error } = await db().from("coffee_drinks").select("slug").limit(1);
+  menuSchema = { ready: !error, at: now };
+  return menuSchema.ready;
+}
+
+const ORDER_HEAD = "id,kind,number,round,parent_id,employee_id,person_name,person_group,person_position,person_bu,room,room_spot,guest,guest_count,status,reject_note,processed_by,processed_label,processed_at,created_label,manual,ordered_at,";
+const ITEM_COLUMNS = "id,for_whom,employee_id,person_name,person_group,person_position,person_bu,guest_name,drink_slug,drink_other,temperature,sugar,ice,qty,sort";
+/** An order with its drinks; the drink's kept name only once the column exists. */
+export const orderColumns = async (): Promise<string> => `${ORDER_HEAD}coffee_order_items(${ITEM_COLUMNS}${await menuReady() ? ",drink_name" : ""})`;
 
 type ItemRow = {
   id: string; for_whom: QueueItem["for"]; employee_id: string | null; person_name: string | null; person_group: QuotaGroup | null; person_position: string | null; person_bu: string | null; guest_name?: string | null;
-  drink_slug: string; drink_other: string | null; temperature: Temperature; sugar: Sugar; ice: Ice; qty: number; sort: number;
+  drink_slug: string; drink_other: string | null; drink_name?: string | null; temperature: Temperature | null; sugar: Sugar | null; ice: Ice | null; qty: number; sort: number;
 };
+
+/*
+ * The menu: every drink in its order, hidden ones included (they still show in the history).
+ * From coffee_drinks once migration 202612020001 has run, else the 15 drinks of the code. Kept
+ * for a quarter of a minute per server instance, so the phones' polling does not ask the database
+ * for it each time; an edit in the admin clears it here at once (`forgetMenu`) and reaches the
+ * other instances within that quarter minute. The pengelola's own Menu page always reads fresh.
+ */
+export const MENU_KEEP_MS = 15_000;
+const DRINK_COLUMNS = "slug,name,description,drink_group,temperatures,photo_url,active";
+type DrinkRow = { slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; active: boolean };
+let menuKept: { drinks: Drink[]; at: number } | null = null;
+/** Forget what is kept (after an edit; `schema` also asks again whether the migration has run: the tests). */
+export function forgetMenu(schema = false) { menuKept = null; if (schema) menuSchema = null; }
+export async function readMenu(fresh = false, now = Date.now()): Promise<Drink[]> {
+  if (!fresh && menuKept && now - menuKept.at < MENU_KEEP_MS) return menuKept.drinks;
+  if (!(await menuReady(now))) return DRINKS;
+  const { data, error } = await db().from("coffee_drinks").select(DRINK_COLUMNS).order("sort").order("name").limit(500);
+  if (error) { if (missing(error)) return DRINKS; coffeeError(error); }
+  const drinks = ((data ?? []) as DrinkRow[]).map((row): Drink => ({
+    slug: row.slug, name: row.name, description: row.description ?? "", group: row.drink_group,
+    temperatures: row.temperatures?.length ? row.temperatures : ["panas"], photo: row.photo_url, active: row.active,
+  }));
+  menuKept = { drinks, at: now };
+  return drinks;
+}
+const codeMenu = new Map(DRINKS.map(drink => [drink.slug, drink]));
 export type OrderRow = {
   id: string; kind: OrderKind; number: number; round: number; parent_id: string | null; employee_id: string; person_name: string; person_group: QuotaGroup | null;
   person_position: string | null; person_bu: string | null; room: string | null; room_spot: string | null; guest: string | null; guest_count: number | null; status: Status;
@@ -61,10 +112,16 @@ export type OrderRow = {
 /** Postgres writes "+00:00", JavaScript "Z": one form, so moments compare as text too. */
 const moment = (value: string) => new Date(value).toISOString();
 
-export function toOrder(row: OrderRow): QueueOrder {
+/**
+ * `menu`: today's menu by slug. A drink's name is the one kept with the order (since F6), else the
+ * menu's; its photo is the menu's of now, so a deleted drink (or "lainnya") has none. Options are
+ * passed on as stored: null where the audience was not asked.
+ */
+export function toOrder(row: OrderRow, menu: ReadonlyMap<string, Drink> = codeMenu): QueueOrder {
   const items = [...(row.coffee_order_items ?? [])].sort((a, b) => a.sort - b.sort).map((item): QueueItem => ({
     id: item.id, for: item.for_whom, qty: item.qty, slug: item.drink_slug, ...(item.drink_other ? { other: item.drink_other } : {}),
-    temperature: item.temperature, sugar: item.sugar, ice: item.ice,
+    ...(item.drink_slug === OTHER_DRINK ? {} : { name: item.drink_name || menu.get(item.drink_slug)?.name || item.drink_slug, photo: menu.get(item.drink_slug)?.photo ?? null }),
+    temperature: item.temperature ?? null, sugar: item.sugar ?? null, ice: item.temperature === "es" ? item.ice ?? null : null,
     person: item.for_whom === "tim" ? { id: item.employee_id, name: item.person_name ?? "—", group: item.person_group, position: item.person_position ?? "", bu: item.person_bu ?? "" } : null,
     ...(item.for_whom === "tamu" && item.guest_name ? { guestName: item.guest_name } : {}),
   }));
@@ -83,7 +140,8 @@ export function toMyOrder(order: QueueOrder, claimNo?: number): MyOrder {
   return {
     id: order.id, no: order.no, status: order.status, orderedAt: order.orderedAt, rejectNote: order.rejectNote,
     processedLabel: order.processed?.label ?? "", processedAt: order.processed?.at ?? null, manual: order.manual,
-    slug: drink?.slug ?? "", ...(drink?.other ? { other: drink.other } : {}), temperature: drink?.temperature ?? "panas", sugar: drink?.sugar ?? "Normal", ice: drink?.ice ?? "Normal",
+    slug: drink?.slug ?? "", ...(drink?.other ? { other: drink.other } : {}), ...(drink?.name ? { name: drink.name } : {}), photo: drink?.photo ?? null,
+    temperature: drink?.temperature ?? null, sugar: drink?.sugar ?? null, ice: drink?.ice ?? null,
     ...(claimNo ? { claimNo } : {}),
   };
 }
@@ -96,10 +154,17 @@ export function toMeetingOrder(order: QueueOrder): MeetingOrder {
   };
 }
 
+/** Rows as orders, with today's menu for the names and photos. */
+export async function toOrders(rows: OrderRow[]): Promise<QueueOrder[]> {
+  if (!rows.length) return [];
+  const menu = new Map((await readMenu()).map(drink => [drink.slug, drink]));
+  return rows.map(row => toOrder(row, menu));
+}
+
 export async function orderById(id: string): Promise<QueueOrder | null> {
-  const { data, error } = await db().from("coffee_orders").select(ORDER_COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await db().from("coffee_orders").select(await orderColumns()).eq("id", id).maybeSingle();
   if (error) coffeeError(error);
-  return data ? toOrder(data as unknown as OrderRow) : null;
+  return data ? (await toOrders([data as unknown as OrderRow]))[0] : null;
 }
 
 export type CountedClaim = { id: string; kind: "klaim"; status: Status; employeeId: string; orderedAt: string; month: string };

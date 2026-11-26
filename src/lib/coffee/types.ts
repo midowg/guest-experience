@@ -1,4 +1,4 @@
-import type { Ice, QuotaGroup, Sugar, Temperature } from "./menu";
+import type { CoffeeOptions, Drink, DrinkOptions, Ice, QuotaGroup, Sugar, Temperature } from "./menu";
 
 /*
  * WG Coffee's shapes (25 Nov 2026), shared by the browser and the server. An order is one
@@ -23,8 +23,13 @@ export function orderNo(kind: OrderKind, number: number, round = 1): string {
   return `T-${String(number).padStart(4, "0")}${round > 1 ? `-${round}` : ""}`;
 }
 
-/** A drink as ordered; `other` names it when the slug is "lainnya" (Catat manual). */
-export type Drinkline = { slug: string; other?: string; temperature: Temperature; sugar: Sugar; ice: Ice };
+/**
+ * A drink as ordered; `other` names it when the slug is "lainnya" (Catat manual). `name`: the
+ * drink's name as it was when ordered (kept with the order since F6, so a renamed or deleted
+ * drink still reads right); `photo`: where its picture is now, null when the drink is gone or has
+ * none. Temperature, sugar and ice are null when that option was not asked of the audience.
+ */
+export type Drinkline = { slug: string; other?: string; name?: string; photo?: string | null; temperature: Temperature | null; sugar: Sugar | null; ice: Ice | null };
 
 /** A person as copied onto an order when it was made (later changes in Data karyawan do not reach it). */
 export type OrderPerson = { id: string | null; name: string; group: QuotaGroup | null; position: string; bu: string };
@@ -96,15 +101,19 @@ export type MeetingOrder = Pick<QueueOrder, "id" | "no" | "number" | "round" | "
 };
 
 export type CoffeeSettings = { karyawan: number; ga: number; intern: number };
+export type { CoffeeOptions, DrinkOptions };
 
 /** Someone the pickers offer: an active employee. `used`: claims that count in the month asked for. */
 export type CoffeePerson = { id: string; name: string; nickname: string; position: string; bu: string; group: QuotaGroup; used?: number };
 
 /** What the phone knows about its owner. */
 export type CoffeeMe = { id: string; name: string; group: QuotaGroup; quota: number; used: number; left: number; month: string };
-export type MyState = { me: CoffeeMe; orders: MyOrder[]; ga: boolean; pengelola: boolean };
+/** `menu`: every drink, hidden ones included (they still show in the history); `options`: what a claim is asked. */
+export type MyState = { me: CoffeeMe; orders: MyOrder[]; ga: boolean; pengelola: boolean; menu: Drink[]; options: DrinkOptions };
+/** What the tablet needs before any GA data: the menu and what the team and guests are asked. Public within the app, so the guest menu book may hold it. */
+export type GaMenu = { menu: Drink[]; options: Pick<CoffeeOptions, "tim" | "tamu"> };
 /** `pin`: a PIN GA is set, so leaving the guest menu book asks for it (never the PIN itself). */
-export type GaState = { today: MeetingOrder[]; people: Pick<CoffeePerson, "id" | "name" | "position" | "bu">[]; rooms: { name: string; spot: string }[]; pin: boolean };
+export type GaState = GaMenu & { today: MeetingOrder[]; people: Pick<CoffeePerson, "id" | "name" | "position" | "bu">[]; rooms: { name: string; spot: string }[]; pin: boolean };
 export type QueueState = { waiting: QueueOrder[]; recent: QueueOrder[]; today: { diproses: number; selesai: number; ditolak: number }; now: string };
 
 /** One recap row: one drink (a line of three is three rows). */
@@ -130,9 +139,9 @@ export type RecapRow = {
   guestCount: number | null;
   room: string;
   drink: string;
-  temperature: Temperature;
-  sugar: Sugar;
-  ice: Ice;
+  temperature: Temperature | null;
+  sugar: Sugar | null;
+  ice: Ice | null;
   status: Status;
   reason: string;
   doneBy: string;

@@ -1,45 +1,54 @@
 import { z } from "zod";
 import { pushSubscriptionSchema } from "@/lib/pra-wam/push";
-import { ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, drinkBySlug, type Temperature } from "./menu";
+import { ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, fitChoice, type Choice, type Drink, type DrinkOptions, type Ice, type Sugar, type Temperature } from "./menu";
 import { ITEM_KINDS, STATUSES } from "./types";
 
 /*
  * What WG Coffee's APIs take (25 Nov 2026). The messages are for the person at the screen,
- * in Indonesian. A drink must be on the menu and come in the temperature asked for; the ice level
- * only means something for a cold drink, so a hot one always carries "Normal".
+ * in Indonesian. Since F6 the menu lives in the database and each audience is asked its own
+ * options, so the shapes here only say what a drink line may look like (temperature, sugar and
+ * ice are optional); whether the drink is on the menu, comes in that temperature, and which
+ * options count is decided by the server with `settleLine`, against the menu and the settings.
  */
 
-const temperature = z.enum(["panas", "es"], "Pilih panas atau es.");
+const blank = (value: unknown) => value === "" || value === null ? undefined : value;
+const temperature = z.preprocess(blank, z.enum(["panas", "es"], "Pilih panas atau es.").optional());
 const drinkShape = {
   slug: z.string("Pilih minuman.").trim().min(1, "Pilih minuman.").max(40, "Pilih minuman."),
   temperature,
-  sugar: z.enum(SUGAR_LEVELS, "Pilih takaran gula."),
-  ice: z.enum(ICE_LEVELS, "Pilih takaran es.").default("Normal"),
+  sugar: z.preprocess(blank, z.enum(SUGAR_LEVELS, "Pilih takaran gula.").optional()),
+  ice: z.preprocess(blank, z.enum(ICE_LEVELS, "Pilih takaran es.").optional()),
 };
-type DrinkInput = { slug: string; temperature: Temperature };
-type Issues = { addIssue: (issue: { code: "custom"; message: string; path: string[] }) => void };
 
-/** The drink is on the menu and comes hot or cold as asked. */
-function checkDrink(value: DrinkInput, ctx: Issues) {
-  const drink = drinkBySlug(value.slug);
-  if (!drink) { ctx.addIssue({ code: "custom", message: "Pilih minuman.", path: ["slug"] }); return; }
-  if (!drink.temperatures.includes(value.temperature)) {
-    ctx.addIssue({ code: "custom", message: `${drink.name} hanya tersedia ${drink.temperatures[0] === "es" ? "dingin (es)" : "panas"}.`, path: ["temperature"] });
+export type DrinkIssue = { field: "slug" | "temperature" | "sugar"; message: string };
+/**
+ * A drink line as it is saved, for the options its audience is asked (the server's last word):
+ * an option that is off is dropped whatever was sent (null, never a made-up default); one that is
+ * on must be there and fit the drink. `drink`: the menu's entry, undefined for "lainnya" (Catat
+ * manual, any temperature). A drink that comes one way only needs no temperature sent.
+ */
+export function settleLine(line: { slug: string; temperature?: Temperature | null; sugar?: Sugar | null; ice?: Ice | null }, drink: Pick<Drink, "name" | "temperatures"> | undefined, options: DrinkOptions): Choice | DrinkIssue {
+  if (!drink && line.slug !== OTHER_DRINK) return { field: "slug", message: "Pilih minuman." };
+  let chosen = line.temperature ?? null;
+  if (options.suhu) {
+    if (!chosen && drink?.temperatures.length === 1) chosen = drink.temperatures[0];
+    if (!chosen) return { field: "temperature", message: "Pilih panas atau es." };
+    if (drink && !drink.temperatures.includes(chosen)) return { field: "temperature", message: `${drink.name} hanya tersedia ${drink.temperatures[0] === "es" ? "dingin (es)" : "panas"}.` };
   }
+  if (options.gula && !line.sugar) return { field: "sugar", message: "Pilih takaran gula." };
+  return fitChoice({ temperature: chosen, sugar: line.sugar, ice: line.ice }, options);
 }
-const tidyIce = <T extends { temperature: Temperature; ice: (typeof ICE_LEVELS)[number] }>(value: T): T =>
-  value.temperature === "panas" ? { ...value, ice: "Normal" } : value;
-const blank = (value: unknown) => value === "" || value === null ? undefined : value;
+export const isDrinkIssue = (value: Choice | DrinkIssue): value is DrinkIssue => "field" in value;
 const optionalText = (max: number, message: string) =>
   z.preprocess(value => typeof value === "string" ? blank(value.trim()) : blank(value), z.string().max(max, message).optional());
 const guestCount = z.preprocess(blank, z.number("Jumlah tamu berupa angka.").int("Jumlah tamu berupa angka bulat.").min(1, "Jumlah tamu minimal 1.").max(500, "Jumlah tamu paling banyak 500.").optional());
 const qty = z.number("Jumlah berupa angka.").int("Jumlah berupa angka bulat.").min(1, "Jumlah minimal 1.").max(50, "Jumlah paling banyak 50 per baris.");
 const key = z.uuid("Kunci pengiriman tidak dikenali. Muat ulang halaman.");
 
-export const drinklineSchema = z.object(drinkShape).superRefine(checkDrink).transform(tidyIce);
+export const drinklineSchema = z.object(drinkShape);
 
 /** An employee's claim: one drink, and the browser's key so a double tap is one claim. */
-export const claimSchema = z.object({ ...drinkShape, key }).superRefine(checkDrink).transform(tidyIce);
+export const claimSchema = z.object({ ...drinkShape, key });
 export type ClaimInput = z.infer<typeof claimSchema>;
 
 /** How long a guest's own name on a drink may be (the column and the database function hold the same limit). */
@@ -53,9 +62,8 @@ const meetingItemSchema = z.object({
   ...drinkShape,
   qty,
 }).superRefine((value, ctx) => {
-  checkDrink(value, ctx);
   if (value.for === "tim" && !value.personId) ctx.addIssue({ code: "custom", message: "Pilih orangnya.", path: ["personId"] });
-}).transform(value => tidyIce({ ...value, personId: value.for === "tim" ? value.personId : undefined, guestName: value.for === "tamu" ? value.guestName : undefined }));
+}).transform(value => ({ ...value, personId: value.for === "tim" ? value.personId : undefined, guestName: value.for === "tamu" ? value.guestName : undefined }));
 
 /** GA's meeting order: the room and the PIC are enough; guest and count are optional. */
 export const meetingSchema = z.object({
@@ -109,12 +117,11 @@ export const manualSchema = z.object({
   key,
 }).superRefine((value, ctx) => {
   if (!z.uuid().safeParse(value.employeeId).success) ctx.addIssue({ code: "custom", message: value.kind === "tamu" ? "Pilih PIC tamu." : "Pilih nama karyawan.", path: ["employeeId"] });
-  if (value.slug === OTHER_DRINK) { if (!value.other) ctx.addIssue({ code: "custom", message: "Tulis nama minumannya.", path: ["other"] }); }
-  else checkDrink(value, ctx);
+  if (value.slug === OTHER_DRINK && !value.other) ctx.addIssue({ code: "custom", message: "Tulis nama minumannya.", path: ["other"] });
   // A date or a clock that is not one already has its own message; there is no moment to compare.
   const at = manualMoment(String(value.date), String(value.time));
   if (!Number.isNaN(at) && at > Date.now() + 60_000) ctx.addIssue({ code: "custom", message: "Tanggal dan jam tidak boleh di masa depan.", path: ["date"] });
-}).transform(value => tidyIce({
+}).transform(value => ({
   ...value,
   other: value.slug === OTHER_DRINK ? value.other : undefined,
   qty: value.kind === "klaim" ? 1 : value.qty,
@@ -128,6 +135,12 @@ const quota = (label: string) => z.number(`Jatah ${label} berupa angka.`).int(`J
 /** PIN GA: exactly four digits, as text (a leading zero counts). */
 export const gaPinSchema = z.object({ pin: z.string("Isi PIN 4 angka.").regex(/^\d{4}$/, "PIN berupa 4 angka.") });
 export const settingsSchema = z.object({ karyawan: quota("karyawan"), ga: quota("Tim GA"), intern: quota("intern") });
+const flag = z.boolean("Pilih nyala atau mati.");
+const audienceOptions = z.object({ suhu: flag, gula: flag, es: flag });
+/** Pengaturan → Opsi minuman: which options each audience is asked. Takaran es never stays on without the temperature. */
+export const optionsSchema = z.object({ klaim: audienceOptions, tim: audienceOptions, tamu: audienceOptions })
+  .transform(value => ({ klaim: tidyOptions(value.klaim), tim: tidyOptions(value.tim), tamu: tidyOptions(value.tamu) }));
+function tidyOptions(options: DrinkOptions): DrinkOptions { return { ...options, es: options.es && options.suhu }; }
 
 /** Rekap's filter, read from the address: a span of WIB days (a year at most), and what to show. */
 export const recapQuerySchema = z.object({

@@ -1,18 +1,21 @@
 "use client";
 
 import { Check, Coffee, Info } from "lucide-react";
-import { drinkBySlug, drinkLabel, optionsLabel } from "@/lib/coffee/menu";
+import { drinkName, optionsLabel } from "@/lib/coffee/menu";
 import type { MyOrder } from "@/lib/coffee/types";
-import { coffeePath } from "@/lib/routes";
 import { STATUS_PILL, STATUS_TITLE, clock, dayShort } from "./format";
 import { PantryMap } from "./PantryMap";
 import css from "./coffee.module.css";
 
-/** The drink's photo; a drink typed in by the pengelola ("Lainnya") has none. */
-export function DrinkPhoto({ slug, size }: { slug: string; size: number }) {
-  if (!drinkBySlug(slug)) return <span className={css.noPhoto} style={{ width: size, height: size }} aria-hidden><Coffee size={Math.round(size / 2.4)} /></span>;
-  // eslint-disable-next-line @next/next/no-img-element -- small local photos, sized here
-  return <img src={coffeePath.photo(slug)} alt="" width={size} height={size} loading="lazy" />;
+/**
+ * The drink's photo, square. `src` null: a drink typed in by the pengelola ("Lainnya"), one that
+ * has no photo yet, or one that has left the menu: a cup is drawn instead. `fill`: as wide as its
+ * box (the menu's cards); `eager`: no lazy loading (the sheet's head, on screen at once).
+ */
+export function DrinkPhoto({ src, size, fill = false, eager = false }: { src: string | null | undefined; size: number; fill?: boolean; eager?: boolean }) {
+  if (!src) return <span className={css.noPhoto} data-fill={fill || undefined} style={fill ? undefined : { width: size, height: size }} aria-hidden><Coffee size={Math.round(Math.min(size, 120) / 2.4)} /></span>;
+  // eslint-disable-next-line @next/next/no-img-element -- small square photos (static files or the pengelola's uploads), sized here
+  return <img src={src} alt="" width={size} height={size} loading={eager ? undefined : "lazy"} />;
 }
 
 /**
@@ -27,6 +30,8 @@ export function CurrentOrder({ order, first, cancelling, onCancel, onMenu }: {
   const waiting = order.status === "diproses", ready = order.status === "selesai" && !order.manual;
   const who = order.processedLabel || "pengelola";
   const pill = order.manual && order.status === "selesai" ? { label: "Selesai", tone: "ok" } : STATUS_PILL[order.status];
+  // Only what the claim carries: nothing when the options were not asked (F6).
+  const options = optionsLabel(order.temperature, order.sugar, order.ice);
   const steps = [
     { label: "Diajukan", note: clock(order.orderedAt), done: true },
     { label: "Diproses", note: waiting ? "Menunggu pengelola" : order.processedAt ? `Selesai oleh ${who} · ${clock(order.processedAt)}` : "", done: ready },
@@ -34,15 +39,15 @@ export function CurrentOrder({ order, first, cancelling, onCancel, onMenu }: {
   ];
 
   return (
-    <section className={css.current} aria-label={`${drinkLabel(order.slug, order.other)}, ${pill.label}`}>
+    <section className={css.current} aria-label={`${drinkName(order)}, ${pill.label}`}>
       <span className={css.pill} data-tone={pill.tone}>{pill.label}</span>
       <Heading>{order.manual && order.status === "selesai" ? "Klaim dicatat pengelola" : STATUS_TITLE[order.status]}</Heading>
 
       <div className={css.orderCard}>
-        <DrinkPhoto slug={order.slug} size={64} />
+        <DrinkPhoto src={order.photo} size={64} />
         <span>
-          <strong>{drinkLabel(order.slug, order.other)}</strong>
-          <span>{optionsLabel(order.temperature, order.sugar, order.ice)}</span>
+          <strong>{drinkName(order)}</strong>
+          {options && <span>{options}</span>}
           <span>#{order.no}{order.claimNo ? ` · klaim ke-${order.claimNo}` : ""}</span>
         </span>
       </div>

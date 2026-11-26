@@ -264,7 +264,7 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
         {coffeeAdminSections.map(tabLink)}
       </nav>
 
-      {manual && <ManualSheet api={api} now={now} actorName={actorName} settings={settings?.settings ?? null} onClose={() => setManual(false)} onSaved={saved} />}
+      {manual && <ManualSheet api={api} now={now} actorName={actorName} settings={settings?.settings ?? null} menu={settings?.menu} options={settings?.options} onClose={() => setManual(false)} onSaved={saved} />}
       {cancel && <CancelDialog target={cancel} onClose={() => setCancel(null)} onConfirm={() => void cancelRecord(cancel)} />}
       {refuse && <RefuseDialog order={refuse} onClose={() => setRefuse(null)} onRefuse={note => void reject(refuse, note)} />}
 
