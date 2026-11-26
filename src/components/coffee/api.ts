@@ -27,7 +27,8 @@ export type CoffeeApi = {
   signOut(): Promise<void>;
 };
 
-async function request<T>(url: string, init: RequestInit = {}): Promise<{ data: T; message: string }> {
+/** One call to a Coffee API: the answer, or a CoffeeApiError with the server’s own words. Also used by the GA tablet (ga/api.ts). */
+export async function request<T>(url: string, init: RequestInit = {}): Promise<{ data: T; message: string }> {
   let response: Response;
   try {
     response = await fetch(url, { ...init, credentials: "same-origin", cache: "no-store", headers: { ...(typeof init.body === "string" ? { "Content-Type": "application/json" } : {}), ...init.headers } });

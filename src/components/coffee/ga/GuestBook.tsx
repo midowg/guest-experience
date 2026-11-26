@@ -1,0 +1,196 @@
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronLeft, Lock } from "lucide-react";
+import { DRINKS, ICE_LEVELS, SUGAR_LEVELS, drinkLabel, optionsLabel, type Drink, type DrinkGroup, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { ExitDialog } from "./ExitDialog";
+import { newLineId, type Line } from "./model";
+import { Photo, useSettled } from "./parts";
+import css from "./ga.module.css";
+
+type Pick = { slug: string; temperature: Temperature; sugar: Sugar; ice: Ice; name: string };
+
+/**
+ * "Serahkan ke tamu": the tablet becomes a menu book. A black cover with only the gold Pegasus,
+ * then paper pages. The guest reads "Anda", never a word about quota or free drinks, and no
+ * employee data but the name of the PIC GA chose. It is given no API and no list of people: what
+ * the guests pick goes back to GA's order panel as Tamu rows, and GA sends. Leaving asks the GA
+ * officer to confirm (no PIN).
+ */
+export function GuestBook({ room, picName, guest, max, onDone }: { room: string; picName: string; guest?: string; max: number; onDone: (lines: Line[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [group, setGroup] = useState<DrinkGroup>("kopi");
+  const [drink, setDrink] = useState<Drink | null>(null);
+  const [picks, setPicks] = useState<Pick[]>([]);
+  const [thanks, setThanks] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const view = !open ? "cover" : thanks ? "thanks" : drink ? `drink:${drink.slug}` : "menu";
+  // Each page ignores the second tap of the press that turned to it.
+  const settled = useSettled(view);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const cover = useRef<HTMLButtonElement>(null);
+  useEffect(() => { (pageRef.current ?? cover.current)?.focus(); }, [view, group]);
+
+  const finish = () => onDone(picks.map(pick => ({
+    id: newLineId(), for: "tamu", slug: pick.slug, temperature: pick.temperature, sugar: pick.sugar, ice: pick.temperature === "es" ? pick.ice : "Normal", qty: 1, guestName: pick.name.trim() || undefined,
+  })));
+  const drinks = DRINKS.filter(item => item.group === group);
+  const split = Math.ceil(drinks.length * 0.4);
+  const full = picks.length >= max;
+  const turn = (action: () => void) => () => { if (settled()) action(); };
+
+  return (
+    <div className={css.book} role="region" aria-label="Buku menu tamu">
+      <div className={css.bookBar}>
+        <button type="button" className={css.bookExit} onClick={turn(() => setConfirm(true))}><Lock aria-hidden size={16} />Mode GA</button>
+      </div>
+
+      {!open ? (
+        <button ref={cover} type="button" className={css.cover} onClick={turn(() => setOpen(true))} aria-label="Buka buku menu">
+          <span className={css.coverFrame} aria-hidden />
+          <span className={css.goldMark} aria-hidden />
+          <span className={css.coverHint}>Ketuk untuk membuka</span>
+        </button>
+      ) : (
+        <div className={css.spread} ref={pageRef} tabIndex={-1}>
+          {thanks ? (
+            <>
+              <div className={css.page}>
+                <div className={css.pageCentre}>
+                  <span className={css.goldMarkSmall} aria-hidden />
+                  <h2 className={css.bookTitle}>{picks.length ? "Pilihan Anda sudah kami terima" : "Belum ada pilihan"}</h2>
+                  <Ornament />
+                  <p className={css.bookLead}>{picks.length ? `Terima kasih. Minuman Anda segera kami siapkan dan antar ke ${room}.` : "Silakan kembali ke menu untuk memilih minuman Anda."}</p>
+                </div>
+              </div>
+              <div className={css.page}>
+                <h3 className={css.bookHeading}>Pilihan di meja ini</h3>
+                <ul className={css.pickList}>
+                  {picks.map((pick, index) => (
+                    <li key={index}>
+                      <span className={css.grow}><strong>{drinkLabel(pick.slug)}</strong><span>{optionsLabel(pick.temperature, pick.sugar, pick.ice)}</span></span>
+                      {pick.name.trim() && <span className={css.pickName}>{pick.name.trim()}</span>}
+                      <button type="button" className={css.bookRemove} onClick={turn(() => setPicks(list => list.filter((_, at) => at !== index)))} aria-label={`Hapus ${drinkLabel(pick.slug)}${pick.name.trim() ? ` untuk ${pick.name.trim()}` : ""}`}>Hapus</button>
+                    </li>
+                  ))}
+                </ul>
+                <div className={css.bookActions}>
+                  {full
+                    ? <p className={css.bookMeta}>Meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
+                    : <button type="button" className={css.inkButton} onClick={turn(() => { setThanks(false); setDrink(null); })}>Tamu berikutnya memilih</button>}
+                  <button type="button" className={css.lineButton} onClick={turn(() => setConfirm(true))}>Serahkan kembali ke GA</button>
+                </div>
+              </div>
+            </>
+          ) : drink ? (
+            <GuestOptions key={drink.slug} drink={drink} onBack={turn(() => setDrink(null))} onPick={pick => { if (!settled() || full) return; setPicks(list => [...list, pick]); setThanks(true); }} />
+          ) : (
+            <>
+              {/* The book’s tabs: on the right page when it lies open, on top when the tablet stands upright. */}
+              <div className={css.ribbons} role="group" aria-label="Bagian menu">
+                <button type="button" aria-pressed={group === "kopi"} onClick={() => setGroup("kopi")}>Kopi</button>
+                <button type="button" aria-pressed={group === "non-kopi"} onClick={() => setGroup("non-kopi")}>Non-kopi</button>
+              </div>
+              <div className={css.page}>
+                <span className={css.goldMarkSmall} aria-hidden />
+                <p className={css.greeting}>{guest ? <>Disajikan khusus untuk <em>{guest}</em></> : <>Selamat datang di Werkudara</>}</p>
+                <p className={css.bookMeta}>Bersama {picName} · {room}</p>
+                <h2 className={css.bookTitle}>{group === "kopi" ? "Kopi" : "Non-kopi"}</h2>
+                <Ornament />
+                <p className={css.bookLead}>Silakan pilih minuman Anda. Ketuk untuk mengatur suhu dan gula.</p>
+                <BookItems drinks={drinks.slice(0, split)} onPick={item => { if (settled()) setDrink(item); }} />
+              </div>
+              <div className={`${css.page} ${css.pageTabbed}`}>
+                <BookItems drinks={drinks.slice(split)} onPick={item => { if (settled()) setDrink(item); }} />
+                {picks.length > 0 && (
+                  <div className={css.picksBar}>
+                    <span>{picks.length} pilihan sudah tercatat</span>
+                    <button type="button" className={css.lineButton} onClick={turn(() => setThanks(true))}>Lihat pilihan</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {confirm && <ExitDialog count={picks.length} onStay={() => setConfirm(false)} onLeave={finish} />}
+    </div>
+  );
+}
+
+function Ornament() {
+  return (
+    <svg className={css.ornament} viewBox="0 0 160 12" aria-hidden>
+      <line x1="0" y1="6" x2="66" y2="6" /><path d="M80 1 L85 6 L80 11 L75 6 Z" /><line x1="94" y1="6" x2="160" y2="6" />
+    </svg>
+  );
+}
+
+function BookItems({ drinks, onPick }: { drinks: Drink[]; onPick: (drink: Drink) => void }) {
+  return (
+    <ul className={css.bookItems}>
+      {drinks.map(drink => (
+        <li key={drink.slug}>
+          <button type="button" onClick={() => onPick(drink)}>
+            <Photo slug={drink.slug} width={72} height={72} />
+            <span><strong>{drink.name}</strong><span>{drink.description}</span></span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function GuestOptions({ drink, onBack, onPick }: { drink: Drink; onBack: () => void; onPick: (pick: Pick) => void }) {
+  const [temperature, setTemperature] = useState<Temperature>(drink.temperatures[0]);
+  const [sugar, setSugar] = useState<Sugar>("Normal");
+  const [ice, setIce] = useState<Ice>("Normal");
+  const [name, setName] = useState("");
+  return (
+    <>
+      <div className={css.page}>
+        <button type="button" className={css.bookBack} onClick={onBack}><ChevronLeft aria-hidden size={20} />Kembali ke menu</button>
+        <Photo className={css.bookPhoto} slug={drink.slug} alt={drink.name} width={360} height={360} />
+        <h2 className={css.bookTitle}>{drink.name}</h2>
+        <Ornament />
+        <p className={css.bookLead}>{drink.description}</p>
+      </div>
+      <div className={css.page}>
+        <h3 className={css.bookHeading}>Atur sesuai selera Anda</h3>
+        {drink.temperatures.length > 1 ? (
+          <fieldset className={css.bookField}>
+            <legend>Suhu</legend>
+            <div className={css.bookOptions} data-cols="2">
+              <BookOption on={temperature === "panas"} onClick={() => setTemperature("panas")}>Panas</BookOption>
+              <BookOption on={temperature === "es"} onClick={() => setTemperature("es")}>Es</BookOption>
+            </div>
+          </fieldset>
+        ) : <p className={`${css.bookMeta} ${css.bookNote}`}>Disajikan {drink.temperatures[0] === "es" ? "dingin dengan es" : "panas"}.</p>}
+        <fieldset className={css.bookField}>
+          <legend>Gula</legend>
+          <div className={css.bookOptions} data-cols="3">
+            {SUGAR_LEVELS.map(level => <BookOption key={level} on={sugar === level} onClick={() => setSugar(level)}>{level}</BookOption>)}
+          </div>
+        </fieldset>
+        {temperature === "es" && (
+          <fieldset className={css.bookField}>
+            <legend>Takaran es</legend>
+            <div className={css.bookOptions} data-cols="3">
+              {ICE_LEVELS.map(level => <BookOption key={level} on={ice === level} onClick={() => setIce(level)}>{level}</BookOption>)}
+            </div>
+          </fieldset>
+        )}
+        <label className={css.bookLabel} htmlFor="ga-tamu-nama-anda">Nama Anda <span>(opsional, agar minuman tidak tertukar)</span></label>
+        <input id="ga-tamu-nama-anda" className={css.bookInput} value={name} maxLength={40} onChange={event => setName(event.target.value)} autoComplete="off" spellCheck={false} />
+        <div className={css.bookActions}>
+          <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, temperature, sugar, ice, name })}>Pilih minuman ini</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BookOption({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return <button type="button" className={css.bookOption} aria-pressed={on} onClick={onClick}>{children}</button>;
+}

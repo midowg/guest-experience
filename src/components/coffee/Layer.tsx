@@ -42,8 +42,11 @@ export const onLayerEntry = () => typeof window !== "undefined" && !!window.hist
 /**
  * `onClose`: asked by Escape, a press outside, the X, and the back gesture; the one who opened the
  * layer decides (a claim being sent stays open). `kind`: a sheet from the bottom, or a question.
+ * `rootClass` and `panelClass`: another look for the same layer (the GA tablet adds its own).
  */
-export function Layer({ onClose, labelledBy, kind = "sheet", alert, children }: { onClose: () => void; labelledBy: string; kind?: "sheet" | "dialog"; alert?: boolean; children: ReactNode }) {
+export function Layer({ onClose, labelledBy, kind = "sheet", alert, rootClass, panelClass, children }: {
+  onClose: () => void; labelledBy: string; kind?: "sheet" | "dialog"; alert?: boolean; rootClass?: string; panelClass?: string; children: ReactNode;
+}) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   useEffect(() => { close.current = onClose; }, [onClose]);
@@ -101,9 +104,9 @@ export function Layer({ onClose, labelledBy, kind = "sheet", alert, children }: 
   }, [host]);
   if (!host) return null;
   return createPortal(
-    <div className={`${css.theme} ${css.layerRoot}`}>
+    <div className={`${css.theme} ${css.layerRoot}${rootClass ? ` ${rootClass}` : ""}`}>
       <div className={css.scrim} data-center={kind === "dialog" ? "true" : undefined} onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-        <div ref={panel} className={kind === "dialog" ? css.dialog : css.sheet} role={alert ? "alertdialog" : "dialog"} aria-modal="true" aria-labelledby={labelledBy}>{children}</div>
+        <div ref={panel} className={`${kind === "dialog" ? css.dialog : css.sheet}${panelClass ? ` ${panelClass}` : ""}`} role={alert ? "alertdialog" : "dialog"} aria-modal="true" aria-labelledby={labelledBy}>{children}</div>
       </div>
     </div>,
     host,

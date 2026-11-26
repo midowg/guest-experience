@@ -627,3 +627,79 @@ berlaku untuk aplikasi di dalam produk).
   `coffee.module.css` (tablet GA butuh 48 px di CSS-nya sendiri).
 - SW: lihat selisih 3. F4 menambah `push`/`notificationclick` di `public/coffee/sw.js` dan mengisi prop `notify` milik
   `CoffeeApp`/`SetupSteps` (`NotifySetup.allow()` → "granted" | "denied" | "unsupported"); pendaftaran SW ada di `pwa.ts`.
+
+---
+
+## Catatan pelaksanaan F3 (26 Nov 2026)
+
+F3 (tablet GA `/coffee/ga` + buku menu tamu) selesai di cabang `feat/werkudara-coffee`. Tidak ada berkas server, API,
+migrasi, admin F1, atau prototipe yang diubah. Skill desain yang dipakai: `ui-ux-pro-max` (sentuhan, aksesibilitas, tata
+letak) dan `design-taste-frontend` (selera; alur pembuat situsnya tidak berlaku untuk aplikasi di dalam produk).
+
+**Berkas F2 yang disentuh (dua, tidak mengubah perilaku yang ada):**
+- `src/components/coffee/Layer.tsx`: dua prop opsional `rootClass` dan `panelClass` (tampilan lain untuk lapisan yang sama).
+- `src/components/coffee/api.ts`: `request` diekspor (dipakai `ga/api.ts`).
+
+**Belum diuji (apa adanya):**
+- Halaman asli `/coffee/ga` **belum pernah dibuka setelah masuk** (agen tidak memakai sandi). Yang dicek: tanpa sesi
+  dialihkan ke `/coffee/masuk?next=%2Fcoffee%2Fga`, `GET /api/coffee/ga/state` dan `POST …/meetings` menjawab 401.
+  "Karyawan biasa → `/coffee?pesan=ga`" dan "non-GA → 403" hanya lewat tes F0 (`session.test.ts`, `coffee-guards.test.ts`).
+- "Muncul di antrean pengelola sebagai satu kartu rapat", `T-xxxx-2`, dan rekap atas nama PIC/orangnya **tidak diuji
+  dengan server asli** (butuh migrasi). Tablet diuji dengan server tiruan (`ga/sample.ts`), yang membaca kiriman dengan
+  `meetingSchema` asli dan meniru aturan Tambah lagi (induk ditolak/batal/bukan hari ini → 409).
+- **Tablet sungguhan tidak dipakai.** Lebar 1280×800, 1024×768, 768×1024 dicek dengan ukuran layar tiruan di panel
+  browser (klik tetikus): keyboard layar, sentuhan asli, putar layar, dan area aman tidak diuji.
+- Di browser: 409 "Pesanan awal sudah tidak bisa ditambah" dan "Pesan pengganti" tidak diulang (hanya di tes). Urutan
+  Tab papan ketik dan kontras tidak diukur (warna sama dengan F2).
+- Satu tes F2 (`CoffeeApp.dom.test.tsx`, "Sisa 2 dari 4") gagal sekali saat seluruh suite dijalankan, lulus 3× sendiri
+  dan lulus pada putaran penuh kedua. Bukan bagian F3; dicatat untuk audit F2.
+
+**Selisih dari rencana dan prototipe:**
+1. **Nama tamu per minuman tidak sampai ke server.** Buku menu menanyakan "Nama Anda (opsional)", tetapi
+   `meetingSchema` dan `coffee_order_items` tidak punya tempat untuk nama tamu (hanya `personId` untuk tim). Nama itu
+   tampil di panel Pesanan ("Tamu · Budi") dan di layar Terkirim **hanya di tablet itu, selama halaman belum dimuat
+   ulang**; pengelola dan rekap tidak melihatnya. Perlu keputusan PM: tambah kolom (mis. `guest_name`) di skema, fungsi
+   SQL, dan kartu antrean sebelum migrasi dijalankan, atau hapus isian itu.
+2. **Anggota tim dipilih dari daftar karyawan**, bukan diketik bebas seperti prototipe: server meminta `personId`.
+   PIC ditawarkan pertama; mengetik hanya menyaring. Fokus awal dialog di judul, bukan di kolom cari (keyboard layar
+   akan menutupi nama).
+3. **Tambah lagi** mengirim `parentId` = kiriman pertama rapat itu. Bila kiriman pertama ditolak/batal (server menolak
+   menambah), tombolnya menjadi **"Pesan pengganti" / "Buat pesanan pengganti"**: pesanan baru dengan ruangan dan PIC
+   yang sama. Bila server tetap menjawab 409 (tablet basi), minuman tidak hilang: pesannya tampil, dan Kirim berikutnya
+   mengirimnya sebagai pesanan baru dengan kunci baru. Kalimat di kotak ditolak: "Kabari PIC, lalu buat pesanan pengganti."
+4. **Kunci kiriman:** satu kunci per kiriman; dipakai lagi untuk coba ulang setelah jaringan gagal, diganti setelah
+   berhasil atau 409.
+5. **Buku menu menggantikan seluruh layar GA** (bukan lapisan di atasnya): selama tamu memegang tablet, halaman tidak
+   memuat bilah GA, daftar karyawan, pesanan lain, pesan status, atau kotak pratinjau. Komponennya tidak menerima API
+   maupun daftar orang. Keluar lewat konfirmasi tanpa PIN (kalimat "PIN" prototipe dihapus). Tambahan kecil: **Hapus**
+   pada tiap pilihan, dan berhenti menerima pilihan saat pesanan mencapai 40 baris.
+6. **Ketuk ganda:** layar yang baru muncul mengabaikan ketukan selama 450 ms (`useSettled`): ubin minuman setelah
+   kembali dari buku menu, tombol layar Terkirim, tiap halaman buku menu, "Ya, mode GA". Kirim yang sedang dikirim
+   tidak dikirim lagi (tombol `aria-disabled`, penjaga di `useGa`).
+7. **Tidak membuang isian tanpa bertanya:** kembali ke Beranda dengan minuman yang belum dikirim → "Buang pesanan yang
+   belum dikirim?"; menutup/memuat ulang halaman → pertanyaan bawaan browser.
+8. **Baca ulang:** tiap 15 detik hanya selama ada pesanan diproses dan tablet terlihat, saat kembali ke depan, dan
+   **setiap kembali ke Beranda** (tablet lain bisa mengirim pesanan). Pesan status memakai `Toast` F2 (di atas, bukan di
+   bawah seperti prototipe); ditolak menetap sampai ditutup; mengetuknya membuka status hanya bila tidak sedang menulis pesanan.
+9. Tab Kopi/Non-kopi dan "Ketuk untuk" adalah tombol `aria-pressed` (bukan `tablist`/`radiogroup` tanpa panah, temuan
+   F1-16). Semua target ≥ 48 px (`ga/layout.test.ts`); ketuk ganda tidak memperbesar atau menyeleksi teks.
+10. **Tegak (≤ 900 px):** satu kolom, layar bergulir; panel Pesanan menempel di bawah (paling tinggi 46% layar); tombol
+    Pesanan baru berdampingan dan menempel di bawah; tab buku menu di atas, tombol pilih menempel di bawah.
+11. Bilah atas punya tautan **"Aplikasi saya"** (`coffeePath.home`). Tablet tidak punya tombol Keluar sendiri.
+12. Berkas di luar daftar rencana: `ga/{api,useGa,model,parts,sample,testing}.ts(x)`, `ga/layout.test.ts`,
+    `src/app/coffee/ga/loading.tsx`, `src/app/dev-preview/coffee/nyata/ga/GaPreview.tsx`. Pratinjau:
+    `/dev-preview/coffee/nyata/ga` (`?kosong=1`, `?lambat=1`).
+
+**Untuk F4 (web push):**
+- `/coffee/ga` berada di dalam scope SW `/coffee/`, tetapi **`GaApp` belum mendaftarkan service worker** (pendaftaran
+  ada di `pwa.ts`, hanya dipanggil `CoffeeApp`). Tablet perlu mendaftar sendiri sebelum bisa berlangganan.
+- Tempat tombol "Nyalakan notifikasi": bilah atas (`css.topbar`, di samping "Aplikasi saya"). Jangan digambar saat
+  buku menu terbuka (cabang `guest` di `GaApp.tsx` sengaja hanya berisi `GuestBook`).
+- Tablet hanya punya satu alamat (`coffeePath.ga`), tanpa alamat per pesanan: klik notifikasi membuka Beranda GA.
+  Bila ingin langsung ke status, tambahkan parameter (mis. `?pesanan=<id>`) dan buka `Sent` dari `GaApp`.
+- Teks yang sekarang tampil sebagai pesan saat status berubah ada di `onDecided` (`GaApp.tsx`); `useGa.refresh()`
+  bisa dipanggil dari pesan SW supaya layar berubah tanpa menunggu 15 detik.
+- Notifikasi sistem bisa muncul di atas buku menu saat tamu memegang tablet (isi: nama panggilan, minuman, ruangan).
+  Putuskan apakah itu boleh; aplikasi tidak bisa menahannya dari dalam halaman.
+- `GaState`/`MeetingOrder` hanya membawa label pengirim (`sentBy`), bukan id-nya; penerima push ditentukan di server
+  (`created_by` + PIC).
