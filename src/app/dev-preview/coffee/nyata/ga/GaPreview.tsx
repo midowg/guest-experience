@@ -4,11 +4,14 @@ import { useState } from "react";
 import { GaApp } from "@/components/coffee/ga/GaApp";
 import css from "@/components/coffee/ga/ga.module.css";
 import { SAMPLE_GA, createSampleGa } from "@/components/coffee/ga/sample";
+import { samplePush } from "@/components/coffee/pushSample";
+import type { CoffeePushState } from "@/lib/coffee/notify";
 
 const HERE = "/dev-preview/coffee/nyata/ga";
 
 /** The real tablet on the make-believe server, with a box that plays the other people: the pengelola who processes, and a network that goes away. */
-export function GaPreview({ empty, slow, pin, held }: { empty: boolean; slow: boolean; pin: boolean; held: boolean }) {
+export function GaPreview({ empty, slow, pin, held, push }: { empty: boolean; slow: boolean; pin: boolean; held: boolean; push: CoffeePushState }) {
+  const [port] = useState(() => samplePush(push));
   const [server] = useState(() => createSampleGa({ seeded: !empty, delay: slow ? 1500 : 0, pin: pin ? "1234" : "" }));
   // Loaded in guest mode: no GA data comes with the page, as on the real one.
   const [initial] = useState(() => held ? { today: [], people: [], rooms: [], pin } : server.initial());
@@ -30,8 +33,10 @@ export function GaPreview({ empty, slow, pin, held }: { empty: boolean; slow: bo
         <a href={`${HERE}?pin=1`}>PIN GA sudah diatur (1234)</a>
         <a href={`${HERE}?kosong=1`}>Belum ada pesanan</a>
         <a href={`${HERE}?lambat=1`}>Jaringan lambat (1,5 detik)</a>
+        <a href={`${HERE}?notif=on`}>Notifikasi aktif</a>
+        <a href={`${HERE}?notif=denied`}>Notifikasi diblokir</a>
       </div>
     </details>
   );
-  return <GaApp initial={initial} me={{ name: SAMPLE_GA }} api={server.api} held={held} tools={tools} />;
+  return <GaApp initial={initial} me={{ name: SAMPLE_GA }} api={server.api} held={held} push={port} tools={tools} />;
 }

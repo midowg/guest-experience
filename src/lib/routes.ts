@@ -993,6 +993,8 @@ export const hrAdminApi = {
  * Super admin → Akses admin). "COFFEE" holds an O, so it can never be an event's short code.
  */
 export const COFFEE_PATH = "/coffee";
+/** The address parameter of Mode GA that names one sent order. */
+export const COFFEE_GA_ORDER = "pesanan";
 const COFFEE_API = "/api/coffee";
 export const coffeePath = {
   /** Menu: the drinks and what is left of this month's quota. */
@@ -1003,6 +1005,8 @@ export const coffeePath = {
   ga: `${COFFEE_PATH}/ga`,
   /** Where someone without Mode GA lands, with a note saying so. */
   gaDenied: `${COFFEE_PATH}?pesan=ga`,
+  /** Mode GA opened on one sent order (where a notification about it leads; the tablet stays in the guest book while a guest holds it). */
+  gaOrder: (id: string) => `${COFFEE_PATH}/ga?${COFFEE_GA_ORDER}=${enc(id)}`,
   login: (next?: string) => `${COFFEE_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
   forgot: `${COFFEE_PATH}/lupa-password`,
   newPassword: (next?: string) => `${COFFEE_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,

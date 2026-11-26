@@ -1,5 +1,7 @@
 import { AdminApiError, adminRequest } from "@/components/admin/shared/api";
+import { browserDevice, type PushApi, type PushPort } from "@/components/coffee/usePush";
 import type { Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import type { CoffeePushInfo } from "@/lib/coffee/notify";
 import type { RecapSummary } from "@/lib/coffee/recap";
 import type { CoffeePerson, CoffeeSettings, ItemFor, QueueOrder, QueueState, RecapRow, Status } from "@/lib/coffee/types";
 import { coffeeAdminApi } from "@/lib/routes";
@@ -72,6 +74,18 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   },
   exportHref: (format, query) => coffeeAdminApi.recapExport(format, filterOf(query)),
 };
+
+/**
+ * Web push for the pengelola (F4): this device is told about new claims and meeting orders. Only
+ * with an employee account: the super admin's sign-in answers 409, which the screen shows as a note.
+ */
+export const coffeeAdminPushApi: PushApi = {
+  info: () => read<CoffeePushInfo>(coffeeAdminApi.push),
+  async save(subscription, device) { await adminRequest(coffeeAdminApi.push, { method: "POST", body: JSON.stringify({ subscription, device }) }); },
+  async remove(endpoint) { await adminRequest(coffeeAdminApi.push, { method: "DELETE", body: JSON.stringify({ endpoint }) }); },
+};
+/** The real thing: the admin's push API and this browser, on Coffee's own service worker. */
+export const coffeeAdminPush: PushPort = { api: coffeeAdminPushApi, device: browserDevice };
 
 /** Someone else got there first (409), or the order is gone (404): the queue on screen is out of date. */
 export const outOfDate = (error: unknown): boolean => error instanceof AdminApiError && (error.status === 409 || error.status === 404);

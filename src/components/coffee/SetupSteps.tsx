@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bell, Check, ChevronLeft, Coffee, Download, EllipsisVertical, Share, SquarePlus } from "lucide-react";
+import { pushNote, type CoffeePushState } from "@/lib/coffee/notify";
 import type { PhoneKind } from "@/lib/coffee/setup";
 import { coffeePath } from "@/lib/routes";
 import css from "./coffee.module.css";
 
 /**
- * Where web push plugs in (F4). The app passes this once push exists: `allow` asks the phone for
- * permission and subscribes this device; the step then offers "Izinkan notifikasi". Without it
- * (now) the step only explains that the status shows by itself in the app.
+ * Web push in the step "Izinkan notifikasi" (F4). `allow` asks the phone for permission and
+ * subscribes this device. `state` is what the device can do (usePush): when it cannot be turned on
+ * here (blocked, an iPhone that has not installed the app yet, a browser without web push, a
+ * server without the keys) the step says what is in the way instead of offering a button that
+ * does nothing. Without `notify` at all (a preview or a test without push) it reads as not ready.
  */
-export type NotifySetup = { allow: () => Promise<"granted" | "denied" | "unsupported"> };
+export type NotifySetup = { allow: () => Promise<"granted" | "denied" | "unsupported">; state?: CoffeePushState };
 
 /**
  * "Atur sekali", shown once after the first sign-in: pasang di layar utama (skipped when the app
@@ -105,29 +108,31 @@ function InstallStep({ first, onInstall, onNext }: { first: PhoneKind; onInstall
 function NotifyStep({ notify, onDone }: { notify?: NotifySetup; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState("");
+  const state: CoffeePushState = notify ? notify.state ?? "off" : "not-ready";
   const allow = async () => {
     if (busy || !notify) return;
     setBusy(true);
     const answer = await notify.allow().catch(() => "unsupported" as const);
     setBusy(false);
     if (answer === "granted") onDone();
+    // Refused by the person or impossible here: the state (now "denied", "not-ready", …) brings its own words; anything else gets these.
     else setRefused(answer === "denied"
-      ? "Notifikasi belum diizinkan. Aplikasi tetap jalan: status pengajuan tampil di Pesanan saya."
-      : "HP ini belum bisa menerima notifikasi. Aplikasi tetap jalan: status pengajuan tampil di Pesanan saya.");
+      ? "Notifikasi belum diizinkan. Aplikasi tetap jalan: status pengajuan berubah sendiri di Pesanan saya. Kamu bisa menyalakannya nanti dari menu Akun."
+      : "Notifikasi belum bisa dinyalakan di HP ini. Aplikasi tetap jalan: status pengajuan berubah sendiri di Pesanan saya.");
   };
+  // What is in the way, in the state's own words; the words above only where the state has nothing to say.
+  const note = state === "on" ? "Notifikasi sudah aktif di perangkat ini." : state !== "off" && state !== "checking" ? pushNote(state, "karyawan") : refused;
   return (
     <section className={css.stepBody}>
-      <h1 tabIndex={-1}>{notify ? "Izinkan notifikasi" : "Notifikasi menyusul"}</h1>
-      <p className={css.lead}>{notify
-        ? "Supaya kamu tahu begitu pengajuan selesai diproses dan kopi siap diambil."
-        : "Sebentar lagi kamu diberi tahu begitu pengajuan selesai diproses. Untuk sekarang, statusnya berubah sendiri di Pesanan saya selama aplikasi terbuka."}</p>
+      <h1 tabIndex={-1}>Izinkan notifikasi</h1>
+      <p className={css.lead}>Supaya kamu tahu begitu pengajuan selesai diproses dan kopi siap diambil, juga saat aplikasi tertutup.</p>
       <div className={css.notifPreview} aria-hidden>
         <span className={css.toastIcon}><Coffee size={18} /></span>
-        <span><strong>Werkudara Coffee</strong><span>Café Latte kamu sudah diproses. Ambil di mesin pantry.</span></span>
+        <span><strong>Silakan ambil di mesin</strong><span>Café Latte kamu selesai diproses oleh Dewi.</span></span>
       </div>
       <div className={css.footer}>
-        {refused && <p className={css.hint} role="status">{refused}</p>}
-        {notify && !refused
+        {note && <p className={css.hint} role="status">{note}</p>}
+        {notify && !note
           ? <>
             <button type="button" className={css.primary} aria-disabled={busy || undefined} onClick={allow}><Bell aria-hidden size={20} />{busy ? "Menunggu izin…" : "Izinkan notifikasi"}</button>
             <button type="button" className={css.textButton} onClick={onDone}>Nanti saja</button>

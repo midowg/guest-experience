@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Coffee, Crown, ExternalLink, LayoutGrid } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, PageHeader, type ConsoleLink, type ConsoleNavGroup } from "@/components/console";
 import { Notice } from "@/components/ui";
@@ -18,8 +18,10 @@ export function coffeeAdminNavGroups(waiting = 0): ConsoleNavGroup[] {
 }
 
 /** Every Werkudara Coffee admin page in the console frame: its sections, the way into the app, the rest of the admin and Keluar. */
-export function CoffeeAdminNav({ current, superAdmin = false, waiting = 0, className, children, personName }: {
+export function CoffeeAdminNav({ current, superAdmin = false, waiting = 0, className, children, personName, onLeave }: {
   current: CoffeeAdminSectionKey; superAdmin?: boolean; waiting?: number; className?: string; children: ReactNode; personName?: string;
+  /** Keluar was pressed (F4: this device lets go of its notifications first). */
+  onLeave?: (event: MouseEvent<HTMLElement>) => void;
 }) {
   const footerLinks: ConsoleLink[] = [
     { key: "app", label: "Buka Werkudara Coffee", href: coffeePath.home, icon: <ExternalLink size={20} />, external: true },
@@ -31,7 +33,7 @@ export function CoffeeAdminNav({ current, superAdmin = false, waiting = 0, class
     person={{ name: personName ?? (superAdmin ? "Super admin" : "Admin"), sub: "Pengelola" }}
     groups={coffeeAdminNavGroups(waiting)} current={current} pageTitle={coffeeAdminSection(current).label}
     footerLinks={footerLinks}
-    footer={<ConsoleLogoutButton endpoint={ADMIN_LOGOUT_API} redirectTo={ADMIN_LOGIN} />}>
+    footer={<span style={{ display: "contents" }} onClickCapture={onLeave}><ConsoleLogoutButton endpoint={ADMIN_LOGOUT_API} redirectTo={ADMIN_LOGIN} /></span>}>
     {children}
   </ConsoleShell>;
 }

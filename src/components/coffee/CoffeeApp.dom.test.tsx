@@ -4,6 +4,7 @@ import { coffeeAdminPath, coffeePath } from "@/lib/routes";
 import { CoffeeApiError, OFFLINE_TEXT, TIMEOUT_TEXT } from "./api";
 import { CoffeeApp, type CoffeeAppProps } from "./CoffeeApp";
 import { stayOnPage } from "./Layer";
+import { samplePush } from "./pushSample";
 import { SAMPLE_REFUSAL, createSampleCoffee } from "./sample";
 import { GUARD_MS, POLL_MS } from "./useCoffee";
 
@@ -306,7 +307,7 @@ it("walks through Atur sekali once: pasang di layar utama, then notifikasi, then
   fireEvent.click(screen.getByRole("button", { name: "Pasang sekarang" }));
   expect((await screen.findByRole("status")).textContent).toMatch(/menu ⋮/);
   fireEvent.click(screen.getByRole("button", { name: "Sudah, lanjut" }));
-  expect(await screen.findByRole("heading", { level: 1, name: "Notifikasi menyusul" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { level: 1, name: "Izinkan notifikasi" })).toBeTruthy();
   expect(screen.getByText("Atur sekali · 2 dari 2")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Izinkan notifikasi/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
@@ -316,13 +317,13 @@ it("walks through Atur sekali once: pasang di layar utama, then notifikasi, then
 });
 
 it("asks for the notification permission once push is plugged in (F4), and goes on when it is refused", async () => {
-  const allow = vi.fn(async () => "denied" as const);
-  open({}, { setup: true, notify: { allow } });
+  const port = samplePush("off", { answer: "denied" });
+  open({}, { setup: true, push: port });
   fireEvent.click(screen.getByRole("button", { name: "Nanti saja" }));
   expect(screen.getByRole("heading", { level: 1, name: "Izinkan notifikasi" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Izinkan notifikasi/ }));
   expect((await screen.findByRole("status")).textContent).toMatch(/Aplikasi tetap jalan/);
-  expect(allow).toHaveBeenCalledTimes(1);
+  expect(port.calls.filter(call => call === "ask")).toHaveLength(1);
   fireEvent.click(screen.getByRole("button", { name: "Mulai pesan" }));
   expect(screen.getByRole("heading", { level: 1, name: /Halo/ })).toBeTruthy();
 });

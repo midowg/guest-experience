@@ -12,6 +12,8 @@ type Failure = { code?: string; message: string };
 type Result = { data: unknown; error: Failure | null };
 
 const COFFEE_TABLES = ["coffee_orders", "coffee_order_items", "coffee_settings"];
+/** Migration 202612010002 (web push): there or not on its own, whatever the first migration's state. */
+const PUSH_TABLES = ["coffee_push_subscriptions", "coffee_push_sent"];
 const groupOf = (category: unknown) => category === "intern" ? "intern" : category === "dw" || category === "ga" ? "ga" : "karyawan";
 const wib = (iso: string) => new Date(Date.parse(iso) + 7 * 3_600_000).toISOString();
 const wibMonth = (iso: string) => wib(iso).slice(0, 7);
@@ -22,6 +24,8 @@ const tidy = (value: unknown) => typeof value === "string" && value.trim() ? val
 export function fakeDb() {
   const state = {
     migrated: true,
+    /** The web push migration ran (coffee_push_subscriptions, coffee_push_sent). */
+    pushMigrated: true,
     /** Skip the functions' first look for the key, so a repeated key meets the unique index. */
     race: false,
     /** consume_rate_limit's counters, by key. */
@@ -33,24 +37,39 @@ export function fakeDb() {
   };
   const rows = (table: string) => (state.tables[table] ??= []);
   const uuid = () => `00000000-0000-4000-8000-${String(++state.seq.id).padStart(12, "0")}`;
-  const absent = (what: string): Result => ({ data: null, error: { code: what.startsWith("coffee_") && !COFFEE_TABLES.includes(what) ? "PGRST202" : "PGRST205", message: `Could not find '${what}' in the schema cache` } });
+  const absent = (what: string): Result => ({ data: null, error: { code: what.startsWith("coffee_") && !COFFEE_TABLES.includes(what) && !PUSH_TABLES.includes(what) ? "PGRST202" : "PGRST205", message: `Could not find '${what}' in the schema cache` } });
   const fail = (message: string): Result => ({ data: null, error: { code: "P0001", message } });
   const withItems = (row: Row): Row => ({ ...row, coffee_order_items: rows("coffee_order_items").filter(item => item.order_id === row.id) });
 
   function from(table: string) {
     const filters: ((row: Row) => boolean)[] = [];
     const orders: [string, boolean][] = [];
-    let mode: { kind: "select" } | { kind: "update"; patch: Row } | { kind: "upsert"; row: Row; key: string } = { kind: "select" };
+    let mode: { kind: "select" } | { kind: "update"; patch: Row } | { kind: "upsert"; row: Row; key: string } | { kind: "insert"; row: Row } | { kind: "delete" } = { kind: "select" };
     let single = false;
     let window: [number, number] | null = null;
     let limit = Infinity;
     const run = (): Result => {
       state.calls.push(`${mode.kind}:${table}`);
       if (!state.migrated && COFFEE_TABLES.includes(table)) return absent(table);
+      if (!state.pushMigrated && PUSH_TABLES.includes(table)) return absent(table);
+      if (mode.kind === "insert") {
+        const { row } = mode;
+        // coffee_push_sent's primary key: the same news is one row.
+        if (table === "coffee_push_sent" && rows(table).some(item => item.order_id === row.order_id && item.event === row.event && item.stamp === row.stamp)) {
+          return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_push_sent_pkey"' } };
+        }
+        rows(table).push({ id: uuid(), ...row });
+        return { data: null, error: null };
+      }
+      if (mode.kind === "delete") {
+        const gone = rows(table).filter(row => filters.every(test => test(row)));
+        state.tables[table] = rows(table).filter(row => !gone.includes(row));
+        return { data: null, error: null };
+      }
       if (mode.kind === "upsert") {
         const { row, key } = mode;
         const same = rows(table).find(item => item[key] === row[key]);
-        if (same) Object.assign(same, row); else rows(table).push({ ...row });
+        if (same) Object.assign(same, row); else rows(table).push({ ...(PUSH_TABLES.includes(table) ? { id: uuid() } : {}), ...row });
         const saved = same ?? rows(table)[rows(table).length - 1];
         return { data: single ? saved : [saved], error: null };
       }
@@ -78,6 +97,8 @@ export function fakeDb() {
       single: () => { single = true; return builder; },
       maybeSingle: () => { single = true; return builder; },
       update: (patch: Row) => { mode = { kind: "update", patch }; return builder; },
+      insert: (row: Row) => { mode = { kind: "insert", row }; return builder; },
+      delete: () => { mode = { kind: "delete" }; return builder; },
       upsert: (row: Row, options?: { onConflict?: string }) => { mode = { kind: "upsert", row, key: options?.onConflict ?? "id" }; return builder; },
       then: (resolve: (result: Result) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve().then(run).then(resolve, reject),
     };

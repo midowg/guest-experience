@@ -6,6 +6,7 @@ import { roomSpot } from "@/lib/coffee/rooms";
 import { manualAt, type ManualInput } from "@/lib/coffee/schemas";
 import { KIND_LABEL, type CoffeeSettings, type QueueOrder, type QueueState, type Status } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
+import { notifyDecided } from "./push";
 import { readSettings } from "./settings";
 import { ORDER_COLUMNS, coffeeError, countingClaims, db, orderById, toOrder, type CoffeeActor, type OrderRow } from "./store";
 
@@ -85,7 +86,10 @@ async function decide(id: string, patch: { status: "selesai" | "ditolak"; reject
     if (order.status === "batal") throw new ServiceError(409, order.manual ? "Catatan ini sudah dibatalkan. Antrean diperbarui." : "Pengajuan ini sudah dibatalkan pemesannya. Antrean diperbarui.");
     throw new ServiceError(409, "Pesanan ini sudah diproses orang lain. Antrean diperbarui.");
   }
-  return shown(id, actor, now);
+  const order = await shown(id, actor, now);
+  // Whoever ordered is told by web push after the answer has gone (Catat manual and Urungkan tell nobody).
+  await notifyDecided(id, actor.employeeId);
+  return order;
 }
 
 /** Selesai diproses: bought in JumpStart. */

@@ -8,16 +8,18 @@ import { setupCookie, type PhoneKind } from "@/lib/coffee/setup";
 import { coffeeTabLabels, coffeeTabPaths, tabOf, type CoffeeTab } from "@/lib/coffee/tabs";
 import type { MyOrder, MyState } from "@/lib/coffee/types";
 import { coffeeAdminPath, coffeePath } from "@/lib/routes";
-import { coffeeClient, errorText, type ClaimChoice, type CoffeeApi } from "./api";
+import { coffeeClient, coffeePush, errorText, type ClaimChoice, type CoffeeApi } from "./api";
 import { CoffeeFrame } from "./CoffeeFrame";
 import { DrinkSheet } from "./DrinkSheet";
 import { Layer, leavePage, onLayerEntry } from "./Layer";
 import { MenuScreen } from "./MenuScreen";
+import { PushBox } from "./NotifySetup";
 import { OrdersScreen } from "./OrdersScreen";
 import { usePwa } from "./pwa";
-import { SetupSteps, type NotifySetup } from "./SetupSteps";
+import { SetupSteps } from "./SetupSteps";
 import { Toast, type ToastMessage } from "./Toast";
 import { useCoffee } from "./useCoffee";
+import { dropPush, usePush, useWorkerNews, type PushPort } from "./usePush";
 import css from "./coffee.module.css";
 
 /*
@@ -70,13 +72,16 @@ export type CoffeeAppProps = {
   phone?: PhoneKind;
   /** A line for the Menu (someone without Mode GA was sent back here). */
   note?: string;
-  /** Web push (F4): see SetupSteps. */
-  notify?: NotifySetup;
+  /**
+   * Web push (F4): the push APIs and the device (usePush). With the real APIs it is the real thing;
+   * a preview passes a make-believe one, and null leaves notifications out (the tests).
+   */
+  push?: PushPort | null;
   /** The preview's own buttons (not part of the app). */
   tools?: ReactNode;
 };
 
-export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", routing = "history", setup = false, phone = "android", note, notify, tools }: CoffeeAppProps) {
+export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", routing = "history", setup = false, phone = "android", note, push: port = api === coffeeClient ? coffeePush : null, tools }: CoffeeAppProps) {
   const live = routing === "history";
   const [tab, go] = useTab(first, routing);
   const { installed, install } = usePwa(live);
@@ -96,6 +101,12 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
   }, [go, say]);
   const { state, today, claim, cancel, cancelling, stale, retrying, retry, gone, refresh } = useCoffee(api, initial, onDecided);
   const { me, orders } = state;
+  const push = usePush(port);
+  // The service worker pushed something, or a notification was tapped: read now (not at the next tick), and show the tab it names.
+  useWorkerNews(news => {
+    void refresh();
+    if (news.type === "open") go(tabOf(news.url.split("?")[0]));
+  }, port !== null);
   const waiting = orders.filter(order => order.status === "diproses").length;
 
   const [sheet, setSheet] = useState<Drink | null>(null);
@@ -174,6 +185,8 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
     if (leaving) return;
     setLeaving(true);
     setLeaveError("");
+    // This device stops getting this person's notifications before the session ends (afterwards the server would not listen).
+    if (port) await dropPush(port);
     try { await api.signOut(); }
     catch (problem) {
       // The server was not told: the session still lives, so the sheet stays and says so.
@@ -200,7 +213,7 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
 
   if (setupOpen) return (
     <div className={css.column}>
-      <SetupSteps phone={phone} installed={installed} onInstall={install} notify={notify} onDone={finishSetup} />
+      <SetupSteps phone={phone} installed={installed} onInstall={install} notify={port ? { allow: push.enable, state: push.state } : undefined} onDone={finishSetup} />
       {tools}
     </div>
   );
@@ -248,6 +261,7 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
             {!installed && <li><button type="button" onClick={() => { setAccount(false); setSetupOpen(true); }}><Download aria-hidden size={20} />Pasang di layar utama</button></li>}
             <li><button type="button" className={css.out} aria-disabled={leaving || undefined} onClick={signOut}><LogOut aria-hidden size={20} />{leaving ? "Keluar…" : "Keluar"}</button></li>
           </ul>
+          {port && <PushBox push={push} />}
           {leaveError && <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{leaveError}</span></p>}
         </Layer>
       )}

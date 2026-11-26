@@ -8,11 +8,11 @@ import { coffeePath } from "@/lib/routes";
  * scope /coffee, so the first page is controlled too), keeps the browser's install offer for
  * "Pasang sekarang", and knows whether the app already runs from the home screen.
  *
- * Web push (F4): `const registration = await coffeeWorker()` and subscribe on
- * `registration.pushManager`. It answers with the one registration of the app (null where service
- * workers do not exist) and may be called from anywhere, any number of times: the employee app
- * already calls it through usePwa; the GA tablet (GaApp) does not yet and must call it itself.
- * `navigator.serviceWorker.ready` works as well now that /coffee is inside the scope.
+ * Web push (F4, usePush.ts) subscribes on this one registration: `coffeeWorker()` answers with it
+ * (null where service workers do not exist) and may be called from anywhere, any number of times.
+ * The employee app calls it through usePwa, GA's tablet in GaApp (not while a guest holds it), and
+ * the pengelola's admin (outside the scope, which a subscription does not need) when its device
+ * is asked about notifications.
  */
 
 let worker: Promise<ServiceWorkerRegistration | null> | null = null;

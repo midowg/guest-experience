@@ -485,3 +485,12 @@
 @media (prefers-reduced-motion: reduce) {
   .ga *, .ga *::before, .ga *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- web push (F4): "Nyalakan notifikasi" in the top bar, beside "Aplikasi saya" */
+.ga button.topLink { border: 0; background: none; font-family: inherit; cursor: pointer; }
+.ga button.topLink[aria-disabled="true"] { opacity: .6; cursor: progress; }
+.ga .topNote { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; color: var(--ink-2); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.ga .topNote svg { color: var(--emp); }
+@media (max-width: 640px) {
+  .ga .topNote span, .ga button.topLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

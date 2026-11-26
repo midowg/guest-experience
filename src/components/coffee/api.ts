@@ -1,6 +1,8 @@
 import type { Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import type { CoffeePushInfo } from "@/lib/coffee/notify";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
 import { coffeeApi, coffeePath, praWamApi } from "@/lib/routes";
+import { browserDevice, type PushApi, type PushPort } from "./usePush";
 
 /*
  * What the employee app asks the server (the F0 APIs under /api/coffee). The screens take this as
@@ -93,6 +95,16 @@ export const coffeeClient: CoffeeApi = {
     window.location.replace(coffeePath.login());
   },
 };
+
+/** Web push for the signed-in employee (F4), also what GA's tablet uses: the device belongs to whoever is signed in. */
+export const coffeePushApi: PushApi = {
+  info: async () => (await request<CoffeePushInfo>(coffeeApi.push)).data,
+  async save(subscription, device) { await request(coffeeApi.push, { method: "POST", body: JSON.stringify({ subscription, device }) }); },
+  async remove(endpoint) { await request(coffeeApi.push, { method: "DELETE", body: JSON.stringify({ endpoint }) }); },
+  test: async () => (await request(coffeeApi.pushTest, { method: "POST" })).message,
+};
+/** The real thing: Coffee's push APIs and this browser. */
+export const coffeePush: PushPort = { api: coffeePushApi, device: browserDevice };
 
 export const errorText = (error: unknown): string => error instanceof CoffeeApiError ? error.message : "Terjadi kesalahan. Muat ulang lalu coba lagi.";
 /** No definite answer came back (no network, the wait ran out, the server failed): the request may or may not have been carried out. */

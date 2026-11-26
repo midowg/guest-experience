@@ -5,14 +5,16 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNo
 import { ChartColumn, Check, Inbox, PenLine, Settings, TriangleAlert, X } from "lucide-react";
 import admin from "@/components/admin/admin.module.css";
 import { errorMessage } from "@/components/admin/shared/api";
+import { dropPush, usePush, useWorkerNews, type PushPort } from "@/components/coffee/usePush";
 import { consoleThemeClass } from "@/components/console";
 import { firstName } from "@/lib/coffee/access";
 import { wibDay } from "@/lib/coffee/quota";
 import type { QueueOrder, QueueState } from "@/lib/coffee/types";
-import { coffeeAdminClient, type CancelTarget, type CoffeeAdminApi, type Done, type RecapData, type RecapQuery, type SettingsData } from "./api";
+import { coffeeAdminClient, coffeeAdminPush, type CancelTarget, type CoffeeAdminApi, type Done, type RecapData, type RecapQuery, type SettingsData } from "./api";
 import { CancelDialog } from "./CancelDialog";
 import { CoffeeAdminNav } from "./CoffeeAdminNav";
 import { orderTitle } from "./format";
+import { PushBar } from "./PushBar";
 import { usePhone } from "./Layer";
 import { ManualSheet } from "./ManualSheet";
 import { QueueView } from "./QueueView";
@@ -35,7 +37,7 @@ type Toast = { tone: "success" | "error"; title: string; body?: string; undo?: Q
  * section's data; the others are read when first opened, with a skeleton where the data is not
  * there yet. On a phone a tab bar at the bottom replaces the menu and the forms come up as sheets.
  */
-export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, personName, superAdmin = false, openManual = false, api = coffeeAdminClient, routing = "history", tools }: {
+export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, personName, superAdmin = false, openManual = false, api = coffeeAdminClient, push: port = api === coffeeAdminClient ? coffeeAdminPush : null, routing = "history", tools }: {
   view: CoffeeAdminSectionKey; initial?: CoffeeAdminInitial;
   /** The server's clock when the page was drawn, so the first paint matches. */
   now: string;
@@ -43,6 +45,11 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
   /** The address asked for Catat manual (?catat=1). */
   openManual?: boolean;
   api?: CoffeeAdminApi;
+  /**
+   * Web push (F4): the push API and the device (usePush). With the real APIs it is the real thing;
+   * the preview passes a make-believe one, and null leaves notifications out (the tests).
+   */
+  push?: PushPort | null;
   /** "memory": sections change without touching the address (the preview and the tests). */
   routing?: "history" | "memory";
   /** Shown above the section (the preview's buttons). */
@@ -91,6 +98,18 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
   }, [notify]);
   const queue = useQueue(api, initial.queue ?? null, onNew);
   const waiting = queue.state?.waiting.length ?? 0;
+
+  const push = usePush(port);
+  // Keluar: this device first lets go of the pengelola's notifications, then the button does its work.
+  const released = useRef(false);
+  const leave = (event: MouseEvent<HTMLElement>) => {
+    const button = (event.target as HTMLElement).closest?.("button");
+    if (!port || !button || released.current || push.state !== "on") return;
+    event.preventDefault();
+    event.stopPropagation();
+    released.current = true;
+    void dropPush(port).finally(() => button.click());
+  };
 
   const [manual, setManual] = useState(openManual);
   const [refuse, setRefuse] = useState<QueueOrder | null>(null);
@@ -199,6 +218,12 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
     notify({ tone: "success", title: "Dicatat manual", body: done.message });
   };
 
+  // The service worker pushed a new order, or its notification was tapped: the queue reads now, and a tap shows it.
+  useWorkerNews(news => {
+    void queue.refresh();
+    if (news.type === "open") go("antrean");
+  }, port !== null);
+
   const tabs: { key: CoffeeAdminSectionKey; label: string; icon: ReactNode }[] = [
     { key: "antrean", label: "Antrean", icon: <Inbox size={22} aria-hidden /> },
     { key: "rekap", label: "Rekap", icon: <ChartColumn size={22} aria-hidden /> },
@@ -213,10 +238,11 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
 
   return (
     <div className={`${css.root} ${consoleThemeClass("admin")}`} onClickCapture={intercept}>
-      <CoffeeAdminNav current={view} waiting={waiting} superAdmin={superAdmin} personName={personName} className={admin.shell}>
+      <CoffeeAdminNav current={view} waiting={waiting} superAdmin={superAdmin} personName={personName} className={admin.shell} onLeave={leave}>
         {tools}
         {opened.includes("antrean") && (
           <div className={css.view} hidden={view !== "antrean"}>
+            {port && <PushBar push={push} />}
             <QueueView
               queue={queue.state} error={queue.error} now={now} phone={phone} actorName={actorName} undoing={queue.undoing}
               onRetry={() => void queue.refresh()} onFinish={order => void finish(order)} onRefuse={openRefuse} onUndo={order => void undo(order)} onManual={openManualSheet} onCancel={openCancel}

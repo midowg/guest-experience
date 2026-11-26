@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { CoffeeTrouble, CoffeeWaiting } from "@/components/coffee/CoffeeAuth";
 import { GaApp } from "@/components/coffee/ga/GaApp";
 import { HOLD_COOKIE } from "@/components/coffee/ga/hold";
-import { coffeePath } from "@/lib/routes";
+import { COFFEE_GA_ORDER, coffeePath } from "@/lib/routes";
 import { gaState } from "@/lib/server/coffee/meetings";
 import { gaPinSet } from "@/lib/server/coffee/pin";
 import { holdsCoffeeGrant, requireGaPage } from "@/lib/server/coffee/session";
@@ -22,7 +23,7 @@ export const metadata = { title: "Mode GA" };
  * carries no GA data at all: no orders, no employees. It opens on the menu book, and GA's data is
  * read only after the GA officer left the book.
  */
-export default async function CoffeeGaPage() {
+export default async function CoffeeGaPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) {
   if (!isSupabaseConfigured()) return <CoffeeWaiting detail="Database belum diatur di server ini." />;
   const member = await requireGaPage(coffeePath.ga);
   const me = { name: member.nickname || member.name };
@@ -38,5 +39,8 @@ export default async function CoffeeGaPage() {
     if (state.status !== 503) return <CoffeeTrouble here={coffeePath.ga} />;
     return <CoffeeWaiting detail={await holdsCoffeeGrant(member.id).catch(() => false) ? state.message : undefined} />;
   }
-  return <GaApp initial={state} me={me} />;
+  // ?pesanan=<id>: where a notification about that order leads. Only an id is taken; the tablet opens it when it is one of today's.
+  const asked = (await searchParams)?.[COFFEE_GA_ORDER];
+  const openId = typeof asked === "string" && z.uuid().safeParse(asked).success ? asked : undefined;
+  return <GaApp initial={state} me={me} openId={openId} />;
 }

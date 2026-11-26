@@ -5,6 +5,7 @@ import type { ClaimInput } from "@/lib/coffee/schemas";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
 import type { Member } from "../pra-wam/session";
+import { notifyNewOrder } from "./push";
 import { holdsCoffeeGrant } from "./session";
 import { readSettings } from "./settings";
 import { ORDER_COLUMNS, coffeeError, db, toMyOrder, toOrder, type OrderRow } from "./store";
@@ -41,7 +42,10 @@ async function answer(member: Member, id: string, now: Date): Promise<{ order: M
   return { order, me: state.me };
 }
 
-/** One claim. A full quota answers 409; the same key sent twice is one claim. */
+/**
+ * One claim. A full quota answers 409; the same key sent twice is one claim. The pengelola are told
+ * by web push after the answer has gone (once per claim, however often its key is sent again).
+ */
 export async function submitClaim(member: Member, input: ClaimInput, now = new Date()): Promise<{ order: MyOrder; me: CoffeeMe }> {
   const { data, error } = await db().rpc("coffee_submit_claim", {
     p_employee: member.id, p_item: { slug: input.slug, temperature: input.temperature, sugar: input.sugar, ice: input.ice },
@@ -51,11 +55,17 @@ export async function submitClaim(member: Member, input: ClaimInput, now = new D
     // Two sendings of the same key met at the unique index: the first one is the claim.
     if (error.code === "23505") {
       const { data: first } = await db().from("coffee_orders").select("id").eq("idempotency_key", input.key).eq("employee_id", member.id).eq("kind", "klaim").in("status", ["diproses", "selesai"]).maybeSingle();
-      if (first) return answer(member, (first as { id: string }).id, now);
+      if (first) return announced(member, (first as { id: string }).id, now);
     }
     coffeeError(error);
   }
-  return answer(member, data as string, now);
+  return announced(member, data as string, now);
+}
+
+async function announced(member: Member, id: string, now: Date): Promise<{ order: MyOrder; me: CoffeeMe }> {
+  const done = await answer(member, id, now);
+  await notifyNewOrder(id, member.id);
+  return done;
 }
 
 /** The person cancels their own claim while it still waits; its place in the quota comes back. */

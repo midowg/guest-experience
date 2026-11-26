@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Coffee, RefreshCw, Smartphone, WifiOff } from "lucide-react";
+import { Bell, BellRing, Coffee, RefreshCw, Smartphone, WifiOff } from "lucide-react";
+import { pushNote } from "@/lib/coffee/notify";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
-import { coffeePath } from "@/lib/routes";
-import { CoffeeApiError, newKey } from "../api";
+import { COFFEE_GA_ORDER, coffeePath } from "@/lib/routes";
+import { CoffeeApiError, coffeePush, newKey } from "../api";
 import { Layer } from "../Layer";
+import { coffeeWorker } from "../pwa";
 import { Toast, type ToastMessage } from "../Toast";
+import { usePush, useWorkerNews, type PushPort } from "../usePush";
 import { gaClient, type GaApi, type MeetingBody } from "./api";
 import type { PinAnswer } from "./ExitDialog";
 import { GuestBook } from "./GuestBook";
@@ -33,6 +36,12 @@ import css from "./ga.module.css";
  * - nothing is read from the server while the book is open;
  * - the back button moves between the tablet's screens and closes dialogs; in the book it does nothing;
  * - leaving the book needs the PIN GA (a question while the pengelola has not set one).
+ *
+ * Web push (F4): "Nyalakan notifikasi" sits in the top bar beside "Aplikasi saya"; a notification
+ * about a meeting order leads to /coffee/ga?pesanan=<id>, which opens that order's status. None of
+ * it exists while the guest holds the tablet: nothing is drawn, asked, registered or listened to,
+ * and a notification that is tapped then leaves the book where it is. (What the notification
+ * itself says in guest mode is the service worker's doing: one neutral line, see public/coffee/sw.js.)
  */
 
 type Screen = "home" | "new" | "quick" | "sent";
@@ -47,6 +56,10 @@ export type GaAppProps = {
   api?: GaApi;
   /** The page was loaded while a guest held the tablet (the server saw the cookie): it opens on the menu book, and `initial` holds no GA data. */
   held?: boolean;
+  /** The order the address named (?pesanan=<id>, where a notification leads): its status opens first, unless a guest holds the tablet. */
+  openId?: string;
+  /** Web push (F4): the real thing with the real APIs; the preview passes a make-believe one, and null leaves it out (the tests). */
+  push?: PushPort | null;
   /** The preview's own buttons (not part of the app); never drawn while the guest holds the tablet. */
   tools?: ReactNode;
 };
@@ -54,11 +67,12 @@ export type GaAppProps = {
 const TRAP = "gaTrap";
 const layerOpen = () => !!document.querySelector("[data-coffee-layer]");
 
-export function GaApp({ initial, me, api = gaClient, held = false, tools }: GaAppProps) {
-  const [screen, setScreen] = useState<Screen>("home");
+export function GaApp({ initial, me, api = gaClient, held = false, openId, push: port = api === gaClient ? coffeePush : null, tools }: GaAppProps) {
+  const named = !held && openId && initial.today.some(order => order.id === openId) ? openId : null;
+  const [screen, setScreen] = useState<Screen>(named ? "sent" : "home");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
-  const [sentId, setSentId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(named);
   const [guest, setGuest] = useState(held);
   /** What the guests picked so far, as the book last told (kept for a reload). */
   const [book, setBook] = useState<BookState | undefined>(undefined);
@@ -107,6 +121,31 @@ export function GaApp({ initial, me, api = gaClient, held = false, tools }: GaAp
   const { state, refresh, send, sending, stale, retry, retrying } = useGa(api, initial, onDecided, guest);
   const { today, people, rooms } = state;
   const sent = sentId ? today.find(order => order.id === sentId) : undefined;
+
+  // Web push. Paused in guest mode: the device is not asked, the worker not registered, its messages not heard.
+  const push = usePush(port, guest);
+  useEffect(() => { if (api === gaClient && !guest) void coffeeWorker(); }, [api, guest]);
+  useWorkerNews(news => {
+    void refresh().then(fresh => {
+      if (news.type !== "open") return;
+      const id = new URLSearchParams(news.url.split("?")[1] ?? "").get(COFFEE_GA_ORDER);
+      const order = id ? (fresh?.today ?? today).find(item => item.id === id) : undefined;
+      // An order that is being written keeps the screen, as with the message on top.
+      if (order && !writing.current) open(order);
+    });
+  }, port !== null && !guest);
+  const turnOn = async () => {
+    if (push.busy) return;
+    if (push.state !== "off") { say({ tone: "no", title: "Notifikasi belum bisa dinyalakan", body: pushNote(push.state, "ga"), sticky: true }); return; }
+    const answer = await push.enable();
+    if (answer === "granted") say({ tone: "ok", title: "Notifikasi aktif di tablet ini", body: "Tablet diberi tahu begitu pesanan rapat selesai diproses." });
+    else say({
+      tone: "no", title: "Notifikasi belum menyala", sticky: true,
+      body: answer === "denied"
+        ? "Izin notifikasi belum diberikan. Bila browser tidak bertanya lagi: buka pengaturan situs (ikon di kiri alamat) → Notifikasi → Izinkan, lalu muat ulang halaman."
+        : "Notifikasi belum bisa dinyalakan di tablet ini. Tablet tetap jalan: status pesanan berubah sendiri di layar ini.",
+    });
+  };
 
   // After a reload: back into the book with what was kept; or, when the server saw guest mode but
   // nothing can be restored, locked on the cover until the GA officer leaves it.
@@ -248,6 +287,8 @@ export function GaApp({ initial, me, api = gaClient, held = false, tools }: GaAp
   });
   useEffect(() => {
     const trap = () => { if (!window.history.state?.[TRAP]) window.history.pushState({ ...window.history.state, [TRAP]: true }, ""); };
+    // The address that named an order is tidied, so a reload opens Beranda and not that order again.
+    if (new URLSearchParams(window.location.search).has(COFFEE_GA_ORDER)) window.history.replaceState(window.history.state, "", window.location.pathname);
     trap();
     const onPop = () => {
       // Still on (or above) the tablet's own entry: a layer's entry was closed, not ours.
@@ -275,6 +316,10 @@ export function GaApp({ initial, me, api = gaClient, held = false, tools }: GaAp
       <header className={css.topbar}>
         <span className={css.brand}><Coffee aria-hidden size={22} />Werkudara Coffee<span className={css.brandSub}>Tablet GA</span></span>
         <span className={css.user}>
+          {port && push.state === "on" && <span className={css.topNote}><BellRing aria-hidden size={18} /><span>Notifikasi aktif</span></span>}
+          {port && (push.state === "off" || push.state === "denied" || push.state === "ios-install" || push.state === "unsupported") && (
+            <button type="button" className={css.topLink} aria-disabled={push.busy || undefined} onClick={() => void turnOn()}><Bell aria-hidden size={18} /><span>Nyalakan notifikasi</span></button>
+          )}
           <a className={css.topLink} href={coffeePath.home}><Smartphone aria-hidden size={18} />Aplikasi saya</a>
           <span className={css.userText}><strong>{me.name}</strong><span>Mode GA</span></span>
           <span className={css.avatar} aria-hidden>{me.name.trim().slice(0, 1).toUpperCase()}</span>

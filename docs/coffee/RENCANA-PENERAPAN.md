@@ -792,3 +792,107 @@ Temuan `docs/coffee/AUDIT-F3.md` diperbaiki (kolom Status di sana). Pertanyaan p
 - Klik notifikasi di tablet membuka `/coffee/ga`; bila tablet sedang di mode tamu, halaman itu tetap membuka buku menu.
 - Pengelola yang menyimpan PIN GA tidak perlu notifikasi; tidak ada peristiwa push baru dari perbaikan ini.
 
+
+---
+
+## Catatan pelaksanaan F4 (26 Nov 2026)
+
+F4 (web push ujung ke ujung) selesai di cabang `feat/werkudara-coffee`. Skill desain yang dipakai: `ui-ux-pro-max`
+(sentuhan, aksesibilitas) dan `design-taste-frontend` (selera, kata; alur pembuat situsnya tidak berlaku di dalam produk).
+
+**Siapa diberi tahu apa** (`src/lib/server/coffee/push.ts`, kata di `src/lib/coffee/notify.ts`):
+
+| Peristiwa | Penerima | Isi (judul · isi) | Ketuk membuka |
+| --- | --- | --- | --- |
+| Klaim baru | semua pemegang grant `coffee` yang masih karyawan aktif, kecuali pengirimnya | "Klaim baru" · "Rina · Café Latte" | `/admin/coffee` |
+| Pesanan rapat baru (tiap kiriman, termasuk Tambah lagi) | sama | "Pesanan rapat baru" · "Vasuki Room · 4 minuman" | `/admin/coffee` |
+| Selesai (klaim) | pemesan | "Silakan ambil di mesin" · "Café Latte kamu selesai diproses oleh Dewi." | `/coffee/pesanan` |
+| Ditolak (klaim) | pemesan | "Pengajuan tidak bisa diproses" · minuman + "catatan dari Dewi" (isi catatan tidak ikut) | `/coffee/pesanan` |
+| Selesai / Ditolak (rapat) | GA pengirim (`created_by`) dan PIC | "Pesanan rapat siap diambil" / "…tidak bisa diproses" · ruangan, jumlah, "oleh Dewi" | pengirim: `/coffee/ga?pesanan=<id>`; PIC: `/coffee` |
+| Catat manual, Batalkan catatan, Urungkan, batal oleh pemesan | tidak ada | | |
+
+Orang yang menekan tombolnya sendiri tidak diberi tahu (pengelola yang memproses klaimnya sendiri). Tidak ada nama tamu,
+instansi, jabatan, BU, atau isi catatan tolak di notifikasi; tidak ada kata "HR".
+
+**Cara kerja:**
+- Kirim lewat `after()` setelah jawaban API pergi; tanpa kunci VAPID tidak ada yang dijadwalkan; semua galat ditelan dan
+  dicatat (`console.error("coffee push: …")`, hanya kode status, tanpa alamat perangkat). Pesanan dibaca ulang saat
+  kirim: yang sudah diurungkan tidak dikabarkan.
+- **Sekali per kabar:** tabel `coffee_push_sent` (pesanan, peristiwa, cap). Kunci yang dikirim ulang = satu "Klaim baru".
+  Keputusan setelah Urungkan punya cap baru (`processed_at`) dan dikabarkan lagi.
+- Perangkat mati (404/410) dihapus saat dikirimi; gagal lain dicatat dan perangkatnya dibiarkan.
+- **Perangkat milik orang yang sedang masuk:** menyimpan alamat yang sama memindahkannya ke orang itu (juga otomatis saat
+  halaman dibuka dan perangkat sudah berlangganan); Keluar di aplikasi karyawan dan di admin menghapusnya dulu (server
+  lalu browser), paling lama beberapa detik, tidak pernah menggagalkan Keluar. Satu browser = satu alamat untuk ketiga tempat.
+- **Service worker** (`public/coffee/sw.js`): jendela yang sudah terbuka tidak dimuat ulang, hanya difokuskan dan diberi
+  pesan (`coffee:open`); tanpa jendela, dibuka alamat aplikasi/admin saja. Setiap push juga memberi tahu jendela terbuka
+  (`coffee:push`) supaya layar membaca ulang saat itu juga. Polling tetap jalan seperti sebelumnya.
+- **Tablet di mode tamu (keputusan agen, perlu disetujui pemilik):** selama cookie `coffee_ga_tamu` ada, notifikasi apa
+  pun di perangkat itu ditampilkan sebagai satu baris netral tanpa suara: "Werkudara Coffee · Ada pembaruan pesanan."
+  (tanpa nama, minuman, ruangan, nomor). Browser yang service worker-nya tidak bisa membaca cookie (`cookieStore` tidak
+  ada) dianggap mode tamu selama ada halaman `/coffee/ga` terbuka. Mengetuknya tidak mengeluarkan tablet dari buku menu:
+  jendela hanya difokuskan, `GaApp` tidak mendengar pesan SW di mode tamu, dan halaman yang dimuat ulang tetap buku menu.
+  Di mode tamu `GaApp` tidak menggambar tombol, tidak bertanya ke server, dan tidak mendaftarkan apa pun.
+- **Keadaan yang ditangani** (kata di `pushNote`): browser tidak mendukung; izin diblokir (cara mengizinkan lagi);
+  iPhone/iPad belum dipasang ("dipasang dulu ke layar utama"); server tanpa kunci atau sebelum migrasi (karyawan:
+  "belum tersedia"; pengelola: nama kunci `WAM_VAPID_*` atau nama migrasi); super admin (409 "Masuk dengan akun
+  karyawan untuk menerima notifikasi."). Semua tetap jalan dengan polling.
+- **Tempat tombol:** Atur sekali langkah "Izinkan notifikasi" dan kotak "Notifikasi" di lembar Akun (Nyalakan, Kirim
+  notifikasi tes, Matikan); bilah atas tablet GA di samping "Aplikasi saya"; baris di atas Antrean pengelola.
+
+**Selisih dari rencana:**
+1. Tabel kedua `coffee_push_sent` di migrasi yang sama (rencana hanya menyebut tabel langganan), untuk "sekali per kabar".
+2. `sendCoffeePush` hanya ke karyawan aktif; `notifyNewOrder(orderId, except)` dan `notifyDecided(orderId, actor)`
+   menerima id (pesanan dibaca ulang), bukan objek pesanan. Tidak ada `scheduleCoffeePush` terpisah.
+3. Alamat push harus `https://` (`coffeePushSchema`); batas 30 simpan dan 10 tes per orang per 10 menit.
+4. Tombol pengelola ada di atas Antrean (`PushBar`), bukan di `CoffeeAdminNav`; `CoffeeAdminNav` hanya mendapat `onLeave`
+   (Keluar). `src/components/console/**` tidak disentuh.
+5. PIC rapat dibawa ke `/coffee` (bukan `/coffee/pesanan`, yang hanya memuat klaim). Tablet punya `?pesanan=<id>`
+   (`coffeePath.gaOrder`) yang membuka layar status pesanan itu; alamatnya dirapikan setelah dibuka.
+6. Prop `notify` milik `CoffeeApp` diganti `push` (API + perangkat); `SetupSteps` tetap menerima `notify` (+ `state`).
+   Tes kirim hanya ada di aplikasi karyawan (tablet dan admin tidak punya tombol tes).
+7. Batal oleh pemesan tidak mengirim apa pun: notifikasi "Klaim baru" yang sudah muncul di perangkat pengelola tetap ada
+   sampai ditutup. Urungkan juga tidak menarik notifikasi "Silakan ambil" yang sudah terkirim (sesuai rencana).
+8. Berkas di luar daftar rencana: `usePush.ts` berisi juga `useWorkerNews`/`dropPush`; `pushSample.ts` (perangkat tiruan
+   untuk pratinjau dan tes); `coffee-admin/PushBar.tsx`. Pratinjau: `?notif=on|denied|ios-install|unsupported|not-ready|account`
+   di ketiga halaman `/dev-preview/coffee/nyata…`.
+
+**Belum diuji (apa adanya):**
+- **Tidak ada push sungguhan yang pernah terkirim.** Tidak ada perangkat, layanan push, izin browser, atau service worker
+  asli yang dipakai. Yang diuji hanya dengan tes: isi dan penerima notifikasi, sekali per kabar, hapus perangkat mati,
+  penjaga route, handler `push`/`notificationclick` (berkas `sw.js` dijalankan dengan `self` tiruan), dan keadaan UI
+  dengan perangkat tiruan. `cookieStore` di service worker (mode tamu) belum pernah dijalankan di browser asli.
+- **Migrasi `202612010002_coffee_push.sql` belum pernah dijalankan** di Postgres mana pun.
+- **Cek tampilan di browser gagal dilakukan.** Server dev di port 3210 jalan (dicek dengan curl: `sw.js` 200 dengan
+  `Service-Worker-Allowed`, keempat route push 401 tanpa sesi, `/coffee/ga?pesanan=x` mengalihkan ke halaman masuk,
+  pratinjau 200), tetapi di panel browser agen setiap halaman pratinjau memuat ulang terus-menerus (±6 kali per detik),
+  **juga halaman prototipe lama `/dev-preview/coffee` yang tidak disentuh F4**, sehingga tidak ada yang bisa diklik atau
+  dibaca. Tidak ada berkas sumber yang berubah selama itu; penyebabnya belum diketahui (dugaan: panel dalam keadaan
+  tersembunyi). Tab ditutup dan server dihentikan. Jadi tata letak tombol baru (lembar Akun 375/320 px, bilah atas
+  tablet 768 px, baris di atas Antrean) **belum pernah dilihat**; perlu dicek PM atau audit F4.
+- Halaman asli setelah masuk (karyawan, GA, admin) tidak dibuka (agen tidak memakai sandi).
+
+**Daftar cek pemilik: uji push di perangkat asli** (setelah kedua migrasi dijalankan dan `WAM_VAPID_PUBLIC_KEY`,
+`WAM_VAPID_PRIVATE_KEY` terisi di server; harus lewat https, bukan `localhost` di HP):
+1. **Desktop (Chrome/Edge), pengelola:** masuk admin dengan **akun karyawan** yang punya grant Coffee → `/admin/coffee` →
+   "Nyalakan notifikasi" → Izinkan. Dari HP lain ajukan klaim: notifikasi "Klaim baru" muncul ≤ beberapa detik, juga
+   saat tab admin ditutup (browser tetap jalan). Ketuk: tab admin yang terbuka maju tanpa memuat ulang, atau terbuka baru.
+   Masuk sebagai super admin: tampil keterangan "Masuk dengan akun karyawan…", tanpa galat.
+2. **Android Chrome, karyawan:** buka `/coffee`, pasang, "Izinkan notifikasi". Lembar Akun → "Kirim notifikasi tes"
+   muncul. Ajukan klaim, kunci layar; pengelola tekan Selesai → "Silakan ambil di mesin · … selesai diproses oleh
+   <nama>". Ketuk: aplikasi terbuka di Pesanan saya. Ulangi dengan Tolak: catatan tolak **tidak** tampil di notifikasi.
+3. **iPhone (iOS 16.4+):** di Safari langkah notifikasi menjelaskan "dipasang dulu ke layar utama" (tanpa tombol
+   izin). Pasang → buka dari ikon → Akun → "Nyalakan notifikasi" → ulangi langkah 2.
+4. **Tablet GA:** `/coffee/ga` → "Nyalakan notifikasi" di bilah atas. Kirim pesanan rapat, pengelola tekan Selesai →
+   notifikasi "Pesanan rapat siap diambil"; ketuk membuka status pesanan itu. HP PIC (bila menyalakan notifikasi) ikut
+   diberi tahu dan terbuka di `/coffee`.
+5. **Mode tamu:** "Serahkan ke tamu", lalu pengelola memproses pesanan lain → di tablet hanya muncul "Werkudara Coffee ·
+   Ada pembaruan pesanan." tanpa suara; ketuk → tetap di buku menu. Keluar dari buku (PIN) → notifikasi berikutnya
+   kembali lengkap.
+6. **Ganti orang:** Keluar di HP itu, masuk sebagai orang lain: notifikasi orang pertama tidak lagi masuk ke HP itu.
+7. **Blokir:** tolak izin di browser → aplikasi menjelaskan cara mengizinkan lagi dan status tetap berubah sendiri.
+8. **Tanpa kunci** (server uji tanpa `WAM_VAPID_*`): ajukan dan proses tetap berhasil; di admin tampil keterangan kunci.
+
+**Untuk F5 (audit):** cek tata letak yang belum dilihat (di atas); putuskan tiga hal di "Keputusan terbuka" laporan F4
+(mode tamu netral, PIC ke `/coffee`, batal tidak menarik notifikasi); pertimbangkan pembersihan `coffee_push_sent`
+(tumbuh satu baris per kabar; ikut terhapus bila pesanannya dihapus).

@@ -439,3 +439,10 @@
   .twoCol { grid-template-columns: minmax(0, 1fr); }
   .quotaRow { grid-template-columns: minmax(0, 1fr) 80px auto; }
 }
+
+/* ---------- web push (F4): "Nyalakan notifikasi" above the queue */
+.pushBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 8px 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.pushBar > svg { flex: none; color: var(--ink-3); }
+.pushBar[data-on] > svg { color: var(--act-strong); }
+.pushBar > span { flex: 1; min-width: 12rem; }
+.pushBar > .error { flex-basis: 100%; margin: 0; }

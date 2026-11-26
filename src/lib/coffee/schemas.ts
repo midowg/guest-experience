@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pushSubscriptionSchema } from "@/lib/pra-wam/push";
 import { ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, drinkBySlug, type Temperature } from "./menu";
 import { ITEM_KINDS, STATUSES } from "./types";
 
@@ -141,3 +142,9 @@ export const recapQuerySchema = z.object({
   else if (days > 366) ctx.addIssue({ code: "custom", message: "Rentang paling lama satu tahun. Persempit tanggalnya.", path: ["sampai"] });
 });
 export type RecapQuery = z.infer<typeof recapQuerySchema>;
+
+/**
+ * What a device sends to turn notifications on (F4): WAM's shape, and the push service's address
+ * must be https (the server later posts to it; nothing on plain http or another scheme is taken).
+ */
+export const coffeePushSchema = pushSubscriptionSchema.refine(value => value.subscription.endpoint.startsWith("https://"), { message: "Alamat notifikasi perangkat ini tidak dikenali.", path: ["subscription", "endpoint"] });

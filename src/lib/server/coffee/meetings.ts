@@ -8,6 +8,7 @@ import { ServiceError } from "../config";
 import type { Member } from "../pra-wam/session";
 import { activePeople } from "./people";
 import { gaPinSet } from "./pin";
+import { notifyNewOrder } from "./push";
 import { ORDER_COLUMNS, coffeeError, db, orderById, toMeetingOrder, toOrder, type OrderRow } from "./store";
 
 /*
@@ -67,5 +68,7 @@ export async function submitMeeting(member: Member, input: MeetingInput, now = n
   }
   const order = id ? await orderById(id) : null;
   if (!order) throw new ServiceError(404, "Pesanan tidak ditemukan. Muat ulang halaman.");
+  // The pengelola are told by web push after the answer has gone; once per sending, whatever its key repeats.
+  await notifyNewOrder(order.id, member.id);
   return { order: toMeetingOrder(order) };
 }

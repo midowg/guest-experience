@@ -2,6 +2,7 @@ import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 import { CoffeeForgot, CoffeeLogin, CoffeeNewPassword, CoffeeWaiting } from "@/components/coffee/CoffeeAuth";
 import css from "@/components/coffee/coffee.module.css";
+import { sampleState } from "@/components/coffee/pushSample";
 import type { QuotaGroup } from "@/lib/coffee/menu";
 import { EmployeePreview } from "./EmployeePreview";
 
@@ -19,7 +20,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
  *   ?riwayat=1           two earlier claims this month
  *   ?akses=1             holds Mode GA and Pengelola (the links in the account sheet)
  *   ?layar=pesanan       opens at Pesanan saya
- *   ?layar=atur          "Atur sekali" first (&notif=1: with the permission step F4 will switch on; &hp=iphone)
+ *   ?layar=atur          "Atur sekali" first (&hp=iphone)
+ *   ?notif=on|denied|ios-install|unsupported|not-ready   the state web push is found in on this
+ *                        make-believe device (F4; otherwise it can be turned on): seen in "Atur
+ *                        sekali" and in the Akun sheet. Nothing is registered or sent.
  *   ?pesan=ga            the note someone without Mode GA sees
  *   ?layar=masuk|lupa|password|tunggu   the sign-in pages and the "belum dibuka" state. The sign-in
  *                        forms are the real ones: sending them calls the real sign-in API.
@@ -36,7 +40,7 @@ export default async function DevCoffeeEmployeePage({ searchParams }: { searchPa
         : layar === "password" ? <CoffeeNewPassword next="/dev-preview/coffee/nyata" />
         : layar === "tunggu" ? <CoffeeWaiting detail="Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." />
         : <EmployeePreview group={group} full={habis === "1"} history={riwayat === "1"} access={akses === "1"} tab={layar === "pesanan" ? "pesanan" : "menu"}
-            setup={layar === "atur"} push={notif === "1"} phone={hp === "iphone" ? "iphone" : "android"}
+            setup={layar === "atur"} push={sampleState(notif)} phone={hp === "iphone" ? "iphone" : "android"}
             note={pesan === "ga" ? "Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee." : undefined} />}
     </div>
   );

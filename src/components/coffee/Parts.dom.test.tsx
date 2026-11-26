@@ -124,7 +124,7 @@ it("F2-15 moves the focus to the new step of Atur sekali", () => {
   // The first step leaves the focus alone (the page has just loaded).
   expect(document.activeElement).toBe(document.body);
   fireEvent.click(screen.getByRole("button", { name: "Sudah, lanjut" }));
-  expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Notifikasi menyusul" }));
+  expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Izinkan notifikasi" }));
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
   expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Pasang di layar utama" }));
 });
