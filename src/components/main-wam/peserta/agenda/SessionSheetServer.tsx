@@ -27,7 +27,7 @@ export async function SessionSheetServer({ id, context, behind = false }: { id: 
   return <>
     {agenda && <AgendaScreen {...agenda} since={hhmm(now.toISOString(), await readLang())} />}
     <SessionSheet view={data.view} contact={data.contact} denahHref={denahHrefOf(data.denah)} closeHref={closeHref}
-      checklist={data.checklist ? { sessionId: data.session.id, items: data.checklist.items, required: data.checklist.required, sample: data.checklist.sample } : null}
+      checklist={data.checklist ? { sessionId: data.session.id, items: data.checklist.items, sample: data.checklist.sample } : null}
       slots={{
         absen: <SessionAbsen session={data.session} context={context} now={now} />,
         action: <SessionModuleAction session={data.session} context={context} now={now} />,

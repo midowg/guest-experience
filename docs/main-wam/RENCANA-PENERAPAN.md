@@ -10,7 +10,7 @@ belum di-push dan migrasi belum dijalankan (pemilik yang menjalankan, lihat `atu
 
 | Agen | Cabang | Isi | Migrasi |
 | --- | --- | --- | --- |
-| S1 | `s1-persiapan` | Ceklis per agenda (teks + foto), tab H-n "Persiapan", syarat ceklis opsional (kunci absen), Detail sesi jadi bottom sheet tinggi menyesuaikan isi | `20261125xxxx` |
+| S1 | `s1-persiapan` | Ceklis per agenda (teks + foto), tab H-n "Persiapan", syarat ceklis opsional (kunci absen; dicabut 26 Nov, KONTRAK 42), Detail sesi jadi bottom sheet tinggi menyesuaikan isi | `20261125xxxx` |
 | S2 | `s2-misi` | Misi + poin + Peringkat: admin Misi, kartu Misi di Beranda, halaman Misi, sheet, kamera misi (tanpa galeri, lokasi wajib), peringkat | `20261126xxxx` |
 | S3 | `s3-kuis` | Kuis live: builder, kontrol MC, layar besar, alur HP (soal tidak tampil di HP, pilihan tampil), skor server | `20261127xxxx` |
 | S4 | `s4-ui-prototipe` | Selaraskan UI yang sudah ada: Splash/Login (+gelap, garis emas mengalir), dialog loading kit, Pengaturan (bahasa ID/EN berbendera), Saya, Katalog emisi, kartu Mozaik Beranda, Momen (satu reaksi, rincian reaksi, tata letak), scrollbar tersembunyi | `20261128xxxx` bila perlu |

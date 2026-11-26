@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, ScanFace, Timer, Trophy, UserCheck, Users } from "lucide-react";
+import { ClipboardList, Gamepad2, Lock, Printer, QrCode, RefreshCw, ScanFace, Timer, Trophy, UserCheck, Users } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
-import type { CeklisBlock } from "@/lib/main-wam/ceklis/ceklis";
 import type { AbsenCard } from "@/lib/main-wam/modul/absen";
 import { presentLabel } from "@/lib/main-wam/modul/absen";
 import type { PanitiaContact } from "@/lib/main-wam/modul/contact";
@@ -23,9 +21,7 @@ export type AbsenSlot =
   | { kind: "terlewat"; contact: PanitiaContact | null }
   | { kind: "bod"; present: number; expected: number }
   /** The QR check-in is hidden (KONTRAK 41): not recorded yet; the one calm line about the tablet at the room door. */
-  | { kind: "tablet" }
-  /** Module Ceklis: absen is open but a checklist that must be finished first is not (the lock and the way to it). */
-  | { kind: "ceklis"; block: CeklisBlock };
+  | { kind: "tablet" };
 
 /** What SessionModuleAction draws. */
 export type ModuleSlot = {
@@ -52,15 +48,6 @@ export function AbsenView({ slot, home }: { slot: AbsenSlot; /** On Beranda's Se
       <AbsenQueue />
       <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? t("peserta.now.absenNow") : t("absen.button")}</Button>
     </>;
-    // The gate (prototipe .box.gold): the lock, and the sentence naming the checklist that opens it.
-    case "ceklis": return <div className={css.gate}>
-      <span className={css.gateLabel}><QrCode aria-hidden />{t("peserta.agenda.absen")}</span>
-      <Button block icon={<Lock />} disabled>{t("absen.ceklisFirst")}</Button>
-      <p className={css.gateInfo}>
-        <ListChecks aria-hidden />
-        <span>{t("absen.ceklisBody", { title: slot.block.title, done: slot.block.done, total: slot.block.total })} <Link className={css.gateLink} href={mainWamPath.session(slot.block.sessionId)}>{t("absen.ceklisOpen")}</Link></span>
-      </p>
-    </div>;
     case "hadir": return <div className={css.pills}><StatusPill status="present">{presentLabel(slot.at, lang)}</StatusPill></div>;
     case "terlewat": return <>
       <Banner tone="warning" title={t("absen.missed")} action={{ label: t("absen.contactTitle"), onClick: () => setContactOpen(true) }} />

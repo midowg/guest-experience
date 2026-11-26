@@ -3,10 +3,10 @@ import type { MwSession } from "@/lib/main-wam/types";
 import { sampleSession } from "@/lib/main-wam/sample";
 
 /*
- * Ceklis persiapan on the server (agen S1) against a stand-in database: what is read (items and the
- * "wajib" switch), ticking one or all (only the items of that agenda), the check that stops absen
- * (only for a session after the checklist's agenda, only while unfinished, nothing before the migration),
- * and the admin's save (ticks kept for an item that keeps its id, a removed item and an unused photo go).
+ * Ceklis persiapan on the server (agen S1) against a stand-in database: what is read (items; the old
+ * column checklist_required is never read, KONTRAK 42), ticking one or all (only the items of that agenda),
+ * and the admin's save (ticks kept for an item that keeps its id, a removed item and an unused photo go;
+ * nothing is written on the session).
  */
 type Call = { table: string; op: string; args: unknown[]; filters: [string, unknown][] };
 const db = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ vi.mock("../demo", () => ({ demoRundown: async () => false }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => new Headers() }));
 vi.mock("react", async importActual => ({ ...(await importActual<object>()), cache: <T,>(fn: T) => fn }));
 
-const { readChecklists, tickChecklist, absenBlock, checklistView } = await import("./data");
+const { readChecklists, tickChecklist, checklistView } = await import("./data");
 const { saveChecklist } = await import("../admin/ceklis");
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -47,29 +47,28 @@ const first: MwSession = { ...sampleSession("pemaparan"), id: FIRST, title: "Kum
 const itemRow = (n: number, extra: Record<string, unknown> = {}) => ({ id: uuid(100 + n), session_id: PREP, text: `Item ${n}`, note: "", photo_key: null, photo_mime: null, photo_size: null, sort: n, updated_at: "2026-11-25T01:00:00Z", ...extra });
 let items: ReturnType<typeof itemRow>[] = [];
 let checks: string[] = [];
-let required = true;
 
 beforeEach(() => {
   db.calls = []; db.removed = []; db.sessions = [prep, first];
-  items = [itemRow(1), itemRow(2), itemRow(3)]; checks = []; required = true;
+  items = [itemRow(1), itemRow(2), itemRow(3)]; checks = [];
   db.answer = call => {
     if (call.table === "mw_checklist_items" && call.op === "select") {
       const session = call.filters.find(([name]) => name === "eq:session_id");
       return { data: session ? items.filter(item => item.session_id === session[1]) : items, error: null };
     }
-    if (call.table === "mw_sessions" && call.op === "select") {
-      return call.filters.some(([name]) => name === "eq:checklist_required") ? { data: required ? [{ id: PREP }] : [], error: null } : { data: { id: PREP, checklist_required: required }, error: null };
-    }
+    if (call.table === "mw_sessions" && call.op === "select") return { data: { id: PREP }, error: null };
     if (call.table === "mw_checklist_checks" && call.op === "select") return { data: checks.map(item_id => ({ item_id })), error: null };
     return { data: [], error: null };
   };
 });
 
 describe("readChecklists", () => {
-  it("groups the items by agenda with the switch", async () => {
+  it("groups the items by agenda, never asking for the old switch column", async () => {
     const read = await readChecklists();
     expect(read.migrated).toBe(true);
-    expect(read.data.get(PREP)).toMatchObject({ required: true, items: [{ text: "Item 1" }, { text: "Item 2" }, { text: "Item 3" }] });
+    expect(read.data.get(PREP)).toMatchObject({ items: [{ text: "Item 1" }, { text: "Item 2" }, { text: "Item 3" }] });
+    expect(read.data.get(PREP)).not.toHaveProperty("required");
+    expect(db.calls.some(call => call.table === "mw_sessions")).toBe(false);
   });
   it("is empty and 'not migrated' before the migration (no table)", async () => {
     db.answer = () => ({ data: null, error: { code: "42P01", message: 'relation "public.mw_checklist_items" does not exist' } });
@@ -115,32 +114,10 @@ describe("tickChecklist", () => {
   });
 });
 
-describe("absenBlock", () => {
-  it("stops the first absen until the checklist is complete", async () => {
-    checks = [uuid(101)];
-    expect(await absenBlock(first, ME)).toEqual({ sessionId: PREP, title: "Persiapan berangkat", done: 1, total: 3 });
-    checks = [uuid(101), uuid(102), uuid(103)];
-    expect(await absenBlock(first, ME)).toBeNull();
-  });
-  it("asks nothing without the switch, for a session without absen, or before the migration", async () => {
-    required = false;
-    expect(await absenBlock(first, ME)).toBeNull();
-    required = true;
-    expect(await absenBlock({ ...first, usesAttendance: false }, ME)).toBeNull();
-    db.answer = () => ({ data: null, error: { code: "42P01", message: "does not exist" } });
-    expect(await absenBlock(first, ME)).toBeNull();
-  });
-  it("refuses with a 503 (not lets through) when the checklists cannot be read", async () => {
-    db.answer = () => ({ data: null, error: { code: "XX000", message: "connection lost" } });
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    await expect(absenBlock(first, ME)).rejects.toMatchObject({ status: 503 });
-  });
-});
-
 describe("saveChecklist (admin)", () => {
-  const input = { required: true, items: [{ id: uuid(101), text: "Jaket tebal", note: "Malam dingin", photo: null }, { text: "Tumbler", note: "", photo: null }] };
+  const input = { items: [{ id: uuid(101), text: "Jaket tebal", note: "Malam dingin", photo: null }, { text: "Tumbler", note: "", photo: null }] };
 
-  it("keeps an item with its id, adds a new one, removes the one left out, and saves the switch", async () => {
+  it("keeps an item with its id, adds a new one, removes the one left out, and writes nothing on the session", async () => {
     await saveChecklist(PREP, input);
     const removed = db.calls.find(call => call.table === "mw_checklist_items" && call.op === "delete")!;
     expect(removed.filters).toEqual([["in:id", [uuid(102), uuid(103)]]]);
@@ -150,7 +127,7 @@ describe("saveChecklist (admin)", () => {
     expect(rows[0].id).toBe(uuid(101));
     expect(rows[1].id).toMatch(/^[0-9a-f-]{36}$/);
     expect(rows.every(row => row.session_id === PREP)).toBe(true);
-    expect(db.calls.find(call => call.table === "mw_sessions" && call.op === "update")!.args[0]).toEqual({ checklist_required: true });
+    expect(db.calls.some(call => call.table === "mw_sessions" && call.op !== "select")).toBe(false);
   });
   it("saves before it removes, and removes nothing when the save fails (ticks of kept items are safe)", async () => {
     await saveChecklist(PREP, input);
@@ -170,7 +147,7 @@ describe("saveChecklist (admin)", () => {
     const newKey = "main-wam/ceklis/00000000-0000-4000-8000-0000000000b2.webp";
     items = [itemRow(1, { photo_key: oldKey, photo_mime: "image/webp", photo_size: 100 }), itemRow(2, { photo_key: "main-wam/ceklis/00000000-0000-4000-8000-0000000000c3.png", photo_mime: "image/png", photo_size: 100 })];
     db.answer = (base => (call: Call) => (call.table === "mw_checklist_items" && call.op === "select" && call.filters.some(([name]) => name === "in:photo_key") ? { data: [], error: null } : base(call)))(db.answer);
-    await saveChecklist(PREP, { required: false, items: [{ id: uuid(101), text: "Jaket", note: "", photo: { key: newKey, mime: "image/webp", size: 200 } }] });
+    await saveChecklist(PREP, { items: [{ id: uuid(101), text: "Jaket", note: "", photo: { key: newKey, mime: "image/webp", size: 200 } }] });
     expect(db.removed.flat().sort()).toEqual([oldKey, "main-wam/ceklis/00000000-0000-4000-8000-0000000000c3.png"].sort());
   });
 });

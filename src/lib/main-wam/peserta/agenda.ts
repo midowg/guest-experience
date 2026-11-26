@@ -1,4 +1,4 @@
-import { checklistProgress, ceklisBlock, type ChecklistProgress, type SessionChecklist } from "../ceklis/ceklis";
+import { checklistProgress, type ChecklistProgress, type SessionChecklist } from "../ceklis/ceklis";
 import { addDays, agendaDay, byStart, daysBeforeEvent, eventDates, hasEnded, isRunning, prepLabel, timeRange, wibDate } from "../rundown";
 import type { MainWamEventInfo, MwSession, RundownChange } from "../types";
 import { t, type Lang } from "../i18n";
@@ -101,8 +101,6 @@ export function timeChange(session: Pick<MwSession, "id" | "startsAt" | "endsAt"
 export type AgendaRow = {
   /** Module Ceklis: this agenda has a checklist ("Ceklis 2/5"). */
   ceklis?: ChecklistProgress | null;
-  /** Module Ceklis: absen here waits for another agenda's checklist ("Ceklis dulu"). */
-  ceklisFirst?: boolean;
   id: string;
   start: string;
   /** Empty for a moment without an end ("14.30 Shuttle"). */
@@ -154,7 +152,7 @@ function rowsOfDate(sessions: readonly MwSession[], date: string, now: Date, log
   const shown = sessions.filter(session => session.status !== "draf");
   const isToday = date === wibDate(now.toISOString());
   const rows: AgendaRow[] = shown.filter(session => wibDate(session.startsAt) === date).sort(byStart).map(session => ({
-    ...(ceklis ? ceklisOf(session, shown, ceklis, now) : {}),
+    ...(ceklis ? ceklisOf(session, ceklis) : {}),
     id: session.id,
     start: hhmm(session.startsAt, lang),
     end: session.endsAt ? hhmm(session.endsAt, lang) : "",
@@ -182,9 +180,8 @@ export function movedInRundown(session: Pick<MwSession, "id" | "startsAt" | "end
   return !!session.changedAt && !log.some(entry => entry.sessionId === session.id);
 }
 
-/** What a row says about checklists: its own progress, and whether absen here waits for another agenda's checklist. */
-function ceklisOf(session: MwSession, all: readonly MwSession[], { lists, checked }: AgendaCeklis, now: Date): Pick<AgendaRow, "ceklis" | "ceklisFirst"> {
+/** What a row says about checklists: its own progress. */
+function ceklisOf(session: MwSession, { lists, checked }: AgendaCeklis): Pick<AgendaRow, "ceklis"> {
   const own = lists.get(session.id);
-  const ahead = session.status === "terbit" && session.usesAttendance && !hasEnded(session, now) && ceklisBlock(session, all, lists, checked) !== null;
-  return { ceklis: own?.items.length ? checklistProgress(own.items, checked) : null, ceklisFirst: ahead };
+  return { ceklis: own?.items.length ? checklistProgress(own.items, checked) : null };
 }

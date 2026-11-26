@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { MAIN_WAM_PATH } from "@/lib/routes";
-import type { CeklisBlock } from "../ceklis/ceklis";
 import { clock, t, type Lang } from "../i18n";
 import { checkInState, checkInWindow, dayWord, wibDate, wibTime } from "../rundown";
 import type { MwSession } from "../types";
@@ -64,9 +63,7 @@ export type CheckInOutcome =
   /** BOD do not check in (aturan-wam §7). */
   | { kind: "bod" }
   /** No session has this QR (an old QR replaced by "Buat QR baru", or a mistyped address). */
-  | { kind: "tidak-dikenal" }
-  /** Module Ceklis: an agenda's checklist (the one that asks "lengkap sebelum absen") is not finished yet; the scan is not recorded. */
-  | { kind: "ceklis"; session: CheckInSession; block: CeklisBlock };
+  | { kind: "tidak-dikenal" };
 
 /** The window of a session as the outcome tells it. */
 export function windowOutcome(session: MwSession, at: Date): CheckInOutcome | null {
@@ -85,7 +82,7 @@ export function clockWhen(iso: string, now: Date, lang: Lang = "id"): string {
   return date === wibDate(now.toISOString()) ? time : `${dayWord(date, wibDate(now.toISOString()), lang)} · ${time}`;
 }
 
-export type OutcomeText = { tone: "success" | "warning" | "error" | "neutral"; icon: "check" | "clock" | "timer-off" | "info" | "qr" | "list"; title: string; sub: string; body: string };
+export type OutcomeText = { tone: "success" | "warning" | "error" | "neutral"; icon: "check" | "clock" | "timer-off" | "info" | "qr"; title: string; sub: string; body: string };
 
 /** The words of A02–A04 and the other outcomes (SPEC revisi: one sentence, no pill). */
 export function outcomeText(outcome: CheckInOutcome, now: Date, lang: Lang = "id"): OutcomeText {
@@ -98,7 +95,6 @@ export function outcomeText(outcome: CheckInOutcome, now: Date, lang: Lang = "id
     case "tutup": return { tone: "error", icon: "timer-off", title: say("absen.closed"), sub: outcome.session.title, body: say("absen.closedAt", { when: when(outcome.closes) }) };
     case "tanpa-absen": return { tone: "neutral", icon: "info", title: say("absen.noAttendance"), sub: outcome.session.title, body: say("absen.noScan") };
     case "bod": return { tone: "neutral", icon: "info", title: say("absen.notNeeded"), sub: "", body: say("absen.bodNoCheckIn") };
-    case "ceklis": return { tone: "warning", icon: "list", title: say("absen.ceklisFirst"), sub: outcome.session.title, body: say("absen.ceklisBody", { title: outcome.block.title, done: outcome.block.done, total: outcome.block.total }) };
     case "tidak-dikenal": return { tone: "neutral", icon: "qr", title: say("absen.unknownQr"), sub: "", body: say("absen.askNewQr") };
   }
 }

@@ -5,8 +5,7 @@ import { Frame } from "../Frame";
 import { AbsenView, ModuleActionView } from "@/components/main-wam/modul/SessionViews";
 import { SessionScreen } from "@/components/main-wam/peserta/agenda/SessionScreen";
 import { SessionSheet, SessionSheetLoading } from "@/components/main-wam/peserta/agenda/SessionSheet";
-import { ceklisBlock } from "@/lib/main-wam/ceklis/ceklis";
-import { sampleChecklistItems, sampleChecklists, samplePrepSession } from "@/lib/main-wam/ceklis/sample";
+import { sampleChecklistItems, samplePrepSession } from "@/lib/main-wam/ceklis/sample";
 import { AgendaScreen } from "@/components/main-wam/peserta/agenda/AgendaScreen";
 import { agendaDays, agendaRowsOfTab, shownTab } from "@/lib/main-wam/peserta/agenda";
 import { hhmm } from "@/lib/main-wam/peserta/format";
@@ -52,13 +51,12 @@ export default async function PreviewSession({ searchParams }: { searchParams: P
   const view = sessionView(session, now, previewLog(now), true, lang);
   const photos = { pemaparan: 24, "team-building": 38 }[key] ?? 0;
   const started = Date.parse(session.startsAt) <= now.getTime();
-  // ?ceklis=0–5: the agenda's checklist with this many items ticked (Persiapan berangkat); on another agenda with absen, the lock until all five are.
+  // ?ceklis=0–5: the agenda's checklist with this many items ticked (Persiapan berangkat).
   const ticked = params.ceklis !== undefined && /^[0-5]$/.test(params.ceklis) ? Number(params.ceklis) : null;
   const checked = new Set(sampleChecklistItems.slice(0, ticked ?? 0).map(item => item.id));
-  const checklist = prep && ticked !== null ? { sessionId: session.id, required: true, items: sampleChecklistItems.map(item => ({ id: item.id, text: item.text, note: item.note, photoVersion: null, checked: checked.has(item.id) })) } : null;
-  const block = !prep && ticked !== null ? ceklisBlock(session, [samplePrepSession, session], sampleChecklists(), checked) : null;
+  const checklist = prep && ticked !== null ? { sessionId: session.id, items: sampleChecklistItems.map(item => ({ id: item.id, text: item.text, note: item.note, photoVersion: null, checked: checked.has(item.id) })) } : null;
   const slots = {
-    absen: block ? <AbsenView slot={{ kind: "ceklis", block }} /> : params.status === "hadir" ? <AbsenView slot={{ kind: "hadir", at: sampleAttendance.find(row => row.sessionId === sampleSessionIds.pemaparan)?.checkedInAt ?? now.toISOString() }} /> : params.status === "absen" || (key === "pemaparan" && params.status !== "tanpa-absen") ? <AbsenStandIn qr={params.qr === "1" ? true : undefined} /> : null,
+    absen: params.status === "hadir" ? <AbsenView slot={{ kind: "hadir", at: sampleAttendance.find(row => row.sessionId === sampleSessionIds.pemaparan)?.checkedInAt ?? now.toISOString() }} /> : params.status === "absen" || (key === "pemaparan" && params.status !== "tanpa-absen") ? <AbsenStandIn qr={params.qr === "1" ? true : undefined} /> : null,
     action: params.kuis === "1" ? <ModuleActionView slot={{ action: { kind: "link", label: "Ikut kuis", href: mainWamPath.quiz("demo"), icon: "kuis", primary: true }, qr: null }} /> : null,
     photos: photos && started ? <SessionPhotosStandIn sessionId={session.id} count={photos} /> : null,
   };

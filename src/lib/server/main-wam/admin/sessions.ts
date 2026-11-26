@@ -60,7 +60,7 @@ export async function adminSessions({ usage: withUsage = true }: { usage?: boole
     data: ((data ?? []) as Record<string, unknown>[]).map(row => {
       const session = sessionFromRow(row);
       const base = { ...session, version: typeof row.updated_at === "string" ? row.updated_at : null, usage: usage?.get(session.id) ?? null };
-      return withUsage ? { ...base, checklist: checklists ? checklists.get(session.id) ?? { required: false, items: [] } : null } : base;
+      return withUsage ? { ...base, checklist: checklists ? checklists.get(session.id) ?? { items: [] } : null } : base;
     }).sort(byStart),
     migrated: true,
   };

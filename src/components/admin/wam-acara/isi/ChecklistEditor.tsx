@@ -7,7 +7,6 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { CHECKLIST_MAX_ITEMS, CHECKLIST_NOTE_MAX, CHECKLIST_PHOTO_BYTES, CHECKLIST_PHOTO_TYPES, CHECKLIST_TEXT_MAX, type ChecklistPhotoMime, type ChecklistPhotoRef } from "@/lib/main-wam/ceklis/ceklis";
 import { blankItem, moveItem, type ChecklistDraft, type ChecklistDraftItem } from "@/lib/main-wam/ceklis/draft";
 import { mainWamAdminApi } from "@/lib/routes";
-import { SwitchRow } from "./fields";
 import css from "./isi.module.css";
 import own from "./ceklis.module.css";
 
@@ -46,8 +45,8 @@ async function uploadPhoto(file: File): Promise<{ ref: ChecklistPhotoRef; previe
 
 /**
  * Admin WAM → Main WAM → Rundown → the session form's "Ceklis persiapan" (agen S1): the items of an
- * agenda, each a text, a short note and an optional photo, in order, and the switch "Wajib lengkap
- * sebelum absen". It edits a draft the form holds; the form's Simpan saves the checklist too.
+ * agenda, each a text, a short note and an optional photo, in order. The checklist is only a reminder
+ * (it never stops absen, KONTRAK 42). It edits a draft the form holds; the form's Simpan saves the checklist too.
  * `ready` is false before the migration (nothing can be saved then, and the section says so).
  */
 export function ChecklistEditor({ draft, onChange, ready, problems }: { draft: ChecklistDraft; onChange: (draft: ChecklistDraft) => void; ready: boolean; problems?: Record<string, string> }) {
@@ -77,7 +76,7 @@ export function ChecklistEditor({ draft, onChange, ready, problems }: { draft: C
   }
   return <fieldset className={css.group}>
     <legend>Ceklis persiapan</legend>
-    <p className={css.note}>Daftar yang dicentang peserta di agenda ini, mis. perlengkapan sebelum berangkat. Tiap item boleh punya foto contoh. Ceklis hanya tampil bila modul Ceklis menyala di Pengaturan.</p>
+    <p className={css.note}>Daftar yang dicentang peserta di agenda ini, mis. perlengkapan sebelum berangkat. Tiap item boleh punya foto contoh. Hanya pengingat: tidak memengaruhi absen. Ceklis hanya tampil bila modul Ceklis menyala di Pengaturan.</p>
     {draft.items.length > 0 && <ol className={own.items} aria-label="Item ceklis">
       {draft.items.map((item, index) => <li key={item.key} className={own.item}>
         <div className={own.photo}>
@@ -113,8 +112,5 @@ export function ChecklistEditor({ draft, onChange, ready, problems }: { draft: C
       </button>
       <span className={css.hint}><ListChecks size={14} aria-hidden /> {filled} item{draft.items.length >= CHECKLIST_MAX_ITEMS ? ` (paling banyak ${CHECKLIST_MAX_ITEMS})` : ""}</span>
     </div>
-    <SwitchRow title="Wajib lengkap sebelum absen" sub="Peserta yang belum melengkapi ceklis ini tidak bisa absen di agenda sesudahnya (tombol Absen terkunci dan menaut ke ceklis). Dimatikan: ceklis hanya pengingat."
-      checked={draft.required} disabled={filled === 0} onChange={required => onChange({ ...draft, required })} />
-    {problems?.required && <p className={css.error} role="alert">{problems.required}</p>}
   </fieldset>;
 }

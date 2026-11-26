@@ -55,13 +55,9 @@
 .contactNote { margin: var(--mw-space-12) 0 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 
 /* ── P04 slots ──────────────────────────────────────────────────────────────────────────────────── */
-.gate { display: flex; flex-direction: column; gap: var(--mw-space-8); padding: 14px 16px; border: 1px solid var(--mw-gold); border-radius: 18px; background: var(--mw-surface); }
-.gateLabel { display: inline-flex; align-items: center; gap: 6px; font: var(--mw-type-cap); letter-spacing: var(--mw-ls-cap); text-transform: uppercase; color: var(--mw-gold-ink); }
-.gateLabel > svg { flex: none; width: 14px; height: 14px; }
 .gateInfo { display: flex; align-items: flex-start; gap: var(--mw-space-8); margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .gateInfo > svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--mw-primary); }
 .gateInfo > span { min-width: 0; overflow-wrap: anywhere; }
-.gateLink { display: inline-block; min-height: 24px; font-weight: 700; color: var(--mw-gold-ink); text-decoration: underline; }
 .quizBox { display: flex; flex-direction: column; gap: var(--mw-space-8); padding: 14px 16px; border: 1px solid var(--mw-kuis-d); border-radius: 18px; background: var(--mw-surface); }
 .quizTag { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: var(--mw-radius-full); background: var(--mw-kuis-d); color: var(--mw-on-kuis); font: 700 10px/1 var(--mw-display-font); letter-spacing: 0.12em; text-transform: uppercase; }
 .quizTag > svg { flex: none; width: 10px; height: 10px; }

@@ -20,7 +20,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   misi: { label: "Misi dan poin", hint: "Kartu Misi di Beranda, halaman Misi dan Peringkat; misi foto, check-in lokasi, dan sesi bernilai poin." },
   karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya, dan halaman rinciannya; angka dihitung dari data acara." },
   kuis: { label: "Kuis live", hint: "Kuis pilihan ganda bersama: soal di layar besar dan HP, peserta menjawab sebagai tokohnya. Kartu Beranda saat lobi dibuka; soal dan pengendali di Modul acara → Kuis." },
-  ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan syarat ceklis lengkap sebelum absen." },
+  ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan tombol Setuju semua. Hanya pengingat: tidak memengaruhi absen." },
 };
 
 /**

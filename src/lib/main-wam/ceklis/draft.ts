@@ -18,20 +18,19 @@ export type ChecklistDraftItem = {
   /** Where to show it: a saved photo's address, or the browser's own copy of one just chosen. */
   photoUrl: string | null;
 };
-export type ChecklistDraft = { required: boolean; items: ChecklistDraftItem[] };
+export type ChecklistDraft = { items: ChecklistDraftItem[] };
 
 let counter = 0;
 /** A key for a new item. */
 export const newItemKey = () => `n${Date.now().toString(36)}${(counter++).toString(36)}`;
 
-export const emptyDraft = (): ChecklistDraft => ({ required: false, items: [] });
+export const emptyDraft = (): ChecklistDraft => ({ items: [] });
 export const blankItem = (): ChecklistDraftItem => ({ key: newItemKey(), text: "", note: "", photo: null, photoUrl: null });
 
 /** The draft of a saved checklist; `photoAddress` says where the admin opens a saved item's photo. */
 export function draftFromChecklist(list: SessionChecklist | null | undefined, photoAddress: (itemId: string, version: string) => string): ChecklistDraft {
   if (!list) return emptyDraft();
   return {
-    required: list.required,
     items: list.items.map(item => ({
       key: item.id, id: item.id, text: item.text, note: item.note,
       photo: item.photo ? { key: item.photo.key, mime: item.photo.mime as ChecklistPhotoRef["mime"], size: item.photo.size } : null,
@@ -43,7 +42,6 @@ export function draftFromChecklist(list: SessionChecklist | null | undefined, ph
 /** What the server is sent (an item with no text is left out: an empty row is not an item). */
 export function draftToInput(draft: ChecklistDraft): ChecklistInput {
   return {
-    required: draft.required,
     items: draft.items.filter(item => item.text.trim()).map(item => ({ ...(item.id ? { id: item.id } : {}), text: item.text.trim(), note: item.note.trim(), photo: item.photo })),
   };
 }
@@ -52,7 +50,7 @@ export function draftToInput(draft: ChecklistDraft): ChecklistInput {
 export function draftChanged(saved: SessionChecklist | null | undefined, draft: ChecklistDraft): boolean {
   const input = draftToInput(draft);
   const items = saved?.items ?? [];
-  if (input.required !== (saved?.required ?? false) || input.items.length !== items.length) return true;
+  if (input.items.length !== items.length) return true;
   return input.items.some((item, index) => {
     const before = items[index];
     return item.id !== before.id || item.text !== before.text || item.note !== before.note || (item.photo?.key ?? null) !== (before.photo?.key ?? null);

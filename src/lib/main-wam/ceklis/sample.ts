@@ -3,8 +3,7 @@ import type { ChecklistItem, SessionChecklist } from "./ceklis";
 
 /*
  * Mode demo's checklist (the prototype's "Persiapan berangkat", five items): the agenda 3 days before
- * the first day, with "Wajib lengkap sebelum absen" on, so the first Absen of the event shows its lock
- * ("Selesaikan ceklis dulu"). Made-up content, no photos. Pure.
+ * the first day. Made-up content, no photos. Pure.
  */
 
 /** A fixed, valid uuid per sample row (the prefix isSampleId() knows): kind 4 is a session, kind 14 an item. */
@@ -35,8 +34,8 @@ export const sampleChecklistItems: ChecklistItem[] = ITEMS.map(([text, note], in
   id: itemId(index + 1), sessionId: PREP_ID, text, note, photo: null, sort: index,
 }));
 
-/** session id → its checklist (the gate is on). */
-export const sampleChecklists = (): Map<string, SessionChecklist> => new Map([[PREP_ID, { required: true, items: sampleChecklistItems }]]);
+/** session id → its checklist. */
+export const sampleChecklists = (): Map<string, SessionChecklist> => new Map([[PREP_ID, { items: sampleChecklistItems }]]);
 
 /** The cookie Mode demo keeps the ticks in (a sample item cannot be saved: every write is refused while the sample rundown stands in). */
 export const DEMO_CEKLIS_COOKIE = "mw_demo_ceklis";

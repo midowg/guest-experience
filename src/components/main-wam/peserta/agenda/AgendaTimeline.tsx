@@ -1,6 +1,6 @@
 "use client";
 
-import { Bus, CalendarDays, ListChecks, Lock, QrCode, ScanFace, Sparkles, Trophy, Utensils, type LucideIcon } from "lucide-react";
+import { Bus, CalendarDays, ListChecks, QrCode, ScanFace, Sparkles, Trophy, Utensils, type LucideIcon } from "lucide-react";
 import type { AgendaKind, AgendaRow } from "@/lib/main-wam/peserta/agenda";
 import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { mainWamPath } from "@/lib/routes";
@@ -14,7 +14,7 @@ export const KIND_ICONS: Record<AgendaKind, LucideIcon> = { sesi: CalendarDays, 
 /**
  * One day of the agenda as a timeline (prototipe .ags/.agr): the start hour in big Barlow on the left, a
  * rail whose node is a ring (blue), filled green once done and a gold glowing dot while it runs, then the
- * title, the place and small tags (kind, "Wajib absen", "Ceklis 0/2", "Ceklis dulu"). The running one
+ * title, the place and small tags (kind, "Wajib absen", "Ceklis 0/2"). The running one
  * also says "Sedang berlangsung", the next one "Berikutnya", a moved one "Jam berubah"; past ones are
  * softened, a cancelled one is struck through and not openable. Under 300 px (zoom 200 %) the hour sits on
  * a line of its own and the rail steps aside.
@@ -45,7 +45,6 @@ export function AgendaTimeline({ rows, label }: { rows: AgendaRow[]; label: stri
               {row.absen && <span className={cx(css.kt, row.absen === "wajib" && css.ktGold)}>{QR_ABSEN_VISIBLE ? <QrCode aria-hidden /> : <ScanFace aria-hidden />}{t(row.absen === "wajib" ? "peserta.agenda.absenRequired" : "peserta.agenda.absen")}</span>}
               {row.ceklis && <span className={cx(css.kt, css.ktGold)}><ListChecks aria-hidden />{t("ceklis.chip", { n: `${row.ceklis.done}/${row.ceklis.total}` })}</span>}
               {row.misi ? <span className={cx(css.kt, css.ktGold)}><Trophy aria-hidden />{t("peserta.agenda.misi", { n: row.misi })}</span> : null}
-              {row.ceklisFirst && <span className={css.kt}><Lock aria-hidden />{t("ceklis.chipFirst")}</span>}
             </span>
             {row.status === "done" && <SrOnly>{t("pill.done")}</SrOnly>}
           </span>

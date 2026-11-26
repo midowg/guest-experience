@@ -9,7 +9,6 @@ import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import type { MainWamContext } from "@/lib/server/main-wam/gate";
 import { serverT } from "@/lib/server/main-wam/lang";
-import { absenBlock } from "@/lib/server/main-wam/ceklis/data";
 import { myCheckIn, presentCount } from "@/lib/server/main-wam/modul/absen";
 import { awardsShown } from "@/lib/server/main-wam/modul/awards";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
@@ -27,8 +26,8 @@ import { AbsenView, ModuleActionView, type AbsenSlot, type ModuleSlot } from "./
  *   tercatat hadir · Hubungi panitia" after the window, and for the BOD "Hadir 96 dari 120".
  * - SessionModuleAction: Detail sesi only, under SessionAbsen: Silent Meeting "Kirim masukan" /
  *   "Sudah ditutup", Awarding "Pilih nominasi", Survei "Isi survei"; for panitia the session's QR.
- * While QR_ABSEN_VISIBLE is false (KONTRAK 41: attendance is the face scan on the panitia's tablet only) there is no Absen button, no
- * ceklis lock and no QR for panitia: the slot says "Hadir 07.52" once recorded, and before that one calm line pointing at the tablet.
+ * While QR_ABSEN_VISIBLE is false (KONTRAK 41: attendance is the face scan on the panitia's tablet only) there is no Absen button
+ * and no QR for panitia: the slot says "Hadir 07.52" once recorded, and before that one calm line pointing at the tablet.
  * Nothing for a cancelled session, a module that is off, or a session without it. A read that
  * fails leaves the slot empty, never the page.
  */
@@ -46,12 +45,6 @@ export async function absenSlot({ session, context, now, qr = QR_ABSEN_VISIBLE }
   if (card.kind === "terlewat") return { kind: "terlewat", contact: await panitiaContact(settings, session).catch(() => null) };
   // No QR to scan: recorded → "Hadir 07.52", else one line about the tablet (before and while absen is open).
   if (!qr) return card.kind === "hadir" ? card : { kind: "tablet" };
-  // Module Ceklis: while an agenda's checklist that asks "lengkap sebelum absen" is unfinished, the button is a lock that leads to it.
-  if (card.kind === "buka" && settings.modules.ceklis) {
-    // Only the screen's hint: when the checklist cannot be read the button stays, and the scan itself refuses (503).
-    const block = await absenBlock(session, viewer.id).catch(() => null);
-    if (block) return { kind: "ceklis", block };
-  }
   return card;
 }
 

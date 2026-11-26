@@ -3,13 +3,12 @@ import { sampleSession, sampleSettings, sampleViewers } from "@/lib/main-wam/sam
 
 /*
  * What Detail sesi's slots hold for the Absen module, in both states of the QR check-in switch (QR_ABSEN_VISIBLE,
- * KONTRAK 41). Hidden (the owner's decision): no Absen button, no ceklis lock, no QR for panitia; "Hadir 07.52" once
+ * KONTRAK 41). Hidden (the owner's decision): no Absen button, no QR for panitia; "Hadir 07.52" once
  * recorded, one calm line about the tablet before that, "Tidak tercatat hadir" after the window. Shown: as before.
  */
 
-const read = vi.hoisted(() => ({ myCheckIn: vi.fn(), presentCount: vi.fn(), absenBlock: vi.fn() }));
+const read = vi.hoisted(() => ({ myCheckIn: vi.fn(), presentCount: vi.fn() }));
 vi.mock("@/lib/server/main-wam/modul/absen", () => ({ myCheckIn: read.myCheckIn, presentCount: read.presentCount }));
-vi.mock("@/lib/server/main-wam/ceklis/data", () => ({ absenBlock: read.absenBlock }));
 vi.mock("@/lib/server/main-wam/modul/contact", () => ({ panitiaContact: async () => null }));
 vi.mock("@/lib/server/main-wam/modul/awards", () => ({ awardsShown: async () => ({ categories: [], approvals: new Map() }) }));
 vi.mock("@/lib/server/main-wam/modul/silent", () => ({ silentNow: async () => ({ view: null }) }));
@@ -26,7 +25,7 @@ const context = (role: keyof typeof sampleViewers, modules: Partial<ReturnType<t
   return { viewer: sampleViewers[role], settings: { ...settings, modules: { ...settings.modules, ...modules } } };
 };
 
-beforeEach(() => { vi.clearAllMocks(); read.myCheckIn.mockResolvedValue(null); read.absenBlock.mockResolvedValue(null); });
+beforeEach(() => { vi.clearAllMocks(); read.myCheckIn.mockResolvedValue(null); });
 
 describe("absenSlot with the QR check-in hidden (the default)", () => {
   it("is false by default: the owner's decision", async () => {
@@ -47,12 +46,6 @@ describe("absenSlot with the QR check-in hidden (the default)", () => {
     expect(await absenSlot({ session, context: context("peserta"), now: at("13:00") })).toMatchObject({ kind: "terlewat" });
   });
 
-  it("does not lock on an unfinished checklist (the lock guarded the QR scan)", async () => {
-    read.absenBlock.mockResolvedValue({ sessionId: "x", title: "Persiapan", done: 1, total: 5 });
-    expect(await absenSlot({ session, context: context("peserta"), now: at("09:00") })).toEqual({ kind: "tablet" });
-    expect(read.absenBlock).not.toHaveBeenCalled();
-  });
-
   it("leaves the BOD's 'Hadir 96 dari 120', and nothing for a module off, a draft or a session without absen", async () => {
     read.presentCount.mockResolvedValue({ present: 96, expected: 120 });
     expect(await absenSlot({ session, context: context("bod"), now: at("09:00") })).toEqual({ kind: "bod", present: 96, expected: 120 });
@@ -67,11 +60,9 @@ describe("absenSlot with the QR check-in hidden (the default)", () => {
 });
 
 describe("absenSlot with the QR check-in shown (the switch turned back on)", () => {
-  it("opens the Absen button while the window is open, and the ceklis lock when a checklist is unfinished", async () => {
+  it("opens the Absen button while the window is open (an unfinished checklist never locks it, KONTRAK 42)", async () => {
     expect(await absenSlot({ session, context: context("peserta"), now: at("09:00"), qr: true })).toMatchObject({ kind: "buka" });
     expect(await absenSlot({ session, context: context("peserta"), now: at("07:00"), qr: true })).toEqual({ kind: "none" });
-    read.absenBlock.mockResolvedValue({ sessionId: "x", title: "Persiapan", done: 1, total: 5 });
-    expect(await absenSlot({ session, context: context("peserta"), now: at("09:00"), qr: true })).toMatchObject({ kind: "ceklis" });
   });
 
   it("offers panitia the QR sheet, and participants none", async () => {

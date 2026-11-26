@@ -12,15 +12,15 @@ import { adminFail, adminWaiting, db } from "./common";
 /*
  * Admin WAM → Main WAM → Rundown → ceklis (agen S1; migration 202611250001): an agenda's checklist as
  * the admin edits it. The list replaces the old one in one save (items that keep their id keep their
- * ticks; a removed one takes its ticks with it), and the "wajib lengkap sebelum absen" switch is
- * saved with it. A photo goes up in two steps like the guides' files (the server names a fresh key
+ * ticks; a removed one takes its ticks with it). The checklist is only a reminder, never a condition
+ * for absen (KONTRAK 42), so nothing about it is saved on the session. A photo goes up in two steps like the guides' files (the server names a fresh key
  * and signs its size and type, the browser puts the file, the server checks the first bytes); the
  * save then links it, and a photo no item uses any more is removed from storage.
  */
 
 const refusals = { invalid: "Isian ceklis belum sesuai aturan. Periksa lagi lalu simpan." };
 
-/** Every saved checklist, for the Rundown page (an agenda with neither items nor the switch has none). Null before the migration. */
+/** Every saved checklist, for the Rundown page (an agenda without items has none). Null before the migration. */
 export async function adminChecklists(): Promise<Map<string, SessionChecklist> | null> {
   const read = await realChecklists();
   return read.migrated ? read.data : null;
@@ -28,13 +28,9 @@ export async function adminChecklists(): Promise<Map<string, SessionChecklist> |
 
 /** One agenda's saved checklist (empty when it has none). */
 async function savedChecklist(sessionId: string): Promise<SessionChecklist> {
-  const [{ data: items, error }, { data: flag, error: flagError }] = await Promise.all([
-    db().from("mw_checklist_items").select(ITEM_COLUMNS).eq("session_id", sessionId).order("sort").order("created_at"),
-    db().from("mw_sessions").select("checklist_required").eq("id", sessionId).maybeSingle(),
-  ]);
+  const { data: items, error } = await db().from("mw_checklist_items").select(ITEM_COLUMNS).eq("session_id", sessionId).order("sort").order("created_at");
   if (error) adminFail(error);
-  if (flagError) adminFail(flagError);
-  return { required: flag?.checklist_required === true, items: (items ?? []).map(row => itemFromRow(row as never)) };
+  return { items: (items ?? []).map(row => itemFromRow(row as never)) };
 }
 
 /** Saves an agenda's whole checklist; answers with what is saved. */
@@ -73,10 +69,6 @@ export async function saveChecklist(sessionId: string, input: ChecklistInput): P
     const { error } = await db().from("mw_checklist_items").delete().in("id", removed.map(item => item.id));
     if (error) adminFail(error, refusals);
   }
-  // The switch rides with the list; touching updated_at is left to the row's own trigger (a checklist edit is not a schedule change).
-  const { error: flagError } = await db().from("mw_sessions").update({ checklist_required: input.required }).eq("id", sessionId);
-  if (flagError) adminFail(flagError, refusals);
-
   // Storage: the photos nobody uses any more (removed items, replaced photos).
   const still = new Set(keys);
   const orphans = before.items.map(item => item.photo?.key).filter((key): key is string => !!key && !still.has(key));

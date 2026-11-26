@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * PUT {required, items}: an agenda's whole checklist (any Admin WAM admin). The list replaces the
- * old one (an item that keeps its id keeps its ticks), and "wajib lengkap sebelum absen" is saved
- * with it. Answers with the whole rundown again, like every Rundown save.
+ * PUT {items}: an agenda's whole checklist (any Admin WAM admin). The list replaces the old one (an
+ * item that keeps its id keeps its ticks). An old client's `required` is ignored. Answers with the
+ * whole rundown again, like every Rundown save.
  */
 export async function PUT(request: Request, { params }: Params) {
   return handle(async () => {
