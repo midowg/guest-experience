@@ -373,6 +373,8 @@
 /* A video is not shown before it plays: the player's own play button and poster stay under the waiting screen. */
 .video iframe, .video video { opacity: 0; transition: opacity .4s ease-out; }
 .video[data-playing="true"] iframe, .video[data-playing="true"] video { opacity: 1; }
+/* A video asked to play with sound that this TV's browser keeps silent: how to turn the sound on, small, in a corner. */
+.soundHint { position: absolute; bottom: calc(3 * var(--u)); left: calc(3 * var(--u)); z-index: 2; max-width: 60%; margin: 0; padding: calc(1 * var(--u)) calc(1.8 * var(--u)); border-radius: calc(1.2 * var(--u)); background: rgb(0 0 0 / .72); color: #fff; font-size: calc(2 * var(--u)); font-weight: 600; line-height: 1.3; }
 
 /*
  * A birthday greeting (BirthdaySlide): the team's card itself, 1131 × 1600, whole and upright in

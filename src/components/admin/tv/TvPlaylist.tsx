@@ -1,16 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Cake, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, Images, FileVideo, ListOrdered, Megaphone, Play, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Cake, CalendarDays, CalendarRange, ChevronRight, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, Images, FileVideo, ListOrdered, Megaphone, Play, Plus, Sparkles, Square, Trash2, Type, UserRound, Volume2, Zap } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SectionToolbar, SegmentedControl, type Crumb } from "@/components/console";
+import { ConsoleButton, ConsoleButtonLink, FilterChips, PageHeader, Pill, type Crumb } from "@/components/console";
+import { Sheet, SheetError } from "@/components/admin/wam-acara/isi/Sheet";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { uploadSlide } from "@/components/admin/wam/PraWamTv";
 import akun from "@/components/admin/wam/akun/akun.module.css";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoLength, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, videoSeconds, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { cutOutPerson } from "./cutout";
@@ -26,35 +27,61 @@ const isTyped = (kind: TvItemKind) => kind === "teks" || kind === "tamu" || kind
 /** The kinds that welcome a guest, and so have a design to pick. A typed welcome has no visit, so no cover photo. */
 const isWelcome = (kind: TvItemKind) => kind === "sambutan" || kind === "tamu";
 const designsFor = (kind: TvItemKind) => tvWelcomeDesigns.filter(design => kind === "sambutan" || design !== "foto");
-/** Where a row's content comes from, for the line under its name. */
+/** What a row is, in a word or two, for the line under its name. */
 const sourceOf = (kind: TvItemKind) => kind === "sambutan" ? "Dari Kunjungan Kantor" : isTemplateKind(kind) ? "Dari WAM" : kind === "tamu" ? "Sambutan tamu" : tvItemKindLabels[kind];
 type Draft = { title: string; body: string; call: string; date: string; design: TvWelcomeDesign; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[];
   /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
-  strip: boolean };
+  strip: boolean;
+  /** A video's: whether it plays with its sound, and its length in seconds as typed ("" = not known). */
+  sound: boolean; length: string };
 /** What "Tayangkan sekarang" is asked with (`minutes` null: until stopped). */
 type Take = { minutes: number | null; screenIds: string[] };
 const draftOf = (item: TvAdminItem): Draft => ({
   title: item.title, body: item.body, call: item.call, date: item.date, design: item.design, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
-  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds, strip: item.strip ?? false,
+  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds, strip: item.strip ?? false, sound: item.sound ?? false, length: item.length ? String(item.length) : "",
 });
-/** The four ways to add a row, one shown at a time. */
-const adds = [{ value: "template", label: "Template" }, { value: "tamu", label: "Sambutan" }, { value: "ultah", label: "Ulang tahun" }, { value: "teks", label: "Teks" }, { value: "video", label: "Video" }, { value: "gambar", label: "Gambar" }] as const;
+/** What can be added, said the way someone who has never seen this page would ask for it. */
+const adds = [
+  { value: "template", label: "Jadwal dan info otomatis", hint: "Kalender ruang, Timeline, pengumuman, sambutan tamu, foto meeting. Isinya datang sendiri.", icon: Sparkles },
+  { value: "gambar", label: "Gambar", hint: "Poster atau foto. Boleh beberapa sekaligus.", icon: ImageUp },
+  { value: "video", label: "Video", hint: "Dari YouTube atau berkas video. Bisa dengan suara.", icon: Play },
+  { value: "teks", label: "Tulisan", hint: "Judul dan isi, besar di tengah layar.", icon: Type },
+  { value: "tamu", label: "Sambutan tamu", hint: "Selamat datang untuk tamu yang namanya Anda ketik.", icon: UserRound },
+  { value: "ultah", label: "Ucapan ulang tahun", hint: "Kartu ulang tahun dengan nama dan foto.", icon: Cake },
+] as const;
 type AddKind = (typeof adds)[number]["value"];
+type Shown = "semua" | "tayang" | "sembunyi";
+
+/** A video file's length, as this browser reads it; null when it cannot. */
+function lengthOf(file: File): Promise<number | null> {
+  return new Promise(resolve => {
+    let settled = false;
+    const address = URL.createObjectURL(file);
+    const done = (value: number | null) => { if (settled) return; settled = true; URL.revokeObjectURL(address); resolve(value); };
+    try {
+      const probe = document.createElement("video");
+      probe.preload = "metadata";
+      probe.onloadedmetadata = () => done(videoSeconds(probe.duration));
+      probe.onerror = () => done(null);
+      probe.src = address;
+    } catch { done(null); }
+    window.setTimeout(() => done(null), 8_000);
+  });
+}
 
 /**
- * Admin TV → Tayangan: the playlist. Every thing a TV plays is a card, in playing order, in as
- * many columns as the page has room for (one on a phone). A card is for reading: its number and
- * where it comes from, its name in full, what it says, then its duration, its schedule and its TVs
- * as labelled facts. It carries only what is used in passing: the two arrows that move it, and
- * Atur. Atur opens the card across the page with everything else inside: its words, its duration,
- * its schedule and TVs, and the actions (Simpan, Tayangkan sekarang, Sembunyikan, Hapus).
- * Tambah tayangan is one card with a choice of four.
+ * Admin TV → Tayangan: the playlist, after docs/standar-admin.md. One row per thing a TV plays, in
+ * playing order: a small picture of the slide, its name, one line that says what it is and when and
+ * where it plays, and its state. The row itself opens it (a sheet: from the side on a laptop, from
+ * the bottom on a phone) with its words, when and where it plays, a video's sound, and the other
+ * actions (Tayangkan sekarang, Sembunyikan, Hapus). Only the two arrows that move a row stay on it.
+ * One main action, Tambah tayangan: a sheet that first asks what to add, in plain words.
  */
 export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string }) {
   const [list, setList] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  /** The card that is open (Atur), with what is typed in it; `take` is set while its "Tayangkan sekarang" is being asked. */
+  /** The row that is open, with what is typed in it; `take` is set while its "Tayangkan sekarang" is being asked. */
   const [editing, setEditing] = useState<{ id: string; draft: Draft; take: Take | null } | null>(null);
   const [text, setText] = useState({ title: "", body: "" });
   const [guest, setGuest] = useState({ title: "", body: "" });
@@ -66,7 +93,9 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   const newPhotoInput = useRef<HTMLInputElement>(null);
   /** The birthday greeting whose photo is being picked. */
   const photoFor = useRef<string | null>(null);
-  const [adding, setAdding] = useState<AddKind>("template");
+  /** Tambah tayangan: closed (null), asking what to add ("pilih"), or one kind's form. */
+  const [adding, setAdding] = useState<AddKind | "pilih" | null>(null);
+  const [shown, setShown] = useState<Shown>("semua");
   const [progress, setProgress] = useState("");
   const [confirm, confirmDialog] = useConfirm();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -94,21 +123,24 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   }
   async function remove(item: TvAdminItem) {
     const name = nameOf(item);
-    const body = item.kind === "gambar" ? `${name} hilang dari semua TV dan dari penyimpanan. Kalau hanya ingin berhenti menayangkannya, pilih Sembunyi.`
-      : isTemplateKind(item.kind) ? `${name} tidak lagi tayang di TV mana pun. Template ini bisa ditambahkan lagi kapan saja; datanya tetap ada di sumbernya.`
+    const body = item.kind === "gambar" ? `${name} hilang dari semua TV dan dari penyimpanan. Kalau hanya ingin berhenti menayangkannya, pilih Sembunyikan.`
+      : isTemplateKind(item.kind) ? `${name} tidak lagi tayang di TV mana pun. Tayangan ini bisa ditambahkan lagi kapan saja; datanya tetap ada di sumbernya.`
       : `${name} dihapus dari daftar tayangan.`;
     if (!(await confirm({ title: "Hapus tayangan ini?", body, confirmLabel: "Hapus", danger: true }))) return;
-    await run(`baris-${item.id}`, praWamTvApi.item(item.id), { method: "DELETE" });
+    await run(`baris-${item.id}`, praWamTvApi.item(item.id), { method: "DELETE" }, () => setEditing(null));
   }
   function save(item: TvAdminItem, draft: Draft) {
+    const length = draft.length.trim() ? Number(draft.length) : null;
     return patch(item, {
       ...(isTyped(item.kind) || item.kind === "gambar" || item.kind === "video" ? { title: draft.title } : {}),
       ...(isTyped(item.kind) ? { body: draft.body } : {}),
       seconds: draft.seconds,
       ...(isWelcome(item.kind) ? { design: draft.design } : {}),
       ...(item.kind === "ultah" ? { call: draft.call, date: draft.date || null } : {}),
-      // Sent only when changed, so saving anything else never waits for the photo row's own migration.
+      // Sent only when changed, so saving anything else never waits for the migration these are kept by.
       ...(item.kind === "gambar" && draft.strip !== (item.strip ?? false) ? { strip: draft.strip } : {}),
+      ...(item.kind === "video" && draft.sound !== (item.sound ?? false) ? { sound: draft.sound } : {}),
+      ...(item.kind === "video" && item.videoFile && length !== (item.length ?? null) ? { length } : {}),
       showFrom: draft.showFrom || null, showUntil: draft.showUntil || null, timeFrom: draft.timeFrom || null, timeUntil: draft.timeUntil || null,
       screenIds: draft.screenIds,
     }, () => setEditing(null));
@@ -126,6 +158,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     setMessage(failed.length
       ? { tone: "error", text: `${done} gambar ditambahkan, ${failed.length} gagal. ${failed.join(" ")}` }
       : { tone: "success", text: `${done} gambar ditambahkan di urutan terakhir.` });
+    if (!failed.length) setAdding(null);
   }
 
   /** A birthday greeting's photo: made smaller in the browser, sent to storage, then kept as that row's picture. */
@@ -156,17 +189,18 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     try {
       const before = new Set(items.map(item => item.id));
       const added = await adminRequest<TvAdmin>(praWamTvApi.items, { method: "POST", body: JSON.stringify({ kind: "ultah", ...bday, date: bday.date || null }) });
-      let data = added.data ?? list, text = added.message;
+      let data = added.data ?? list, said = added.message;
       const made = data.items?.find(item => item.kind === "ultah" && !before.has(item.id));
       if (bdayPhoto && made) {
-        try { data = await uploadSlide(bdayPhoto.file, made.id, bdayPhoto.cut); text = "Ucapan ulang tahun ditambahkan dengan fotonya."; }
-        catch (error) { text = `Ucapan ditambahkan, tetapi fotonya belum tersimpan: ${errorMessage(error)} Unggah lagi lewat Atur.`; }
+        try { data = await uploadSlide(bdayPhoto.file, made.id, bdayPhoto.cut); said = "Ucapan ulang tahun ditambahkan dengan fotonya."; }
+        catch (error) { said = `Ucapan ditambahkan, tetapi fotonya belum tersimpan: ${errorMessage(error)} Unggah lagi dengan membuka ucapannya.`; }
       }
       setList(data);
-      setMessage({ tone: "success", text });
+      setMessage({ tone: "success", text: said });
       setBday(value => ({ ...value, title: "", call: "" }));
       if (bdayPhoto) URL.revokeObjectURL(bdayPhoto.shown);
       setBdayPhoto(null);
+      setAdding(null);
     } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
     finally { setBusy(null); }
   }
@@ -178,14 +212,17 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     setBusy("unggah-video"); setMessage(null); setProgress("Menyiapkan unggahan…");
     try {
       const agreed = { mime: file.type as TvVideoMime, size: file.size };
+      // The video's length, read here: the board for old TVs stays on the video for that long.
+      const length = await lengthOf(file);
       const start = await adminRequest<{ key: string; uploadUrl: string; token: string }>(praWamTvApi.videoStart, { method: "POST", body: JSON.stringify(agreed) });
       const problem = putProblem(await putFile(start.data!.uploadUrl, file, agreed.mime, share => setProgress(`Mengunggah ${file.name}: ${Math.round(share * 100)}%`)));
       if (problem) throw new AdminApiError(problem);
       setProgress("Memeriksa berkas…");
-      const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 80);
-      const done = await adminRequest<TvAdmin>(praWamTvApi.videoConfirm, { method: "POST", body: JSON.stringify({ ...agreed, key: start.data!.key, token: start.data!.token, title }) });
+      const named = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 80);
+      const done = await adminRequest<TvAdmin>(praWamTvApi.videoConfirm, { method: "POST", body: JSON.stringify({ ...agreed, key: start.data!.key, token: start.data!.token, title: named, ...(length ? { length } : {}) }) });
       if (done.data) setList(done.data);
-      setMessage({ tone: "success", text: done.message });
+      setMessage({ tone: "success", text: `${done.message} Buka videonya di daftar untuk menyalakan suaranya.` });
+      setAdding(null);
     } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
     finally { setBusy(null); setProgress(""); }
   }
@@ -199,12 +236,26 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   const missing = tvTemplateKinds.filter(kind => !items.some(item => item.kind === kind));
   const pictures = items.filter(item => item.kind === "gambar").length;
   const active = items.filter(item => item.active).length;
+  const rows = items.map((item, index) => ({ item, index })).filter(({ item }) => shown === "semua" || (shown === "tayang") === item.active);
+  const closeAdd = () => { if (!busy) setAdding(null); };
+  const refused = message?.tone === "error" ? message.text : null;
+
+  // The open row, for its sheet.
+  const open = editing ? items.find(item => item.id === editing.id) : undefined;
+  const edit = open && editing ? editing.draft : null;
+  const take = open && editing ? editing.take : null;
+  const change = (more: Partial<Draft>) => { if (editing) setEditing({ ...editing, draft: { ...editing.draft, ...more } }); };
+  const seconds = edit && !SECONDS.includes(edit.seconds) ? [...SECONDS, edit.seconds].sort((a, b) => a - b) : SECONDS;
+  const lengthBad = !!edit && !!edit.length.trim() && videoSeconds(Number(edit.length)) === null;
 
   return <>
     {confirmDialog}
     <PageHeader crumbs={crumbs} title={title} subtitle="Semua yang ditayangkan TV, berurutan dari atas lalu mengulang."
-      actions={<ConsoleButtonLink href={tvAdminPath.preview} target="_blank" rel="noopener" variant="primary" icon={<ExternalLink size={18} aria-hidden />}>Pratinjau</ConsoleButtonLink>} />
-    <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
+      actions={<>
+        <ConsoleButtonLink href={tvAdminPath.preview} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Lihat seperti di TV</ConsoleButtonLink>
+        <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} onClick={() => { setMessage(null); setAdding("pilih"); }}>Tambah tayangan</ConsoleButton>
+      </>} />
+    <div aria-live="polite">{message && !editing && !adding && <Notice tone={message.tone}>{message.text}</Notice>}</div>
     {list.takeover && taken && <div className={css.plTaking} role="status">
       <Zap size={20} aria-hidden />
       <p><strong>{nameOf(taken)}</strong> sedang mengambil alih {takenWhere}, {list.takeover.until ? `sampai ${clockLabel(wibTime(list.takeover.until))} WIB` : "sampai dihentikan"}. Tayangan lain menunggu.</p>
@@ -212,152 +263,58 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     </div>}
     {list.items && !list.welcomeReady && <Notice tone="warning">Sambutan tamu dan Tayangkan sekarang menunggu migrasi 202611100008_pw_tv_welcome.sql. Tayangan lain berjalan seperti biasa.</Notice>}
 
-    <section className={akun.section} aria-labelledby="tv-daftar">
-      <SectionToolbar title={<span id="tv-daftar">Daftar tayangan</span>} count={`${active} tayang dari ${items.length}`} />
-      {items.length === 0 ? <p className={akun.empty}>Daftar tayangan kosong, jadi TV menulis &quot;Belum ada yang ditayangkan&quot;. Tambahkan tayangan di bawah.</p>
-        : <ol className={css.plGrid} aria-label="Tayangan, urut tayang">{items.map((item, index) => {
-          const Icon = icons[item.kind];
+    <section className={akun.section} aria-label="Daftar tayangan">
+      <div className={css.plBar}>
+        <FilterChips label="Tampilkan" value={shown} onChange={setShown} chips={[
+          { value: "semua", label: "Semua", count: items.length },
+          { value: "tayang", label: "Tayang", count: active },
+          { value: "sembunyi", label: "Disembunyikan", count: items.length - active },
+        ]} />
+        <p className={css.plHint}>{shown === "semua" ? "Ketuk satu tayangan untuk mengaturnya. Panah mengubah urutan tayang." : "Urutan diubah di tampilan Semua."}</p>
+      </div>
+      {items.length === 0 ? <div className={css.plEmpty}>
+        <p>Belum ada tayangan, jadi TV menulis &quot;Belum ada yang ditayangkan&quot;.</p>
+        <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} onClick={() => setAdding("pilih")}>Tambah tayangan pertama</ConsoleButton>
+      </div>
+        : rows.length === 0 ? <p className={akun.empty}>{shown === "tayang" ? "Tidak ada tayangan yang sedang tayang." : "Tidak ada tayangan yang disembunyikan."}</p>
+        : <ol className={css.plList} aria-label="Tayangan, urut tayang">{rows.map(({ item, index }) => {
           const name = nameOf(item);
           const isTaking = list.takeover?.itemId === item.id;
-          const days = scheduleLabel({ ...item, screenIds: [] }, screenName) || "Setiap hari, sepanjang hari";
-          const screens = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
+          const days = scheduleLabel({ ...item, screenIds: [] }, screenName) || "Setiap hari";
+          const where = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
+          const long = item.kind === "video" ? "Sampai video selesai" : `${item.seconds} detik`;
+          const line = [sourceOf(item.kind), long, where, days,
+            item.kind === "video" ? (item.sound ? "Dengan suara" : "Tanpa suara") : "",
+            item.kind === "gambar" && list.rowsReady && item.strip ? "Baris foto bawah" : ""].filter(Boolean).join(" · ");
           const note = item.kind === "sambutan" ? (list.welcomes.length ? `Hari ini: ${list.welcomes.join(", ")}` : "Tidak ada kunjungan terbit hari ini, jadi dilewati.")
             : item.kind === "ultah" ? [item.call && `Happy Birthday ${item.call}`, item.slideId ? "" : "Belum ada foto."].filter(Boolean).join(" · ")
-            : isTyped(item.kind) ? item.body : item.kind === "video" ? (item.videoFile ? "Berkas video yang diunggah" : youtubeWatch(item.body)) : isTemplateKind(item.kind) ? tvItemKindHints[item.kind] : "";
-          const open = editing?.id === item.id ? editing : null;
-          const edit = open?.draft ?? null, take = open?.take ?? null;
-          const change = (more: Partial<Draft>) => { if (open) setEditing({ ...open, draft: { ...open.draft, ...more } }); };
-          const seconds = edit && !SECONDS.includes(edit.seconds) ? [...SECONDS, edit.seconds].sort((a, b) => a - b) : SECONDS;
-          const saving = busy === `baris-${item.id}`;
-          return <li key={item.id} className={css.plCard} data-off={!item.active} data-open={!!open}>
-            {/* What it looks like on a TV, at a glance: the picture itself, or a drawing of the slide. */}
-            <div className={css.plShot}>
-              {item.kind === "gambar" && item.slideId
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={320} height={180} />
-                : <TvPreview kind={item.kind} title={edit?.title ?? item.title} body={item.videoFile ? "" : edit?.body ?? item.body} design={edit?.design ?? item.design}
-                  call={edit?.call ?? item.call} date={edit?.date ?? item.date} photo={item.kind === "ultah" && item.slideId ? praWamTvApi.slideImage(item.slideId) : ""} />}
-            </div>
-            <div className={css.plHead}>
-              <span className={css.plKind} aria-hidden="true"><Icon size={18} /></span>
-              <p className={css.plOrder}><span aria-label={`Urutan ${index + 1}`}>{index + 1}</span>{sourceOf(item.kind)}</p>
-              {isTaking ? <Pill tone="warn">Mengambil alih</Pill> : <Pill tone={item.active ? "ok" : "neutral"}>{item.active ? "Tayang" : "Disembunyikan"}</Pill>}
-            </div>
-            <div className={css.plText}>
-              <h3 className={css.plName}>{name}</h3>
-              {note && <p className={css.plNote}>{note}</p>}
-            </div>
-            <dl className={css.plFacts}>
-              <div><dt>Durasi</dt><dd>{item.kind === "video" ? "Sampai video selesai" : `${item.seconds} detik`}</dd></div>
-              <div><dt>Tayang di</dt><dd>{screens}</dd></div>
-              {item.kind === "gambar" && list.rowsReady && <div><dt>Di TV dua baris</dt><dd>{item.strip ? "Baris foto bawah" : "Bagian atas"}</dd></div>}
-              <div className={css.plWide}><dt>Jadwal</dt><dd>{days}</dd></div>
-            </dl>
-            <div className={css.plFoot}>
-              <div className={css.plMove}>
-                <button type="button" className={css.plStep} disabled={!!busy || index === 0} aria-label={`Naikkan ${name}`} title="Naikkan urutan" onClick={() => void move(index, -1)}><ArrowUp size={20} aria-hidden /></button>
-                <button type="button" className={css.plStep} disabled={!!busy || index === items.length - 1} aria-label={`Turunkan ${name}`} title="Turunkan urutan" onClick={() => void move(index, 1)}><ArrowDown size={20} aria-hidden /></button>
-              </div>
-              <ConsoleButton icon={open ? <X size={18} aria-hidden /> : <SlidersHorizontal size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!open} aria-label={`${open ? "Tutup" : "Atur"} ${name}`}
-                onClick={() => setEditing(open ? null : { id: item.id, draft: draftOf(item), take: null })}>{open ? "Tutup" : "Atur"}</ConsoleButton>
-            </div>
-
-            {open && edit && <form className={css.plDetail} onSubmit={event => { event.preventDefault(); void save(item, edit); }}>
-              <div className={css.plCols}>
-                <fieldset className={css.plGroup} disabled={!!busy}>
-                  <legend>Isi dan durasi</legend>
-                  {(isTyped(item.kind) || item.kind === "gambar" || item.kind === "video") && <div className={css.plField}>
-                    <label htmlFor={`judul-${item.id}`}>{item.kind === "teks" ? "Judul" : item.kind === "tamu" ? "Nama tamu" : item.kind === "ultah" ? "Nama lengkap" : item.kind === "video" ? "Nama video" : "Nama gambar"}</label>
-                    <input id={`judul-${item.id}`} value={edit.title} maxLength={80} onChange={event => change({ title: event.target.value })} />
-                  </div>}
-                  {item.kind === "ultah" && <div className={css.plFields}>
-                    <div className={css.plField}><label htmlFor={`panggilan-${item.id}`}>Nama panggilan</label><input id={`panggilan-${item.id}`} value={edit.call} maxLength={40} placeholder="Misalnya Pak Contoh" onChange={event => change({ call: event.target.value })} /></div>
-                    <div className={css.plField}><label htmlFor={`lahir-${item.id}`}>Tanggal ulang tahun</label><input id={`lahir-${item.id}`} type="date" value={edit.date} onChange={event => change({ date: event.target.value })} /></div>
-                  </div>}
-                  {item.kind === "ultah" && <div className={css.plSubmit}>
-                    <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => { photoFor.current = item.id; photoInput.current?.click(); }}>{busy === `foto-${item.id}` ? "Memotong dan mengunggah…" : item.slideId ? "Ganti foto" : "Unggah foto"}</ConsoleButton>
-                    <span className={css.plHint}>Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis di browser ini (beberapa detik; perlu internet saat pertama).</span>
-                  </div>}
-                  {isTyped(item.kind) && <div className={css.plField}>
-                    <label htmlFor={`isi-${item.id}`}>{item.kind === "tamu" || item.kind === "ultah" ? "Ucapan" : "Isi"}</label>
-                    <textarea id={`isi-${item.id}`} rows={3} value={edit.body} maxLength={600} onChange={event => change({ body: event.target.value })} />
-                  </div>}
-                  {isTemplateKind(item.kind) && <p className={css.plHint}>{tvItemKindHints[item.kind]}</p>}
-                  {isWelcome(item.kind) && <div className={css.plField}>
-                    <label htmlFor={`desain-${item.id}`}>Desain layar</label>
-                    <select id={`desain-${item.id}`} value={edit.design} onChange={event => change({ design: event.target.value as TvWelcomeDesign })}>
-                      {designsFor(item.kind).map(design => <option key={design} value={design}>{tvWelcomeDesignLabels[design]}</option>)}
-                    </select>
-                  </div>}
-                  {item.kind === "gambar" && list.rowsReady && <div className={css.plField}>
-                    <label htmlFor={`baris-foto-${item.id}`}>Di TV dua baris</label>
-                    <select id={`baris-foto-${item.id}`} value={edit.strip ? "bawah" : "atas"} onChange={event => change({ strip: event.target.value === "bawah" })}>
-                      <option value="atas">Bagian atas, bergantian dengan tayangan lain</option>
-                      <option value="bawah">Baris foto bawah, berjalan terus</option>
-                    </select>
-                    <p className={css.plHint}>Hanya berlaku di TV yang susunannya dua baris (Layar TV). Di TV layar penuh gambar ini tayang seperti biasa.</p>
-                  </div>}
-                  {item.kind === "video" ? <p className={css.plHint}>Diputar tanpa suara sampai selesai, lalu TV lanjut ke tayangan berikutnya. Untuk mengganti videonya, hapus tayangan ini dan tambahkan yang baru.</p>
-                  : <div className={css.plField}>
-                    <label htmlFor={`durasi-${item.id}`}>Durasi tayang</label>
-                    <select id={`durasi-${item.id}`} value={edit.seconds} onChange={event => change({ seconds: Number(event.target.value) })}>
-                      {seconds.map(value => <option key={value} value={value}>{value} detik</option>)}
-                    </select>
-                  </div>}
-                </fieldset>
-
-                <fieldset className={css.plGroup} disabled={!!busy}>
-                  <legend>Jadwal dan TV</legend>
-                  <div className={css.plFields}>
-                    <div className={css.plField}><label htmlFor={`dari-${item.id}`}>Mulai tanggal</label><input id={`dari-${item.id}`} type="date" value={edit.showFrom} onChange={event => change({ showFrom: event.target.value })} /></div>
-                    <div className={css.plField}><label htmlFor={`sampai-${item.id}`}>Sampai tanggal</label><input id={`sampai-${item.id}`} type="date" value={edit.showUntil} min={edit.showFrom || undefined} onChange={event => change({ showUntil: event.target.value })} /></div>
-                    <div className={css.plField}><label htmlFor={`jam-dari-${item.id}`}>Dari jam (WIB)</label><input id={`jam-dari-${item.id}`} type="time" value={edit.timeFrom} onChange={event => change({ timeFrom: event.target.value })} /></div>
-                    <div className={css.plField}><label htmlFor={`jam-sampai-${item.id}`}>Sampai jam (WIB)</label><input id={`jam-sampai-${item.id}`} type="time" value={edit.timeUntil} onChange={event => change({ timeUntil: event.target.value })} /></div>
-                  </div>
-                  <p className={css.plHint}>Kosongkan untuk tayang tanpa batas. Di luar jadwalnya, tayangan dilewati dan muncul lagi dengan sendirinya.</p>
-                  {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Tayang di TV">
-                    {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
-                      <input type="checkbox" checked={edit.screenIds.includes(screen.id)}
-                        onChange={event => change({ screenIds: event.target.checked ? [...edit.screenIds, screen.id] : edit.screenIds.filter(id => id !== screen.id) })} />
-                      {screen.name}
-                    </label>)}
-                  </div>}
-                  <p className={css.plHint}>{list.screens.length === 0 ? "Belum ada TV beralamat sendiri, jadi tayangan ini untuk semua TV."
-                    : edit.screenIds.length === 0 ? "Tidak ada TV yang dicentang: tayang di semua TV, termasuk alamat umum /tv." : "Hanya di TV yang dicentang. Alamat umum /tv tidak menayangkannya."}</p>
-                </fieldset>
-              </div>
-
-              <div className={css.plActions}>
-                <ConsoleButton type="submit" variant="primary" disabled={!!busy}>{saving ? "Menyimpan…" : "Simpan"}</ConsoleButton>
-                {list.welcomeReady && <ConsoleButton icon={<Zap size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!take} onClick={() => setEditing({ ...open, take: take ? null : { minutes: 15, screenIds: [] } })}>Tayangkan sekarang</ConsoleButton>}
-                <ConsoleButton icon={item.active ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />} disabled={!!busy} onClick={() => void patch(item, { active: !item.active })}>{item.active ? "Sembunyikan" : "Tayangkan lagi"}</ConsoleButton>
-                <ConsoleButton className={css.plDanger} icon={<Trash2 size={18} aria-hidden />} disabled={!!busy} onClick={() => void remove(item)}>Hapus</ConsoleButton>
-              </div>
-
-              {take && <div className={css.plTake} role="group" aria-label="Tayangkan sekarang">
-                <p className={css.plHint}><strong>{name}</strong> tayang sendirian di TV yang dipilih, menggantikan daftar tayangan, lalu TV kembali ke daftar dengan sendirinya.{item.kind === "sambutan" && !list.welcomes.length ? " Hari ini tidak ada kunjungan terbit, jadi TV akan menulis belum ada yang ditayangkan." : ""}{list.takeover ? " Ini menggantikan tayangan yang sedang mengambil alih." : ""}</p>
-                <div className={css.plFields}>
-                  <div className={css.plField}>
-                    <label htmlFor={`lama-${item.id}`}>Lama</label>
-                    <select id={`lama-${item.id}`} value={take.minutes ?? ""} disabled={!!busy} onChange={event => setEditing({ ...open, take: { ...take, minutes: event.target.value ? Number(event.target.value) : null } })}>
-                      {tvTakeoverMinutes.map(value => <option key={value} value={value}>{value} menit</option>)}
-                      <option value="">Sampai dihentikan</option>
-                    </select>
-                  </div>
-                </div>
-                {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Ambil alih di TV">
-                  {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
-                    <input type="checkbox" checked={take.screenIds.includes(screen.id)} disabled={!!busy}
-                      onChange={event => setEditing({ ...open, take: { ...take, screenIds: event.target.checked ? [...take.screenIds, screen.id] : take.screenIds.filter(id => id !== screen.id) } })} />
-                    {screen.name}
-                  </label>)}
-                </div>}
-                <p className={css.plHint}>{take.screenIds.length === 0 ? "Semua TV, termasuk alamat umum /tv." : "Hanya TV yang dicentang. TV lain dan alamat umum /tv tetap memutar daftar tayangan."}</p>
-                <div className={css.plActions}>
-                  <ConsoleButton variant="primary" icon={<Zap size={18} aria-hidden />} disabled={!!busy} onClick={() => void takeOver(item, take)}>{busy === "ambil-alih" ? "Memulai…" : "Mulai tayangkan"}</ConsoleButton>
-                </div>
-              </div>}
-            </form>}
+            : isTyped(item.kind) ? item.body : item.kind === "video" && !item.videoFile ? youtubeWatch(item.body) : "";
+          return <li key={item.id} className={css.plRow} data-off={!item.active}>
+            <span className={css.plOrder} aria-label={`Urutan ${index + 1}`}>{index + 1}</span>
+            <button type="button" className={css.plOpen} aria-label={`Atur ${name}`} aria-describedby={`baris-${item.id}`} disabled={!!busy}
+              onClick={() => { setMessage(null); setEditing({ id: item.id, draft: draftOf(item), take: null }); }}>
+              {/* What it looks like on a TV, at a glance: the picture itself, or a drawing of the slide. */}
+              <span className={css.plShot}>
+                {item.kind === "gambar" && item.slideId
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={160} height={90} />
+                  : <TvPreview kind={item.kind} title={item.title} body={item.videoFile ? "" : item.body} design={item.design}
+                    call={item.call} date={item.date} photo={item.kind === "ultah" && item.slideId ? praWamTvApi.slideImage(item.slideId) : ""} />}
+              </span>
+              <span className={css.plText} id={`baris-${item.id}`}>
+                <strong className={css.plName}>{name}</strong>
+                <span className={css.plLine}>{line}</span>
+                {note && <span className={css.plNote}>{note}</span>}
+              </span>
+              <span className={css.plState}>
+                {isTaking ? <Pill tone="warn">Mengambil alih</Pill> : <Pill tone={item.active ? "ok" : "neutral"}>{item.active ? "Tayang" : "Disembunyikan"}</Pill>}
+                <ChevronRight size={20} aria-hidden />
+              </span>
+            </button>
+            {shown === "semua" && <div className={css.plMove}>
+              <button type="button" className={css.plStep} disabled={!!busy || index === 0} aria-label={`Naikkan ${name}`} title="Naikkan urutan" onClick={() => void move(index, -1)}><ArrowUp size={20} aria-hidden /></button>
+              <button type="button" className={css.plStep} disabled={!!busy || index === items.length - 1} aria-label={`Turunkan ${name}`} title="Turunkan urutan" onClick={() => void move(index, 1)}><ArrowDown size={20} aria-hidden /></button>
+            </div>}
           </li>;
         })}</ol>}
     </section>
@@ -365,15 +322,170 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     <input ref={photoInput} className={css.plFile} type="file" accept={ACCEPT} tabIndex={-1} aria-hidden="true"
       onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file && photoFor.current) void uploadPhoto(photoFor.current, file); }} />
 
-    <section className={akun.section} aria-labelledby="tv-tambah">
-      <SectionToolbar title={<span id="tv-tambah">Tambah tayangan</span>} />
-      {!list.storageReady && <Notice tone="warning">Penyimpanan gambar belum disiapkan (R2). Template dan teks tetap bisa ditayangkan; gambar belum bisa diunggah.</Notice>}
-      <div className={css.plAdd}>
-        <div className={css.plPick}><SegmentedControl label="Jenis tayangan yang ditambahkan" options={adds} value={adding} onChange={setAdding} /></div>
+    {/* One tayangan, opened: its words, when and where it plays, a video's sound, and the other actions. */}
+    {open && edit && editing && <SheetError.Provider value={refused}>
+      <Sheet title={nameOf(open)} subtitle={`${sourceOf(open.kind)} · ${open.active ? "Tayang" : "Disembunyikan"}`} busy={!!busy} onClose={() => setEditing(null)} onSubmit={() => { if (!lengthBad) void save(open, edit); }}
+        footer={<>
+          <ConsoleButton disabled={!!busy} onClick={() => setEditing(null)}>Batal</ConsoleButton>
+          <ConsoleButton type="submit" variant="primary" disabled={!!busy || lengthBad}>{busy === `baris-${open.id}` ? "Menyimpan…" : "Simpan"}</ConsoleButton>
+        </>}>
+        <div className={css.plPeek}>
+          {open.kind === "gambar" && open.slideId
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={praWamTvApi.slideImage(open.slideId)} alt="" width={320} height={180} />
+            : <TvPreview kind={open.kind} title={edit.title} body={open.videoFile ? "" : edit.body} design={edit.design}
+              call={edit.call} date={edit.date} photo={open.kind === "ultah" && open.slideId ? praWamTvApi.slideImage(open.slideId) : ""} />}
+        </div>
+
+        <fieldset className={css.plGroup} disabled={!!busy}>
+          <legend>Isi</legend>
+          {(isTyped(open.kind) || open.kind === "gambar" || open.kind === "video") && <div className={css.plField}>
+            <label htmlFor={`judul-${open.id}`}>{open.kind === "teks" ? "Judul" : open.kind === "tamu" ? "Nama tamu" : open.kind === "ultah" ? "Nama lengkap" : open.kind === "video" ? "Nama video" : "Nama gambar"}</label>
+            <input id={`judul-${open.id}`} value={edit.title} maxLength={80} onChange={event => change({ title: event.target.value })} />
+          </div>}
+          {open.kind === "ultah" && <div className={css.plFields}>
+            <div className={css.plField}><label htmlFor={`panggilan-${open.id}`}>Nama panggilan</label><input id={`panggilan-${open.id}`} value={edit.call} maxLength={40} placeholder="Misalnya Pak Contoh" onChange={event => change({ call: event.target.value })} /></div>
+            <div className={css.plField}><label htmlFor={`lahir-${open.id}`}>Tanggal ulang tahun</label><input id={`lahir-${open.id}`} type="date" value={edit.date} onChange={event => change({ date: event.target.value })} /></div>
+          </div>}
+          {open.kind === "ultah" && <div className={css.plSubmit}>
+            <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => { photoFor.current = open.id; photoInput.current?.click(); }}>{busy === `foto-${open.id}` ? "Memotong dan mengunggah…" : open.slideId ? "Ganti foto" : "Unggah foto"}</ConsoleButton>
+            <span className={css.plHint}>Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis (beberapa detik).</span>
+          </div>}
+          {isTyped(open.kind) && <div className={css.plField}>
+            <label htmlFor={`isi-${open.id}`}>{open.kind === "tamu" || open.kind === "ultah" ? "Ucapan" : "Isi"}</label>
+            <textarea id={`isi-${open.id}`} rows={3} value={edit.body} maxLength={600} onChange={event => change({ body: event.target.value })} />
+          </div>}
+          {isTemplateKind(open.kind) && <p className={css.plHint}>{tvItemKindHints[open.kind]}</p>}
+          {isWelcome(open.kind) && <div className={css.plField}>
+            <label htmlFor={`desain-${open.id}`}>Desain layar</label>
+            <select id={`desain-${open.id}`} value={edit.design} onChange={event => change({ design: event.target.value as TvWelcomeDesign })}>
+              {designsFor(open.kind).map(design => <option key={design} value={design}>{tvWelcomeDesignLabels[design]}</option>)}
+            </select>
+          </div>}
+          {open.kind === "gambar" && list.rowsReady && <div className={css.plField}>
+            <label htmlFor={`baris-foto-${open.id}`}>Di TV dua baris</label>
+            <select id={`baris-foto-${open.id}`} value={edit.strip ? "bawah" : "atas"} onChange={event => change({ strip: event.target.value === "bawah" })}>
+              <option value="atas">Bagian atas, bergantian dengan tayangan lain</option>
+              <option value="bawah">Baris foto bawah, berjalan terus</option>
+            </select>
+            <p className={css.plHint}>Hanya berlaku di TV yang susunannya dua baris (Layar TV).</p>
+          </div>}
+          {open.kind === "video" ? <p className={css.plHint}>Diputar sampai selesai, lalu TV lanjut ke tayangan berikutnya. Untuk mengganti videonya, hapus tayangan ini dan tambahkan yang baru.</p>
+          : <div className={css.plField}>
+            <label htmlFor={`durasi-${open.id}`}>Lama tayang</label>
+            <select id={`durasi-${open.id}`} value={edit.seconds} onChange={event => change({ seconds: Number(event.target.value) })}>
+              {seconds.map(value => <option key={value} value={value}>{value} detik</option>)}
+            </select>
+          </div>}
+        </fieldset>
+
+        {open.kind === "video" && <fieldset className={css.plGroup} disabled={!!busy}>
+          <legend><Volume2 size={18} aria-hidden />Suara</legend>
+          <div className={css.plChoice} role="radiogroup" aria-label="Suara video">
+            <label className={css.plRadio}><input type="radio" name={`suara-${open.id}`} checked={!edit.sound} onChange={() => change({ sound: false })} /><span><strong>Tanpa suara</strong>Aman untuk semua TV.</span></label>
+            <label className={css.plRadio}><input type="radio" name={`suara-${open.id}`} checked={edit.sound} onChange={() => change({ sound: true })} /><span><strong>Dengan suara</strong>TV mencoba memutar suaranya.</span></label>
+          </div>
+          {edit.sound && <p className={css.plHint}>Sebagian TV menolak suara yang tidak diminta lewat remote. Di TV seperti itu video tetap jalan tanpa suara, dan TV menulis caranya: tekan OK di remote sekali. {list.soundReady ? "TV yang disetel senyap di Layar TV tetap tanpa suara." : ""}</p>}
+          {open.videoFile ? <div className={css.plField}>
+            <label htmlFor={`lama-video-${open.id}`}>Lama video (detik)</label>
+            <input id={`lama-video-${open.id}`} type="number" inputMode="numeric" min={tvVideoLength.least} max={tvVideoLength.most} value={edit.length} placeholder="Misalnya 95" aria-describedby={`lama-video-ket-${open.id}`} aria-invalid={lengthBad || undefined}
+              onChange={event => change({ length: event.target.value })} />
+            <p id={`lama-video-ket-${open.id}`} className={css.plHint} data-bad={lengthBad || undefined}>{lengthBad ? "Isi angka antara 3 dan 1.800 detik, atau kosongkan."
+              : "Hanya untuk TV lama (alamat /lite): TV itu pindah ke tayangan berikutnya setelah waktu ini. Terisi sendiri saat video diunggah. Kalau kosong, TV lama melewati video ini."}</p>
+          </div> : <p className={css.plHint}>TV lama (alamat /lite) melewati video YouTube. Untuk TV lama, unggah videonya sebagai berkas.</p>}
+        </fieldset>}
+
+        <fieldset className={css.plGroup} disabled={!!busy}>
+          <legend>Kapan tayang</legend>
+          <div className={css.plFields}>
+            <div className={css.plField}><label htmlFor={`dari-${open.id}`}>Mulai tanggal</label><input id={`dari-${open.id}`} type="date" value={edit.showFrom} onChange={event => change({ showFrom: event.target.value })} /></div>
+            <div className={css.plField}><label htmlFor={`sampai-${open.id}`}>Sampai tanggal</label><input id={`sampai-${open.id}`} type="date" value={edit.showUntil} min={edit.showFrom || undefined} onChange={event => change({ showUntil: event.target.value })} /></div>
+            <div className={css.plField}><label htmlFor={`jam-dari-${open.id}`}>Dari jam (WIB)</label><input id={`jam-dari-${open.id}`} type="time" value={edit.timeFrom} onChange={event => change({ timeFrom: event.target.value })} /></div>
+            <div className={css.plField}><label htmlFor={`jam-sampai-${open.id}`}>Sampai jam (WIB)</label><input id={`jam-sampai-${open.id}`} type="time" value={edit.timeUntil} onChange={event => change({ timeUntil: event.target.value })} /></div>
+          </div>
+          <p className={css.plHint}>Kosongkan semuanya untuk tayang terus. Di luar waktunya, tayangan dilewati dan muncul lagi dengan sendirinya.</p>
+        </fieldset>
+
+        <fieldset className={css.plGroup} disabled={!!busy}>
+          <legend>Di TV mana</legend>
+          {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Tayang di TV">
+            {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
+              <input type="checkbox" checked={edit.screenIds.includes(screen.id)}
+                onChange={event => change({ screenIds: event.target.checked ? [...edit.screenIds, screen.id] : edit.screenIds.filter(id => id !== screen.id) })} />
+              {screen.name}
+            </label>)}
+          </div>}
+          <p className={css.plHint}>{list.screens.length === 0 ? "Belum ada TV beralamat sendiri, jadi tayangan ini untuk semua TV."
+            : edit.screenIds.length === 0 ? "Tidak ada yang dicentang: tayang di semua TV." : "Hanya di TV yang dicentang."}</p>
+        </fieldset>
+
+        <div className={css.plGroup} role="group" aria-label="Tindakan lain">
+          <p className={css.plLegend}>Tindakan lain</p>
+          <div className={css.plActions}>
+            {list.welcomeReady && <ConsoleButton icon={<Zap size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!take} onClick={() => setEditing({ ...editing, take: take ? null : { minutes: 15, screenIds: [] } })}>Tayangkan sekarang</ConsoleButton>}
+            <ConsoleButton icon={open.active ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />} disabled={!!busy} onClick={() => void patch(open, { active: !open.active })}>{open.active ? "Sembunyikan" : "Tayangkan lagi"}</ConsoleButton>
+            <ConsoleButton className={css.plDanger} icon={<Trash2 size={18} aria-hidden />} disabled={!!busy} onClick={() => void remove(open)}>Hapus</ConsoleButton>
+          </div>
+          {take && <div className={css.plTake} role="group" aria-label="Tayangkan sekarang">
+            <p className={css.plHint}><strong>{nameOf(open)}</strong> tayang sendirian di TV yang dipilih, menggantikan daftar tayangan, lalu TV kembali ke daftar dengan sendirinya.{open.kind === "sambutan" && !list.welcomes.length ? " Hari ini tidak ada kunjungan terbit, jadi TV akan menulis belum ada yang ditayangkan." : ""}{list.takeover ? " Ini menggantikan tayangan yang sedang mengambil alih." : ""}</p>
+            <div className={css.plField}>
+              <label htmlFor={`lama-${open.id}`}>Lama</label>
+              <select id={`lama-${open.id}`} value={take.minutes ?? ""} disabled={!!busy} onChange={event => setEditing({ ...editing, take: { ...take, minutes: event.target.value ? Number(event.target.value) : null } })}>
+                {tvTakeoverMinutes.map(value => <option key={value} value={value}>{value} menit</option>)}
+                <option value="">Sampai dihentikan</option>
+              </select>
+            </div>
+            {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Ambil alih di TV">
+              {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
+                <input type="checkbox" checked={take.screenIds.includes(screen.id)} disabled={!!busy}
+                  onChange={event => setEditing({ ...editing, take: { ...take, screenIds: event.target.checked ? [...take.screenIds, screen.id] : take.screenIds.filter(id => id !== screen.id) } })} />
+                Hanya {screen.name}
+              </label>)}
+            </div>}
+            <p className={css.plHint}>{take.screenIds.length === 0 ? "Semua TV." : "Hanya TV yang dicentang. TV lain tetap memutar daftar tayangan."}</p>
+            <div className={css.plActions}>
+              <ConsoleButton variant="primary" icon={<Zap size={18} aria-hidden />} disabled={!!busy} onClick={() => void takeOver(open, take)}>{busy === "ambil-alih" ? "Memulai…" : "Mulai tayangkan"}</ConsoleButton>
+            </div>
+          </div>}
+        </div>
+      </Sheet>
+    </SheetError.Provider>}
+
+    {/* Tambah tayangan: first what to add, in plain words; then that kind's own short form. */}
+    {adding && <SheetError.Provider value={refused}>
+      <Sheet title={adding === "pilih" ? "Tambah tayangan" : `Tambah ${adds.find(kind => kind.value === adding)!.label.toLowerCase()}`}
+        subtitle={adding === "pilih" ? "Apa yang ingin ditampilkan di TV?" : undefined} busy={!!busy} onClose={closeAdd}
+        onSubmit={adding === "tamu" ? () => void add("tamu", guest, () => { setGuest({ title: "", body: "" }); setAdding(null); })
+          : adding === "ultah" ? () => void addBirthday()
+          : adding === "teks" ? () => void add("teks", text, () => { setText({ title: "", body: "" }); setAdding(null); })
+          : adding === "video" ? () => { if (youtubeId(clip.body)) void add("video", clip, () => { setClip({ title: "", body: "" }); setAdding(null); }); }
+          : undefined}
+        footer={<>
+          {adding !== "pilih" && <ConsoleButton className={css.plPush} icon={<ArrowLeft size={18} aria-hidden />} disabled={!!busy} onClick={() => { setMessage(null); setAdding("pilih"); }}>Jenis lain</ConsoleButton>}
+          {(adding === "pilih" || adding === "template" || adding === "gambar") && <ConsoleButton disabled={!!busy} onClick={closeAdd}>Selesai</ConsoleButton>}
+          {adding === "tamu" && <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !guest.title.trim() || !list.welcomeReady}>{busy === "tambah-tamu" ? "Menambahkan…" : "Tambah sambutan"}</ConsoleButton>}
+          {adding === "ultah" && <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !bday.title.trim()}>{busy === "tambah-ultah" ? "Menambahkan…" : "Tambah ucapan"}</ConsoleButton>}
+          {adding === "teks" && <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || (!text.title.trim() && !text.body.trim())}>{busy === "tambah-teks" ? "Menambahkan…" : "Tambah tulisan"}</ConsoleButton>}
+          {adding === "video" && <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !youtubeId(clip.body)}>{busy === "tambah-video" ? "Menambahkan…" : "Tambah video"}</ConsoleButton>}
+        </>}>
+        {!list.storageReady && (adding === "pilih" || adding === "gambar" || adding === "video") && <Notice tone="warning">Penyimpanan berkas belum disiapkan, jadi gambar dan berkas video belum bisa diunggah. Yang lain tetap bisa.</Notice>}
+
+        {adding === "pilih" && <ul className={css.plKinds}>
+          {adds.map(kind => {
+            const Icon = kind.icon;
+            return <li key={kind.value}>
+              <button type="button" className={css.plKindTile} onClick={() => { setMessage(null); setAdding(kind.value); }}>
+                <span className={css.plKind} aria-hidden="true"><Icon size={22} /></span>
+                <span><strong>{kind.label}</strong><span>{kind.hint}</span></span>
+                <ChevronRight size={20} aria-hidden />
+              </button>
+            </li>;
+          })}
+        </ul>}
 
         {adding === "template" && <div className={css.plPane}>
-          <p className={css.plHint}>Isinya datang sendiri dari WAM dan Kunjungan Kantor. Tiap template cukup satu.</p>
-          {missing.length === 0 ? <p className={css.plDone}>Semua template sudah ada di daftar.</p>
+          <p className={css.plHint}>Isinya datang sendiri dari WAM dan Kunjungan Kantor. Tiap jenis cukup satu.</p>
+          {missing.length === 0 ? <p className={css.plDone}>Semua sudah ada di daftar.</p>
             : <ul className={css.plTemplates}>{missing.map(kind => {
               const Icon = icons[kind];
               return <li key={kind} className={css.plTemplate}>
@@ -382,11 +494,11 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
                 <ConsoleButton icon={<Plus size={18} aria-hidden />} disabled={!!busy || (kind === "sambutan" && !list.welcomeReady)} aria-label={`Tambah ${tvItemKindLabels[kind]}`} onClick={() => void add(kind)}>{busy === `tambah-${kind}` ? "Menambahkan…" : "Tambah"}</ConsoleButton>
               </li>;
             })}</ul>}
-          {(missing.includes("pengumuman") || missing.includes("sambutan")) && <p className={css.plHint}>Alamat TV terbuka: pengumuman yang tayang hanya yang dikirim ke semua peserta, dan Sambutan tamu menampilkan nama tamu di TV.</p>}
+          {(missing.includes("pengumuman") || missing.includes("sambutan")) && <p className={css.plHint}>Alamat TV terbuka untuk siapa saja: pengumuman yang tayang hanya yang dikirim ke semua peserta, dan Sambutan tamu menampilkan nama tamu di TV.</p>}
         </div>}
 
-        {adding === "tamu" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("tamu", guest, () => setGuest({ title: "", body: "" })); }}>
-          <p className={css.plHint}>Untuk tamu tanpa halaman Kunjungan Kantor. Tanggal dan jam tayangnya diatur lewat Atur setelah ditambahkan.</p>
+        {adding === "tamu" && <div className={css.plPane}>
+          <p className={css.plHint}>Untuk tamu tanpa halaman Kunjungan Kantor. Tanggal dan jam tayangnya diatur setelah ditambahkan.</p>
           <TvPreview className={css.plLive} kind="tamu" title={guest.title} body={guest.body} />
           <div className={css.plField}>
             <label htmlFor="tamu-nama">Nama tamu</label>
@@ -396,19 +508,16 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             <label htmlFor="tamu-ucapan">Ucapan (boleh kosong)</label>
             <textarea id="tamu-ucapan" rows={2} value={guest.body} maxLength={600} disabled={!!busy} onChange={event => setGuest(value => ({ ...value, body: event.target.value }))} />
           </div>
-          <div className={css.plSubmit}>
-            <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !guest.title.trim() || !list.welcomeReady}>{busy === "tambah-tamu" ? "Menambahkan…" : "Tambah sambutan"}</ConsoleButton>
-          </div>
-        </form>}
+        </div>}
 
-        {adding === "ultah" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void addBirthday(); }}>
-          <p className={css.plHint}>Kartu ulang tahun Werkudara untuk satu orang. Tayang pada tanggal ulang tahunnya tahun ini; ubah harinya lewat Atur.</p>
+        {adding === "ultah" && <div className={css.plPane}>
+          <p className={css.plHint}>Kartu ulang tahun Werkudara untuk satu orang. Tayang pada tanggal ulang tahunnya tahun ini.</p>
           <TvPreview className={css.plLive} kind="ultah" title={bday.title} body={bday.body} call={bday.call} date={bday.date} photo={bdayPhoto?.shown ?? ""} />
           <input ref={newPhotoInput} className={css.plFile} type="file" accept={ACCEPT} tabIndex={-1} aria-hidden="true"
             onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void pickBirthdayPhoto(file); }} />
           <div className={css.plSubmit}>
             <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => newPhotoInput.current?.click()}>{busy === "foto-baru" ? "Memotong foto…" : bdayPhoto ? "Ganti foto" : "Pilih foto"}</ConsoleButton>
-            <span className={css.plHint} aria-live="polite">{bdayPhoto?.note ?? "Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis di browser ini."}</span>
+            <span className={css.plHint} aria-live="polite">{bdayPhoto?.note ?? "Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis."}</span>
           </div>
           <div className={css.plField}>
             <label htmlFor="ultah-nama">Nama lengkap</label>
@@ -429,13 +538,9 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             <label htmlFor="ultah-ucapan">Ucapan</label>
             <textarea id="ultah-ucapan" rows={4} value={bday.body} maxLength={600} disabled={!!busy} onChange={event => setBday(value => ({ ...value, body: event.target.value }))} />
           </div>
-          <div className={css.plSubmit}>
-            <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !bday.title.trim()}>{busy === "tambah-ultah" ? "Menambahkan…" : "Tambah ucapan"}</ConsoleButton>
-          </div>
-        </form>}
+        </div>}
 
-        {adding === "teks" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("teks", text, () => setText({ title: "", body: "" })); }}>
-          <p className={css.plHint}>Tulisan besar di tengah layar: judul dan isi.</p>
+        {adding === "teks" && <div className={css.plPane}>
           <TvPreview className={css.plLive} kind="teks" title={text.title} body={text.body} />
           <div className={css.plField}>
             <label htmlFor="teks-judul">Judul</label>
@@ -445,13 +550,18 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             <label htmlFor="teks-isi">Isi</label>
             <textarea id="teks-isi" rows={3} value={text.body} maxLength={600} disabled={!!busy} onChange={event => setText(value => ({ ...value, body: event.target.value }))} />
           </div>
-          <div className={css.plSubmit}>
-            <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || (!text.title.trim() && !text.body.trim())}>{busy === "tambah-teks" ? "Menambahkan…" : "Tambah teks"}</ConsoleButton>
-          </div>
-        </form>}
+        </div>}
 
-        {adding === "video" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("video", clip, () => setClip({ title: "", body: "" })); }}>
-          <p className={css.plHint}>TV memutar video tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya. TV yang tidak kuat memutar video bisa diatur melewatinya di Layar TV.</p>
+        {adding === "video" && <div className={css.plPane}>
+          <p className={css.plHint}>TV memutar video sampai selesai, lalu lanjut ke tayangan berikutnya. Suaranya dinyalakan setelah video ditambahkan: buka videonya di daftar, lalu pilih Dengan suara.</p>
+          <h3 className={css.plSub}><FileVideo size={16} aria-hidden />Dari berkas video</h3>
+          <p className={css.plHint}>MP4 atau WebM, paling besar 200 MB. Cara ini juga jalan di TV lama.</p>
+          <input ref={videoInput} className={css.plFile} type="file" accept={ACCEPT_VIDEO} tabIndex={-1} aria-hidden="true"
+            onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadVideo(file); }} />
+          <div className={css.plSubmit}>
+            <ConsoleButton icon={<FileVideo size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => videoInput.current?.click()}>{busy === "unggah-video" ? "Mengunggah…" : "Unggah berkas video"}</ConsoleButton>
+          </div>
+          {busy === "unggah-video" && progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
           <h3 className={css.plSub}><Play size={16} aria-hidden />Dari YouTube</h3>
           {youtubeId(clip.body) && <TvPreview className={css.plLive} kind="video" title={clip.title} body={youtubeId(clip.body) ?? ""} />}
           <div className={css.plField}>
@@ -464,18 +574,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             <label htmlFor="video-nama">Nama video</label>
             <input id="video-nama" value={clip.title} maxLength={80} placeholder="Misalnya Annual Meeting 2025" disabled={!!busy} onChange={event => setClip(value => ({ ...value, title: event.target.value }))} />
           </div>
-          <div className={css.plSubmit}>
-            <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !youtubeId(clip.body)}>{busy === "tambah-video" ? "Menambahkan…" : "Tambah video"}</ConsoleButton>
-          </div>
-          <h3 className={css.plSub}><FileVideo size={16} aria-hidden />Dari berkas video</h3>
-          <p className={css.plHint}>MP4 atau WebM, paling besar 200 MB. Berkas disimpan di penyimpanan Journey, jadi TV tidak perlu membuka YouTube. Nama dan jadwalnya diatur lewat Atur setelah diunggah.</p>
-          <input ref={videoInput} className={css.plFile} type="file" accept={ACCEPT_VIDEO} tabIndex={-1} aria-hidden="true"
-            onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadVideo(file); }} />
-          <div className={css.plSubmit}>
-            <ConsoleButton icon={<FileVideo size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => videoInput.current?.click()}>{busy === "unggah-video" ? "Mengunggah…" : "Unggah berkas video"}</ConsoleButton>
-          </div>
-          {busy === "unggah-video" && progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
-        </form>}
+        </div>}
 
         {adding === "gambar" && <div className={css.plPane}>
           <p className={css.plHint}>JPG, PNG, atau WebP; boleh beberapa sekaligus. Paling banyak {tvLimits.slides} gambar ({pictures} terpakai).</p>
@@ -488,7 +587,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           </div>
           {busy === "unggah" && progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
         </div>}
-      </div>
-    </section>
+      </Sheet>
+    </SheetError.Provider>}
   </>;
 }

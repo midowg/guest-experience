@@ -227,6 +227,8 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
                     onClick={() => void run(`video-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ playsVideo: !screen.playsVideo }) })}>{screen.playsVideo ? "Video: diputar" : "Video: dilewati"}</ConsoleButton>}
                   {list.rowsReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.layout === "dua_baris"} title={screen.layout === "dua_baris" ? "Tayangan di atas, foto berjalan di bawah" : "Tayangan memakai seluruh layar"}
                     onClick={() => void run(`susunan-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ layout: screen.layout === "dua_baris" ? "penuh" : "dua_baris" }) })}>{screen.layout === "dua_baris" ? "Susunan: dua baris" : "Susunan: layar penuh"}</ConsoleButton>}
+                  {list.soundReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.sound !== false} title={screen.sound !== false ? "Video yang disetel Dengan suara terdengar di TV ini" : "TV ini selalu tanpa suara"}
+                    onClick={() => void run(`suara-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ sound: screen.sound === false }) })}>{screen.sound !== false ? "Suara: boleh" : "Suara: senyap"}</ConsoleButton>}
                   <ConsoleButton disabled={!!busy} onClick={() => void removeScreen(screen)}>{busy === `hapus-tv-${screen.id}` ? "Menghapus…" : "Hapus TV"}</ConsoleButton>
                 </>}
               </div>

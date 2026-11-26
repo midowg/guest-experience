@@ -55,7 +55,7 @@ type ItemRow = {
   /** How a welcome is drawn; absent before migration 202611100009. */
   design?: string | null;
   /** A birthday greeting's "call" and "date"; absent before migration 202611100012. */
-  extra?: { call?: string; date?: string; cut?: boolean; strip?: boolean } | null;
+  extra?: { call?: string; date?: string; cut?: boolean; strip?: boolean; sound?: boolean; length?: number } | null;
 };
 /** Birthday greetings arrive with this one; before it none can be added. */
 export const TV_BIRTHDAY_MIGRATION = "202611100012_pw_tv_birthday.sql";
@@ -132,6 +132,8 @@ export type TvScreen = {
   playsVideo: boolean;
   /** How this TV is laid out ("penuh" before migration 202611120007). */
   layout?: TvLayout;
+  /** Whether this TV may play sound (true before migration 202612030001). */
+  sound?: boolean;
 };
 /** A row of the playlist as the admin edits it. `slideId` is a picture's, for its thumbnail. */
 export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title: string; body: string; seconds: number; active: boolean; slideId: string | null; design: TvWelcomeDesign;
@@ -140,7 +142,9 @@ export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title
   /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
   strip?: boolean;
   /** A video row whose video is an uploaded file (its `body` is then the file's place in storage, not a YouTube id). */
-  videoFile: boolean };
+  videoFile: boolean;
+  /** A video's: whether it plays with its sound, and a file's length in seconds (null: not known, so the board for old TVs passes it over). */
+  sound?: boolean; length?: number | null };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
 export type TvAdmin = {
   migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings;
@@ -156,6 +160,8 @@ export type TvAdmin = {
   videoReady: boolean;
   /** Whether a TV can be laid out in two rows (migration 202611120007 has run). */
   rowsReady?: boolean;
+  /** Whether a TV can be kept silent (migration 202612030001 has run). */
+  soundReady?: boolean;
 };
 
 /** The board's mode and QR code arrive with this one; before it the board is dark, without a QR code. */
@@ -217,11 +223,14 @@ export async function tvAdmin(): Promise<TvAdmin> {
   // How each TV is laid out: a column of its own migration; every TV is full screen before it.
   const [{ data: laid, error: layoutError }, fromMeeting] = await Promise.all([client.from("pw_tv_screens").select("id,layout"), meetingSlides()]);
   const layouts = new Map(layoutError ? [] : ((laid ?? []) as { id: string; layout: string }[]).map(row => [row.id, tvLayout(row.layout)]));
+  // Which TVs are kept silent: a column of its own migration; every TV may play sound before it.
+  const { data: heard, error: soundError } = await client.from("pw_tv_screens").select("id,sound");
+  const quiet = new Set(soundError ? [] : ((heard ?? []) as { id: string; sound: boolean }[]).filter(row => row.sound === false).map(row => row.id));
   return {
-    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), videoFile: row.kind === "video" && isVideoFile(row.body), call: row.extra?.call ?? "", date: row.extra?.date ?? "", ...(row.kind === "gambar" ? { strip: inStrip({ kind: row.kind, strip: row.extra?.strip, fromMeeting: !!row.slide_id && fromMeeting.has(row.slide_id) }) } : {}), ...scheduleOf(row) })) ?? null,
+    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), videoFile: row.kind === "video" && isVideoFile(row.body), ...(row.kind === "video" ? { sound: row.extra?.sound === true, length: row.extra?.length ?? null } : {}), call: row.extra?.call ?? "", date: row.extra?.date ?? "", ...(row.kind === "gambar" ? { strip: inStrip({ kind: row.kind, strip: row.extra?.strip, fromMeeting: !!row.slide_id && fromMeeting.has(row.slide_id) }) } : {}), ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
-    videoReady: !videoError, rowsReady: !layoutError, welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
-    screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null, playsVideo: !silent.has(row.id), layout: layouts.get(row.id) ?? "penuh" })),
+    videoReady: !videoError, rowsReady: !layoutError, soundReady: !soundError, welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
+    screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null, playsVideo: !silent.has(row.id), layout: layouts.get(row.id) ?? "penuh", sound: !quiet.has(row.id) })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,
   };
@@ -245,9 +254,10 @@ export async function createScreen(name: string, slug: string): Promise<void> {
 }
 
 /** A TV's name or address changed. A new address takes over at once; the old one stops working. */
-export async function updateScreen(id: string, change: { name?: string; slug?: string; playsVideo?: boolean; layout?: TvLayout }): Promise<void> {
-  const row = { ...(change.name !== undefined ? { name: change.name } : {}), ...(change.slug !== undefined ? { slug: change.slug } : {}), ...(change.playsVideo !== undefined ? { plays_video: change.playsVideo } : {}), ...(change.layout !== undefined ? { layout: change.layout } : {}) };
+export async function updateScreen(id: string, change: { name?: string; slug?: string; playsVideo?: boolean; layout?: TvLayout; sound?: boolean }): Promise<void> {
+  const row = { ...(change.name !== undefined ? { name: change.name } : {}), ...(change.slug !== undefined ? { slug: change.slug } : {}), ...(change.playsVideo !== undefined ? { plays_video: change.playsVideo } : {}), ...(change.layout !== undefined ? { layout: change.layout } : {}), ...(change.sound !== undefined ? { sound: change.sound } : {}) };
   const { data, error } = await createPrivilegedClient().from("pw_tv_screens").update(row).eq("id", id).select("id");
+  if (error && noSlug(error) && change.sound !== undefined) throw new ServiceError(503, `Pengaturan suara per TV menunggu migrasi ${TV_SOUND_MIGRATION}.`);
   if (error && noSlug(error) && change.layout !== undefined) throw new ServiceError(503, `Tata letak dua baris menunggu migrasi ${TV_ROWS_MIGRATION}.`);
   if (error && noSlug(error) && change.playsVideo !== undefined) throw new ServiceError(503, `Pengaturan video per TV menunggu migrasi ${TV_PLAYS_VIDEO_MIGRATION}.`);
   if (error) screenSaveError(error);
@@ -336,6 +346,8 @@ export async function startTakeover(input: { itemId: string; minutes: number | n
 
 /** A TV can be laid out in two rows (the playlist on top, a row of running photos below) with this one; before it every TV is full screen. */
 export const TV_ROWS_MIGRATION = "202611120007_pw_tv_rows.sql";
+/** A TV can be kept silent with this one; before it every TV may play a video's sound. */
+export const TV_SOUND_MIGRATION = "202612030001_pw_tv_sound.sql";
 /** The pictures that came from a meeting photo (Arsip MoM → Masukkan ke TV); none before migration 202611120006. */
 async function meetingSlides(): Promise<Set<string>> {
   const { data, error } = await createPrivilegedClient().from("pw_tv_slides").select("id").not("mom_photo_id", "is", null);
@@ -349,7 +361,7 @@ export async function stopTakeover(): Promise<void> {
   invalidate();
 }
 
-export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[]; design: TvWelcomeDesign; call: string; date: string | null; strip: boolean }>;
+export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[]; design: TvWelcomeDesign; call: string; date: string | null; strip: boolean; sound: boolean; length: number | null }>;
 export async function updateItem(id: string, change: ItemChange): Promise<void> {
   const row: Record<string, unknown> = {};
   if (change.title !== undefined) row.title = change.title;
@@ -368,11 +380,15 @@ export async function updateItem(id: string, change: ItemChange): Promise<void> 
     const { data: now } = await createPrivilegedClient().from("pw_tv_items").select("extra").eq("id", id).maybeSingle();
     row.extra = { call: change.call ?? "", date: change.date ?? "", cut: (now?.extra as { cut?: boolean } | null)?.cut === true };
   }
-  // A picture's place on a TV in two rows is kept with whatever else its row remembers.
-  if (change.strip !== undefined) {
+  // A picture's place on a TV in two rows, and a video's sound and length, are kept with whatever else the row remembers.
+  if (change.strip !== undefined || change.sound !== undefined || change.length !== undefined) {
     const { data: now, error: unread } = await createPrivilegedClient().from("pw_tv_items").select("extra").eq("id", id).maybeSingle();
-    if (unread && noSlug(unread)) throw new ServiceError(503, `Pilihan baris foto menunggu migrasi ${TV_BIRTHDAY_MIGRATION}.`);
-    row.extra = { ...((now?.extra as Record<string, unknown> | null) ?? {}), strip: change.strip };
+    if (unread && noSlug(unread)) throw new ServiceError(503, `Pilihan ini menunggu migrasi ${TV_BIRTHDAY_MIGRATION}.`);
+    const kept: Record<string, unknown> = { ...((now?.extra as Record<string, unknown> | null) ?? {}) };
+    if (change.strip !== undefined) kept.strip = change.strip;
+    if (change.sound !== undefined) kept.sound = change.sound;
+    if (change.length === null) delete kept.length; else if (change.length !== undefined) kept.length = change.length;
+    row.extra = kept;
   }
   let { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
   // Before the design's migration: everything else is saved, and a design other than the only one there is waits for it.
@@ -553,14 +569,17 @@ export async function startVideoUpload(input: TvVideoStart): Promise<{ key: stri
 }
 
 /** Step two: the file is there with the agreed size and is an MP4 or a WebM; then it joins the playlist, last. */
-export async function confirmVideoUpload(input: TvVideoStart & { key: string; token: string; title: string }): Promise<void> {
+export async function confirmVideoUpload(input: TvVideoStart & { key: string; token: string; title: string; length?: number }): Promise<void> {
   if (!isR2Configured()) throw notReady();
   if (!isVideoFile(input.key) || !videoTokenMatches(input.token, input.key, input)) throw new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
   const discard = () => removeObjects([input.key]).catch(() => undefined);
   try {
     if (!sniffVideo(await uploadedStart(input.key, input.size))) throw new ServiceError(422, "Berkas bukan video MP4 atau WebM.");
     const items = await itemsOrWait();
-    const { error } = await createPrivilegedClient().from("pw_tv_items").insert({ kind: "video", title: input.title, body: input.key, seconds: 15, sort_order: nextOrder(items) });
+    const fresh = { kind: "video", title: input.title, body: input.key, seconds: 15, sort_order: nextOrder(items) };
+    // The file's length, as the admin's browser read it, for the board for old TVs. Before the migration that keeps it: added without.
+    let { error } = await createPrivilegedClient().from("pw_tv_items").insert(input.length ? { ...fresh, extra: { length: input.length } } : fresh);
+    if (error && noSlug(error) && input.length) ({ error } = await createPrivilegedClient().from("pw_tv_items").insert(fresh));
     if (error) { if (error.code === "23514") throw new ServiceError(503, `Video menunggu migrasi ${TV_VIDEO_MIGRATION}.`); databaseError(error); }
   } catch (error) { await discard(); throw error; }
   invalidate();
@@ -761,7 +780,7 @@ async function content(now: Date): Promise<Content> {
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
-export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date(), screen: { id: string; reloadAt: string | null; playsVideo?: boolean; layout?: TvLayout } | null = null): Promise<TvFeed> {
+export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date(), screen: { id: string; reloadAt: string | null; playsVideo?: boolean; layout?: TvLayout; sound?: boolean } | null = null): Promise<TvFeed> {
   const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes, welcomes, takeover, meetingPhotos, fromMeeting } = await content(now);
   // The playlist, narrowed to this TV, today and this time of day. A picture's row carries its picture's id, so its address is the picture's.
   const at = { date, time: wibTime(now.toISOString()), screenId: screen?.id ?? null };
@@ -777,7 +796,9 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     .filter(item => item.kind !== "video" || screen?.playsVideo !== false)
     // A video file's place in storage stays here: the TV gets an address of this site instead.
     .map(item => item.kind === "video" && isVideoFile(item.body) ? { ...item, body: "", video_src: tvVideoApi(item.id) } : { ...item, video_src: "" })
-    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}), ...(item.kind === "ultah" ? { call: item.extra?.call ?? "", date: item.extra?.date ?? "", cut: item.extra?.cut === true } : {}) }));
+    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}), ...(item.kind === "ultah" ? { call: item.extra?.call ?? "", date: item.extra?.date ?? "", cut: item.extra?.cut === true } : {}),
+      // A video plays with its sound when its row says so and this TV is not kept silent.
+      ...(item.kind === "video" && item.extra?.sound === true && screen?.sound !== false ? { sound: true } : {}), ...(item.kind === "video" && item.extra?.length ? { length: item.extra.length } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
@@ -803,15 +824,17 @@ const SHOWING_EVERY_MS = 20_000;
  * address is the TV's short slug ("lobi"); a TV made before those still answers at its long key.
  * Notes when it was last seen and its screen size, at most once a minute.
  */
-export async function screenForKey(key: unknown, size?: { width: number; height: number }, now = new Date(), showing?: string): Promise<{ id: string; reloadAt: string | null; playsVideo: boolean; layout: TvLayout } | null> {
+export async function screenForKey(key: unknown, size?: { width: number; height: number }, now = new Date(), showing?: string): Promise<{ id: string; reloadAt: string | null; playsVideo: boolean; layout: TvLayout; sound: boolean } | null> {
   const byKey = looksLikeTvKey(key);
   if (!byKey && !looksLikeTvSlug(key)) return null;
   const client = createPrivilegedClient();
-  type Found = { id: string; last_seen_at: string | null; last_width: number | null; last_height: number | null; reload_at?: string | null; last_item?: string | null; plays_video?: boolean | null; layout?: string | null };
+  type Found = { id: string; last_seen_at: string | null; last_width: number | null; last_height: number | null; reload_at?: string | null; last_item?: string | null; plays_video?: boolean | null; layout?: string | null; sound?: boolean | null };
   const find = (columns: string) => { const found = client.from("pw_tv_screens").select(columns); return (byKey ? found.eq("key_hash", hashTvKey(key)) : found.eq("slug", key)).maybeSingle(); };
   // With the playlist's migration a TV also has a reload request and says what it shows; before it, neither.
   let playlistReady = true;
-  let { data: row, error } = await find("id,last_seen_at,last_width,last_height,reload_at,last_item,plays_video,layout");
+  let { data: row, error } = await find("id,last_seen_at,last_width,last_height,reload_at,last_item,plays_video,layout,sound");
+  // Before the migration that can keep a TV silent: the same without it.
+  if (error && noSlug(error)) ({ data: row, error } = await find("id,last_seen_at,last_width,last_height,reload_at,last_item,plays_video,layout"));
   // Before the migration that lays a TV out in two rows: the same without it.
   if (error && noSlug(error)) ({ data: row, error } = await find("id,last_seen_at,last_width,last_height,reload_at,last_item,plays_video"));
   // Before the migration that lets a TV pass over videos: the same without it.
@@ -828,5 +851,5 @@ export async function screenForKey(key: unknown, size?: { width: number; height:
   if (size && (resized || changed || !data.last_seen_at || now.getTime() - Date.parse(data.last_seen_at) >= SEEN_EVERY_MS)) {
     await client.from("pw_tv_screens").update({ last_seen_at: now.toISOString(), last_width: size.width, last_height: size.height, ...(item !== undefined ? { last_item: item } : {}) }).eq("id", data.id);
   }
-  return { id: data.id, reloadAt: data.reload_at ?? null, playsVideo: data.plays_video !== false, layout: tvLayout(data.layout) };
+  return { id: data.id, reloadAt: data.reload_at ?? null, playsVideo: data.plays_video !== false, layout: tvLayout(data.layout), sound: data.sound !== false };
 }

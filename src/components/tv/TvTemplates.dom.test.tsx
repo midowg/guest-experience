@@ -82,6 +82,31 @@ describe("the waiting screen and videos", () => {
     expect(screen.getByRole("status").textContent).toBe("TV ini belum bisa memulai video sendiri");
   });
 
+  it("plays a file with its sound when asked, and turns the sound on at one press where the browser refused", async () => {
+    const { container } = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil" loop={false} sound onEnd={() => undefined} />);
+    const video = container.querySelector("video") as HTMLVideoElement;
+    // Asked for with sound first.
+    expect(video.muted).toBe(false);
+    expect(video.hasAttribute("muted")).toBe(false);
+    expect(screen.queryByRole("note")).toBeNull();
+    cleanup();
+
+    // A browser that refuses sound nobody asked for by hand: the video plays silent and says how to turn it on.
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) { return this.muted ? Promise.resolve() : Promise.reject(new Error("NotAllowedError")); };
+    try {
+      const refused = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil" loop={false} sound onEnd={() => undefined} />);
+      const silent = refused.container.querySelector("video") as HTMLVideoElement;
+      await Promise.resolve(); await Promise.resolve();
+      expect(silent.muted).toBe(true);
+      fireEvent.playing(silent);
+      expect((await screen.findByRole("note")).textContent).toContain("Tekan OK di remote");
+      fireEvent.keyDown(window, { key: "Enter" });
+      expect(silent.muted).toBe(false);
+      expect(screen.queryByRole("note")).toBeNull();
+    } finally { HTMLMediaElement.prototype.play = play; }
+  });
+
   it("covers a YouTube video too until its player says it plays", () => {
     const { container } = render(<VideoSlide video="FWN1B1B7Gu8" title="Annual Meeting" loop={false} onEnd={() => undefined} />);
     expect(container.querySelector("iframe")?.getAttribute("src")).toContain("/embed/FWN1B1B7Gu8?autoplay=1&mute=1");

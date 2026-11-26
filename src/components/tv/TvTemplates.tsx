@@ -128,13 +128,15 @@ export function TvLoader({ note }: { note: string }) {
  * that does not start in TV_VIDEO_START_MS is passed over too. With `loop` (the only thing in the
  * playlist, as when it takes the TV over) it repeats, and one that will not start says so.
  */
-export function VideoSlide({ video, file, title, loop, onEnd }: { video: string; file?: string; title: string; loop: boolean; onEnd: () => void }) {
+export function VideoSlide({ video, file, title, loop, sound = false, onEnd }: { video: string; file?: string; title: string; loop: boolean; sound?: boolean; onEnd: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const end = useRef(onEnd);
   const started = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [stuck, setStuck] = useState(false);
+  /** Asked to play with sound, but this TV's browser refused sound nobody asked for by hand: it plays silent, and says how to turn it on. */
+  const [silenced, setSilenced] = useState(false);
   useEffect(() => { end.current = onEnd; }, [onEnd]);
   const play = () => { started.current = true; setPlaying(true); setStuck(false); };
 
@@ -145,16 +147,29 @@ export function VideoSlide({ video, file, title, loop, onEnd }: { video: string;
   }, [video, file, loop]);
 
   // A file: muted by hand (React does not write the attribute a browser looks for), then told to play until it does.
+  // With sound: tried with it first; a browser that refuses gets it silent, and one press on the TV turns the sound on.
   useEffect(() => {
     const element = player.current;
     if (!file || !element) return;
-    element.muted = true; element.defaultMuted = true; element.setAttribute("muted", "");
-    // An old TV browser's play() gives nothing back (no promise): asked for, never assumed.
-    const start = () => { if (!element.paused) return; try { const tried = element.play() as Promise<void> | undefined; tried?.catch?.(() => undefined); } catch { /* not allowed yet: asked again */ } };
+    let quiet = !sound, tries = 0;
+    const hush = (on: boolean) => { element.muted = on; element.defaultMuted = on; if (on) element.setAttribute("muted", ""); else element.removeAttribute("muted"); };
+    hush(quiet);
+    const ask = () => { try { return element.play() as Promise<void> | undefined; } catch { return undefined; } };
+    const silence = () => { if (quiet) return; quiet = true; hush(true); setSilenced(true); };
+    const start = () => {
+      if (!element.paused) return;
+      // An old TV browser's play() gives nothing back (no promise): still stopped at the next ask is taken as "sound refused".
+      if (tries > 0) silence();
+      tries += 1;
+      ask()?.catch?.(() => { if (quiet) return; silence(); ask()?.catch?.(() => undefined); });
+    };
     start();
     const again = window.setInterval(start, 3_000);
-    return () => window.clearInterval(again);
-  }, [file]);
+    const unlock = () => { if (!sound || !quiet) return; quiet = false; hush(false); setSilenced(false); };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => { window.clearInterval(again); window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+  }, [file, sound]);
 
   // YouTube: its player reports to a page that listens, and takes commands the same way.
   useEffect(() => {
@@ -162,6 +177,10 @@ export function VideoSlide({ video, file, title, loop, onEnd }: { video: string;
     let heard = false;
     const tell = (message: object) => frame.current?.contentWindow?.postMessage(JSON.stringify({ ...message, id: 1, channel: "widget" }), "*");
     const start = () => { tell({ event: "command", func: "mute", args: [] }); tell({ event: "command", func: "playVideo", args: [] }); };
+    // Sound: asked for once the video plays. A browser that refuses stops the video instead: it is then started again silent.
+    let loud: "no" | "asked" | "refused" | "on" = "no", askedAt = 0;
+    const unmute = () => { tell({ event: "command", func: "unMute", args: [] }); tell({ event: "command", func: "setVolume", args: [100] }); };
+    const unlock = () => { if (!sound || loud !== "refused") return; loud = "on"; unmute(); setSilenced(false); };
     const onMessage = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return;
       let data: { event?: string; info?: unknown };
@@ -171,23 +190,31 @@ export function VideoSlide({ video, file, title, loop, onEnd }: { video: string;
       // The player's state arrives as "onStateChange" (a number) or inside "infoDelivery": 1 is playing, 0 ended.
       const state = data.event === "onStateChange" ? data.info
         : data.event === "infoDelivery" && data.info && typeof data.info === "object" ? (data.info as { playerState?: unknown }).playerState : undefined;
-      if (state === 1) play();
+      if (state === 1) {
+        play();
+        if (sound && loud === "no") { loud = "asked"; askedAt = Date.now(); unmute(); }
+      }
+      // Stopped right after sound was asked for: this browser will not play sound by itself.
+      if (state === 2 && loud === "asked" && Date.now() - askedAt < 6_000) { loud = "refused"; setSilenced(true); start(); }
       if (!loop && (state === 0 || data.event === "onError")) end.current();
     };
     window.addEventListener("message", onMessage);
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
     // Asked until it answers; then told to play until it does.
     const ask = window.setInterval(() => { if (!heard) tell({ event: "listening" }); else if (!started.current) start(); }, 1_500);
     const most = loop ? 0 : window.setTimeout(() => end.current(), TV_VIDEO_MOST_MS);
-    return () => { window.removeEventListener("message", onMessage); window.clearInterval(ask); window.clearTimeout(most); };
-  }, [video, file, loop]);
+    return () => { window.removeEventListener("message", onMessage); window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); window.clearInterval(ask); window.clearTimeout(most); };
+  }, [video, file, loop, sound]);
 
   return <section className={`${css.slide} ${css.video}`} data-playing={playing} aria-label={title || "Video"}>
     {file
       // A file that cannot be played (gone, or a kind this TV does not know) is passed over, not left black.
-      ? <video ref={player} src={file} autoPlay muted playsInline loop={loop} preload="auto" disablePictureInPicture
+      ? <video ref={player} src={file} autoPlay muted={!sound} playsInline loop={loop} preload="auto" disablePictureInPicture
         onPlaying={play} onEnded={() => end.current()} onError={() => { if (loop) setStuck(true); else end.current(); }} />
       : <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />}
     {!playing && <TvLoader note={stuck ? "TV ini belum bisa memulai video sendiri" : "Menyiapkan video"} />}
+    {playing && silenced && <p className={css.soundHint} role="note">Suara belum menyala. Tekan OK di remote atau klik layar sekali.</p>}
   </section>;
 }
 

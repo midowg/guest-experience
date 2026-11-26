@@ -21,9 +21,13 @@ import { TV_BIRTHDAY_CARD, TV_BIRTHDAY_FLOWERS, TV_WELCOME_ART } from "@/lib/rou
  * minute. Videos are passed over (a page without script cannot tell when one ends). A landscape TV only.
  */
 
-/** What this page plays of the TV's list, in its order: everything but videos. */
+/**
+ * What this page plays of the TV's list, in its order. A video plays only when it is a file whose
+ * length is known: this page has no script, so it cannot tell when a video ends and stays on it for
+ * that long instead. A YouTube video needs a newer browser than these TVs have, and is passed over.
+ */
 export function liteItems(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes" | "meetingPhotos">): TvItem[] {
-  return playlistOf(feed).filter(item => item.kind !== "video");
+  return playlistOf(feed).filter(item => item.kind !== "video" || (!!item.file && !!item.length));
 }
 
 /**
@@ -53,6 +57,9 @@ export function refreshSeconds(nowIso: string): number {
 export const LITE_LEAST_SECONDS = 8;
 /** How long an item stays before the next load: its own time, between LITE_LEAST_SECONDS and a minute (so changes arrive within one). */
 export const liteSeconds = (item: Pick<TvItem, "seconds">) => Math.min(60, Math.max(LITE_LEAST_SECONDS, Math.round(item.seconds || 0)));
+/** How long a video stays: its length and a moment for an old TV to start it. */
+export const LITE_VIDEO_START_SECONDS = 4;
+export const liteVideoSeconds = (length: number) => Math.round(length) + LITE_VIDEO_START_SECONDS;
 
 /* ---- Colours: WAM's theme tokens (pra-wam.module.css), written out, since old browsers have no var() ---- */
 
@@ -329,6 +336,14 @@ function birthdayHtml(birthday: TvBirthday): string {
 const pictureHtml = (slide: TvSlide) =>
   `<div class="slide picture" data-item="gambar"><img src="${esc(slide.src)}" alt="${esc(slide.title || "Gambar pengumuman")}"></div>`;
 
+/**
+ * A video file, by the browser's own player and nothing else: it starts by itself, with its sound
+ * when the row and the TV say so (an old TV browser does not refuse sound nobody asked for by
+ * hand; one that does shows its own play button). The meta refresh moves on after its length.
+ */
+const videoHtml = (src: string, title: string, sound: boolean, alone: boolean) =>
+  `<div class="slide picture" data-item="video" data-sound="${sound}"><video src="${esc(src)}" autoplay${sound ? "" : " muted"}${alone ? " loop" : ""} playsinline preload="auto" title="${esc(title || "Video")}"></video></div>`;
+
 /* ---- The page ------------------------------------------------------------------------------------- */
 
 function styles(p: Palette, stars: string): string {
@@ -462,7 +477,7 @@ function styles(p: Palette, stars: string): string {
     + ".bdayWish p{display:-webkit-box;overflow:hidden;font-weight:600;line-height:1.22;white-space:pre-line;-webkit-box-orient:vertical;-webkit-line-clamp:5;word-wrap:break-word}"
     // A picture, whole, on black
     + ".picture{background-color:#000000}"
-    + ".picture img{display:block;width:100%;height:100%;object-fit:contain}";
+    + ".picture img,.picture video{display:block;width:100%;height:100%;object-fit:contain}";
 }
 
 function page(p: Palette, stars: string, refresh: string, body: string): string {
@@ -488,13 +503,16 @@ export function tvLiteHtml(feed: TvFeed, options: { ask?: { s?: string | null; v
   }
   const index = liteIndex(items, options.ask ?? {});
   const item = items[index], next = items[(index + 1) % items.length];
-  const refresh = items.length > 1 ? `${liteSeconds(item)};url=${options.path(next.key)}` : String(refreshSeconds(feed.now));
+  // A video stays for its own length; alone in the list it starts again by itself (loop) and the page is loaded afresh after each run.
+  const stay = item.kind === "video" ? liteVideoSeconds(item.length ?? 0) : liteSeconds(item);
+  const refresh = items.length > 1 ? `${stay};url=${options.path(next.key)}` : item.kind === "video" ? String(stay) : String(refreshSeconds(feed.now));
   const now = Date.parse(feed.now), time = wibTime(feed.now), clock = clockLabel(time);
 
   if (item.kind === "teks") return page(p, stars, refresh, textHtml(item.title, item.body));
   if (item.kind === "sambutan") return page(p, stars, refresh, welcomeHtml(item.welcome, item.design));
   if (item.kind === "ultah") return page(p, stars, refresh, birthdayHtml(item.birthday));
   if (item.kind === "gambar") return page(p, stars, refresh, pictureHtml(item.slide));
+  if (item.kind === "video") return page(p, stars, refresh, videoHtml(item.file ?? "", item.title, item.sound === true, items.length < 2));
   if (item.kind === "timeline") {
     return page(p, stars, refresh, `<main class="schedule" data-item="timeline">${head("Timeline Pra WAM", "Forum dan acara", "", clock, null)}<div class="body">${timelineHtml(p, feed.timeline ?? [], ROOM.height)}</div></main>`);
   }

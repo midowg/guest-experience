@@ -170,8 +170,8 @@ const screenSlug = z.string().trim().toLowerCase()
   .regex(SLUG_PATTERN, "Alamat hanya huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2.")
   .refine(value => !RESERVED_SLUGS.includes(value), "Alamat ini dipakai sistem. Pilih alamat lain.");
 export const tvScreenSchema = z.object({ name: screenName, slug: screenSlug });
-export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional(), playsVideo: z.boolean().optional(), layout: z.enum(["penuh", "dua_baris"]).optional() })
-  .refine(value => value.name !== undefined || value.slug !== undefined || value.playsVideo !== undefined || value.layout !== undefined, { message: "Tidak ada yang diubah." });
+export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional(), playsVideo: z.boolean().optional(), layout: z.enum(["penuh", "dua_baris"]).optional(), sound: z.boolean().optional() })
+  .refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." });
 /** A web address a phone can open, for the QR code; "" means the TV's own address. */
 const isWebAddress = (value: string) => { try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; } };
 export const tvSettingsSchema = z.object({
@@ -382,7 +382,11 @@ export type TvItem =
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
   | { key: string; kind: "sambutan"; welcome: TvWelcome; design: TvWelcomeDesign; seconds: number }
   | { key: string; kind: "ultah"; birthday: TvBirthday; seconds: number }
-  | { key: string; kind: "video"; title: string; video: string; file?: string; seconds: number }
+  | { key: string; kind: "video"; title: string; video: string; file?: string; seconds: number;
+    /** Played with its sound, where this TV is allowed sound (26 Nov 2026); without it otherwise. */
+    sound?: boolean;
+    /** A file's length in seconds, when known: how long the board for old TVs stays on it. */
+    length?: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -497,7 +501,23 @@ export const tvVideoStartSchema = z.object({
   size: z.number().int().min(1).max(TV_VIDEO_BYTES, "Berkas video lebih dari 200 MB."),
 });
 export type TvVideoStart = z.infer<typeof tvVideoStartSchema>;
-export const tvVideoConfirmSchema = tvVideoStartSchema.extend({ key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default("") });
+/*
+ * Sound (26 Nov 2026, asked by the owner): a video row can be played with its sound, and a TV can
+ * be kept silent whatever the rows say. A browser may refuse sound nobody asked for by hand: the
+ * board then plays the video silent and says how to turn the sound on (one press on the TV).
+ * A file's length is noted when it is uploaded (the admin's browser reads it), or typed in Atur:
+ * the board for old TVs has no script, so it stays on a video for that long. Without a length, or
+ * for a YouTube video, that board passes the video over, as before.
+ */
+export const tvVideoLength = { least: 3, most: 30 * 60 } as const;
+const videoLength = z.number().int().min(tvVideoLength.least, "Lama video paling singkat 3 detik.").max(tvVideoLength.most, "Lama video paling lama 30 menit.");
+/** A length as read from a file: whole seconds within the limits, or null for one that cannot be used. */
+export function videoSeconds(duration: unknown): number | null {
+  if (typeof duration !== "number" || !Number.isFinite(duration)) return null;
+  const whole = Math.ceil(duration);
+  return whole >= tvVideoLength.least && whole <= tvVideoLength.most ? whole : null;
+}
+export const tvVideoConfirmSchema = tvVideoStartSchema.extend({ key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default(""), length: videoLength.optional() });
 /** What a file is by its first bytes: MP4 says "ftyp" at the fifth, WebM starts with its EBML mark; null for anything else. */
 export function sniffVideo(start: Uint8Array): TvVideoMime | null {
   if (start.length >= 8 && String.fromCharCode(...start.slice(4, 8)) === "ftyp") return "video/mp4";
@@ -506,7 +526,9 @@ export function sniffVideo(start: Uint8Array): TvVideoMime | null {
 }
 
 /** A row as a TV gets it. `src` is a picture's address. */
-export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string; cut?: boolean };
+export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string; cut?: boolean;
+  /** A video's: played with sound on this TV, and a file's length in seconds when known. */
+  sound?: boolean; length?: number };
 
 /*
  * A birthday greeting (migration 202611100012), after the team's own card ("WG Bday", a portrait
@@ -570,8 +592,9 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "", cut: !!item.src && item.cut === true } }] : [];
     // One picture per meeting photo; none, and the row is passed over.
     if (item.kind === "foto_meeting") return (feed.meetingPhotos ?? []).map(photo => ({ key: `${key}-${photo.id}`, kind: "gambar" as const, seconds: item.seconds, slide: { id: photo.id, title: photo.caption, seconds: item.seconds, src: photo.src } }));
-    if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds }];
-    if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
+    const heard = item.sound ? { sound: true } : {};
+    if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds, ...heard, ...(item.length ? { length: item.length } : {}) }];
+    if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds, ...heard }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
   });
 }
@@ -611,6 +634,8 @@ export const tvItemPatchSchema = z.object({
   call: itemCall.optional(), date: day.optional(),
   /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
   strip: z.boolean().optional(),
+  /** A video's: whether it plays with its sound, and its length in seconds for the board for old TVs (null: not known). */
+  sound: z.boolean().optional(), length: videoLength.nullable().optional(),
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });
