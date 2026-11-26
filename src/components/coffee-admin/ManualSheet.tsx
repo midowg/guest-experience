@@ -17,8 +17,10 @@ import css from "./coffee-admin.module.css";
 
 /** One key per opened sheet: sending the same record twice answers with the first one. randomUUID is missing on plain http, so the key is then drawn by hand. */
 export function newKey(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  const hex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16));
+  const source = (typeof crypto === "undefined" ? undefined : crypto) as Partial<Crypto> | undefined;
+  if (source?.randomUUID) return source.randomUUID();
+  const drawn = source?.getRandomValues ? [...source.getRandomValues(new Uint8Array(32))] : null;
+  const hex = Array.from({ length: 32 }, (_, index) => (drawn ? drawn[index] % 16 : Math.floor(Math.random() * 16)).toString(16));
   hex[12] = "4";
   hex[16] = "89ab"[Math.floor(Math.random() * 4)];
   const text = hex.join("");
@@ -87,6 +89,17 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
       : Date.parse(manualAt(day, time)) > now + 60_000 ? "Tanggal dan jam tidak boleh di masa depan."
         : day < earliest ? "Catat manual paling lama sampai awal bulan lalu." : "",
     qty: kind !== "klaim" && (!Number.isInteger(count) || count < 1 || count > 50) ? "Jumlah 1 sampai 50." : "",
+    guestCount: kind === "tamu" && guestCount.trim() && (!Number.isInteger(Number(guestCount)) || Number(guestCount) < 1 || Number(guestCount) > 500) ? "Jumlah tamu 1 sampai 500, angka bulat." : "",
+  };
+  // Anything typed or chosen here that closing would throw away (audit F1-07).
+  const touched = !!person || !!guest.trim() || !!guestCount.trim() || !!roomOther.trim() || !!other.trim() || kind !== "klaim" || slug !== DRINKS[0].slug
+    || qty !== "1" || temperature !== "panas" || sugar !== "Normal" || ice !== "Normal" || room !== ROOMS[0].name || day !== wibDay(start) || time !== wibClock(start);
+  const [asking, setAsking] = useState(false);
+  /** Escape, a press outside, the X, Batal, the back gesture: nothing closes while saving, and typed input is asked about first. */
+  const requestClose = () => {
+    if (busy) return;
+    if (touched) setAsking(true);
+    else onClose();
   };
   const invalid = Object.values(errors).some(Boolean) || full;
   const shown = (name: keyof typeof errors, ...serverKeys: string[]) =>
@@ -115,14 +128,14 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
   };
 
   return (
-    <Layer onClose={onClose} labelledBy={titleId} side>
+    <Layer onClose={requestClose} labelledBy={titleId} side>
       <form className={css.sheetForm} onSubmit={event => void save(event)} noValidate>
         <div className={css.sheetHead}>
           <div>
             <h2 id={titleId}>Catat manual</h2>
             <p className={css.muted}>Untuk permintaan di luar aplikasi. Tersimpan sebagai selesai dan ditandai “Dicatat manual”.</p>
           </div>
-          <button type="button" className={css.iconButton} aria-label="Tutup" onClick={onClose}><X size={20} aria-hidden /></button>
+          <button type="button" className={css.iconButton} aria-label="Tutup" onClick={requestClose}><X size={20} aria-hidden /></button>
         </div>
         <div className={css.sheetBody}>
           <div className={css.twoCol}>
@@ -177,7 +190,9 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
               </div>
               <div className={css.field}>
                 <label htmlFor={`${uid}-count`}>Jumlah tamu <span className={css.optional}>(opsional)</span></label>
-                <input id={`${uid}-count`} type="number" min={1} max={500} inputMode="numeric" value={guestCount} onChange={event => setGuestCount(event.target.value)} />
+                <input id={`${uid}-count`} type="number" min={1} max={500} inputMode="numeric" value={guestCount} onChange={event => setGuestCount(event.target.value)}
+                  aria-invalid={!!shown("guestCount", "guestCount")} aria-describedby={shown("guestCount", "guestCount") ? `${uid}-count-error` : undefined} />
+                {shown("guestCount", "guestCount") && <p id={`${uid}-count-error`} className={css.error}>{shown("guestCount", "guestCount")}</p>}
               </div>
             </div>
           )}
@@ -260,12 +275,24 @@ export function ManualSheet({ api, now, actorName, settings, onClose, onSaved }:
         </div>
         <div className={css.sheetFoot}>
           <p className={css.small}>Dicatat oleh {actorName}</p>
-          <button type="button" className={css.secondary} onClick={onClose}>Batal</button>
+          <button type="button" className={css.secondary} disabled={busy} onClick={requestClose}>Batal</button>
           <button type="submit" className={css.primary} disabled={busy} aria-disabled={tried && invalid ? true : undefined}>
             <Check size={18} aria-hidden />{busy ? "Menyimpan…" : "Simpan"}
           </button>
         </div>
       </form>
+      {asking && (
+        <Layer onClose={() => setAsking(false)} labelledBy={`${uid}-discard`}>
+          <div className={css.dialogHead}>
+            <h2 id={`${uid}-discard`}>Buang isian catatan ini?</h2>
+          </div>
+          <p className={css.muted}>Yang sudah diisi belum tersimpan dan akan hilang.</p>
+          <div className={css.dialogActions}>
+            <button type="button" className={css.secondary} data-autofocus onClick={() => setAsking(false)}>Lanjut mengisi</button>
+            <button type="button" className={css.danger} onClick={onClose}>Buang isian</button>
+          </div>
+        </Layer>
+      )}
     </Layer>
   );
 }

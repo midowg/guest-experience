@@ -542,3 +542,17 @@ Temuan `docs/coffee/AUDIT-F0.md` diperbaiki (kolom Status di sana). Yang berubah
   per alamat 300. Pesan 429 per orang: "Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi."
 - Selesai/Tolak pada pesanan yang dibatalkan pemesannya: 409 "Pengajuan ini sudah dibatalkan pemesannya. Antrean diperbarui."
 
+---
+
+## Catatan perbaikan audit F1 (26 Nov 2026)
+
+Temuan `docs/coffee/AUDIT-F1.md` diperbaiki (kolom Status di sana). Yang perlu diketahui F2/F3 bila memakai ulang bagian ini:
+
+- `Layer.tsx` kini menggambar lewat **portal** di akhir `<body>` dengan tema konsol admin, mengunci gulir, memberi `inert`
+  pada selain lapisan teratas, dan boleh bertumpuk (pertanyaan di atas sheet). Aplikasi karyawan yang ingin memakainya
+  perlu tema sendiri di pembungkus portal.
+- `useQueue`: aksi yang sedang dikirim menahan pembacaan; setelah aksi terakhir dijawab antrean dibaca sekali. Selesai
+  pada kartu lain diabaikan 700 ms setelah satu kartu keluar. `undoing` = himpunan id.
+- Catat manual bertanya sebelum membuang isian; Pengaturan bertanya sebelum jatah menjadi 0 dan dibaca ulang tiap dibuka.
+- Semua target ≥ 44 px di semua lebar; antrean satu kolom sampai 1100 px; pesan di HP tampil di bawah bilah atas.
+

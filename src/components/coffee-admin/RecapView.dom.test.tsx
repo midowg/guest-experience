@@ -157,3 +157,57 @@ it("offers Batalkan catatan on records made by hand only, and shows a cancelled 
     cleanup();
   }
 });
+
+// Audit F1-16: a tablist holds only tabs, one of them in the Tab order, the arrows move between them.
+it("has a tablist of two tabs with one Tab stop and arrow keys", async () => {
+  await open();
+  const list = screen.getByRole("tablist", { name: "Tampilan rekap" });
+  expect([...list.children].map(child => child.getAttribute("role"))).toEqual(["tab", "tab"]);
+  const [summary, detail] = within(list).getAllByRole("tab") as HTMLElement[];
+  expect([summary.tabIndex, detail.tabIndex]).toEqual([0, -1]);
+  summary.focus();
+  fireEvent.keyDown(summary, { key: "ArrowRight" });
+  expect(detail.getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(detail);
+  expect([summary.tabIndex, detail.tabIndex]).toEqual([-1, 0]);
+  expect(screen.getByRole("table")).toBeTruthy();
+  fireEvent.keyDown(detail, { key: "ArrowLeft" });
+  expect(summary.getAttribute("aria-selected")).toBe("true");
+});
+
+// Audit F1-13: reading the same span again (an order changed) is quiet; only another filter dims the old numbers.
+it("does not dim the numbers when the same span is read again, only while another filter loads", async () => {
+  const server = createSampleServer();
+  const query = monthQuery("2026-11");
+  const data = await server.api.recap(query);
+  let release: () => void = () => undefined;
+  const recap = vi.fn(async (asked: typeof query) => { await new Promise<void>(resolve => { release = resolve; }); return server.api.recap(asked); });
+  const api = { ...server.api, recap };
+  const view = (version: number) => <div className={css.root}><RecapView api={api} initial={{ query, data }} today="2026-11-25" phone={false} active version={version} /></div>;
+  const { rerender } = render(view(0));
+  const numbers = () => screen.getByRole("region", { name: /^Angka/ }).parentElement!;
+  rerender(view(1));
+  await waitFor(() => expect(recap).toHaveBeenCalledTimes(1));
+  expect(numbers().getAttribute("aria-busy")).toBe("true");
+  expect(numbers().className).not.toContain(css.stale);
+  release();
+  await waitFor(() => expect(numbers().getAttribute("aria-busy")).toBe("false"));
+  fireEvent.change(screen.getByLabelText("Status"), { target: { value: "ditolak" } });
+  await waitFor(() => expect(recap).toHaveBeenCalledTimes(2));
+  expect(numbers().className).toContain(css.stale);
+  release();
+  await waitFor(() => expect(numbers().className).not.toContain(css.stale));
+});
+
+// Audit F1-21: the name is the row's header, and a drink processed on another day says which day.
+it("marks the name as the row's header and dates a processing that fell on another day", async () => {
+  await open();
+  fireEvent.click(screen.getByRole("tab", { name: /^Detail/ }));
+  const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+  expect(within(rows[0]).getByRole("rowheader").textContent).toMatch(/\(contoh\)/);
+  const cells = (row: HTMLElement) => [...row.children].map(cell => cell.textContent);
+  expect(rows.every(row => /^(–|\d{2}\.\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}\.\d{2})$/.test(cells(row)[19] ?? ""))).toBe(true);
+  // The sample's meeting of five days ago was processed ten minutes later, past midnight UTC but the same WIB day or the next.
+  const dated = rows.filter(row => /^\d{2}\/\d{2}\/\d{4} /.test(cells(row)[19] ?? ""));
+  for (const row of dated) expect(cells(row)[19]!.slice(0, 10)).not.toBe(cells(row)[0]);
+});

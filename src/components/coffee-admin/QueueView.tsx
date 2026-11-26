@@ -16,7 +16,7 @@ import css from "./coffee-admin.module.css";
  * minutes, and Batalkan catatan on a record made by hand.
  */
 export function QueueView({ queue, error, now, phone, actorName, undoing, onRetry, onFinish, onRefuse, onUndo, onManual, onCancel }: {
-  queue: QueueState | null; error: string; now: number; phone: boolean; actorName: string; undoing: string | null;
+  queue: QueueState | null; error: string; now: number; phone: boolean; actorName: string; undoing: ReadonlySet<string>;
   onRetry: () => void; onFinish: (order: QueueOrder) => void; onRefuse: (order: QueueOrder) => void; onUndo: (order: QueueOrder) => void; onManual: () => void;
   onCancel: (target: CancelTarget) => void;
 }) {
@@ -26,7 +26,7 @@ export function QueueView({ queue, error, now, phone, actorName, undoing, onRetr
       <PageHeader
         title={section.label}
         subtitle={phone ? "Terlama di atas. Beli di JumpStart, lalu tandai selesai." : section.summary}
-        actions={<ConsoleButton className={css.desktopOnly} icon={<PenLine size={18} aria-hidden />} onClick={onManual}>Catat manual</ConsoleButton>}
+        actions={<ConsoleButton className={`${css.desktopOnly} ${css.tall}`} icon={<PenLine size={18} aria-hidden />} onClick={onManual}>Catat manual</ConsoleButton>}
       />
       {error && (
         <div className={css.banner} role="status">
@@ -35,7 +35,7 @@ export function QueueView({ queue, error, now, phone, actorName, undoing, onRetr
         </div>
       )}
       <div className={css.queueLayout}>
-        <section aria-label="Pesanan menunggu" className={css.queue} aria-busy={!queue}>
+        <section aria-label="Pesanan menunggu" className={css.queue} aria-busy={!queue} tabIndex={-1} data-coffee-focus>
           {!queue && !error && <><span className={css.skeleton} style={{ height: 168 }} /><span className={css.skeleton} style={{ height: 168 }} /></>}
           {queue && queue.waiting.length === 0 && (
             <div className={css.empty}>
@@ -71,8 +71,8 @@ export function QueueView({ queue, error, now, phone, actorName, undoing, onRetr
                       <span>{order.kind === "klaim" ? "Klaim" : "Rapat"}{order.processed ? ` · ${order.processed.label} · ${wibClock(order.processed.at).replace(":", ".")}` : ""}</span>
                     </span>
                     {canUndo(order, now) && (
-                      <button type="button" className={css.textButton} disabled={undoing === order.id} onClick={() => onUndo(order)}>
-                        {undoing === order.id ? "Mengurungkan…" : "Urungkan"}<span className={css.srOnly}> {orderTitle(order)}</span>
+                      <button type="button" className={css.textButton} disabled={undoing.has(order.id)} onClick={() => onUndo(order)}>
+                        {undoing.has(order.id) ? "Mengurungkan…" : "Urungkan"}<span className={css.srOnly}> {orderTitle(order)}</span>
                       </button>
                     )}
                     {canCancel(order) && (

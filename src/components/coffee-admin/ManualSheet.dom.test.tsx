@@ -168,3 +168,71 @@ it("answers with the first record when the same sheet is sent twice (the make-be
   expect(again.order.id).toBe(first.order.id);
   expect(server.orders.filter(order => order.manual)).toHaveLength(1);
 });
+
+// Audit F1-07: typed input is not thrown away by Escape, a press outside, the X or Batal.
+it("asks before throwing away what was typed, and closes at once when nothing was", async () => {
+  const empty = open();
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(empty.onClose).toHaveBeenCalledTimes(1);
+  cleanup();
+
+  const { onClose } = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  const sheet = screen.getByRole("dialog", { name: "Catat manual" });
+  for (const close of [
+    () => fireEvent.keyDown(document.body, { key: "Escape" }),
+    () => fireEvent.mouseDown(sheet.parentElement!),
+    () => fireEvent.click(within(sheet).getByRole("button", { name: "Tutup" })),
+    () => fireEvent.click(within(sheet).getByRole("button", { name: "Batal" })),
+  ]) {
+    close();
+    const question = screen.getByRole("dialog", { name: "Buang isian catatan ini?" });
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(within(question).getByRole("button", { name: "Lanjut mengisi" }));
+    expect(screen.queryByRole("dialog", { name: "Buang isian catatan ini?" })).toBeNull();
+    expect((screen.getByRole("combobox", { name: "Nama karyawan" }) as HTMLInputElement).value).toMatch(/Arief Hidayat/);
+  }
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Buang isian catatan ini?" })).getByRole("button", { name: "Buang isian" }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it("does not close while it is saving", async () => {
+  const { api, onClose, onSaved } = open();
+  let release!: () => void;
+  const real = api.manual.getMockImplementation()!;
+  api.manual.mockImplementationOnce(async body => { await new Promise<void>(resolve => { release = resolve; }); return real(body); });
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(screen.getByRole("button", { name: /Menyimpan/ })).toBeTruthy());
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  fireEvent.mouseDown(screen.getByRole("dialog", { name: "Catat manual" }).parentElement!);
+  expect(screen.queryByRole("dialog", { name: "Buang isian catatan ini?" })).toBeNull();
+  expect(onClose).not.toHaveBeenCalled();
+  expect((screen.getByRole("button", { name: "Batal" }) as HTMLButtonElement).disabled).toBe(true);
+  release();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+});
+
+// Audit F1-08: without crypto.randomUUID the key is drawn from getRandomValues, never a constant.
+it("draws the key from getRandomValues where randomUUID is missing", () => {
+  const getRandomValues = vi.fn((bytes: Uint8Array) => { for (let index = 0; index < bytes.length; index++) bytes[index] = (index * 37 + getRandomValues.mock.calls.length * 11) % 256; return bytes; });
+  vi.stubGlobal("crypto", { getRandomValues });
+  const [first, second] = [newKey(), newKey()];
+  vi.unstubAllGlobals();
+  expect(getRandomValues).toHaveBeenCalledTimes(2);
+  for (const key of [first, second]) expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(first).not.toBe(second);
+  expect(first).not.toBe("00000000-0000-4000-8000-000000000000");
+});
+
+// Audit F1-20: the guest count says what is wrong under its own field.
+it("holds back a guest count that is not a whole number from 1 to 500", async () => {
+  const { api } = open();
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  await pick("PIC tamu", "sari", /Sari Wulandari/);
+  fireEvent.change(screen.getByLabelText(/Jumlah tamu/), { target: { value: "501" } });
+  save();
+  expect(await screen.findByText("Jumlah tamu 1 sampai 500, angka bulat.")).toBeTruthy();
+  expect(api.manual).not.toHaveBeenCalled();
+});

@@ -89,7 +89,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                 <td className={css.num}>{clock(row.at)}</td>
                 <td className={css.num}>{row.no}</td>
                 <td>{KIND_LABEL[row.kind]}</td>
-                <td className={css.nameCell}>{row.name}</td>
+                <th scope="row" className={css.nameCell}>{row.name}</th>
                 <td>{row.group}</td>
                 <td>{row.position || "–"}</td>
                 <td>{row.bu || "–"}</td>
@@ -104,7 +104,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                 <td><span className={css.statusCell}>{status(row)}{cancel(row)}</span></td>
                 <td>{row.reason || "–"}</td>
                 <td>{row.doneBy || "–"}</td>
-                <td className={css.num}>{row.doneAt ? clock(row.doneAt) : "–"}</td>
+                <td className={css.num}>{row.doneAt ? `${wibDay(row.doneAt) === wibDay(row.at) ? "" : `${sheetDate(row.doneAt)} `}${clock(row.doneAt)}` : "–"}</td>
                 <td className={css.num}>{row.claimNo ?? "–"}</td>
               </tr>
             ))}

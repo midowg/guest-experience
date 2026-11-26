@@ -67,7 +67,12 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
-  const notify = useCallback((next: Toast) => {
+  /** The message on screen, for `notify` to look at without being made anew. */
+  const shownToast = useRef<Toast | null>(null);
+  useEffect(() => { shownToast.current = toast; }, [toast]);
+  const notify = useCallback((next: Toast, quiet = false) => {
+    // News that only informs never takes away a message that still offers Urungkan.
+    if (quiet && shownToast.current?.undo) return;
     window.clearTimeout(toastTimer.current);
     setToast(next);
     // A success goes by itself; a problem stays until it is closed.
@@ -82,14 +87,13 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
     notify({
       tone: "success", title: orders.length === 1 ? "Pesanan baru masuk" : `${orders.length} pesanan baru masuk`,
       body: orders.map(order => order.kind === "klaim" ? `Klaim ${firstName(order.person.name)}` : `Rapat ${order.room || order.no}`).join(", "),
-    });
+    }, true);
   }, [notify]);
   const queue = useQueue(api, initial.queue ?? null, onNew);
   const waiting = queue.state?.waiting.length ?? 0;
 
   const [manual, setManual] = useState(openManual);
   const [refuse, setRefuse] = useState<QueueOrder | null>(null);
-  const [undoing, setUndoing] = useState<string | null>(null);
   // A sheet or a dialog takes the screen: a message left over from before would cover its buttons.
   const openManualSheet = () => { setToast(null); setManual(true); };
   const openRefuse = (order: QueueOrder) => { setToast(null); setRefuse(order); };
@@ -100,9 +104,13 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
   const [settings, setSettings] = useState<SettingsData | null>(initial.settings ?? null);
   const [settingsError, setSettingsError] = useState("");
   const [settingsAttempt, setSettingsAttempt] = useState(0);
-  const needsSettings = !settings && (view === "pengaturan" || manual);
+  // Read each time Pengaturan or Catat manual is opened (another pengelola may have changed the quotas);
+  // what is already known stays on screen meanwhile. The page's own first data is not asked for twice.
+  const needsSettings = view === "pengaturan" || manual;
+  const settingsFresh = useRef(!!initial.settings);
   useEffect(() => {
     if (!needsSettings) return;
+    if (settingsFresh.current) { settingsFresh.current = false; return; }
     let live = true;
     api.settings()
       .then(data => { if (live) { setSettings(data); setSettingsError(""); } })
@@ -141,21 +149,30 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
     go(to);
   };
 
+  /** The card that held the focus left the queue (or its dialog closed onto nothing): the focus goes to the queue, not to the top of the page. */
+  const focusQueue = () => window.setTimeout(() => {
+    if (!document.activeElement || document.activeElement === document.body) document.querySelector<HTMLElement>("[data-coffee-focus]")?.focus();
+  }, 0);
   const undo = async (order: QueueOrder) => {
-    setUndoing(order.id);
     const result = await queue.reopen(order);
-    setUndoing(null);
+    if (!result.ok && result.ignored) return;
     setVersion(value => value + 1);
     notify(result.ok ? { tone: "success", title: "Dikembalikan ke antrean", body: orderTitle(order) } : { tone: "error", title: result.message });
   };
   const finish = async (order: QueueOrder) => {
-    const result = await queue.finish(order);
+    const sent = queue.finish(order);
+    focusQueue();
+    const result = await sent;
+    // A second press that landed on the card that moved up: nothing was sent, nothing to say.
+    if (!result.ok && result.ignored) return;
     setVersion(value => value + 1);
     notify(result.ok ? { tone: "success", title: "Selesai diproses", body: orderTitle(order), undo: result.order } : { tone: "error", title: result.message });
   };
   const reject = async (order: QueueOrder, note: string) => {
     setRefuse(null);
-    const result = await queue.reject(order, note);
+    const sent = queue.reject(order, note);
+    focusQueue();
+    const result = await sent;
     setVersion(value => value + 1);
     notify(result.ok
       ? { tone: "success", title: "Ditolak", body: `${orderTitle(order)}. Catatannya dibaca ${order.kind === "klaim" ? "pemesan. Jatah tidak terpakai." : "GA dan PIC."}`, undo: result.order }
@@ -201,7 +218,7 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
         {opened.includes("antrean") && (
           <div className={css.view} hidden={view !== "antrean"}>
             <QueueView
-              queue={queue.state} error={queue.error} now={now} phone={phone} actorName={actorName} undoing={undoing}
+              queue={queue.state} error={queue.error} now={now} phone={phone} actorName={actorName} undoing={queue.undoing}
               onRetry={() => void queue.refresh()} onFinish={order => void finish(order)} onRefuse={openRefuse} onUndo={order => void undo(order)} onManual={openManualSheet} onCancel={openCancel}
             />
           </div>
@@ -238,7 +255,7 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
           <div className={css.toast} role={toast.tone === "error" ? "alert" : "status"}>
             {toast.tone === "error" ? <TriangleAlert size={20} aria-hidden /> : <Check size={20} aria-hidden />}
             <div><strong>{toast.title}</strong>{toast.body && <p>{toast.body}</p>}</div>
-            {toast.undo && <button type="button" className={css.toastAction} disabled={undoing !== null} onClick={() => { const order = toast.undo!; setToast(null); void undo(order); }}>Urungkan</button>}
+            {toast.undo && <button type="button" className={css.toastAction} disabled={queue.undoing.has(toast.undo.id)} onClick={() => { const order = toast.undo!; setToast(null); void undo(order); }}>Urungkan</button>}
             <button type="button" className={css.iconButton} aria-label="Tutup pemberitahuan" onClick={() => setToast(null)}><X size={18} aria-hidden /></button>
           </div>
         )}

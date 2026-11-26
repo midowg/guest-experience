@@ -185,7 +185,7 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
           <span className={css.skeleton} style={{ height: 320 }} />
         </div>
       ) : (
-        <div className={`${css.stack} ${stale || loading ? css.stale : ""}`} aria-busy={loading}>
+        <div className={`${css.stack} ${stale ? css.stale : ""}`} aria-busy={loading}>
           <section className={css.stats} aria-label={`Angka ${title}`}>
             <div className={css.stat} data-main="true">
               <span>Total minuman</span><strong>{summary.total}</strong>
@@ -197,12 +197,21 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
             <div className={css.stat} data-tone="no"><span>Ditolak</span><strong>{summary.refused}</strong><small>jatah tidak terpakai</small></div>
           </section>
 
-          <div className={css.tabs} role="tablist" aria-label="Tampilan rekap">
-            {(["ringkasan", "detail"] as RecapTab[]).map(item => (
-              <button key={item} type="button" role="tab" id={`${uid}-tab-${item}`} aria-selected={tab === item} aria-controls={`${uid}-panel-${item}`} onClick={() => setTab(item)}>
-                {item === "ringkasan" ? "Ringkasan" : `Detail · ${rows.length} baris`}
-              </button>
-            ))}
+          <div className={css.tabs}>
+            <div role="tablist" aria-label="Tampilan rekap" onKeyDown={event => {
+              // One stop for Tab; the arrows move between the two.
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              const next: RecapTab = tab === "ringkasan" ? "detail" : "ringkasan";
+              setTab(next);
+              document.getElementById(`${uid}-tab-${next}`)?.focus();
+            }}>
+              {(["ringkasan", "detail"] as RecapTab[]).map(item => (
+                <button key={item} type="button" role="tab" id={`${uid}-tab-${item}`} aria-selected={tab === item} aria-controls={`${uid}-panel-${item}`} tabIndex={tab === item ? 0 : -1} onClick={() => setTab(item)}>
+                  {item === "ringkasan" ? "Ringkasan" : `Detail · ${rows.length} baris`}
+                </button>
+              ))}
+            </div>
             <span className={css.tabsNote}>{title}</span>
           </div>
 

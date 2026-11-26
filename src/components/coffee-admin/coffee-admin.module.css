@@ -7,6 +7,8 @@
   display: contents;
   --surface: var(--cs-surface); --surface-2: var(--cs-surface-2); --fill: var(--cs-fill); --line: var(--cs-line);
   --line-strong: color-mix(in srgb, var(--cs-text) 22%, var(--cs-line));
+  /* the edge of something to type in or choose: at least 3:1 against the surface */
+  --field-line: color-mix(in srgb, var(--cs-text) 52%, var(--cs-line));
   --ink: var(--cs-text); --ink-2: var(--cs-muted); --ink-3: var(--cs-subtle);
   --act: var(--cs-primary); --act-strong: var(--cs-primary-hover); --act-c: var(--cs-primary-soft);
   --ok: var(--cs-ok-fg); --ok-c: var(--cs-ok-bg);
@@ -14,14 +16,16 @@
   --ease: cubic-bezier(.2, 0, 0, 1);
 }
 .view, .scrim, .toastRegion, .tabBar { color: var(--ink); font-size: 15px; line-height: 1.45; }
-.view { display: grid; gap: 20px; min-width: 0; }
+/* one column that may shrink: a long line inside (a span's title) never widens the page */
+.view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
 .view[hidden] { display: none; }
-.stack { display: grid; gap: 20px; min-width: 0; }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
 .view *, .scrim *, .toastRegion *, .tabBar * { box-sizing: border-box; }
 .view :where(h2, p), .scrim :where(h2, p), .toastRegion p { margin: 0; }
 .view :where(h2), .scrim :where(h2) { font-family: inherit; color: var(--ink); letter-spacing: -.01em; }
 .root :where(button, input, select, textarea) { font: inherit; color: inherit; }
 .root :where(button) { cursor: pointer; }
+.queue:focus { outline: none; }
 .view :focus-visible, .scrim :focus-visible, .tabBar :focus-visible { outline: 3px solid var(--act); outline-offset: 2px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .num { font-variant-numeric: tabular-nums; text-align: right; }
@@ -30,7 +34,7 @@
 .muted { color: var(--ink-2); font-size: 15px; }
 
 .primary, .secondary, .danger, .dangerText {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 16px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
   border-radius: 12px; border: 1px solid transparent; font-size: 15px; font-weight: 700; text-decoration: none; white-space: nowrap;
   transition: background-color .15s var(--ease), transform .1s var(--ease);
 }
@@ -38,19 +42,19 @@
 .primary:hover { background: var(--act-strong); }
 .secondary { background: var(--surface); border-color: var(--line-strong); color: var(--ink); }
 .secondary:hover { background: var(--surface-2); }
-.danger { background: var(--no); color: #fff; }
+.danger { background: var(--no); color: var(--cs-on-primary); }
 .danger:hover { background: color-mix(in srgb, var(--no) 85%, #000); }
 .dangerText { background: none; color: var(--no); }
 .dangerText:hover { background: var(--no-c); }
 .primary:active, .secondary:active, .danger:active { transform: scale(.98); }
 .primary:disabled, .secondary:disabled, .danger:disabled, .primary[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 .textButton {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 8px; border: 0; border-radius: 10px;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px; border: 0; border-radius: 10px;
   background: none; color: var(--act-strong); font-weight: 700;
 }
 .textButton:hover { background: var(--act-c); }
 .textButton:disabled { opacity: .55; cursor: not-allowed; }
-.iconButton { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 0; border-radius: 12px; background: none; color: var(--ink-2); }
+.iconButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border: 0; border-radius: 12px; background: none; color: var(--ink-2); }
 .iconButton:hover { background: var(--cs-hover); }
 
 .pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
@@ -130,7 +134,7 @@
 .field { display: grid; gap: 6px; min-width: 0; }
 .field > label, .kindFilter > span, .fieldset legend { font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .field input, .field select, .field textarea {
-  width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface);
+  width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface);
   font-size: 15px;
 }
 .field textarea { resize: vertical; }
@@ -140,7 +144,7 @@
 .error { color: var(--no); font-size: 14px; font-weight: 700; }
 .combo { position: relative; }
 .combo input { padding-left: 38px; }
-.comboIcon { position: absolute; left: 12px; top: 11px; color: var(--ink-3); pointer-events: none; }
+.comboIcon { position: absolute; left: 12px; top: 13px; color: var(--ink-3); pointer-events: none; }
 .comboList {
   position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none;
   max-height: 280px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
@@ -155,7 +159,7 @@
 .fieldset legend { padding: 0; margin-bottom: 6px; }
 .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--fill); }
 .segmented label {
-  flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 36px; border-radius: 9px;
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 9px;
   font-weight: 700; color: var(--ink-2); cursor: pointer; position: relative; text-align: center;
 }
 .segmented label[data-checked] { background: var(--surface); color: var(--ink); box-shadow: var(--cs-raise); }
@@ -164,7 +168,7 @@
 .segmented label:has(input:focus-visible), .chips label:has(input:focus-visible) { outline: 3px solid var(--act); outline-offset: 2px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button, .chips label {
-  display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px;
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border: 1px solid var(--field-line); border-radius: 8px;
   background: var(--surface); font-size: 14px; font-weight: 700; color: var(--ink-2); cursor: pointer; position: relative; text-align: left;
 }
 .chips button:hover, .chips label:hover { background: var(--surface-2); }
@@ -206,9 +210,9 @@
 .toast strong { display: block; font-size: 15px; }
 .toast p { font-size: 14px; opacity: .86; overflow-wrap: anywhere; }
 .toast button { color: inherit; }
-.toast .toastAction { flex: none; min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.toast .toastAction { flex: none; min-height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .toast button:hover { background: rgba(255, 255, 255, .12); }
-.toast .iconButton { width: 36px; height: 36px; }
+.toast .iconButton { width: 44px; height: 44px; }
 .toast :focus-visible { outline: 3px solid var(--cs-on-strong); outline-offset: 2px; }
 
 /* ---------- rekap */
@@ -227,6 +231,7 @@
 .stat[data-main] strong, .stat[data-main] span, .stat[data-main] small { color: var(--act-strong); }
 .stat[data-tone="no"] strong { color: var(--no); }
 .tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs [role="tablist"] { display: flex; gap: 4px; }
 .tabs button {
   min-height: 44px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none;
   color: var(--ink-2); font-weight: 700; font-variant-numeric: tabular-nums;
@@ -250,12 +255,12 @@
 .barTrack { height: 10px; border-radius: 999px; background: var(--fill); overflow: hidden; }
 .barTrack span { display: block; height: 100%; border-radius: 999px; background: var(--act); }
 .detailBox { max-height: calc(100dvh - 120px); min-height: 320px; border: 1px solid var(--line); }
-.detail tbody td:nth-child(5), .detail thead th:nth-child(5) { position: sticky; left: 0; }
+.detail tbody th:nth-child(5), .detail thead th:nth-child(5) { position: sticky; left: 0; }
 .detail thead th:nth-child(5) { z-index: 2; }
-.detail tbody td:nth-child(5) { background: var(--surface); }
+.detail tbody th:nth-child(5) { background: var(--surface); }
 .nameCell { font-weight: 700; }
 .statusCell { display: inline-flex; gap: 4px; }
-.sortButton { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font-weight: 700; color: var(--ink); }
+.sortButton { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: none; font-weight: 700; color: var(--ink); }
 .moreRow { display: flex; justify-content: center; padding-top: 12px; }
 
 /* ---------- lists that stand in for tables on a phone */
@@ -279,7 +284,7 @@
 .quotaForm { display: grid; gap: 12px; }
 .quotaRow { display: grid; grid-template-columns: minmax(0, 1fr) 96px auto; align-items: center; gap: 10px; }
 .quotaRow label { font-weight: 700; }
-.quotaRow input { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-variant-numeric: tabular-nums; text-align: right; }
+.quotaRow input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); font-variant-numeric: tabular-nums; text-align: right; }
 .quotaRow input[aria-invalid="true"] { border-color: var(--no); }
 .quotaRow > span { color: var(--ink-2); }
 .formFoot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -299,6 +304,18 @@
   .queueLayout { grid-template-columns: minmax(0, 1fr) 272px; }
   .filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .searchField { grid-column: 1 / -1; }
+}
+
+/* the console's own buttons in this area's page heads (Catat manual, Unduh): the same 44 px as the rest */
+.root .headActions :is(a, button), .root .tall { min-height: 44px; }
+
+/* A tablet, or a narrow window beside the menu: one column, today's numbers above the queue and
+   "Baru diproses" under it (as on a phone), so a card keeps its full width (audit F1-05). */
+@media (max-width: 1100px) {
+  .queueLayout { grid-template-columns: minmax(0, 1fr); }
+  .aside { display: contents; }
+  .tallyPanel { order: -1; }
+  .recentPanel { order: 1; }
 }
 
 /* ---------- phone shell parts: hidden on wider screens */
@@ -332,7 +349,7 @@
   .tabIcon { position: relative; display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; }
   .tabBadge {
     position: absolute; top: -4px; right: 6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
-    background: var(--wait); color: #fff; font-size: 12px; font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums;
+    background: var(--wait); color: var(--cs-on-primary); font-size: 12px; font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums;
   }
   .tabBar .tabAction { color: var(--act-strong); }
   .tabBar .tabAction .tabIcon { background: var(--act); color: var(--cs-on-primary); }
@@ -367,11 +384,9 @@
   .actions .dangerText { border-color: color-mix(in srgb, var(--no) 30%, var(--line)); }
   .actions .primary { grid-column: 1 / -1; min-height: 52px; font-size: 17px; }
 
-  /* toast above the tab bar */
-  .toastRegion { left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); }
+  /* toast under the top bar: at the bottom it would cover the first card's buttons (audit F1-12) */
+  .toastRegion { left: 12px; right: 12px; bottom: auto; top: calc(76px + env(safe-area-inset-top)); }
   .toast { width: auto; max-width: none; }
-  .toast .toastAction { min-height: 44px; }
-  .toast .iconButton { width: 44px; height: 44px; }
 
   /* dialogs and sheets come up from the bottom */
   .scrim, .scrim[data-side] { place-items: end stretch; padding: 0; }
@@ -392,13 +407,12 @@
   .sheetFoot .secondary, .sheetFoot .primary { flex: 1; }
   .field input, .field select, .field textarea, .quotaRow input { min-height: 48px; font-size: 16px; }
   .comboIcon { top: 15px; }
-  .segmented label { min-height: 44px; }
-  .chips button, .chips label { min-height: 44px; font-size: 15px; }
+  .chips button, .chips label { font-size: 15px; }
   .twoCol { gap: 10px; }
 
   /* rekap */
   .filterBar { display: flex; align-items: center; gap: 12px; }
-  .filterBar > span { min-width: 0; color: var(--ink-2); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filterBar > span { flex: 1; min-width: 0; color: var(--ink-2); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .filterBar .secondary { flex: none; }
   .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
   .stat { padding: 12px; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { firstName } from "@/lib/coffee/access";
 import { drinkLabel } from "@/lib/coffee/menu";
@@ -16,12 +16,14 @@ export function RefuseDialog({ order, onClose, onRefuse }: { order: QueueOrder; 
   const [tried, setTried] = useState(false);
   const titleId = useId();
   const fieldId = useId();
+  const field = useRef<HTMLTextAreaElement>(null);
   const text = note.trim();
   const error = !tried ? "" : text.length < 3 ? "Tulis catatan untuk pemesan, minimal 3 huruf." : text.length > 300 ? "Catatan paling panjang 300 huruf." : "";
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setTried(true);
     if (text.length >= 3 && text.length <= 300) onRefuse(text);
+    else field.current?.focus(); // to where the mistake is
   };
   const claim = order.kind === "klaim";
   const item = order.items[0];
@@ -36,7 +38,7 @@ export function RefuseDialog({ order, onClose, onRefuse }: { order: QueueOrder; 
         <p className={css.muted}>{claim ? "Jatah tidak terpakai. " : ""}Catatan ini dibaca {claim ? "pemesan" : "GA dan PIC"}.</p>
         <div className={css.field}>
           <label htmlFor={fieldId}>Catatan tolak</label>
-          <textarea id={fieldId} data-autofocus rows={3} maxLength={300} value={note} onChange={event => setNote(event.target.value)}
+          <textarea ref={field} id={fieldId} data-autofocus rows={3} maxLength={300} value={note} onChange={event => setNote(event.target.value)}
             aria-invalid={!!error} aria-describedby={error ? `${fieldId}-error` : undefined} />
           {error && <p id={`${fieldId}-error`} className={css.error} role="alert">{error}</p>}
         </div>
