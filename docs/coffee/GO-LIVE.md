@@ -6,9 +6,10 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 
 ## Yang perlu diketahui dulu
 
-- Ada **dua berkas database** (migrasi) yang **belum pernah dijalankan di database mana pun**, juga
-  belum di database uji. Sebelum keduanya dijalankan, Werkudara Coffee mati dengan rapi: halamannya
-  menulis "belum dibuka", dan aplikasi lain tidak berubah.
+- Ada **dua berkas database** (migrasi) yang **belum pernah dijalankan di database Supabase mana
+  pun**. **SQL sudah dijalankan di Postgres WASM (PGlite) pada 26 Nov 2026; uji balapan sungguhan
+  belum** (lihat langkah 1). Sebelum keduanya dijalankan, Werkudara Coffee mati dengan rapi:
+  halamannya menulis "belum dibuka", dan aplikasi lain tidak berubah.
 - **Belum pernah diuji dengan orang sungguhan:** masuk dengan akun asli, HP dan tablet asli, dan
   notifikasi sungguhan. Semua itu baru diuji lewat tes otomatis dan layar tiruan. Langkah 9 dan 10 di
   bawah adalah ujinya.
@@ -21,11 +22,26 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
    tayang tanpa migrasi: `/coffee` menulis "belum dibuka" dan aplikasi lain normal. **Jangan mencentang
    Werkudara Coffee di Akses admin dulu**: akan ditolak dengan kalimat "Akses Werkudara Coffee menunggu
    migrasi 202612010001_coffee.sql", dan tidak ada yang tersimpan.
-1. **Uji database di salinan uji (teknis, wajib, belum pernah dilakukan).** Jalankan
-   `202612010001_coffee.sql` lalu `202612010002_coffee_push.sql` di database uji yang punya tabel
-   `employees` dan `admin_grants`. Uji: 20 klaim serentak untuk satu orang yang jatahnya tinggal 1 →
-   tepat 1 yang berhasil; "Tambah lagi" memberi nomor `T-xxxx-2`; Urungkan klaim yang ditolak gagal
-   bila jatahnya sudah penuh; 5 PIN salah mengunci 30 detik lalu terbuka lagi.
+1. **Uji database (teknis). Sebagian sudah, satu hal belum.**
+   - **Sudah (26 Nov 2026):** kedua migrasi dijalankan apa adanya di mesin Postgres sungguhan yang
+     hidup di memori (PGlite, Postgres versi WASM), di atas tabel `employees` dan `admin_grants` yang
+     dibuat dari migrasi aslinya. Hasil: **keduanya berjalan tanpa galat, tidak ada SQL yang perlu
+     diperbaiki**; dijalankan ulang 3 kali (tabel kosong dan sudah berisi) tetap aman, isi tabel, nomor
+     urut, PIN, dan akses tidak berubah. 325 pemeriksaan aturan lulus (jatah 4/2/2 per bulan WIB, kunci
+     kiriman, Catat manual, Batalkan catatan, Urungkan, pesanan rapat, Tambah lagi, PIN, notifikasi,
+     akses admin, hak akses), dan hasilnya **sama** dengan tiruan yang dipakai tes (`fake-db.ts`).
+     Ulangi kapan saja, tanpa memasang apa pun dan tanpa menyentuh database asli:
+     `npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs` (perlu Node 22.18+;
+     tambah `--verbose` untuk melihat tiap pemeriksaan). Jalankan lagi setiap kali berkas migrasi diubah.
+   - **Belum (wajib, di database uji Supabase):** **balapan sungguhan.** PGlite hanya punya satu
+     koneksi, jadi dua permintaan tidak pernah benar-benar bersamaan; yang terbukti hanya bahwa kunci
+     jatah diambil di dalam transaksi klaim dan dilepas sesudahnya. Jalankan kedua berkas di database
+     uji, lalu kirim 20 klaim serentak untuk satu orang yang jatahnya tinggal 1 → harus tepat 1 yang
+     berhasil; dan 2 "Tambah lagi" serentak → nomor `T-xxxx-2` dan `T-xxxx-3`, tidak ada yang kembar.
+   - **Juga belum:** lewat PostgREST/Supabase sungguhan (pemanggilan `.rpc`, baca pesanan beserta
+     minumannya, kode galat), dan versi Postgres Supabase (PGlite memakai versi yang lebih baru).
+   - Diketahui dari uji: nomor rapat `T-xxxx` bisa melompat satu bila sebuah kiriman ditolak di
+     tengah jalan (sifat nomor urut Postgres, bukan salah).
 2. **Produksi, cek satu hal sebelum migrasi (teknis).** Jalankan:
    `select pg_get_constraintdef(oid) from pg_constraint where conname = 'admin_grants_apps_check';`
    Isinya harus tepat `acara, friday_sharing, your_visit, wam, kuesioner, tv, wellbeing, wam_acara, hr`.
@@ -112,7 +128,9 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 
 ## Yang masih terbuka setelah perbaikan audit
 
-- Database belum pernah dijalankan dan uji 20 klaim serentak belum dilakukan (langkah 1).
+- Migrasi belum pernah dijalankan di database Supabase (uji maupun produksi), dan uji 20 klaim
+  serentak (balapan sungguhan) belum dilakukan. Yang sudah: SQL dijalankan dan aturannya diuji di
+  Postgres WASM (PGlite), 26 Nov 2026 (langkah 1).
 - Akun asli, perangkat asli, dan notifikasi sungguhan belum pernah diuji (langkah 9 dan 10).
 - Keluar dari WAM, WG People, atau Booking (bukan dari Coffee) belum menghentikan notifikasi Coffee di
   perangkat itu sampai Coffee dibuka lagi di sana.

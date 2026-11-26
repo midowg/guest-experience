@@ -42,6 +42,12 @@ tidak memblokir push tetapi wajib beres sebelum langkah berikutnya ditandai "tid
 > F5-09, F5-10. Sebagian: F5-07, F5-12. Dibiarkan: F5-13, F5-14. Dicatat: F5-11. Daftar rilis dan catatan rollback di
 > bagian H **sudah digantikan** oleh `docs/coffee/GO-LIVE.md` (kunci PIN kini 30 detik naik bertahap, bukan 10 menit;
 > nomor baris migrasi berubah). Yang tetap belum pernah dilakukan: menjalankan SQL, akun asli, perangkat asli, push sungguhan.
+>
+> **Pembaruan 26 Nov 2026 (uji SQL):** SQL sudah dijalankan di Postgres WASM (PGlite); uji balapan sungguhan belum.
+> Kedua migrasi berjalan tanpa galat, aman dijalankan ulang, tidak ada SQL yang diperbaiki; aturan fungsi, PIN, tabel
+> push, hak akses, dan `admin_grants_apps_check` lulus dan sama dengan `fake-db.ts`
+> (`npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs`). Belum: dua transaksi bersamaan
+> (20 klaim serentak), PostgREST, dan database Supabase. Rinciannya di `GO-LIVE.md` langkah 1.
 
 | ID | Tingkat | Berkas:baris | Yang salah | Cara mengulang | Saran perbaikan | Blokir rilis? | Status (setelah perbaikan, 26 Nov 2026) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -207,9 +213,9 @@ SQL), F2-04 (header `Service-Worker-Allowed`, `curl`), F2-05 (tanpa `orientation
 
 | Ditunda / belum | Wajib sebelum produksi dipakai orang? |
 | --- | --- |
-| **SQL belum pernah dijalankan + uji balapan jatah** (semua audit) | **Ya.** Jalankan kedua berkas di Postgres uji dan uji 20 permintaan serentak sebelum migrasi produksi. |
+| **SQL belum pernah dijalankan + uji balapan jatah** (semua audit) | **Ya, sebagian sudah.** 26 Nov: kedua berkas dijalankan dan aturannya diuji di Postgres WASM (PGlite), bersih. **Belum:** 20 permintaan serentak di Postgres uji (PGlite hanya satu koneksi); tetap wajib sebelum migrasi produksi. |
 | A-1: siapa "GA" (`dw` + Admin Booking + pemegang akses boleh Mode GA, pesanan tim tanpa jatah, daftar karyawan) | **Ya, keputusan pemilik** sebelum `/coffee/ga` diumumkan. |
-| S-7: cek `admin_grants_apps_check` | **Ya**, saat menjalankan migrasi 1 (daftar rilis langkah 2). |
+| S-7: cek `admin_grants_apps_check` | **Ya**, saat menjalankan migrasi 1 (daftar rilis langkah 2). Di PGlite (26 Nov) batasan sesudah migrasi = daftar `202611200703` + `coffee`. |
 | Halaman asli dengan sesi tidak pernah dibuka; push tidak pernah terkirim; perangkat asli | **Ya**, langkah uji di daftar rilis. |
 | F2-10 ("Siap diambil" hanya hari yang sama), tiga keputusan terbuka F4 (netral di mode tamu, PIC ke `/coffee`, batal tidak menarik notifikasi) | Perlu persetujuan pemilik; tidak menahan. |
 | S-5 (jam aplikasi vs database), B-4 (catat manual untuk yang sudah nonaktif), R-2 (sel angka di Detail), R-3 (`limit(5000)`), Q-2, F1-22, F1-24, F2-13 (sisa), F2-20, F3-15, F3-17 (b,c), F3-20 | Tidak. Boleh setelah rilis. R-2 sebaiknya ditanyakan ke HR saat rekap pertama. |
