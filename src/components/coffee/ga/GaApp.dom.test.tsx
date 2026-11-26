@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { coffeePath } from "@/lib/routes";
 import { GaApp } from "./GaApp";
+import { HOLD_REFRESH_MS } from "./hold";
 import { SAMPLE_GA, SAMPLE_PEOPLE, SAMPLE_REFUSAL, createSampleGa } from "./sample";
 import { forget, NOW, rest } from "./testing";
 import { POLL_MS } from "./useGa";
@@ -327,6 +328,30 @@ function guestPicks(drink: string, name = "") {
   press("Pilih minuman ini");
 }
 const yes = () => { fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Ya, mode GA" })); rest(); };
+
+// Audit F5-06: the cookie lives twelve hours; a book left open longer must still be in guest mode at the next reload.
+it("F5-06 writes the guest-mode cookie again while the book is open, and not once the GA officer is back", () => {
+  const gone = () => { document.cookie = "coffee_ga_tamu=; path=/; max-age=0"; };
+  open();
+  start();
+  press("Serahkan ke tamu");
+  expect(document.cookie).toContain("coffee_ga_tamu=1");
+  // As if it had run out: half an hour later it is there again.
+  gone();
+  expect(document.cookie).not.toContain("coffee_ga_tamu=1");
+  act(() => { vi.advanceTimersByTime(HOLD_REFRESH_MS + 1000); });
+  expect(document.cookie).toContain("coffee_ga_tamu=1");
+  // And whenever the tablet is looked at again (woken up, the browser brought back).
+  gone();
+  act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+  expect(document.cookie).toContain("coffee_ga_tamu=1");
+  // Back in Mode GA: the cookie is gone and stays gone.
+  press("Mode GA");
+  yes();
+  expect(document.cookie).not.toContain("coffee_ga_tamu=1");
+  act(() => { vi.advanceTimersByTime(HOLD_REFRESH_MS * 3); document.dispatchEvent(new Event("visibilitychange")); });
+  expect(document.cookie).not.toContain("coffee_ga_tamu=1");
+});
 
 it("F3-01 comes back to the menu book after a reload in guest mode: no GA data on the page, nothing asked, nothing lost", async () => {
   const first = open();

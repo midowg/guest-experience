@@ -12,7 +12,7 @@ import { coffeePath } from "@/lib/routes";
  * (null where service workers do not exist) and may be called from anywhere, any number of times.
  * The employee app calls it through usePwa, GA's tablet in GaApp (not while a guest holds it), and
  * the pengelola's admin (outside the scope, which a subscription does not need) when its device
- * is asked about notifications.
+ * is asked about notifications. Subscribing waits for the worker to be active (`activeCoffeeWorker`).
  */
 
 let worker: Promise<ServiceWorkerRegistration | null> | null = null;
@@ -32,6 +32,30 @@ export function coffeeWorker(): Promise<ServiceWorkerRegistration | null> {
     }
   })();
   return worker;
+}
+/** How long "Nyalakan notifikasi" waits for a worker that was registered just now to become active. */
+export const WORKER_READY_MS = 10_000;
+/**
+ * The registration once its worker is active (audit F5-03). register() answers while the worker is
+ * still installing, and pushManager.subscribe() refuses until one is active: on a browser that
+ * never opened /coffee (the pengelola's admin, outside the scope) the first press would fail and
+ * only the second work. navigator.serviceWorker.ready cannot be used for it: it never settles on
+ * a page outside the scope. So the worker's own state is watched, for a while at most; after that
+ * the caller goes on and fails in the open. Never throws.
+ */
+export async function activeCoffeeWorker(ms = WORKER_READY_MS): Promise<ServiceWorkerRegistration | null> {
+  const found = await coffeeWorker();
+  if (!found || found.active) return found;
+  const pending = found.installing ?? found.waiting;
+  if (!pending) return found;
+  await new Promise<void>(resolve => {
+    const done = () => { clearTimeout(timer); pending.removeEventListener("statechange", check); resolve(); };
+    const check = () => { if (pending.state === "activated" || pending.state === "redundant") done(); };
+    const timer = setTimeout(done, ms);
+    pending.addEventListener("statechange", check);
+    check();
+  });
+  return found;
 }
 /** For tests only. */
 export const forgetCoffeeWorker = () => { worker = null; };

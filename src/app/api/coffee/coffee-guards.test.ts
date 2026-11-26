@@ -127,7 +127,9 @@ it("checks the PIN GA on the server: one answer for every wrong try, nothing of 
   await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
   expect((await body(await all.gaState())).data).toMatchObject({ pin: true });
   const answers: string[] = [];
-  for (const wrong of ["0000", "482", "48211", "abcd", "", null, 4821, { $ne: "" }]) {
+  for (const [index, wrong] of ["0000", "482", "48211", "abcd", "", null, 4821, { $ne: "" }].entries()) {
+    // A right try in between, so the wrong ones never add up to a lock here (that is the next test).
+    if (index === 4) expect((await all.gaPin("4821")).status).toBe(200);
     const response = await all.gaPin(wrong);
     expect(response.status, String(wrong)).toBe(422);
     const answer = await body(response);
@@ -141,18 +143,47 @@ it("checks the PIN GA on the server: one answer for every wrong try, nothing of 
   expect(said).not.toMatch(/4821|s1\$|ga_pin/);
 });
 
-it("stops trying PINs for one tablet account after ten tries in ten minutes, the right PIN included", async () => {
+// Audit F5-05: a guest who types wrong PINs must not lock the GA officer in the book for ten minutes.
+it("counts wrong PINs only, locks for a short while that it names, and lets the right PIN in afterwards", async () => {
   const { saveGaPin } = await import("@/lib/server/coffee/pin");
   await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
   state.member = bagas;
   const all = await routes();
-  for (let n = 0; n < 10; n++) expect((await all.gaPin("0000")).status).toBe(422);
+  vi.useFakeTimers({ now: new Date("2026-11-26T03:00:00Z"), toFake: ["Date"] });
+  try {
+    // Right tries are free: twelve in a row (the old limit was ten, right ones included).
+    for (let n = 0; n < 12; n++) expect((await all.gaPin("4821")).status).toBe(200);
+    for (let n = 0; n < 4; n++) expect((await all.gaPin("0000")).status).toBe(422);
+    const fifth = await all.gaPin("0000");
+    expect(fifth.status).toBe(429);
+    expect((await body(fifth)).message).toBe("Terlalu banyak PIN salah. Tunggu 30 detik, lalu coba lagi. Lupa PIN? Minta pengelola menyimpan PIN baru di Pengaturan.");
+    // Locked: the right PIN waits too, however often the button is pressed (pressing does not use up the address's limit).
+    const calls = db.state.calls.length;
+    for (let n = 0; n < 70; n++) expect((await all.gaPin("4821")).status).toBe(429);
+    expect(db.state.calls.slice(calls)).not.toContain("rpc:consume_rate_limit");
+    // Counted per person: another GA account on the same office address is not locked.
+    state.member = { ...rina, roles: ["ga"] };
+    expect((await all.gaPin("4821")).status).toBe(200);
+    state.member = bagas;
+    vi.setSystemTime(new Date("2026-11-26T03:00:30Z"));
+    expect((await all.gaPin("4821")).status).toBe(200);
+    // The pengelola saving a PIN opens a locked account at once.
+    for (let n = 0; n < 4; n++) await all.gaPin("0000");
+    expect((await all.gaPin("0000")).status).toBe(429);
+    await saveGaPin("5555", { employeeId: PEOPLE.dewi, label: "Dewi" });
+    expect((await all.gaPin("5555")).status).toBe(200);
+  } finally { vi.useRealTimers(); }
+});
+
+it("keeps an outer wall per account and per address against a script", async () => {
+  const { saveGaPin } = await import("@/lib/server/coffee/pin");
+  await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
+  state.member = bagas;
+  const all = await routes();
+  for (let n = 0; n < 30; n++) expect((await all.gaPin("4821")).status).toBe(200);
   const late = await all.gaPin("4821");
   expect(late.status).toBe(429);
   expect((await body(late)).message).toBe("Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi.");
-  // Counted per person: another GA account on the same office address still gets its own tries.
-  state.member = { ...rina, roles: ["ga"] };
-  expect((await all.gaPin("4821")).status).toBe(200);
 });
 
 it("takes a claim, shows it, and lets its owner (only) cancel it", async () => {

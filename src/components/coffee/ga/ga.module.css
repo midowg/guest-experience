@@ -491,6 +491,9 @@
 .ga button.topLink[aria-disabled="true"] { opacity: .6; cursor: progress; }
 .ga .topNote { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; color: var(--ink-2); font-size: 15px; font-weight: 600; white-space: nowrap; }
 .ga .topNote svg { color: var(--emp); }
+/* "Matikan" beside "Notifikasi aktif": a quiet word, still a 48 px target. */
+.ga .topNote:has(+ .topOff) { padding-right: 0; }
+.ga button.topOff { color: var(--ink-2); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 640px) {
   .ga .topNote span, .ga button.topLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }

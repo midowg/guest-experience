@@ -105,12 +105,56 @@ it("brings the window of the right part to the front and tells it where to go, w
   expect(sw.opened).toEqual([]);
 });
 
-it("opens a window when that part is not open, and never the tablet's window for the employee app", async () => {
-  const sw = worker({ windows: [coffeePath.ga] });
+it("opens a window when that part is not open, on a device no guest holds", async () => {
+  // A phone or a desk: the employee app is open, the notification is for the admin (and the other way round).
+  const sw = worker({ windows: [coffeePath.home], cookie: null });
+  await sw.click(`${SITE}${coffeeAdminPath.home}`);
+  expect(sw.opened).toEqual([`${SITE}${coffeeAdminPath.home}`]);
+  // GA's tablet outside guest mode (the cookie is gone): the officer's own claim opens in a window of its own.
+  const tablet = worker({ windows: [coffeePath.ga], cookie: null });
+  await tablet.click(`${SITE}${coffeePath.orders}`);
+  expect(tablet.opened).toEqual([`${SITE}${coffeePath.orders}`]);
+  expect(tablet.focused).toEqual([]);
+});
+
+// Audit F5-01: a tap on a notification must never take a guest out of the menu book.
+it("never opens a window and never moves the tablet while a guest holds it, whatever the notification is about", async () => {
+  for (const url of [coffeePath.orders, coffeePath.home, coffeeAdminPath.home, `${coffeeAdminPath.home}/rekap`, coffeePath.gaOrder("o1"), "https://evil.example/coffee", undefined]) {
+    const sw = worker({ windows: [coffeePath.ga], cookie: "1" });
+    await sw.click(url === undefined || url.startsWith("https://") ? url : `${SITE}${url}`);
+    expect(sw.opened, String(url)).toEqual([]);
+    // The book only comes to the front: it is told nothing, so it has nothing to open.
+    expect(sw.focused, String(url)).toEqual([coffeePath.ga]);
+    expect(sw.told, String(url)).toEqual([]);
+  }
+  // The tablet's browser was put away in guest mode (no window at all): nothing opens either.
+  const away = worker({ cookie: "1" });
+  await away.click(`${SITE}${coffeePath.orders}`);
+  await away.click(`${SITE}${coffeeAdminPath.home}`);
+  expect(away.opened).toEqual([]);
+  // Other windows of the same browser (the officer's own app, the admin) are not brought forward for the guest.
+  const more = worker({ windows: [coffeePath.orders, coffeeAdminPath.home, coffeePath.ga], cookie: "1" });
+  await more.click(`${SITE}${coffeePath.orders}`);
+  await more.click(`${SITE}${coffeeAdminPath.home}`);
+  expect(more.opened).toEqual([]);
+  expect(more.focused).toEqual([coffeePath.ga, coffeePath.ga]);
+  expect(more.told).toEqual([]);
+});
+
+it("stays in the book on a browser that cannot read cookies whenever a tablet page is open", async () => {
+  const sw = worker({ windows: [coffeePath.ga], cookieStore: false });
   await sw.click(`${SITE}${coffeePath.orders}`);
   await sw.click(`${SITE}${coffeeAdminPath.home}`);
-  expect(sw.opened).toEqual([`${SITE}${coffeePath.orders}`, `${SITE}${coffeeAdminPath.home}`]);
-  expect(sw.focused).toEqual([]);
+  expect(sw.opened).toEqual([]);
+  expect(sw.focused).toEqual([coffeePath.ga, coffeePath.ga]);
+});
+
+it("keeps only the tablet's address in a notification shown in guest mode", async () => {
+  const sw = worker({ windows: [coffeePath.ga], cookie: "1" });
+  await sw.push({ title: "Klaim baru", body: "Rina · Café Latte", url: coffeeAdminPath.home, tag: "K-419" });
+  await sw.push({ ...claim });
+  await sw.push({ title: "Pesanan rapat siap diambil", body: "Vasuki Room", url: coffeePath.gaOrder("o1"), tag: "T-0113" });
+  expect(sw.shown.map(item => item.options.data.url)).toEqual([`${SITE}${coffeePath.ga}`, `${SITE}${coffeePath.ga}`, `${SITE}${coffeePath.ga}`]);
 });
 
 it("only ever opens an address of the app or its admin on this site", async () => {

@@ -44,6 +44,24 @@ it("offers Nyalakan notifikasi in the top bar beside Aplikasi saya, and says it 
   expect(topbar().queryByRole("button", { name: "Nyalakan notifikasi" })).toBeNull();
 });
 
+// Audit F5-07 (the tablet had no way to turn notifications off) and F5-09 (the focus after the press).
+it("offers Matikan beside Notifikasi aktif, and the focus follows both presses", async () => {
+  const port = samplePush("off");
+  open(port);
+  const on = await topbar().findByRole("button", { name: "Nyalakan notifikasi" });
+  fireEvent.click(on);
+  const off = await topbar().findByRole("button", { name: "Matikan notifikasi di tablet ini" });
+  expect(off.textContent).toBe("Matikan");
+  await waitFor(() => expect(document.activeElement).toBe(off));
+  fireEvent.click(off);
+  const again = await topbar().findByRole("button", { name: "Nyalakan notifikasi" });
+  await waitFor(() => expect(document.activeElement).toBe(again));
+  expect(port.calls.slice(-2)).toEqual(["remove:https://push.example/contoh", "unsubscribe"]);
+  expect(port.saved()).toBe(false);
+  expect(await screen.findByText("Notifikasi dimatikan di tablet ini")).toBeTruthy();
+  expect(topbar().queryByText("Notifikasi aktif")).toBeNull();
+});
+
 it("explains, in a message that stays, why it cannot be turned on", async () => {
   const blocked = samplePush("denied");
   open(blocked);

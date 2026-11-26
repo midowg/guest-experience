@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimSchema, drinklineSchema, manualSchema, meetingSchema, recapQuerySchema, rejectSchema, settingsSchema } from "./schemas";
+import { claimSchema, coffeePushSchema, drinklineSchema, isPushServiceUrl, manualSchema, meetingSchema, recapQuerySchema, rejectSchema, settingsSchema } from "./schemas";
 
 const KEY = "11111111-1111-4111-8111-111111111111";
 const PERSON = "22222222-2222-4222-8222-222222222222";
@@ -126,5 +126,27 @@ describe("Pengaturan and Rekap", () => {
     expect(recapQuerySchema.safeParse({ dari: "2026-11-01" }).success).toBe(false);
     expect(recapQuerySchema.safeParse({ dari: "2026-11-01", sampai: "2026-11-30", jenis: "rapat" }).success).toBe(false);
     expect(recapQuerySchema.safeParse({ dari: "2026-11-01", sampai: "2026-11-30", q: "x".repeat(81) }).success).toBe(false);
+  });
+});
+
+describe("the address of a device's push service (audit F5-04)", () => {
+  it("takes the known push services over https only", () => {
+    for (const url of ["https://fcm.googleapis.com/fcm/send/abc:def", "https://fcm.googleapis.com/wp/abc", "https://FCM.googleapis.com/fcm/send/abc", "https://fcm.googleapis.com:443/fcm/send/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc", "https://web.push.apple.com/QGuQyavXutnMH", "https://api.push.apple.com/3/device/x", "https://wns2-sg2p.notify.windows.com/w/?token=abc", "https://db5p.notify.windows.com/w/?token=abc"]) {
+      expect(isPushServiceUrl(url), url).toBe(true);
+    }
+  });
+  it("refuses every other host, an address by number, another port or scheme, and look-alikes", () => {
+    for (const url of ["https://push.example/x", "http://fcm.googleapis.com/fcm/send/abc", "https://fcm.googleapis.com:8443/x", "https://fcm.googleapis.com.evil.example/x", "https://evilfcm.googleapis.com/x",
+      "https://xfcm.googleapis.com/x", "https://googleapis.com/x", "https://push.apple.com/x", "https://notify.windows.com/x", "https://evilpush.apple.com/x", "https://web.push.apple.com.evil.example/x",
+      "https://user:pw@fcm.googleapis.com/x", "https://fcm.googleapis.com@evil.example/x", "https://evil.example/?u=https://fcm.googleapis.com/", "https://evil.example/#fcm.googleapis.com",
+      "https://127.0.0.1/x", "https://10.0.0.1/x", "https://169.254.169.254/latest", "https://[::1]/x", "https://localhost/x", "https://fcm.googleapis.com./x", "wss://fcm.googleapis.com/x", "file:///etc/passwd", "bukan alamat", "", null, 7]) {
+      expect(isPushServiceUrl(url), String(url)).toBe(false);
+    }
+  });
+  it("is what the push schema asks of a device", () => {
+    const keys = { p256dh: "p".repeat(40), auth: "a".repeat(16) };
+    expect(coffeePushSchema.safeParse({ subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/abc", keys } }).success).toBe(true);
+    expect(coffeePushSchema.safeParse({ subscription: { endpoint: "https://push.example/abc", keys } }).success).toBe(false);
   });
 });

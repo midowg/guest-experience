@@ -446,3 +446,14 @@
 .pushBar[data-on] > svg { color: var(--act-strong); }
 .pushBar > span { flex: 1; min-width: 12rem; }
 .pushBar > .error { flex-basis: 100%; margin: 0; }
+.pushBar > span:focus { outline: none; }
+.pushBar > span:focus-visible { outline: 2px solid var(--act-strong); outline-offset: 2px; border-radius: 6px; }
+/* On a phone the offer is one row: the icon and the button. Its sentence stays for screen readers (audit F5-10). */
+@media (max-width: 760px) {
+  .pushBar[data-on] { flex-wrap: nowrap; }
+  .pushBar[data-on] > span { min-width: 0; }
+  .pushBar[data-offer] { flex-wrap: nowrap; padding: 6px 6px 6px 12px; }
+  .pushBar[data-offer] > span { position: absolute; width: 1px; height: 1px; min-width: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .pushBar[data-offer] > button { flex: 1; min-height: 44px; }
+  .pushBar[data-offer] > .error { position: static; }
+}

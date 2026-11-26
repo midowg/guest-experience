@@ -99,6 +99,11 @@ describe("Rekap's files", () => {
     expect(detail.match(/>Budi</g)).toHaveLength(3);
     expect(detail).toContain("=SUM(A1) habis");
     expect(detail).not.toContain("<f>");
+    // Audit F5-08: all 23 columns have their own width ("Nama tamu" had none, and the rest slid one to the left).
+    const widths = [...detail.matchAll(/<col min="(\d+)" max="\d+" width="(\d+)"/g)].map(match => Number(match[2]));
+    expect(widths).toHaveLength(23);
+    expect(widths.slice(9, 14)).toEqual([24, 18, 10, 20, 24]);
+    expect(widths.slice(17)).toEqual([10, 30, 16, 10, 8, 10]);
     const summary = part(xlsx, "xl/worksheets/sheet2.xml");
     expect(summary).toContain("Rekap Werkudara Coffee · November 2026");
     expect(summary).toContain("Per PIC");

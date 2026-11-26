@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CoffeePushInfo, CoffeePushState, CoffeePushWaiting } from "@/lib/coffee/notify";
 import { deviceLabel, keyBytes, pushSupport, type PushSupport } from "@/lib/pra-wam/push";
-import { coffeeWorker } from "./pwa";
+import { coffeePath } from "@/lib/routes";
+import { activeCoffeeWorker, coffeeWorker } from "./pwa";
 
 /*
  * Web push on one device (F4): whether it can take notifications, turning them on and off, and the
@@ -42,8 +43,9 @@ export type PushPort = { api: PushApi; device: PushDevice };
 
 const hasPush = () => typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof window !== "undefined" && "PushManager" in window && "Notification" in window;
 const standalone = () => !!window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-async function registration(): Promise<ServiceWorkerRegistration> {
-  const found = await coffeeWorker();
+/** `active`: wait until the worker is active, which subscribing needs (audit F5-03); looking for a subscription does not. */
+async function registration(active = false): Promise<ServiceWorkerRegistration> {
+  const found = await (active ? activeCoffeeWorker() : coffeeWorker());
   if (!found) throw new Error("no service worker");
   return found;
 }
@@ -54,7 +56,7 @@ export const browserDevice: PushDevice = {
   permission: () => typeof Notification === "undefined" ? "denied" : Notification.permission,
   ask: () => Notification.requestPermission(),
   current: async () => (await registration()).pushManager.getSubscription(),
-  subscribe: async publicKey => (await registration()).pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }),
+  subscribe: async publicKey => (await registration(true)).pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }),
   label: () => deviceLabel(navigator.userAgent),
 };
 
@@ -79,6 +81,38 @@ export async function dropPush(port: PushPort | null | undefined): Promise<void>
     await soon(port.api.remove(subscription.endpoint), 3_000);
     await soon(subscription.unsubscribe(), 2_000);
   } catch { /* nothing to remove */ }
+}
+
+/**
+ * Nobody is signed in on this browser any more (Coffee's sign-in page is showing, or the app met
+ * 401): a subscription that is still there belongs to whoever was signed in before, and the server
+ * can no longer be told. The browser lets go of it, so the push service refuses the next sending
+ * (410) and the server removes the row then (audit F5-07). Nothing is registered for this; never throws.
+ */
+export async function forgetLocalPush(): Promise<void> {
+  try {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const found = await soon(navigator.serviceWorker.getRegistration(coffeePath.scope), 2_000);
+    const subscription = found?.pushManager ? await soon(found.pushManager.getSubscription(), 2_000) : null;
+    if (subscription) await soon(subscription.unsubscribe(), 2_000);
+  } catch { /* nothing to let go of */ }
+}
+
+/**
+ * "Nyalakan notifikasi" and "Matikan" replace each other, so the button that was pressed is gone
+ * when the press is done and the focus would fall to the page (audit F5-09). `follow()` before the
+ * press, `target` on whatever stands there afterwards (the other button, or the line of status):
+ * once the press has settled the focus goes there.
+ */
+export function useFocusAfter<T extends HTMLElement = HTMLElement>(settled: boolean, state: unknown) {
+  const target = useRef<T>(null);
+  const wanted = useRef(false);
+  useEffect(() => {
+    if (!wanted.current || !settled) return;
+    wanted.current = false;
+    target.current?.focus({ preventScroll: true });
+  }, [settled, state]);
+  return { target, follow: useCallback(() => { wanted.current = true; }, []) };
 }
 
 export type PushControl = {
@@ -190,7 +224,8 @@ export function usePush(port: PushPort | null, paused = false): PushControl {
     if (!send || working.current) return;
     working.current = true;
     setBusy(true); setError(""); setMessage("");
-    try { setMessage(`${await send()} Notifikasinya muncul dalam beberapa detik.`); }
+    // The server does not say whether the push service took it (audit F5-04), so the words cover both.
+    try { setMessage(`${await send()} Bila tidak muncul dalam beberapa detik, matikan lalu nyalakan lagi notifikasi di perangkat ini.`); }
     catch (problem) { setError(statusOf(problem) !== undefined && problem instanceof Error ? problem.message : "Notifikasi tes belum terkirim. Coba lagi."); }
     working.current = false;
     setBusy(false);

@@ -2,13 +2,14 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { CoffeePushState } from "@/lib/coffee/notify";
 import { coffeePath } from "@/lib/routes";
+import { CoffeeApiError } from "./api";
 import { CoffeeApp } from "./CoffeeApp";
 import { stayOnPage } from "./Layer";
 import { PushBox } from "./NotifySetup";
 import { samplePush, sampleState } from "./pushSample";
 import { createSampleCoffee } from "./sample";
 import { SetupSteps } from "./SetupSteps";
-import { dropPush, usePush, useWorkerNews, type PushPort, type WorkerNews } from "./usePush";
+import { dropPush, forgetLocalPush, usePush, useWorkerNews, type PushPort, type WorkerNews } from "./usePush";
 
 /*
  * Web push in the employee app (F4) on a make-believe device (pushSample.ts): the states of
@@ -39,7 +40,7 @@ it("turns notifications on: asks the browser, subscribes, saves the device, and 
   expect(await screen.findByText("Aktif")).toBeTruthy();
   expect(port.calls).toEqual(["info", "ask", "subscribe", "save"]);
   fireEvent.click(screen.getByRole("button", { name: "Kirim notifikasi tes" }));
-  await waitFor(() => expect(within(box()).getByRole("status").textContent).toBe("Notifikasi tes dikirim. Notifikasinya muncul dalam beberapa detik."));
+  await waitFor(() => expect(within(box()).getByRole("status").textContent).toBe("Notifikasi tes dikirim. Bila tidak muncul dalam beberapa detik, matikan lalu nyalakan lagi notifikasi di perangkat ini."));
   fireEvent.click(screen.getByRole("button", { name: "Matikan" }));
   expect(await screen.findByText("Belum aktif")).toBeTruthy();
   expect(port.calls.slice(-3)).toEqual(["test", "remove:https://push.example/contoh", "unsubscribe"]);
@@ -158,6 +159,8 @@ it("Atur sekali offers Izinkan notifikasi, and explains instead of offering when
     expect(screen.getByRole("status").textContent, state).toMatch(note);
     expect(screen.queryByRole("button", { name: "Izinkan notifikasi" }), state).toBeNull();
     expect(screen.getByRole("button", { name: "Mulai pesan" }), state).toBeTruthy();
+    // Audit F5-10: the title does not ask for a permission that cannot be given here.
+    expect(screen.getByRole("heading", { level: 1 }).textContent, state).toBe("Notifikasi");
   }
   // The preview on the lock screen says what the real notification says, never "HR".
   expect(document.body.textContent).toMatch(/Café Latte kamu selesai diproses oleh Dewi\./);
@@ -185,6 +188,54 @@ it("shows Notifikasi in the Akun sheet and removes the device before the session
   // First the server forgets the device and the browser lets go of it, then the session ends.
   expect(port.calls.slice(-2)).toEqual(["remove:https://push.example/contoh", "unsubscribe"]);
   expect(order).toEqual(["signOut after unsubscribe"]);
+});
+
+// Audit F5-10: Keluar is the last thing in the sheet. F5-09: the focus after Nyalakan and Matikan.
+it("puts Notifikasi above Keluar, and keeps the focus in the box when Nyalakan and Matikan replace each other", async () => {
+  const port = samplePush("off");
+  openApp(port);
+  fireEvent.click(screen.getByRole("button", { name: "Akun Rina (contoh)" }));
+  const sheet = within(screen.getByRole("dialog"));
+  const on = await sheet.findByRole("button", { name: "Nyalakan notifikasi" });
+  const out = sheet.getByRole("button", { name: "Keluar" });
+  expect(on.compareDocumentPosition(out) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(box().compareDocumentPosition(out) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const buttons = sheet.getAllByRole("button");
+  expect(buttons.at(-1)).toBe(out);
+  fireEvent.click(on);
+  await sheet.findByText("Aktif");
+  await waitFor(() => expect(document.activeElement).toBe(within(box()).getByRole("status")));
+  fireEvent.click(sheet.getByRole("button", { name: "Matikan" }));
+  await sheet.findByText("Belum aktif");
+  await waitFor(() => expect(document.activeElement).toBe(within(box()).getByRole("status")));
+});
+
+// Audit F5-07: a session that ended without Keluar must not leave the device with the person's notifications.
+it("lets go of the device when the server says the session ended", async () => {
+  const port = samplePush("on");
+  const { api } = openApp(port);
+  await flush();
+  api.state.mockRejectedValue(new CoffeeApiError("Sesi berakhir. Masuk lagi.", 401));
+  news({ type: "coffee:push" });
+  expect(await screen.findByRole("heading", { level: 1, name: "Sesi berakhir" })).toBeTruthy();
+  await waitFor(() => expect(port.calls.at(-1)).toBe("unsubscribe"));
+  expect(port.saved()).toBe(false);
+});
+
+it("lets go of a subscription left on the browser, without registering anything", async () => {
+  const unsubscribe = vi.fn(async () => true);
+  const register = vi.fn();
+  const getRegistration = vi.fn(async () => ({ pushManager: { getSubscription: async () => ({ unsubscribe }) } }));
+  Object.defineProperty(navigator, "serviceWorker", { value: Object.assign(new EventTarget(), { getRegistration, register }), configurable: true });
+  await forgetLocalPush();
+  expect(getRegistration).toHaveBeenCalledWith(coffeePath.scope);
+  expect(unsubscribe).toHaveBeenCalledTimes(1);
+  expect(register).not.toHaveBeenCalled();
+  // No registration, no subscription, a browser that throws: nothing happens, nothing is thrown.
+  Object.defineProperty(navigator, "serviceWorker", { value: Object.assign(new EventTarget(), { getRegistration: async () => undefined }), configurable: true });
+  await expect(forgetLocalPush()).resolves.toBeUndefined();
+  Object.defineProperty(navigator, "serviceWorker", { value: Object.assign(new EventTarget(), { getRegistration: async () => { throw new Error("SecurityError"); } }), configurable: true });
+  await expect(forgetLocalPush()).resolves.toBeUndefined();
 });
 
 it("reads at once when the service worker pushed, and opens Pesanan saya when the notification was tapped", async () => {

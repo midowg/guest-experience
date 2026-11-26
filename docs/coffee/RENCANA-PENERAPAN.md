@@ -896,3 +896,30 @@ instansi, jabatan, BU, atau isi catatan tolak di notifikasi; tidak ada kata "HR"
 **Untuk F5 (audit):** cek tata letak yang belum dilihat (di atas); putuskan tiga hal di "Keputusan terbuka" laporan F4
 (mode tamu netral, PIC ke `/coffee`, batal tidak menarik notifikasi); pertimbangkan pembersihan `coffee_push_sent`
 (tumbuh satu baris per kabar; ikut terhapus bila pesanannya dihapus).
+
+## Catatan pelaksanaan F5: perbaikan audit akhir (26 Nov 2026)
+
+Temuan dan statusnya per butir ada di kolom Status `AUDIT-F5.md`. Skill desain yang dipakai untuk butir tampilan
+(F5-09, F5-10, tombol Matikan di tablet): `ui-ux-pro-max` (sentuhan ≥ 44/48 px, fokus, aksi keluar paling akhir).
+
+**Yang berubah dari catatan F4 di atas:**
+- **Mode tamu:** mengetuk notifikasi apa pun tidak pernah membuka jendela dan tidak memberi tahu halaman mana pun;
+  jendela tablet hanya difokuskan (`public/coffee/sw.js`).
+- **Alamat push** harus milik layanan push yang dikenal (`isPushServiceUrl` di `src/lib/coffee/schemas.ts`), bukan
+  sekadar `https://`; diperiksa lagi sebelum setiap pengiriman. Paling banyak 5 perangkat per orang
+  (`COFFEE_PUSH_DEVICES`, kolom `updated_at`). Penerima dibaca per orang, bukan satu `select … limit(2000)`.
+- **Tes kirim** tidak lagi menjawab 502: jawabannya sama apa pun kata layanan push.
+- **`coffee_push_sent`** dibersihkan sendiri (baris > 30 hari) setiap ada kabar baru.
+- **PIN GA:** tabel baru `coffee_pin_tries` di migrasi 1 (diedit di tempat, belum pernah dijalankan); aturan di
+  kepala `src/lib/server/coffee/pin.ts`. Route memanggil `pinGate` lalu `tryGaPin`, bukan `checkGaPin` + batas 10.
+- **Langganan tertinggal:** `forgetLocalPush` (halaman masuk, 401), hapus di server saat ganti/reset password
+  (`dropCoffeeDevices` di `src/lib/server/pra-wam/session.ts`), "Matikan" di tablet.
+- **`saveGrant`:** kode 23514 diperiksa sebelum `missing()`, dari aplikasi terbaru.
+- Migrasi 2 diedit di tempat: kolom `updated_at`, indeks `(employee_id, updated_at desc)`, indeks `sent_at`.
+
+**Belum diuji (apa adanya):** kedua migrasi tetap belum pernah dijalankan; tidak ada push, service worker, atau
+perangkat sungguhan; F5-03 belum dicek di Chrome asli. Di browser (pratinjau, port 3210) hanya dilihat: baris
+notifikasi admin 375 px (tawaran 57 px, fokus pindah), bilah atas tablet 1024 px (Matikan 74×48, fokus pindah),
+lembar Akun 375×812 (Notifikasi di atas Keluar). Keadaan "aktif" baris admin di HP setelah penyesuaian terakhir
+belum terlihat: halaman pratinjau admin berhenti di "Memuat halaman" pada dua percobaan terakhir (penyebab tidak dicari).
+`public/dev/coffee` dibiarkan (lihat F5-13).

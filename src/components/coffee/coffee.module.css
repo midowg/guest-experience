@@ -198,6 +198,7 @@ textarea.input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 .links { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .theme .links :is(a, button) { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; text-align: left; }
 .links :is(a, button):hover { background: var(--soft); }
+.linksEnd { margin-top: 12px; }
 .links svg { flex: none; color: var(--emp); }
 .theme .links .out, .links .out svg { color: var(--no); }
 
@@ -307,6 +308,7 @@ textarea.input { min-height: 96px; padding: 12px 16px; resize: vertical; }
 .pushTag[data-on] { color: var(--emp-strong); }
 .pushBox > p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
 .pushBox > .problem { color: var(--no); }
+.pushBox > p:focus { outline: none; }
 .pushActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .theme .pushActions button { min-height: 48px; padding: 0 16px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); color: var(--emp-strong); font-size: 16px; font-weight: 600; }
 .pushActions button:hover { background: var(--soft); }

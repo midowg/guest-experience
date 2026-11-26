@@ -124,7 +124,8 @@ function NotifyStep({ notify, onDone }: { notify?: NotifySetup; onDone: () => vo
   const note = state === "on" ? "Notifikasi sudah aktif di perangkat ini." : state !== "off" && state !== "checking" ? pushNote(state, "karyawan") : refused;
   return (
     <section className={css.stepBody}>
-      <h1 tabIndex={-1}>Izinkan notifikasi</h1>
+      {/* The title asks for permission only while it can be given here; otherwise the step just tells (audit F5-10). */}
+      <h1 tabIndex={-1}>{notify && !note ? "Izinkan notifikasi" : "Notifikasi"}</h1>
       <p className={css.lead}>Supaya kamu tahu begitu pengajuan selesai diproses dan kopi siap diambil, juga saat aplikasi tertutup.</p>
       <div className={css.notifPreview} aria-hidden>
         <span className={css.toastIcon}><Coffee size={18} /></span>

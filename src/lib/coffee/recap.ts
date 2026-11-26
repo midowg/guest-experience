@@ -43,6 +43,17 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
 
 export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu", "Ruangan",
   "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-", "Dicatat manual"] as const;
+/**
+ * The Detail sheet's column widths, by column name (audit F5-08: a list of numbers beside the head
+ * fell one short when "Nama tamu" was added, and every width after it slid one column to the left).
+ * A column added to DETAIL_HEAD without a width here does not compile.
+ */
+const DETAIL_WIDTH: Record<(typeof DETAIL_HEAD)[number], number> = {
+  "Tanggal": 12, "Jam diajukan": 10, "Nomor pesanan": 12, "Jenis": 12, "Nama": 26, "Kelompok": 12, "Jabatan": 26, "BU": 10, "PIC": 26, "Tamu/instansi": 24, "Nama tamu": 18,
+  "Jumlah tamu": 10, "Ruangan": 20, "Minuman": 24, "Suhu": 8, "Gula": 10, "Takaran es": 10, "Status": 10, "Catatan tolak": 30, "Diproses oleh": 16, "Jam diproses": 10,
+  "Klaim ke-": 8, "Dicatat manual": 10,
+};
+export const DETAIL_WIDTHS: number[] = DETAIL_HEAD.map(name => DETAIL_WIDTH[name]);
 
 const sheetDate = (iso: string) => wibDay(iso).split("-").reverse().join("/");
 /** The status as Rekap words it: a record made by hand and cancelled by a pengelola reads "Dibatalkan". */

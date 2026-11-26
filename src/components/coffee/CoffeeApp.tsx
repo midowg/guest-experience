@@ -117,7 +117,8 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
   /** Signed out here: the person's name, quota and claims leave the screen at once, before the sign-in page arrives. */
   const [left, setLeft] = useState(false);
   // The session ended elsewhere (401): the app is already on its way to the sign-in page, and a sheet that closes must not cancel that.
-  useEffect(() => { if (gone) leavePage(); }, [gone]);
+  // This device also stops getting this person's notifications (audit F5-07): the server no longer listens, so the browser lets go.
+  useEffect(() => { if (!gone) return; if (port) void dropPush(port); leavePage(); }, [gone, port]);
   const [setupOpen, setSetupOpen] = useState(setup);
   const [noteOpen, setNoteOpen] = useState(Boolean(note));
   const askId = useId(), accountId = useId();
@@ -259,9 +260,12 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
             {state.ga && <li><a href={coffeePath.ga}><Tablet aria-hidden size={20} />Mode GA (pesanan rapat)</a></li>}
             {state.pengelola && <li><a href={coffeeAdminPath.home}><ClipboardCheck aria-hidden size={20} />Pengelola (antrean)</a></li>}
             {!installed && <li><button type="button" onClick={() => { setAccount(false); setSetupOpen(true); }}><Download aria-hidden size={20} />Pasang di layar utama</button></li>}
-            <li><button type="button" className={css.out} aria-disabled={leaving || undefined} onClick={signOut}><LogOut aria-hidden size={20} />{leaving ? "Keluar…" : "Keluar"}</button></li>
           </ul>
           {port && <PushBox push={push} />}
+          {/* Keluar is the last thing in the sheet, after Notifikasi (audit F5-10). */}
+          <ul className={`${css.links} ${css.linksEnd}`}>
+            <li><button type="button" className={css.out} aria-disabled={leaving || undefined} onClick={signOut}><LogOut aria-hidden size={20} />{leaving ? "Keluar…" : "Keluar"}</button></li>
+          </ul>
           {leaveError && <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{leaveError}</span></p>}
         </Layer>
       )}

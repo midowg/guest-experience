@@ -1,6 +1,6 @@
 import "server-only";
 import { claimNumbers, dayStart, nextDay } from "@/lib/coffee/quota";
-import { DETAIL_HEAD, detailCells, expandRows, filterRows, recapTitle, summarize, summarySheet, type RecapSummary } from "@/lib/coffee/recap";
+import { DETAIL_HEAD, DETAIL_WIDTHS, detailCells, expandRows, filterRows, recapTitle, summarize, summarySheet, type RecapSummary } from "@/lib/coffee/recap";
 import type { RecapQuery } from "@/lib/coffee/schemas";
 import type { RecapRow } from "@/lib/coffee/types";
 import { csvCell } from "../responses";
@@ -44,7 +44,7 @@ export async function recapFiles(query: RecapQuery): Promise<{ csv: string; xlsx
   return {
     csv: `﻿${detail.map(line => line.map(csvCell).join(",")).join("\r\n")}\r\n`,
     xlsx: writeXlsx([
-      { name: "Detail", rows: detail, widths: [12, 10, 12, 12, 26, 12, 26, 10, 26, 24, 10, 20, 24, 8, 10, 10, 10, 30, 16, 10, 8, 10] },
+      { name: "Detail", rows: detail, widths: DETAIL_WIDTHS },
       { name: "Ringkasan", rows: summarySheet(summary, title), widths: [34, 16, 14, 14, 10, 12, 10] },
     ]),
   };

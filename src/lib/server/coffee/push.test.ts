@@ -42,8 +42,8 @@ const superAdmin = { employeeId: null, label: "Super admin" };
 const drink = { slug: "cafe-latte", temperature: "panas" as const, sugar: "Normal" as const, ice: "Normal" as const };
 let n = 0;
 const key = () => `eeeeeeee-eeee-4eee-8eee-${String(++n).padStart(12, "0")}`;
-const device = (who: string, name: string) => db.rows("coffee_push_subscriptions").push({ id: `sub-${name}`, employee_id: who, endpoint: `https://push.example/${name}`, p256dh: "p".repeat(20), auth: "a".repeat(10), device: name, last_sent_at: null });
-const endpoints = () => web.sent.map(item => item.endpoint.replace("https://push.example/", ""));
+const device = (who: string, name: string) => db.rows("coffee_push_subscriptions").push({ id: `sub-${name}`, employee_id: who, endpoint: `https://fcm.googleapis.com/fcm/send/${name}`, p256dh: "p".repeat(20), auth: "a".repeat(10), device: name, last_sent_at: null, updated_at: null });
+const endpoints = () => web.sent.map(item => item.endpoint.replace("https://fcm.googleapis.com/fcm/send/", ""));
 /** Everything that was handed to after() runs now, as Next does once the response has gone. */
 async function afterResponse() { const work = web.later ?? []; web.later = []; for (const run of work) await run(); }
 const meetingInput = (more: object = {}) => ({ room: "Vasuki Room", picId: PEOPLE.rina, items: [{ for: "tamu" as const, ...drink, qty: 2, guestName: "RAHASIA-TAMU" }], key: key(), ...more }) as never;
@@ -208,18 +208,18 @@ describe("a decision", () => {
 describe("sending never stops what caused it", () => {
   it("removes a device the push service no longer knows (404, 410) and keeps the others", async () => {
     device(PEOPLE.dewi, "mati-410"); device(PEOPLE.dewi, "mati-404"); device(PEOPLE.dewi, "sibuk-500"); device(PEOPLE.fajar, "putus"); device(PEOPLE.fajar, "hidup");
-    web.fails = new Map<string, number | "network">([["https://push.example/mati-410", 410], ["https://push.example/mati-404", 404], ["https://push.example/sibuk-500", 500], ["https://push.example/putus", "network"]]);
+    web.fails = new Map<string, number | "network">([["https://fcm.googleapis.com/fcm/send/mati-410", 410], ["https://fcm.googleapis.com/fcm/send/mati-404", 404], ["https://fcm.googleapis.com/fcm/send/sibuk-500", 500], ["https://fcm.googleapis.com/fcm/send/putus", "network"]]);
     const result = await push.sendCoffeePush([PEOPLE.dewi, PEOPLE.fajar, PEOPLE.dewi, null], { title: "t", body: "b", url: "/coffee" });
     expect(result).toEqual({ sent: 1, failed: 4, removed: 2, devices: 5 });
     expect(db.rows("coffee_push_subscriptions").map(row => row.device).sort()).toEqual(["hidup", "putus", "sibuk-500"]);
     // What failed is logged with its status, never with an address or a key.
     expect(errors.mock.calls.flat().join(" ")).toMatch(/2 perangkat gagal dikirimi \(500, tanpa jawaban\)/);
-    expect(errors.mock.calls.flat().join(" ")).not.toMatch(/push\.example|pppp/);
+    expect(errors.mock.calls.flat().join(" ")).not.toMatch(/googleapis|fcm|pppp/);
   });
 
   it("saves the order all the same when every device fails, the table is missing, or the keys are not set", async () => {
     device(PEOPLE.dewi, "dewi-hp");
-    web.fails.set("https://push.example/dewi-hp", "network");
+    web.fails.set("https://fcm.googleapis.com/fcm/send/dewi-hp", "network");
     await expect(submitClaim(rina, { ...drink, key: key() }, now)).resolves.toMatchObject({ order: { status: "diproses" } });
     await expect(afterResponse()).resolves.toBeUndefined();
 
@@ -260,7 +260,7 @@ describe("sending never stops what caused it", () => {
 });
 
 describe("a device", () => {
-  const input = { endpoint: "https://push.example/hp", p256dh: "p".repeat(20), auth: "a".repeat(10), device: "Android · Chrome" };
+  const input = { endpoint: "https://fcm.googleapis.com/fcm/send/hp", p256dh: "p".repeat(20), auth: "a".repeat(10), device: "Android · Chrome" };
 
   it("belongs to whoever saved it last, and only its owner removes it", async () => {
     await push.saveSubscription(PEOPLE.rina, input);
@@ -286,13 +286,67 @@ describe("a device", () => {
     await expect(push.saveSubscription(PEOPLE.rina, input)).rejects.toMatchObject({ status: 503, message: "Notifikasi belum disiapkan di server." });
   });
 
-  it("gets a test only when there is a device to send to", async () => {
+  it("gets a test only when there is a device to send to, and is never told what the push service answered", async () => {
     await expect(push.sendTestPush(PEOPLE.rina)).rejects.toMatchObject({ status: 409 });
     device(PEOPLE.rina, "rina-hp"); device(PEOPLE.dewi, "dewi-hp");
-    await expect(push.sendTestPush(PEOPLE.rina)).resolves.toMatchObject({ sent: 1, devices: 1 });
-    expect(web.sent.map(item => [item.endpoint, item.body.title, item.body.tag])).toEqual([["https://push.example/rina-hp", "Werkudara Coffee", "tes"]]);
-    web.fails.set("https://push.example/rina-hp", 410);
-    await expect(push.sendTestPush(PEOPLE.rina)).rejects.toMatchObject({ status: 502 });
+    await expect(push.sendTestPush(PEOPLE.rina)).resolves.toBeUndefined();
+    expect(web.sent.map(item => [item.endpoint, item.body.title, item.body.tag])).toEqual([["https://fcm.googleapis.com/fcm/send/rina-hp", "Werkudara Coffee", "tes"]]);
+    // Audit F5-04: delivered, refused, unreachable or gone, the caller hears the same (nothing).
+    for (const fail of [500, 403, "network", 410] as const) {
+      web.fails.set("https://fcm.googleapis.com/fcm/send/rina-hp", fail);
+      await expect(push.sendTestPush(PEOPLE.rina), String(fail)).resolves.toBeUndefined();
+    }
     expect(db.rows("coffee_push_subscriptions").map(row => row.device)).toEqual(["dewi-hp"]);
+  });
+
+  // Audit F5-04: the server only ever posts to a push service, and nobody can pile up devices.
+  it("refuses an address that is not a push service's, and never posts to one that is already stored", async () => {
+    for (const endpoint of ["https://push.example/hp", "https://10.0.0.1/x", "https://fcm.googleapis.com.evil.example/x", "https://fcm.googleapis.com:8443/x", "http://fcm.googleapis.com/x"]) {
+      await expect(push.saveSubscription(PEOPLE.rina, { ...input, endpoint }), endpoint).rejects.toMatchObject({ status: 422 });
+    }
+    expect(db.rows("coffee_push_subscriptions")).toEqual([]);
+    db.rows("coffee_push_subscriptions").push({ id: "sub-lama", employee_id: PEOPLE.rina, endpoint: "https://internal.example/admin", p256dh: "p".repeat(20), auth: "a".repeat(10), device: "lama", updated_at: null });
+    device(PEOPLE.rina, "rina-hp");
+    expect(await push.sendCoffeePush([PEOPLE.rina], { title: "t", body: "b", url: "/coffee" })).toMatchObject({ sent: 1, devices: 1 });
+    expect(web.sent.map(item => item.endpoint)).toEqual(["https://fcm.googleapis.com/fcm/send/rina-hp"]);
+    expect(db.rows("coffee_push_subscriptions").map(row => row.device)).toEqual(["rina-hp"]);
+  });
+
+  it("keeps five devices per person: the one used longest ago makes room", async () => {
+    const at = (minute: number) => new Date(now.getTime() + minute * 60_000);
+    const hp = (name: string) => ({ ...input, endpoint: `https://fcm.googleapis.com/fcm/send/${name}`, device: name });
+    for (let index = 1; index <= 5; index++) await push.saveSubscription(PEOPLE.rina, hp(`hp-${index}`), at(index));
+    await push.saveSubscription(PEOPLE.fajar, hp("fajar-hp"), at(0));
+    // hp-1 is opened again (the page saves it again): it is the newest now.
+    await push.saveSubscription(PEOPLE.rina, hp("hp-1"), at(6));
+    await push.saveSubscription(PEOPLE.rina, hp("hp-6"), at(7));
+    expect(db.rows("coffee_push_subscriptions").filter(row => row.employee_id === PEOPLE.rina).map(row => row.device).sort()).toEqual(["hp-1", "hp-3", "hp-4", "hp-5", "hp-6"]);
+    await push.saveSubscription(PEOPLE.rina, hp("hp-7"), at(8));
+    expect(db.rows("coffee_push_subscriptions").filter(row => row.employee_id === PEOPLE.rina).map(row => row.device).sort()).toEqual(["hp-1", "hp-4", "hp-5", "hp-6", "hp-7"]);
+    // Someone else's device is never the one that makes room.
+    expect(db.rows("coffee_push_subscriptions").filter(row => row.employee_id === PEOPLE.fajar)).toHaveLength(1);
+  });
+
+  it("reaches everyone's devices however many rows one person has, each person's five newest", async () => {
+    // Rows from before the limit (or written past it): 2,500 for one pengelola must not push the others out.
+    for (let index = 0; index < 2500; index++) db.rows("coffee_push_subscriptions").push({ id: `sub-banyak-${String(index).padStart(4, "0")}`, employee_id: PEOPLE.dewi, endpoint: `https://fcm.googleapis.com/fcm/send/banyak-${index}`, p256dh: "p".repeat(20), auth: "a".repeat(10), device: `banyak-${index}`, updated_at: new Date(now.getTime() + index * 1000).toISOString() });
+    device(PEOPLE.fajar, "fajar-hp");
+    const result = await push.sendCoffeePush([PEOPLE.dewi, PEOPLE.fajar], { title: "t", body: "b", url: "/coffee" });
+    expect(result).toMatchObject({ sent: 6, devices: 6 });
+    expect(endpoints().sort()).toEqual(["banyak-2495", "banyak-2496", "banyak-2497", "banyak-2498", "banyak-2499", "fajar-hp"]);
+  });
+
+  it("forgets what was announced more than thirty days ago when something new is announced", async () => {
+    const old = new Date(now.getTime() - 31 * 86_400_000).toISOString(), recent = new Date(now.getTime() - 29 * 86_400_000).toISOString();
+    db.rows("coffee_push_sent").push({ order_id: "lama", event: "selesai", stamp: old, sent_at: old }, { order_id: "baru", event: "selesai", stamp: recent, sent_at: recent });
+    device(PEOPLE.dewi, "dewi-hp");
+    vi.useFakeTimers({ now, toFake: ["Date"] });
+    try {
+      await submitClaim(rina, { ...drink, key: key() }, now);
+      await afterResponse();
+    } finally { vi.useRealTimers(); }
+    expect(db.rows("coffee_push_sent").map(row => row.order_id)).not.toContain("lama");
+    expect(db.rows("coffee_push_sent").map(row => row.order_id)).toContain("baru");
+    expect(endpoints()).toEqual(["dewi-hp"]);
   });
 });

@@ -26,7 +26,7 @@ vi.mock("@/lib/server/admin-session", async () => {
 });
 
 const SITE = "https://journey.test";
-const ENDPOINT = "https://push.example/laptop-dewi";
+const ENDPOINT = "https://fcm.googleapis.com/fcm/send/laptop-dewi";
 const device = { subscription: { endpoint: ENDPOINT, keys: { p256dh: "p".repeat(40), auth: "a".repeat(16) } }, device: "Windows · Chrome" };
 const send = (method: string, body?: unknown, origin = SITE) => new Request(`${SITE}/api/admin/coffee/push`, {
   method, headers: { origin, ...(body === undefined ? {} : { "content-type": "application/json" }) }, body: body === undefined ? undefined : JSON.stringify(body),

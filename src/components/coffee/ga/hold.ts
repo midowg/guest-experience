@@ -78,6 +78,14 @@ export function keepHold(hold: Hold | null): void {
   cookie(true);
   try { if (hold) storage()?.setItem(HOLD_KEY, JSON.stringify(hold)); } catch { /* storage full or closed: the cookie still keeps the tablet on the cover */ }
 }
+/** How often the cookie is written again while the book is open (it lives twelve hours). */
+export const HOLD_REFRESH_MS = 30 * 60_000;
+/**
+ * The book is still open: the cookie is written again, so it never runs out under a tablet that
+ * is left in guest mode for longer than its twelve hours (audit F5-06; a page loaded without it
+ * would come with GA's data).
+ */
+export const refreshHold = (): void => cookie(true);
 /** Guest mode is over (the GA officer left the book). */
 export function dropHold(): void {
   cookie(false);

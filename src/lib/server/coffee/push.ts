@@ -2,6 +2,7 @@ import "server-only";
 import { after } from "next/server";
 import webpush from "web-push";
 import { COFFEE_PUSH_MIGRATION, pushFor, testPush, type CoffeePushEvent, type CoffeePushInfo } from "@/lib/coffee/notify";
+import { isPushServiceUrl } from "@/lib/coffee/schemas";
 import type { PushPayload } from "@/lib/pra-wam/push";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -25,10 +26,23 @@ import { db, missing, orderById } from "./store";
  *
  * The same news goes out once: coffee_push_sent holds one row per order, event and moment, and
  * only the insert that succeeds sends. A device the push service no longer knows (404, 410) is removed.
+ * Rows older than thirty days are deleted when something new is announced (they only guard against
+ * the same news twice, which cannot happen that late), so the table stays small without a job.
+ *
+ * After the final audit (F5-04): the server posts only to a known push service (the address is
+ * checked when a device is saved and again before every sending), a person keeps at most five
+ * devices (the one used longest ago makes room), each recipient's devices are read on their own
+ * and in a fixed order (nobody's rows can push another person's out), and "Kirim notifikasi tes"
+ * never tells what the push service answered.
  */
 
 const SUBSCRIPTIONS = "coffee_push_subscriptions";
 const SENT = "coffee_push_sent";
+/** How many devices one person keeps. A phone, a laptop, the tablet and a spare; more is not a person's use. */
+export const COFFEE_PUSH_DEVICES = 5;
+/** How long "already announced" is remembered. */
+const SENT_KEPT_MS = 30 * 86_400_000;
+const NOT_A_PUSH_SERVICE = "Alamat notifikasi perangkat ini tidak dikenali.";
 const log = (what: string, error?: unknown) => console.error(`coffee push: ${what}`, error instanceof Error ? error.message : error ?? "");
 
 /** The VAPID keys from the server's environment (shared with WAM); null until both are set. */
@@ -59,13 +73,23 @@ export async function pushInfo(): Promise<CoffeePushInfo> {
  * This device now gets this person's notifications. The same device saved again is one row, and it
  * moves to whoever saved it last: a phone that changed hands tells its new owner only.
  */
-export async function saveSubscription(employeeId: string, input: { endpoint: string; p256dh: string; auth: string; device: string }): Promise<void> {
+export async function saveSubscription(employeeId: string, input: { endpoint: string; p256dh: string; auth: string; device: string }, now = new Date()): Promise<void> {
   if (!vapid()) throw new ServiceError(503, "Notifikasi belum disiapkan di server.");
-  const { error } = await db().from(SUBSCRIPTIONS).upsert(
-    { employee_id: employeeId, endpoint: input.endpoint, p256dh: input.p256dh, auth: input.auth, device: input.device },
+  // The routes' schema says the same; here again, so no caller can store an address the server must not post to.
+  if (!isPushServiceUrl(input.endpoint)) throw new ServiceError(422, NOT_A_PUSH_SERVICE);
+  const client = db();
+  // updated_at: when the device was last saved (turned on, or a page opened on it). The newest five stay.
+  const { error } = await client.from(SUBSCRIPTIONS).upsert(
+    { employee_id: employeeId, endpoint: input.endpoint, p256dh: input.p256dh, auth: input.auth, device: input.device, updated_at: now.toISOString() },
     { onConflict: "endpoint" },
   );
   if (error) { if (missing(error)) throw waitingForPush(); databaseError(error); }
+  // Past five devices the ones used longest ago go (never the one saved just now: it is the newest).
+  const { data: extra, error: extraError } = await client.from(SUBSCRIPTIONS).select("id").eq("employee_id", employeeId)
+    .order("updated_at", { ascending: false }).order("id").range(COFFEE_PUSH_DEVICES, COFFEE_PUSH_DEVICES + 199);
+  if (extraError) { log("perangkat lama tidak terbaca", extraError); return; }
+  const old = ((extra ?? []) as { id: string }[]).map(row => row.id);
+  if (old.length) await client.from(SUBSCRIPTIONS).delete().in("id", old);
 }
 
 /** This device stops getting notifications. Only the person's own device is removed. */
@@ -92,9 +116,16 @@ export async function sendCoffeePush(employeeIds: (string | null | undefined)[],
     if (peopleError) { log("penerima tidak terbaca", peopleError); return NONE; }
     const to = ((active ?? []) as { id: string }[]).map(person => person.id);
     if (!to.length) return NONE;
-    const { data, error } = await client.from(SUBSCRIPTIONS).select("id,endpoint,p256dh,auth").in("employee_id", to).limit(2000);
-    if (error) { if (!missing(error)) log("perangkat tidak terbaca", error); return NONE; }
-    const devices = (data ?? []) as Device[];
+    // Each person's own newest devices, in a fixed order: one person's rows never push another's out.
+    const read = await Promise.all(to.map(id => client.from(SUBSCRIPTIONS).select("id,endpoint,p256dh,auth").eq("employee_id", id)
+      .order("updated_at", { ascending: false }).order("id").limit(COFFEE_PUSH_DEVICES)));
+    const failed = read.find(result => result.error)?.error;
+    if (failed) { if (!missing(failed)) log("perangkat tidak terbaca", failed); return NONE; }
+    const found = read.flatMap(result => (result.data ?? []) as Device[]);
+    // Never post to an address that is not a push service's, however it got into the table; it is removed.
+    const devices = found.filter(device => isPushServiceUrl(device.endpoint));
+    const foreign = found.filter(device => !devices.includes(device)).map(device => device.id);
+    if (foreign.length) await client.from(SUBSCRIPTIONS).delete().in("id", foreign);
     if (!devices.length) return NONE;
     const body = JSON.stringify(payload);
     const results = await Promise.allSettled(devices.map(device => webpush.sendNotification(
@@ -109,7 +140,7 @@ export async function sendCoffeePush(employeeIds: (string | null | undefined)[],
       if (status === 404 || status === 410) gone.push(devices[index].id);
       else refused.push(status ?? "tanpa jawaban");
     });
-    if (refused.length) log(`${refused.length} perangkat gagal dikirimi (${[...new Set(refused)].join(", ")})`);
+    if (refused.length) log(`${refused.length} perangkat gagal dikirimi (${[...new Set(refused.map(String))].sort().join(", ")})`);
     if (gone.length) await client.from(SUBSCRIPTIONS).delete().in("id", gone);
     if (delivered.length) await client.from(SUBSCRIPTIONS).update({ last_sent_at: new Date().toISOString() }).in("id", delivered);
     return { sent: delivered.length, failed: devices.length - delivered.length, removed: gone.length, devices: devices.length };
@@ -119,19 +150,26 @@ export async function sendCoffeePush(employeeIds: (string | null | undefined)[],
   }
 }
 
-/** "Kirim notifikasi tes": to the person's own devices, and it says so when there is nothing to send to. */
-export async function sendTestPush(employeeId: string): Promise<PushResult> {
+/**
+ * "Kirim notifikasi tes": to the person's own devices, and it says so when there is nothing to send
+ * to. Whether the push service took it is not told (audit F5-04): the caller would otherwise learn
+ * how another host answered the server. The app says what to do when nothing shows up.
+ */
+export async function sendTestPush(employeeId: string): Promise<void> {
   if (!vapid()) throw new ServiceError(503, "Notifikasi belum disiapkan di server.");
   const result = await sendCoffeePush([employeeId], testPush());
   if (!result.devices) throw new ServiceError(409, "Belum ada perangkat yang menyalakan notifikasi. Nyalakan dulu di perangkat ini.");
-  if (!result.sent) throw new ServiceError(502, "Notifikasi tes belum terkirim. Matikan lalu nyalakan lagi notifikasi di perangkat ini.");
-  return result;
 }
 
 /** Is this the first time this news is told? Only one caller gets a yes; unknown (no table, a fault) is no. */
 async function firstTime(orderId: string, event: CoffeePushEvent, stamp: string): Promise<boolean> {
   const { error } = await db().from(SENT).insert({ order_id: orderId, event, stamp });
-  if (!error) return true;
+  if (!error) {
+    // Housekeeping on the way: what was announced more than thirty days ago is forgotten.
+    const { error: oldError } = await db().from(SENT).delete().lt("sent_at", new Date(Date.now() - SENT_KEPT_MS).toISOString());
+    if (oldError && !missing(oldError)) log("catatan kirim lama tidak terhapus", oldError);
+    return true;
+  }
   if (error.code !== "23505" && !missing(error)) log("catatan kirim tidak tersimpan", error);
   return false;
 }

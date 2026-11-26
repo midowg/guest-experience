@@ -6,6 +6,7 @@ import { ArrowLeft, Check, CheckCircle2, ChevronLeft, Circle, CircleAlert, Coffe
 import { useForgot, useNewPassword, useSignIn } from "@/components/booking/BookingAuth";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { coffeePath } from "@/lib/routes";
+import { forgetLocalPush } from "./usePush";
 import css from "./coffee.module.css";
 
 /*
@@ -42,8 +43,13 @@ function Secret({ id, label, value, onChange, autoComplete, error }: { id: strin
   </>;
 }
 
-/** Masuk: the welcome first (once per device), then email and password. `next`: where to go afterwards (an address of the app only). */
-export function CoffeeLogin({ next }: { next: string | null }) {
+/**
+ * Masuk: the welcome first (once per device), then email and password. `next`: where to go afterwards (an address of the app only).
+ * `forget`: nobody is signed in on this browser (the real sign-in page, with no pengelola signed in to the admin either), so a
+ * push subscription that is still there belongs to whoever was signed in before and is let go of (audit F5-07).
+ */
+export function CoffeeLogin({ next, forget = false }: { next: string | null; forget?: boolean }) {
+  useEffect(() => { if (forget) void forgetLocalPush(); }, [forget]);
   const { email, setEmail, password, setPassword, busy, error, submit } = useSignIn(next, paths, remember);
   const known = useSyncExternalStore(noChange, knownNow, () => false);
   const [picked, setPicked] = useState<"welcome" | "login" | null>(null);

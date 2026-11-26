@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { claim, item, meeting, person } from "./fixtures";
-import { DETAIL_HEAD, detailCells, expandRows, filterRows, recapTitle, rowStatus, summarize, summarySheet } from "./recap";
+import { DETAIL_HEAD, DETAIL_WIDTHS, detailCells, expandRows, filterRows, recapTitle, rowStatus, summarize, summarySheet } from "./recap";
 
 const rina = person("e1", "Contoh Rina Putri");
 const dimas = person("e2", "Contoh Dimas Pratama", "karyawan", "TEE", "Contoh Account Executive");
@@ -40,6 +40,8 @@ describe("Rekap's rows", () => {
   });
   it("fill the 23 columns of the sheet in WIB", () => {
     expect(DETAIL_HEAD).toHaveLength(23);
+    expect(DETAIL_WIDTHS).toHaveLength(DETAIL_HEAD.length);
+    expect(DETAIL_WIDTHS.every(width => width >= 8 && width <= 40)).toBe(true);
     expect(DETAIL_HEAD.slice(8, 12)).toEqual(["PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu"]);
     const numbered = expandRows(orders, new Map([["k1", 1]]));
     expect(detailCells(numbered[0])).toEqual(["25/11/2026", "09:12", "K-415", "Klaim", "Contoh Rina Putri", "Karyawan", "Contoh Staf", "WNS", "", "", "", "", "", "Café Latte",

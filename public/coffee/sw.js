@@ -16,6 +16,10 @@
 // - While a guest holds GA's tablet (the cookie the tablet sets in "Serahkan ke tamu"), whatever
 //   arrives is shown as one neutral line without a name, a drink or a room, and without a sound.
 //   Where the worker cannot read cookies it stays neutral whenever a tablet page is open.
+// - A tap in guest mode never opens a window and never moves one (audit F5-01): whatever the
+//   notification was about (the officer's own claim, a new claim for the pengelola), the guest must
+//   not land in someone's app or in the admin. The tablet's window only comes to the front, with
+//   no message; a notification shown in guest mode keeps the tablet's address and nothing else.
 const APP = "/coffee";
 const ADMIN = "/admin/coffee";
 const TABLET = "/coffee/ga";
@@ -69,7 +73,7 @@ self.addEventListener("push", event => {
     // A note with the same tag replaces the older one; renotify makes it show again (a claim done after an Urungkan).
     await self.registration.showNotification(text.title, {
       body: text.body, icon: ICON, badge: ICON, tag: quiet ? "coffee" : tag, renotify: Boolean(quiet || tag), silent: quiet,
-      data: { url: safeUrl(data.url).href },
+      data: { url: quiet ? new URL(TABLET, self.location.origin).href : safeUrl(data.url).href },
     });
     // The open screens read again now instead of at their next tick (the tablet ignores it in guest mode).
     for (const client of windows) client.postMessage({ type: "coffee:push" });
@@ -82,6 +86,12 @@ self.addEventListener("notificationclick", event => {
   const area = areaOf(url.pathname);
   event.waitUntil((async () => {
     const windows = await openWindows();
+    if (await guestHolds(windows)) {
+      // The guest's tap: the book stays where it is. No window opens, none is told to go anywhere.
+      const tablet = windows.find(item => areaOf(pathOf(item.url)) === "ga");
+      if (tablet && "focus" in tablet) await tablet.focus().catch(() => undefined);
+      return;
+    }
     const client = windows.find(item => areaOf(pathOf(item.url)) === area);
     if (client && "focus" in client) {
       await client.focus().catch(() => undefined);

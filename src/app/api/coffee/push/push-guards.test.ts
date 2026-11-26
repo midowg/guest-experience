@@ -6,12 +6,12 @@ import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
  * wrong body 422, a device saved for the signed-in person only, and a server without the keys or
  * the migration that says so instead of failing. The database and the push service are stand-ins.
  */
-const state = vi.hoisted(() => ({ member: null as null | { id: string; name: string; nickname: string; category: string; roles: string[] }, sent: [] as string[] }));
+const state = vi.hoisted(() => ({ member: null as null | { id: string; name: string; nickname: string; category: string; roles: string[] }, sent: [] as string[], fail: 0 }));
 let db = fakeDb();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/server/supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
-vi.mock("web-push", () => ({ default: { sendNotification: async (to: { endpoint: string }) => { state.sent.push(to.endpoint); } } }));
+vi.mock("web-push", () => ({ default: { sendNotification: async (to: { endpoint: string }) => { if (state.fail) throw Object.assign(new Error("push service: RAHASIA-JAWABAN"), { statusCode: state.fail, body: "RAHASIA-JAWABAN" }); state.sent.push(to.endpoint); } } }));
 vi.mock("@/lib/server/pra-wam/session", async () => {
   const { ServiceError } = await import("@/lib/server/config");
   return {
@@ -23,7 +23,7 @@ vi.mock("@/lib/server/pra-wam/session", async () => {
 const SITE = "https://journey.test";
 const rina = { id: PEOPLE.rina, name: "Contoh Rina Putri", nickname: "Rina", category: "karyawan", roles: [] };
 const fajar = { id: PEOPLE.fajar, name: "Contoh Fajar Nugroho", nickname: "Fajar", category: "intern", roles: [] };
-const ENDPOINT = "https://push.example/hp-rina";
+const ENDPOINT = "https://fcm.googleapis.com/fcm/send/hp-rina";
 const device = { subscription: { endpoint: ENDPOINT, keys: { p256dh: "p".repeat(40), auth: "a".repeat(16) } }, device: "Android · Chrome" };
 const send = (path: string, method: string, body?: unknown, origin = SITE) => new Request(`${SITE}${path}`, {
   method, headers: { origin, ...(body === undefined ? {} : { "content-type": "application/json" }) }, body: body === undefined ? undefined : JSON.stringify(body),
@@ -42,7 +42,7 @@ const devices = () => db.rows("coffee_push_subscriptions");
 
 beforeEach(() => {
   db = fakeDb(); seedPeople(db); db.state.now = new Date();
-  state.member = rina; state.sent = [];
+  state.member = rina; state.sent = []; state.fail = 0;
   process.env.RATE_LIMIT_SECRET = "x".repeat(40);
   process.env.WAM_VAPID_PUBLIC_KEY = "BContohKunciPublik"; process.env.WAM_VAPID_PRIVATE_KEY = "contoh-kunci-rahasia";
 });
@@ -64,14 +64,30 @@ it("refuses a device that is not a push subscription", async () => {
     // Only https: the server later posts to this address.
     { subscription: { ...device.subscription, endpoint: "http://10.0.0.1/internal" } },
     { subscription: { ...device.subscription, endpoint: "file:///etc/passwd" } },
+    // Only a push service (audit F5-04): no other host, no address by number, no other port, no look-alike.
+    { subscription: { ...device.subscription, endpoint: "https://push.example/hp-rina" } },
+    { subscription: { ...device.subscription, endpoint: "https://169.254.169.254/latest/meta-data" } },
+    { subscription: { ...device.subscription, endpoint: "https://[::1]/x" } },
+    { subscription: { ...device.subscription, endpoint: "https://localhost/x" } },
+    { subscription: { ...device.subscription, endpoint: "https://fcm.googleapis.com:8443/fcm/send/x" } },
+    { subscription: { ...device.subscription, endpoint: "https://fcm.googleapis.com.evil.example/fcm/send/x" } },
+    { subscription: { ...device.subscription, endpoint: "https://evil.example/?https://fcm.googleapis.com/" } },
+    { subscription: { ...device.subscription, endpoint: "https://fcm.googleapis.com@evil.example/x" } },
     { subscription: { endpoint: ENDPOINT, keys: { p256dh: "x", auth: "y" } } },
     { ...device, device: "d".repeat(121) },
-    { subscription: { ...device.subscription, endpoint: `https://push.example/${"x".repeat(2000)}` } },
+    { subscription: { ...device.subscription, endpoint: `https://fcm.googleapis.com/fcm/send/${"x".repeat(2000)}` } },
   ];
   for (const input of wrong) expect((await all.save(input)).status, JSON.stringify(input).slice(0, 80)).toBe(422);
   expect((await all.remove({})).status).toBe(422);
   expect((await all.remove({ endpoint: "bukan alamat" })).status).toBe(422);
   expect(devices()).toEqual([]);
+});
+
+it("takes the push services of Chrome, Firefox, Safari and Edge", async () => {
+  const all = await routes();
+  const known = ["https://fcm.googleapis.com/fcm/send/abc", "https://fcm.googleapis.com/wp/abc", "https://updates.push.services.mozilla.com/wpush/v2/abc", "https://web.push.apple.com/abc", "https://wns2-sg2p.notify.windows.com/w/?token=abc"];
+  for (const endpoint of known) expect((await all.save({ ...device, subscription: { ...device.subscription, endpoint } })).status, endpoint).toBe(200);
+  expect(devices().map(row => row.endpoint)).toEqual(known);
 });
 
 it("saves the device for the signed-in person, whatever the request says, and removes only their own", async () => {
@@ -95,11 +111,25 @@ it("sends a test to the person's own devices only, ten times in ten minutes at m
   const all = await routes();
   expect((await all.test()).status).toBe(409);
   await all.save();
-  devices().push({ id: "lain", employee_id: PEOPLE.dewi, endpoint: "https://push.example/hp-dewi", p256dh: "p".repeat(40), auth: "a".repeat(16) });
+  devices().push({ id: "lain", employee_id: PEOPLE.dewi, endpoint: "https://fcm.googleapis.com/fcm/send/hp-dewi", p256dh: "p".repeat(40), auth: "a".repeat(16) });
   expect(await body(await all.test())).toMatchObject({ ok: true, message: "Notifikasi tes dikirim." });
   expect(state.sent).toEqual([ENDPOINT]);
   for (let count = 0; count < 8; count++) expect((await all.test()).status).toBe(200);
   expect((await all.test()).status).toBe(429);
+});
+
+it("answers a test the same whatever the push service said (audit F5-04)", async () => {
+  const all = await routes();
+  await all.save();
+  const fine = await body(await all.test());
+  for (const fail of [500, 403, 404]) {
+    state.fail = fail;
+    const answer = await all.test();
+    expect(answer.status, String(fail)).toBe(200);
+    const said = await body(answer);
+    expect(said).toEqual(fine);
+    expect(JSON.stringify(said)).not.toMatch(/RAHASIA|500|403|404|gagal|belum terkirim/);
+  }
 });
 
 it("says the feature is off instead of failing when the keys or the migration are missing", async () => {

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { coffeePath } from "@/lib/routes";
 import { CoffeeLogin, CoffeeTrouble, CoffeeWaiting } from "./CoffeeAuth";
 import { Layer, onLayerEntry, stayOnPage } from "./Layer";
-import { coffeeWorker, forgetCoffeeWorker } from "./pwa";
+import { activeCoffeeWorker, coffeeWorker, forgetCoffeeWorker } from "./pwa";
+import { browserDevice } from "./usePush";
 import { SetupSteps } from "./SetupSteps";
 import { TOAST_MS, Toast, type ToastMessage } from "./Toast";
 
@@ -124,7 +125,7 @@ it("F2-15 moves the focus to the new step of Atur sekali", () => {
   // The first step leaves the focus alone (the page has just loaded).
   expect(document.activeElement).toBe(document.body);
   fireEvent.click(screen.getByRole("button", { name: "Sudah, lanjut" }));
-  expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Izinkan notifikasi" }));
+  expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Notifikasi" }));
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
   expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Pasang di layar utama" }));
 });
@@ -179,4 +180,56 @@ it("F2-04 leaves a registration that already has the new scope alone, and never 
   vi.stubGlobal("navigator", { userAgent: "x" });
   forgetCoffeeWorker();
   expect(await coffeeWorker()).toBeNull();
+});
+
+// Audit F5-03: register() answers before the worker is active, and pushManager.subscribe() refuses until it is.
+function installingWorker() {
+  const listeners = new Set<() => void>();
+  const worker = { state: "installing", addEventListener: (_: string, listener: () => void) => { listeners.add(listener); }, removeEventListener: (_: string, listener: () => void) => { listeners.delete(listener); } };
+  const subscribe = vi.fn(async () => { if (!registration.active) throw new DOMException("no active Service Worker", "AbortError"); return { endpoint: "https://fcm.googleapis.com/fcm/send/x" }; });
+  const registration: { scope: string; active: unknown; installing: unknown; waiting: unknown; pushManager: unknown } = { scope: `http://localhost${coffeePath.scope}`, active: null, installing: worker, waiting: null, pushManager: { subscribe, getSubscription: async () => null } };
+  const to = (state: string) => {
+    worker.state = state;
+    if (state === "activated") { registration.active = worker; registration.installing = null; }
+    [...listeners].forEach(listener => listener());
+  };
+  vi.stubGlobal("navigator", { ...navigator, serviceWorker: { register: async () => registration, getRegistration: async () => undefined } });
+  return { registration, subscribe, to, listeners };
+}
+
+it("F5-03 waits for the worker to be active before subscribing, so the first press works on a browser that never opened the app", async () => {
+  const { subscribe, to, listeners } = installingWorker();
+  let done = false;
+  const pressed = browserDevice.subscribe("BContohKunciPublik").then(result => { done = true; return result; });
+  await soon();
+  // Still installing: nothing was asked of the push manager yet.
+  expect(subscribe).not.toHaveBeenCalled();
+  expect(done).toBe(false);
+  to("installed"); to("activating");
+  await soon();
+  expect(subscribe).not.toHaveBeenCalled();
+  to("activated");
+  await expect(pressed).resolves.toMatchObject({ endpoint: "https://fcm.googleapis.com/fcm/send/x" });
+  expect(subscribe).toHaveBeenCalledTimes(1);
+  expect(listeners.size).toBe(0);
+});
+
+it("F5-03 does not wait when the worker is already active, and gives up waiting after a while", async () => {
+  const active = installingWorker();
+  active.to("activated");
+  expect(await activeCoffeeWorker()).toBe(active.registration);
+  forgetCoffeeWorker();
+  // A worker that never gets there: the wait ends (here after 20 ms) and the caller goes on, to fail in the open.
+  const stuck = installingWorker();
+  const started = Date.now();
+  expect(await activeCoffeeWorker(20)).toBe(stuck.registration);
+  expect(Date.now() - started).toBeLessThan(2_000);
+  expect(stuck.listeners.size).toBe(0);
+  forgetCoffeeWorker();
+  // A worker that failed to install (redundant) ends the wait at once.
+  const broken = installingWorker();
+  const waiting = activeCoffeeWorker(60_000);
+  await soon();
+  broken.to("redundant");
+  expect(await waiting).toBe(broken.registration);
 });

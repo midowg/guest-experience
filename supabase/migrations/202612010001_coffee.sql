@@ -19,7 +19,7 @@
 --   drop function if exists public.coffee_reopen(uuid, uuid, text, integer);
 --   drop function if exists public.coffee_submit_meeting(jsonb, jsonb, uuid);
 --   drop function if exists public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid);
---   drop table if exists public.coffee_order_items, public.coffee_orders, public.coffee_settings;
+--   drop table if exists public.coffee_order_items, public.coffee_orders, public.coffee_settings, public.coffee_pin_tries;
 --   drop sequence if exists public.coffee_claim_no, public.coffee_meeting_no;
 --   update public.admin_grants set apps = array_remove(apps, 'coffee');
 --   then restore the check of 202611200703 without 'coffee'.
@@ -40,6 +40,20 @@ create table if not exists public.coffee_settings (
   ga_pin_label text check (ga_pin_label is null or char_length(ga_pin_label) <= 120)
 );
 insert into public.coffee_settings (id) values (1) on conflict (id) do nothing;
+
+-- Wrong tries at the PIN GA, one row per tablet account (final audit F5-05; the rules are in
+-- src/lib/server/coffee/pin.ts). Only wrong tries are counted: `fails` since the last lock, `level`
+-- how many locks there were in a row (30 s, 1 min, 5 min, 15 min), `locked_until` the end of the
+-- lock that runs now. `seq` goes up with every write, so only one of two requests that read the
+-- same row wins. The right PIN deletes the row, and so does a pengelola saving a PIN.
+create table if not exists public.coffee_pin_tries (
+  employee_id uuid primary key references public.employees (id) on delete cascade,
+  fails smallint not null default 0 check (fails between 0 and 100),
+  level smallint not null default 0 check (level between 0 and 100),
+  locked_until timestamptz,
+  updated_at timestamptz not null default now(),
+  seq bigint not null default 0
+);
 
 create sequence if not exists public.coffee_claim_no;
 create sequence if not exists public.coffee_meeting_no;
@@ -370,13 +384,14 @@ end $$;
 alter table public.coffee_settings enable row level security;
 alter table public.coffee_orders enable row level security;
 alter table public.coffee_order_items enable row level security;
-revoke all on public.coffee_settings, public.coffee_orders, public.coffee_order_items from public, anon, authenticated;
+alter table public.coffee_pin_tries enable row level security;
+revoke all on public.coffee_settings, public.coffee_orders, public.coffee_order_items, public.coffee_pin_tries from public, anon, authenticated;
 revoke all on sequence public.coffee_claim_no, public.coffee_meeting_no from public, anon, authenticated;
 revoke all on function public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid) from public, anon, authenticated;
 revoke all on function public.coffee_submit_meeting(jsonb, jsonb, uuid) from public, anon, authenticated;
 revoke all on function public.coffee_reopen(uuid, uuid, text, integer) from public, anon, authenticated;
 revoke all on function public.coffee_cancel_manual(uuid, uuid, text) from public, anon, authenticated;
-grant select, insert, update, delete on public.coffee_settings, public.coffee_orders, public.coffee_order_items to service_role;
+grant select, insert, update, delete on public.coffee_settings, public.coffee_orders, public.coffee_order_items, public.coffee_pin_tries to service_role;
 grant usage, select on sequence public.coffee_claim_no, public.coffee_meeting_no to service_role;
 grant execute on function public.coffee_submit_claim(uuid, jsonb, timestamptz, boolean, uuid, text, uuid) to service_role;
 grant execute on function public.coffee_submit_meeting(jsonb, jsonb, uuid) to service_role;

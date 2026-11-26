@@ -307,7 +307,8 @@ it("walks through Atur sekali once: pasang di layar utama, then notifikasi, then
   fireEvent.click(screen.getByRole("button", { name: "Pasang sekarang" }));
   expect((await screen.findByRole("status")).textContent).toMatch(/menu ⋮/);
   fireEvent.click(screen.getByRole("button", { name: "Sudah, lanjut" }));
-  expect(await screen.findByRole("heading", { level: 1, name: "Izinkan notifikasi" })).toBeTruthy();
+  // Without push there is no permission to ask for: the step is called what it is about (audit F5-10).
+  expect(await screen.findByRole("heading", { level: 1, name: "Notifikasi" })).toBeTruthy();
   expect(screen.getByText("Atur sekali · 2 dari 2")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Izinkan notifikasi/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));

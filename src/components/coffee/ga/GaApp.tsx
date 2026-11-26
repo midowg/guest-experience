@@ -9,11 +9,11 @@ import { CoffeeApiError, coffeePush, newKey } from "../api";
 import { Layer } from "../Layer";
 import { coffeeWorker } from "../pwa";
 import { Toast, type ToastMessage } from "../Toast";
-import { usePush, useWorkerNews, type PushPort } from "../usePush";
+import { useFocusAfter, usePush, useWorkerNews, type PushPort } from "../usePush";
 import { gaClient, type GaApi, type MeetingBody } from "./api";
 import type { PinAnswer } from "./ExitDialog";
 import { GuestBook } from "./GuestBook";
-import { dropHold, keepHold, readHold, type BookState } from "./hold";
+import { HOLD_REFRESH_MS, dropHold, keepHold, readHold, refreshHold, type BookState } from "./hold";
 import { Home } from "./Home";
 import { MAX_LINES, canAddTo, counts, doneLine, nextDraft, printOf, sameSending, toBody, type Draft, type Line } from "./model";
 import { NewOrder } from "./NewOrder";
@@ -42,6 +42,8 @@ import css from "./ga.module.css";
  * it exists while the guest holds the tablet: nothing is drawn, asked, registered or listened to,
  * and a notification that is tapped then leaves the book where it is. (What the notification
  * itself says in guest mode is the service worker's doing: one neutral line, see public/coffee/sw.js.)
+ * After the final audit: "Matikan" beside "Notifikasi aktif" (F5-07), the focus follows Nyalakan and
+ * Matikan (F5-09), and the guest-mode cookie is written again while the book is open (F5-06).
  */
 
 type Screen = "home" | "new" | "quick" | "sent";
@@ -134,8 +136,16 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
       if (order && !writing.current) open(order);
     });
   }, port !== null && !guest);
+  const { target: pushButton, follow } = useFocusAfter<HTMLButtonElement>(!push.busy, push.state);
+  const turnOff = async () => {
+    if (push.busy) return;
+    follow();
+    await push.disable();
+    say({ tone: "ok", title: "Notifikasi dimatikan di tablet ini", body: "Status pesanan tetap berubah sendiri di layar ini." });
+  };
   const turnOn = async () => {
     if (push.busy) return;
+    follow();
     if (push.state !== "off") { say({ tone: "no", title: "Notifikasi belum bisa dinyalakan", body: pushNote(push.state, "ga"), sticky: true }); return; }
     const answer = await push.enable();
     if (answer === "granted") say({ tone: "ok", title: "Notifikasi aktif di tablet ini", body: "Tablet diberi tahu begitu pesanan rapat selesai diproses." });
@@ -162,6 +172,16 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
     if (guest) keepHold(draft ? { draft, lines, book: book ?? { open: false, picks: [] } } : null);
     else dropHold();
   }, [restored, guest, draft, lines, book]);
+  // The cookie lives twelve hours and a book can stay open longer: it is written again every half
+  // hour and whenever the tablet is looked at again, so a reload in guest mode never brings GA's data.
+  useEffect(() => {
+    if (!restored || !guest) return;
+    const again = () => { if (document.visibilityState !== "hidden") refreshHold(); };
+    const timer = window.setInterval(refreshHold, HOLD_REFRESH_MS);
+    document.addEventListener("visibilitychange", again);
+    window.addEventListener("pageshow", again);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", again); window.removeEventListener("pageshow", again); };
+  }, [restored, guest]);
 
   // A pull on the page must not reload it (the cover does not scroll, so Chrome would take the pull for a refresh).
   useEffect(() => {
@@ -316,9 +336,12 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
       <header className={css.topbar}>
         <span className={css.brand}><Coffee aria-hidden size={22} />Werkudara Coffee<span className={css.brandSub}>Tablet GA</span></span>
         <span className={css.user}>
-          {port && push.state === "on" && <span className={css.topNote}><BellRing aria-hidden size={18} /><span>Notifikasi aktif</span></span>}
+          {port && push.state === "on" && <>
+            <span className={css.topNote}><BellRing aria-hidden size={18} /><span>Notifikasi aktif</span></span>
+            <button type="button" ref={pushButton} className={`${css.topLink} ${css.topOff}`} aria-label="Matikan notifikasi di tablet ini" aria-disabled={push.busy || undefined} onClick={() => void turnOff()}>Matikan</button>
+          </>}
           {port && (push.state === "off" || push.state === "denied" || push.state === "ios-install" || push.state === "unsupported") && (
-            <button type="button" className={css.topLink} aria-disabled={push.busy || undefined} onClick={() => void turnOn()}><Bell aria-hidden size={18} /><span>Nyalakan notifikasi</span></button>
+            <button type="button" ref={pushButton} className={css.topLink} aria-disabled={push.busy || undefined} onClick={() => void turnOn()}><Bell aria-hidden size={18} /><span>Nyalakan notifikasi</span></button>
           )}
           <a className={css.topLink} href={coffeePath.home}><Smartphone aria-hidden size={18} />Aplikasi saya</a>
           <span className={css.userText}><strong>{me.name}</strong><span>Mode GA</span></span>

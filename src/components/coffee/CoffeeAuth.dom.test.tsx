@@ -98,3 +98,19 @@ it("says plainly that the app is not open yet before the migration ran", () => {
   expect(screen.getByRole("heading", { level: 1, name: "Werkudara Coffee belum dibuka" })).toBeTruthy();
   expect(screen.getByText(/Rincian untuk admin: Werkudara Coffee menunggu migrasi 202612010001_coffee\.sql\./)).toBeTruthy();
 });
+
+// Audit F5-07: nobody is signed in on this browser, so a push subscription left behind belongs to whoever was.
+it("lets go of a push subscription left on the browser when told that nobody is signed in, and only then", async () => {
+  const unsubscribe = vi.fn(async () => true);
+  const getRegistration = vi.fn(async () => ({ pushManager: { getSubscription: async () => ({ unsubscribe }) } }));
+  Object.defineProperty(navigator, "serviceWorker", { value: { getRegistration }, configurable: true });
+  try {
+    render(<CoffeeLogin next={null} />);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(getRegistration).not.toHaveBeenCalled();
+    cleanup();
+    render(<CoffeeLogin next={null} forget />);
+    await waitFor(() => expect(unsubscribe).toHaveBeenCalledTimes(1));
+    expect(getRegistration).toHaveBeenCalledWith(coffeePath.scope);
+  } finally { Reflect.deleteProperty(navigator, "serviceWorker"); }
+});

@@ -45,6 +45,28 @@ it("offers Nyalakan notifikasi above the queue, and Matikan once it is on", asyn
   expect(port.calls.slice(-2)).toEqual(["remove:https://push.example/contoh", "unsubscribe"]);
 });
 
+// Audit F5-09: the pressed button is replaced; the focus must not fall to the page.
+it("moves the focus to the button that took the pressed one's place", async () => {
+  await open(samplePush("off"));
+  const on = await screen.findByRole("button", { name: "Nyalakan notifikasi" });
+  on.focus();
+  fireEvent.click(on);
+  const off = await screen.findByRole("button", { name: "Matikan" });
+  await waitFor(() => expect(document.activeElement).toBe(off));
+  fireEvent.click(off);
+  const again = await screen.findByRole("button", { name: "Nyalakan notifikasi" });
+  await waitFor(() => expect(document.activeElement).toBe(again));
+  // Audit F5-10: the offer is marked, so a phone draws it as one row (the sentence stays for screen readers).
+  expect(again.closest("[data-offer]")?.querySelector("[role=status]")?.textContent).toMatch(/^Nyalakan supaya kamu diberi tahu/);
+  cleanup();
+  // The browser's question was answered with no: no button is left, the focus goes to the line that says why.
+  await open(samplePush("off", { answer: "denied" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Nyalakan notifikasi" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Nyalakan notifikasi" })).toBeNull());
+  await waitFor(() => expect(document.activeElement?.getAttribute("role")).toBe("status"));
+  expect(document.activeElement?.closest("[data-offer]")).toBeNull();
+});
+
 it("says why it cannot be turned on: the super admin's sign-in, missing keys, a blocked or unfit browser", async () => {
   const cases: [CoffeePushState, RegExp][] = [
     ["account", /^Masuk dengan akun karyawan untuk menerima notifikasi\./],

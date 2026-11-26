@@ -143,8 +143,26 @@ export const recapQuerySchema = z.object({
 });
 export type RecapQuery = z.infer<typeof recapQuerySchema>;
 
-/**
- * What a device sends to turn notifications on (F4): WAM's shape, and the push service's address
- * must be https (the server later posts to it; nothing on plain http or another scheme is taken).
+/*
+ * The push services a browser subscribes with (audit F5-04). The server later posts to the address
+ * a device handed in, so only these hosts are taken: Chrome and other Chromium browsers and
+ * Android (FCM), Firefox (Mozilla), Safari on iPhone, iPad and Mac (Apple), Edge on Windows (WNS).
+ * WAM's own push has no such list (25 Nov 2026); this one is Coffee's.
  */
-export const coffeePushSchema = pushSubscriptionSchema.refine(value => value.subscription.endpoint.startsWith("https://"), { message: "Alamat notifikasi perangkat ini tidak dikenali.", path: ["subscription", "endpoint"] });
+const PUSH_HOSTS = ["fcm.googleapis.com", "updates.push.services.mozilla.com"];
+const PUSH_HOST_ENDINGS = [".push.apple.com", ".notify.windows.com"];
+/** Is this the address of a known push service: https, its usual port, no sign-in part, a host from the list? */
+export function isPushServiceUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  let url: URL;
+  try { url = new URL(value); } catch { return false; }
+  if (url.protocol !== "https:" || url.port || url.username || url.password) return false;
+  const host = url.hostname.toLowerCase();
+  return PUSH_HOSTS.includes(host) || PUSH_HOST_ENDINGS.some(ending => host.endsWith(ending) && host.length > ending.length);
+}
+
+/**
+ * What a device sends to turn notifications on (F4): WAM's shape, and the address must be a push
+ * service's (the server later posts to it; nothing else is taken, see isPushServiceUrl).
+ */
+export const coffeePushSchema = pushSubscriptionSchema.refine(value => isPushServiceUrl(value.subscription.endpoint), { message: "Alamat notifikasi perangkat ini tidak dikenali.", path: ["subscription", "endpoint"] });

@@ -11,7 +11,7 @@ type Row = Record<string, unknown>;
 type Failure = { code?: string; message: string };
 type Result = { data: unknown; error: Failure | null };
 
-const COFFEE_TABLES = ["coffee_orders", "coffee_order_items", "coffee_settings"];
+const COFFEE_TABLES = ["coffee_orders", "coffee_order_items", "coffee_settings", "coffee_pin_tries"];
 /** Migration 202612010002 (web push): there or not on its own, whatever the first migration's state. */
 const PUSH_TABLES = ["coffee_push_subscriptions", "coffee_push_sent"];
 const groupOf = (category: unknown) => category === "intern" ? "intern" : category === "dw" || category === "ga" ? "ga" : "karyawan";
@@ -57,6 +57,10 @@ export function fakeDb() {
         // coffee_push_sent's primary key: the same news is one row.
         if (table === "coffee_push_sent" && rows(table).some(item => item.order_id === row.order_id && item.event === row.event && item.stamp === row.stamp)) {
           return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_push_sent_pkey"' } };
+        }
+        // coffee_pin_tries' primary key: one row per tablet account.
+        if (table === "coffee_pin_tries" && rows(table).some(item => item.employee_id === row.employee_id)) {
+          return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_pin_tries_pkey"' } };
         }
         rows(table).push({ id: uuid(), ...row });
         return { data: null, error: null };
