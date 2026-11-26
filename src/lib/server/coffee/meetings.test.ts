@@ -168,7 +168,7 @@ describe("the tablet's home", () => {
     expect(state.today.map(item => item.no)).toEqual(["T-0113"]);
     expect(state.people.map(person => person.name)).toEqual(["Contoh Bagas Saputra", "Contoh Dewi Lestari", "Contoh Fajar Nugroho", "Contoh Rina Putri"]);
     expect(Object.keys(state.people[0]).sort()).toEqual(["bu", "id", "name", "position"]);
-    expect(state.rooms.map(room => room.spot)).toEqual(["ananta", "limasan", "vasuki", "communal"]);
+    expect(state.rooms.map(room => room.spot)).toEqual(["ananta", "limasan", "vasuki", "communal", "nagapadma"]);
     // Whether a PIN GA is set, and nothing else of it; a record made by hand says so (it cannot be added to).
     expect(state.pin).toBe(false);
     expect(state.today[0].manual).toBe(false);

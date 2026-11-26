@@ -62,7 +62,7 @@ it("opens on today's meeting orders, with each room's status in words next to th
   expect(within(cards[1]).getByText("#T-0113 · 08.25")).toBeTruthy();
   expect(screen.getByRole("img", { name: "Denah kantor: ruangan dengan pesanan hari ini" }).textContent).toContain("AnantaSelesai");
   const rooms = within(screen.getByRole("list", { name: "Status per ruangan" })).getAllByRole("listitem").map(item => item.textContent);
-  expect(rooms).toEqual(["CFC Ananta RoomSelesai", "Kaliya LimasanTidak ada", "Vasuki RoomDiproses", "Komunal SpaceTidak ada"]);
+  expect(rooms).toEqual(["CFC Ananta RoomSelesai", "Kaliya LimasanTidak ada", "Vasuki RoomDiproses", "Komunal SpaceTidak ada", "NagapadmaTidak ada"]);
   expect(within(screen.getByRole("list", { name: "Keterangan warna" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["Diproses", "Selesai", "Ditolak", "Mesin kopi"]);
 });
 
