@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { ChartColumn, Check, Inbox, PenLine, Settings, TriangleAlert, X } from "lucide-react";
+import { Check, TriangleAlert, X } from "lucide-react";
 import admin from "@/components/admin/admin.module.css";
 import { errorMessage } from "@/components/admin/shared/api";
 import { dropPush, usePush, useWorkerNews, type PushPort } from "@/components/coffee/usePush";
@@ -20,7 +20,7 @@ import { ManualSheet } from "./ManualSheet";
 import { QueueView } from "./QueueView";
 import { RecapView } from "./RecapView";
 import { RefuseDialog } from "./RefuseDialog";
-import { COFFEE_ADMIN_LABEL, coffeeAdminSection, sectionOfPath, type CoffeeAdminSectionKey } from "./sections";
+import { COFFEE_ADMIN_LABEL, coffeeAdminSection, coffeeAdminSections, sectionOfPath, type CoffeeAdminSection, type CoffeeAdminSectionKey } from "./sections";
 import { SettingsView } from "./SettingsView";
 import { useQueue } from "./useQueue";
 import css from "./coffee-admin.module.css";
@@ -224,14 +224,10 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
     if (news.type === "open") go("antrean");
   }, port !== null);
 
-  const tabs: { key: CoffeeAdminSectionKey; label: string; icon: ReactNode }[] = [
-    { key: "antrean", label: "Antrean", icon: <Inbox size={22} aria-hidden /> },
-    { key: "rekap", label: "Rekap", icon: <ChartColumn size={22} aria-hidden /> },
-    { key: "pengaturan", label: "Lainnya", icon: <Settings size={22} aria-hidden /> },
-  ];
-  const tabLink = ({ key, label, icon }: (typeof tabs)[number]) => (
-    <a key={key} href={coffeeAdminSection(key).href} aria-current={view === key ? "page" : undefined}>
-      <span className={css.tabIcon}>{icon}{key === "antrean" && waiting ? <span className={css.tabBadge}>{waiting}<span className={css.srOnly}> pesanan menunggu</span></span> : null}</span>
+  // The phone's bottom menu is the desktop menu: the same sections, labels and icons (26 Nov 2026). Catat manual is a button in Antrean's head.
+  const tabLink = ({ key, label, href, icon: Icon }: CoffeeAdminSection) => (
+    <a key={key} href={href} aria-current={view === key ? "page" : undefined}>
+      <span className={css.tabIcon}><Icon size={22} aria-hidden />{key === "antrean" && waiting ? <span className={css.tabBadge}>{waiting}<span className={css.srOnly}> pesanan menunggu</span></span> : null}</span>
       {label}
     </a>
   );
@@ -265,11 +261,7 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
       </CoffeeAdminNav>
 
       <nav className={css.tabBar} aria-label="Menu pengelola (ponsel)">
-        {tabs.slice(0, 2).map(tabLink)}
-        <button type="button" className={css.tabAction} onClick={openManualSheet}>
-          <span className={css.tabIcon}><PenLine size={22} aria-hidden /></span>Catat
-        </button>
-        {tabs.slice(2).map(tabLink)}
+        {coffeeAdminSections.map(tabLink)}
       </nav>
 
       {manual && <ManualSheet api={api} now={now} actorName={actorName} settings={settings?.settings ?? null} onClose={() => setManual(false)} onSaved={saved} />}

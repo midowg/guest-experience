@@ -26,7 +26,7 @@ export function QueueView({ queue, error, now, phone, actorName, undoing, onRetr
       <PageHeader
         title={section.label}
         subtitle={phone ? "Terlama di atas. Beli di JumpStart, lalu tandai selesai." : section.summary}
-        actions={<ConsoleButton className={`${css.desktopOnly} ${css.tall}`} icon={<PenLine size={18} aria-hidden />} onClick={onManual}>Catat manual</ConsoleButton>}
+        actions={<ConsoleButton variant="primary" className={`${css.tall} ${css.onPrimary}`} icon={<PenLine size={18} aria-hidden />} onClick={onManual}>Catat manual</ConsoleButton>}
       />
       {error && (
         <div className={css.banner} role="status">

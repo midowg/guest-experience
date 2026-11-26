@@ -1,4 +1,4 @@
-/* Werkudara Coffee, pengelola (/admin/coffee). The layout, the parts and the words of the approved
+/* WG Coffee, pengelola (/admin/coffee). The layout, the parts and the words of the approved
    prototype (pengelola-prototype.module.css), inside Journey Admin's console frame: every colour
    reads the console's --cs-* tokens (one primary, the shared status tones), so the pages are one
    system with the rest of the admin. Radii from brain/aturan/desain-ui.md: 8 chips, 12 buttons and
@@ -312,6 +312,8 @@
 
 /* the console's own buttons in this area's page heads (Catat manual, Unduh): the same 44 px as the rest */
 .root .headActions :is(a, button), .root .tall { min-height: 44px; }
+/* a primary console <button>: the reset above (.root :where(button) { color: inherit }) would otherwise leave dark words on the blue */
+.root .onPrimary { color: var(--cs-on-primary); }
 
 /* A tablet, or a narrow window beside the menu: one column, today's numbers above the queue and
    "Baru diproses" under it (as on a phone), so a card keeps its full width (audit F1-05). */
@@ -340,11 +342,11 @@
 
   /* bottom tab bar */
   .tabBar {
-    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr);
     padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     background: var(--surface); border-top: 1px solid var(--line);
   }
-  .tabBar a, .tabBar button {
+  .tabBar a {
     display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 56px; min-width: 0; padding: 0; border: 0; border-radius: 12px;
     background: none; color: var(--ink-3); font-size: 13px; font-weight: 700; text-decoration: none;
   }
@@ -355,8 +357,6 @@
     position: absolute; top: -4px; right: 6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
     background: var(--wait); color: var(--cs-on-primary); font-size: 12px; font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums;
   }
-  .tabBar .tabAction { color: var(--act-strong); }
-  .tabBar .tabAction .tabIcon { background: var(--act); color: var(--cs-on-primary); }
 
   /* queue */
   .queueLayout { grid-template-columns: minmax(0, 1fr); gap: 12px; }

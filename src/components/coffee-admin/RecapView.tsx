@@ -138,7 +138,7 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
   const downloads = problem ? (
     <>
       <ConsoleButton disabled icon={<Download size={18} aria-hidden />}>Unduh CSV</ConsoleButton>
-      <ConsoleButton variant="primary" disabled icon={<FileSpreadsheet size={18} aria-hidden />}>Unduh Excel</ConsoleButton>
+      <ConsoleButton variant="primary" className={css.onPrimary} disabled icon={<FileSpreadsheet size={18} aria-hidden />}>Unduh Excel</ConsoleButton>
     </>
   ) : (
     <>

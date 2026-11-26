@@ -4,6 +4,7 @@ import { AdminApiError } from "@/components/admin/shared/api";
 import type { Done } from "./api";
 import { CoffeeAdminApp } from "./CoffeeAdminApp";
 import { SAMPLE_ACTOR, createSampleServer, type SampleServer } from "./sample";
+import { coffeeAdminSections } from "./sections";
 import { CLICK_GUARD_MS, POLL_MS } from "./useQueue";
 
 /*
@@ -235,13 +236,28 @@ it("reads Pengaturan again each time it is opened, keeping what it knew on scree
   const settings = vi.fn();
   const { server } = await open(made => ({ settings: settings.mockImplementation(made.api.settings) }));
   const go = (name: string) => fireEvent.click(within(screen.getByRole("navigation", { name: "Menu pengelola (ponsel)" })).getByRole("link", { name: new RegExp(name) }));
-  go("Lainnya");
+  go("Pengaturan");
   await waitFor(() => expect((screen.getByLabelText("Karyawan") as HTMLInputElement).value).toBe("4"));
   expect(settings).toHaveBeenCalledTimes(1);
   go("Antrean");
   await server.api.saveSettings({ karyawan: 6, ga: 2, intern: 2 }); // another pengelola, elsewhere
-  go("Lainnya");
+  go("Pengaturan");
   expect((screen.getByLabelText("Karyawan") as HTMLInputElement).value).toBe("4"); // shown at once from what was known
   await waitFor(() => expect((screen.getByLabelText("Karyawan") as HTMLInputElement).value).toBe("6"));
   expect(settings).toHaveBeenCalledTimes(2);
+});
+
+// 26 Nov 2026: the phone's bottom menu is the desktop menu; Catat manual is a button of Antrean, not a tab.
+it("gives the phone's bottom menu the three sections of the desktop menu, and opens Catat manual from Antrean's head", async () => {
+  await open();
+  const bar = screen.getByRole("navigation", { name: "Menu pengelola (ponsel)" });
+  expect(within(bar).getAllByRole("link").map(link => link.textContent!.replace(/^\d+ pesanan menunggu/, ""))).toEqual(coffeeAdminSections.map(section => section.label));
+  expect(within(bar).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(coffeeAdminSections.map(section => section.href));
+  expect(within(bar).queryAllByRole("button")).toHaveLength(0);
+  expect(within(bar).getByRole("link", { name: /Antrean/ }).textContent).toMatch(/\d+ pesanan menunggu/);
+  const manual = screen.getAllByRole("button", { name: "Catat manual" });
+  expect(manual).toHaveLength(1);
+  expect(manual[0].className).not.toMatch(/desktopOnly/);
+  fireEvent.click(manual[0]);
+  expect(await screen.findByRole("dialog", { name: "Catat manual" })).toBeTruthy();
 });
