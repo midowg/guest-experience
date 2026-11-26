@@ -163,3 +163,80 @@ it("stops at forty rows, as the server does", () => {
   expect(lines()).toHaveLength(MAX_LINES);
   expect(within(order()).getByText(/Paling banyak 40 baris per kiriman/)).toBeTruthy();
 });
+
+/* ---------- after the F3 audit (26 Nov 2026) */
+
+it("F3-09 says so when a tap adds nothing because the order is full, and does not hand a full order to the guest", () => {
+  const first: Line[] = Array.from({ length: MAX_LINES }, (_, index) => ({ id: `l${index}`, slug: "americano", for: "tamu", qty: 1, temperature: "panas", sugar: "Normal", ice: "Normal", guestName: `Tamu ${index}` }));
+  const { lines, onGuest } = open({ first });
+  const note = () => within(order()).getByRole("status", { name: "" });
+  expect(within(order()).getByText(/^Paling banyak 40 baris per kiriman/).getAttribute("role")).toBe("status");
+  fireEvent.click(tile("Kopi Hitam"));
+  expect(lines()).toHaveLength(MAX_LINES);
+  expect(within(order()).getByText(/^Tidak ditambahkan: pesanan sudah penuh\. Paling banyak 40 baris per kiriman\. Kirim dulu, lalu Tambah lagi\.$/)).toBeTruthy();
+  // A team member's drink is not started either.
+  fireEvent.click(screen.getByRole("button", { name: "Tim · rapat" }));
+  fireEvent.click(tile("Kopi Hitam"));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  const hand = screen.getByRole("button", { name: "Serahkan ke tamu" });
+  expect(hand.getAttribute("aria-disabled")).toBe("true");
+  fireEvent.click(hand);
+  expect(onGuest).not.toHaveBeenCalled();
+  void note;
+});
+
+it("F3-09 still adds one more of a row that is already there when the order is full", () => {
+  const first: Line[] = [
+    ...Array.from({ length: MAX_LINES - 1 }, (_, index): Line => ({ id: `l${index}`, slug: "americano", for: "tamu", qty: 1, temperature: "panas", sugar: "Normal", ice: "Normal", guestName: `Tamu ${index}` })),
+    { id: "plain", slug: "kopi-hitam", for: "tamu", qty: 1, temperature: "panas", sugar: "Normal", ice: "Normal" },
+  ];
+  const { lines } = open({ first });
+  fireEvent.click(tile("Kopi Hitam"));
+  expect(lines()).toHaveLength(MAX_LINES);
+  expect(lines().find(line => line.id === "plain")?.qty).toBe(2);
+  expect(within(order()).queryByText(/Tidak ditambahkan/)).toBeNull();
+});
+
+it("F3-10 does not add a tap to a row whose ice level was changed", () => {
+  const { lines } = open();
+  fireEvent.click(screen.getByRole("button", { name: "Non-kopi" }));
+  fireEvent.click(tile("Cucumber Ice"));
+  fireEvent.click(within(order()).getByRole("button", { name: /^Ubah Cucumber Ice/ }));
+  fireEvent.click(within(within(dialog()).getByRole("group", { name: "Takaran es" })).getByRole("button", { name: "Sedikit" }));
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan" }));
+  fireEvent.click(tile("Cucumber Ice"));
+  expect(lines().map(line => [line.slug, line.ice, line.qty])).toEqual([["cucumber-ice", "Sedikit", 1], ["cucumber-ice", "Normal", 1]]);
+  // The plain one takes the next tap; a row with a guest's name never does.
+  fireEvent.click(tile("Cucumber Ice"));
+  expect(lines().map(line => line.qty)).toEqual([1, 2]);
+});
+
+it("does not add a tap to a row a guest put a name on, and starts a new row past fifty", () => {
+  const first: Line[] = [
+    { id: "named", slug: "americano", for: "tamu", qty: 1, temperature: "panas", sugar: "Normal", ice: "Normal", guestName: "Budi" },
+    { id: "many", slug: "kopi-susu", for: "tamu", qty: 50, temperature: "panas", sugar: "Normal", ice: "Normal" },
+  ];
+  const { lines } = open({ first });
+  fireEvent.click(tile("Americano"));
+  fireEvent.click(tile("Kopi Susu"));
+  expect(lines().map(line => [line.slug, line.qty, line.guestName])).toEqual([["americano", 1, "Budi"], ["kopi-susu", 50, undefined], ["americano", 1, undefined], ["kopi-susu", 1, undefined]]);
+});
+
+it("F3-07 brings the name search to the top when it is typed in, so the names under it stay above the keyboard", async () => {
+  const raised: Element[] = [];
+  Element.prototype.scrollIntoView = function scrollIntoView(this: Element) { raised.push(this); };
+  open();
+  fireEvent.click(screen.getByRole("button", { name: "Tim · rapat" }));
+  fireEvent.click(tile("Americano"));
+  const field = within(dialog()).getByLabelText("Nama anggota tim");
+  fireEvent.focus(field);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  // (A field focused by an earlier test may rise late too; the one that matters is this field's block.)
+  const block = raised.find(element => element.contains(field)) as HTMLElement;
+  expect(block).toBeTruthy();
+  expect(block.dataset.raise).toBeDefined();
+  // The block that rises holds the field and, right under it, the names to pick from.
+  expect(within(block).getByRole("button", { name: `${PIC.name} (PIC)` })).toBeTruthy();
+  expect([...block.querySelectorAll("input, button")].indexOf(field)).toBe(0);
+  delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+});

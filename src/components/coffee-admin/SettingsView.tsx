@@ -49,7 +49,7 @@ function QuotaForm({ api, data, onSaved }: { api: CoffeeAdminApi; data: Settings
     setBusy(true); setFailure(""); setServerErrors({});
     try {
       const saved = await api.saveSettings({ karyawan: values.karyawan!, ga: values.ga!, intern: values.intern! });
-      onSaved({ settings: saved.settings, holders: saved.holders }, saved.message);
+      onSaved({ settings: saved.settings, holders: saved.holders, gaPin: saved.gaPin }, saved.message);
     } catch (problem) {
       setServerErrors(fieldErrorsOf(problem));
       setFailure(errorMessage(problem));
@@ -93,6 +93,52 @@ function QuotaForm({ api, data, onSaved }: { api: CoffeeAdminApi; data: Settings
 }
 
 /**
+ * PIN GA: the four digits the GA officer types on the tablet to leave the guest menu book. Only
+ * "sudah diatur" or "belum diatur" is known here: the PIN is typed, sent, and forgotten (the field
+ * is emptied after saving, and the browser is told not to remember it).
+ */
+function PinForm({ api, set, onSaved }: { api: CoffeeAdminApi; set: boolean; onSaved: (message: string) => void }) {
+  const uid = useId();
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  const [tried, setTried] = useState(false);
+  const valid = /^\d{4}$/.test(pin);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (busy) return;
+    if (!valid) { setTried(true); return; }
+    setBusy(true); setFailure("");
+    try {
+      const saved = await api.saveGaPin(pin);
+      setPin(""); setTried(false);
+      onSaved(saved.message);
+    } catch (problem) {
+      setFailure(fieldErrorsOf(problem).pin?.[0] ?? errorMessage(problem));
+    } finally { setBusy(false); }
+  };
+  const error = tried && !valid ? "Isi PIN 4 angka." : "";
+  return (
+    <form className={css.quotaForm} onSubmit={submit} noValidate>
+      <p className={css.pinState} data-set={set || undefined} role="status">{set ? "Sudah diatur" : "Belum diatur"}</p>
+      <div>
+        <div className={css.quotaRow}>
+          <label htmlFor={`${uid}-pin`}>{set ? "PIN baru" : "PIN"}</label>
+          <input id={`${uid}-pin`} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} autoComplete="off" value={pin} readOnly={busy}
+            onChange={event => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))} aria-invalid={!!error} aria-describedby={`${uid}-pin-help`} />
+          <span>4 angka</span>
+        </div>
+        <p id={`${uid}-pin-help`} className={error ? css.error : css.small}>{error || "PIN tidak bisa dilihat lagi setelah disimpan. Lupa? Simpan PIN baru."}</p>
+      </div>
+      {failure && <div className={css.banner} data-tone="no" role="alert"><span>{failure}</span></div>}
+      <div className={css.formFoot}>
+        <button type="submit" className={css.primary} disabled={busy || !pin}><Check size={18} aria-hidden />{busy ? "Menyimpan…" : set ? "Ganti PIN" : "Simpan PIN"}</button>
+      </div>
+    </form>
+  );
+}
+
+/**
  * Pengaturan: the monthly quotas (the pengelola may change them; they hold from the next claim
  * on), who holds the access (changed in Super admin → Akses admin) and the rooms (read only).
  */
@@ -121,6 +167,13 @@ export function SettingsView({ api, data, error, onRetry, onSaved }: {
             <div><dt>Tim · rapat</dt><dd>Tanpa jatah, dicatat atas nama orangnya</dd></div>
           </dl>
           <p className={css.small}>Bulan kalender WIB. Klaim yang ditolak atau dibatalkan tidak memakai jatah. Perubahan berlaku mulai klaim berikutnya.</p>
+        </section>
+        <section className={css.panel} aria-labelledby={`${uid}-pin`} aria-busy={!data && !error}>
+          <h2 id={`${uid}-pin`}>PIN GA</h2>
+          {data
+            ? <PinForm api={api} set={data.gaPin} onSaved={message => onSaved({ ...data, gaPin: true }, message)} />
+            : !error && <span className={css.skeleton} style={{ height: 120 }} />}
+          <p className={css.small} style={{ marginTop: 12 }}>Diminta di tablet GA saat petugas keluar dari buku menu tamu, supaya tamu tidak bisa membuka layar GA. Selama belum diatur, keluar hanya lewat pertanyaan.</p>
         </section>
         <section className={css.panel} aria-labelledby={`${uid}-access`} aria-busy={!data && !error}>
           <h2 id={`${uid}-access`}>Pemegang akses Werkudara Coffee</h2>

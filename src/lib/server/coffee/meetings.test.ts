@@ -120,6 +120,31 @@ describe("a meeting order", () => {
     expect(db.rows("coffee_orders").filter(row => row.kind === "rapat")).toHaveLength(1);
   });
 
+  // Audit F3-02: drinks added after a lost answer must never be answered with "already sent".
+  it("refuses a key that comes back with other contents, and still answers the same contents with the first order", async () => {
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu." };
+    const first = await submitMeeting(bagas, order(1), now);
+    expect((await submitMeeting(bagas, order(1), new Date(now.getTime() + 60_000))).order.id).toBe(first.order.id);
+    const more = [{ for: "tamu" as const, ...drink, qty: 3 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, slug: "americano", qty: 1 }, { for: "tamu" as const, ...drink, slug: "kopi-hitam", qty: 2 }];
+    await expect(submitMeeting(bagas, order(1, { items: more }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, ...drink, qty: 4 }, more[1]] }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { room: "Vasuki Room" }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { picId: PEOPLE.dewi }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, ...drink, qty: 3, guestName: "Budi" }, more[1]] }), now)).rejects.toMatchObject(reused);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    expect(db.rows("coffee_order_items")).toHaveLength(2);
+    expect(db.rows("coffee_orders")[0].request_print).toMatch(/^[0-9a-f]{64}$/);
+    // Two sendings of one key that meet at the unique index: the same rule.
+    db.state.race = true;
+    expect((await submitMeeting(bagas, order(1), now)).order.id).toBe(first.order.id);
+    await expect(submitMeeting(bagas, order(1, { items: more }), now)).rejects.toMatchObject(reused);
+    db.state.race = false;
+    // A next round: the fingerprint is of its parent and drinks, whatever room the tablet sent along.
+    const round = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);
+    expect((await submitMeeting(bagas, order(2, { parentId: first.order.id, room: "Apa saja" }), now)).order.id).toBe(round.order.id);
+    await expect(submitMeeting(bagas, order(2, { parentId: first.order.id, items: more }), now)).rejects.toMatchObject(reused);
+  });
+
   it("is refused by the database when its time lies ahead", async () => {
     await expect(submitMeeting(bagas, order(1), new Date(now.getTime() + 6 * 60_000))).rejects.toMatchObject({ status: 422, message: "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi." });
   });
@@ -143,6 +168,17 @@ describe("the tablet's home", () => {
     expect(state.people.map(person => person.name)).toEqual(["Contoh Bagas Saputra", "Contoh Dewi Lestari", "Contoh Fajar Nugroho", "Contoh Rina Putri"]);
     expect(Object.keys(state.people[0]).sort()).toEqual(["bu", "id", "name", "position"]);
     expect(state.rooms.map(room => room.spot)).toEqual(["ananta", "limasan", "vasuki", "communal"]);
+    // Whether a PIN GA is set, and nothing else of it; a record made by hand says so (it cannot be added to).
+    expect(state.pin).toBe(false);
+    expect(state.today[0].manual).toBe(false);
+    process.env.RATE_LIMIT_SECRET = "x".repeat(40);
+    const { saveGaPin } = await import("./pin");
+    await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
+    Object.assign(db.rows("coffee_orders")[0], { manual: true });
+    const next = await gaState(bagas, now);
+    expect(next.pin).toBe(true);
+    expect(next.today[0].manual).toBe(true);
+    expect(JSON.stringify(next)).not.toMatch(/4821|s1\$|ga_pin/);
   });
 
   it("answers 503 with the migration's name before it runs", async () => {

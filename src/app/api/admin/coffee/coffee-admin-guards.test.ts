@@ -39,10 +39,10 @@ const body = async (response: Response) => await response.json() as { ok: boolea
 
 const load = () => Promise.all([
   import("./queue/route"), import("./orders/[id]/selesai/route"), import("./orders/[id]/tolak/route"), import("./orders/[id]/urungkan/route"),
-  import("./manual/route"), import("./people/route"), import("./rekap/route"), import("./rekap/export/route"), import("./settings/route"), import("./orders/[id]/batalkan/route"),
+  import("./manual/route"), import("./people/route"), import("./rekap/route"), import("./rekap/export/route"), import("./settings/route"), import("./orders/[id]/batalkan/route"), import("./settings/pin/route"),
 ]);
 const routes = async (headers: Record<string, string> = {}) => {
-  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel] = await load();
+  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel, pin] = await load();
   const order = (name: string, id: string) => `/api/admin/coffee/orders/${id}/${name}`;
   return {
     reads: {
@@ -59,13 +59,14 @@ const routes = async (headers: Record<string, string> = {}) => {
       cancel: (id = NOBODY) => cancel.POST(send(order("batalkan", id), "POST", undefined, headers), params(id)),
       manual: (input: unknown = manual) => manualRoute.POST(send("/api/admin/coffee/manual", "POST", input, headers)),
       settings: (input: unknown = { karyawan: 5, ga: 2, intern: 2 }) => settings.PUT(send("/api/admin/coffee/settings", "PUT", input, headers)),
+      pin: (input: unknown = { pin: "4821" }) => pin.PUT(send("/api/admin/coffee/settings/pin", "PUT", input, headers)),
     },
   };
 };
 const everyCall = (all: Awaited<ReturnType<typeof routes>>) => [...Object.values(all.reads), ...Object.values(all.writes)] as (() => Promise<Response>)[];
 const claim = async (employee: string = PEOPLE.rina) => (await db.client.rpc("coffee_submit_claim", { p_employee: employee, p_item: drink, p_at: new Date(Date.now() - 60_000 + db.rows("coffee_orders").length).toISOString(), p_manual: false, p_actor: employee, p_actor_label: "Contoh", p_key: KEY.replace(/1$/, String(db.rows("coffee_orders").length + 2)) })).data as string;
 
-beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = new Date(); state.admin = "person"; });
+beforeEach(() => { db = fakeDb(); seedPeople(db); db.state.now = new Date(); state.admin = "person"; process.env.RATE_LIMIT_SECRET = "x".repeat(40); });
 
 it("answers 401 without an admin session and 403 without the grant, on every route", async () => {
   const all = await routes();
@@ -82,7 +83,8 @@ it("answers 401 without an admin session and 403 without the grant, on every rou
 it("refuses a write from another site, and a download asked for by another site", async () => {
   const id = await claim();
   const foreign = await routes({ origin: "https://evil.test" });
-  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings]) expect((await call()).status).toBe(403);
+  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings, foreign.writes.pin]) expect((await call()).status).toBe(403);
+  expect(db.rows("coffee_settings")[0].ga_pin_hash).toBeUndefined();
   expect((await foreign.reads.exported(undefined, { "sec-fetch-site": "cross-site" })).status).toBe(403);
   expect(db.rows("coffee_orders")).toMatchObject([{ status: "diproses" }]);
 });
@@ -113,6 +115,30 @@ it("names the field when the body or the address is wrong", async () => {
   expect((await all.reads.recap("?dari=2026-11-30&sampai=2026-11-01")).status).toBe(422);
   expect((await all.reads.exported(`?format=pdf&${span}`)).status).toBe(422);
   expect((await all.reads.people("?bulan=2026-13")).status).toBe(422);
+});
+
+// Audit F3-04: the pengelola sets the PIN GA; nothing but "sudah diatur" ever comes back.
+it("sets the PIN GA as four digits, keeps only its hash, and never hands it out again", async () => {
+  const all = await routes();
+  expect((await body(await all.reads.settings())).data).toMatchObject({ gaPin: false });
+  for (const wrong of [{ pin: "123" }, { pin: "12345" }, { pin: "12a4" }, { pin: 1234 }, { pin: "" }, {}]) {
+    const response = await all.writes.pin(wrong);
+    expect(response.status, JSON.stringify(wrong)).toBe(422);
+    expect((await body(response)).fieldErrors).toHaveProperty("pin");
+  }
+  expect(db.rows("coffee_settings")[0].ga_pin_hash).toBeUndefined();
+  const saved = await all.writes.pin({ pin: "0042" });
+  expect(await body(saved)).toEqual({ ok: true, data: { gaPin: true }, message: "PIN GA disimpan. Beri tahu petugas GA." });
+  expect(db.rows("coffee_settings")[0]).toMatchObject({ ga_pin_label: "Dewi", quota_karyawan: 4 });
+  const { checkGaPin } = await import("@/lib/server/coffee/pin");
+  expect(await checkGaPin("0042")).toEqual({ set: true, ok: true });
+  // Reading the settings, saving the quotas: "sudah diatur", and neither the PIN nor its hash.
+  const read = JSON.stringify(await body(await all.reads.settings())), written = JSON.stringify(await body(await all.writes.settings()));
+  for (const answer of [read, written]) {
+    expect(answer).toContain('"gaPin":true');
+    expect(answer).not.toMatch(/0042|s1\$|ga_pin/);
+  }
+  expect(await checkGaPin("0042")).toEqual({ set: true, ok: true });
 });
 
 it("answers 503 with the migration's name before it runs", async () => {
@@ -148,7 +174,7 @@ it("records by hand, changes the quotas, lists the people, and hands out the rec
   expect(await body(await all.writes.settings({ karyawan: 1, ga: 2, intern: 2 }))).toMatchObject({ message: "Jatah disimpan.", data: { settings: { karyawan: 1 }, holders: [{ id: PEOPLE.dewi }] } });
   const full = await all.writes.manual({ ...today, time: "00:01", key: KEY.replace(/1$/, "9") });
   expect(full.status).toBe(409);
-  expect((await body(await all.reads.settings())).data).toEqual({ settings: { karyawan: 1, ga: 2, intern: 2 }, holders: [{ id: PEOPLE.dewi, name: "Contoh Dewi Lestari", position: "Contoh karyawan" }] });
+  expect((await body(await all.reads.settings())).data).toEqual({ settings: { karyawan: 1, ga: 2, intern: 2 }, holders: [{ id: PEOPLE.dewi, name: "Contoh Dewi Lestari", position: "Contoh karyawan" }], gaPin: false });
   const people = (await body(await all.reads.people())).data as { month: string; people: { id: string; used: number }[] };
   expect(people.month).toBe(month);
   expect(people.people.find(person => person.id === PEOPLE.rina)?.used).toBe(1);

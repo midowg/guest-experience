@@ -4,7 +4,7 @@ import { GaApp } from "./GaApp";
 import { GuestBook } from "./GuestBook";
 import type { Line } from "./model";
 import { SAMPLE_GA, SAMPLE_PEOPLE, createSampleGa } from "./sample";
-import { NOW, rest } from "./testing";
+import { forget, NOW, rest } from "./testing";
 
 /*
  * The guest menu book (26 Nov 2026): what a guest can see and do while holding the tablet, and that
@@ -14,7 +14,7 @@ const PIC = SAMPLE_PEOPLE[0];
 
 function open(props: { guest?: string; max?: number } = {}) {
   const onDone = vi.fn<(lines: Line[]) => void>();
-  render(<GuestBook room="Vasuki Room" picName={PIC.name} guest={"guest" in props ? props.guest : "PT Sinar Jaya (contoh)"} max={props.max ?? 40} onDone={onDone} />);
+  render(<GuestBook room="Vasuki Room" picName={PIC.name} guest={"guest" in props ? props.guest : "PT Sinar Jaya (contoh)"} max={props.max ?? 40} exit={{ pin: false, check: async () => ({ ok: true }) }} onDone={onDone} />);
   rest();
   return { onDone };
 }
@@ -27,7 +27,7 @@ function pick(drink: string, name = "") {
 }
 
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] }); vi.setSystemTime(new Date(NOW)); });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); forget(); });
 
 it("opens on a cover with nothing but the logo and the way in", () => {
   open();
@@ -146,7 +146,7 @@ it("stops taking choices when the order is full", () => {
 
 it("inside the tablet: while the guest holds it, the page has no GA screen, no employee but the PIC, and asks the server nothing", () => {
   const server = createSampleGa({ seeded: true });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
   render(<GaApp initial={server.initial()} me={{ name: SAMPLE_GA }} api={api} tools={<p>kotak pratinjau</p>} />);
   rest();
   fireEvent.click(screen.getByRole("button", { name: "Pesanan baru" }));
@@ -171,4 +171,65 @@ it("inside the tablet: while the guest holds it, the page has no GA screen, no e
   expect(screen.getByRole("heading", { level: 1, name: "Input cepat" })).toBeTruthy();
   expect(within(screen.getByRole("region", { name: "Pesanan" })).getByText("Tamu · Ibu Ratna")).toBeTruthy();
   expect(api.send).not.toHaveBeenCalled();
+});
+
+/* ---------- after the F3 audit (26 Nov 2026) */
+
+it("F3-08 a double tap on Hapus removes one choice, not the one that moved up under the finger", () => {
+  open();
+  press("Buka buku menu");
+  pick("Americano", "Ani");
+  press("Tamu berikutnya memilih");
+  pick("Kopi Susu", "Budi");
+  press("Tamu berikutnya memilih");
+  pick("Kopi Hitam", "Cici");
+  expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  const remove = () => screen.getAllByRole("button", { name: /^Hapus / })[0];
+  fireEvent.click(remove());
+  fireEvent.click(remove()); // the second tap of the same press lands on Budi's row
+  expect(screen.getAllByRole("listitem").map(item => item.textContent)).toEqual([expect.stringMatching(/Kopi Susu.*Budi/), expect.stringMatching(/Kopi Hitam.*Cici/)]);
+  rest();
+  fireEvent.click(remove());
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+});
+
+it("F3-09 says the table is full instead of taking a choice that goes nowhere", () => {
+  const { onDone } = open({ max: 0 });
+  press("Buka buku menu");
+  expect(screen.getByRole("status").textContent).toBe("Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.");
+  press(/^Kopi Susu/);
+  expect(screen.queryByRole("button", { name: "Pilih minuman ini" })).toBeNull();
+  expect(screen.getByRole("status").textContent).toMatch(/sudah penuh/);
+  expect(onDone).not.toHaveBeenCalled();
+});
+
+it("F3-01 hands up what the guests picked as it changes, and opens where it was left when it is given back", () => {
+  const kept: unknown[] = [];
+  const onDone = vi.fn<(lines: Line[]) => void>();
+  const exit = { pin: false, check: async () => ({ ok: true as const }) };
+  const view = render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} exit={exit} onKeep={book => kept.push(book)} onDone={onDone} />);
+  rest();
+  press("Buka buku menu");
+  pick("Americano", "Ani");
+  const last = kept[kept.length - 1] as { open: boolean; picks: { slug: string; name: string; id: string }[] };
+  expect(last).toMatchObject({ open: true, picks: [{ slug: "americano", name: "Ani", temperature: "panas", sugar: "Normal" }] });
+  expect(last.picks[0].id).toBeTruthy();
+  view.unmount();
+  render(<GuestBook room="Vasuki Room" picName={PIC.name} max={40} exit={exit} saved={last as never} onDone={onDone} />);
+  rest();
+  // Open on the menu, with the pick still counted.
+  expect(screen.queryByRole("button", { name: "Buka buku menu" })).toBeNull();
+  expect(screen.getByText("1 pilihan sudah tercatat")).toBeTruthy();
+  press("Mode GA");
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Ya, mode GA" }));
+  expect(onDone.mock.calls[0][0]).toMatchObject([{ for: "tamu", slug: "americano", guestName: "Ani", qty: 1 }]);
+});
+
+it("F3-17 keeps the focus on the Kopi / Non-kopi tab when it is pressed", () => {
+  open();
+  press("Buka buku menu");
+  const tab = screen.getByRole("button", { name: "Non-kopi" });
+  tab.focus();
+  fireEvent.click(tab);
+  expect(document.activeElement).toBe(tab);
 });

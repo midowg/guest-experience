@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { coffeePath } from "@/lib/routes";
 import { GaApp } from "./GaApp";
 import { SAMPLE_GA, SAMPLE_PEOPLE, SAMPLE_REFUSAL, createSampleGa } from "./sample";
-import { NOW, rest } from "./testing";
+import { forget, NOW, rest } from "./testing";
 import { POLL_MS } from "./useGa";
 
 /*
@@ -17,7 +17,7 @@ const PIC = SAMPLE_PEOPLE[0], TEAM = SAMPLE_PEOPLE[3];
 
 function open(options: Options = {}) {
   const server = createSampleGa({ seeded: true, ...options });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
   render(<GaApp initial={server.initial()} me={{ name: SAMPLE_GA }} api={api} />);
   rest();
   return { server, api };
@@ -41,7 +41,7 @@ async function nextRead(pengelola: () => void) {
 const order = () => screen.getByRole("region", { name: "Pesanan" });
 
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] }); vi.setSystemTime(new Date(NOW)); });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); forget(); });
 
 it("opens on today's meeting orders, with each room's status in words next to the floor plan", () => {
   open();
@@ -306,4 +306,383 @@ it("sends the name a guest gave with that drink, and shows what the server kept"
   expect(screen.getByText("Tamu · Pak Budi")).toBeTruthy();
   const { server } = { server: api };
   expect((await server.state()).today[0].items.map(item => item.guestName)).toEqual(["Pak Budi", undefined]);
+});
+
+/* ---------- after the F3 audit (26 Nov 2026) */
+
+const EMPTY = { today: [], people: [], rooms: [], pin: false };
+const allTimers = () => { vi.useRealTimers(); vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval", "setTimeout", "clearTimeout"] }); vi.setSystemTime(new Date(NOW)); };
+const soon = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 40)); });
+/** Beranda → Pesanan baru → room and PIC → Serahkan ke tamu → the open book. */
+function handOver() {
+  press("Pesanan baru");
+  fireEvent.click(screen.getByRole("button", { name: "Pilih Vasuki Room" }));
+  person(PIC.name);
+  press("Serahkan ke tamu");
+  press("Buka buku menu");
+}
+function guestPicks(drink: string, name = "") {
+  press(new RegExp(`^${drink}`));
+  if (name) fireEvent.change(screen.getByLabelText(/^Nama Anda/), { target: { value: name } });
+  press("Pilih minuman ini");
+}
+const yes = () => { fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Ya, mode GA" })); rest(); };
+
+it("F3-01 comes back to the menu book after a reload in guest mode: no GA data on the page, nothing asked, nothing lost", async () => {
+  const first = open();
+  start();
+  tile("Americano"); // GA's own unsent drink
+  press("Serahkan ke tamu");
+  press("Buka buku menu");
+  guestPicks("Kopi Susu", "Pak Budi");
+  expect(document.cookie).toContain("coffee_ga_tamu=1");
+  // The reload: the page is gone; the server saw the cookie and sends no GA data with the new one.
+  cleanup();
+  const api = { state: vi.fn(first.server.api.state), send: vi.fn(first.server.api.send), checkPin: vi.fn(first.server.api.checkPin) };
+  render(<GaApp held initial={EMPTY} me={{ name: SAMPLE_GA }} api={api} tools={<p>kotak pratinjau</p>} />);
+  rest();
+  expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
+  // The book is open where it was, with the guest's pick.
+  expect(screen.getByText("1 pilihan sudah tercatat")).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Pesanan rapat hari ini" })).toBeNull();
+  expect(screen.queryByRole("main")).toBeNull();
+  expect(screen.queryByText(SAMPLE_GA)).toBeNull();
+  expect(screen.queryByText("kotak pratinjau")).toBeNull();
+  expect(screen.queryByRole("link")).toBeNull();
+  for (const who of SAMPLE_PEOPLE.filter(item => item.id !== PIC.id)) expect(document.body.textContent).not.toContain(who.name);
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 3); document.dispatchEvent(new Event("visibilitychange")); window.dispatchEvent(new Event("online")); });
+  expect(api.state).not.toHaveBeenCalled();
+  // The GA officer leaves the book: the guest's pick joins GA's unsent drink, and only now GA's data is read.
+  press("Mode GA");
+  yes();
+  await waitFor(() => expect(api.state).toHaveBeenCalledTimes(1));
+  expect(within(order()).getByText("2 minuman · Tamu 2")).toBeTruthy();
+  expect(within(order()).getByText("Tamu · Pak Budi")).toBeTruthy();
+  expect(screen.getByText(`Vasuki Room · PIC ${PIC.name}`)).toBeTruthy();
+  expect(document.cookie).not.toContain("coffee_ga_tamu=1");
+  expect(window.sessionStorage.getItem("coffee:ga:tamu")).toBeNull();
+});
+
+it("F3-01 stays locked on the cover when guest mode was on and nothing can be restored", async () => {
+  const server = createSampleGa({ seeded: true });
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
+  render(<GaApp held initial={EMPTY} me={{ name: SAMPLE_GA }} api={api} />);
+  rest();
+  expect(screen.getByRole("button", { name: "Buku menu tertutup" })).toBeTruthy();
+  expect(screen.getByText("Mohon panggil petugas kami")).toBeTruthy();
+  press("Buku menu tertutup");
+  expect(screen.queryByText(/Selamat datang|Disajikan khusus/)).toBeNull();
+  expect(api.state).not.toHaveBeenCalled();
+  expect(screen.queryByRole("main")).toBeNull();
+  press("Mode GA");
+  yes();
+  // Back on Beranda, and today's orders are read now.
+  expect(await screen.findByText("2 pesanan · 1 sedang diproses")).toBeTruthy();
+});
+
+it("F3-01 offers no way out of the book by a pull, a long press or a drag", () => {
+  open();
+  expect(document.documentElement.style.overscrollBehavior).toBe("none");
+  expect(document.body.style.overscrollBehavior).toBe("none");
+  handOver();
+  const book = screen.getByRole("region", { name: "Buku menu tamu" });
+  expect(fireEvent.contextMenu(book.querySelector("img")!)).toBe(false);
+  expect(fireEvent.dragStart(book.querySelector("img")!)).toBe(false);
+  expect([...book.querySelectorAll("img")].every(image => image.getAttribute("draggable") === "false")).toBe(true);
+  cleanup();
+  expect(document.documentElement.style.overscrollBehavior).toBe("");
+});
+
+it("F3-04 leaves the book only with the PIN GA: a wrong one says so and stays, the right one opens Mode GA", async () => {
+  const { api } = open({ pin: "4821" });
+  expect(screen.queryByText(/PIN GA belum diatur/)).toBeNull();
+  handOver();
+  guestPicks("Kopi Susu");
+  press("Mode GA");
+  const ask = () => screen.getByRole("alertdialog", { name: "Masukkan PIN GA" });
+  const key = (digit: string) => fireEvent.click(within(ask()).getByRole("button", { name: digit }));
+  // A keypad, not a text field: no on-screen keyboard comes up, and the focus rests on the title.
+  expect(ask().querySelector("input")).toBeNull();
+  expect(document.activeElement).toBe(within(ask()).getByRole("heading", { name: "Masukkan PIN GA" }));
+  expect(within(ask()).queryByRole("button", { name: "Ya, mode GA" })).toBeNull();
+  expect(within(ask()).getByRole("img", { name: "0 dari 4 angka diisi" })).toBeTruthy();
+  for (const digit of ["1", "1", "1"]) key(digit);
+  expect(within(ask()).getByRole("img", { name: "3 dari 4 angka diisi" })).toBeTruthy();
+  fireEvent.click(within(ask()).getByRole("button", { name: "Hapus angka terakhir" }));
+  expect(within(ask()).getByRole("img", { name: "2 dari 4 angka diisi" })).toBeTruthy();
+  expect(api.checkPin).not.toHaveBeenCalled();
+  key("1"); key("1");
+  await waitFor(() => expect(within(ask()).getByRole("alert").textContent).toBe("PIN tidak cocok. Coba lagi."));
+  expect(api.checkPin).toHaveBeenCalledWith("1111");
+  expect(within(ask()).getByRole("img", { name: "0 dari 4 angka diisi" })).toBeTruthy();
+  expect(screen.queryByRole("main")).toBeNull();
+  // Batal stays in the book.
+  fireEvent.click(within(ask()).getByRole("button", { name: "Batal" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
+  press("Mode GA");
+  for (const digit of ["4", "8", "2", "1"]) key(digit);
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Input cepat" })).toBeTruthy());
+  expect(api.checkPin).toHaveBeenLastCalledWith("4821");
+  expect(within(order()).getByText("1 minuman · Tamu 1")).toBeTruthy();
+  // The PIN was never written anywhere on the page or kept in the tab.
+  expect(document.body.innerHTML).not.toContain("4821");
+});
+
+it("F3-04 says on Beranda that the PIN GA is missing, and stops trying PINs when the server says enough", async () => {
+  const plain = open();
+  expect(screen.getByText(/PIN GA belum diatur — minta pengelola mengaturnya/)).toBeTruthy();
+  cleanup(); forget();
+  const { api } = open({ pin: "4821" });
+  handOver();
+  press("Mode GA");
+  const ask = () => screen.getByRole("alertdialog");
+  for (let round = 0; round < 11; round++) {
+    for (const digit of ["0", "0", "0", "0"]) fireEvent.click(within(ask()).getByRole("button", { name: digit }));
+    await waitFor(() => expect(api.checkPin).toHaveBeenCalledTimes(round + 1));
+    await waitFor(() => expect(within(ask()).getByRole("alert").textContent).not.toBe("Memeriksa…"));
+    await waitFor(() => expect(within(ask()).getByRole("img", { name: "0 dari 4 angka diisi" })).toBeTruthy());
+  }
+  expect(within(ask()).getByRole("alert").textContent).toBe("Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi.");
+  // Even the right PIN is refused now; the guest is still in the book.
+  for (const digit of ["4", "8", "2", "1"]) fireEvent.click(within(ask()).getByRole("button", { name: digit }));
+  await waitFor(() => expect(api.checkPin).toHaveBeenCalledTimes(12));
+  expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
+  expect(plain.api.checkPin).not.toHaveBeenCalled();
+});
+
+it("F3-04 falls back to the question when the pengelola took the PIN away meanwhile", async () => {
+  const { server } = open({ pin: "4821" });
+  handOver();
+  server.setPin("");
+  press("Mode GA");
+  for (const digit of ["4", "8", "2", "1"]) fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: digit }));
+  expect(await screen.findByRole("alertdialog", { name: "Kembali ke mode GA?" })).toBeTruthy();
+});
+
+it("F3-02 shows the order whose answer was lost as sent, instead of sending it again", async () => {
+  const { server, api } = open();
+  start();
+  tile("Americano");
+  server.loseAnswers(1);
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  expect(api.send).toHaveBeenCalledTimes(1);
+  expect(server.orders).toHaveLength(3);
+  expect(screen.getByText("#T-0115 · Vasuki Room")).toBeTruthy();
+});
+
+it("F3-02 never loses drinks added after a lost answer: the first sending is found, the rest goes as Tambah lagi", async () => {
+  const { server, api } = open();
+  start();
+  tile("Americano");
+  server.loseAnswers(1);
+  api.state.mockRejectedValueOnce(new Error("offline"));
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  expect((await within(order()).findByRole("alert")).textContent).toBe("Tidak dapat terhubung. Periksa jaringan lalu coba lagi.");
+  expect(server.orders).toHaveLength(3); // it arrived; the tablet does not know
+  // GA adds two drinks and sends again.
+  tile("Kopi Susu"); tile("Kopi Susu");
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 3 minuman" }));
+  const said = await within(order()).findByRole("alert");
+  await waitFor(() => expect(said.textContent).toMatch(/^Kiriman sebelumnya ternyata sudah masuk sebagai #T-0115 \(1 minuman\)\. Hapus minuman yang sudah terkirim/));
+  // Nothing was sent a second time, nothing was dropped: the three rows are still there, and the screen did not claim "terkirim".
+  expect(api.send).toHaveBeenCalledTimes(1);
+  expect(server.orders).toHaveLength(3);
+  expect(within(order()).getByText("3 minuman · Tamu 3")).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "Tambah lagi untuk #T-0115" })).toBeTruthy();
+  // The Americano went out already: GA takes it off and sends the rest as the next round.
+  fireEvent.click(within(within(order()).getByRole("group", { name: "Jumlah Americano" })).getByRole("button", { name: "Kurangi" }));
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 2 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  expect(api.send).toHaveBeenCalledTimes(2);
+  expect(api.send.mock.calls[1][0].key).not.toBe(api.send.mock.calls[0][0].key);
+  expect(api.send.mock.calls[1][0].parentId).toBe(server.orders[2].id);
+  expect(server.orders.map(item => item.no)).toEqual(["T-0113", "T-0114", "T-0115", "T-0115-2"]);
+  expect(server.orders[3].items.map(item => [item.slug, item.qty])).toEqual([["kopi-susu", 2]]);
+});
+
+it("F3-02 gives changed contents a key of their own, and does not send them while it cannot find out about the first sending", async () => {
+  const { server, api } = open();
+  start();
+  tile("Americano");
+  server.setOffline(true);
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await within(order()).findByRole("alert");
+  tile("Kopi Susu");
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 2 minuman" }));
+  await waitFor(() => expect(within(order()).getByRole("alert").textContent).toMatch(/^Belum tersambung, jadi belum diketahui apakah kiriman sebelumnya sudah masuk/));
+  expect(api.send).toHaveBeenCalledTimes(1);
+  // Back online: the first sending never arrived, so the changed order goes out whole, under a new key.
+  server.setOffline(false);
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 2 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  expect(api.send).toHaveBeenCalledTimes(2);
+  expect(api.send.mock.calls[1][0].key).not.toBe(api.send.mock.calls[0][0].key);
+  expect(server.orders).toHaveLength(3);
+  expect(server.orders[2].items.map(item => item.slug)).toEqual(["americano", "kopi-susu"]);
+});
+
+it("F3-02 the make-believe server, as the real one, refuses a key that comes back with other contents", async () => {
+  const server = createSampleGa({ seeded: false });
+  const key = "bbbbbbbb-bbbb-4bbb-8bbb-000000000001";
+  const body = { room: "Vasuki Room", picId: PIC.id, key, items: [{ for: "tamu" as const, slug: "americano", temperature: "panas" as const, sugar: "Normal" as const, ice: "Normal" as const, qty: 1 }] };
+  const first = await server.api.send(body);
+  expect((await server.api.send(body)).order.id).toBe(first.order.id);
+  await expect(server.api.send({ ...body, items: [{ ...body.items[0], qty: 3 }] })).rejects.toMatchObject({ status: 409 });
+  expect(server.orders).toHaveLength(1);
+});
+
+it("F3-03 a message about another order never takes the screen away from drinks that are being written", async () => {
+  const { server } = open();
+  // The waiting order is refused while GA is on Beranda: the message can open it.
+  await nextRead(() => { server.settle("ditolak"); });
+  rest();
+  const message = () => screen.getByRole("button", { name: /#T-0114 Vasuki Room: ditolak/ });
+  // GA starts a replacement and taps three drinks, the message still on top.
+  press("Pesan pengganti untuk #T-0114 Vasuki Room");
+  tile("Americano"); tile("Kopi Susu"); tile("Kopi Hitam");
+  fireEvent.click(message());
+  rest();
+  expect(screen.getByRole("heading", { level: 1, name: "Input cepat" })).toBeTruthy();
+  expect(within(order()).getByText("3 minuman · Tamu 3")).toBeTruthy();
+  expect(screen.queryByRole("heading", { level: 1, name: "Pesanan ditolak" })).toBeNull();
+});
+
+it("F3-05 gives up a Kirim that hangs: says so, keeps the drinks, and the next Kirim is the same sending", async () => {
+  allTimers();
+  const { server, api } = open();
+  act(() => { vi.advanceTimersByTime(500); });
+  fireEvent.click(screen.getByRole("button", { name: "Pesanan baru" })); act(() => { vi.advanceTimersByTime(500); });
+  fireEvent.click(screen.getByRole("button", { name: "Pilih Vasuki Room" }));
+  person(PIC.name);
+  fireEvent.click(screen.getByRole("button", { name: "Input cepat" })); act(() => { vi.advanceTimersByTime(500); });
+  tile("Americano");
+  server.hangNext(1);
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+  expect(screen.getByRole("button", { name: "Mengirim…" })).toBeTruthy();
+  await act(async () => { await vi.advanceTimersByTimeAsync(13_000); });
+  expect(within(order()).getByRole("alert").textContent).toBe("Server terlalu lama menjawab. Periksa jaringan lalu coba lagi.");
+  expect(within(order()).getByText("1 minuman · Tamu 1")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  expect(screen.getByRole("heading", { level: 1, name: "Pesanan terkirim" })).toBeTruthy();
+  expect(api.send.mock.calls[1][0].key).toBe(api.send.mock.calls[0][0].key);
+  expect(server.orders).toHaveLength(3);
+});
+
+it("F3-05 says when the status could not be read, keeps reading after a read that hung, and goes quiet once it works", async () => {
+  allTimers();
+  const { server, api } = open();
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+  server.hangNext(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); }); // this read hangs
+  expect(api.state).toHaveBeenCalledTimes(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(18_000); });
+  const banner = screen.getByText("Tidak tersambung. Status mungkin belum terbaru.").parentElement!;
+  expect(banner.getAttribute("role")).toBe("status");
+  server.settle("selesai");
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+  expect(api.state.mock.calls.length).toBeGreaterThan(1);
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+  expect(screen.getByText("2 pesanan · 0 sedang diproses")).toBeTruthy();
+  // Offline: the banner at once, with a way to try again.
+  server.setOffline(true);
+  await act(async () => { window.dispatchEvent(new Event("offline")); });
+  const reads = api.state.mock.calls.length;
+  fireEvent.click(screen.getByRole("button", { name: "Coba lagi" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  expect(api.state.mock.calls.length).toBe(reads + 1);
+  expect(screen.getByText(/Tidak tersambung/)).toBeTruthy();
+  server.setOffline(false);
+  await act(async () => { window.dispatchEvent(new Event("online")); await vi.advanceTimersByTimeAsync(50); });
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+});
+
+it("F3-06 the back button walks the tablet's screens and closes dialogs instead of leaving the page", async () => {
+  open();
+  const leaves = vi.spyOn(window.history, "back");
+  const back = async () => { await act(async () => { leaves.mockClear(); window.history.go(-1); await new Promise(resolve => setTimeout(resolve, 40)); }); rest(); };
+  expect(window.history.state?.gaTrap).toBe(true);
+  start();
+  tile("Americano");
+  // A dialog is open: back closes it, the row stays.
+  fireEvent.click(within(order()).getByRole("button", { name: /^Ubah Americano/ }));
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  await back();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: "Input cepat" })).toBeTruthy();
+  // Input cepat → Pesanan baru (as "Ubah data"), with the drink kept.
+  await back();
+  expect(screen.getByRole("heading", { level: 1, name: "Pesanan baru" })).toBeTruthy();
+  // Pesanan baru → Beranda asks first, because a drink is not sent yet; back again closes the question.
+  await back();
+  expect(screen.getByRole("alertdialog", { name: "Buang pesanan yang belum dikirim?" })).toBeTruthy();
+  await back();
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: "Pesanan baru" })).toBeTruthy();
+  expect(window.history.state?.gaTrap).toBe(true);
+  expect(leaves).not.toHaveBeenCalled();
+  leaves.mockRestore();
+});
+
+it("F3-06 in the guest's book the back button does nothing at all", async () => {
+  open();
+  handOver();
+  guestPicks("Kopi Susu");
+  for (let press = 0; press < 3; press++) await act(async () => { window.history.go(-1); await new Promise(resolve => setTimeout(resolve, 40)); });
+  expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2, name: "Pilihan Anda sudah kami terima" })).toBeTruthy();
+  expect(screen.queryByRole("main")).toBeNull();
+  expect(window.history.state?.gaTrap).toBe(true);
+  // With the way out open, back closes it and stays in the book.
+  press("Mode GA");
+  await act(async () => { window.history.go(-1); await new Promise(resolve => setTimeout(resolve, 40)); });
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
+});
+
+it("F3-12 does not offer Tambah lagi on a record the pengelola made by hand, and names a missing room", async () => {
+  const { server } = open();
+  await nextRead(() => { server.recordManual(""); });
+  const cards = within(screen.getByRole("main")).getAllByRole("listitem").filter(item => item.querySelector("dl"));
+  expect(within(cards[0]).getByText("Tanpa ruangan")).toBeTruthy();
+  expect(within(cards[0]).getByText("Dicatat manual oleh Dewi")).toBeTruthy();
+  expect(within(cards[0]).queryByRole("button", { name: /Tambah lagi/ })).toBeNull();
+  expect(within(cards[0]).getByRole("button", { name: /^Pesanan baru untuk #T-0115 Tanpa ruangan/ })).toBeTruthy();
+  expect(within(screen.getByRole("list", { name: "Status per ruangan" })).getAllByRole("listitem").map(item => item.textContent)).toContain("Tanpa ruanganSelesai");
+});
+
+it("F3-13 keeps a refusal on top until it is closed; what came meanwhile shows after it", async () => {
+  const { server } = open();
+  start("Kaliya Limasan");
+  tile("Americano");
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  fireEvent.click(screen.getByRole("button", { name: "Tutup pesan" }));
+  // #T-0115 is refused; then #T-0114 is done.
+  await nextRead(() => { server.settle("ditolak"); });
+  const said = () => screen.getByRole("status").textContent ?? "";
+  expect(said()).toMatch(/#T-0115 Kaliya Limasan: ditolak/);
+  await nextRead(() => { server.settle("selesai"); });
+  expect(said()).toMatch(/#T-0115 Kaliya Limasan: ditolak/);
+  // It does not leave by itself either.
+  await soon();
+  expect(said()).toMatch(/ditolak/);
+  fireEvent.click(screen.getByRole("button", { name: "Tutup pesan" }));
+  expect(said()).toMatch(/#T-0114 Vasuki Room: siap diambil/);
+});
+
+it("F3-13 says how many when several orders were decided in one read", async () => {
+  const { server } = open();
+  start("Kaliya Limasan");
+  tile("Americano");
+  fireEvent.click(screen.getByRole("button", { name: "Kirim 1 minuman" }));
+  await sentHeading("Pesanan terkirim");
+  await nextRead(() => { server.settle("ditolak"); server.settle("selesai"); });
+  const said = screen.getByRole("status").textContent ?? "";
+  expect(said).toMatch(/2 pesanan sudah diputuskan, 1 ditolak/);
+  expect(said).toMatch(/#T-0115 Kaliya Limasan: ditolak/);
+  expect(said).toMatch(/#T-0114 Vasuki Room: siap diambil/);
 });

@@ -1028,6 +1028,8 @@ export const coffeeApi = {
   gaState: `${COFFEE_API}/ga/state`,
   /** POST {room, picId, guest?, guestCount?, parentId?, items, key}: one meeting order (Mode GA). */
   gaMeetings: `${COFFEE_API}/ga/meetings`,
+  /** POST {pin}: is this the PIN GA? (leaving the guest menu book) */
+  gaPin: `${COFFEE_API}/ga/pin`,
   /** Web push (F4): GET the public key and this device's state, POST subscribe, DELETE unsubscribe. */
   push: `${COFFEE_API}/push`,
   pushTest: `${COFFEE_API}/push/test`,
@@ -1066,6 +1068,8 @@ export const coffeeAdminApi = {
   recapExport: (format: "csv" | "xlsx", filter: Record<string, string | undefined>) => `${COFFEE_ADMIN_API}/rekap/export${query({ format, ...filter })}`,
   /** GET the quotas and who holds access; PUT {karyawan, ga, intern}. */
   settings: `${COFFEE_ADMIN_API}/settings`,
+  /** PUT {pin}: the pengelola sets the PIN GA. */
+  gaPin: `${COFFEE_ADMIN_API}/settings/pin`,
   /** Web push for the pengelola (F4). */
   push: `${COFFEE_ADMIN_API}/push`,
 };

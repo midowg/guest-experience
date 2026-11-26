@@ -20,6 +20,8 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
   const [group, setGroup] = useState<DrinkGroup>("kopi");
   const [tapFor, setTapFor] = useState<LineFor>("tamu");
   const [editing, setEditing] = useState<{ line: Line; isNew: boolean } | null>(null);
+  /** A tap that could not add anything because the order is full: said out loud, not swallowed. */
+  const [refused, setRefused] = useState(0);
   const settled = useSettled();
   const drinks = DRINKS.filter(drink => drink.group === group);
   const qtyOf = (slug: string) => lines.filter(line => line.slug === slug).reduce((sum, line) => sum + line.qty, 0);
@@ -28,14 +30,15 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
 
   const add = (slug: string) => {
     if (sending || !settled()) return;
-    if (tapFor === "tim") { if (!full) setEditing({ line: defaultLine(slug, "tim"), isNew: true }); return; }
-    setLines(list => {
-      const base = defaultLine(slug, "tamu");
-      const same = list.find(line => line.for === "tamu" && !line.guestName && line.slug === slug && line.temperature === base.temperature && line.sugar === "Normal" && line.qty < MAX_QTY);
-      if (same) return list.map(line => line === same ? { ...line, qty: line.qty + 1 } : line);
-      return list.length >= MAX_LINES ? list : [...list, base];
-    });
+    if (tapFor === "tim") { if (full) setRefused(count => count + 1); else setEditing({ line: defaultLine(slug, "tim"), isNew: true }); return; }
+    const base = defaultLine(slug, "tamu");
+    // One more of a row only when it is the very same drink: the bawaan options, the ice level included
+    // (Cucumber Ice changed to "es Sedikit" is another row), and no guest's name on it.
+    const same = lines.find(line => line.for === "tamu" && !line.guestName && line.slug === slug && line.temperature === base.temperature && line.sugar === base.sugar && line.ice === base.ice && line.qty < MAX_QTY);
+    if (!same && full) { setRefused(count => count + 1); return; }
+    setLines(list => same && list.includes(same) ? list.map(line => line === same ? { ...line, qty: line.qty + 1 } : line) : list.length >= MAX_LINES ? list : [...list, base]);
   };
+  const handOver = () => { if (sending) return; if (full) setRefused(count => count + 1); else onGuest(); };
   const setQty = (id: string, qty: number) => setLines(list => qty <= 0 ? list.filter(line => line.id !== id) : list.map(line => line.id === id ? { ...line, qty } : line));
   const save = (line: Line) => {
     setLines(list => editing?.isNew ? [...list, line] : list.map(item => item.id === line.id ? line : item));
@@ -46,7 +49,7 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
   return (
     <div className={css.screen}>
       <ScreenHead title={draft.parent ? `Tambah lagi untuk #${draft.parent.no}` : "Input cepat"} sub={sub} onBack={onBack} backLabel={draft.parent ? "Beranda" : "Ubah data"}>
-        <button type="button" className={css.secondary} disabled={sending} onClick={onGuest}><BookOpen aria-hidden size={20} />Serahkan ke tamu</button>
+        <button type="button" className={css.secondary} disabled={sending} aria-disabled={full || undefined} onClick={handOver}><BookOpen aria-hidden size={20} />Serahkan ke tamu</button>
       </ScreenHead>
       <div className={css.quickGrid}>
         <section className={css.menuPane} aria-label="Menu minuman">
@@ -107,7 +110,11 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
           )}
           <div className={css.orderFoot}>
             <p className={css.total} aria-live="polite">{total ? countLabel(lines) : "Belum ada minuman"}</p>
-            {full && <p className={css.mutedSmall}>Paling banyak {MAX_LINES} baris per kiriman. Kirim dulu, lalu Tambah lagi.</p>}
+            {full && (
+              <p key={refused} className={refused ? css.fullNote : css.mutedSmall} role="status">
+                {refused ? "Tidak ditambahkan: pesanan sudah penuh. " : ""}Paling banyak {MAX_LINES} baris per kiriman. Kirim dulu, lalu Tambah lagi.
+              </p>
+            )}
             {problem
               ? <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{problem}</span></p>
               : <p className={css.sendTo}><Info aria-hidden size={16} />Dikirim ke pengelola Werkudara Coffee (HR dan admin yang punya akses).</p>}

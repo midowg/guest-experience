@@ -758,3 +758,37 @@ Menutup selisih 1 di catatan F3. Nama yang diketik tamu di buku menu ("Nama Anda
 - Catat manual tidak punya isian nama tamu. Notifikasi (F4) **tidak** memuat nama tamu: `notify.ts` tidak diubah, dan
   aturan F4 "isi notifikasi hanya nama panggilan, minuman, ruangan" tetap berlaku.
 
+---
+
+## Catatan perbaikan audit F3 (26 Nov 2026)
+
+Temuan `docs/coffee/AUDIT-F3.md` diperbaiki (kolom Status di sana). Pertanyaan pemilik no. 7 dijawab PM: **PIN GA**.
+
+- **Migrasi `202612010001_coffee.sql` diubah di tempat lagi** (tetap belum pernah dijalankan): `coffee_settings`
+  mendapat `ga_pin_hash`, `ga_pin_at`, `ga_pin_label`; `coffee_orders` mendapat `request_print`;
+  `coffee_submit_meeting` menolak kunci yang sama dengan sidik isi berbeda (`COFFEE_KEY_REUSED`).
+- **PIN GA:** `src/lib/server/coffee/pin.ts` (`saveGaPin`, `checkGaPin`, `gaPinSet`; hash scrypt bergaram + rahasia
+  `RATE_LIMIT_SECRET`, jadi **mengganti rahasia itu membuat PIN harus diatur ulang**). API: `PUT
+  /api/admin/coffee/settings/pin` (`coffeeAdminApi.gaPin`), `POST /api/coffee/ga/pin` (`coffeeApi.gaPin`; 10 coba per
+  10 menit per akun, 60 per alamat; 409 bila belum diatur, 422 "PIN tidak cocok. Coba lagi." untuk semua yang salah).
+  `GaState.pin` dan `SettingsData.gaPin` hanya ya/tidak. Lupa PIN = pengelola menyimpan PIN baru.
+- **Mode tamu bertahan:** `ga/hold.ts` (cookie `coffee_ga_tamu`, path `/`, 12 jam; `sessionStorage` `coffee:ga:tamu`).
+  `src/app/coffee/ga/page.tsx` membaca cookie itu dan tidak memanggil `gaState`. `GaApp` menerima `held`.
+  Cookie berlaku per host: di komputer pengembang, mode tamu yang ditinggal terbuka di pratinjau ikut mengunci
+  `/coffee/ga` di port lain sampai petugas keluar dari buku atau cookie dihapus.
+- **`useGa(api, initial, onDecided, paused)`:** `paused` = mode tamu (tidak membaca apa pun, membaca sekali saat
+  selesai); mengembalikan `stale`/`retry`/`retrying`; `send` mengembalikan `unsure` bila tidak ada jawaban.
+- **Kunci kiriman** kini dipegang `GaApp` bersama sidik isinya (`printOf`); `MeetingOrder.manual` baru.
+- **Riwayat:** `GaApp` memasang satu entri (`history.state.gaTrap`) dan menangani `popstate`. Layar baru di tablet
+  cukup menambah cabang di `onBack` (GaApp), tanpa `pushState` sendiri.
+
+**Untuk F4 (web push), tambahan:**
+- Jangan daftarkan push atau gambar tombol "Nyalakan notifikasi" saat `guest` benar (cabang `guest` di `GaApp` hanya
+  berisi `GuestBook`). Pesan dari SW ke halaman tidak boleh memanggil `refresh()` selama mode tamu: `useGa` sudah
+  mengabaikannya (`paused`), pertahankan itu.
+- Notifikasi sistem di atas buku menu tetap bisa muncul (isi: nama panggilan, minuman, ruangan). Putuskan apakah tablet
+  GA menerima push sama sekali; bila ya, pertimbangkan tidak menampilkannya saat cookie `coffee_ga_tamu` ada (SW bisa
+  bertanya ke klien yang terbuka lewat `postMessage`).
+- Klik notifikasi di tablet membuka `/coffee/ga`; bila tablet sedang di mode tamu, halaman itu tetap membuka buku menu.
+- Pengelola yang menyimpan PIN GA tidak perlu notifikasi; tidak ada peristiwa push baru dari perbaikan ini.
+

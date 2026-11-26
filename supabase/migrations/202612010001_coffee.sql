@@ -31,7 +31,13 @@ create table if not exists public.coffee_settings (
   quota_ga smallint not null default 2 check (quota_ga between 0 and 60),
   quota_intern smallint not null default 2 check (quota_intern between 0 and 60),
   updated_at timestamptz,
-  updated_label text check (updated_label is null or char_length(updated_label) <= 120)
+  updated_label text check (updated_label is null or char_length(updated_label) <= 120),
+  -- PIN GA: four digits the GA officer types to leave the guest menu book on the tablet. Only its
+  -- salted hash is kept (worked out on the server, src/lib/server/coffee/pin.ts); it never leaves
+  -- the server, the pages only learn whether one is set. Null: no PIN yet (leaving asks to confirm).
+  ga_pin_hash text check (ga_pin_hash is null or char_length(ga_pin_hash) between 20 and 300),
+  ga_pin_at timestamptz,
+  ga_pin_label text check (ga_pin_label is null or char_length(ga_pin_label) <= 120)
 );
 insert into public.coffee_settings (id) values (1) on conflict (id) do nothing;
 
@@ -70,6 +76,10 @@ create table if not exists public.coffee_orders (
   quota_month text not null check (quota_month ~ '^\d{4}-\d{2}$'),
   -- From the browser: the same request sent twice is one row.
   idempotency_key uuid unique,
+  -- Meeting orders: a fingerprint of what the key was first sent with (room, PIC, parent, drinks),
+  -- worked out on the server. The same key with other contents is refused instead of answered
+  -- with the first order (drinks added after a lost answer would vanish silently).
+  request_print text check (request_print is null or char_length(request_print) <= 100),
   created_at timestamptz not null default now(),
   constraint coffee_orders_number unique (kind, number, round),
   constraint coffee_orders_claim_shape check (kind <> 'klaim' or (person_group is not null and room is null and guest is null and guest_count is null and round = 1 and parent_id is null)),
@@ -215,11 +225,16 @@ declare
   is_manual boolean := coalesce((p_order->>'manual')::boolean, false);
   actor uuid := nullif(p_order->>'actor_id', '')::uuid;
   actor_label text := left(p_order->>'actor_label', 120);
+  req_print text := nullif(left(coalesce(p_order->>'print', ''), 100), '');
 begin
   if p_key is not null then
-    select o.id, o.kind, o.manual, o.status into again from coffee_orders o where o.idempotency_key = p_key;
+    select o.id, o.kind, o.manual, o.status, o.request_print into again from coffee_orders o where o.idempotency_key = p_key;
     if found then
       if again.kind <> 'rapat' or again.manual <> is_manual or again.status in ('ditolak', 'batal') then
+        raise exception 'COFFEE_KEY_REUSED';
+      end if;
+      -- The same key with other drinks, another room or another PIC is not the same sending.
+      if again.request_print is not null and req_print is not null and again.request_print <> req_print then
         raise exception 'COFFEE_KEY_REUSED';
       end if;
       return again.id;
@@ -262,12 +277,12 @@ begin
   end if;
   insert into coffee_orders (kind, number, round, parent_id, employee_id, person_name, person_group, person_position, person_bu,
       room, room_spot, guest, guest_count, status, processed_by, processed_label, processed_at,
-      created_by, created_label, manual, ordered_at, quota_month, idempotency_key)
+      created_by, created_label, manual, ordered_at, quota_month, idempotency_key, request_print)
   values ('rapat', order_no, rnd, root, pic_id, pic_name, pic_group, pic_position, pic_bu,
       the_room, the_spot, the_guest, the_guest_count,
       case when is_manual then 'selesai' else 'diproses' end,
       case when is_manual then actor end, case when is_manual then actor_label end, case when is_manual then now() end,
-      actor, actor_label, is_manual, at_time, to_char(at_time at time zone 'Asia/Jakarta', 'YYYY-MM'), p_key)
+      actor, actor_label, is_manual, at_time, to_char(at_time at time zone 'Asia/Jakarta', 'YYYY-MM'), p_key, req_print)
   returning id into saved;
   for item, place in select value, ordinality from jsonb_array_elements(p_items) with ordinality loop
     if item->>'for' = 'tim' then

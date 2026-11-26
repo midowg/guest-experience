@@ -48,6 +48,8 @@ export function createSampleServer(clock: () => number = Date.now) {
   const iso = (msAgo: number) => new Date(clock() - msAgo).toISOString();
   const minute = 60_000, day = 86_400_000;
   let settings: CoffeeSettings = { ...MONTHLY_QUOTA };
+  /** Whether a PIN GA is set (the make-believe keeps no PIN at all). */
+  let gaPin = false;
   let claimSeq = 418, meetingSeq = 113, idSeq = 1;
   const nextId = () => `s-${idSeq++}`;
   const done = (order: QueueOrder, actor: { employeeId: string; label: string }, msAgo: number, status: "selesai" | "ditolak" = "selesai", note = ""): QueueOrder =>
@@ -177,8 +179,13 @@ export function createSampleServer(clock: () => number = Date.now) {
       const rows = filterRows(expandRows(inSpan, numbers), { jenis: query.jenis, status: query.status, q: query.q });
       return { rows, summary: summarize(rows, SAMPLE_PEOPLE, settings), title: recapTitle(query.dari, query.sampai) };
     },
-    async settings() { return { settings, holders: HOLDERS }; },
-    async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, message: "Jatah disimpan." }; },
+    async settings() { return { settings, holders: HOLDERS, gaPin }; },
+    async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, message: "Jatah disimpan." }; },
+    async saveGaPin(pin) {
+      if (!/^\d{4}$/.test(pin)) throw refusal(422, "Periksa kembali isian formulir.", { pin: ["PIN berupa 4 angka."] });
+      gaPin = true;
+      return { message: "PIN GA disimpan. Beri tahu petugas GA." };
+    },
     exportHref: coffeeAdminClient.exportHref,
   };
 

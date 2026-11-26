@@ -126,3 +126,43 @@ it("says so when it cannot be loaded, with Coba lagi, and a skeleton while it lo
   fireEvent.click(screen.getByRole("button", { name: "Coba lagi" }));
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
+
+/* ---------- PIN GA (audit F3-04, 26 Nov 2026) */
+
+it("sets the PIN GA: four digits only, said as set afterwards, and the field forgets what was typed", async () => {
+  const { api, onSaved } = await open(real => ({ saveGaPin: vi.fn(real.saveGaPin) }));
+  const pin = () => screen.getByLabelText("PIN") as HTMLInputElement;
+  const panel = () => within(screen.getByRole("heading", { level: 2, name: "PIN GA" }).closest("section")!);
+  expect(panel().getByRole("status").textContent).toBe("Belum diatur");
+  expect(pin().type).toBe("password");
+  expect(pin().getAttribute("inputmode")).toBe("numeric");
+  expect(pin().getAttribute("autocomplete")).toBe("off");
+  // Letters never get in, and a fifth digit is not taken.
+  fireEvent.change(pin(), { target: { value: "12ab345" } });
+  expect(pin().value).toBe("1234");
+  fireEvent.change(pin(), { target: { value: "12" } });
+  fireEvent.click(panel().getByRole("button", { name: "Simpan PIN" }));
+  expect(panel().getByText("Isi PIN 4 angka.")).toBeTruthy();
+  expect(pin().getAttribute("aria-invalid")).toBe("true");
+  expect((api as unknown as { saveGaPin: ReturnType<typeof vi.fn> }).saveGaPin).not.toHaveBeenCalled();
+  fireEvent.change(pin(), { target: { value: "4821" } });
+  fireEvent.click(panel().getByRole("button", { name: "Simpan PIN" }));
+  await waitFor(() => expect(panel().getByRole("status").textContent).toBe("Sudah diatur"));
+  expect((api as unknown as { saveGaPin: ReturnType<typeof vi.fn> }).saveGaPin).toHaveBeenCalledWith("4821");
+  expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ gaPin: true }), "PIN GA disimpan. Beri tahu petugas GA.");
+  // Nothing of the PIN stays on the page; the same form now replaces it.
+  expect((screen.getByLabelText("PIN baru") as HTMLInputElement).value).toBe("");
+  expect(document.body.innerHTML).not.toContain("4821");
+  expect(panel().getByRole("button", { name: "Ganti PIN" })).toBeTruthy();
+  // Saving the PIN left the quotas' form alone.
+  expect(field("Karyawan").value).toBe("4");
+});
+
+it("says so when the PIN could not be saved, and keeps what was typed for another try", async () => {
+  await open(() => ({ saveGaPin: vi.fn(async () => { throw new AdminApiError("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.", undefined, 503); }) }));
+  fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "4821" } });
+  fireEvent.click(screen.getByRole("button", { name: "Simpan PIN" }));
+  expect((await screen.findByRole("alert")).textContent).toMatch(/menunggu migrasi/);
+  expect((screen.getByLabelText("PIN") as HTMLInputElement).value).toBe("4821");
+  expect(screen.getByText("Belum diatur")).toBeTruthy();
+});

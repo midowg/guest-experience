@@ -1,36 +1,47 @@
 "use client";
 
-import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, Lock } from "lucide-react";
 import { DRINKS, ICE_LEVELS, SUGAR_LEVELS, drinkLabel, optionsLabel, type Drink, type DrinkGroup, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
-import { ExitDialog } from "./ExitDialog";
+import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
+import { ExitDialog, type BookExit } from "./ExitDialog";
+import type { BookState, Pick } from "./hold";
 import { newLineId, type Line } from "./model";
 import { Photo, useSettled } from "./parts";
 import css from "./ga.module.css";
-
-type Pick = { slug: string; temperature: Temperature; sugar: Sugar; ice: Ice; name: string };
 
 /**
  * "Serahkan ke tamu": the tablet becomes a menu book. A black cover with only the gold Pegasus,
  * then paper pages. The guest reads "Anda", never a word about quota or free drinks, and no
  * employee data but the name of the PIC GA chose. It is given no API and no list of people: what
- * the guests pick goes back to GA's order panel as Tamu rows, and GA sends. Leaving asks the GA
- * officer to confirm (no PIN).
+ * the guests pick goes back to GA's order panel as Tamu rows, and GA sends. Leaving needs the PIN
+ * GA (`exit`; a question while the pengelola has not set one).
+ *
+ * After the F3 audit: what the guests picked is handed up as it changes (`onKeep`) and given back
+ * after a reload (`saved`), so a reload lands on this book again and loses nothing. `locked`: the
+ * tablet was reloaded in guest mode and nothing could be restored; only the cover and the way out
+ * for the GA officer are left. A long press, a pull or a selection finds nothing to open here.
  */
-export function GuestBook({ room, picName, guest, max, onDone }: { room: string; picName: string; guest?: string; max: number; onDone: (lines: Line[]) => void }) {
-  const [open, setOpen] = useState(false);
+export function GuestBook({ room, picName, guest, max, saved, locked = false, exit, onKeep, onDone }: {
+  room: string; picName: string; guest?: string; max: number; saved?: BookState; locked?: boolean; exit: BookExit; onKeep?: (book: BookState) => void; onDone: (lines: Line[]) => void;
+}) {
+  const [open, setOpen] = useState(saved?.open ?? false);
   const [group, setGroup] = useState<DrinkGroup>("kopi");
   const [drink, setDrink] = useState<Drink | null>(null);
-  const [picks, setPicks] = useState<Pick[]>([]);
+  const [picks, setPicks] = useState<Pick[]>(saved?.picks ?? []);
   const [thanks, setThanks] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const view = !open ? "cover" : thanks ? "thanks" : drink ? `drink:${drink.slug}` : "menu";
-  // Each page ignores the second tap of the press that turned to it.
-  const settled = useSettled(view);
+  // Each page ignores the second tap of the press that turned to it; so does the list of picks
+  // after one was removed (the row below moved up under the finger).
+  const settled = useSettled(`${view}:${picks.length}`);
   const pageRef = useRef<HTMLDivElement>(null);
   const cover = useRef<HTMLButtonElement>(null);
-  useEffect(() => { (pageRef.current ?? cover.current)?.focus(); }, [view, group]);
+  // The focus follows the page, not the tab of the menu (a keyboard user stays on Kopi / Non-kopi).
+  useEffect(() => { (pageRef.current ?? cover.current)?.focus(); }, [view]);
+  const keep = useRef(onKeep);
+  useEffect(() => { keep.current = onKeep; }, [onKeep]);
+  useEffect(() => { keep.current?.({ open, picks }); }, [open, picks]);
 
   const finish = () => onDone(picks.map(pick => ({
     id: newLineId(), for: "tamu", slug: pick.slug, temperature: pick.temperature, sugar: pick.sugar, ice: pick.temperature === "es" ? pick.ice : "Normal", qty: 1, guestName: pick.name.trim() || undefined,
@@ -41,16 +52,16 @@ export function GuestBook({ room, picName, guest, max, onDone }: { room: string;
   const turn = (action: () => void) => () => { if (settled()) action(); };
 
   return (
-    <div className={css.book} role="region" aria-label="Buku menu tamu">
+    <div className={css.book} role="region" aria-label="Buku menu tamu" onContextMenu={event => event.preventDefault()} onDragStart={event => event.preventDefault()}>
       <div className={css.bookBar}>
         <button type="button" className={css.bookExit} onClick={turn(() => setConfirm(true))}><Lock aria-hidden size={16} />Mode GA</button>
       </div>
 
       {!open ? (
-        <button ref={cover} type="button" className={css.cover} onClick={turn(() => setOpen(true))} aria-label="Buka buku menu">
+        <button ref={cover} type="button" className={css.cover} onClick={turn(() => { if (!locked) setOpen(true); })} aria-label={locked ? "Buku menu tertutup" : "Buka buku menu"}>
           <span className={css.coverFrame} aria-hidden />
           <span className={css.goldMark} aria-hidden />
-          <span className={css.coverHint}>Ketuk untuk membuka</span>
+          <span className={css.coverHint}>{locked ? "Mohon panggil petugas kami" : "Ketuk untuk membuka"}</span>
         </button>
       ) : (
         <div className={css.spread} ref={pageRef} tabIndex={-1}>
@@ -67,11 +78,11 @@ export function GuestBook({ room, picName, guest, max, onDone }: { room: string;
               <div className={css.page}>
                 <h3 className={css.bookHeading}>Pilihan di meja ini</h3>
                 <ul className={css.pickList}>
-                  {picks.map((pick, index) => (
-                    <li key={index}>
+                  {picks.map(pick => (
+                    <li key={pick.id}>
                       <span className={css.grow}><strong>{drinkLabel(pick.slug)}</strong><span>{optionsLabel(pick.temperature, pick.sugar, pick.ice)}</span></span>
                       {pick.name.trim() && <span className={css.pickName}>{pick.name.trim()}</span>}
-                      <button type="button" className={css.bookRemove} onClick={turn(() => setPicks(list => list.filter((_, at) => at !== index)))} aria-label={`Hapus ${drinkLabel(pick.slug)}${pick.name.trim() ? ` untuk ${pick.name.trim()}` : ""}`}>Hapus</button>
+                      <button type="button" className={css.bookRemove} onClick={turn(() => setPicks(list => list.filter(item => item.id !== pick.id)))} aria-label={`Hapus ${drinkLabel(pick.slug)}${pick.name.trim() ? ` untuk ${pick.name.trim()}` : ""}`}>Hapus</button>
                     </li>
                   ))}
                 </ul>
@@ -84,7 +95,7 @@ export function GuestBook({ room, picName, guest, max, onDone }: { room: string;
               </div>
             </>
           ) : drink ? (
-            <GuestOptions key={drink.slug} drink={drink} onBack={turn(() => setDrink(null))} onPick={pick => { if (!settled() || full) return; setPicks(list => [...list, pick]); setThanks(true); }} />
+            <GuestOptions key={drink.slug} drink={drink} full={full} onBack={turn(() => setDrink(null))} onPick={pick => { if (!settled() || full) return; setPicks(list => [...list, { ...pick, id: newLineId() }]); setThanks(true); }} />
           ) : (
             <>
               {/* The book’s tabs: on the right page when it lies open, on top when the tablet stands upright. */}
@@ -98,7 +109,9 @@ export function GuestBook({ room, picName, guest, max, onDone }: { room: string;
                 <p className={css.bookMeta}>Bersama {picName} · {room}</p>
                 <h2 className={css.bookTitle}>{group === "kopi" ? "Kopi" : "Non-kopi"}</h2>
                 <Ornament />
-                <p className={css.bookLead}>Silakan pilih minuman Anda. Ketuk untuk mengatur suhu dan gula.</p>
+                {full
+                  ? <p className={css.bookLead} role="status">Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
+                  : <p className={css.bookLead}>Silakan pilih minuman Anda. Ketuk untuk mengatur suhu dan gula.</p>}
                 <BookItems drinks={drinks.slice(0, split)} onPick={item => { if (settled()) setDrink(item); }} />
               </div>
               <div className={`${css.page} ${css.pageTabbed}`}>
@@ -115,7 +128,7 @@ export function GuestBook({ room, picName, guest, max, onDone }: { room: string;
         </div>
       )}
 
-      {confirm && <ExitDialog count={picks.length} onStay={() => setConfirm(false)} onLeave={finish} />}
+      {confirm && <ExitDialog count={picks.length} exit={exit} onStay={() => setConfirm(false)} onLeave={finish} />}
     </div>
   );
 }
@@ -143,7 +156,7 @@ function BookItems({ drinks, onPick }: { drinks: Drink[]; onPick: (drink: Drink)
   );
 }
 
-function GuestOptions({ drink, onBack, onPick }: { drink: Drink; onBack: () => void; onPick: (pick: Pick) => void }) {
+function GuestOptions({ drink, full, onBack, onPick }: { drink: Drink; full: boolean; onBack: () => void; onPick: (pick: Omit<Pick, "id">) => void }) {
   const [temperature, setTemperature] = useState<Temperature>(drink.temperatures[0]);
   const [sugar, setSugar] = useState<Sugar>("Normal");
   const [ice, setIce] = useState<Ice>("Normal");
@@ -185,7 +198,9 @@ function GuestOptions({ drink, onBack, onPick }: { drink: Drink; onBack: () => v
         <label className={css.bookLabel} htmlFor="ga-tamu-nama-anda">Nama Anda <span>(opsional, agar minuman tidak tertukar)</span></label>
         <input id="ga-tamu-nama-anda" className={css.bookInput} value={name} maxLength={GUEST_NAME_MAX} onChange={event => setName(event.target.value)} autoComplete="off" spellCheck={false} />
         <div className={css.bookActions}>
-          <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, temperature, sugar, ice, name })}>Pilih minuman ini</button>
+          {full
+            ? <p className={css.bookMeta} role="status">Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
+            : <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, temperature, sugar, ice, name })}>Pilih minuman ini</button>}
         </div>
       </div>
     </>

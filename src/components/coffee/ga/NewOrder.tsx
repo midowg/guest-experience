@@ -6,7 +6,7 @@ import { OTHER_ROOM } from "@/lib/coffee/rooms";
 import type { GaState } from "@/lib/coffee/types";
 import { FloorMap } from "./FloorMap";
 import { MAX_GUESTS, matches, type Draft, type GaPerson } from "./model";
-import { ScreenHead, Stepper } from "./parts";
+import { ScreenHead, Stepper, raiseOnFocus } from "./parts";
 import css from "./ga.module.css";
 
 const SHOWN = 4;
@@ -74,11 +74,12 @@ export function NewOrder({ initial, rooms, people, onBack, onQuick, onGuest }: {
                 <button type="button" className={css.ghost} onClick={() => setPic(null)}>Ganti</button>
               </div>
             ) : (
-              <>
+              // The names sit right under the field, and the field rises to the top when it is typed in: the on-screen keyboard covers neither.
+              <div className={css.searchBlock} data-raise>
                 <label className={css.search}>
                   <Search aria-hidden size={20} />
                   <span className={css.srOnly}>Cari karyawan PIC</span>
-                  <input value={query} maxLength={80} onChange={event => setQuery(event.target.value)} placeholder="Cari nama, jabatan, atau BU" autoComplete="off" spellCheck={false} />
+                  <input value={query} maxLength={80} onChange={event => setQuery(event.target.value)} onFocus={event => raiseOnFocus(event.currentTarget)} placeholder="Cari nama, jabatan, atau BU" autoComplete="off" spellCheck={false} enterKeyHint="search" />
                 </label>
                 <ul className={css.people} aria-label="Karyawan">
                   {found.slice(0, SHOWN).map(person => (
@@ -92,7 +93,7 @@ export function NewOrder({ initial, rooms, people, onBack, onQuick, onGuest }: {
                   {found.length === 0 && <li className={css.mutedSmall}>Tidak ada nama yang cocok.</li>}
                 </ul>
                 {found.length > SHOWN && <p className={css.more}>{found.length - SHOWN} nama lain. Ketik untuk mempersempit.</p>}
-              </>
+              </div>
             )}
           </div>
 

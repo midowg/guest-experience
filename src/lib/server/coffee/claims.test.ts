@@ -77,7 +77,7 @@ describe("a claim", () => {
   // Audit S-2: a key belongs to one sending of one person.
   it("never answers with someone else's claim, nor with one already cancelled, for a key used before", async () => {
     const { order } = await submitClaim(rina, { ...latte, key: key(1) }, now);
-    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu." };
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu." };
     await expect(submitClaim(fajar, { ...latte, key: key(1) }, now)).rejects.toMatchObject(reused);
     db.state.race = true;
     const raced = await submitClaim(fajar, { ...latte, key: key(1) }, now).catch((problem: unknown) => problem);

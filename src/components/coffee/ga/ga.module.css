@@ -72,14 +72,14 @@
 .ga .input:focus { outline: none; border-color: var(--emp); box-shadow: 0 0 0 3px var(--emp-c); }
 .ga .input[aria-invalid="true"] { border-color: var(--no); }
 .ga .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.ga .chip { min-height: 48px; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; }
+.ga .chip { min-height: 48px; padding: 0 16px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; }
 .ga .chip:hover { background: var(--soft); }
 .ga .chip[aria-pressed="true"] { border-color: var(--emp); background: var(--emp-c); color: var(--emp-strong); box-shadow: inset 0 0 0 1px var(--emp); }
 .ga .options { display: grid; gap: 8px; }
 .ga .options[data-cols="2"] { grid-template-columns: 1fr 1fr; }
 .ga .options[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
 .ga .options[data-cols="6"] { grid-template-columns: repeat(6, 1fr); }
-.ga .option { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; }
+.ga .option { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 6px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; }
 .ga .option[aria-pressed="true"] { border-color: var(--emp); background: var(--emp-c); color: var(--emp-strong); box-shadow: inset 0 0 0 1px var(--emp); }
 
 .ga .stepper { display: inline-flex; align-items: center; gap: 4px; padding: 2px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); flex: none; }
@@ -286,8 +286,13 @@
 
 
 /* ---------- serahkan ke tamu: menu book (own look: black cover, paper pages, gold only for lines and the logo) */
-.ga .book { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--book-black); animation: fade .3s var(--ease); }
+.ga .book { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--book-black); animation: fade .3s var(--ease); overscroll-behavior: none; -webkit-touch-callout: none; }
 .ga .book :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* On paper gold is 2.2:1: the focus ring there is the book's ink (gold stays for the ornaments and the black cover). */
+.ga .spread :focus-visible { outline-color: var(--book-ink); }
+/* Nothing in the book opens a way out: no pull to refresh, no long-press menu on a photo, no selection, no dragging a picture away. */
+.ga .book img { pointer-events: none; -webkit-user-drag: none; }
+.ga .spread, .ga .page { overscroll-behavior: contain; }
 .ga .bookBar { display: flex; justify-content: flex-end; width: 100%; height: 56px; align-items: center; flex: none; }
 .ga .bookExit { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 14px; border: 1px solid #3A3A3A; border-radius: 0; background: none; color: #A8A29A !important; font-size: 14px; font-weight: 600; }
 .ga .bookExit:hover { color: #E8E2D6 !important; border-color: #5A5A5A; }
@@ -337,12 +342,12 @@
 .ga .bookOptions { display: grid; gap: 8px; }
 .ga .bookOptions[data-cols="2"] { grid-template-columns: 1fr 1fr; }
 .ga .bookOptions[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
-.ga .bookOption { min-height: 52px; padding: 0 8px; border: 1px solid rgba(26, 26, 26, .35); border-radius: 0; background: transparent; color: var(--book-ink); font-size: 17px; font-weight: 600; }
+.ga .bookOption { min-height: 52px; padding: 0 8px; border: 1px solid rgba(26, 26, 26, .6); border-radius: 0; background: transparent; color: var(--book-ink); font-size: 17px; font-weight: 600; }
 .ga .bookOption[aria-pressed="true"] { background: var(--book-ink); border-color: var(--book-ink); color: var(--paper) !important; }
 .ga .bookLabel { display: block; margin: 0 0 6px; font-size: 16px; font-weight: 700; color: var(--book-ink); }
 .ga .bookLabel span { font-weight: 400; color: var(--book-ink-2); }
 .ga .bookInput { width: 100%; min-height: 52px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--book-ink); border-radius: 0; background: transparent; font: inherit; font-size: 18px; color: var(--book-ink); }
-.ga .bookInput:focus { outline: none; border-bottom: 2px solid var(--gold); }
+.ga .bookInput:focus { outline: none; border-bottom: 2px solid var(--book-ink); box-shadow: 0 3px 0 var(--book-ink); }
 .ga .bookActions { display: grid; gap: 10px; margin-top: auto; padding-top: 20px; }
 .ga .inkButton, .ga .lineButton { min-height: 56px; padding: 0 20px; border-radius: 0; font-size: 17px; font-weight: 600; }
 .ga .inkButton { border: 1px solid var(--book-ink); background: var(--book-ink); color: var(--paper) !important; }
@@ -363,6 +368,32 @@
 .ga .askDialog h2 { font-size: 22px; }
 .ga .askDialog p { margin: 0; font-size: 16px; line-height: 1.45; color: var(--ink-2); }
 .ga .askFoot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 12px; }
+/* PIN GA: four dots and a keypad of large keys (no text field, so no keyboard comes up over the book). */
+.ga .pinDialog { width: min(380px, 100%); text-align: center; }
+.ga .pinDialog h2:focus { outline: none; }
+.ga .pinDots { display: flex; justify-content: center; gap: 16px; padding: 12px 0 12px; }
+.ga .pinDots span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--field-line); background: var(--surface); }
+.ga .pinDots span[data-on] { background: var(--ink); border-color: var(--ink); }
+.ga .askDialog .pinSaid { margin: 0; line-height: 1.4; block-size: auto; color: var(--no); font-size: 15px; font-weight: 600; }
+.ga .pinPad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 4px; }
+.ga .pinKey { display: grid; place-items: center; min-height: 64px; border: 1px solid var(--field-line); border-radius: 16px; background: var(--surface); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ga .pinKey:active { background: var(--soft); transform: scale(.97); }
+.ga .pinKey[aria-disabled="true"] { opacity: .5; cursor: default; }
+.ga .pinWord { border-color: transparent; background: none; font-size: 16px; color: var(--ink-2); }
+/* The last read failed, or the tablet is offline: thin, under the top bar, with a way to try again. */
+.ga .offline { display: flex; align-items: center; gap: 10px; flex: none; padding: 2px 12px 2px 24px; background: var(--wait-c); color: var(--wait); font-size: 15px; font-weight: 600; }
+.ga .offline > span { flex: 1; min-width: 0; }
+.ga .offline svg { flex: none; }
+.ga .offline button { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 48px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: var(--wait); font-size: 15px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.ga .offline button[aria-disabled="true"] { cursor: progress; text-decoration: none; }
+/* Beranda: the PIN GA is not set yet. */
+.ga .hintBar { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--wait-c); color: var(--wait); font-size: 15px; font-weight: 600; line-height: 1.4; }
+.ga .hintBar svg { flex: none; margin-top: 2px; }
+/* A tap that added nothing because the order is full. */
+.ga .fullNote { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--wait-c); color: var(--wait); font-size: 14px; font-weight: 600; line-height: 1.4; }
+.ga .secondary[aria-disabled="true"] { opacity: .55; }
+/* A search field and the names found for it: one block that rises to the top when the field is typed in. */
+.ga .searchBlock { display: grid; gap: 8px; scroll-margin-top: 12px; }
 .ga .danger { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border: 1px solid transparent; border-radius: 12px; background: var(--no); color: #fff; font-size: 16px; font-weight: 600; }
 .ga .input { border-color: var(--field-line); }
 .ga .search { border-color: var(--field-line); }
@@ -438,6 +469,9 @@
   .ga .ribbons { position: sticky; left: auto; flex: none; padding: 0 32px; background: var(--paper); border-bottom: 1px solid rgba(201, 163, 91, .5); }
   .ga .pageTabbed { padding-top: 0; }
   .ga .bookActions { position: sticky; bottom: 0; padding-bottom: 20px; margin-bottom: -24px; background: var(--paper); }
+  /* Upright the button bar sticks to the bottom and used to cover the field's single line: the field is a full box here, clear of the bar. */
+  .ga .bookInput { padding: 0 14px; border: 1px solid var(--book-ink); margin-bottom: 20px; scroll-margin-bottom: 120px; }
+  .ga .bookInput:focus { border: 2px solid var(--book-ink); box-shadow: none; }
   .ga .bookPhoto { max-height: 22vh; width: auto; }
   .ga .bookTitle { margin-top: 12px !important; }
 }

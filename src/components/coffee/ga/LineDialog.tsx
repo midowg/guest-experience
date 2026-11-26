@@ -5,7 +5,7 @@ import { Flame, Snowflake, X } from "lucide-react";
 import { ICE_LEVELS, SUGAR_LEVELS, drinkBySlug } from "@/lib/coffee/menu";
 import { Layer } from "../Layer";
 import { MAX_QTY, matches, type Draft, type GaPerson, type Line } from "./model";
-import { Option, Photo, Stepper } from "./parts";
+import { Option, Photo, Stepper, raiseOnFocus } from "./parts";
 import css from "./ga.module.css";
 
 const SHOWN = 4;
@@ -84,10 +84,11 @@ export function LineDialog({ line, isNew, pic, people, onClose, onSave, onRemove
               <button type="button" className={css.ghost} onClick={() => { patch({ person: undefined }); setQuery(""); }}>Ganti</button>
             </div>
           ) : (
-            <>
+            // The names sit right under the field, and the field rises to the top of the dialog when it is typed in: the on-screen keyboard covers neither.
+            <div className={css.searchBlock} data-raise>
               <label className={css.label} htmlFor={nameId}>Nama anggota tim</label>
-              <input ref={search} id={nameId} className={css.input} value={query} maxLength={80} onChange={event => setQuery(event.target.value)}
-                placeholder="Ketik untuk mencari, lalu pilih" aria-invalid={tried && needsPerson} aria-describedby={infoId} autoComplete="off" spellCheck={false} />
+              <input ref={search} id={nameId} className={css.input} value={query} maxLength={80} onChange={event => setQuery(event.target.value)} onFocus={event => raiseOnFocus(event.currentTarget)}
+                placeholder="Ketik untuk mencari, lalu pilih" aria-invalid={tried && needsPerson} aria-describedby={infoId} autoComplete="off" spellCheck={false} enterKeyHint="search" />
               {offered.length > 0 && (
                 <div className={css.chips}>
                   {offered.slice(0, SHOWN).map(person => (
@@ -101,7 +102,7 @@ export function LineDialog({ line, isNew, pic, people, onClose, onSave, onRemove
                   : offered.length > SHOWN ? `${offered.length - SHOWN} nama lain. Ketik untuk mempersempit.`
                   : "Tidak memotong jatah, tetapi dicatat atas nama orang ini."}
               </p>
-            </>
+            </div>
           ))}
         </fieldset>
       </div>

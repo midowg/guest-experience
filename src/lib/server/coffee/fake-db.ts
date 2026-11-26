@@ -143,7 +143,9 @@ export function fakeDb() {
       const items = args.p_items as Row[];
       const manual = order.manual === true;
       const again = state.race ? undefined : byKey(args.p_key);
-      if (again) return sameSending(again, again.kind === "rapat" && again.manual === manual);
+      // The same key with other contents (the fingerprint the server worked out) is not the same sending.
+      const print = order.print ? String(order.print).slice(0, 100) : null;
+      if (again) return sameSending(again, again.kind === "rapat" && again.manual === manual && !(again.request_print && print && again.request_print !== print));
       if (!Array.isArray(items) || !items.length || items.length > 40) return fail("COFFEE_INVALID");
       const at = String(order.ordered_at ?? state.now.toISOString());
       if (tooLate(at)) return fail("COFFEE_INVALID");
@@ -184,7 +186,7 @@ export function fakeDb() {
       rows("coffee_orders").push({
         id, kind: "rapat", number, round, parent_id: root, ...meeting, reject_note: null,
         ...processed(manual, order.actor_id, order.actor_label), created_by: order.actor_id ?? null, created_label: order.actor_label ?? null, manual,
-        ordered_at: at, quota_month: wibMonth(at), idempotency_key: args.p_key ?? null,
+        ordered_at: at, quota_month: wibMonth(at), idempotency_key: args.p_key ?? null, request_print: print,
       });
       items.forEach((item, index) => {
         const who = team[index];

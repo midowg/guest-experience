@@ -100,7 +100,8 @@ export const rootOf = (order: MeetingOrder, today: readonly MeetingOrder[]): Mee
  */
 export function nextDraft(order: MeetingOrder, today: readonly MeetingOrder[]): Draft {
   const root = rootOf(order, today);
-  const open = root && (root.status === "diproses" || root.status === "selesai");
+  // A record the pengelola made by hand (Catat manual) is never added to: the server refuses it.
+  const open = root && !root.manual && (root.status === "diproses" || root.status === "selesai");
   const from = root ?? order;
   return {
     room: from.room, spot: from.spot ?? undefined, pic: { id: from.pic.id ?? "", name: from.pic.name },
@@ -120,6 +121,23 @@ export function toBody(draft: Draft, lines: readonly Line[], key: string): Meeti
       ice: line.temperature === "es" ? line.ice : "Normal", qty: line.qty,
     })),
   };
+}
+
+/**
+ * What one sending consists of, as text: the key of a sending belongs to exactly these contents.
+ * Anything changed after a Kirim whose answer was lost (a drink more, another room or PIC) is
+ * another sending and gets another key (audit F3-02).
+ */
+export const printOf = (draft: Draft, lines: readonly Line[]): string => { const { key: _key, ...rest } = toBody(draft, lines, ""); void _key; return JSON.stringify(rest); };
+
+/** Is this order what that sending asked for? (Used to recognise a sending whose answer was lost.) */
+export function sameSending(order: MeetingOrder, body: MeetingBody): boolean {
+  if (body.parentId ? order.parentId !== body.parentId : order.parentId !== null || order.room !== body.room.trim() || order.pic.id !== body.picId) return false;
+  return order.items.length === body.items.length && order.items.every((item, index) => {
+    const sent = body.items[index];
+    return item.for === sent.for && item.slug === sent.slug && item.qty === sent.qty && item.temperature === sent.temperature && item.sugar === sent.sugar
+      && (item.temperature !== "es" || item.ice === sent.ice) && (item.person?.id ?? undefined) === (sent.for === "tim" ? sent.personId : undefined) && (item.guestName ?? undefined) === (sent.guestName ?? undefined);
+  });
 }
 
 /** "Tamu", "Tamu · Budi", "Tim · rapat · Rina". */

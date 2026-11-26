@@ -178,7 +178,7 @@ describe("Catat manual sent twice", () => {
   });
 
   it("refuses a key that belongs to another kind of sending, or to a record already cancelled", async () => {
-    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu." };
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu." };
     const id = await claim(PEOPLE.rina);
     const appKey = db.rows("coffee_orders")[0].idempotency_key as string;
     await expect(recordManual(manual({ key: appKey }), dewi, now)).rejects.toMatchObject(reused);

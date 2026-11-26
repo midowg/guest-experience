@@ -22,7 +22,7 @@ export function useSettled(mark: unknown = 0): () => boolean {
 /** A drink of the menu, by its slug. Decorative: the name is always written next to it. */
 export function Photo({ slug, width, height, className, alt = "" }: { slug: string; width: number; height: number; className?: string; alt?: string }) {
   // eslint-disable-next-line @next/next/no-img-element -- small local photos, sized here
-  return <img className={className} src={coffeePath.photo(slug)} alt={alt} width={width} height={height} loading="lazy" />;
+  return <img className={className} src={coffeePath.photo(slug)} alt={alt} width={width} height={height} loading="lazy" draggable={false} />;
 }
 
 export function ScreenHead({ title, sub, onBack, backLabel, children }: { title: string; sub?: ReactNode; onBack: () => void; backLabel: string; children?: ReactNode }) {
@@ -36,6 +36,16 @@ export function ScreenHead({ title, sub, onBack, backLabel, children }: { title:
       {children}
     </div>
   );
+}
+
+/**
+ * A search field that got the focus: bring it to the top of what scrolls, so the names to pick
+ * from, which sit right under it, stay above the on-screen keyboard (audit F3-07). Waits for the
+ * keyboard to come up.
+ */
+export function raiseOnFocus(element: HTMLElement | null) {
+  const block = element?.closest<HTMLElement>("[data-raise]") ?? element;
+  window.setTimeout(() => block?.scrollIntoView?.({ block: "start", behavior: "smooth" }), 250);
 }
 
 /** Minus, the number, plus. At `min` the minus rests, unless going below it means "none" (`min` 0). */

@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Coffee, Smartphone } from "lucide-react";
+import { Coffee, RefreshCw, Smartphone, WifiOff } from "lucide-react";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
 import { coffeePath } from "@/lib/routes";
-import { newKey } from "../api";
+import { CoffeeApiError, newKey } from "../api";
 import { Layer } from "../Layer";
 import { Toast, type ToastMessage } from "../Toast";
-import { gaClient, type GaApi } from "./api";
+import { gaClient, type GaApi, type MeetingBody } from "./api";
+import type { PinAnswer } from "./ExitDialog";
 import { GuestBook } from "./GuestBook";
+import { dropHold, keepHold, readHold, type BookState } from "./hold";
 import { Home } from "./Home";
-import { MAX_LINES, canAddTo, counts, doneLine, nextDraft, toBody, type Draft, type Line } from "./model";
+import { MAX_LINES, canAddTo, counts, doneLine, nextDraft, printOf, sameSending, toBody, type Draft, type Line } from "./model";
 import { NewOrder } from "./NewOrder";
 import { QuickInput } from "./QuickInput";
 import { Sent } from "./Sent";
@@ -22,10 +24,20 @@ import css from "./ga.module.css";
  * Input cepat, the guest menu book, and the sent order with its live status. The server draws it
  * once with today's state; after that everything comes from the API (`api`, a prop, so the preview
  * and the tests run this same component on a make-believe server). Moving between the screens
- * never loads a page. While the guest holds the tablet nothing but the menu book is on the page.
+ * never loads a page.
+ *
+ * While the guest holds the tablet nothing but the menu book is on the page, and that holds
+ * through a reload, the back button and a pull on the page (audit F3-01, F3-04, F3-06):
+ * - guest mode, the meeting, GA's unsent drinks and the guests' picks are kept (hold.ts) and
+ *   restored; the server sends no GA data with a page that is reloaded in guest mode (`held`);
+ * - nothing is read from the server while the book is open;
+ * - the back button moves between the tablet's screens and closes dialogs; in the book it does nothing;
+ * - leaving the book needs the PIN GA (a question while the pengelola has not set one).
  */
 
 type Screen = "home" | "new" | "quick" | "sent";
+/** A sending that has a key: its exact contents, and what was on the list when it first went out. */
+type Pending = { key: string; print: string; body: MeetingBody; before: Set<string>; unsure: boolean };
 
 export type GaAppProps = {
   initial: GaState;
@@ -33,41 +45,92 @@ export type GaAppProps = {
   me: { name: string };
   /** The real APIs unless the preview or a test passes a make-believe one. */
   api?: GaApi;
+  /** The page was loaded while a guest held the tablet (the server saw the cookie): it opens on the menu book, and `initial` holds no GA data. */
+  held?: boolean;
   /** The preview's own buttons (not part of the app); never drawn while the guest holds the tablet. */
   tools?: ReactNode;
 };
 
-export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
+const TRAP = "gaTrap";
+const layerOpen = () => !!document.querySelector("[data-coffee-layer]");
+
+export function GaApp({ initial, me, api = gaClient, held = false, tools }: GaAppProps) {
   const [screen, setScreen] = useState<Screen>("home");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [sentId, setSentId] = useState<string | null>(null);
-  const [guest, setGuest] = useState(false);
+  const [guest, setGuest] = useState(held);
+  /** What the guests picked so far, as the book last told (kept for a reload). */
+  const [book, setBook] = useState<BookState | undefined>(undefined);
+  /** The tab's storage was looked at (it exists only in the browser, after the first paint). */
+  const [restored, setRestored] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [asking, setAsking] = useState(false);
+  /** A question before unsent drinks are thrown away; `then` is what the yes goes on to. */
+  const [asking, setAsking] = useState<{ then: () => void } | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastNo = useRef(0);
-  const say = useCallback((message: Omit<ToastMessage, "id">) => setToast({ ...message, id: ++toastNo.current }), []);
-  const closeToast = useCallback(() => setToast(null), []);
+  /** A plain message that arrived while a refusal was showing: it waits its turn instead of covering it. */
+  const queued = useRef<ToastMessage | null>(null);
+  const say = useCallback((message: Omit<ToastMessage, "id">) => {
+    const next = { ...message, id: ++toastNo.current };
+    setToast(current => {
+      if (current?.sticky && !next.sticky) { queued.current = next; return current; }
+      return next;
+    });
+  }, []);
+  const closeToast = useCallback(() => { const next = queued.current; queued.current = null; setToast(next); }, []);
   const askId = useId();
-  /** One key per sending: kept for a retry of the same sending, new after an answer that settled it. */
-  const key = useRef("");
+  const pending = useRef<Pending | null>(null);
+  const checking = useRef(false);
 
   const open = useCallback((order: MeetingOrder) => { setSentId(order.id); setScreen("sent"); }, []);
   /** An order is being written: a message about another order does not take the screen away from it. */
   const writing = useRef(false);
   useEffect(() => { writing.current = screen === "new" || screen === "quick" || guest; }, [screen, guest]);
-  /** An order was decided while the tablet was open. */
+  /** Orders were decided while the tablet was open. Tapping the message opens the order, unless one is being written by then. */
   const onDecided = useCallback((orders: MeetingOrder[]) => {
+    const refused = orders.filter(order => order.status === "ditolak");
+    if (orders.length > 1) {
+      say({
+        tone: refused.length ? "no" : "ok", sticky: refused.length > 0,
+        title: `${orders.length} pesanan sudah diputuskan${refused.length ? `, ${refused.length} ditolak` : ""}`,
+        body: orders.map(order => `#${order.no} ${order.room || "Tanpa ruangan"}: ${order.status === "ditolak" ? "ditolak" : "siap diambil"}`).join(" · "),
+      });
+      return;
+    }
     const order = orders[0];
-    const onOpen = writing.current ? undefined : () => open(order);
+    const onOpen = () => { if (!writing.current) open(order); };
     say(order.status === "selesai"
       ? { tone: "ok", title: `#${order.no} ${order.room}: siap diambil`, body: `${doneLine(order)}. Ambil di mesin kopi pantry.`, onOpen }
       : { tone: "no", title: `#${order.no} ${order.room}: ditolak`, body: `${doneLine(order)}. Lihat catatannya.`, onOpen, sticky: true });
   }, [open, say]);
-  const { state, refresh, send, sending } = useGa(api, initial, onDecided);
+  const { state, refresh, send, sending, stale, retry, retrying } = useGa(api, initial, onDecided, guest);
   const { today, people, rooms } = state;
   const sent = sentId ? today.find(order => order.id === sentId) : undefined;
+
+  // After a reload: back into the book with what was kept; or, when the server saw guest mode but
+  // nothing can be restored, locked on the cover until the GA officer leaves it.
+  useEffect(() => {
+    const kept = readHold();
+    /* eslint-disable react-hooks/set-state-in-effect -- the tab's storage exists only in the browser, after the first paint */
+    if (kept) { setDraft(kept.draft); setLines(kept.lines); setBook(kept.book); setGuest(true); setScreen("quick"); }
+    setRestored(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+  // Guest mode is remembered while it lasts, and forgotten the moment the GA officer is back.
+  useEffect(() => {
+    if (!restored) return;
+    if (guest) keepHold(draft ? { draft, lines, book: book ?? { open: false, picks: [] } } : null);
+    else dropHold();
+  }, [restored, guest, draft, lines, book]);
+
+  // A pull on the page must not reload it (the cover does not scroll, so Chrome would take the pull for a refresh).
+  useEffect(() => {
+    const targets = [document.documentElement, document.body];
+    const before = targets.map(element => element.style.overscrollBehavior);
+    targets.forEach(element => { element.style.overscrollBehavior = "none"; });
+    return () => targets.forEach((element, index) => { element.style.overscrollBehavior = before[index]; });
+  }, []);
 
   // The screen changed: the focus goes to it, not to nowhere (the button that was pressed is gone).
   const main = useRef<HTMLElement>(null);
@@ -89,55 +152,121 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
   }, [unsent]);
 
   const toHome = useCallback(() => {
-    setLines([]); setDraft(null); setProblem(null); setAsking(false); setScreen("home");
+    pending.current = null;
+    setLines([]); setDraft(null); setProblem(null); setAsking(null); setScreen("home");
     void refresh();
   }, [refresh]);
-  /** Beranda: drinks that were not sent are only thrown away after a yes. */
-  const leave = useCallback(() => { if (lines.length) setAsking(true); else toHome(); }, [lines.length, toHome]);
+  /** Drinks that were not sent are only thrown away after a yes, whatever asks for it. */
+  const discardThen = useCallback((then: () => void) => { if (lines.length) setAsking({ then }); else then(); }, [lines.length]);
+  const leave = useCallback(() => discardThen(toHome), [discardThen, toHome]);
 
   const startRound = useCallback((order: MeetingOrder) => {
     const next = nextDraft(order, today);
-    key.current = newKey();
-    setDraft(next); setLines([]); setProblem(null);
+    pending.current = null;
+    setDraft(next); setLines([]); setProblem(null); setAsking(null);
     // A replacement order whose PIC is no longer an employee starts at the form, to pick another.
     setScreen(next.pic.id ? "quick" : "new");
   }, [today]);
 
-  const begin = (next: Draft, withGuest: boolean) => {
-    if (!key.current) key.current = newKey();
-    setDraft(next); setProblem(null); setScreen("quick"); setGuest(withGuest);
-  };
+  const begin = (next: Draft, withGuest: boolean) => { setDraft(next); setProblem(null); setScreen("quick"); setGuest(withGuest); if (withGuest) setBook(undefined); };
 
   const submit = useCallback(async () => {
-    if (!draft || lines.length === 0) return;
+    if (!draft || lines.length === 0 || checking.current) return;
     setProblem(null);
-    if (!key.current) key.current = newKey();
-    const result = await send(toBody(draft, lines, key.current));
+    const print = printOf(draft, lines);
+    const before = pending.current;
+    if (before && before.print !== print) {
+      // The order was changed after a Kirim. When that Kirim got no answer it may still have arrived:
+      // find out first, or its drinks would be sent a second time under the new key.
+      if (before.unsure) {
+        checking.current = true;
+        const fresh = await refresh();
+        checking.current = false;
+        if (!fresh) { setProblem("Belum tersambung, jadi belum diketahui apakah kiriman sebelumnya sudah masuk. Periksa jaringan, lalu tekan Kirim lagi."); return; }
+        const arrived = fresh.today.find(order => !before.before.has(order.id) && sameSending(order, before.body));
+        if (arrived) {
+          pending.current = null;
+          const next = nextDraft(arrived, fresh.today);
+          setDraft(current => current && next.parent ? { ...current, parent: next.parent } : current);
+          setProblem(`Kiriman sebelumnya ternyata sudah masuk sebagai #${arrived.no} (${counts(arrived.items).total} minuman). Hapus minuman yang sudah terkirim dari daftar ini, lalu tekan Kirim untuk menambahkan sisanya.`);
+          return;
+        }
+      }
+      // Other contents are another sending: a key of its own.
+      pending.current = null;
+    }
+    const body = toBody(draft, lines, pending.current?.key ?? newKey());
+    pending.current ??= { key: body.key, print, body, before: new Set(today.map(order => order.id)), unsure: false };
+    const result = await send(body);
     if (result.ok) {
-      key.current = "";
+      pending.current = null;
       setLines([]); setSentId(result.order.id); setScreen("sent");
       say({ tone: "ok", title: result.message || "Pesanan terkirim ke pengelola." });
       return;
     }
     if (result.ignored) return;
+    // No answer at all: the same contents go out again under the same key.
+    if (result.unsure) { if (pending.current) pending.current.unsure = true; setProblem(result.message); return; }
+    // A definite refusal: this sending is over, the next one is a new one.
+    pending.current = null;
     if (!result.stale) { setProblem(result.message); return; }
-    // The server refused what this tablet believed: this sending is over, the next one is a new one.
-    key.current = "";
     if (draft.parent) {
       setDraft({ ...draft, parent: undefined });
       setProblem(`${result.message} Tekan Kirim lagi untuk mengirimnya sebagai pesanan baru.`);
-    } else setProblem(result.message);
-  }, [draft, lines, say, send]);
+    } else setProblem(`${result.message} Tekan Kirim lagi.`);
+  }, [draft, lines, refresh, say, send, today]);
 
   const backFromGuest = (picks: Line[]) => {
     setLines(list => [...list, ...picks].slice(0, MAX_LINES));
-    setGuest(false);
-    setScreen("quick");
+    setGuest(false); setBook(undefined);
+    // Reloaded in guest mode with nothing to restore: back to Beranda. useGa reads GA's data now (none came with such a page).
+    setScreen(draft ? "quick" : "home");
   };
+  /** The PIN GA, asked of the server: the page never knows it. */
+  const checkPin = useCallback(async (pin: string): Promise<PinAnswer> => {
+    try { await api.checkPin(pin); return { ok: true }; }
+    catch (failure) {
+      if (failure instanceof CoffeeApiError && failure.status === 409) return { ok: false, message: failure.message, unset: true };
+      return { ok: false, message: failure instanceof CoffeeApiError ? failure.message : "PIN belum bisa diperiksa. Coba lagi." };
+    }
+  }, [api]);
 
-  if (guest && draft) return (
-    <div className={`${css.ga} ${css.stage}`}>
-      <GuestBook room={draft.room} picName={draft.pic.name} guest={draft.guest} max={Math.max(MAX_LINES - lines.length, 0)} onDone={backFromGuest} />
+  // The back button (Android's, or a swipe from the edge): one screen back, or the dialog closed.
+  // In the book it does nothing at all. One entry of the history is kept under the tablet for it.
+  const onBack = useRef<() => boolean>(() => false);
+  useEffect(() => {
+    onBack.current = () => {
+      if (layerOpen()) { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); return true; }
+      if (guest) return true;
+      if (asking) { setAsking(null); return true; }
+      if (sending) return true;
+      if (screen === "quick" && draft) { if (draft.parent) leave(); else { setProblem(null); setScreen("new"); } return true; }
+      if (screen === "new") { leave(); return true; }
+      if (screen === "sent") { leave(); return true; }
+      return false;
+    };
+  });
+  useEffect(() => {
+    const trap = () => { if (!window.history.state?.[TRAP]) window.history.pushState({ ...window.history.state, [TRAP]: true }, ""); };
+    trap();
+    const onPop = () => {
+      // Still on (or above) the tablet's own entry: a layer's entry was closed, not ours.
+      if (window.history.state?.[TRAP]) return;
+      if (onBack.current()) trap();
+      // Beranda with nothing open: the back button leaves the tablet page, as it would without us.
+      else window.history.back();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  if (guest) return (
+    <div className={`${css.ga} ${css.stage}`} data-guest>
+      {restored
+        ? <GuestBook key={draft ? "book" : "locked"} room={draft?.room ?? ""} picName={draft?.pic.name ?? ""} guest={draft?.guest} max={Math.max(MAX_LINES - lines.length, 0)}
+            saved={book} locked={!draft} exit={{ pin: state.pin, check: checkPin }} onKeep={setBook} onDone={backFromGuest} />
+        // Before the tab's storage was read: the closed cover, the same on the server and in the browser.
+        : <div className={css.book} role="region" aria-label="Buku menu tamu"><div className={css.cover} aria-hidden><span className={css.coverFrame} /><span className={css.goldMark} /></div></div>}
     </div>
   );
 
@@ -152,23 +281,31 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
         </span>
       </header>
 
+      {stale && (
+        <div className={css.offline} role="status">
+          <WifiOff aria-hidden size={18} />
+          <span>Tidak tersambung. Status mungkin belum terbaru.</span>
+          <button type="button" aria-disabled={retrying || undefined} onClick={() => void retry()}><RefreshCw aria-hidden size={16} />{retrying ? "Memuat…" : "Coba lagi"}</button>
+        </div>
+      )}
+
       <main ref={main} className={css.main} tabIndex={-1} data-coffee-focus>
         {screen === "home" && (
-          <Home orders={today} rooms={rooms} onNew={() => { key.current = newKey(); setDraft(null); setLines([]); setProblem(null); setScreen("new"); }} onMore={startRound} onOpen={open} />
+          <Home orders={today} rooms={rooms} pin={state.pin} onNew={() => { pending.current = null; setDraft(null); setLines([]); setProblem(null); setScreen("new"); }} onMore={startRound} onOpen={open} />
         )}
         {screen === "new" && (
           <NewOrder initial={draft} rooms={rooms} people={people} onBack={leave} onQuick={next => begin(next, false)} onGuest={next => begin(next, true)} />
         )}
         {screen === "quick" && draft && (
           <QuickInput draft={draft} lines={lines} setLines={setLines} people={people} sending={sending} problem={problem} onSend={submit}
-            onGuest={() => setGuest(true)} onBack={() => { if (sending) return; if (draft.parent) leave(); else { setProblem(null); setScreen("new"); } }} />
+            onGuest={() => { setBook(undefined); setGuest(true); }} onBack={() => { if (sending) return; if (draft.parent) leave(); else { setProblem(null); setScreen("new"); } }} />
         )}
         {screen === "sent" && (sent
-          ? <Sent order={sent} more={canAddTo(sent, today)} onMore={() => startRound(sent)} onHome={toHome} />
+          ? <Sent order={sent} more={canAddTo(sent, today)} onMore={() => discardThen(() => startRound(sent))} onHome={leave} />
           : (
             <div className={css.emptyState}>
               <h1>Pesanan ini sudah tidak ada di daftar hari ini</h1>
-              <button type="button" className={css.primary} onClick={toHome}>Ke beranda</button>
+              <button type="button" className={css.primary} onClick={leave}>Ke beranda</button>
             </div>
           ))}
       </main>
@@ -177,12 +314,12 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
       <div className={css.toastWrap}><Toast message={toast} onClose={closeToast} /></div>
 
       {asking && (
-        <Layer kind="dialog" alert labelledBy={askId} onClose={() => setAsking(false)} rootClass={css.ga} panelClass={css.askDialog}>
+        <Layer kind="dialog" alert labelledBy={askId} onClose={() => setAsking(null)} rootClass={css.ga} panelClass={css.askDialog}>
           <h2 id={askId}>Buang pesanan yang belum dikirim?</h2>
           <p>{counts(lines).total} minuman untuk {draft?.room} belum dikirim ke pengelola.</p>
           <div className={css.askFoot}>
-            <button type="button" className={css.secondary} data-autofocus onClick={() => setAsking(false)}>Lanjutkan pesanan</button>
-            <button type="button" className={css.danger} onClick={toHome}>Buang</button>
+            <button type="button" className={css.secondary} data-autofocus onClick={() => setAsking(null)}>Lanjutkan pesanan</button>
+            <button type="button" className={css.danger} onClick={asking.then}>Buang</button>
           </div>
         </Layer>
       )}

@@ -1,8 +1,11 @@
-import { CoffeeWaiting } from "@/components/coffee/CoffeeAuth";
+import { cookies } from "next/headers";
+import { CoffeeTrouble, CoffeeWaiting } from "@/components/coffee/CoffeeAuth";
 import { GaApp } from "@/components/coffee/ga/GaApp";
+import { HOLD_COOKIE } from "@/components/coffee/ga/hold";
 import { coffeePath } from "@/lib/routes";
 import { gaState } from "@/lib/server/coffee/meetings";
-import { requireGaPage } from "@/lib/server/coffee/session";
+import { gaPinSet } from "@/lib/server/coffee/pin";
+import { holdsCoffeeGrant, requireGaPage } from "@/lib/server/coffee/session";
 import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +14,29 @@ export const metadata = { title: "Mode GA" };
 /**
  * The GA tablet: meeting orders for guests and the team in the room. A stranger goes to Coffee's
  * sign-in and comes back here; an employee without Mode GA lands on the employee app with a note
- * (coffeePath.gaDenied). Before the migration ran the page says it is not open yet instead of failing.
+ * (coffeePath.gaDenied). Before the migration ran (503) the page says it is not open yet, with the
+ * migration's name for the pengelola only; any other refusal says it could not load, with a way to
+ * try again.
+ *
+ * A page loaded while a guest holds the tablet (the cookie the tablet sets in "Serahkan ke tamu")
+ * carries no GA data at all: no orders, no employees. It opens on the menu book, and GA's data is
+ * read only after the GA officer left the book.
  */
 export default async function CoffeeGaPage() {
   if (!isSupabaseConfigured()) return <CoffeeWaiting detail="Database belum diatur di server ini." />;
   const member = await requireGaPage(coffeePath.ga);
+  const me = { name: member.nickname || member.name };
+  if ((await cookies()).get(HOLD_COOKIE)?.value === "1") {
+    const pin = await gaPinSet().catch(() => false);
+    return <GaApp held initial={{ today: [], people: [], rooms: [], pin }} me={me} />;
+  }
   const state = await gaState(member).catch((problem: unknown) => {
     if (problem instanceof ServiceError) return problem;
     throw problem;
   });
-  if (state instanceof ServiceError) return <CoffeeWaiting detail={state.message} />;
-  return <GaApp initial={state} me={{ name: member.nickname || member.name }} />;
+  if (state instanceof ServiceError) {
+    if (state.status !== 503) return <CoffeeTrouble here={coffeePath.ga} />;
+    return <CoffeeWaiting detail={await holdsCoffeeGrant(member.id).catch(() => false) ? state.message : undefined} />;
+  }
+  return <GaApp initial={state} me={me} />;
 }

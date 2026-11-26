@@ -2,7 +2,7 @@ import { wibDay } from "@/lib/coffee/quota";
 import { ROOMS, roomSpot } from "@/lib/coffee/rooms";
 import { meetingSchema } from "@/lib/coffee/schemas";
 import { orderNo, type GaState, type MeetingOrder, type QueueItem } from "@/lib/coffee/types";
-import { CoffeeApiError } from "../api";
+import { CoffeeApiError, OFFLINE_TEXT } from "../api";
 import type { GaApi, MeetingBody } from "./api";
 
 /*
@@ -36,22 +36,34 @@ type Options = {
   clock?: () => number;
   /** How long every answer takes (the tests use it to press twice before the first answer). */
   delay?: number;
+  /** The PIN GA the make-believe pengelola set ("" or missing: none yet). */
+  pin?: string;
 };
 export type SampleGa = ReturnType<typeof createSampleGa>;
 
-export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: Options = {}) {
+export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pin = "" }: Options = {}) {
   const iso = (msAgo = 0) => new Date(clock() - msAgo).toISOString();
   let number = 113, idSeq = 1, itemSeq = 1;
   const orders: MeetingOrder[] = [];
   const keys = new Map<string, string>();
-  const calls = { state: 0, send: 0 };
+  const calls = { state: 0, send: 0, pin: 0 };
   let offline = false;
+  /** Answers that get lost on the way back (the server did the work), and requests that never answer. */
+  let lose = 0, hang = 0;
+  let pinTries = 0;
+  const prints = new Map<string, string>();
+  const printOf = (body: MeetingBody) => { const { key: _key, ...rest } = body; void _key; return JSON.stringify(rest); };
   const newId = () => `00000000-0000-4000-8000-${String(idSeq++).padStart(12, "0")}`;
   const today = () => orders.filter(order => wibDay(order.orderedAt) === wibDay(iso())).sort((a, b) => Date.parse(b.orderedAt) - Date.parse(a.orderedAt) || b.id.localeCompare(a.id));
   const snapshot = (order: MeetingOrder): MeetingOrder => ({ ...order, pic: { ...order.pic }, items: order.items.map(item => ({ ...item })) });
   const wait = async () => {
+    if (hang > 0) { hang -= 1; await new Promise(() => undefined); }
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-    if (offline) throw new CoffeeApiError("Tidak dapat terhubung. Periksa jaringan lalu coba lagi.");
+    if (offline) throw new CoffeeApiError(OFFLINE_TEXT);
+  };
+  const sent = <T,>(answer: T): T => {
+    if (lose > 0) { lose -= 1; throw new CoffeeApiError(OFFLINE_TEXT); }
+    return answer;
   };
 
   function add(body: Omit<MeetingBody, "key">, more: Partial<MeetingOrder> = {}): MeetingOrder {
@@ -70,7 +82,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
       };
     });
     const order: MeetingOrder = {
-      id: newId(), no: orderNo("rapat", no, round), number: no, round, parentId: root?.id ?? null, room, spot: roomSpot(room),
+      id: newId(), no: orderNo("rapat", no, round), number: no, round, parentId: root?.id ?? null, room, spot: roomSpot(room), manual: false,
       guest: root ? root.guest : body.guest?.trim() ?? "", guestCount: root ? root.guestCount : body.guestCount ?? null,
       status: "diproses", rejectNote: "", orderedAt: iso(), items, sentBy: SAMPLE_GA, pic: { id: pic.id, name: pic.name }, processedLabel: "", processedAt: null, ...more,
     };
@@ -93,7 +105,14 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
     async state(): Promise<GaState> {
       calls.state += 1;
       await wait();
-      return { today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })) };
+      return { today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) };
+    },
+    async checkPin(typed) {
+      calls.pin += 1;
+      await wait();
+      if (!pin) throw new CoffeeApiError("PIN GA belum diatur. Minta pengelola mengaturnya di Pengaturan.", 409);
+      if (++pinTries > 10) throw new CoffeeApiError("Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi.", 429);
+      if (typed !== pin) throw new CoffeeApiError("PIN tidak cocok. Coba lagi.", 422);
     },
     async send(body) {
       calls.send += 1;
@@ -104,8 +123,9 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
       const again = keys.get(body.key);
       if (again) {
         const first = orders.find(order => order.id === again)!;
-        if (first.status === "ditolak" || first.status === "batal") throw new CoffeeApiError("Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu.", 409);
-        return { order: snapshot(first), message: "Pesanan terkirim ke pengelola." };
+        // Refused meanwhile, or the same key with other contents: not the same sending (409), as on the server.
+        if (first.status === "ditolak" || first.status === "batal" || prints.get(body.key) !== printOf(read.data as MeetingBody)) throw new CoffeeApiError("Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu.", 409);
+        return sent({ order: snapshot(first), message: "Pesanan terkirim ke pengelola." });
       }
       if (body.parentId) {
         const parent = orders.find(order => order.id === body.parentId);
@@ -116,7 +136,8 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
       if (body.items.some(item => item.for === "tim" && !SAMPLE_PEOPLE.some(found => found.id === item.personId))) throw new CoffeeApiError("Karyawan tidak ditemukan atau sudah tidak aktif.", 422);
       const order = add(read.data);
       keys.set(body.key, order.id);
-      return { order: snapshot(order), message: "Pesanan terkirim ke pengelola." };
+      prints.set(body.key, printOf(read.data as MeetingBody));
+      return sent({ order: snapshot(order), message: "Pesanan terkirim ke pengelola." });
     },
   };
 
@@ -124,7 +145,18 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
     api,
     calls,
     orders,
-    initial: (): GaState => ({ today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })) }),
+    initial: (): GaState => ({ today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) }),
+    /** A pengelola records a meeting order by hand (Catat manual): it arrives already done, and cannot be added to. */
+    recordManual(room = ""): MeetingOrder {
+      return add({ room: room || " ", picId: SAMPLE_PEOPLE[0].id, items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 2 }] },
+        { room, spot: room ? roomSpot(room) : null, manual: true, status: "selesai", processedLabel: SAMPLE_PROCESSOR, processedAt: iso() });
+    },
+    /** The pengelola sets (or changes) the PIN GA. */
+    setPin(value: string) { pin = value; pinTries = 0; },
+    /** The next `count` answers to Kirim are lost on the way back (the server did the work). */
+    loseAnswers(count = 1) { lose = count; },
+    /** The next `count` requests never answer. */
+    hangNext(count = 1) { hang = count; },
     /** A pengelola processes the newest waiting order (Selesai, or Tolak with a note). */
     settle(status: "selesai" | "ditolak", note = SAMPLE_REFUSAL): MeetingOrder | null {
       const order = today().find(item => item.status === "diproses");

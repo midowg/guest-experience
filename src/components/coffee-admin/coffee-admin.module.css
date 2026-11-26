@@ -289,6 +289,9 @@
 .quotaRow input[aria-invalid="true"] { border-color: var(--no); }
 .quotaRow > span { color: var(--ink-2); }
 .formFoot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* PIN GA: said in words, the colour only underlines it. */
+.pinState { margin: 0; font-weight: 700; color: var(--cs-warn-fg, var(--ink)); }
+.pinState[data-set] { color: var(--cs-ok-fg, var(--ink)); }
 .kv { margin: 0 0 10px; display: grid; }
 .kv div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .kv dt { font-weight: 700; }

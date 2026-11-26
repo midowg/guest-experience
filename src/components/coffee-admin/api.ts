@@ -13,7 +13,8 @@ import { coffeeAdminApi } from "@/lib/routes";
 export type RecapQuery = { dari: string; sampai: string; jenis?: ItemFor; status?: Status; q?: string };
 export type RecapData = { rows: RecapRow[]; summary: RecapSummary; title: string };
 export type CoffeeHolder = { id: string; name: string; position: string };
-export type SettingsData = { settings: CoffeeSettings; holders: CoffeeHolder[] };
+/** `gaPin`: a PIN GA is set (the PIN itself never reaches the browser). */
+export type SettingsData = { settings: CoffeeSettings; holders: CoffeeHolder[]; gaPin: boolean };
 export type ManualBody = {
   kind: ItemFor; employeeId: string; date: string; time: string; slug: string; other?: string;
   temperature: Temperature; sugar: Sugar; ice: Ice; qty?: number; room?: string; guest?: string; guestCount?: number; key: string;
@@ -34,6 +35,8 @@ export type CoffeeAdminApi = {
   recap(query: RecapQuery): Promise<RecapData>;
   settings(): Promise<SettingsData>;
   saveSettings(input: CoffeeSettings): Promise<SettingsData & { message: string }>;
+  /** Sets or replaces the PIN GA (four digits) the tablet asks for when the guest menu book is left. */
+  saveGaPin(pin: string): Promise<{ message: string }>;
   /** The address of the file with the same filter (a plain download, no fetch). */
   exportHref(format: "csv" | "xlsx", query: RecapQuery): string;
 };
@@ -62,6 +65,10 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   async saveSettings(input) {
     const result = await adminRequest<SettingsData>(coffeeAdminApi.settings, { method: "PUT", body: JSON.stringify(input) });
     return { ...result.data!, message: result.message };
+  },
+  async saveGaPin(pin) {
+    const result = await adminRequest<{ gaPin: boolean }>(coffeeAdminApi.gaPin, { method: "PUT", body: JSON.stringify({ pin }) });
+    return { message: result.message };
   },
   exportHref: (format, query) => coffeeAdminApi.recapExport(format, filterOf(query)),
 };

@@ -132,6 +132,10 @@ Bila nama sudah dipakai orang lain, pemilik asli melihat "Nama ini sudah aktif d
 ke HR. Setiap klaim atas nama seseorang dikirim sebagai notifikasi ke HP orang itu.
 
 Tamu tidak punya akun atau tautan; semua lewat tablet GA. Keluar dari buku menu ke mode GA memakai PIN GA.
+**Keputusan PM 26 Nov 2026 (ditegaskan):** PIN GA = 4 angka, diatur pengelola di `/admin/coffee` → Pengaturan, disimpan
+hanya sebagai hash di server, diperiksa server (batas coba per akun tablet dan per alamat), tidak pernah dikirim ke
+browser. Selama PIN belum diatur, keluar memakai pertanyaan konfirmasi dan Beranda GA menampilkan pengingat. Mode tamu
+bertahan saat halaman dimuat ulang atau tombol kembali ditekan (tablet kembali ke buku menu, tanpa data GA).
 
 **Notifikasi push (PWA):** klaim baru → HR; pesanan rapat dari GA → HR; "Sudah dibeli" → pemesan/GA.
 Android Chrome lancar; iPhone hanya bila aplikasi dipasang ke layar utama (iOS 16.4+). Tiap orang
@@ -174,7 +178,7 @@ tamu/instansi), minuman (termasuk "Lainnya" + isian teks), suhu/gula/es; "klaim 
 - Ketiga prototype memakai data contoh bersama di browser (`src/components/coffee/prototype/store.ts`), jadi klaim dari
   HP dan pesanan GA muncul di antrean pengelola dan statusnya kembali ke HP/tablet, juga antar-tab.
 - Keputusan sementara di prototype (perlu dikonfirmasi): Kirim GA tanpa konfirmasi tambahan; keluar dari buku menu tamu
-  cukup konfirmasi (versi final pakai PIN GA?); Catat manual menolak simpan bila jatah habis; tamu dicatat atas nama PIC
+  cukup konfirmasi di prototipe (versi final: PIN GA, diputuskan 26 Nov 2026, lihat di atas); Catat manual menolak simpan bila jatah habis; tamu dicatat atas nama PIC
   dan masuk BU PIC.
 
 ## Prototype karyawan (25 November 2026)

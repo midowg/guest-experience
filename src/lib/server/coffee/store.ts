@@ -27,7 +27,7 @@ const known: Record<string, [number, string]> = {
   COFFEE_UNDO_EXPIRED: [409, "Sudah lewat batas waktu untuk mengurungkan."],
   COFFEE_NOT_FOUND: [404, "Pesanan tidak ditemukan. Muat ulang halaman."],
   COFFEE_INVALID: [422, "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi."],
-  COFFEE_KEY_REUSED: [409, "Kiriman ini sudah pernah diproses. Muat ulang halaman, lalu kirim lagi bila masih perlu."],
+  COFFEE_KEY_REUSED: [409, "Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu."],
   COFFEE_PARENT_CLOSED: [409, "Pesanan awal sudah tidak bisa ditambah. Buat pesanan baru."],
   COFFEE_NOT_MANUAL: [409, "Hanya catatan manual yang bisa dibatalkan."],
   COFFEE_ALREADY_CANCELLED: [409, "Catatan ini sudah dibatalkan."],
@@ -91,7 +91,7 @@ export function toMyOrder(order: QueueOrder, claimNo?: number): MyOrder {
 export function toMeetingOrder(order: QueueOrder): MeetingOrder {
   return {
     id: order.id, no: order.no, number: order.number, round: order.round, parentId: order.parentId, room: order.room, spot: order.spot, guest: order.guest,
-    guestCount: order.guestCount, status: order.status, rejectNote: order.rejectNote, orderedAt: order.orderedAt, items: order.items, sentBy: order.sentBy,
+    guestCount: order.guestCount, status: order.status, rejectNote: order.rejectNote, orderedAt: order.orderedAt, items: order.items, sentBy: order.sentBy, manual: order.manual,
     pic: { id: order.person.id, name: order.person.name }, processedLabel: order.processed?.label ?? "", processedAt: order.processed?.at ?? null,
   };
 }

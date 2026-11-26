@@ -89,7 +89,7 @@ export type MyOrder = Drinkline & {
 };
 
 /** A meeting order as GA's tablet shows it. */
-export type MeetingOrder = Pick<QueueOrder, "id" | "no" | "number" | "round" | "parentId" | "room" | "spot" | "guest" | "guestCount" | "status" | "rejectNote" | "orderedAt" | "items" | "sentBy"> & {
+export type MeetingOrder = Pick<QueueOrder, "id" | "no" | "number" | "round" | "parentId" | "room" | "spot" | "guest" | "guestCount" | "status" | "rejectNote" | "orderedAt" | "items" | "sentBy" | "manual"> & {
   pic: { id: string | null; name: string };
   processedLabel: string;
   processedAt: string | null;
@@ -103,7 +103,8 @@ export type CoffeePerson = { id: string; name: string; nickname: string; positio
 /** What the phone knows about its owner. */
 export type CoffeeMe = { id: string; name: string; group: QuotaGroup; quota: number; used: number; left: number; month: string };
 export type MyState = { me: CoffeeMe; orders: MyOrder[]; ga: boolean; pengelola: boolean };
-export type GaState = { today: MeetingOrder[]; people: Pick<CoffeePerson, "id" | "name" | "position" | "bu">[]; rooms: { name: string; spot: string }[] };
+/** `pin`: a PIN GA is set, so leaving the guest menu book asks for it (never the PIN itself). */
+export type GaState = { today: MeetingOrder[]; people: Pick<CoffeePerson, "id" | "name" | "position" | "bu">[]; rooms: { name: string; spot: string }[]; pin: boolean };
 export type QueueState = { waiting: QueueOrder[]; recent: QueueOrder[]; today: { diproses: number; selesai: number; ditolak: number }; now: string };
 
 /** One recap row: one drink (a line of three is three rows). */

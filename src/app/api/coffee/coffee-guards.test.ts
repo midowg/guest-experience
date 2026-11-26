@@ -32,13 +32,14 @@ const meeting = { room: "Vasuki Room", picId: PEOPLE.rina, items: [{ for: "tamu"
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
 const routes = async () => {
-  const [stateRoute, claims, one, gaStateRoute, gaMeetings] = await Promise.all([import("./state/route"), import("./claims/route"), import("./claims/[id]/route"), import("./ga/state/route"), import("./ga/meetings/route")]);
+  const [stateRoute, claims, one, gaStateRoute, gaMeetings, gaPinRoute] = await Promise.all([import("./state/route"), import("./claims/route"), import("./claims/[id]/route"), import("./ga/state/route"), import("./ga/meetings/route"), import("./ga/pin/route")]);
   return {
     state: () => stateRoute.GET(),
     claim: (body: unknown = claim, origin?: string) => claims.POST(send("/api/coffee/claims", "POST", body, origin)),
     cancel: (id: string = KEY, origin?: string) => one.DELETE(send(`/api/coffee/claims/${id}`, "DELETE", undefined, origin), params(id)),
     gaState: () => gaStateRoute.GET(),
     gaMeeting: (body: unknown = meeting, origin?: string) => gaMeetings.POST(send("/api/coffee/ga/meetings", "POST", body, origin)),
+    gaPin: (pin: unknown = "4821", origin?: string) => gaPinRoute.POST(send("/api/coffee/ga/pin", "POST", { pin }, origin)),
   };
 };
 const body = async (response: Response) => await response.json() as { ok: boolean; message: string; data?: Record<string, unknown>; fieldErrors?: Record<string, string[]> };
@@ -64,7 +65,7 @@ it("answers 401 as JSON without a session, on every route", async () => {
 it("refuses a write from another site", async () => {
   state.member = bagas;
   const all = await routes();
-  for (const call of [() => all.claim(claim, "https://evil.test"), () => all.cancel(KEY, "https://evil.test"), () => all.gaMeeting(meeting, "https://evil.test")]) {
+  for (const call of [() => all.claim(claim, "https://evil.test"), () => all.cancel(KEY, "https://evil.test"), () => all.gaMeeting(meeting, "https://evil.test"), () => all.gaPin("4821", "https://evil.test")]) {
     expect((await call()).status).toBe(403);
   }
   expect(db.rows("coffee_orders")).toEqual([]);
@@ -72,7 +73,7 @@ it("refuses a write from another site", async () => {
 
 it("keeps Mode GA for the GA group, Admin Booking and holders of the Coffee grant", async () => {
   const all = await routes();
-  for (const call of [all.gaState, all.gaMeeting]) {
+  for (const call of [all.gaState, all.gaMeeting, all.gaPin]) {
     const response = await call();
     expect(response.status).toBe(403);
     expect((await body(response)).message).toBe("Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee.");
@@ -104,11 +105,54 @@ it("answers 503 with the migration's name before it runs", async () => {
   state.member = bagas;
   db.state.migrated = false;
   const all = await routes();
-  for (const call of Object.values(all)) {
+  for (const [name, call] of Object.entries(all)) {
+    // The PIN GA does not exist before the migration: the tablet is told so, and leaves the book with a question.
+    if (name === "gaPin") continue;
     const response = await call();
     expect(response.status).toBe(503);
     expect((await body(response)).message).toBe("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
   }
+  const pin = await all.gaPin();
+  expect(pin.status).toBe(409);
+  expect((await body(pin)).message).toMatch(/^PIN GA belum diatur/);
+});
+
+// Audit F3-04: leaving the guest menu book. The server decides, says yes or no, and counts the tries.
+it("checks the PIN GA on the server: one answer for every wrong try, nothing of the PIN in any answer", async () => {
+  const { saveGaPin } = await import("@/lib/server/coffee/pin");
+  state.member = bagas;
+  const all = await routes();
+  const unset = await all.gaPin("4821");
+  expect(unset.status).toBe(409);
+  await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
+  expect((await body(await all.gaState())).data).toMatchObject({ pin: true });
+  const answers: string[] = [];
+  for (const wrong of ["0000", "482", "48211", "abcd", "", null, 4821, { $ne: "" }]) {
+    const response = await all.gaPin(wrong);
+    expect(response.status, String(wrong)).toBe(422);
+    const answer = await body(response);
+    expect(answer.fieldErrors).toBeUndefined();
+    answers.push(answer.message);
+  }
+  expect(new Set(answers)).toEqual(new Set(["PIN tidak cocok. Coba lagi."]));
+  const right = await all.gaPin("4821");
+  expect(right.status).toBe(200);
+  const said = JSON.stringify(await body(right)) + JSON.stringify((await body(await all.gaState())).data);
+  expect(said).not.toMatch(/4821|s1\$|ga_pin/);
+});
+
+it("stops trying PINs for one tablet account after ten tries in ten minutes, the right PIN included", async () => {
+  const { saveGaPin } = await import("@/lib/server/coffee/pin");
+  await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
+  state.member = bagas;
+  const all = await routes();
+  for (let n = 0; n < 10; n++) expect((await all.gaPin("0000")).status).toBe(422);
+  const late = await all.gaPin("4821");
+  expect(late.status).toBe(429);
+  expect((await body(late)).message).toBe("Terlalu sering dalam waktu singkat. Tunggu sepuluh menit lalu coba lagi.");
+  // Counted per person: another GA account on the same office address still gets its own tries.
+  state.member = { ...rina, roles: ["ga"] };
+  expect((await all.gaPin("4821")).status).toBe(200);
 });
 
 it("takes a claim, shows it, and lets its owner (only) cancel it", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleAlert, Coffee, MapPin, Plus } from "lucide-react";
+import { Check, CircleAlert, Coffee, KeyRound, MapPin, Plus } from "lucide-react";
 import { drinkLabel } from "@/lib/coffee/menu";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
 import { clock } from "../format";
@@ -8,18 +8,21 @@ import { FloorMap } from "./FloorMap";
 import { STATUS, canAddTo, countLabel, doneLine, roomStatuses, statusOf } from "./model";
 import css from "./ga.module.css";
 
+const NO_ROOM = "Tanpa ruangan";
+
 /**
  * Beranda GA: today's meeting orders (whoever sent them: the tablet is shared), and the floor plan
  * with the rooms that have orders, each in words as well as colour.
  */
-export function Home({ orders, rooms, onNew, onMore, onOpen }: {
-  orders: MeetingOrder[]; rooms: GaState["rooms"]; onNew: () => void; onMore: (order: MeetingOrder) => void; onOpen: (order: MeetingOrder) => void;
+export function Home({ orders, rooms, pin, onNew, onMore, onOpen }: {
+  orders: MeetingOrder[]; rooms: GaState["rooms"]; pin: boolean; onNew: () => void; onMore: (order: MeetingOrder) => void; onOpen: (order: MeetingOrder) => void;
 }) {
   const date = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(new Date());
   const statuses = roomStatuses(orders, rooms);
   const waiting = orders.filter(order => order.status === "diproses").length;
   const listed = new Set(rooms.map(room => room.name));
-  const others = [...new Set(orders.filter(order => !order.spot && !listed.has(order.room)).map(order => order.room))];
+  // A record made by hand may have no room at all: it is listed as "Tanpa ruangan", never as a nameless row.
+  const others = [...new Set(orders.filter(order => !order.spot && !listed.has(order.room)).map(order => order.room || NO_ROOM))];
   return (
     <div className={css.home}>
       <section className={css.homeMain}>
@@ -31,6 +34,9 @@ export function Home({ orders, rooms, onNew, onMore, onOpen }: {
           </div>
           <button type="button" className={`${css.primary} ${css.big}`} onClick={onNew}><Plus aria-hidden size={24} />Pesanan baru</button>
         </div>
+        {!pin && (
+          <p className={css.hintBar} role="note"><KeyRound aria-hidden size={18} /><span>PIN GA belum diatur — minta pengelola mengaturnya di Pengaturan. Sampai itu, keluar dari buku menu tamu hanya lewat pertanyaan.</span></p>
+        )}
         {orders.length === 0 ? (
           <div className={css.emptyState}>
             <Coffee aria-hidden size={32} />
@@ -55,7 +61,7 @@ export function Home({ orders, rooms, onNew, onMore, onOpen }: {
         <ul className={css.roomList} aria-label="Status per ruangan">
           {[...rooms.map(room => room.name), ...others].map(name => {
             const spot = rooms.find(room => room.name === name)?.spot;
-            const status = spot ? statuses[spot] : statusOf(orders.filter(order => order.room === name));
+            const status = spot ? statuses[spot] : statusOf(orders.filter(order => (order.room || NO_ROOM) === name));
             return (
               <li key={name}>
                 <span>{name}</span>
@@ -74,7 +80,7 @@ function MeetingCard({ order, more, onMore, onOpen }: { order: MeetingOrder; mor
   return (
     <li className={css.card}>
       <div className={css.cardHead}>
-        <span className={css.cardRoom}><MapPin aria-hidden size={18} /><strong>{order.room}</strong></span>
+        <span className={css.cardRoom}><MapPin aria-hidden size={18} /><strong>{order.room || NO_ROOM}</strong></span>
         <span className={css.pill} data-tone={status.tone}>{status.label}</span>
       </div>
       <dl className={css.facts}>
@@ -87,14 +93,14 @@ function MeetingCard({ order, more, onMore, onOpen }: { order: MeetingOrder; mor
       </ul>
       <p className={css.cardStatus} data-tone={status.tone}>
         {order.status === "selesai" ? <Check aria-hidden size={16} /> : order.status === "diproses" ? <span className={css.dot} aria-hidden /> : <CircleAlert aria-hidden size={16} />}
-        {doneLine(order)}
+        {order.manual ? `Dicatat manual oleh ${order.processedLabel || "pengelola"}` : doneLine(order)}
       </p>
       {order.status === "ditolak" && order.rejectNote && <p className={css.cardReason}>{order.rejectNote}</p>}
       <div className={css.cardFoot}>
         <span className={css.mutedSmall}>#{order.no} · {clock(order.orderedAt)}{order.round > 1 ? ` · tambahan ke-${order.round - 1}` : ""}</span>
         <span className={css.row}>
-          <button type="button" className={css.ghost} onClick={onOpen} aria-label={`Status #${order.no} ${order.room}`}>Status</button>
-          <button type="button" className={css.secondary} onClick={onMore} aria-label={`${more ? "Tambah lagi" : "Pesan pengganti"} untuk #${order.no} ${order.room}`}><Plus aria-hidden size={18} />{more ? "Tambah lagi" : "Pesan pengganti"}</button>
+          <button type="button" className={css.ghost} onClick={onOpen} aria-label={`Status #${order.no} ${order.room || NO_ROOM}`}>Status</button>
+          <button type="button" className={css.secondary} onClick={onMore} aria-label={`${more ? "Tambah lagi" : order.manual ? "Pesanan baru" : "Pesan pengganti"} untuk #${order.no} ${order.room || NO_ROOM}`}><Plus aria-hidden size={18} />{more ? "Tambah lagi" : order.manual ? "Pesanan baru" : "Pesan pengganti"}</button>
         </span>
       </div>
     </li>

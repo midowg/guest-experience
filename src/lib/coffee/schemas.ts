@@ -124,6 +124,8 @@ export const manualSchema = z.object({
 export type ManualInput = z.infer<typeof manualSchema>;
 
 const quota = (label: string) => z.number(`Jatah ${label} berupa angka.`).int(`Jatah ${label} berupa angka bulat.`).min(0, `Jatah ${label} minimal 0.`).max(60, `Jatah ${label} paling banyak 60.`);
+/** PIN GA: exactly four digits, as text (a leading zero counts). */
+export const gaPinSchema = z.object({ pin: z.string("Isi PIN 4 angka.").regex(/^\d{4}$/, "PIN berupa 4 angka.") });
 export const settingsSchema = z.object({ karyawan: quota("karyawan"), ga: quota("Tim GA"), intern: quota("intern") });
 
 /** Rekap's filter, read from the address: a span of WIB days (a year at most), and what to show. */
