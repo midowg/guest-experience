@@ -1,0 +1,251 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { meetingSchema } from "@/lib/coffee/schemas";
+import type { Member } from "../pra-wam/session";
+import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
+import { forgetMenu } from "./store";
+
+/* Mode GA's meeting orders against the in-memory stand-in (fake-db.ts). Made-up people. */
+let db = fakeDb();
+vi.mock("server-only", () => ({}));
+vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => db.client }));
+
+const { gaMenu, gaState, submitMeeting } = await import("./meetings");
+const bagas = { id: PEOPLE.bagas, name: "Contoh Bagas Saputra", nickname: "Bagas", category: "dw", roles: [] } as unknown as Member;
+const now = new Date("2026-11-25T03:00:00Z");
+const key = (n: number) => `bbbbbbbb-bbbb-4bbb-8bbb-${String(n).padStart(12, "0")}`;
+const drink = { slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal" } as const;
+const order = (n: number, more: object = {}) => meetingSchema.parse({
+  room: "Kaliya Limasan", picId: PEOPLE.rina, guest: "Contoh PT Sinar", guestCount: 5, key: key(n),
+  items: [{ for: "tamu" as const, ...drink, qty: 3 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, slug: "americano", qty: 1 }], ...more,
+});
+
+beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); db.state.now = now; });
+
+describe("a meeting order", () => {
+  it("is one order with all its drinks, under the PIC, with no quota", async () => {
+    const { order: sent } = await submitMeeting(bagas, order(1), now);
+    expect(sent).toMatchObject({ no: "T-0113", round: 1, room: "Kaliya Limasan", spot: "limasan", guest: "Contoh PT Sinar", guestCount: 5, status: "diproses", sentBy: "Bagas", pic: { id: PEOPLE.rina, name: "Contoh Rina Putri" } });
+    expect(sent.items.map(item => [item.for, item.qty, item.slug, item.person?.name ?? null])).toEqual([["tamu", 3, "kopi-susu", null], ["tim", 1, "americano", "Contoh Fajar Nugroho"]]);
+    expect(sent.items[1].person).toMatchObject({ group: "intern", bu: "CoE" });
+    expect(db.rows("coffee_orders")[0]).toMatchObject({ kind: "rapat", employee_id: PEOPLE.rina, person_bu: "WNS", created_by: PEOPLE.bagas });
+    // The intern's quota of two is untouched by sixty team drinks.
+    for (let n = 2; n <= 4; n++) await submitMeeting(bagas, order(n, { items: [{ for: "tim" as const, personId: PEOPLE.fajar, ...drink, qty: 20 }] }), now);
+    expect(db.rows("coffee_orders")).toHaveLength(4);
+  });
+
+  it("keeps the name a guest gave on that drink: for the tablet, the pengelola's queue and the copied text", async () => {
+    const named = order(1, { items: [{ for: "tamu" as const, ...drink, qty: 1, guestName: "  Pak Budi " }, { for: "tamu" as const, ...drink, slug: "americano", qty: 2 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, qty: 1, guestName: "Bukan tamu" }] });
+    const { order: sent } = await submitMeeting(bagas, named, now);
+    expect(sent.items.map(item => [item.for, item.guestName])).toEqual([["tamu", "Pak Budi"], ["tamu", undefined], ["tim", undefined]]);
+    expect(db.rows("coffee_order_items").map(row => row.guest_name)).toEqual(["Pak Budi", null, null]);
+    expect((await gaState(bagas, now)).today[0].items[0].guestName).toBe("Pak Budi");
+    const { queue } = await import("./queue");
+    const waiting = (await queue({ employeeId: PEOPLE.dewi, label: "Dewi" }, now)).waiting[0];
+    expect(waiting.items[0]).toMatchObject({ for: "tamu", guestName: "Pak Budi" });
+    const { orderText } = await import("@/lib/coffee/copy-text");
+    expect(orderText(waiting)).toContain("- 1× Kopi Susu · Panas · gula Normal (Tamu · Pak Budi)");
+  });
+
+  it("is refused by the database when a guest's name is longer than forty letters, however it got past the form", async () => {
+    const { error } = await db.client.rpc("coffee_submit_meeting", {
+      p_order: { pic_id: PEOPLE.rina, room: "Vasuki Room", actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: now.toISOString() },
+      p_items: [{ for: "tamu", ...drink, qty: 1, guest_name: "x".repeat(41) }], p_key: key(9),
+    });
+    expect(error?.message).toBe("COFFEE_INVALID");
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+  });
+
+  it("keeps the number and takes the next round for Tambah lagi", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    const second = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);
+    const third = await submitMeeting(bagas, order(3, { parentId: second.order.id }), now);
+    expect([second.order.no, third.order.no]).toEqual(["T-0113-2", "T-0113-3"]);
+    expect([second.order.parentId, third.order.parentId]).toEqual([first.order.id, first.order.id]);
+    expect((await submitMeeting(bagas, order(4), now)).order.no).toBe("T-0114");
+    await expect(submitMeeting(bagas, order(5, { parentId: key(99) }), now)).rejects.toMatchObject({ status: 404 });
+  });
+
+  // Audit S-1: the PIC, room, guest and guest count of a next round are the first round's, whatever is sent.
+  it("takes the PIC, room, guest and count of Tambah lagi from the first round, not from the sender", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    const second = await submitMeeting(bagas, order(2, { parentId: first.order.id, picId: PEOPLE.dewi, room: "Vasuki Room", guest: "Contoh Orang Lain", guestCount: 99 }), now);
+    expect(second.order).toMatchObject({ no: "T-0113-2", room: "Kaliya Limasan", spot: "limasan", guest: "Contoh PT Sinar", guestCount: 5, pic: { id: PEOPLE.rina, name: "Contoh Rina Putri" } });
+    expect(db.rows("coffee_orders")[1]).toMatchObject({ employee_id: PEOPLE.rina, person_bu: "WNS", person_group: "karyawan", room_spot: "limasan" });
+    // Sent without a guest count, and with a PIC who has left meanwhile: still the first round's.
+    const third = await submitMeeting(bagas, order(3, { parentId: second.order.id, picId: PEOPLE.keluar, guest: undefined, guestCount: undefined }), now);
+    expect(third.order).toMatchObject({ no: "T-0113-3", guest: "Contoh PT Sinar", guestCount: 5, pic: { id: PEOPLE.rina } });
+  });
+
+  it("refuses Tambah lagi on a meeting that was refused, is not of today, or is not a meeting order from the tablet", async () => {
+    const closed = { status: 409, message: "Pesanan awal sudah tidak bisa ditambah. Buat pesanan baru." };
+    const first = await submitMeeting(bagas, order(1), now);
+    const second = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);
+    Object.assign(db.rows("coffee_orders")[0], { status: "ditolak", reject_note: "Dobel." });
+    await expect(submitMeeting(bagas, order(3, { parentId: first.order.id }), now)).rejects.toMatchObject(closed);
+    // The round asked for is fine, but its first round is the refused one.
+    await expect(submitMeeting(bagas, order(4, { parentId: second.order.id }), now)).rejects.toMatchObject(closed);
+    Object.assign(db.rows("coffee_orders")[0], { status: "selesai", reject_note: null });
+    expect((await submitMeeting(bagas, order(5, { parentId: first.order.id }), now)).order.no).toBe("T-0113-3");
+    // 25 Nov 17.00 UTC is 26 Nov 00.00 WIB: yesterday's meeting, and last month's, take no more rounds.
+    const tomorrow = new Date("2026-11-25T17:00:00Z");
+    db.state.now = tomorrow;
+    await expect(submitMeeting(bagas, order(6, { parentId: first.order.id }), tomorrow)).rejects.toMatchObject(closed);
+    db.state.now = new Date("2026-12-20T03:00:00Z");
+    await expect(submitMeeting(bagas, order(7, { parentId: first.order.id }), db.state.now)).rejects.toMatchObject(closed);
+    db.state.now = now;
+    // A record made by hand, and a claim, are not meetings to add to.
+    Object.assign(db.rows("coffee_orders")[0], { manual: true });
+    await expect(submitMeeting(bagas, order(8, { parentId: first.order.id }), now)).rejects.toMatchObject(closed);
+    Object.assign(db.rows("coffee_orders")[0], { manual: false, kind: "klaim" });
+    await expect(submitMeeting(bagas, order(9, { parentId: first.order.id }), now)).rejects.toMatchObject({ status: 404 });
+    expect(db.rows("coffee_orders")).toHaveLength(3);
+  });
+
+  it("is one order when the same key is sent twice", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    const again = await submitMeeting(bagas, order(1), now);
+    expect(again.order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+  });
+
+  it("is one order when two sendings of one key meet at the unique index, and a key of another kind is refused", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    db.state.race = true;
+    expect((await submitMeeting(bagas, order(1), now)).order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    db.state.race = false;
+    await db.client.rpc("coffee_submit_claim", { p_employee: PEOPLE.rina, p_item: drink, p_at: now.toISOString(), p_manual: false, p_actor: PEOPLE.rina, p_actor_label: "Rina", p_key: key(2) });
+    await expect(submitMeeting(bagas, order(2), now)).rejects.toMatchObject({ status: 409, message: expect.stringContaining("sudah pernah diproses") });
+    db.state.race = true;
+    await expect(submitMeeting(bagas, order(2), now)).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders").filter(row => row.kind === "rapat")).toHaveLength(1);
+  });
+
+  // Audit F3-02: drinks added after a lost answer must never be answered with "already sent".
+  it("refuses a key that comes back with other contents, and still answers the same contents with the first order", async () => {
+    const reused = { status: 409, message: "Kiriman ini sudah pernah diproses atau isinya berubah. Periksa pesanan, lalu kirim lagi bila masih perlu." };
+    const first = await submitMeeting(bagas, order(1), now);
+    expect((await submitMeeting(bagas, order(1), new Date(now.getTime() + 60_000))).order.id).toBe(first.order.id);
+    const more = [{ for: "tamu" as const, ...drink, qty: 3 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, slug: "americano", qty: 1 }, { for: "tamu" as const, ...drink, slug: "kopi-hitam", qty: 2 }];
+    await expect(submitMeeting(bagas, order(1, { items: more }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, ...drink, qty: 4 }, more[1]] }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { room: "Vasuki Room" }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { picId: PEOPLE.dewi }), now)).rejects.toMatchObject(reused);
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, ...drink, qty: 3, guestName: "Budi" }, more[1]] }), now)).rejects.toMatchObject(reused);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+    expect(db.rows("coffee_order_items")).toHaveLength(2);
+    expect(db.rows("coffee_orders")[0].request_print).toMatch(/^[0-9a-f]{64}$/);
+    // Two sendings of one key that meet at the unique index: the same rule.
+    db.state.race = true;
+    expect((await submitMeeting(bagas, order(1), now)).order.id).toBe(first.order.id);
+    await expect(submitMeeting(bagas, order(1, { items: more }), now)).rejects.toMatchObject(reused);
+    db.state.race = false;
+    // A next round: the fingerprint is of its parent and drinks, whatever room the tablet sent along.
+    const round = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);
+    expect((await submitMeeting(bagas, order(2, { parentId: first.order.id, room: "Apa saja" }), now)).order.id).toBe(round.order.id);
+    await expect(submitMeeting(bagas, order(2, { parentId: first.order.id, items: more }), now)).rejects.toMatchObject(reused);
+  });
+
+  it("is refused by the database when its time lies ahead", async () => {
+    await expect(submitMeeting(bagas, order(1), new Date(now.getTime() + 6 * 60_000))).rejects.toMatchObject({ status: 422, message: "Isian pesanan tidak sesuai. Muat ulang halaman lalu coba lagi." });
+  });
+
+  it("needs an active PIC and active team members; a typed room has no spot", async () => {
+    await expect(submitMeeting(bagas, order(1, { picId: PEOPLE.keluar }), now)).rejects.toMatchObject({ status: 422, message: "Karyawan tidak ditemukan atau sudah tidak aktif." });
+    await expect(submitMeeting(bagas, order(2, { items: [{ for: "tim" as const, personId: PEOPLE.keluar, ...drink, qty: 1 }] }), now)).rejects.toMatchObject({ status: 422 });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+    const typed = await submitMeeting(bagas, order(3, { room: "Teras belakang", guest: undefined, guestCount: undefined }), now);
+    expect(typed.order).toMatchObject({ room: "Teras belakang", spot: null, guest: "", guestCount: null });
+  });
+});
+
+describe("the tablet's home", () => {
+  it("shows today's meeting orders (WIB), the active people and the rooms, and no claims", async () => {
+    await submitMeeting(bagas, order(1), now);
+    await submitMeeting(bagas, order(2), new Date("2026-11-24T16:59:00Z"));
+    db.rows("coffee_orders").push({ ...db.rows("coffee_orders")[0], id: "k1", kind: "klaim" });
+    const state = await gaState(bagas, now);
+    expect(state.today.map(item => item.no)).toEqual(["T-0113"]);
+    expect(state.people.map(person => person.name)).toEqual(["Contoh Bagas Saputra", "Contoh Dewi Lestari", "Contoh Fajar Nugroho", "Contoh Rina Putri"]);
+    expect(Object.keys(state.people[0]).sort()).toEqual(["bu", "id", "name", "position"]);
+    expect(state.rooms.map(room => room.spot)).toEqual(["ananta", "limasan", "vasuki", "communal"]);
+    // Whether a PIN GA is set, and nothing else of it; a record made by hand says so (it cannot be added to).
+    expect(state.pin).toBe(false);
+    expect(state.today[0].manual).toBe(false);
+    process.env.RATE_LIMIT_SECRET = "x".repeat(40);
+    const { saveGaPin } = await import("./pin");
+    await saveGaPin("4821", { employeeId: PEOPLE.dewi, label: "Dewi" });
+    Object.assign(db.rows("coffee_orders")[0], { manual: true });
+    const next = await gaState(bagas, now);
+    expect(next.pin).toBe(true);
+    expect(next.today[0].manual).toBe(true);
+    expect(JSON.stringify(next)).not.toMatch(/4821|s1\$|ga_pin/);
+  });
+
+  it("answers 503 with the migration's name before it runs", async () => {
+    db.state.migrated = false;
+    await expect(gaState(bagas, now)).rejects.toMatchObject({ status: 503, message: expect.stringContaining("202612010001_coffee.sql") });
+    await expect(submitMeeting(bagas, order(1), now)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+describe("F6: what the team and guests are asked, and the menu", () => {
+  const ask = (more: object) => Object.assign(db.rows("coffee_settings")[0], more);
+  const lines = () => db.rows("coffee_order_items").map(row => [row.for_whom, row.drink_name, row.temperature, row.sugar, row.ice]);
+
+  it("hands the tablet the menu and both audiences' options; the menu book gets those and nothing else", async () => {
+    const state = await gaState(bagas, now);
+    expect(state.options).toEqual({ tim: { suhu: true, gula: true, es: true }, tamu: { suhu: true, gula: true, es: true } });
+    expect(state.menu).toHaveLength(15);
+    const book = await gaMenu();
+    expect(Object.keys(book).sort()).toEqual(["menu", "options"]);
+    expect(book.options).not.toHaveProperty("klaim");
+  });
+
+  it("keeps on each line only what its own audience is asked", async () => {
+    ask({ opt_tim_suhu: false, opt_tim_gula: false, opt_tim_es: false, opt_tamu_es: false });
+    const { order: sent } = await submitMeeting(bagas, order(1, { items: [
+      { for: "tamu" as const, slug: "kopi-susu", temperature: "es", sugar: "Sedikit", ice: "Ekstra", qty: 2 },
+      { for: "tim" as const, personId: PEOPLE.fajar, slug: "americano", temperature: "es", sugar: "Tanpa", ice: "Ekstra", qty: 1 },
+    ] }), now);
+    expect(lines()).toEqual([["tamu", "Kopi Susu", "es", "Sedikit", null], ["tim", "Americano", null, null, null]]);
+    expect(sent.items.map(item => [item.name, item.temperature, item.sugar, item.ice])).toEqual([["Kopi Susu", "es", "Sedikit", null], ["Americano", null, null, null]]);
+    expect(sent.items[0].photo).toMatch(/kopi-susu\.jpg$/);
+  });
+
+  it("asks for an option that is on, naming the line; a hot drink carries no ice", async () => {
+    await expect(submitMeeting(bagas, order(1, { items: [{ for: "tamu" as const, slug: "kopi-susu", sugar: "Normal", qty: 1 }, { for: "tamu" as const, slug: "kopi-susu", temperature: "panas", qty: 1 }] }), now))
+      .rejects.toMatchObject({ status: 422, fieldErrors: { "items.0.temperature": ["Pilih panas atau es."] } });
+    await expect(submitMeeting(bagas, order(2, { items: [{ for: "tamu" as const, slug: "espresso", temperature: "es", sugar: "Normal", qty: 1 }] }), now))
+      .rejects.toMatchObject({ status: 422, fieldErrors: { "items.0.temperature": ["Espresso hanya tersedia panas."] } });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+    await submitMeeting(bagas, order(3), now);
+    expect(lines()).toEqual([["tamu", "Kopi Susu", "panas", "Normal", null], ["tim", "Americano", "panas", "Normal", null]]);
+  });
+
+  it("refuses a hidden or unknown drink, and 'lainnya', for the whole order", async () => {
+    Object.assign(db.rows("coffee_drinks").find(item => item.slug === "americano")!, { active: false });
+    await expect(submitMeeting(bagas, order(1), now)).rejects.toMatchObject({ status: 409, message: "Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain." });
+    await expect(submitMeeting(bagas, order(2, { items: [{ for: "tamu" as const, ...drink, slug: "lainnya", qty: 1 }] }), now)).rejects.toMatchObject({ status: 409 });
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+  });
+
+  it("the same sending again is the same order even after Pengaturan changed what is asked", async () => {
+    const first = await submitMeeting(bagas, order(1), now);
+    ask({ opt_tamu_gula: false, opt_tamu_suhu: false, opt_tamu_es: false });
+    const again = await submitMeeting(bagas, order(1), now);
+    expect(again.order.id).toBe(first.order.id);
+    expect(db.rows("coffee_orders")).toHaveLength(1);
+  });
+
+  it("before migration 202612020001: every option for both, the code's menu, the old columns", async () => {
+    db.state.menuMigrated = false;
+    db.state.tables.coffee_settings = [{ id: 1, quota_karyawan: 4, quota_ga: 2, quota_intern: 2 }];
+    delete db.state.tables.coffee_drinks;
+    forgetMenu(true);
+    const { order: sent } = await submitMeeting(bagas, order(1), now);
+    expect(sent.items.map(item => [item.name, item.temperature, item.sugar])).toEqual([["Kopi Susu", "panas", "Normal"], ["Americano", "panas", "Normal"]]);
+    expect(db.rows("coffee_order_items")[0]).not.toHaveProperty("drink_name");
+    expect((await gaState(bagas, now)).options.tamu).toEqual({ suhu: true, gula: true, es: true });
+  });
+});

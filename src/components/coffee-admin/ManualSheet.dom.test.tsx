@@ -1,0 +1,293 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { AdminApiError } from "@/components/admin/shared/api";
+import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MONTHLY_QUOTA, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
+import { ManualSheet, newKey } from "./ManualSheet";
+import { createSampleServer } from "./sample";
+import css from "./coffee-admin.module.css";
+
+/*
+ * Catat manual (25 Nov 2026): each field says what is wrong under itself, a full quota refuses a
+ * claim (the line under the name, and the server's 409), and a guest's or team's drink is sent
+ * with its room and count. Made-up people only.
+ */
+const NOW = Date.parse("2026-11-25T03:00:00.000Z");
+
+/** `options`: what each kind is asked (Pengaturan). The tests below ask everything of everyone unless they say otherwise; the F6 tests at the end use the real defaults. */
+function open(more: { options?: CoffeeOptions | null; menu?: Drink[] | null } = {}) {
+  const server = createSampleServer();
+  const api = { ...server.api, manual: vi.fn(server.api.manual) };
+  const onSaved = vi.fn(), onClose = vi.fn();
+  // The make-believe server asks what the sheet asks (it settles a record with its own options, like the real one).
+  void server.api.saveOptions("options" in more && more.options ? more.options : LEGACY_OPTIONS);
+  render(<div className={css.root}><ManualSheet api={api} now={NOW} actorName="Dewi" settings={{ ...MONTHLY_QUOTA }} menu={"menu" in more ? more.menu : DRINKS} options={"options" in more ? more.options : LEGACY_OPTIONS} onClose={onClose} onSaved={onSaved} /></div>);
+  return { server, api, onSaved, onClose };
+}
+async function pick(label: string, word: string, name: RegExp) {
+  const input = screen.getByRole("combobox", { name: label });
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: word } });
+  fireEvent.mouseDown(await screen.findByRole("option", { name }));
+}
+const save = () => fireEvent.click(screen.getByRole("button", { name: /Simpan/ }));
+
+beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(NOW)); });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+it("starts at now (WIB), as a claim, and may not go further back than the start of last month", () => {
+  open();
+  const day = screen.getByLabelText("Tanggal") as HTMLInputElement;
+  expect(day.value).toBe("2026-11-25");
+  expect(day.min).toBe("2026-10-01");
+  expect(day.max).toBe("2026-11-25");
+  expect((screen.getByLabelText("Jam") as HTMLInputElement).value).toBe("10:00");
+  expect((screen.getByRole("radio", { name: "Klaim" }) as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByRole("dialog").textContent).toMatch(/Tersimpan sebagai selesai dan ditandai “Dicatat manual”/);
+});
+
+it("holds the form back with what is wrong under each field", async () => {
+  const { api } = open();
+  fireEvent.change(screen.getByLabelText("Minuman"), { target: { value: "lainnya" } });
+  fireEvent.change(screen.getByLabelText("Jam"), { target: { value: "23:30" } });
+  save();
+  expect(screen.getByText("Pilih nama karyawan.")).toBeTruthy();
+  expect(screen.getByText("Tulis nama minumannya.")).toBeTruthy();
+  expect(screen.getByText("Tanggal dan jam tidak boleh di masa depan.")).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: "Nama karyawan" }).getAttribute("aria-invalid")).toBe("true");
+  expect(screen.getByLabelText("Nama minuman").getAttribute("aria-invalid")).toBe("true");
+  expect(api.manual).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  expect(screen.getByText("Pilih PIC tamu.")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Tanggal"), { target: { value: "2026-09-30" } });
+  expect(screen.getByText("Catat manual paling lama sampai awal bulan lalu.")).toBeTruthy();
+});
+
+it("offers only the temperatures the drink comes in", () => {
+  open();
+  fireEvent.change(screen.getByLabelText("Minuman"), { target: { value: "espresso" } });
+  expect((screen.getByRole("radio", { name: "Es" }) as HTMLInputElement).disabled).toBe(true);
+  expect(screen.queryByRole("group", { name: "Takaran es" })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Minuman"), { target: { value: "cucumber-ice" } });
+  expect((screen.getByRole("radio", { name: "Es" }) as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByRole("group", { name: "Takaran es" })).toBeTruthy();
+});
+
+it("saves a claim as done and says which claim of the month it is", async () => {
+  const { api, onSaved } = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  expect((await screen.findByRole("status")).textContent).toBe("Ini klaim ke-2 dari 4 bulan November.");
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(api.manual).toHaveBeenCalledWith(expect.objectContaining({ kind: "klaim", employeeId: "p-arief", date: "2026-11-25", time: "10:00", slug: "kopi-susu", temperature: "panas", sugar: "Normal" }));
+  expect(api.manual.mock.calls[0][0]).not.toHaveProperty("room");
+  const done = onSaved.mock.calls[0][0];
+  expect(done.message).toBe("Arief · Kopi Susu · klaim ke-2 dari 4.");
+  expect(done.order).toMatchObject({ status: "selesai", manual: true });
+});
+
+it("refuses a claim when that month's quota is full, and points to Tim · rapat", async () => {
+  const { api, onSaved } = open();
+  await pick("Nama karyawan", "maya", /Maya Lestari/);
+  expect((await screen.findByRole("status")).textContent).toBe("Jatah November Maya sudah habis (4 dari 4). Bila untuk rapat, pilih Tim · rapat.");
+  save();
+  expect(api.manual).not.toHaveBeenCalled();
+  expect(onSaved).not.toHaveBeenCalled();
+});
+
+it("shows the server's refusal when the quota filled up in the meantime", async () => {
+  const { api, onSaved } = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  await screen.findByRole("status");
+  api.manual.mockRejectedValueOnce(new AdminApiError("Jatah bulan ini sudah habis.", undefined, 409));
+  save();
+  expect((await screen.findByRole("alert")).textContent).toBe("Jatah bulan ini sudah habis.");
+  expect(onSaved).not.toHaveBeenCalled();
+  expect((screen.getByRole("button", { name: /Simpan/ }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("puts the server's field errors under their fields", async () => {
+  const { api } = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  api.manual.mockRejectedValueOnce(new AdminApiError("Periksa kembali isian formulir.", { date: ["Catat manual paling lama sampai awal bulan lalu."] }, 422));
+  save();
+  await waitFor(() => expect(screen.getByText("Catat manual paling lama sampai awal bulan lalu.")).toBeTruthy());
+  expect(screen.getByLabelText("Tanggal").getAttribute("aria-invalid")).toBe("true");
+});
+
+it("sends a guest's drinks with the PIC, the room, the guest and the count", async () => {
+  const { api, onSaved } = open();
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  await pick("PIC tamu", "sari", /Sari Wulandari/);
+  fireEvent.change(screen.getByLabelText(/Tamu\/instansi/), { target: { value: "PT Mitra (contoh)" } });
+  fireEvent.change(screen.getByLabelText(/Jumlah tamu/), { target: { value: "4" } });
+  fireEvent.change(screen.getByLabelText("Ruangan"), { target: { value: "Vasuki Room" } });
+  fireEvent.change(screen.getByLabelText("Jumlah"), { target: { value: "0" } });
+  save();
+  expect(screen.getByText("Jumlah 1 sampai 50.")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Jumlah"), { target: { value: "4" } });
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(api.manual).toHaveBeenCalledWith(expect.objectContaining({ kind: "tamu", employeeId: "p-sari", qty: 4, room: "Vasuki Room", guest: "PT Mitra (contoh)", guestCount: 4 }));
+  expect(onSaved.mock.calls[0][0].message).toBe("Tamu · 4× Kopi Susu · PIC Sari.");
+  expect(within(screen.getByRole("dialog")).queryByRole("status")).toBeNull(); // no quota line for a guest
+});
+
+// Audit B-2: one key per opened sheet, so a second Simpan (a slow network, a retry) is the same record.
+it("sends one key per opened sheet, a new one for the next sheet, also where randomUUID is missing", async () => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const { api, onSaved } = open();
+  api.manual.mockRejectedValueOnce(new AdminApiError("Layanan belum dapat memproses permintaan.", undefined, 503));
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(api.manual).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByRole("button", { name: /Simpan/ }).hasAttribute("disabled")).toBe(false));
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const [first, second] = api.manual.mock.calls.map(call => call[0].key);
+  expect(first).toMatch(uuid);
+  expect(second).toBe(first);
+  cleanup();
+  const next = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(next.api.manual).toHaveBeenCalledTimes(1));
+  expect(next.api.manual.mock.calls[0][0].key).toMatch(uuid);
+  expect(next.api.manual.mock.calls[0][0].key).not.toBe(first);
+
+  // Plain http (an office address) has no crypto.randomUUID: the key is still a fresh uuid each time.
+  vi.stubGlobal("crypto", {});
+  const drawn = new Set(Array.from({ length: 50 }, () => newKey()));
+  vi.unstubAllGlobals();
+  expect(drawn.size).toBe(50);
+  for (const key of drawn) expect(key).toMatch(uuid);
+});
+
+it("answers with the first record when the same sheet is sent twice (the make-believe server, as the real one)", async () => {
+  const server = createSampleServer();
+  const body = { kind: "klaim" as const, employeeId: "p-arief", date: "2026-11-25", time: "09:00", slug: "kopi-susu", temperature: "panas" as const, sugar: "Normal" as const, ice: "Normal" as const, key: "dddddddd-dddd-4ddd-8ddd-000000000001" };
+  const first = await server.api.manual(body);
+  const again = await server.api.manual({ ...body, slug: "americano" });
+  expect(again.order.id).toBe(first.order.id);
+  expect(server.orders.filter(order => order.manual)).toHaveLength(1);
+});
+
+// Audit F1-07: typed input is not thrown away by Escape, a press outside, the X or Batal.
+it("asks before throwing away what was typed, and closes at once when nothing was", async () => {
+  const empty = open();
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(empty.onClose).toHaveBeenCalledTimes(1);
+  cleanup();
+
+  const { onClose } = open();
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  const sheet = screen.getByRole("dialog", { name: "Catat manual" });
+  for (const close of [
+    () => fireEvent.keyDown(document.body, { key: "Escape" }),
+    () => fireEvent.mouseDown(sheet.parentElement!),
+    () => fireEvent.click(within(sheet).getByRole("button", { name: "Tutup" })),
+    () => fireEvent.click(within(sheet).getByRole("button", { name: "Batal" })),
+  ]) {
+    close();
+    const question = screen.getByRole("dialog", { name: "Buang isian catatan ini?" });
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(within(question).getByRole("button", { name: "Lanjut mengisi" }));
+    expect(screen.queryByRole("dialog", { name: "Buang isian catatan ini?" })).toBeNull();
+    expect((screen.getByRole("combobox", { name: "Nama karyawan" }) as HTMLInputElement).value).toMatch(/Arief Hidayat/);
+  }
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Buang isian catatan ini?" })).getByRole("button", { name: "Buang isian" }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it("does not close while it is saving", async () => {
+  const { api, onClose, onSaved } = open();
+  let release!: () => void;
+  const real = api.manual.getMockImplementation()!;
+  api.manual.mockImplementationOnce(async body => { await new Promise<void>(resolve => { release = resolve; }); return real(body); });
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(screen.getByRole("button", { name: /Menyimpan/ })).toBeTruthy());
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  fireEvent.mouseDown(screen.getByRole("dialog", { name: "Catat manual" }).parentElement!);
+  expect(screen.queryByRole("dialog", { name: "Buang isian catatan ini?" })).toBeNull();
+  expect(onClose).not.toHaveBeenCalled();
+  expect((screen.getByRole("button", { name: "Batal" }) as HTMLButtonElement).disabled).toBe(true);
+  release();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+});
+
+// Audit F1-08: without crypto.randomUUID the key is drawn from getRandomValues, never a constant.
+it("draws the key from getRandomValues where randomUUID is missing", () => {
+  const getRandomValues = vi.fn((bytes: Uint8Array) => { for (let index = 0; index < bytes.length; index++) bytes[index] = (index * 37 + getRandomValues.mock.calls.length * 11) % 256; return bytes; });
+  vi.stubGlobal("crypto", { getRandomValues });
+  const [first, second] = [newKey(), newKey()];
+  vi.unstubAllGlobals();
+  expect(getRandomValues).toHaveBeenCalledTimes(2);
+  for (const key of [first, second]) expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(first).not.toBe(second);
+  expect(first).not.toBe("00000000-0000-4000-8000-000000000000");
+});
+
+// Audit F1-20: the guest count says what is wrong under its own field.
+it("holds back a guest count that is not a whole number from 1 to 500", async () => {
+  const { api } = open();
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  await pick("PIC tamu", "sari", /Sari Wulandari/);
+  fireEvent.change(screen.getByLabelText(/Jumlah tamu/), { target: { value: "501" } });
+  save();
+  expect(await screen.findByText("Jumlah tamu 1 sampai 500, angka bulat.")).toBeTruthy();
+  expect(api.manual).not.toHaveBeenCalled();
+});
+
+// F6: the options follow the kind chosen, and the drinks are the pengelola's menu.
+it("F6 records a claim without Suhu and Gula by default, and asks them once the kind is a guest's or the team's", async () => {
+  const { server, api, onSaved } = open({ options: DEFAULT_OPTIONS });
+  for (const name of ["Suhu", "Gula", "Takaran es"]) expect(screen.queryByRole("group", { name })).toBeNull();
+  expect(screen.getByText("Klaim karyawan dicatat tanpa suhu dan gula (diatur di Pengaturan → Opsi minuman).")).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  expect(screen.getByRole("group", { name: "Suhu" })).toBeTruthy();
+  expect(screen.getByRole("group", { name: "Gula" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Klaim" }));
+  await pick("Nama karyawan", "arief", /Arief Hidayat/);
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const sent = api.manual.mock.calls[0][0];
+  expect(sent).toMatchObject({ kind: "klaim", slug: "kopi-susu" });
+  expect([sent.temperature, sent.sugar, sent.ice]).toEqual([undefined, undefined, undefined]);
+  expect(server.orders.at(-1)?.items[0]).toMatchObject({ slug: "kopi-susu", temperature: null, sugar: null, ice: null });
+  expect(onSaved.mock.calls[0][0].message).toBe("Arief · Kopi Susu · klaim ke-2 dari 4.");
+});
+
+it("F6 sends a guest's drink with what guests are asked, and nothing made up for the rest", async () => {
+  const { api, onSaved } = open({ options: { klaim: { suhu: false, gula: false, es: false }, tim: { suhu: false, gula: false, es: false }, tamu: { suhu: true, gula: false, es: true } } });
+  fireEvent.click(screen.getByRole("radio", { name: "Tamu" }));
+  expect(screen.queryByRole("group", { name: "Gula" })).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "Es" }));
+  fireEvent.click(within(screen.getByRole("group", { name: "Takaran es" })).getByRole("radio", { name: "Sedikit" }));
+  await pick("PIC tamu", "sari", /Sari Wulandari/);
+  save();
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  const sent = api.manual.mock.calls[0][0];
+  expect(sent).toMatchObject({ kind: "tamu", temperature: "es", ice: "Sedikit" });
+  expect(sent.sugar).toBeUndefined();
+});
+
+it("F6 offers the drinks the pengelola shows, in their order, with Lainnya last", () => {
+  const menu: Drink[] = [
+    { slug: "teh-tarik", name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], photo: null, active: true },
+    ...DRINKS.slice(0, 2), { ...DRINKS[2], active: false },
+  ];
+  open({ menu });
+  const select = screen.getByLabelText("Minuman") as HTMLSelectElement;
+  expect([...select.options].map(option => option.textContent)).toEqual(["Kopi Susu", "Cappuccino", "Teh Tarik", "Lainnya (tulis sendiri)"]);
+  expect(select.value).toBe("teh-tarik");
+  // Teh Tarik only comes hot.
+  expect((screen.getByRole("radio", { name: "Es" }) as HTMLInputElement).disabled).toBe(true);
+});
+
+it("F6 stands on the code's menu and the starting options until Pengaturan's data has arrived", () => {
+  open({ menu: null, options: null });
+  expect((screen.getByLabelText("Minuman") as HTMLSelectElement).options).toHaveLength(16);
+  expect(screen.queryByRole("group", { name: "Gula" })).toBeNull();
+});

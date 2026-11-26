@@ -986,6 +986,115 @@ export const hrAdminApi = {
 };
 
 /*
+ * WG Coffee (25 Nov 2026, docs/coffee/RENCANA-PENERAPAN.md): employees claim a drink of the
+ * office JumpStart machine at /coffee (the same employee account as WAM, Booking Kantor and WG
+ * People, on its own sign-in pages), GA sends meeting orders from the tablet at /coffee/ga, and the
+ * pengelola process them in Journey Admin (/admin/coffee, the "WG Coffee" grant of
+ * Super admin → Akses admin). "COFFEE" holds an O, so it can never be an event's short code.
+ */
+export const COFFEE_PATH = "/coffee";
+/** The address parameter of Mode GA that names one sent order. */
+export const COFFEE_GA_ORDER = "pesanan";
+const COFFEE_API = "/api/coffee";
+export const coffeePath = {
+  /** Menu: the drinks and what is left of this month's quota. */
+  home: COFFEE_PATH,
+  /** Pesanan saya: the person's claims and where each stands; switching tabs never reloads. */
+  orders: `${COFFEE_PATH}/pesanan`,
+  /** Mode GA: the tablet for meeting orders (GA and the pengelola only). */
+  ga: `${COFFEE_PATH}/ga`,
+  /** Where someone without Mode GA lands, with a note saying so. */
+  gaDenied: `${COFFEE_PATH}?pesan=ga`,
+  /** Mode GA opened on one sent order (where a notification about it leads; the tablet stays in the guest book while a guest holds it). */
+  gaOrder: (id: string) => `${COFFEE_PATH}/ga?${COFFEE_GA_ORDER}=${enc(id)}`,
+  login: (next?: string) => `${COFFEE_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  forgot: `${COFFEE_PATH}/lupa-password`,
+  newPassword: (next?: string) => `${COFFEE_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,
+  manifest: `${COFFEE_PATH}/manifest.webmanifest`,
+  serviceWorker: `${COFFEE_PATH}/sw.js`,
+  /** The service worker's scope: the app's own address without a slash, so /coffee itself is controlled too (next.config.ts allows it with Service-Worker-Allowed). */
+  scope: COFFEE_PATH,
+  /** The scope the worker had before the F2 audit; a device that registered it then lets go of it (pwa.ts). */
+  oldScope: `${COFFEE_PATH}/`,
+  /** A drink's photo (public/coffee/drinks), by its slug of src/lib/coffee/menu.ts. */
+  photo: (slug: string) => `${COFFEE_PATH}/drinks/${enc(slug)}.jpg`,
+  /** An app icon of public/coffee, e.g. "icon-192.png". */
+  icon: (name: string) => `${COFFEE_PATH}/${enc(name)}`,
+  /** The square picture of the link preview (public/coffee/og-square.jpg, 1200 × 1200). */
+  preview: `${COFFEE_PATH}/og-square.jpg`,
+};
+export const coffeeApi = {
+  /** GET: the person's quota this month and their claims; polled while one is being processed. */
+  state: `${COFFEE_API}/state`,
+  /** POST {slug, temperature, sugar, ice, key}: one claim. */
+  claims: `${COFFEE_API}/claims`,
+  /** DELETE: the person cancels their own claim while it is still being processed. */
+  claim: (id: string) => `${COFFEE_API}/claims/${enc(id)}`,
+  /** GET: today's meeting orders, the people to pick as PIC or team, the rooms (Mode GA). */
+  gaState: `${COFFEE_API}/ga/state`,
+  /** POST {room, picId, guest?, guestCount?, parentId?, items, key}: one meeting order (Mode GA). */
+  gaMeetings: `${COFFEE_API}/ga/meetings`,
+  /** POST {pin}: is this the PIN GA? (leaving the guest menu book) */
+  gaPin: `${COFFEE_API}/ga/pin`,
+  /** Web push (F4): GET the public key and this device's state, POST subscribe, DELETE unsubscribe. */
+  push: `${COFFEE_API}/push`,
+  pushTest: `${COFFEE_API}/push/test`,
+};
+/** Pengelola WG Coffee in Journey Admin: Antrean, Rekap, Pengaturan. */
+export const COFFEE_ADMIN = "/admin/coffee";
+const COFFEE_ADMIN_API = "/api/admin/coffee";
+export const coffeeAdminPath = {
+  /** Antrean: what waits, oldest first, and what was just processed. */
+  home: COFFEE_ADMIN,
+  /** Antrean with Catat manual open. */
+  manual: `${COFFEE_ADMIN}?catat=1`,
+  /** Rekap: a month (or a span of days) as a summary and a row per drink. */
+  recap: (month?: string) => `${COFFEE_ADMIN}/rekap${month ? `?bulan=${enc(month)}` : ""}`,
+  /** Pengaturan: the quotas; who holds access and the rooms are read only. */
+  settings: `${COFFEE_ADMIN}/pengaturan`,
+  /** Menu: the drinks the pengelola adds, changes, orders, hides and deletes (F6). */
+  menu: `${COFFEE_ADMIN}/menu`,
+};
+export const coffeeAdminApi = {
+  /** GET: the queue; polled every ten seconds while the tab shows. */
+  queue: `${COFFEE_ADMIN_API}/queue`,
+  /** POST: Selesai diproses. */
+  finish: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/selesai`,
+  /** POST {note}: Tolak, with a note for the one who ordered. */
+  reject: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/tolak`,
+  /** POST: Urungkan, back to the queue (the processor only, within five minutes). */
+  reopen: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/urungkan`,
+  /** POST: Batalkan catatan, for a record made by hand (Catat manual) only. */
+  cancelManual: (id: string) => `${COFFEE_ADMIN_API}/orders/${enc(id)}/batalkan`,
+  /** POST: Catat manual. */
+  manual: `${COFFEE_ADMIN_API}/manual`,
+  /** GET ?bulan=YYYY-MM: the active employees to pick from, with the claims used that month. */
+  people: (month?: string) => `${COFFEE_ADMIN_API}/people${month ? `?bulan=${enc(month)}` : ""}`,
+  /** GET ?dari=&sampai=&jenis=&status=&q=: Rekap's rows and summary. */
+  recap: (filter: Record<string, string | undefined>) => `${COFFEE_ADMIN_API}/rekap${query(filter)}`,
+  /** GET: the same filter as a file, .csv (Detail) or .xlsx (Detail and Ringkasan). */
+  recapExport: (format: "csv" | "xlsx", filter: Record<string, string | undefined>) => `${COFFEE_ADMIN_API}/rekap/export${query({ format, ...filter })}`,
+  /** GET the quotas and who holds access; PUT {karyawan, ga, intern}. */
+  settings: `${COFFEE_ADMIN_API}/settings`,
+  /** PUT {pin}: the pengelola sets the PIN GA. */
+  gaPin: `${COFFEE_ADMIN_API}/settings/pin`,
+  /** GET: the whole menu with how often each drink was ordered. POST: a new drink. */
+  menu: `${COFFEE_ADMIN_API}/menu`,
+  /** PUT: change a drink. PATCH {active}: hide or show it. DELETE: only a drink no order ever used. */
+  drink: (slug: string) => `${COFFEE_ADMIN_API}/menu/${enc(slug)}`,
+  /** POST (multipart, field "file"): the drink's photo, cropped square on the server. */
+  drinkPhoto: (slug: string) => `${COFFEE_ADMIN_API}/menu/${enc(slug)}/foto`,
+  /** PUT {slugs}: the menu's order. */
+  menuOrder: `${COFFEE_ADMIN_API}/menu/urutan`,
+  /** PUT: which options (temperature, sugar, ice) each audience is asked with a drink (F6). */
+  options: `${COFFEE_ADMIN_API}/settings/opsi`,
+  /** Web push for the pengelola (F4). */
+  push: `${COFFEE_ADMIN_API}/push`,
+};
+/** JumpStart's own ordering page: the pengelola buys there by hand (never automated). */
+export const JUMPSTART_URL = "https://jumpstart.id/outlet/menu";
+
+/*
  * TV Announcement: an office TV opens /tv/{address} with no sign-in, e.g. /tv/lobi; the address
  * is the TV's short slug, picked by the admin and open on purpose (an older TV's is its long key).
  * Outside /wam and /admin on purpose: no login, no app frame.

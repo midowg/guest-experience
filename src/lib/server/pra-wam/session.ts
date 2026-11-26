@@ -152,6 +152,15 @@ async function issueSession(secret: string, employeeId: string, version: number)
 }
 
 /**
+ * A new password signs every other device out, so WG Coffee's notifications stop on all of
+ * the person's devices too (Coffee audit F5-07); the device in hand turns them on again by itself
+ * when Coffee is opened. The table may not exist yet, and this never stops the password change.
+ */
+async function dropCoffeeDevices(client: ReturnType<typeof createPrivilegedClient>, employeeId: string): Promise<void> {
+  try { await client.from("coffee_push_subscriptions").delete().eq("employee_id", employeeId); } catch { /* Coffee's push is not set up here */ }
+}
+
+/**
  * Changes the person's own password after checking the current one. Other devices are signed
  * out (the session version goes up); this one gets a fresh cookie and stays signed in.
  */
@@ -172,6 +181,7 @@ export async function changePassword(member: Member, current: string, next: stri
   const version = account.session_version + 1;
   const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: false, password_changed_at: new Date().toISOString(), session_version: version }).eq("employee_id", member.id);
   if (saveError) databaseError(saveError);
+  await dropCoffeeDevices(client, member.id);
   await issueSession(secret, member.id, version);
 }
 
@@ -204,6 +214,7 @@ export async function completePasswordReset(accessToken: string, next: string): 
   const version = account.session_version + 1;
   const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: false, password_changed_at: new Date().toISOString(), session_version: version }).eq("employee_id", account.employee_id);
   if (saveError) databaseError(saveError);
+  await dropCoffeeDevices(client, account.employee_id);
   await issueSession(secret, account.employee_id, version);
 }
 

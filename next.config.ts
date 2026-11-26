@@ -39,6 +39,9 @@ const config: NextConfig = {
       // WG People moved from /hr to /people (21 Nov 2026, the owner's ask); old links and installs keep working.
       { source: "/hr", destination: "/people", permanent: true },
       { source: "/hr/:path*", destination: "/people/:path*", permanent: true },
+      // WG Coffee: the pengelola page was first planned at /coffee/hr; it lives in Journey Admin (25 Nov 2026).
+      { source: "/coffee/hr", destination: "/admin/coffee", permanent: false },
+      { source: "/coffee/hr/:path*", destination: "/admin/coffee", permanent: false },
       { source: "/panduan-ke-werkudara", destination: "/your-visit", permanent: false },
       // The app was first published as /pra-wam with Indonesian paths; it is WAM now (Pra WAM is a
       // phase inside it). Old links and printed QR codes keep working.
@@ -75,6 +78,9 @@ const config: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       ] },
+      // WG Coffee's service worker sits at /coffee/sw.js, which by default may only control /coffee/…; the app's first
+      // page is /coffee itself, so the worker is allowed that one address above its folder (26 Nov 2026, audit F2-04).
+      { source: "/coffee/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/coffee" }, { key: "Cache-Control", value: "no-cache, max-age=0" }] },
       { source: "/e/:slug/i/:token", headers: personalHeaders },
       { source: "/e/:slug/i/:token/tiket", headers: personalHeaders },
       { source: "/:code([A-Za-z2-9]{6})/:token([a-z2-9]{8})", headers: personalHeaders },

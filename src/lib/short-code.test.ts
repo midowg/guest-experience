@@ -6,6 +6,9 @@ it("reads event codes, flagging lowercase for a redirect", () => {
   expect(readEventCode("ab23cd")).toEqual({ code: "AB23CD", canonical: false });
   expect(readEventCode("ABI3CD")).toBeNull();
   expect(readEventCode("admin")).toBeNull();
+  // WG Coffee lives at /coffee: six letters, but the O keeps it from ever being an event code.
+  expect(readEventCode("coffee")).toBeNull();
+  expect(readEventCode("COFFEE")).toBeNull();
   expect(readEventCode("AB23CDE")).toBeNull();
 });
 

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { adminAuthConfig, readSession, SESSION_COOKIE } from "@/lib/admin-token";
-import { ADMIN_APPS, ADMIN_GRANTS_MIGRATION, ADMIN_HR_MIGRATION, ADMIN_KUESIONER_MIGRATION, ADMIN_WAM_ACARA_MIGRATION, ADMIN_WELLBEING_MIGRATION, mayOpenEvent, WAM_EVENT_ADMIN_LABEL, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
+import { ADMIN_APPS, ADMIN_COFFEE_MIGRATION, ADMIN_GRANTS_MIGRATION, ADMIN_HR_MIGRATION, ADMIN_KUESIONER_MIGRATION, ADMIN_WAM_ACARA_MIGRATION, ADMIN_WELLBEING_MIGRATION, mayOpenEvent, WAM_EVENT_ADMIN_LABEL, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
 import { isEmailLike } from "@/lib/pra-wam/login-name";
 import { createPrivilegedClient, createPublicClient } from "./supabase/admin";
 import { databaseError } from "./http";
@@ -169,15 +169,23 @@ export async function saveGrant(employeeId: string, input: AdminGrantInput): Pro
     .upsert({ employee_id: employeeId, apps: grant.apps, all_events: grant.allEvents, event_ids: grant.eventIds, updated_at: new Date().toISOString() }, { onConflict: "employee_id" })
     .select("employee_id,apps,all_events,event_ids").single();
   if (error) {
+    // The apps check refused an app the database does not know yet (23514). Looked at before
+    // `missing`, whose text test would take the constraint's name (admin_grants_apps_check) for a
+    // missing table. Newest first (audit F5-02): the migrations run in order, so the newest app that
+    // was ticked is the one that is missing, also for someone who already holds the older ones.
+    if (error.code === "23514") {
+      // Before 202612010001 the apps check does not know WG Coffee (only the super admin opens it till then).
+      if (grant.apps.includes("coffee")) throw new ServiceError(503, `Akses WG Coffee menunggu migrasi ${ADMIN_COFFEE_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
+      // Before 202611200703 the apps check does not know WG People (only the super admin opens it till then).
+      if (grant.apps.includes("hr")) throw new ServiceError(503, `Akses WG People menunggu migrasi ${ADMIN_HR_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
+      // Before 202611200603 the apps check does not know Admin WAM 2026 (only the super admin opens it till then).
+      if (grant.apps.includes("wam_acara")) throw new ServiceError(503, `Akses ${WAM_EVENT_ADMIN_LABEL} menunggu migrasi ${ADMIN_WAM_ACARA_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
+      // Before 202611160050 the apps check does not know Wellbeing.
+      if (grant.apps.includes("wellbeing")) throw new ServiceError(503, `Akses Wellbeing menunggu migrasi ${ADMIN_WELLBEING_MIGRATION}.`);
+      // Before 202611140001 the apps check does not know Kuesioner WAM.
+      if (grant.apps.includes("kuesioner")) throw new ServiceError(503, `Akses Kuesioner WAM menunggu migrasi ${ADMIN_KUESIONER_MIGRATION}.`);
+    }
     if (missing(error)) throw waiting();
-    // Before 202611140001 the apps check does not know Kuesioner WAM.
-    if (error.code === "23514" && grant.apps.includes("kuesioner")) throw new ServiceError(503, `Akses Kuesioner WAM menunggu migrasi ${ADMIN_KUESIONER_MIGRATION}.`);
-    // Before 202611160050 the apps check does not know Wellbeing.
-    if (error.code === "23514" && grant.apps.includes("wellbeing")) throw new ServiceError(503, `Akses Wellbeing menunggu migrasi ${ADMIN_WELLBEING_MIGRATION}.`);
-    // Before 202611200603 the apps check does not know Admin WAM 2026 (only the super admin opens it till then).
-    if (error.code === "23514" && grant.apps.includes("wam_acara")) throw new ServiceError(503, `Akses ${WAM_EVENT_ADMIN_LABEL} menunggu migrasi ${ADMIN_WAM_ACARA_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
-    // Before 202611200703 the apps check does not know WG People (only the super admin opens it till then).
-    if (error.code === "23514" && grant.apps.includes("hr")) throw new ServiceError(503, `Akses WG People menunggu migrasi ${ADMIN_HR_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
     databaseError(error);
   }
   return fromRow(data as GrantRow);

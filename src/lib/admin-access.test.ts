@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_APPS, adminAppLabels, areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminApp, type AdminGrant } from "./admin-access";
+import { ADMIN_APPS, ADMIN_COFFEE_MIGRATION, adminAppHints, adminAppLabels, adminGrantSchema, areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminApp, type AdminGrant } from "./admin-access";
 
 describe("Kuesioner WAM, given on its own (14 Nov 2026)", () => {
   const g = (apps: AdminGrant["apps"]): AdminGrant => ({ employeeId: "e1", apps, allEvents: false, eventIds: [] });
@@ -142,6 +142,32 @@ describe("WG People (20 Nov 2026)", () => {
     expect(showsAppCard(null, "hr")).toBe(true);
     expect(adminAppLabels.hr).toBe("WG People");
     expect(ADMIN_APPS).toContain("hr");
+  });
+});
+
+describe("WG Coffee (25 Nov 2026)", () => {
+  it("opens /admin/coffee and its API only with its own grant", () => {
+    expect(areaOfPath("/admin/coffee")).toBe("coffee");
+    expect(areaOfPath("/admin/coffee/rekap?bulan=2026-11")).toBe("coffee");
+    expect(areaOfPath("/api/admin/coffee/orders/abc/selesai")).toBe("coffee");
+    expect(areaOfPath("/admin/coffeex")).toBeNull();
+    // The employees' app and the GA tablet are not part of the admin.
+    expect(areaOfPath("/coffee")).toBeNull();
+    expect(areaOfPath("/api/coffee/claims")).toBeNull();
+    expect(mayOpenArea({ employeeId: "e1", apps: ["coffee"], allEvents: false, eventIds: [] }, "coffee")).toBe(true);
+    expect(mayOpenArea({ employeeId: "e1", apps: ["hr", "wam"], allEvents: false, eventIds: [] }, "coffee")).toBe(false);
+    expect(mayOpenArea({ employeeId: "e1", apps: ["coffee"], allEvents: false, eventIds: [] }, "hr")).toBe(false);
+  });
+  it("shows the Coffee card to whoever has it, and names it in Akses admin", () => {
+    expect(showsAppCard({ apps: ["coffee"] }, "coffee")).toBe(true);
+    expect(showsAppCard({ apps: ["hr"] }, "coffee")).toBe(false);
+    expect(showsAppCard(null, "coffee")).toBe(true);
+    expect(adminAppLabels.coffee).toBe("WG Coffee");
+    expect(adminAppHints.coffee).toContain("antrean");
+    expect(ADMIN_APPS).toContain("coffee");
+    expect(ADMIN_COFFEE_MIGRATION).toBe("202612010001_coffee.sql");
+    expect(adminGrantSchema.parse({ apps: ["coffee"] }).apps).toEqual(["coffee"]);
+    expect(tidyGrant({ apps: ["coffee", "acara"], allEvents: false, eventIds: [] }).apps).toEqual(["acara", "coffee"]);
   });
 });
 
