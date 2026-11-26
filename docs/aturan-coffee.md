@@ -1,4 +1,4 @@
-# Aturan Werkudara Coffee (`/coffee`)
+# Aturan WG Coffee (`/coffee`)
 
 Klaim jatah kopi bulanan dari mesin JumpStart di pantry, pesanan rapat untuk tamu dan tim, dan antrean
 pengelola. Aturan pemakaian untuk tim; rincian teknis ada di `docs/coffee/RENCANA-PENERAPAN.md`, urutan
@@ -10,8 +10,8 @@ pemeriksaan) tetap mengikuti `docs/aturan-wam.md` §1–§2.
 | Tempat | Alamat | Siapa | Untuk apa |
 | --- | --- | --- | --- |
 | Aplikasi karyawan | `/coffee` (Menu), `/coffee/pesanan` (Pesanan saya), `/coffee/masuk` | Semua karyawan aktif yang punya akun (akun yang sama dengan WAM, Booking Kantor, WG People) | Mengajukan klaim, melihat status, membatalkan yang belum diproses |
-| Tablet GA | `/coffee/ga` | Kelompok GA (kategori `dw`), Admin Booking, dan pemegang akses Werkudara Coffee | Pesanan rapat: minuman tamu dan tim di ruangan, buku menu untuk tamu |
-| Pengelola | `/admin/coffee` (Antrean), `/admin/coffee/rekap`, `/admin/coffee/pengaturan` | Super admin, dan orang yang dicentang **Werkudara Coffee** di Super admin → Akses admin | Membeli di mesin, menekan Selesai atau Tolak, Catat manual, Rekap, Pengaturan |
+| Tablet GA | `/coffee/ga` | Kelompok GA (kategori `dw`), Admin Booking, dan pemegang akses WG Coffee | Pesanan rapat: minuman tamu dan tim di ruangan, buku menu untuk tamu |
+| Pengelola | `/admin/coffee` (Antrean), `/admin/coffee/rekap`, `/admin/coffee/pengaturan` | Super admin, dan orang yang dicentang **WG Coffee** di Super admin → Akses admin | Membeli di mesin, menekan Selesai atau Tolak, Catat manual, Rekap, Pengaturan |
 
 - Pengelola masuk ke admin dengan **akun karyawan sendiri**. Super admin bisa memproses, tetapi tidak
   bisa menerima notifikasi (masuknya bukan milik satu orang).
@@ -81,7 +81,7 @@ Untuk kopi yang sudah dibeli tanpa lewat aplikasi (HP mati, tamu mendadak). Peng
   Antrean. Mematikan di tempat yang sama (tablet: **Matikan** di samping "Notifikasi aktif").
 - iPhone/iPad: aplikasi dipasang dulu ke layar utama, baru notifikasi bisa dinyalakan.
 - Isi notifikasi tidak pernah memuat nama tamu, instansi, jabatan, atau isi catatan tolak.
-- **Tablet di mode tamu:** notifikasi apa pun hanya berbunyi "Werkudara Coffee · Ada pembaruan pesanan."
+- **Tablet di mode tamu:** notifikasi apa pun hanya berbunyi "WG Coffee · Ada pembaruan pesanan."
   tanpa suara, dan mengetuknya **tidak pernah** membuka jendela lain atau mengeluarkan tablet dari buku menu.
 - Perangkat milik orang yang sedang masuk. Keluar dari Coffee, ganti password, atau membuka Coffee
   setelah sesi berakhir menghentikan notifikasi di perangkat itu; setelah masuk lagi, nyalakan lagi bila

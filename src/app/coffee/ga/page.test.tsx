@@ -50,7 +50,7 @@ it("F3-01 sends no GA data with a page that is loaded while a guest holds the ta
 });
 
 it("F3-18 says 'belum dibuka' only while the migration is missing; any other refusal offers to try again", async () => {
-  mocks.state = new ServiceError(503, "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
+  mocks.state = new ServiceError(503, "WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   let page = await draw();
   expect(page.type).toBe(CoffeeWaiting);
   expect(page.props.detail).toBeUndefined();

@@ -51,7 +51,7 @@ it("types at 16 px or more in fields (no zoom on iPhone) and rests when motion i
 
 it("is installable: a manifest that opens /coffee full screen, with icons that exist", async () => {
   const manifest = await GET().json();
-  expect(manifest).toMatchObject({ id: COFFEE_PATH, start_url: COFFEE_PATH, scope: COFFEE_PATH, display: "standalone", name: "Werkudara Coffee", lang: "id" });
+  expect(manifest).toMatchObject({ id: COFFEE_PATH, start_url: COFFEE_PATH, scope: COFFEE_PATH, display: "standalone", name: "WG Coffee", short_name: "WG Coffee", lang: "id" });
   // The first page is inside the scope (a scope ending in a slash would leave /coffee itself outside).
   expect(coffeePath.home.startsWith(manifest.scope)).toBe(true);
   expect(coffeePath.orders.startsWith(manifest.scope)).toBe(true);
@@ -60,6 +60,14 @@ it("is installable: a manifest that opens /coffee full screen, with icons that e
     expect(existsSync(here(`../../../public${coffeePath.icon(name)}`)), name).toBe(true);
   }
   for (const icon of manifest.icons as { src: string }[]) expect(existsSync(here(`../../../public${icon.src}`)), icon.src).toBe(true);
+});
+
+it("carries a square link preview with the app's name (WhatsApp)", async () => {
+  const { metadata } = await import("@/app/coffee/layout");
+  expect(metadata).toMatchObject({ title: { default: "WG Coffee", template: "%s · WG Coffee" }, applicationName: "WG Coffee", appleWebApp: { title: "WG Coffee" }, twitter: { card: "summary" } });
+  const [image] = (metadata.openGraph as { images: { url: string; width: number; height: number }[] }).images;
+  expect(image).toMatchObject({ url: coffeePath.preview, width: 1200, height: 1200 });
+  expect(existsSync(here(`../../../public${coffeePath.preview}`))).toBe(true);
 });
 
 it("has a service worker that answers offline with a page and keeps nothing personal", () => {

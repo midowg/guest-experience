@@ -1,5 +1,7 @@
 # Rencana penerapan Werkudara Coffee (25 Nov 2026)
 
+> Nama aplikasi sejak 26 Nov 2026: WG Coffee
+
 Aplikasi sungguhan dari tiga prototipe yang sudah disetujui. Cabang `feat/werkudara-coffee` (worktree
 `.claude/worktrees/coffee`). **Admin dulu, lalu karyawan, lalu tablet GA, lalu push.** Tidak ada push, commit ke
 `main`, `npm run build` saat `next dev` jalan, atau migrasi yang dijalankan agen: pemilik yang menjalankan migrasi.

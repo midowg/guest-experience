@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const kind = validate(z.enum(["csv", "xlsx"], "Format berkas tidak dikenali. Pilih CSV atau Excel."), format);
     const query = validate(recapQuerySchema, filter);
     const files = await recapFiles(query);
-    const name = `werkudara-coffee-${query.dari}_${query.sampai}.${kind}`;
+    const name = `wg-coffee-rekap-${query.dari}_${query.sampai}.${kind}`;
     return new Response(kind === "csv" ? files.csv : new Uint8Array(files.xlsx), {
       headers: {
         "Content-Type": kind === "csv" ? "text/csv; charset=utf-8" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

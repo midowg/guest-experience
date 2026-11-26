@@ -330,8 +330,8 @@ it("asks for the notification permission once push is plugged in (F4), and goes 
 });
 
 it("tells someone without Mode GA why they are back on the menu", () => {
-  open({}, { note: "Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee." });
-  expect(screen.getByText("Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee.")).toBeTruthy();
+  open({}, { note: "Mode GA hanya untuk tim GA dan pengelola WG Coffee." });
+  expect(screen.getByText("Mode GA hanya untuk tim GA dan pengelola WG Coffee.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Tutup pesan" }));
   expect(screen.queryByText(/Mode GA hanya/)).toBeNull();
 });
@@ -635,7 +635,7 @@ it("moves between the tabs by address on the real routing, and the back button w
   fireEvent.click(tab(/Pesanan saya/));
   expect(window.location.pathname).toBe(coffeePath.orders);
   expect(screen.getByRole("heading", { level: 1, name: "Belum ada pesanan" })).toBeTruthy();
-  expect(document.title).toBe("Pesanan saya · Werkudara Coffee");
+  expect(document.title).toBe("Pesanan saya · WG Coffee");
   // The same tab again adds no entry.
   const entries = window.history.length;
   fireEvent.click(tab(/Pesanan saya/));
@@ -643,7 +643,7 @@ it("moves between the tabs by address on the real routing, and the back button w
   await act(async () => { window.history.back(); await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(window.location.pathname).toBe(coffeePath.home);
   expect(screen.getByRole("heading", { level: 1, name: /Halo/ })).toBeTruthy();
-  expect(document.title).toBe("Werkudara Coffee");
+  expect(document.title).toBe("WG Coffee");
   expect(state).not.toHaveBeenCalled();
   window.history.replaceState({}, "", "/");
 });

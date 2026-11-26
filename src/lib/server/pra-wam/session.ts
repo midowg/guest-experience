@@ -152,7 +152,7 @@ async function issueSession(secret: string, employeeId: string, version: number)
 }
 
 /**
- * A new password signs every other device out, so Werkudara Coffee's notifications stop on all of
+ * A new password signs every other device out, so WG Coffee's notifications stop on all of
  * the person's devices too (Coffee audit F5-07); the device in hand turns them on again by itself
  * when Coffee is opened. The table may not exist yet, and this never stops the password change.
  */

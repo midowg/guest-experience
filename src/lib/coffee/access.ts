@@ -1,8 +1,8 @@
 /*
- * Who opens what in Werkudara Coffee (25 Nov 2026). Every active employee with an account claims
+ * Who opens what in WG Coffee (25 Nov 2026). Every active employee with an account claims
  * drinks. Mode GA (the tablet for meeting orders) is for the GA group, which Data karyawan knows as
  * the category "dw" (Daily Worker, "ga" before 13 Nov 2026), for Admin Booking (the role "ga": the
- * administration staff), and for whoever holds the Werkudara Coffee admin grant. Pure, so it is
+ * administration staff), and for whoever holds the WG Coffee admin grant. Pure, so it is
  * tested without a server.
  */
 

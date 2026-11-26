@@ -10,11 +10,11 @@ import { holders } from "./people";
 import { db, missing, orderById } from "./store";
 
 /*
- * Web push for Werkudara Coffee (F4, migration 202612010002). The same VAPID keys as WAM
+ * Web push for WG Coffee (F4, migration 202612010002). The same VAPID keys as WAM
  * (WAM_VAPID_*), but a table of its own: a subscription belongs to Coffee's service worker.
  *
  * Who is told what:
- *   a new claim or meeting order   every holder of the Werkudara Coffee grant, except its sender
+ *   a new claim or meeting order   every holder of the WG Coffee grant, except its sender
  *   Selesai / Ditolak of a claim   the claimant
  *   Selesai / Ditolak of a meeting the GA officer who sent it, and the PIC
  *   never                          Catat manual, Batalkan catatan, Urungkan, a claimant's own cancel

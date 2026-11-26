@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "./fake-db";
 
-/* Who opens Werkudara Coffee's pages and Mode GA, and how the pengelola is named. Made-up people. */
+/* Who opens WG Coffee's pages and Mode GA, and how the pengelola is named. Made-up people. */
 const state = vi.hoisted(() => ({ member: null as unknown, admin: null as unknown }));
 let db = fakeDb();
 
@@ -29,7 +29,7 @@ it("sends a stranger to Coffee's own sign-in, and back to where they were", asyn
 it("opens Mode GA for the GA group, Admin Booking and holders of the Coffee grant; others land on the app with a note", async () => {
   state.member = member(PEOPLE.rina, "karyawan");
   await expect(requireGaPage("/coffee/ga")).rejects.toThrow("REDIRECT /coffee?pesan=ga");
-  await expect(requireApiGa()).rejects.toMatchObject({ status: 403, message: "Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee." });
+  await expect(requireApiGa()).rejects.toMatchObject({ status: 403, message: "Mode GA hanya untuk tim GA dan pengelola WG Coffee." });
   for (const allowed of [member(PEOPLE.bagas, "dw"), member(PEOPLE.rina, "karyawan", ["ga"]), member(PEOPLE.dewi, "karyawan")]) {
     state.member = allowed;
     expect(await requireGaPage("/coffee/ga")).toBe(allowed);

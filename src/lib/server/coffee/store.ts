@@ -6,7 +6,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 
 /*
- * Werkudara Coffee's tables (migration 202612010001), read and written with the service role only.
+ * WG Coffee's tables (migration 202612010001), read and written with the service role only.
  * Before the migration runs every read and write answers 503 with the migration's name, so the
  * pages can say what waits instead of failing.
  */
@@ -19,7 +19,7 @@ type DbError = { code?: string; message?: string };
  * a coffee_ table (no permission, a mistyped column, a broken rule) is a fault, not a waiting migration.
  */
 export const missing = (error: DbError): boolean => ["42P01", "PGRST205", "42883", "PGRST202"].includes(error.code ?? "");
-export const waitingForMigration = () => new ServiceError(503, `Werkudara Coffee menunggu migrasi ${COFFEE_MIGRATION}.`);
+export const waitingForMigration = () => new ServiceError(503, `WG Coffee menunggu migrasi ${COFFEE_MIGRATION}.`);
 
 const known: Record<string, [number, string]> = {
   COFFEE_QUOTA_FULL: [409, "Jatah bulan ini sudah habis."],

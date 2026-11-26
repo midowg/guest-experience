@@ -159,7 +159,7 @@ it("sets the PIN GA: four digits only, said as set afterwards, and the field for
 });
 
 it("says so when the PIN could not be saved, and keeps what was typed for another try", async () => {
-  await open(() => ({ saveGaPin: vi.fn(async () => { throw new AdminApiError("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.", undefined, 503); }) }));
+  await open(() => ({ saveGaPin: vi.fn(async () => { throw new AdminApiError("WG Coffee menunggu migrasi 202612010001_coffee.sql.", undefined, 503); }) }));
   fireEvent.change(screen.getByLabelText("PIN"), { target: { value: "4821" } });
   fireEvent.click(screen.getByRole("button", { name: "Simpan PIN" }));
   expect((await screen.findByRole("alert")).textContent).toMatch(/menunggu migrasi/);

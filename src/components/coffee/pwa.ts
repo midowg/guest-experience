@@ -4,7 +4,7 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { coffeePath } from "@/lib/routes";
 
 /*
- * Werkudara Coffee as an app on the phone: registers its own service worker (public/coffee/sw.js,
+ * WG Coffee as an app on the phone: registers its own service worker (public/coffee/sw.js,
  * scope /coffee, so the first page is controlled too), keeps the browser's install offer for
  * "Pasang sekarang", and knows whether the app already runs from the home screen.
  *

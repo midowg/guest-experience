@@ -140,11 +140,11 @@ it("F2-15 puts the focus in the email field after the welcome, and back on Masuk
 
 it("F2-11 keeps the technical detail off the 'belum dibuka' screen unless it is passed, and offers a way to try again on trouble", () => {
   render(<CoffeeWaiting />);
-  expect(screen.getByRole("heading", { level: 1, name: "Werkudara Coffee belum dibuka" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "WG Coffee belum dibuka" })).toBeTruthy();
   expect(screen.queryByText(/Rincian untuk admin/)).toBeNull();
   cleanup();
-  render(<CoffeeWaiting detail="Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." />);
-  expect(screen.getByText(/Rincian untuk admin: Werkudara Coffee menunggu migrasi/)).toBeTruthy();
+  render(<CoffeeWaiting detail="WG Coffee menunggu migrasi 202612010001_coffee.sql." />);
+  expect(screen.getByText(/Rincian untuk admin: WG Coffee menunggu migrasi/)).toBeTruthy();
   cleanup();
   render(<CoffeeTrouble here={coffeePath.orders} />);
   expect(screen.getByRole("heading", { level: 1, name: "Belum bisa memuat" })).toBeTruthy();

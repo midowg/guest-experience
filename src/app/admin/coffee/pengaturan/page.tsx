@@ -10,7 +10,7 @@ import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${coffeeAdminSection("pengaturan").label} · ${COFFEE_ADMIN_LABEL}` };
 
-/** Werkudara Coffee → Pengaturan: the monthly quotas, the PIN GA (only whether one is set), who holds the access, and the rooms. */
+/** WG Coffee → Pengaturan: the monthly quotas, the PIN GA (only whether one is set), who holds the access, and the rooms. */
 export default async function CoffeeAdminSettingsPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;

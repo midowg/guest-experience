@@ -1,7 +1,7 @@
 import type { Ice, QuotaGroup, Sugar, Temperature } from "./menu";
 
 /*
- * Werkudara Coffee's shapes (25 Nov 2026), shared by the browser and the server. An order is one
+ * WG Coffee's shapes (25 Nov 2026), shared by the browser and the server. An order is one
  * request: a claim (one drink, counted against the monthly quota), or one sending of a meeting
  * order (guests' and team's drinks, no quota). Pure, so it is tested without a server.
  */

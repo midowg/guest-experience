@@ -174,8 +174,8 @@ export async function saveGrant(employeeId: string, input: AdminGrantInput): Pro
     // missing table. Newest first (audit F5-02): the migrations run in order, so the newest app that
     // was ticked is the one that is missing, also for someone who already holds the older ones.
     if (error.code === "23514") {
-      // Before 202612010001 the apps check does not know Werkudara Coffee (only the super admin opens it till then).
-      if (grant.apps.includes("coffee")) throw new ServiceError(503, `Akses Werkudara Coffee menunggu migrasi ${ADMIN_COFFEE_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
+      // Before 202612010001 the apps check does not know WG Coffee (only the super admin opens it till then).
+      if (grant.apps.includes("coffee")) throw new ServiceError(503, `Akses WG Coffee menunggu migrasi ${ADMIN_COFFEE_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
       // Before 202611200703 the apps check does not know WG People (only the super admin opens it till then).
       if (grant.apps.includes("hr")) throw new ServiceError(503, `Akses WG People menunggu migrasi ${ADMIN_HR_MIGRATION}. Sampai itu, hanya super admin yang bisa membukanya.`);
       // Before 202611200603 the apps check does not know Admin WAM 2026 (only the super admin opens it till then).

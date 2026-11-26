@@ -25,7 +25,7 @@ it("offers Panas and Es, six sugar levels, and takaran es only once Es is picked
   expect(pressed("Normal")).toBe("true");
   expect(sheet.queryByRole("group", { name: "Takaran es" })).toBeNull();
   expect(sheet.getByText("Ini klaim ke-2 dari 4 bulan November.")).toBeTruthy();
-  expect(sheet.getByText("Dikirim ke pengelola Werkudara Coffee: HR dan admin yang punya akses.")).toBeTruthy();
+  expect(sheet.getByText("Dikirim ke pengelola WG Coffee: HR dan admin yang punya akses.")).toBeTruthy();
 
   fireEvent.click(sheet.getByRole("button", { name: "Es" }));
   const ice = within(sheet.getByRole("group", { name: "Takaran es" }));

@@ -9,10 +9,10 @@ import { createPrivilegedClient } from "../supabase/admin";
 import type { CoffeeActor } from "./store";
 
 /*
- * Who is signed in to Werkudara Coffee (25 Nov 2026). The account is the employee's own (the same
+ * Who is signed in to WG Coffee (25 Nov 2026). The account is the employee's own (the same
  * one WAM, Booking Kantor and WG People use: one email, one password, one session cookie), but a
  * stranger is sent to Coffee's own sign-in page. Mode GA (the tablet) opens for the GA group, Admin
- * Booking, and whoever holds the Werkudara Coffee grant. The pengelola work in Journey Admin
+ * Booking, and whoever holds the WG Coffee grant. The pengelola work in Journey Admin
  * (/admin/coffee), behind the admin sign-in and that grant.
  */
 
@@ -23,7 +23,7 @@ export async function requireCoffeePage(here: string): Promise<Member> {
   return member;
 }
 
-/** Does this person hold the Werkudara Coffee admin grant? Unknown (no table yet, a database hiccup) is no. */
+/** Does this person hold the WG Coffee admin grant? Unknown (no table yet, a database hiccup) is no. */
 export async function holdsCoffeeGrant(employeeId: string): Promise<boolean> {
   const { data, error } = await createPrivilegedClient().from("admin_grants").select("apps").eq("employee_id", employeeId).maybeSingle();
   if (error || !data) return false;
@@ -31,7 +31,7 @@ export async function holdsCoffeeGrant(employeeId: string): Promise<boolean> {
 }
 
 const opensGa = async (member: Member) => opensGaMode({ category: member.category, roles: member.roles, holdsCoffee: await holdsCoffeeGrant(member.id) });
-export const GA_ONLY = "Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee.";
+export const GA_ONLY = "Mode GA hanya untuk tim GA dan pengelola WG Coffee.";
 
 /** For the tablet page: someone signed in who may use Mode GA; anyone else lands on the app with a note. */
 export async function requireGaPage(here: string): Promise<Member> {

@@ -33,7 +33,7 @@ it("carries a first name, the drink and the room, and nothing else", () => {
     }
   }
   expect(JSON.stringify(testPush())).not.toMatch(/RAHASIA/);
-  expect(testPush()).toMatchObject({ title: "Werkudara Coffee", url: "/coffee/pesanan" });
+  expect(testPush()).toMatchObject({ title: "WG Coffee", url: "/coffee/pesanan" });
 });
 
 it("has words for every state of Nyalakan notifikasi, each saying what to do or that the app works anyway", () => {

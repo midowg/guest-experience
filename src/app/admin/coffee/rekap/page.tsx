@@ -10,7 +10,7 @@ import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${coffeeAdminSection("rekap").label} · ${COFFEE_ADMIN_LABEL}` };
 
-/** Werkudara Coffee → Rekap: this month, one row per drink; ?bulan=YYYY-MM opens another month. */
+/** WG Coffee → Rekap: this month, one row per drink; ?bulan=YYYY-MM opens another month. */
 export default async function CoffeeAdminRecapPage({ searchParams }: { searchParams: Promise<{ bulan?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;

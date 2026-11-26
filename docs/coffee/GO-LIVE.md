@@ -1,4 +1,4 @@
-# Werkudara Coffee: panduan go-live untuk pemilik
+# WG Coffee: panduan go-live untuk pemilik
 
 Disalin dari audit akhir (`AUDIT-F5.md`, 26 Nov 2026) dan diperbarui setelah perbaikannya. Kerjakan
 **berurutan**. Yang bertanda (teknis) dikerjakan orang yang memegang database dan server; sisanya bisa
@@ -8,7 +8,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 
 - Ada **dua berkas database** (migrasi) yang **belum pernah dijalankan di database Supabase mana
   pun**. **SQL sudah dijalankan di Postgres WASM (PGlite) pada 26 Nov 2026; uji balapan sungguhan
-  belum** (lihat langkah 1). Sebelum keduanya dijalankan, Werkudara Coffee mati dengan rapi:
+  belum** (lihat langkah 1). Sebelum keduanya dijalankan, WG Coffee mati dengan rapi:
   halamannya menulis "belum dibuka", dan aplikasi lain tidak berubah.
 - **Belum pernah diuji dengan orang sungguhan:** masuk dengan akun asli, HP dan tablet asli, dan
   notifikasi sungguhan. Semua itu baru diuji lewat tes otomatis dan layar tiruan. Langkah 9 dan 10 di
@@ -20,7 +20,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 0. **Sebelum kode dinaikkan (teknis).** Ambil keadaan terbaru `main`, pastikan cabang ini masih bisa
    digabung tanpa bentrok, jalankan lagi tiga pemeriksaan (tes, tsc, eslint), lalu naikkan. Setelah
    tayang tanpa migrasi: `/coffee` menulis "belum dibuka" dan aplikasi lain normal. **Jangan mencentang
-   Werkudara Coffee di Akses admin dulu**: akan ditolak dengan kalimat "Akses Werkudara Coffee menunggu
+   WG Coffee di Akses admin dulu**: akan ditolak dengan kalimat "Akses WG Coffee menunggu
    migrasi 202612010001_coffee.sql", dan tidak ada yang tersimpan.
 1. **Uji database (teknis). Sebagian sudah, satu hal belum.**
    - **Sudah (26 Nov 2026):** kedua migrasi dijalankan apa adanya di mesin Postgres sungguhan yang
@@ -55,7 +55,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 5. **Setelan server (teknis).** `WAM_VAPID_PUBLIC_KEY` dan `WAM_VAPID_PRIVATE_KEY` (sudah dipakai WAM,
    jangan dikosongkan), dan `RATE_LIMIT_SECRET` (minimal 32 huruf). **Jangan mengganti
    `RATE_LIMIT_SECRET` setelah PIN GA diatur**; bila terpaksa, simpan PIN baru sesudahnya.
-6. **Beri akses pengelola.** Super admin → Akses admin → centang **Werkudara Coffee** untuk tiap
+6. **Beri akses pengelola.** Super admin → Akses admin → centang **WG Coffee** untuk tiap
    pengelola (HR/admin). Mereka masuk ke admin dengan **akun karyawan sendiri**; super admin tidak bisa
    menerima notifikasi. Pemegang akses otomatis bisa memakai Mode GA di tablet.
 7. **Atur PIN GA.** `/admin/coffee` → Pengaturan → PIN GA (4 angka) → beri tahu petugas GA.
@@ -91,7 +91,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
     5. **Mode tamu (yang terpenting).** Di tablet tekan Serahkan ke tamu. Lalu buat tiga kabar: pengelola
        memproses pesanan rapat, karyawan lain mengajukan klaim (bila petugas tablet juga pengelola), dan
        pengelola memproses klaim pribadi petugas tablet. Setiap kali, di tablet hanya muncul
-       "Werkudara Coffee · Ada pembaruan pesanan." tanpa suara. **Ketuk masing-masing: tablet harus
+       "WG Coffee · Ada pembaruan pesanan." tanpa suara. **Ketuk masing-masing: tablet harus
        tetap di buku menu, tidak ada jendela atau tab baru yang terbuka.** Bila ada yang terbuka,
        berhenti dan laporkan; jangan pakai tablet dengan tamu.
     6. Ganti orang: Keluar di HP itu, masuk sebagai orang lain → notifikasi orang pertama tidak masuk lagi.

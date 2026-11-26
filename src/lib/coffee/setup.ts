@@ -1,7 +1,7 @@
 import { COFFEE_PATH, coffeePath } from "@/lib/routes";
 
 /*
- * Werkudara Coffee's employee app, the small rules around signing in and the one-time setup
+ * WG Coffee's employee app, the small rules around signing in and the one-time setup
  * (26 Nov 2026). Pure, so it is tested without a browser.
  */
 

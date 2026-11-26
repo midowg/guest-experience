@@ -4,7 +4,7 @@ import type { CoffeePerson } from "@/lib/coffee/types";
 import { databaseError } from "../http";
 import { coffeeError, countingClaims, db } from "./store";
 
-/* The people Werkudara Coffee's pickers offer, and who holds its admin grant. */
+/* The people WG Coffee's pickers offer, and who holds its admin grant. */
 
 type PersonRow = { id: string; full_name: string; nickname: string | null; position: string | null; business_unit: string | null; category: string | null };
 
@@ -21,7 +21,7 @@ export async function activePeople(month?: string): Promise<CoffeePerson[]> {
 }
 
 export type CoffeeHolder = { id: string; name: string; position: string };
-/** Who holds the Werkudara Coffee grant (Pengaturan shows them; F4 notifies them). Changed in Super admin → Akses admin. */
+/** Who holds the WG Coffee grant (Pengaturan shows them; F4 notifies them). Changed in Super admin → Akses admin. */
 export async function holders(): Promise<CoffeeHolder[]> {
   const { data: grants, error } = await db().from("admin_grants").select("employee_id").contains("apps", ["coffee"]).limit(500);
   // Before the grants table exists there is nobody to show; any other fault is said, not shown as "nobody".

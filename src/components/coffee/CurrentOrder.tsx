@@ -76,7 +76,7 @@ export function CurrentOrder({ order, first, cancelling, onCancel, onMenu }: {
       {waiting && (
         <div className={css.infoBox}>
           <Info aria-hidden size={20} />
-          <span><strong>Siapa yang memproses?</strong>Pengajuanmu masuk ke HR dan admin yang punya akses Werkudara Coffee. Siapa pun yang lebih dulu membuka akan memprosesnya. Status di sini berubah sendiri.</span>
+          <span><strong>Siapa yang memproses?</strong>Pengajuanmu masuk ke HR dan admin yang punya akses WG Coffee. Siapa pun yang lebih dulu membuka akan memprosesnya. Status di sini berubah sendiri.</span>
         </div>
       )}
 

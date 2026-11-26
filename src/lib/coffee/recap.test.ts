@@ -112,7 +112,7 @@ describe("Rekap's summary", () => {
   });
   it("writes the Ringkasan sheet with numbers as numbers", () => {
     const sheet = summarySheet(summary, "November 2026");
-    expect(sheet[0]).toEqual(["Rekap Werkudara Coffee · November 2026"]);
+    expect(sheet[0]).toEqual(["Rekap WG Coffee · November 2026"]);
     expect(sheet[1]).toEqual(["Total minuman", 8]);
     expect(sheet).toContainEqual(["Contoh Rina Putri", "Karyawan", "WNS", 2, 4, 0, 1]);
     expect(sheet).toContainEqual(["Contoh Dimas Pratama", 1, 5, 5]);

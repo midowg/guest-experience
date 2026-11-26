@@ -145,7 +145,7 @@ describe("WG People (20 Nov 2026)", () => {
   });
 });
 
-describe("Werkudara Coffee (25 Nov 2026)", () => {
+describe("WG Coffee (25 Nov 2026)", () => {
   it("opens /admin/coffee and its API only with its own grant", () => {
     expect(areaOfPath("/admin/coffee")).toBe("coffee");
     expect(areaOfPath("/admin/coffee/rekap?bulan=2026-11")).toBe("coffee");
@@ -162,7 +162,7 @@ describe("Werkudara Coffee (25 Nov 2026)", () => {
     expect(showsAppCard({ apps: ["coffee"] }, "coffee")).toBe(true);
     expect(showsAppCard({ apps: ["hr"] }, "coffee")).toBe(false);
     expect(showsAppCard(null, "coffee")).toBe(true);
-    expect(adminAppLabels.coffee).toBe("Werkudara Coffee");
+    expect(adminAppLabels.coffee).toBe("WG Coffee");
     expect(adminAppHints.coffee).toContain("antrean");
     expect(ADMIN_APPS).toContain("coffee");
     expect(ADMIN_COFFEE_MIGRATION).toBe("202612010001_coffee.sql");

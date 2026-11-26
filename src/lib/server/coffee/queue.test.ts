@@ -240,7 +240,7 @@ describe("Batalkan catatan", () => {
 
 it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
-  const waits = { status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." };
+  const waits = { status: 503, message: "WG Coffee menunggu migrasi 202612010001_coffee.sql." };
   await expect(queue(dewi, now)).rejects.toMatchObject(waits);
   await expect(waitingCount()).rejects.toMatchObject(waits);
   await expect(finishOrder(NOBODY, dewi, now)).rejects.toMatchObject(waits);

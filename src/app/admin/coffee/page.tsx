@@ -9,7 +9,7 @@ import { isSupabaseConfigured, ServiceError } from "@/lib/server/config";
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${coffeeAdminSection("antrean").label} · ${COFFEE_ADMIN_LABEL}` };
 
-/** Werkudara Coffee → Antrean (25 Nov 2026): the orders that wait; ?catat=1 opens Catat manual. */
+/** WG Coffee → Antrean (25 Nov 2026): the orders that wait; ?catat=1 opens Catat manual. */
 export default async function CoffeeAdminQueuePage({ searchParams }: { searchParams: Promise<{ catat?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;

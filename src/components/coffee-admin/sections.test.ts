@@ -14,9 +14,9 @@ function routes(dir: URL): string[] {
   return walk(fsPath(dir));
 }
 
-describe("Werkudara Coffee admin's sections", () => {
+describe("WG Coffee admin's sections", () => {
   it("are Antrean, Rekap and Pengaturan, each with its own key, an address under /admin/coffee, and a page", () => {
-    expect(COFFEE_ADMIN_LABEL).toBe("Werkudara Coffee");
+    expect(COFFEE_ADMIN_LABEL).toBe("WG Coffee");
     expect(coffeeAdminSections.map(section => section.label)).toEqual(["Antrean", "Rekap", "Pengaturan"]);
     expect(new Set(coffeeAdminSections.map(section => section.key)).size).toBe(coffeeAdminSections.length);
     expect(coffeeAdminSections[0].href).toBe(coffeeAdminPath.home);
@@ -46,7 +46,7 @@ describe("Werkudara Coffee admin's sections", () => {
   });
 });
 
-describe("who may use Werkudara Coffee admin's APIs", () => {
+describe("who may use WG Coffee admin's APIs", () => {
   it("every one checks the admin session first (the area check gives coffee holders and the super admin only)", () => {
     const files = routes(new URL("../../app/api/admin/coffee/", import.meta.url));
     expect(files.length).toBeGreaterThan(8);

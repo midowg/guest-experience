@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
 
 /*
- * Every employee route of Werkudara Coffee: no session 401, a foreign origin 403, Mode GA only for
+ * Every employee route of WG Coffee: no session 401, a foreign origin 403, Mode GA only for
  * those who may 403, a wrong body 422 with the field named, and 503 with the migration's name
  * before it runs. The database is the in-memory stand-in; made-up people.
  */
@@ -76,7 +76,7 @@ it("keeps Mode GA for the GA group, Admin Booking and holders of the Coffee gran
   for (const call of [all.gaState, all.gaMeeting, all.gaPin]) {
     const response = await call();
     expect(response.status).toBe(403);
-    expect((await body(response)).message).toBe("Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee.");
+    expect((await body(response)).message).toBe("Mode GA hanya untuk tim GA dan pengelola WG Coffee.");
   }
   expect(db.rows("coffee_orders")).toEqual([]);
   for (const member of [bagas, { ...rina, roles: ["ga"] }, { ...rina, id: PEOPLE.dewi }]) {
@@ -110,7 +110,7 @@ it("answers 503 with the migration's name before it runs", async () => {
     if (name === "gaPin") continue;
     const response = await call();
     expect(response.status).toBe(503);
-    expect((await body(response)).message).toBe("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
+    expect((await body(response)).message).toBe("WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   }
   const pin = await all.gaPin();
   expect(pin.status).toBe(409);

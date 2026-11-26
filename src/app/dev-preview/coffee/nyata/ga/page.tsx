@@ -7,12 +7,12 @@ import { sampleState } from "@/components/coffee/pushSample";
 import { GaPreview } from "./GaPreview";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Pratinjau Mode GA · Werkudara Coffee" };
+export const metadata = { title: "Pratinjau Mode GA · WG Coffee" };
 /** As the real tablet page (src/app/coffee/ga/layout.tsx). */
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#FFFDF9", colorScheme: "light", viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 /*
- * Werkudara Coffee, GA tablet and the guest menu book (F3): the real components of /coffee/ga on a
+ * WG Coffee, GA tablet and the guest menu book (F3): the real components of /coffee/ga on a
  * make-believe server kept in memory ("... (contoh)" people; nothing is saved, a reload starts
  * over). For looking at the screens before the migration runs, at 1280×800, 1024×768 and 768×1024.
  * The "Pratinjau" box plays the pengelola (Selesai, Tolak) and a network that goes away.

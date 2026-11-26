@@ -54,14 +54,14 @@ it("skips Atur sekali on a device that already walked through it", async () => {
 });
 
 it("says 'belum dibuka' only while the migration is missing, with its name for the pengelola only", async () => {
-  mocks.state = new ServiceError(503, "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
+  mocks.state = new ServiceError(503, "WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   let screen = await draw();
   expect(screen.type).toBe(CoffeeWaiting);
   expect(screen.props.detail).toBeUndefined();
   mocks.grant = true;
   screen = await draw();
   expect(screen.type).toBe(CoffeeWaiting);
-  expect(screen.props.detail).toBe("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
+  expect(screen.props.detail).toBe("WG Coffee menunggu migrasi 202612010001_coffee.sql.");
 });
 
 it("F2-11 says it could not load, with a way to try again, for any other refusal of the server", async () => {

@@ -986,10 +986,10 @@ export const hrAdminApi = {
 };
 
 /*
- * Werkudara Coffee (25 Nov 2026, docs/coffee/RENCANA-PENERAPAN.md): employees claim a drink of the
+ * WG Coffee (25 Nov 2026, docs/coffee/RENCANA-PENERAPAN.md): employees claim a drink of the
  * office JumpStart machine at /coffee (the same employee account as WAM, Booking Kantor and WG
  * People, on its own sign-in pages), GA sends meeting orders from the tablet at /coffee/ga, and the
- * pengelola process them in Journey Admin (/admin/coffee, the "Werkudara Coffee" grant of
+ * pengelola process them in Journey Admin (/admin/coffee, the "WG Coffee" grant of
  * Super admin → Akses admin). "COFFEE" holds an O, so it can never be an event's short code.
  */
 export const COFFEE_PATH = "/coffee";
@@ -1020,6 +1020,8 @@ export const coffeePath = {
   photo: (slug: string) => `${COFFEE_PATH}/drinks/${enc(slug)}.jpg`,
   /** An app icon of public/coffee, e.g. "icon-192.png". */
   icon: (name: string) => `${COFFEE_PATH}/${enc(name)}`,
+  /** The square picture of the link preview (public/coffee/og-square.jpg, 1200 × 1200). */
+  preview: `${COFFEE_PATH}/og-square.jpg`,
 };
 export const coffeeApi = {
   /** GET: the person's quota this month and their claims; polled while one is being processed. */
@@ -1038,7 +1040,7 @@ export const coffeeApi = {
   push: `${COFFEE_API}/push`,
   pushTest: `${COFFEE_API}/push/test`,
 };
-/** Pengelola Werkudara Coffee in Journey Admin: Antrean, Rekap, Pengaturan. */
+/** Pengelola WG Coffee in Journey Admin: Antrean, Rekap, Pengaturan. */
 export const COFFEE_ADMIN = "/admin/coffee";
 const COFFEE_ADMIN_API = "/api/admin/coffee";
 export const coffeeAdminPath = {

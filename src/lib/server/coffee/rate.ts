@@ -5,7 +5,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 
 /*
- * A limit per person, not per address: the whole office reaches Werkudara Coffee through one Wi-Fi
+ * A limit per person, not per address: the whole office reaches WG Coffee through one Wi-Fi
  * (one public IP), so the site's per-IP limiter (enforceRateLimit) alone would stop everyone once
  * thirty people have claimed. The routes keep a generous per-IP limit as an outer wall and count
  * each person here. Same counter table and function (consume_rate_limit), keyed by an HMAC of the

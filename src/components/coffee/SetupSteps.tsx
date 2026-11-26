@@ -73,7 +73,7 @@ function InstallStep({ first, onInstall, onNext }: { first: PhoneKind; onInstall
       <div className={css.appIcon}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the app's own icon */}
         <img src={coffeePath.icon("icon-192.png")} alt="" width={64} height={64} />
-        Werkudara Coffee
+        WG Coffee
       </div>
       <div className={css.segmented} role="group" aria-label="Jenis HP">
         <button type="button" aria-pressed={!ios} onClick={() => setPhone("android")}>Android</button>

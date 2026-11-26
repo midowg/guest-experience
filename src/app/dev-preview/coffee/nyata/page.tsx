@@ -7,12 +7,12 @@ import type { QuotaGroup } from "@/lib/coffee/menu";
 import { EmployeePreview } from "./EmployeePreview";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Pratinjau Werkudara Coffee" };
+export const metadata = { title: "Pratinjau WG Coffee" };
 /** As the real app: the screen reaches under the notch and the home bar and pads itself. */
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#FBF6EE", colorScheme: "light", viewportFit: "cover" };
 
 /*
- * Werkudara Coffee, employee app (F2): the real components of /coffee on a make-believe server kept
+ * WG Coffee, employee app (F2): the real components of /coffee on a make-believe server kept
  * in memory ("... (contoh)" people; nothing is saved, a reload starts over). For looking at the
  * screens before the migration runs. The "Pratinjau" box plays the pengelola (Selesai, Tolak).
  *   ?sebagai=ga|intern   the quota group (karyawan 4, GA 2, intern 2)
@@ -38,10 +38,10 @@ export default async function DevCoffeeEmployeePage({ searchParams }: { searchPa
       {layar === "masuk" ? <CoffeeLogin next={null} />
         : layar === "lupa" ? <CoffeeForgot />
         : layar === "password" ? <CoffeeNewPassword next="/dev-preview/coffee/nyata" />
-        : layar === "tunggu" ? <CoffeeWaiting detail="Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." />
+        : layar === "tunggu" ? <CoffeeWaiting detail="WG Coffee menunggu migrasi 202612010001_coffee.sql." />
         : <EmployeePreview group={group} full={habis === "1"} history={riwayat === "1"} access={akses === "1"} tab={layar === "pesanan" ? "pesanan" : "menu"}
             setup={layar === "atur"} push={sampleState(notif)} phone={hp === "iphone" ? "iphone" : "android"}
-            note={pesan === "ga" ? "Mode GA hanya untuk tim GA dan pengelola Werkudara Coffee." : undefined} />}
+            note={pesan === "ga" ? "Mode GA hanya untuk tim GA dan pengelola WG Coffee." : undefined} />}
     </div>
   );
 }

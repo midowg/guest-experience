@@ -87,7 +87,7 @@ export function Sent({ order, more, onMore, onHome }: { order: MeetingOrder; mor
             </div>
           )}
           {order.status === "diproses" && (
-            <p className={css.infoBox}><Info aria-hidden size={20} /><span>Pesanan masuk ke semua pengelola Werkudara Coffee. Siapa pun yang lebih dulu membuka akan memprosesnya, lalu layar ini berubah.</span></p>
+            <p className={css.infoBox}><Info aria-hidden size={20} /><span>Pesanan masuk ke semua pengelola WG Coffee. Siapa pun yang lebih dulu membuka akan memprosesnya, lalu layar ini berubah.</span></p>
           )}
           <div className={css.sentActions}>
             <button type="button" className={`${css.primary} ${css.big}`} onClick={() => { if (settled()) onMore(); }}><Plus aria-hidden size={22} />{more ? "Tambah lagi untuk rapat ini" : "Buat pesanan pengganti"}</button>

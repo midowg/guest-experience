@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { fakeDb, PEOPLE, seedPeople } from "@/lib/server/coffee/fake-db";
 
 /*
- * Every pengelola route of Werkudara Coffee: no admin session 401, no grant 403, a foreign origin
+ * Every pengelola route of WG Coffee: no admin session 401, no grant 403, a foreign origin
  * 403, a wrong body 422 with the field named, and 503 with the migration's name before it runs.
  * The database is the in-memory stand-in; made-up people.
  */
@@ -146,7 +146,7 @@ it("answers 503 with the migration's name before it runs", async () => {
   for (const call of everyCall(await routes())) {
     const response = await call();
     expect(response.status).toBe(503);
-    expect((await body(response)).message).toBe("Werkudara Coffee menunggu migrasi 202612010001_coffee.sql.");
+    expect((await body(response)).message).toBe("WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   }
 });
 
@@ -182,7 +182,7 @@ it("records by hand, changes the quotas, lists the people, and hands out the rec
   expect((await body(await all.reads.recap(`?${days}`))).data).toMatchObject({ rows: [{ no: "K-418", manual: true, claimNo: 1 }], summary: { total: 1, klaim: 1 } });
   const csv = await all.reads.exported(`?format=csv&${days}`, { "sec-fetch-site": "same-origin" });
   expect(csv.headers.get("content-type")).toBe("text/csv; charset=utf-8");
-  expect(csv.headers.get("content-disposition")).toBe(`attachment; filename="werkudara-coffee-${month}-01_${month}-28.csv"`);
+  expect(csv.headers.get("content-disposition")).toBe(`attachment; filename="wg-coffee-rekap-${month}-01_${month}-28.csv"`);
   expect(csv.headers.get("cache-control")).toBe("no-store");
   expect((await csv.text()).split("\r\n")).toHaveLength(3);
   const xlsx = await all.reads.exported(`?format=xlsx&${days}`);

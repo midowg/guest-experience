@@ -23,7 +23,7 @@ import { dropPush, usePush, useWorkerNews, type PushPort } from "./usePush";
 import css from "./coffee.module.css";
 
 /*
- * The employee app of Werkudara Coffee: one screen that holds Menu and Pesanan saya, the drink
+ * The employee app of WG Coffee: one screen that holds Menu and Pesanan saya, the drink
  * sheet, the questions and the messages. The server draws it once with the person's state; after
  * that everything comes from the API (`api`, a prop, so the preview and the tests run this same
  * component on a make-believe server). Moving between the two tabs changes the address only:
@@ -128,7 +128,7 @@ export function CoffeeApp({ initial, api = coffeeClient, tab: first = "menu", ro
   const shownTab = useRef(tab);
   useEffect(() => {
     if (shownTab.current !== tab) { window.scrollTo(0, scrolls.current[tab] ?? 0); shownTab.current = tab; }
-    if (live) document.title = tab === "menu" ? "Werkudara Coffee" : `${coffeeTabLabels[tab]} · Werkudara Coffee`;
+    if (live) document.title = tab === "menu" ? "WG Coffee" : `${coffeeTabLabels[tab]} · WG Coffee`;
   }, [tab, live]);
   // Compared with the tab that is drawn, not with a note an effect writes later: right after a
   // claim moved the screen to Pesanan saya, a tap on Menu arrived before that note and did nothing.

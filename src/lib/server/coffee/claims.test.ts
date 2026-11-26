@@ -142,7 +142,7 @@ describe("what the phone is told", () => {
 
   it("answers 503 with the migration's name before it runs", async () => {
     db.state.migrated = false;
-    await expect(myState(rina, now)).rejects.toMatchObject({ status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." });
+    await expect(myState(rina, now)).rejects.toMatchObject({ status: 503, message: "WG Coffee menunggu migrasi 202612010001_coffee.sql." });
     await expect(submitClaim(rina, { ...latte, key: key(1) }, now)).rejects.toMatchObject({ status: 503 });
     await expect(cancelClaim(rina, key(9), now)).rejects.toMatchObject({ status: 503 });
   });

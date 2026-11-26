@@ -1,5 +1,5 @@
 /*
- * Werkudara Coffee: the drinks and options of the paper menu in the office (photographed 2 Nov 2026),
+ * WG Coffee: the drinks and options of the paper menu in the office (photographed 2 Nov 2026),
  * not the JumpStart app's menu. Descriptions follow the paper menu. Photos are AI stand-ins
  * (docs/rancangan-kopi-kantor.md) until the pantry sends real ones.
  */

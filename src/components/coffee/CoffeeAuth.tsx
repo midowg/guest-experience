@@ -10,7 +10,7 @@ import { forgetLocalPush } from "./usePush";
 import css from "./coffee.module.css";
 
 /*
- * Werkudara Coffee's own sign-in, Lupa password and first new password, in the look of the
+ * WG Coffee's own sign-in, Lupa password and first new password, in the look of the
  * approved prototype (welcome, then Masuk). The account and the APIs are the employee account's
  * (the hooks of BookingAuth, as WG People uses them): one email, one password, one session.
  */
@@ -23,7 +23,7 @@ const knownNow = () => { try { return window.localStorage.getItem(KNOWN_KEY) ===
 const remember = () => { try { window.localStorage.setItem(KNOWN_KEY, "1"); } catch { /* private mode: the welcome simply shows again */ } };
 
 function Page({ title, children }: { title: string; children: ReactNode }) {
-  useEffect(() => { document.title = `${title} · Werkudara Coffee`; }, [title]);
+  useEffect(() => { document.title = `${title} · WG Coffee`; }, [title]);
   return <div className={css.column}><main className={css.activation}>{children}</main></div>;
 }
 
@@ -65,7 +65,7 @@ export function CoffeeLogin({ next, forget = false }: { next: string | null; for
     <Page title="Selamat datang">
       <section className={css.welcome}>
         <span className={css.welcomeMark}><Coffee aria-hidden size={36} /></span>
-        <h1>Werkudara Coffee</h1>
+        <h1>WG Coffee</h1>
         <p>Klaim jatah kopi bulanan dari HP. Pengajuanmu diproses HR atau admin, kamu tinggal ambil di mesin pantry.</p>
         <ul className={css.facts}>
           <li><Check aria-hidden size={18} />Masuk dengan akun karyawan Journey</li>
@@ -164,7 +164,7 @@ export function CoffeeWaiting({ detail }: { detail?: string }) {
     <div className={css.column}>
       <main className={css.waiting}>
         <span className={css.welcomeMark}><Coffee aria-hidden size={36} /></span>
-        <h1>Werkudara Coffee belum dibuka</h1>
+        <h1>WG Coffee belum dibuka</h1>
         <p className={css.lead}>Aplikasinya sedang disiapkan. Coba lagi nanti, atau tanyakan ke HR kapan mulai bisa dipakai.</p>
         {detail && <small>Rincian untuk admin: {detail}</small>}
       </main>
@@ -179,7 +179,7 @@ export function CoffeeTrouble({ here }: { here: string }) {
       <main className={css.waiting}>
         <span className={css.welcomeMark}><Coffee aria-hidden size={36} /></span>
         <h1>Belum bisa memuat</h1>
-        <p className={css.lead}>Werkudara Coffee belum bisa dibuka saat ini. Periksa jaringan, lalu coba lagi sebentar.</p>
+        <p className={css.lead}>WG Coffee belum bisa dibuka saat ini. Periksa jaringan, lalu coba lagi sebentar.</p>
         {/* A plain link: the page is asked for again, also when the script never arrived. */}
         <a className={css.primary} href={here}><RefreshCw aria-hidden size={18} />Coba lagi</a>
       </main>

@@ -77,7 +77,7 @@ export function DrinkSheet({ drink, me, onClose, onSubmit }: {
 
       <div className={css.sheetFoot}>
         {error && <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{error}</span></p>}
-        {!empty && <p className={css.sendTo}><Info aria-hidden size={16} /><span>Dikirim ke pengelola Werkudara Coffee: HR dan admin yang punya akses.</span></p>}
+        {!empty && <p className={css.sendTo}><Info aria-hidden size={16} /><span>Dikirim ke pengelola WG Coffee: HR dan admin yang punya akses.</span></p>}
         <p className={css.muted}>{empty ? `Jatah bulan ini habis. Kembali ${resetDay(me.month)}.` : `Ini klaim ke-${me.used + 1} dari ${me.quota} bulan ${monthName(me.month)}.`}</p>
         <button type="button" className={css.primary} disabled={empty} aria-disabled={busy || undefined} onClick={send}>
           {empty ? "Jatah habis" : busy ? "Mengirim…" : "Ajukan klaim"}

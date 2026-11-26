@@ -105,14 +105,14 @@ describe("Rekap's files", () => {
     expect(widths.slice(9, 14)).toEqual([24, 18, 10, 20, 24]);
     expect(widths.slice(17)).toEqual([10, 30, 16, 10, 8, 10]);
     const summary = part(xlsx, "xl/worksheets/sheet2.xml");
-    expect(summary).toContain("Rekap Werkudara Coffee · November 2026");
+    expect(summary).toContain("Rekap WG Coffee · November 2026");
     expect(summary).toContain("Per PIC");
   });
 });
 
 it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
-  await expect(recap(november)).rejects.toMatchObject({ status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." });
+  await expect(recap(november)).rejects.toMatchObject({ status: 503, message: "WG Coffee menunggu migrasi 202612010001_coffee.sql." });
   await expect(recapFiles(november)).rejects.toMatchObject({ status: 503 });
 });
 

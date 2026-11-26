@@ -5,7 +5,7 @@ import { drinkLabel } from "./menu";
 import type { QueueOrder } from "./types";
 
 /*
- * What Werkudara Coffee's notifications say (F4 sends them). A new order goes to the pengelola;
+ * What WG Coffee's notifications say (F4 sends them). A new order goes to the pengelola;
  * a decision goes to whoever ordered. A notification shows on a locked screen, so it carries a
  * first name, the drink and the room, and nothing else: no position, BU, guest, guest's name or
  * the note of a refusal. Who processed it is the name the claimant sees in the app anyway
@@ -44,7 +44,7 @@ export function pushFor(event: CoffeePushEvent, order: QueueOrder, reader: Coffe
 }
 
 /** "Kirim notifikasi tes": proves this device shows Coffee's notifications. */
-export const testPush = (): PushPayload => ({ title: "Werkudara Coffee", body: "Notifikasi tes. Perangkat ini siap diberi tahu.", url: coffeePath.orders, tag: "tes" });
+export const testPush = (): PushPayload => ({ title: "WG Coffee", body: "Notifikasi tes. Perangkat ini siap diberi tahu.", url: coffeePath.orders, tag: "tes" });
 
 /*
  * The states of "Nyalakan notifikasi" on one device, and the words for each. The app keeps working
@@ -84,7 +84,7 @@ export function pushNote(state: CoffeePushState, place: CoffeePushPlace, waiting
     case "on": return `Notifikasi aktif di perangkat ini: kamu diberi tahu ${subject[place]}.`;
     case "off": return `Nyalakan supaya kamu diberi tahu ${subject[place]}, juga saat aplikasi tertutup.`;
     case "denied": return `Notifikasi diblokir untuk situs ini. Buka pengaturan situs di browser (ikon di kiri alamat, atau Setelan → Notifikasi), pilih Izinkan, lalu muat ulang halaman. ${fallback[place]}`;
-    case "ios-install": return `Di iPhone dan iPad, notifikasi baru bisa dinyalakan setelah Werkudara Coffee dipasang dulu ke layar utama (Bagikan → Tambah ke Layar Utama) dan dibuka dari ikonnya. ${fallback[place]}`;
+    case "ios-install": return `Di iPhone dan iPad, notifikasi baru bisa dinyalakan setelah WG Coffee dipasang dulu ke layar utama (Bagikan → Tambah ke Layar Utama) dan dibuka dari ikonnya. ${fallback[place]}`;
     case "unsupported": return `Browser ini belum mendukung notifikasi. Pakai Chrome atau Edge terbaru. ${fallback[place]}`;
     case "account": return "Masuk dengan akun karyawan untuk menerima notifikasi. Akun super admin tidak terhubung ke satu orang.";
     case "not-ready":

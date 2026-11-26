@@ -117,7 +117,7 @@ export function QuickInput({ draft, lines, setLines, people, sending, problem, o
             )}
             {problem
               ? <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{problem}</span></p>
-              : <p className={css.sendTo}><Info aria-hidden size={16} />Dikirim ke pengelola Werkudara Coffee (HR dan admin yang punya akses).</p>}
+              : <p className={css.sendTo}><Info aria-hidden size={16} />Dikirim ke pengelola WG Coffee (HR dan admin yang punya akses).</p>}
             <button type="button" className={`${css.primary} ${css.big}`} disabled={!total} aria-disabled={sending || undefined} onClick={() => { if (!sending) onSend(); }}>
               <Send aria-hidden size={20} />{sending ? "Mengirim…" : total ? `Kirim ${total} minuman` : "Kirim"}
             </button>

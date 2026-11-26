@@ -2,8 +2,8 @@ import { ChartColumn, Inbox, Settings, type LucideIcon } from "lucide-react";
 import { coffeeAdminPath } from "@/lib/routes";
 
 /*
- * Werkudara Coffee's admin (25 Nov 2026): the pengelola's pages in Journey Admin (/admin/coffee),
- * given per person in Super admin → Akses admin ("Werkudara Coffee"). The menu, the phone's tab bar
+ * WG Coffee's admin (25 Nov 2026): the pengelola's pages in Journey Admin (/admin/coffee),
+ * given per person in Super admin → Akses admin ("WG Coffee"). The menu, the phone's tab bar
  * and the page titles read this list.
  */
 export type CoffeeAdminSectionKey = "antrean" | "rekap" | "pengaturan";
@@ -18,7 +18,7 @@ export type CoffeeAdminSection = {
   summary: string;
 };
 
-export const COFFEE_ADMIN_LABEL = "Werkudara Coffee";
+export const COFFEE_ADMIN_LABEL = "WG Coffee";
 
 export const coffeeAdminSections: readonly CoffeeAdminSection[] = [
   { key: "antrean", label: "Antrean", group: "Pesanan", href: coffeeAdminPath.home, icon: Inbox, summary: "Pesanan menunggu, terlama di atas. Beli di aplikasi JumpStart, lalu tandai selesai. Terlihat oleh semua pemegang akses." },

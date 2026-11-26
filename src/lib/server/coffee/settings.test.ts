@@ -24,7 +24,7 @@ it("falls back to the owner's starting values while the row or the migration is 
   expect(await readSettings()).toEqual({ karyawan: 4, ga: 2, intern: 2 });
   db.state.migrated = false;
   expect(await readSettings()).toEqual({ karyawan: 4, ga: 2, intern: 2 });
-  await expect(readSettings(true)).rejects.toMatchObject({ status: 503, message: "Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." });
+  await expect(readSettings(true)).rejects.toMatchObject({ status: 503, message: "WG Coffee menunggu migrasi 202612010001_coffee.sql." });
   await expect(saveSettings({ karyawan: 6, ga: 3, intern: 0 }, dewi)).rejects.toMatchObject({ status: 503 });
 });
 
@@ -43,7 +43,7 @@ it("lists the active people by name with their quota group, and the month's use 
   expect((await activePeople("2026-10")).map(person => person.used)).toEqual([0, 0, 0, 1]);
 });
 
-it("names who holds the Werkudara Coffee grant", async () => {
+it("names who holds the WG Coffee grant", async () => {
   db.rows("admin_grants").push({ employee_id: PEOPLE.rina, apps: ["hr"] }, { employee_id: PEOPLE.keluar, apps: ["coffee"] });
   expect(await holders()).toEqual([{ id: PEOPLE.dewi, name: "Contoh Dewi Lestari", position: "Contoh karyawan" }]);
   db.state.tables.admin_grants = [];

@@ -24,7 +24,7 @@ export function CoffeeFrame({ tab, onTab, waiting, name, onAccount, children }: 
   return (
     <div className={css.column}>
       <header className={css.topbar}>
-        <span className={css.brand}><Coffee aria-hidden size={20} />Werkudara Coffee</span>
+        <span className={css.brand}><Coffee aria-hidden size={20} />WG Coffee</span>
         <button type="button" className={css.avatarButton} aria-label={`Akun ${name}`} aria-haspopup="dialog" onClick={onAccount}>
           <span className={css.avatar} aria-hidden>{name.trim().slice(0, 1).toUpperCase()}</span>
         </button>

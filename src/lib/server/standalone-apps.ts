@@ -71,12 +71,12 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       ...(hrWaiting ? { waiting: { label: `${hrWaiting} absen perlu dicek`, href: hrAdminPath.waiting } } : {}),
     },
     {
-      // Werkudara Coffee (25 Nov 2026): claims of the office JumpStart machine, processed in /admin/coffee.
-      key: "coffee", name: "Werkudara Coffee", eyebrow: "Aplikasi karyawan",
+      // WG Coffee (25 Nov 2026): claims of the office JumpStart machine, processed in /admin/coffee.
+      key: "coffee", name: "WG Coffee", eyebrow: "Aplikasi karyawan",
       status: coffeeWaiting ? `${coffeeWaiting} pesanan menunggu diproses` : "Klaim minuman dan pesanan rapat",
       address: COFFEE_PATH,
       description: "Karyawan mengajukan klaim minuman JumpStart dari HP dengan jatah per bulan; GA mengirim pesanan rapat untuk tamu dan tim. Pengelola memproses antrean, mencatat manual, dan mengunduh rekap.",
-      open: { label: "Buka aplikasi", href: coffeePath.home }, manage: { label: "Kelola Werkudara Coffee", href: coffeeAdminPath.home },
+      open: { label: "Buka aplikasi", href: coffeePath.home }, manage: { label: "Kelola WG Coffee", href: coffeeAdminPath.home },
       ...(coffeeWaiting ? { waiting: { label: `${coffeeWaiting} pesanan menunggu diproses`, href: coffeeAdminPath.home } } : {}),
     },
     {

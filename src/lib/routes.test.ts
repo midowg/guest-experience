@@ -152,7 +152,7 @@ describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
   });
 });
 
-describe("Werkudara Coffee addresses (25 Nov 2026)", () => {
+describe("WG Coffee addresses (25 Nov 2026)", () => {
   it("put the employee app under /coffee, with its own sign-in, tablet, photos and PWA files", () => {
     expect(COFFEE_PATH).toBe("/coffee");
     expect(coffeePath).toMatchObject({ home: "/coffee", orders: "/coffee/pesanan", ga: "/coffee/ga", gaDenied: "/coffee?pesan=ga", forgot: "/coffee/lupa-password",
@@ -162,6 +162,7 @@ describe("Werkudara Coffee addresses (25 Nov 2026)", () => {
     expect(coffeePath.newPassword("/coffee")).toBe("/coffee/password-baru?next=%2Fcoffee");
     expect(coffeePath.photo("cafe-latte")).toBe("/coffee/drinks/cafe-latte.jpg");
     expect(coffeePath.icon("icon-192.png")).toBe("/coffee/icon-192.png");
+    expect(coffeePath.preview).toBe("/coffee/og-square.jpg");
   });
 
   it("give every drink of the menu a photo in public/coffee/drinks", () => {

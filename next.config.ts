@@ -39,7 +39,7 @@ const config: NextConfig = {
       // WG People moved from /hr to /people (21 Nov 2026, the owner's ask); old links and installs keep working.
       { source: "/hr", destination: "/people", permanent: true },
       { source: "/hr/:path*", destination: "/people/:path*", permanent: true },
-      // Werkudara Coffee: the pengelola page was first planned at /coffee/hr; it lives in Journey Admin (25 Nov 2026).
+      // WG Coffee: the pengelola page was first planned at /coffee/hr; it lives in Journey Admin (25 Nov 2026).
       { source: "/coffee/hr", destination: "/admin/coffee", permanent: false },
       { source: "/coffee/hr/:path*", destination: "/admin/coffee", permanent: false },
       { source: "/panduan-ke-werkudara", destination: "/your-visit", permanent: false },
@@ -78,7 +78,7 @@ const config: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       ] },
-      // Werkudara Coffee's service worker sits at /coffee/sw.js, which by default may only control /coffee/…; the app's first
+      // WG Coffee's service worker sits at /coffee/sw.js, which by default may only control /coffee/…; the app's first
       // page is /coffee itself, so the worker is allowed that one address above its folder (26 Nov 2026, audit F2-04).
       { source: "/coffee/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/coffee" }, { key: "Cache-Control", value: "no-cache, max-age=0" }] },
       { source: "/e/:slug/i/:token", headers: personalHeaders },

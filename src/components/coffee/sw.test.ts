@@ -60,7 +60,7 @@ it("always shows something, also for a push it cannot read", async () => {
     const sw = worker();
     await sw.push(payload);
     expect(sw.shown, String(payload)).toHaveLength(1);
-    expect(sw.shown[0]).toMatchObject({ title: "Werkudara Coffee", options: { data: { url: `${SITE}${coffeePath.home}` } } });
+    expect(sw.shown[0]).toMatchObject({ title: "WG Coffee", options: { data: { url: `${SITE}${coffeePath.home}` } } });
   }
 });
 
@@ -69,13 +69,13 @@ it("says one neutral line, without a sound, while a guest holds GA's tablet", as
   await sw.push({ title: "Klaim baru", body: "Rina · Café Latte", url: coffeeAdminPath.home, tag: "K-419" });
   await sw.push({ title: "Pesanan rapat siap diambil", body: "Vasuki Room · 4 minuman. Selesai diproses oleh Dewi.", url: coffeePath.gaOrder("o1"), tag: "T-0113" });
   expect(sw.shown.map(item => [item.title, item.options.body, item.options.silent, item.options.tag])).toEqual([
-    ["Werkudara Coffee", "Ada pembaruan pesanan.", true, "coffee"], ["Werkudara Coffee", "Ada pembaruan pesanan.", true, "coffee"],
+    ["WG Coffee", "Ada pembaruan pesanan.", true, "coffee"], ["WG Coffee", "Ada pembaruan pesanan.", true, "coffee"],
   ]);
   expect(JSON.stringify(sw.shown.map(item => [item.title, item.options.body, item.options.tag]))).not.toMatch(/Rina|Latte|Vasuki|Dewi|K-419|T-0113/);
   // The cookie decides, also with no window open (the tablet's browser was put away in guest mode).
   const closed = worker({ cookie: "1" });
   await closed.push(claim);
-  expect(closed.shown[0]).toMatchObject({ title: "Werkudara Coffee", options: { body: "Ada pembaruan pesanan.", silent: true } });
+  expect(closed.shown[0]).toMatchObject({ title: "WG Coffee", options: { body: "Ada pembaruan pesanan.", silent: true } });
   // Guest mode is over (the cookie is gone): the tablet reads the real words again.
   const back = worker({ windows: [coffeePath.ga], cookie: null });
   await back.push(claim);
@@ -85,7 +85,7 @@ it("says one neutral line, without a sound, while a guest holds GA's tablet", as
 it("stays neutral on a browser that cannot read cookies whenever a tablet page is open", async () => {
   const tablet = worker({ windows: [coffeePath.ga], cookieStore: false });
   await tablet.push(claim);
-  expect(tablet.shown[0]).toMatchObject({ title: "Werkudara Coffee", options: { body: "Ada pembaruan pesanan.", silent: true } });
+  expect(tablet.shown[0]).toMatchObject({ title: "WG Coffee", options: { body: "Ada pembaruan pesanan.", silent: true } });
   const phone = worker({ windows: [coffeePath.orders], cookieStore: false });
   await phone.push(claim);
   expect(phone.shown[0]).toMatchObject({ title: claim.title, options: { silent: false } });

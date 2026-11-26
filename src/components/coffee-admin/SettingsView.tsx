@@ -176,7 +176,7 @@ export function SettingsView({ api, data, error, onRetry, onSaved }: {
           <p className={css.small} style={{ marginTop: 12 }}>Diminta di tablet GA saat petugas keluar dari buku menu tamu, supaya tamu tidak bisa membuka layar GA. Selama belum diatur, keluar hanya lewat pertanyaan.</p>
         </section>
         <section className={css.panel} aria-labelledby={`${uid}-access`} aria-busy={!data && !error}>
-          <h2 id={`${uid}-access`}>Pemegang akses Werkudara Coffee</h2>
+          <h2 id={`${uid}-access`}>Pemegang akses WG Coffee</h2>
           {!data ? !error && <span className={css.skeleton} style={{ height: 96 }} /> : data.holders.length ? (
             <ul className={css.recent}>
               {data.holders.map(holder => (

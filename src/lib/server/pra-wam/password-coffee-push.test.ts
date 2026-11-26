@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 /*
- * A new password signs every other device out, so Werkudara Coffee's notifications stop on all of
+ * A new password signs every other device out, so WG Coffee's notifications stop on all of
  * the person's devices (Coffee audit F5-07). A stand-in database; made-up people. A database
  * without Coffee's push table must not stop the password change.
  */

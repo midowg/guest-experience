@@ -1,6 +1,6 @@
 # Rancangan Kopi Kantor (JumpStart)
 
-Status: **sudah diterapkan** di cabang `feat/werkudara-coffee` (26 Nov 2026), belum dibuka ke karyawan; aturan pemakaian di
+Status: **sudah diterapkan dan sudah dibuka** dengan nama **WG Coffee** (nama aplikasi sejak 26 Nov 2026; cabang `feat/werkudara-coffee`); aturan pemakaian di
 `docs/aturan-coffee.md`, langkah membuka di `docs/coffee/GO-LIVE.md`. Dokumen ini tinggal catatan rancangan awal. Desain ada di **Penpot, file `werkudara-coffee`** (4 November 2026),
 dengan halaman berurutan sesuai alur prototype: 00 Sampul & alur, 01 Fondasi, 02 Komponen (49), 03 Foto produk,
 10 GA · Pesanan rapat, 11 Tamu · Buku menu, 20 Karyawan · Aktivasi, 21 Karyawan · Klaim, 30 HR · Antrean & rekap,

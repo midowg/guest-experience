@@ -1,7 +1,7 @@
 import { COFFEE_PATH, coffeePath } from "@/lib/routes";
 
 /*
- * Werkudara Coffee as an installable app ("Pasang di layar utama", 26 Nov 2026): its own name,
+ * WG Coffee as an installable app ("Pasang di layar utama", 26 Nov 2026): its own name,
  * icon and scope, so it opens full screen at /coffee, apart from WAM, Booking Kantor and WG People.
  * The scope is the app's address without a slash at the end: the app's first page is /coffee
  * itself, which "/coffee/" would leave outside (the phone would then show a browser bar on it).
@@ -12,8 +12,8 @@ export const dynamic = "force-static";
 export function GET() {
   return Response.json({
     id: COFFEE_PATH,
-    name: "Werkudara Coffee",
-    short_name: "Coffee",
+    name: "WG Coffee",
+    short_name: "WG Coffee",
     description: "Klaim jatah kopi bulanan dari HP, lalu ambil di mesin pantry.",
     lang: "id",
     start_url: COFFEE_PATH,

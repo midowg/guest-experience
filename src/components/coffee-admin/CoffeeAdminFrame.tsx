@@ -12,7 +12,7 @@ export const waitingFor = (error: unknown): ServiceError => {
 };
 
 /**
- * Every Werkudara Coffee admin page (/admin/coffee, …/rekap, …/pengaturan). The page checks the
+ * Every WG Coffee admin page (/admin/coffee, …/rekap, …/pengaturan). The page checks the
  * session itself (requireAdminPage: the "coffee" grant, or the super admin) and reads its own
  * section's data; this hands it to the one screen that holds all three sections (CoffeeAdminApp).
  * `notice`: what the page waits for (the migration), shown in the frame instead of the screen.

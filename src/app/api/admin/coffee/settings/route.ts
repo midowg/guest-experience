@@ -8,7 +8,7 @@ import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/h
 
 export const dynamic = "force-dynamic";
 
-/** GET: the monthly quotas and who holds the Werkudara Coffee grant (changed in Super admin → Akses admin). */
+/** GET: the monthly quotas and who holds the WG Coffee grant (changed in Super admin → Akses admin). */
 export async function GET() {
   return handle(async () => {
     await requireApiAdmin();

@@ -13,7 +13,7 @@ const UPRIGHT = new Set(["communal", "vasuki"]);
 const centre = (rect: Rect) => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 
 /**
- * The meeting rooms Werkudara Coffee serves, each in the colour and the word of its orders today
+ * The meeting rooms WG Coffee serves, each in the colour and the word of its orders today
  * (never colour alone), and the machine in the pantry. With `onPick`, the rooms are buttons.
  */
 export function FloorMap({ rooms, statuses = {}, selected, onPick, label }: {

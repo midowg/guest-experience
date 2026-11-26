@@ -1,4 +1,4 @@
-// Werkudara Coffee's service worker (26 Nov 2026): makes the app installable and answers with a
+// WG Coffee's service worker (26 Nov 2026): makes the app installable and answers with a
 // short offline page when there is no signal. Pages are personal: nothing is cached.
 //
 // Scope: /coffee (no slash), so the app's first page, the one the home-screen icon opens, is
@@ -25,10 +25,10 @@ const ADMIN = "/admin/coffee";
 const TABLET = "/coffee/ga";
 const GUEST_COOKIE = "coffee_ga_tamu";
 const ICON = "/coffee/icon-192.png";
-const QUIET = { title: "Werkudara Coffee", body: "Ada pembaruan pesanan." };
+const QUIET = { title: "WG Coffee", body: "Ada pembaruan pesanan." };
 const OFFLINE = `<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Werkudara Coffee</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#FBF6EE;color:#2B1E16;font-family:system-ui,sans-serif;text-align:center;padding:24px">
-<div><h1 style="font-size:24px;margin:0 0 8px">Sinyalnya hilang</h1><p style="max-width:22rem;margin:0 auto 20px;line-height:1.5;color:#6B5546">Werkudara Coffee butuh internet supaya pengajuanmu sampai ke pengelola. Periksa sinyal, lalu coba lagi.</p>
+<title>WG Coffee</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#FBF6EE;color:#2B1E16;font-family:system-ui,sans-serif;text-align:center;padding:24px">
+<div><h1 style="font-size:24px;margin:0 0 8px">Sinyalnya hilang</h1><p style="max-width:22rem;margin:0 auto 20px;line-height:1.5;color:#6B5546">WG Coffee butuh internet supaya pengajuanmu sampai ke pengelola. Periksa sinyal, lalu coba lagi.</p>
 <button onclick="location.reload()" style="min-height:52px;padding:0 24px;border:0;border-radius:12px;background:#2F6B5A;color:#fff;font-weight:600;font-size:17px">Coba lagi</button></div></body></html>`;
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -43,7 +43,7 @@ self.addEventListener("fetch", event => {
 const under = (pathname, base) => pathname === base || pathname.startsWith(base + "/");
 const pathOf = url => { try { return new URL(url).pathname; } catch { return ""; } };
 const openWindows = () => self.clients.matchAll({ type: "window", includeUncontrolled: true });
-/** Which part of Werkudara Coffee an address belongs to: the admin, GA's tablet, the employee app, or none. */
+/** Which part of WG Coffee an address belongs to: the admin, GA's tablet, the employee app, or none. */
 const areaOf = pathname => under(pathname, ADMIN) ? "admin" : under(pathname, TABLET) ? "ga" : under(pathname, APP) ? "app" : "";
 /** The address a notification may open: on this site and inside the app or its admin, else the app's first page. */
 function safeUrl(value) {

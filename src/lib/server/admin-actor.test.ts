@@ -24,9 +24,9 @@ vi.mock("./supabase/admin", () => {
 const { saveGrant } = await import("./admin-actor");
 const grant = (apps: string[]) => saveGrant("e1", { apps, allEvents: false, eventIds: [] } as never);
 
-it("names the Coffee migration when Werkudara Coffee is ticked for someone who already holds older access", async () => {
+it("names the Coffee migration when WG Coffee is ticked for someone who already holds older access", async () => {
   for (const apps of [["coffee"], ["hr", "coffee"], ["kuesioner", "wellbeing", "wam_acara", "hr", "coffee"], ["acara", "wam", "coffee"]]) {
-    await expect(grant(apps), apps.join()).rejects.toMatchObject({ status: 503, message: "Akses Werkudara Coffee menunggu migrasi 202612010001_coffee.sql. Sampai itu, hanya super admin yang bisa membukanya." });
+    await expect(grant(apps), apps.join()).rejects.toMatchObject({ status: 503, message: "Akses WG Coffee menunggu migrasi 202612010001_coffee.sql. Sampai itu, hanya super admin yang bisa membukanya." });
   }
 });
 

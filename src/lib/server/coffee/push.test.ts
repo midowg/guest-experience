@@ -290,7 +290,7 @@ describe("a device", () => {
     await expect(push.sendTestPush(PEOPLE.rina)).rejects.toMatchObject({ status: 409 });
     device(PEOPLE.rina, "rina-hp"); device(PEOPLE.dewi, "dewi-hp");
     await expect(push.sendTestPush(PEOPLE.rina)).resolves.toBeUndefined();
-    expect(web.sent.map(item => [item.endpoint, item.body.title, item.body.tag])).toEqual([["https://fcm.googleapis.com/fcm/send/rina-hp", "Werkudara Coffee", "tes"]]);
+    expect(web.sent.map(item => [item.endpoint, item.body.title, item.body.tag])).toEqual([["https://fcm.googleapis.com/fcm/send/rina-hp", "WG Coffee", "tes"]]);
     // Audit F5-04: delivered, refused, unreachable or gone, the caller hears the same (nothing).
     for (const fail of [500, 403, "network", 410] as const) {
       web.fails.set("https://fcm.googleapis.com/fcm/send/rina-hp", fail);

@@ -334,7 +334,7 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
   return (
     <div className={`${css.ga} ${css.stage}`}>
       <header className={css.topbar}>
-        <span className={css.brand}><Coffee aria-hidden size={22} />Werkudara Coffee<span className={css.brandSub}>Tablet GA</span></span>
+        <span className={css.brand}><Coffee aria-hidden size={22} />WG Coffee<span className={css.brandSub}>Tablet GA</span></span>
         <span className={css.user}>
           {port && push.state === "on" && <>
             <span className={css.topNote}><BellRing aria-hidden size={18} /><span>Notifikasi aktif</span></span>

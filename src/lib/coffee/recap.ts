@@ -144,7 +144,7 @@ export function summarize(rows: RecapRow[], people: RecapPerson[], settings: Cof
 /** The Ringkasan sheet of the .xlsx: the same numbers as the screen; counts are number cells. */
 export function summarySheet(summary: RecapSummary, title: string): (string | number)[][] {
   return [
-    [`Rekap Werkudara Coffee · ${title}`],
+    [`Rekap WG Coffee · ${title}`],
     ["Total minuman", summary.total], ["Klaim", summary.klaim], ["Tamu", summary.tamu],
     ["Tim · rapat", summary.tim], ["Ditolak", summary.refused], [],
     ["Per orang", "Kelompok", "BU", "Klaim terpakai", "Jatah", "Tim · rapat", "Ditolak"],

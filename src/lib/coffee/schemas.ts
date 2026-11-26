@@ -4,7 +4,7 @@ import { ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, drinkBySlug, type Temperature } 
 import { ITEM_KINDS, STATUSES } from "./types";
 
 /*
- * What Werkudara Coffee's APIs take (25 Nov 2026). The messages are for the person at the screen,
+ * What WG Coffee's APIs take (25 Nov 2026). The messages are for the person at the screen,
  * in Indonesian. A drink must be on the menu and come in the temperature asked for; the ice level
  * only means something for a cold drink, so a hot one always carries "Normal".
  */

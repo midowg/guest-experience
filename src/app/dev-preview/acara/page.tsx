@@ -4,6 +4,7 @@ import { EventList } from "@/components/admin/events/EventList";
 import { AccountMenu } from "@/components/admin/shared/AccountMenu";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventRecord } from "@/lib/types";
+import { COFFEE_PATH, coffeeAdminPath, coffeePath } from "@/lib/routes";
 import type { StandaloneApp } from "@/lib/server/standalone-apps";
 import { smTdnYogyakarta } from "@/lib/fixtures/sm-tdn-yogyakarta";
 
@@ -27,6 +28,7 @@ export default function DevEventListPage() {
   // The standalone apps as the admin page gets them (standaloneApps), fixed for the layout check.
   const apps: StandaloneApp[] = [
     { key: "wam", name: "Pra WAM", eyebrow: "Aplikasi karyawan", status: "Minggu Pra WAM · 28 Okt–29 Des · WAM 55 hari lagi", address: "/wam", description: "Login per karyawan: agenda, appraisal, booking ruang, absen QR, dokumen, dan pengumuman. Panitia mengelola sesi dari dalam aplikasi.", open: { label: "Buka aplikasi", href: "/wam" }, manage: { label: "Kelola di Admin Pra WAM", href: "/admin/wam" }, waiting: { label: "2 permintaan reset password", href: "/admin/wam/permintaan-reset" } },
+    { key: "coffee", name: "WG Coffee", eyebrow: "Aplikasi karyawan", status: "Klaim minuman dan pesanan rapat", address: COFFEE_PATH, description: "Karyawan mengajukan klaim minuman JumpStart dari HP dengan jatah per bulan.", open: { label: "Buka aplikasi", href: coffeePath.home }, manage: { label: "Kelola WG Coffee", href: coffeeAdminPath.home } },
     { key: "booking", name: "Booking Kantor", eyebrow: "Booking ruangan", status: "Ruang kantor, di luar WAM", address: "/booking", description: "Booking ruangan kantor untuk semua karyawan dengan akun WAM, berbagi ruang dan jadwal yang sama dengan WAM. Staf administrasi mengelola semua booking.", open: { label: "Buka aplikasi", href: "/booking" }, manage: { label: "Kelola booking", href: "/booking/kelola" } },
     { key: "tv", name: "TV Announcement", eyebrow: "Digital signage", status: "TV kantor", address: "/tv", description: "Kendali signage TV kantor: alamat tiap TV, jadwal ruang hari ini dan minggu ini, gambar pengumuman dan durasinya, mode, serta QR. Semua bisa diatur sendiri.", open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: "/admin/wam/tv" } },
   ];

@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { PraWamApiError } from "@/components/pra-wam/api";
 import { coffeePath, praWamApi } from "@/lib/routes";
 
-/* Werkudara Coffee's own sign-in (26 Nov 2026) with the server replaced: a made-up email. */
+/* WG Coffee's own sign-in (26 Nov 2026) with the server replaced: a made-up email. */
 const router = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const request = vi.hoisted(() => vi.fn());
@@ -22,7 +22,7 @@ const fill = (email = "contoh@example.com", password = "rahasia-contoh") => {
 it("welcomes first, then signs in with the employee account and opens the app", async () => {
   request.mockResolvedValue({ data: { askNewPassword: false } });
   render(<CoffeeLogin next={null} />);
-  expect(screen.getByRole("heading", { level: 1, name: "Werkudara Coffee" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "WG Coffee" })).toBeTruthy();
   expect(screen.getByText("Masuk dengan akun karyawan Journey")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
   expect(screen.getByRole("heading", { level: 1, name: "Masuk" })).toBeTruthy();
@@ -51,7 +51,7 @@ it("goes back to where the person was headed, and skips the welcome on a device 
   expect(screen.getByRole("heading", { level: 1, name: "Masuk" })).toBeTruthy();
   // Kembali still shows the welcome.
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
-  expect(screen.getByRole("heading", { level: 1, name: "Werkudara Coffee" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "WG Coffee" })).toBeTruthy();
 });
 
 it("sends someone on the first password to make a new one, on Coffee's own page", async () => {
@@ -94,9 +94,9 @@ it("asks for a new password with the rules ticked as they are met, or lets the p
 });
 
 it("says plainly that the app is not open yet before the migration ran", () => {
-  render(<CoffeeWaiting detail="Werkudara Coffee menunggu migrasi 202612010001_coffee.sql." />);
-  expect(screen.getByRole("heading", { level: 1, name: "Werkudara Coffee belum dibuka" })).toBeTruthy();
-  expect(screen.getByText(/Rincian untuk admin: Werkudara Coffee menunggu migrasi 202612010001_coffee\.sql\./)).toBeTruthy();
+  render(<CoffeeWaiting detail="WG Coffee menunggu migrasi 202612010001_coffee.sql." />);
+  expect(screen.getByRole("heading", { level: 1, name: "WG Coffee belum dibuka" })).toBeTruthy();
+  expect(screen.getByText(/Rincian untuk admin: WG Coffee menunggu migrasi 202612010001_coffee\.sql\./)).toBeTruthy();
 });
 
 // Audit F5-07: nobody is signed in on this browser, so a push subscription left behind belongs to whoever was.
