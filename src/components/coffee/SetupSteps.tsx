@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Check, ChevronLeft, Coffee, Download, EllipsisVertical, Share, SquarePlus } from "lucide-react";
 import type { PhoneKind } from "@/lib/coffee/setup";
 import { coffeePath } from "@/lib/routes";
@@ -26,8 +26,16 @@ export function SetupSteps({ phone, installed, onInstall, notify, onDone }: {
   const step = installed ? "notify" : picked ?? "install";
   const total = installed ? 1 : 2;
   const index = step === "install" ? 1 : total;
+  // The step changed without a page load and the button that was pressed is gone: the focus goes to the new step's heading.
+  const root = useRef<HTMLDivElement>(null);
+  const shown = useRef(step);
+  useEffect(() => {
+    if (shown.current === step) return;
+    shown.current = step;
+    if (picked) root.current?.querySelector<HTMLElement>("h1")?.focus();
+  }, [step, picked]);
   return (
-    <div className={css.activation}>
+    <div className={css.activation} ref={root}>
       <header className={css.stepbar}>
         {step === "notify" && !installed
           ? <button type="button" className={css.iconButton} aria-label="Kembali" onClick={() => setStep("install")}><ChevronLeft aria-hidden size={24} /></button>
@@ -57,7 +65,7 @@ function InstallStep({ first, onInstall, onNext }: { first: PhoneKind; onInstall
   };
   return (
     <section className={css.stepBody}>
-      <h1>Pasang di layar utama</h1>
+      <h1 tabIndex={-1}>Pasang di layar utama</h1>
       <p className={css.lead}>Seterusnya cukup ketuk ikon ini, tanpa membuka tautan lagi.</p>
       <div className={css.appIcon}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the app's own icon */}
@@ -109,7 +117,7 @@ function NotifyStep({ notify, onDone }: { notify?: NotifySetup; onDone: () => vo
   };
   return (
     <section className={css.stepBody}>
-      <h1>{notify ? "Izinkan notifikasi" : "Notifikasi menyusul"}</h1>
+      <h1 tabIndex={-1}>{notify ? "Izinkan notifikasi" : "Notifikasi menyusul"}</h1>
       <p className={css.lead}>{notify
         ? "Supaya kamu tahu begitu pengajuan selesai diproses dan kopi siap diambil."
         : "Sebentar lagi kamu diberi tahu begitu pengajuan selesai diproses. Untuk sekarang, statusnya berubah sendiri di Pesanan saya selama aplikasi terbuka."}</p>

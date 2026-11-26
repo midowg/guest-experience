@@ -78,6 +78,9 @@ const config: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       ] },
+      // Werkudara Coffee's service worker sits at /coffee/sw.js, which by default may only control /coffee/…; the app's first
+      // page is /coffee itself, so the worker is allowed that one address above its folder (26 Nov 2026, audit F2-04).
+      { source: "/coffee/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/coffee" }, { key: "Cache-Control", value: "no-cache, max-age=0" }] },
       { source: "/e/:slug/i/:token", headers: personalHeaders },
       { source: "/e/:slug/i/:token/tiket", headers: personalHeaders },
       { source: "/:code([A-Za-z2-9]{6})/:token([a-z2-9]{8})", headers: personalHeaders },

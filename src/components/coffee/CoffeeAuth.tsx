@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ArrowLeft, Check, CheckCircle2, ChevronLeft, Circle, CircleAlert, Coffee, Eye, EyeOff } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ArrowLeft, Check, CheckCircle2, ChevronLeft, Circle, CircleAlert, Coffee, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useForgot, useNewPassword, useSignIn } from "@/components/booking/BookingAuth";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { coffeePath } from "@/lib/routes";
@@ -48,6 +48,12 @@ export function CoffeeLogin({ next }: { next: string | null }) {
   const known = useSyncExternalStore(noChange, knownNow, () => false);
   const [picked, setPicked] = useState<"welcome" | "login" | null>(null);
   const step = picked ?? (known || next ? "login" : "welcome");
+  // "Masuk" on the welcome and "Kembali" on the form remove the button that was pressed: the focus follows to the new step.
+  const emailField = useRef<HTMLInputElement>(null), startButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (picked === "login") emailField.current?.focus();
+    else if (picked === "welcome") startButton.current?.focus();
+  }, [picked]);
 
   if (step === "welcome") return (
     <Page title="Selamat datang">
@@ -59,7 +65,7 @@ export function CoffeeLogin({ next }: { next: string | null }) {
           <li><Check aria-hidden size={18} />Masuk dengan akun karyawan Journey</li>
           <li><Check aria-hidden size={18} />Akun yang sama dengan WG People dan Booking Kantor</li>
         </ul>
-        <button type="button" className={css.primary} onClick={() => setPicked("login")}>Masuk</button>
+        <button ref={startButton} type="button" className={css.primary} onClick={() => setPicked("login")}>Masuk</button>
       </section>
     </Page>
   );
@@ -74,7 +80,7 @@ export function CoffeeLogin({ next }: { next: string | null }) {
         <form className={css.form} onSubmit={submit} noValidate>
           {error && <Problem text={error} />}
           <label className={css.label} htmlFor="kopi-email">Email</label>
-          <input id="kopi-email" className={css.input} type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={event => setEmail(event.target.value)} required />
+          <input ref={emailField} id="kopi-email" className={css.input} type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={event => setEmail(event.target.value)} required />
           <Secret id="kopi-password" label="Password" value={password} onChange={setPassword} autoComplete="current-password" />
           <Link href={coffeePath.forgot} className={css.linkButton}>Lupa password?</Link>
           <button type="submit" className={css.primary} disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</button>
@@ -143,7 +149,10 @@ export function CoffeeNewPassword({ next }: { next: string }) {
   );
 }
 
-/** Before the migration ran (or the database is not set up): the app says so, plainly, instead of failing. */
+/**
+ * Before the migration ran (or the database is not set up): the app says so, plainly, instead of
+ * failing. `detail` (the migration's name) is passed for the pengelola only.
+ */
 export function CoffeeWaiting({ detail }: { detail?: string }) {
   return (
     <div className={css.column}>
@@ -152,6 +161,21 @@ export function CoffeeWaiting({ detail }: { detail?: string }) {
         <h1>Werkudara Coffee belum dibuka</h1>
         <p className={css.lead}>Aplikasinya sedang disiapkan. Coba lagi nanti, atau tanyakan ke HR kapan mulai bisa dipakai.</p>
         {detail && <small>Rincian untuk admin: {detail}</small>}
+      </main>
+    </div>
+  );
+}
+
+/** The app is open but could not be read just now (a database hiccup, not a missing migration): say so, with a way to try again. */
+export function CoffeeTrouble({ here }: { here: string }) {
+  return (
+    <div className={css.column}>
+      <main className={css.waiting}>
+        <span className={css.welcomeMark}><Coffee aria-hidden size={36} /></span>
+        <h1>Belum bisa memuat</h1>
+        <p className={css.lead}>Werkudara Coffee belum bisa dibuka saat ini. Periksa jaringan, lalu coba lagi sebentar.</p>
+        {/* A plain link: the page is asked for again, also when the script never arrived. */}
+        <a className={css.primary} href={here}><RefreshCw aria-hidden size={18} />Coba lagi</a>
       </main>
     </div>
   );

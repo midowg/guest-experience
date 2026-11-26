@@ -2,6 +2,7 @@
 
 import { ClipboardList } from "lucide-react";
 import { drinkLabel, optionsLabel } from "@/lib/coffee/menu";
+import { wibDay } from "@/lib/coffee/quota";
 import type { MyOrder } from "@/lib/coffee/types";
 import { CurrentOrder, DrinkPhoto } from "./CurrentOrder";
 import { HISTORY_PILL, clock, dayShort } from "./format";
@@ -9,11 +10,12 @@ import css from "./coffee.module.css";
 
 /**
  * Pesanan saya: every claim that still waits is shown in full (more than one may wait while the
- * quota lasts, and each can be cancelled); with none waiting, the newest claim. The rest is
- * "Sebelumnya", newest first.
+ * quota lasts, and each can be cancelled); with none waiting, the newest claim when it was decided
+ * today (`today`, the office's day in WIB). A claim done last week is not "ready now": it sits in
+ * "Sebelumnya" with the rest, newest first, under an invitation to the menu.
  */
-export function OrdersScreen({ orders, cancelling, onCancel, onMenu }: {
-  orders: MyOrder[]; cancelling: ReadonlySet<string>; onCancel: (order: MyOrder) => void; onMenu: () => void;
+export function OrdersScreen({ orders, today, cancelling, onCancel, onMenu }: {
+  orders: MyOrder[]; today: string; cancelling: ReadonlySet<string>; onCancel: (order: MyOrder) => void; onMenu: () => void;
 }) {
   if (!orders.length) return (
     <section className={css.emptyState}>
@@ -24,10 +26,18 @@ export function OrdersScreen({ orders, cancelling, onCancel, onMenu }: {
     </section>
   );
   const waiting = orders.filter(order => order.status === "diproses");
-  const shown = waiting.length ? waiting : [orders[0]];
+  const newest = orders[0];
+  const shown = waiting.length ? waiting : wibDay(newest.processedAt ?? newest.orderedAt) === today ? [newest] : [];
   const rest = orders.filter(order => !shown.includes(order));
   return (
     <>
+      {shown.length === 0 && (
+        <section className={css.invite}>
+          <h1>Tidak ada pesanan hari ini</h1>
+          <p>Pilih minuman di Menu, lalu ajukan klaim.</p>
+          <button type="button" className={css.secondary} onClick={onMenu}>Lihat menu</button>
+        </section>
+      )}
       {shown.map((order, index) => <CurrentOrder key={order.id} order={order} first={index === 0} cancelling={cancelling.has(order.id)} onCancel={onCancel} onMenu={onMenu} />)}
       {rest.length > 0 && (
         <section>

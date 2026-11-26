@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { coffeeAdminPath, coffeePath } from "@/lib/routes";
+import { CoffeeApiError, OFFLINE_TEXT, TIMEOUT_TEXT } from "./api";
 import { CoffeeApp, type CoffeeAppProps } from "./CoffeeApp";
+import { stayOnPage } from "./Layer";
 import { SAMPLE_REFUSAL, createSampleCoffee } from "./sample";
-import { POLL_MS } from "./useCoffee";
+import { GUARD_MS, POLL_MS } from "./useCoffee";
 
 /*
  * The employee app on the make-believe server (26 Nov 2026): the quota, a claim from the sheet to
@@ -38,7 +40,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(NOW));
   vi.stubGlobal("scrollTo", vi.fn());
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); stayOnPage(); });
 
 it("greets the person with what is left of the month's quota and the drinks of both kinds", () => {
   const { api } = open();
@@ -159,15 +161,36 @@ it("cancels a waiting claim after asking, and gives the place back", async () =>
   expect(screen.getByText("Sisa 4 dari 4")).toBeTruthy();
 });
 
-it("says so when the claim was processed before it could be cancelled, and shows where it stands", async () => {
-  const { server } = open();
+it("explains a cancel that lost the race to the pengelola, and keeps that message", async () => {
+  const { server, api } = open();
   await claim();
   server.settle("selesai");
   fireEvent.click(screen.getByRole("button", { name: "Batalkan pengajuan" }));
   fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Batalkan" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Silakan ambil di mesin" })).toBeTruthy();
-  await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Pengajuan ini sudah diproses, tidak bisa dibatalkan\.|Silakan ambil di mesin/));
+  // One message: the cancel failed, why, and what happens to the quota. Not the ordinary "Silakan ambil" message over it.
+  const said = () => screen.getByRole("status").textContent ?? "";
+  await waitFor(() => expect(said()).toMatch(/Tidak bisa dibatalkan/));
+  expect(said()).toMatch(/Café Latte sudah diproses Dewi sebelum sempat dibatalkan, jadi jatahnya terpakai\. Silakan ambil di mesin pantry\./);
+  expect(said()).not.toMatch(/kamu sudah diproses Dewi\. Ambil di mesin kopi pantry/);
   expect(screen.queryByRole("button", { name: "Batalkan pengajuan" })).toBeNull();
+  // It stays: no later read replaces it, and it does not leave by itself.
+  const reads = api.state.mock.calls.length;
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 2); });
+  await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await Promise.resolve(); });
+  await waitFor(() => expect(api.state.mock.calls.length).toBeGreaterThan(reads));
+  expect(said()).toMatch(/Tidak bisa dibatalkan.*sebelum sempat dibatalkan/);
+  fireEvent.click(screen.getByRole("button", { name: "Tutup pesan" }));
+  expect(said()).toBe("");
+});
+
+it("explains a cancel that met a refusal instead: the quota is not used", async () => {
+  const { server } = open();
+  await claim("Americano");
+  server.settle("ditolak");
+  fireEvent.click(screen.getByRole("button", { name: "Batalkan pengajuan" }));
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Batalkan" }));
+  await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Tidak bisa dibatalkan.*Americano sudah ditolak Dewi sebelum sempat dibatalkan\. Jatah kamu tidak berkurang/));
 });
 
 it("shows Selesai within fifteen seconds without a reload: who processed it, the pantry, the note about ice", async () => {
@@ -261,6 +284,7 @@ it("offers Mode GA and Pengelola only to who may open them, and signs out", asyn
   fireEvent.click(account.getByRole("button", { name: "Keluar" }));
   await waitFor(() => expect(plain.api.signOut).toHaveBeenCalledTimes(1));
   cleanup();
+  stayOnPage();
 
   open({ ga: true, pengelola: true });
   fireEvent.click(screen.getByRole("button", { name: "Akun Rina (contoh)" }));
@@ -321,4 +345,303 @@ it("says the network is gone and keeps the claim for another try", async () => {
   await screen.findByRole("heading", { level: 1, name: "Pengajuan sedang diproses" });
   expect(api.claim.mock.calls[1][0].key).toBe(api.claim.mock.calls[0][0].key);
   expect(server.orders).toHaveLength(1);
+});
+
+/* ---------- after the F2 audit (26 Nov 2026) */
+
+const phone = (on: boolean) => vi.stubGlobal("matchMedia", (query: string) => ({ matches: on, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+const settleTimers = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+/** Also the timeouts stand still (the tests of requests that hang walk the clock themselves). */
+function holdAllTimers() {
+  vi.useRealTimers();
+  vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
+  vi.setSystemTime(new Date(NOW));
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+it("F2-01 signs out on a phone without walking the history back, and takes the person off the screen", async () => {
+  phone(true);
+  const back = vi.spyOn(window.history, "back");
+  const { api } = open({ used: 1 });
+  fireEvent.click(screen.getByRole("button", { name: "Akun Rina (contoh)" }));
+  // On a phone the sheet holds its own history entry (the back gesture closes it).
+  expect(window.history.state?.coffeeLayer).toBe(true);
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Keluar" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Kamu sudah keluar" })).toBeTruthy();
+  expect(api.signOut).toHaveBeenCalledTimes(1);
+  await settleTimers();
+  // history.back() right after the navigation to the sign-in page would cancel it.
+  expect(back).not.toHaveBeenCalled();
+  // Nothing of the person is left: no name, no quota, no claim, no sheet.
+  expect(document.body.textContent).not.toMatch(/Rina|Sisa|klaim|Kopi Susu/);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByRole("link", { name: "Masuk lagi" }).getAttribute("href")).toBe(coffeePath.login());
+  back.mockRestore();
+  window.history.replaceState({}, "");
+});
+
+it("F2-01 still gives the history entry back when a sheet is simply closed on a phone", async () => {
+  phone(true);
+  const back = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
+  open();
+  fireEvent.click(screen.getByRole("button", { name: "Akun Rina (contoh)" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tutup" }));
+  await settleTimers();
+  expect(back).toHaveBeenCalledTimes(1);
+  back.mockRestore();
+  window.history.replaceState({}, "");
+});
+
+it("F2-09 stays signed in, and says so, when the server could not be told", async () => {
+  const { api } = open();
+  api.signOut.mockRejectedValueOnce(new CoffeeApiError("Belum bisa keluar. Periksa jaringan lalu coba lagi."));
+  fireEvent.click(screen.getByRole("button", { name: "Akun Rina (contoh)" }));
+  const account = within(screen.getByRole("dialog"));
+  fireEvent.click(account.getByRole("button", { name: "Keluar" }));
+  expect((await account.findByRole("alert")).textContent).toBe("Belum bisa keluar. Periksa jaringan lalu coba lagi.");
+  expect(screen.queryByRole("heading", { name: "Kamu sudah keluar" })).toBeNull();
+  // Tried again, and this time it goes through.
+  fireEvent.click(account.getByRole("button", { name: "Keluar" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Kamu sudah keluar" })).toBeTruthy();
+  expect(api.signOut).toHaveBeenCalledTimes(2);
+});
+
+it("F2-01 takes the person off the screen when the server says the session ended", async () => {
+  const { api } = open();
+  await claim();
+  api.state.mockRejectedValueOnce(new CoffeeApiError("Sesi berakhir. Masuk lagi.", 401));
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+  expect(screen.getByRole("heading", { level: 1, name: "Sesi berakhir" })).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/Rina|Café Latte/);
+});
+
+it("F2-02 shows the claim whose answer was lost on the way, instead of asking to send it again", async () => {
+  const { server, api } = open();
+  server.loseAnswers(1);
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  // The app read the state at once: the claim did arrive, so it is shown as sent.
+  await screen.findByRole("heading", { level: 1, name: "Pengajuan sedang diproses" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(api.claim).toHaveBeenCalledTimes(1);
+  expect(server.orders).toHaveLength(1);
+  // A definite answer: the next Americano is a new claim with a new key.
+  fireEvent.click(tab(/Menu/));
+  await claim("Americano").catch(() => undefined);
+  expect(api.claim.mock.calls[1][0].key).not.toBe(api.claim.mock.calls[0][0].key);
+  expect(api.claim.mock.calls[0][0].key).toMatch(UUID);
+  expect(server.orders).toHaveLength(2);
+});
+
+it("F2-02 makes one claim when the answer and the read after it are both lost and the sheet is opened again", async () => {
+  const { server, api } = open();
+  server.loseAnswers(1);
+  api.state.mockRejectedValueOnce(new CoffeeApiError(OFFLINE_TEXT));
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  expect((await within(screen.getByRole("dialog")).findByRole("alert")).textContent).toBe(OFFLINE_TEXT);
+  expect(server.orders).toHaveLength(1); // it arrived; the phone does not know
+  // The person gives up, closes the sheet, opens the same drink again and sends it.
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tutup" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await screen.findByRole("heading", { level: 1, name: "Pengajuan sedang diproses" });
+  expect(api.claim).toHaveBeenCalledTimes(2);
+  expect(api.claim.mock.calls[1][0].key).toBe(api.claim.mock.calls[0][0].key);
+  expect(server.orders).toHaveLength(1);
+  fireEvent.click(tab(/Menu/));
+  expect(screen.getByText("Sisa 3 dari 4")).toBeTruthy();
+});
+
+it("F2-02 keeps one key per drink and options: another drink meanwhile is its own claim", async () => {
+  const { server, api } = open();
+  server.setOffline(true);
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await within(screen.getByRole("dialog")).findByRole("alert");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Tutup" }));
+  server.setOffline(false);
+  await claim("Kopi Hitam");
+  fireEvent.click(tab(/Menu/));
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await screen.findByRole("region", { name: "Americano, Diproses" });
+  const keys = api.claim.mock.calls.map(call => call[0].key);
+  expect(keys[2]).toBe(keys[0]);
+  expect(keys[1]).not.toBe(keys[0]);
+  expect(server.orders).toHaveLength(2);
+});
+
+it("F2-03 gives up a claim that hangs, says so, lets the sheet close, and sends the same key afterwards", async () => {
+  holdAllTimers();
+  const { server, api } = open();
+  server.hangNext(1);
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(GUARD_MS - 1000); });
+  expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Mengirim…" })).toBeTruthy();
+  await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+  const sheet = within(screen.getByRole("dialog"));
+  expect(sheet.getByRole("alert").textContent).toBe(TIMEOUT_TEXT);
+  expect((sheet.getByRole("button", { name: "Tutup" }) as HTMLButtonElement).disabled).toBe(false);
+  // The way out works, and trying again is the same claim.
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  expect(screen.getByRole("heading", { level: 1, name: "Pengajuan sedang diproses" })).toBeTruthy();
+  expect(api.claim.mock.calls[1][0].key).toBe(api.claim.mock.calls[0][0].key);
+  expect(server.orders).toHaveLength(1);
+});
+
+it("F2-03 gives up a cancel that hangs and says it could not be cancelled yet", async () => {
+  holdAllTimers();
+  const { server } = open();
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  server.hangNext(1);
+  fireEvent.click(screen.getByRole("button", { name: "Batalkan pengajuan" }));
+  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Batalkan" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  expect(screen.getByRole("button", { name: "Membatalkan…" })).toBeTruthy();
+  await act(async () => { await vi.advanceTimersByTimeAsync(GUARD_MS); });
+  expect(screen.getByRole("status").textContent).toMatch(new RegExp(`Belum bisa dibatalkan.*${TIMEOUT_TEXT.replace(/\./g, "\\.")}`));
+  expect(screen.getByRole("button", { name: "Batalkan pengajuan" })).toBeTruthy();
+  expect(server.orders[0].status).toBe("diproses");
+});
+
+it("F2-03 keeps reading the status after one read hung", async () => {
+  holdAllTimers();
+  const { server, api } = open();
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  const before = api.state.mock.calls.length;
+  server.hangNext(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); }); // this read hangs
+  expect(api.state.mock.calls.length).toBe(before + 1);
+  server.settle("selesai");
+  // The hung read is let go of (and the banner says the status may be old); the reads after it go on.
+  await act(async () => { await vi.advanceTimersByTimeAsync(GUARD_MS); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+  expect(api.state.mock.calls.length).toBeGreaterThan(before + 1);
+  expect(screen.getByRole("heading", { level: 1, name: "Silakan ambil di mesin" })).toBeTruthy();
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+});
+
+it("F2-07 says when the status could not be read, offers to try again, and goes quiet once it works", async () => {
+  const { server, api } = open();
+  await claim();
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+  server.setOffline(true);
+  await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+  const banner = screen.getByText("Tidak tersambung. Status mungkin belum terbaru.").parentElement!;
+  expect(banner.getAttribute("role")).toBe("status");
+  // What is on screen stays.
+  expect(screen.getByRole("heading", { level: 1, name: "Pengajuan sedang diproses" })).toBeTruthy();
+  // Trying while still offline keeps the banner.
+  fireEvent.click(within(banner).getByRole("button", { name: "Coba lagi" }));
+  await waitFor(() => expect(within(banner).getByRole("button", { name: "Coba lagi" })).toBeTruthy());
+  expect(screen.getByText(/Tidak tersambung/)).toBeTruthy();
+  server.setOffline(false);
+  server.settle("selesai");
+  const reads = api.state.mock.calls.length;
+  fireEvent.click(within(banner).getByRole("button", { name: "Coba lagi" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Silakan ambil di mesin" })).toBeTruthy();
+  expect(api.state.mock.calls.length).toBe(reads + 1);
+  expect(screen.queryByText(/Tidak tersambung/)).toBeNull();
+});
+
+it("F2-07 shows the banner when the phone goes offline and reads again when the network is back", async () => {
+  const { api } = open();
+  await act(async () => { window.dispatchEvent(new Event("offline")); });
+  expect(screen.getByText(/Tidak tersambung/)).toBeTruthy();
+  expect(api.state).not.toHaveBeenCalled();
+  await act(async () => { window.dispatchEvent(new Event("online")); await Promise.resolve(); });
+  await waitFor(() => expect(screen.queryByText(/Tidak tersambung/)).toBeNull());
+  expect(api.state).toHaveBeenCalledTimes(1);
+});
+
+it("F2-10 does not call a claim of an earlier day ready now", () => {
+  const server = createSampleCoffee({ used: 2 });
+  // The next morning: both claims were done yesterday.
+  vi.setSystemTime(new Date("2026-11-26T01:00:00.000Z"));
+  render(<CoffeeApp initial={server.initial()} api={server.api} routing="memory" tab="pesanan" />);
+  expect(screen.getByRole("heading", { level: 1, name: "Tidak ada pesanan hari ini" })).toBeTruthy();
+  expect(screen.queryByText("Siap diambil")).toBeNull();
+  expect(screen.queryByText("Sekarang")).toBeNull();
+  expect(screen.queryByRole("img", { name: /Denah kantor/ })).toBeNull();
+  expect(within(screen.getByRole("heading", { level: 2, name: "Sebelumnya" }).parentElement!).getAllByRole("listitem")).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "Lihat menu" }));
+  expect(screen.getByRole("heading", { level: 1, name: /Halo/ })).toBeTruthy();
+});
+
+it("F2-10 still shows today's done claim as ready", () => {
+  const server = createSampleCoffee({ used: 1 });
+  render(<CoffeeApp initial={server.initial()} api={server.api} routing="memory" tab="pesanan" />);
+  expect(screen.getByRole("heading", { level: 1, name: "Silakan ambil di mesin" })).toBeTruthy();
+  expect(screen.getByText("Sekarang")).toBeTruthy();
+});
+
+it("F2-13 closes a message when a sheet opens over it", async () => {
+  open();
+  await claim();
+  expect(screen.getByRole("status").textContent).toMatch(/Pengajuan terkirim/);
+  fireEvent.click(tab(/Menu/));
+  pick("Americano");
+  expect(screen.getByRole("status").textContent).toBe("");
+});
+
+it("F2-17 says the pengelola process the claim, not buy it", async () => {
+  open();
+  await claim();
+  expect(screen.getByText(/Siapa pun yang lebih dulu membuka akan memprosesnya\./)).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/membeli/i);
+});
+
+it("F2-18 reads the quota again when a drink is opened after the month turned", async () => {
+  const { api } = open({ used: 4 });
+  pick("Americano");
+  expect(api.state).not.toHaveBeenCalled();
+  fireEvent.keyDown(document, { key: "Escape" });
+  vi.setSystemTime(new Date("2026-11-30T17:00:00.000Z")); // 1 Dec, 00.00 WIB
+  pick("Americano");
+  expect(api.state).toHaveBeenCalledTimes(1);
+  expect(await within(screen.getByRole("dialog")).findByRole("button", { name: "Ajukan klaim" })).toBeTruthy();
+});
+
+it("F2-19 says how many when two claims were decided in one read", async () => {
+  const { server } = open();
+  await claim("Café Latte");
+  fireEvent.click(tab(/Menu/));
+  vi.setSystemTime(new Date("2026-11-25T03:05:00.000Z"));
+  pick("Americano");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Ajukan klaim" }));
+  await screen.findByRole("region", { name: "Americano, Diproses" });
+  await nextRead(() => { server.settle("selesai"); server.settle("ditolak"); });
+  expect(screen.getByRole("button", { name: /2 pengajuan sudah diputuskan/ }).textContent).toMatch(/Lihat hasilnya di Pesanan saya\./);
+});
+
+it("moves between the tabs by address on the real routing, and the back button walks them", async () => {
+  window.history.replaceState({}, "", coffeePath.home);
+  const server = createSampleCoffee();
+  const state = vi.fn(server.api.state);
+  render(<CoffeeApp initial={server.initial()} api={{ ...server.api, state }} routing="history" />);
+  fireEvent.click(tab(/Pesanan saya/));
+  expect(window.location.pathname).toBe(coffeePath.orders);
+  expect(screen.getByRole("heading", { level: 1, name: "Belum ada pesanan" })).toBeTruthy();
+  expect(document.title).toBe("Pesanan saya · Werkudara Coffee");
+  // The same tab again adds no entry.
+  const entries = window.history.length;
+  fireEvent.click(tab(/Pesanan saya/));
+  expect(window.history.length).toBe(entries);
+  await act(async () => { window.history.back(); await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(window.location.pathname).toBe(coffeePath.home);
+  expect(screen.getByRole("heading", { level: 1, name: /Halo/ })).toBeTruthy();
+  expect(document.title).toBe("Werkudara Coffee");
+  expect(state).not.toHaveBeenCalled();
+  window.history.replaceState({}, "", "/");
 });

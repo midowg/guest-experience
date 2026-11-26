@@ -5,6 +5,7 @@ import { COFFEE_PATH, coffeePath } from "@/lib/routes";
  * icon and scope, so it opens full screen at /coffee, apart from WAM, Booking Kantor and WG People.
  * The scope is the app's address without a slash at the end: the app's first page is /coffee
  * itself, which "/coffee/" would leave outside (the phone would then show a browser bar on it).
+ * The service worker has the same scope (coffeePath.scope).
  */
 export const dynamic = "force-static";
 
@@ -18,7 +19,7 @@ export function GET() {
     start_url: COFFEE_PATH,
     scope: COFFEE_PATH,
     display: "standalone",
-    orientation: "portrait",
+    // No `orientation`: the same manifest covers the GA tablet (/coffee/ga), which is laid out lying down.
     // The launch screen Android draws from these: the cream of the app with its icon.
     background_color: "#FBF6EE",
     theme_color: "#FBF6EE",

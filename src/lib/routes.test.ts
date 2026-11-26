@@ -156,7 +156,7 @@ describe("Werkudara Coffee addresses (25 Nov 2026)", () => {
   it("put the employee app under /coffee, with its own sign-in, tablet, photos and PWA files", () => {
     expect(COFFEE_PATH).toBe("/coffee");
     expect(coffeePath).toMatchObject({ home: "/coffee", orders: "/coffee/pesanan", ga: "/coffee/ga", gaDenied: "/coffee?pesan=ga", forgot: "/coffee/lupa-password",
-      manifest: "/coffee/manifest.webmanifest", serviceWorker: "/coffee/sw.js", scope: "/coffee/" });
+      manifest: "/coffee/manifest.webmanifest", serviceWorker: "/coffee/sw.js", scope: "/coffee", oldScope: "/coffee/" });
     expect(coffeePath.login()).toBe("/coffee/masuk");
     expect(coffeePath.login("/coffee/ga")).toBe("/coffee/masuk?next=%2Fcoffee%2Fga");
     expect(coffeePath.newPassword("/coffee")).toBe("/coffee/password-baru?next=%2Fcoffee");

@@ -36,6 +36,16 @@ function settle() {
   }
 }
 
+/**
+ * The app is leaving for another page (signed out): a layer that closes now must not walk the
+ * history back, since `history.back()` right after `location.replace()` cancels that navigation
+ * and the person would stay on a page they signed out of (F2-01).
+ */
+let leaving = false;
+export const leavePage = () => { leaving = true; };
+/** For tests only. */
+export const stayOnPage = () => { leaving = false; };
+
 /** True while a layer's own history entry is the current one (the tab bar then replaces it instead of adding one). */
 export const onLayerEntry = () => typeof window !== "undefined" && !!window.history.state?.coffeeLayer;
 
@@ -96,7 +106,7 @@ export function Layer({ onClose, labelledBy, kind = "sheet", alert, rootClass, p
       stack.splice(stack.indexOf(entry), 1);
       settle();
       // Deferred, so a remount (React's dev double effect) keeps the entry instead of going back.
-      if (usesBack) window.setTimeout(() => { if (stack.length === 0 && window.history.state?.coffeeLayer) window.history.back(); }, 0);
+      if (usesBack) window.setTimeout(() => { if (!leaving && stack.length === 0 && window.history.state?.coffeeLayer) window.history.back(); }, 0);
       // Back to where the focus came from; when that is gone (the screen changed), to the screen itself.
       if (back?.isConnected) back.focus?.();
       else document.querySelector<HTMLElement>("[data-coffee-focus]")?.focus();

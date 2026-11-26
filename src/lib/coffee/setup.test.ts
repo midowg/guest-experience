@@ -13,6 +13,27 @@ it("lets signing in lead back to the app's own pages only", () => {
   }
 });
 
+it("F2-08 refuses dot segments, anything encoded and the app's files as the way back", () => {
+  for (const bad of [
+    "/coffee/../admin", "/coffee/..", "/coffee/../wam", "/coffee/./masuk", "/coffee/.", "/coffee/pesanan/../../admin",
+    "/coffee/%2e%2e/admin", "/coffee/%2E%2E/api/admin/coffee/rekap/export", "/coffee/.%2e/admin", "/coffee/%2e/masuk", "/coffee%2f..%2fadmin",
+    "/coffee/..%2fadmin", "/coffee/%5c..%5cadmin", "/coffee/%252e%252e/admin", "/coffee//admin", "/coffee//jahat.example", "/coffee/",
+    "/coffee/sw.js", "/coffee/manifest.webmanifest", "/coffee/drinks/americano.jpg", "/coffee/icon-192.png",
+    "/COFFEE", "/Coffee/pesanan", "/coffee/../coffee/masuk", "/coffee/pesanan;x=1/../../admin", "/coffee/ga/..", "/coffee/@jahat.example", "/coffee:8080",
+    "/coffee/..?next=/coffee", "/coffee/..#x",
+  ]) {
+    expect(safeCoffeeNext(bad), bad).toBeNull();
+    // What the browser would open, had it been let through, is checked too: none of them is a page of the app by another spelling.
+  }
+  // A query or a fragment on a real page stays.
+  expect(safeCoffeeNext(`${coffeePath.orders}?dari=notif`)).toBe(`${coffeePath.orders}?dari=notif`);
+  expect(safeCoffeeNext(`${coffeePath.home}#atas`)).toBe(`${coffeePath.home}#atas`);
+  // Whatever is let through opens inside the app.
+  for (const good of [coffeePath.home, coffeePath.orders, coffeePath.ga, coffeePath.gaDenied]) {
+    expect(new URL(safeCoffeeNext(good)!, "https://journey.example").pathname.startsWith(coffeePath.home)).toBe(true);
+  }
+});
+
 it("remembers the one-time setup for the app's addresses", () => {
   expect(setupCookie()).toContain(`${SETUP_COOKIE}=1`);
   expect(setupCookie()).toContain(`path=${coffeePath.home};`);

@@ -5,9 +5,36 @@ import { coffeePath } from "@/lib/routes";
 
 /*
  * Werkudara Coffee as an app on the phone: registers its own service worker (public/coffee/sw.js,
- * scope /coffee/), keeps the browser's install offer for "Pasang sekarang", and knows whether the
- * app already runs from the home screen. Web push (F4) subscribes on this same registration.
+ * scope /coffee, so the first page is controlled too), keeps the browser's install offer for
+ * "Pasang sekarang", and knows whether the app already runs from the home screen.
+ *
+ * Web push (F4): `const registration = await coffeeWorker()` and subscribe on
+ * `registration.pushManager`. It answers with the one registration of the app (null where service
+ * workers do not exist) and may be called from anywhere, any number of times: the employee app
+ * already calls it through usePwa; the GA tablet (GaApp) does not yet and must call it itself.
+ * `navigator.serviceWorker.ready` works as well now that /coffee is inside the scope.
  */
+
+let worker: Promise<ServiceWorkerRegistration | null> | null = null;
+/** Registers the app's service worker once per page load and answers with its registration. Never throws. */
+export function coffeeWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return Promise.resolve(null);
+  worker ??= (async () => {
+    try {
+      // Before the F2 audit the scope was /coffee/ (the first page left out). A device that still has that
+      // registration lets go of it, or it would keep winning for every page under /coffee/.
+      const old = await navigator.serviceWorker.getRegistration(coffeePath.oldScope);
+      if (old && new URL(old.scope).pathname === coffeePath.oldScope) await old.unregister();
+      return await navigator.serviceWorker.register(coffeePath.serviceWorker, { scope: coffeePath.scope });
+    } catch {
+      worker = null;
+      return null;
+    }
+  })();
+  return worker;
+}
+/** For tests only. */
+export const forgetCoffeeWorker = () => { worker = null; };
 
 type InstallOffer = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 /** Chrome's offer to install, kept until the person presses "Pasang sekarang". */
@@ -25,7 +52,7 @@ function subscribeStandalone(listener: () => void) {
 export function usePwa(live: boolean) {
   useEffect(() => {
     if (!live) return;
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register(coffeePath.serviceWorker, { scope: coffeePath.scope }).catch(() => undefined);
+    void coffeeWorker();
     const keep = (event: Event) => { event.preventDefault(); offer = event as InstallOffer; };
     window.addEventListener("beforeinstallprompt", keep);
     return () => window.removeEventListener("beforeinstallprompt", keep);

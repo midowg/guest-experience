@@ -1008,7 +1008,10 @@ export const coffeePath = {
   newPassword: (next?: string) => `${COFFEE_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,
   manifest: `${COFFEE_PATH}/manifest.webmanifest`,
   serviceWorker: `${COFFEE_PATH}/sw.js`,
-  scope: `${COFFEE_PATH}/`,
+  /** The service worker's scope: the app's own address without a slash, so /coffee itself is controlled too (next.config.ts allows it with Service-Worker-Allowed). */
+  scope: COFFEE_PATH,
+  /** The scope the worker had before the F2 audit; a device that registered it then lets go of it (pwa.ts). */
+  oldScope: `${COFFEE_PATH}/`,
   /** A drink's photo (public/coffee/drinks), by its slug of src/lib/coffee/menu.ts. */
   photo: (slug: string) => `${COFFEE_PATH}/drinks/${enc(slug)}.jpg`,
   /** An app icon of public/coffee, e.g. "icon-192.png". */

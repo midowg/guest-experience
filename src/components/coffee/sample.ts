@@ -1,7 +1,7 @@
 import { DRINKS, MONTHLY_QUOTA, drinkBySlug, type QuotaGroup } from "@/lib/coffee/menu";
 import { claimNumbers, countsForQuota, wibMonth } from "@/lib/coffee/quota";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
-import { CoffeeApiError, type ClaimDone, type CoffeeApi } from "./api";
+import { CoffeeApiError, OFFLINE_TEXT, type ClaimDone, type CoffeeApi } from "./api";
 
 /*
  * A make-believe server for the employee app: the same answers and refusals as the F0 APIs (409
@@ -43,6 +43,10 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
   const keys = new Map<string, string>();
   const calls = { state: 0, claim: 0, cancel: 0 };
   let offline = false;
+  /** Answers that get lost on the way back: the server did the work, the phone never hears. */
+  let lose = 0;
+  /** Requests that never answer at all (a connection that hangs). */
+  let hang = 0;
 
   const add = (slug: string, more: Partial<MyOrder> = {}): MyOrder => {
     const drink = drinkBySlug(slug) ?? DRINKS[0];
@@ -69,8 +73,14 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
   };
   const answer = (id: string, message: string): ClaimDone => ({ order: shown().find(order => order.id === id)!, me: me(), message });
   const wait = async () => {
+    if (hang > 0) { hang -= 1; await new Promise(() => undefined); }
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-    if (offline) throw new CoffeeApiError("Tidak dapat terhubung. Periksa jaringan lalu coba lagi.");
+    if (offline) throw new CoffeeApiError(OFFLINE_TEXT);
+  };
+  /** The work is done; the answer may still get lost. */
+  const sent = <T,>(answer: T): T => {
+    if (lose > 0) { lose -= 1; throw new CoffeeApiError(OFFLINE_TEXT); }
+    return answer;
   };
 
   const api: CoffeeApi = {
@@ -84,13 +94,13 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
       await wait();
       // The same key again is the same claim, as on the server.
       const again = keys.get(body.key);
-      if (again) return answer(again, "Pengajuan terkirim.");
+      if (again) return sent(answer(again, "Pengajuan terkirim."));
       const drink = drinkBySlug(body.slug);
       if (!drink || !drink.temperatures.includes(body.temperature)) throw new CoffeeApiError("Periksa kembali isian formulir.", 422, { slug: ["Pilih minuman."] });
       if (usedNow() >= quota) throw new CoffeeApiError("Jatah bulan ini sudah habis.", 409);
       const order = add(body.slug, { temperature: body.temperature, sugar: body.sugar, ice: body.temperature === "es" ? body.ice : "Normal" });
       keys.set(body.key, order.id);
-      return answer(order.id, "Pengajuan terkirim.");
+      return sent(answer(order.id, "Pengajuan terkirim."));
     },
     async cancel(id) {
       calls.cancel += 1;
@@ -98,7 +108,7 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
       const order = orders.find(item => item.id === id);
       if (!order || order.status !== "diproses") throw new CoffeeApiError("Pengajuan ini sudah diproses, tidak bisa dibatalkan.", 409);
       order.status = "batal";
-      return answer(id, "Pengajuan dibatalkan. Jatah kamu dikembalikan.");
+      return sent(answer(id, "Pengajuan dibatalkan. Jatah kamu dikembalikan."));
     },
     async signOut() { /* nothing to sign out of */ },
   };
@@ -121,5 +131,9 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
     },
     /** The network goes away, or comes back. */
     setOffline(value: boolean) { offline = value; },
+    /** The next `count` answers to Ajukan or Batalkan are lost on the way back (the server did the work). */
+    loseAnswers(count = 1) { lose = count; },
+    /** The next `count` requests never answer. */
+    hangNext(count = 1) { hang = count; },
   };
 }

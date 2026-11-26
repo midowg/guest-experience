@@ -14,14 +14,21 @@ export type PhoneKind = "android" | "iphone";
 /** Which install steps to show first; the person can switch. */
 export const phoneKind = (userAgent: string | null | undefined): PhoneKind => /iPhone|iPad|iPod/i.test(userAgent ?? "") ? "iphone" : "android";
 
+/** A page of the app: /coffee, then plain segments only. No dot (so no "..", no file), no "%" (nothing encoded), no empty segment. */
+const APP_PAGE = new RegExp(`^${COFFEE_PATH}(/[A-Za-z0-9_-]+)*$`);
+
 /**
  * Where signing in may lead back to: the app's own pages only (Menu, Pesanan saya, Mode GA), never
- * a sign-in page, another site or another app.
+ * a sign-in page, another site or another app. Dot segments and anything encoded are refused: the
+ * browser would straighten "/coffee/../admin" or "/coffee/%2e%2e/admin" into another app's address.
+ * Files of the app (sw.js, the manifest, photos) are not pages either.
  */
 export function safeCoffeeNext(value: string | null | undefined): string | null {
   if (!value || /[\\\s]/.test(value)) return null;
   const path = value.split(/[?#]/)[0];
-  if (path !== COFFEE_PATH && !path.startsWith(`${COFFEE_PATH}/`)) return null;
+  if (!APP_PAGE.test(path)) return null;
+  // Belt and braces: what the browser will really open is still that page of the app.
+  try { if (new URL(value, "http://x").pathname !== path) return null; } catch { return null; }
   if ([coffeePath.login(), coffeePath.forgot, coffeePath.newPassword()].some(page => path === page || path.startsWith(`${page}/`))) return null;
   return value;
 }

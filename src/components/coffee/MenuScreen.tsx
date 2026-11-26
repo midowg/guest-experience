@@ -60,7 +60,9 @@ export function MenuScreen({ me, note, onNote, onPick }: { me: CoffeeMe; note?: 
         ))}
       </div>
 
-      <ul id="kopi-daftar" className={css.grid} role="tabpanel" aria-labelledby={`kopi-tab-${group}`}>
+      {/* The panel wraps the list: a list that is itself the tabpanel loses its list role (and the count of drinks). */}
+      <div id="kopi-daftar" role="tabpanel" aria-labelledby={`kopi-tab-${group}`}>
+      <ul className={css.grid}>
         {drinks.map(drink => (
           <li key={drink.slug}>
             <button type="button" className={css.card} onClick={() => onPick(drink)}>
@@ -72,6 +74,7 @@ export function MenuScreen({ me, note, onNote, onPick }: { me: CoffeeMe; note?: 
           </li>
         ))}
       </ul>
+      </div>
     </>
   );
 }

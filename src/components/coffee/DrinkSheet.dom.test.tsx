@@ -2,14 +2,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { drinkBySlug } from "@/lib/coffee/menu";
 import type { CoffeeMe } from "@/lib/coffee/types";
-import type { ClaimBody } from "./api";
+import type { ClaimChoice } from "./api";
 import { DrinkSheet } from "./DrinkSheet";
 
-/* The drink's options (26 Nov 2026): only what the drink comes in, takaran es only for Es, one key per opened sheet. */
+/* The drink's options (26 Nov 2026): only what the drink comes in, takaran es only for Es. The key of a claim lives in useCoffee (CoffeeApp.dom.test.tsx). */
 const me = (more: Partial<CoffeeMe> = {}): CoffeeMe => ({ id: "p-rina", name: "Rina (contoh)", group: "karyawan", quota: 4, used: 1, left: 3, month: "2026-11", ...more });
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-function open(slug: string, who = me(), onSubmit: (body: ClaimBody) => Promise<string> = async () => "") {
+function open(slug: string, who = me(), onSubmit: (body: ClaimChoice) => Promise<string> = async () => "") {
   const onClose = vi.fn(), submit = vi.fn(onSubmit);
   render(<DrinkSheet drink={drinkBySlug(slug)!} me={who} onClose={onClose} onSubmit={submit} />);
   return { onClose, submit, sheet: within(screen.getByRole("dialog")) };
@@ -35,8 +34,7 @@ it("offers Panas and Es, six sugar levels, and takaran es only once Es is picked
   fireEvent.click(within(sheet.getByRole("group", { name: "Gula" })).getByRole("button", { name: "Sedikit" }));
   fireEvent.click(sheet.getByRole("button", { name: "Ajukan klaim" }));
   await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
-  expect(submit.mock.calls[0][0]).toMatchObject({ slug: "cafe-latte", temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
-  expect(submit.mock.calls[0][0].key).toMatch(UUID);
+  expect(submit.mock.calls[0][0]).toEqual({ slug: "cafe-latte", temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
 });
 
 it("never sends a takaran es for a hot drink, also after Es was tried", async () => {
@@ -77,14 +75,16 @@ it("sends one claim for a double tap, and keeps the sheet open while it is sent"
   await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
 });
 
-it("says why a claim was refused and sends the same key when tried again", async () => {
+it("says why a claim was refused, lets go of the sheet, and sends the same choice when tried again", async () => {
   const answers = ["Tidak dapat terhubung. Periksa jaringan lalu coba lagi.", ""];
   const { sheet, submit, onClose } = open("americano", me(), async () => answers.shift() ?? "");
   fireEvent.click(sheet.getByRole("button", { name: "Ajukan klaim" }));
   expect((await sheet.findByRole("alert")).textContent).toBe("Tidak dapat terhubung. Periksa jaringan lalu coba lagi.");
+  // The refusal gave the sheet back: the X works again (a request that hung does not lock the person in).
+  expect((sheet.getByRole("button", { name: "Tutup" }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(sheet.getByRole("button", { name: "Ajukan klaim" }));
   await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
-  expect(submit.mock.calls[1][0].key).toBe(submit.mock.calls[0][0].key);
+  expect(submit.mock.calls[1][0]).toEqual(submit.mock.calls[0][0]);
   expect(sheet.queryByRole("alert")).toBeNull();
   // Nothing is being sent any more: Escape closes.
   cleanup();
@@ -92,17 +92,6 @@ it("says why a claim was refused and sends the same key when tried again", async
   fireEvent.keyDown(document, { key: "Escape" });
   expect(again.onClose).toHaveBeenCalledTimes(1);
   expect(onClose).not.toHaveBeenCalled();
-});
-
-it("draws a new key each time a sheet is opened", async () => {
-  const first = open("americano");
-  fireEvent.click(first.sheet.getByRole("button", { name: "Ajukan klaim" }));
-  await waitFor(() => expect(first.submit).toHaveBeenCalled());
-  cleanup();
-  const second = open("americano");
-  fireEvent.click(second.sheet.getByRole("button", { name: "Ajukan klaim" }));
-  await waitFor(() => expect(second.submit).toHaveBeenCalled());
-  expect(second.submit.mock.calls[0][0].key).not.toBe(first.submit.mock.calls[0][0].key);
 });
 
 it("turns the button off with the reason when the quota is used up", () => {

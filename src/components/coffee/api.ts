@@ -9,13 +9,16 @@ import { coffeeApi, coffeePath, praWamApi } from "@/lib/routes";
  */
 
 export class CoffeeApiError extends Error {
-  constructor(message: string, public status?: number, public fieldErrors?: Record<string, string[]>) {
+  /** `status` is missing when no answer came back at all (no network, or the wait ran out: `timeout`). */
+  constructor(message: string, public status?: number, public fieldErrors?: Record<string, string[]>, public timeout = false) {
     super(message);
     this.name = "CoffeeApiError";
   }
 }
 
-export type ClaimBody = { slug: string; temperature: Temperature; sugar: Sugar; ice: Ice; key: string };
+/** What the person picked in the sheet. The key that makes two sendings one claim is added by useCoffee. */
+export type ClaimChoice = { slug: string; temperature: Temperature; sugar: Sugar; ice: Ice };
+export type ClaimBody = ClaimChoice & { key: string };
 export type ClaimDone = { order: MyOrder; me: CoffeeMe; message: string };
 
 export type CoffeeApi = {
@@ -24,20 +27,45 @@ export type CoffeeApi = {
   claim(body: ClaimBody): Promise<ClaimDone>;
   /** The person cancels their own claim while it still waits. 409 when it was processed meanwhile. */
   cancel(id: string): Promise<ClaimDone>;
+  /** Ends the session and leaves for the sign-in page. Throws when the server could not be told (the session then still lives). */
   signOut(): Promise<void>;
 };
 
+/** How long one request may take. A phone on bad office wifi hangs rather than fails: after this the app says so and lets go. */
+export const REQUEST_TIMEOUT_MS = 15_000;
+export const TIMEOUT_TEXT = "Server terlalu lama menjawab. Periksa jaringan lalu coba lagi.";
+export const OFFLINE_TEXT = "Tidak dapat terhubung. Periksa jaringan lalu coba lagi.";
+
+/** The promise, or a refusal once `ms` have passed (the make-believe servers and a hung read are let go of the same way). */
+export function within<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new CoffeeApiError(TIMEOUT_TEXT, undefined, undefined, true)), ms);
+    promise.then(value => { clearTimeout(timer); resolve(value); }, problem => { clearTimeout(timer); reject(problem); });
+  });
+}
+
 /** One call to a Coffee API: the answer, or a CoffeeApiError with the server’s own words. Also used by the GA tablet (ga/api.ts). */
 export async function request<T>(url: string, init: RequestInit = {}): Promise<{ data: T; message: string }> {
+  // A request that hangs is given up after REQUEST_TIMEOUT_MS (the connection is let go too).
+  const stop = typeof AbortController === "undefined" ? null : new AbortController();
+  let late = false;
+  const timer = setTimeout(() => { late = true; stop?.abort(); }, REQUEST_TIMEOUT_MS);
   let response: Response;
-  try {
-    response = await fetch(url, { ...init, credentials: "same-origin", cache: "no-store", headers: { ...(typeof init.body === "string" ? { "Content-Type": "application/json" } : {}), ...init.headers } });
-  } catch {
-    throw new CoffeeApiError("Tidak dapat terhubung. Periksa jaringan lalu coba lagi.");
-  }
   let result: { ok: boolean; data?: T; message?: string; fieldErrors?: Record<string, string[]> };
-  try { result = await response.json(); }
-  catch { throw new CoffeeApiError("Server belum dapat memberikan jawaban. Coba lagi sebentar.", response.status); }
+  try {
+    try {
+      response = await fetch(url, { ...init, signal: stop?.signal, credentials: "same-origin", cache: "no-store", headers: { ...(typeof init.body === "string" ? { "Content-Type": "application/json" } : {}), ...init.headers } });
+    } catch {
+      throw late ? new CoffeeApiError(TIMEOUT_TEXT, undefined, undefined, true) : new CoffeeApiError(OFFLINE_TEXT);
+    }
+    try { result = await response.json(); }
+    catch {
+      if (late) throw new CoffeeApiError(TIMEOUT_TEXT, undefined, undefined, true);
+      throw new CoffeeApiError("Server belum dapat memberikan jawaban. Coba lagi sebentar.", response.status);
+    }
+  } finally {
+    clearTimeout(timer);
+  }
   // The session ended: back to Coffee's own sign-in, and here again afterwards.
   if (response.status === 401 && typeof window !== "undefined") window.location.assign(coffeePath.login(`${window.location.pathname}${window.location.search}`));
   if (!response.ok || !result?.ok) throw new CoffeeApiError(result?.message || "Permintaan gagal. Coba lagi.", response.status, result?.fieldErrors);
@@ -55,16 +83,26 @@ export const coffeeClient: CoffeeApi = {
     return { ...result.data, message: result.message };
   },
   async signOut() {
-    try { await request(praWamApi.logout, { method: "POST" }); } catch { /* the cookie may already be gone */ }
-    window.location.assign(coffeePath.login());
+    try { await request(praWamApi.logout, { method: "POST" }); }
+    catch (problem) {
+      // No answer, or the server failed: the session still lives, so the app must not pretend it ended.
+      // Any other refusal (the session is already gone) leaves for the sign-in page all the same.
+      if (!(problem instanceof CoffeeApiError) || answerUnknown(problem)) throw new CoffeeApiError("Belum bisa keluar. Periksa jaringan lalu coba lagi.");
+    }
+    // replace, not assign: the page with the person's data does not stay behind the sign-in page.
+    window.location.replace(coffeePath.login());
   },
 };
 
 export const errorText = (error: unknown): string => error instanceof CoffeeApiError ? error.message : "Terjadi kesalahan. Muat ulang lalu coba lagi.";
+/** No definite answer came back (no network, the wait ran out, the server failed): the request may or may not have been carried out. */
+export const answerUnknown = (error: unknown): boolean => !(error instanceof CoffeeApiError) || error.status === undefined || error.status >= 500;
+/** The session ended (the app is already on its way to the sign-in page). */
+export const signedOut = (error: unknown): boolean => error instanceof CoffeeApiError && error.status === 401;
 /** The server refused because what the screen shows is out of date (quota filled, claim already processed). */
 export const outOfDate = (error: unknown): boolean => error instanceof CoffeeApiError && (error.status === 409 || error.status === 404);
 
-/** One key per opened sheet: sending the same claim twice answers with the first one. randomUUID is missing on plain http, so the key is then drawn by hand. */
+/** One key per claim: sending the same claim twice answers with the first one (useCoffee keeps it until a definite answer). randomUUID is missing on plain http, so the key is then drawn by hand. */
 export function newKey(): string {
   const source = (typeof crypto === "undefined" ? undefined : crypto) as Partial<Crypto> | undefined;
   if (source?.randomUUID) return source.randomUUID();

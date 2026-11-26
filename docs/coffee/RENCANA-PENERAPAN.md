@@ -703,3 +703,39 @@ letak) dan `design-taste-frontend` (selera; alur pembuat situsnya tidak berlaku 
   Putuskan apakah itu boleh; aplikasi tidak bisa menahannya dari dalam halaman.
 - `GaState`/`MeetingOrder` hanya membawa label pengirim (`sentBy`), bukan id-nya; penerima push ditentukan di server
   (`created_by` + PIC).
+
+---
+
+## Catatan perbaikan audit F2 (26 Nov 2026)
+
+Temuan `docs/coffee/AUDIT-F2.md` diperbaiki (kolom Status di sana). Yang berubah untuk fase berikutnya:
+
+- **Kunci klaim pindah ke `useCoffee`.** `DrinkSheet` mengirim pilihan saja (`ClaimChoice`); `useCoffee.claim` menambah
+  kunci dan menyimpannya per minuman + opsi sampai server memberi jawaban pasti. `ClaimBody` (bentuk API) tidak berubah.
+- **Batas waktu:** `request` (dipakai juga `ga/api.ts`) kini membatalkan permintaan setelah 15 detik dan melempar
+  `CoffeeApiError` dengan `timeout: true` tanpa `status`. `answerUnknown(error)` = tidak ada jawaban pasti (jaringan,
+  batas waktu, 5xx); `within(promise, ms)` melepas janji apa pun. `useGa` belum memakainya (lihat audit F3).
+- **`useCoffee` mengembalikan** `stale`/`retry`/`retrying` (banner tidak tersambung), `gone` (401), `today` (hari WIB).
+- **Keluar:** `api.signOut()` melempar bila server tidak bisa diberi tahu, dan memakai `location.replace`. Siapa pun yang
+  berpindah halaman sambil sebuah `Layer` terbuka di HP harus memanggil `leavePage()` (dari `Layer.tsx`) lebih dulu,
+  kalau tidak `history.back()` milik lapisan membatalkan perpindahan itu.
+- **Service worker:** scope `/coffee` (`coffeePath.scope`; `coffeePath.oldScope` hanya untuk melepas registrasi lama),
+  header `Service-Worker-Allowed` di `next.config.ts`, handler `fetch` hanya menjawab `/coffee` dan `/coffee/…`.
+- **Keputusan yang diambil agen, perlu disetujui pemilik:** "Siap diambil · Sekarang" hanya untuk klaim yang diputuskan
+  pada hari yang sama (WIB).
+
+**Untuk F4 (web push):**
+- Pendaftaran: `const registration = await coffeeWorker()` (`src/components/coffee/pwa.ts`; satu pendaftaran per muat
+  halaman, tidak pernah melempar, `null` bila browser tanpa service worker), lalu `registration.pushManager.subscribe(…)`.
+  Aplikasi karyawan sudah memanggilnya lewat `usePwa(live)`; **`GaApp` belum**: panggil `coffeeWorker()` di sana.
+  `navigator.serviceWorker.ready` kini juga selesai di `/coffee` karena halaman itu sudah di dalam scope.
+- Di `public/coffee/sw.js`: tambah `push` dan `notificationclick` di bawah handler yang ada; pakai
+  `clients.matchAll({ type: "window", includeUncontrolled: true })` dan hanya buka alamat yang diawali `/coffee` atau
+  `/admin/coffee`. Pertahankan pemeriksaan `pathname` di handler `fetch` dan tes `layout.test.ts` yang menjalankan berkas itu.
+- Langganan milik orang sebelumnya: saat keluar (`CoffeeApp.signOut`, sebelum `api.signOut()`), hapus langganan
+  perangkat itu di server, supaya orang berikutnya di HP yang sama tidak menerima notifikasi orang lain.
+- Pesan dari SW ke halaman (klik notifikasi, push diterima) bisa memanggil `refresh()` milik `useCoffee` supaya layar
+  berubah tanpa menunggu 15 detik; `onDecided` sudah menggabungkan beberapa keputusan dalam satu pesan.
+- Panel browser agen menolak pendaftaran SW apa pun ("unknown error occurred when fetching the script"), jadi SW dan
+  push hanya bisa diuji di Chrome sungguhan atau di perangkat.
+

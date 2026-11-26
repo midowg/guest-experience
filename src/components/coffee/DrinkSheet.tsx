@@ -6,7 +6,7 @@ import { ICE_LEVELS, SUGAR_LEVELS, type Drink, type Ice, type Sugar, type Temper
 import { monthName, resetDay } from "@/lib/coffee/setup";
 import type { CoffeeMe } from "@/lib/coffee/types";
 import { coffeePath } from "@/lib/routes";
-import { newKey, type ClaimBody } from "./api";
+import type { ClaimChoice } from "./api";
 import { Layer } from "./Layer";
 import css from "./coffee.module.css";
 
@@ -16,15 +16,16 @@ function Option({ on, onClick, children }: { on: boolean; onClick: () => void; c
 
 /**
  * One drink's options and "Ajukan klaim". Panas/Es only when the drink comes in both; takaran es
- * only for Es. The key is drawn once per opened sheet, so sending twice (a double tap, a slow
- * network, a retry) is one claim. While the claim is being sent the sheet stays open.
+ * only for Es. Sending twice (a double tap, a slow network, a retry, also after the sheet was
+ * closed and opened again) is one claim: the key lives in useCoffee until the server gave a
+ * definite answer. While the claim is being sent the sheet stays open; a request that hangs is
+ * given up after a while, so the sheet never locks the person in.
  * `onSubmit` answers with what went wrong ("" when the claim went through).
  */
 export function DrinkSheet({ drink, me, onClose, onSubmit }: {
-  drink: Drink; me: CoffeeMe; onClose: () => void; onSubmit: (body: ClaimBody) => Promise<string>;
+  drink: Drink; me: CoffeeMe; onClose: () => void; onSubmit: (body: ClaimChoice) => Promise<string>;
 }) {
   const titleId = useId();
-  const [key] = useState(newKey);
   const [temperature, setTemperature] = useState<Temperature>(drink.temperatures[0]);
   const [sugar, setSugar] = useState<Sugar>("Normal");
   const [ice, setIce] = useState<Ice>("Normal");
@@ -35,7 +36,7 @@ export function DrinkSheet({ drink, me, onClose, onSubmit }: {
   const send = async () => {
     if (busy || empty) return;
     setBusy(true); setError("");
-    const problem = await onSubmit({ slug: drink.slug, temperature, sugar, ice: temperature === "es" ? ice : "Normal", key });
+    const problem = await onSubmit({ slug: drink.slug, temperature, sugar, ice: temperature === "es" ? ice : "Normal" });
     // Sent: the app closes the sheet. Refused: it stays, with the reason above the button.
     if (problem) { setError(problem); setBusy(false); }
   };
