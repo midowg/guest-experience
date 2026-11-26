@@ -64,3 +64,17 @@ it("draws fields and chips with the field line", () => {
 it("shows the phone's messages under the top bar", () => {
   expect(block("@media (max-width: 760px)")).toMatch(/\.toastRegion \{[^}]*bottom: auto; top:/);
 });
+
+// F6: the phone's bottom menu takes as many columns as there are sections (four), each as wide as the others.
+it("gives the phone's bottom menu one equal column per section", () => {
+  const phone = block("@media (max-width: 760px)");
+  expect(phone).toMatch(/\.tabBar \{[^}]*grid-auto-flow: column; grid-auto-columns: minmax\(0, 1fr\)/);
+  expect(phone).not.toContain("repeat(3, 1fr)");
+});
+
+// F6: the Menu's rows and the option switches keep their 44 px targets, and stack on a phone.
+it("keeps the menu's rows and the switches reachable", () => {
+  expect(rule(".menuMain")).toMatch(/min-height: 72px/);
+  expect(rule(".switchRow")).toMatch(/min-height: 48px/);
+  expect(block("@media (max-width: 760px)")).toContain(".menuMain { flex-basis: 100%;");
+});

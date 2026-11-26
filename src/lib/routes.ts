@@ -1052,6 +1052,8 @@ export const coffeeAdminPath = {
   recap: (month?: string) => `${COFFEE_ADMIN}/rekap${month ? `?bulan=${enc(month)}` : ""}`,
   /** Pengaturan: the quotas; who holds access and the rooms are read only. */
   settings: `${COFFEE_ADMIN}/pengaturan`,
+  /** Menu: the drinks the pengelola adds, changes, orders, hides and deletes (F6). */
+  menu: `${COFFEE_ADMIN}/menu`,
 };
 export const coffeeAdminApi = {
   /** GET: the queue; polled every ten seconds while the tab shows. */
@@ -1076,6 +1078,14 @@ export const coffeeAdminApi = {
   settings: `${COFFEE_ADMIN_API}/settings`,
   /** PUT {pin}: the pengelola sets the PIN GA. */
   gaPin: `${COFFEE_ADMIN_API}/settings/pin`,
+  /** GET: the whole menu with how often each drink was ordered. POST: a new drink. */
+  menu: `${COFFEE_ADMIN_API}/menu`,
+  /** PUT: change a drink. PATCH {active}: hide or show it. DELETE: only a drink no order ever used. */
+  drink: (slug: string) => `${COFFEE_ADMIN_API}/menu/${enc(slug)}`,
+  /** POST (multipart, field "file"): the drink's photo, cropped square on the server. */
+  drinkPhoto: (slug: string) => `${COFFEE_ADMIN_API}/menu/${enc(slug)}/foto`,
+  /** PUT {slugs}: the menu's order. */
+  menuOrder: `${COFFEE_ADMIN_API}/menu/urutan`,
   /** PUT: which options (temperature, sugar, ice) each audience is asked with a drink (F6). */
   options: `${COFFEE_ADMIN_API}/settings/opsi`,
   /** Web push for the pengelola (F4). */

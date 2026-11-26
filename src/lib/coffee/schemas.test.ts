@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coffeePath } from "../routes";
 import { ALL_OPTIONS, DRINKS, NO_OPTIONS, drinkBySlug } from "./menu";
-import { claimSchema, coffeePushSchema, drinklineSchema, isPushServiceUrl, manualSchema, meetingSchema, optionsSchema, recapQuerySchema, rejectSchema, settingsSchema, settleLine } from "./schemas";
+import { claimSchema, coffeePushSchema, drinkOrderSchema, drinkSchema, drinkShownSchema, drinkSlugSchema, drinklineSchema, isPushServiceUrl, manualSchema, meetingSchema, optionsSchema, recapQuerySchema, rejectSchema, settingsSchema, settleLine, slugOf } from "./schemas";
 
 const KEY = "11111111-1111-4111-8111-111111111111";
 const PERSON = "22222222-2222-4222-8222-222222222222";
@@ -198,5 +198,40 @@ describe("the address of a device's push service (audit F5-04)", () => {
     const keys = { p256dh: "p".repeat(40), auth: "a".repeat(16) };
     expect(coffeePushSchema.safeParse({ subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/abc", keys } }).success).toBe(true);
     expect(coffeePushSchema.safeParse({ subscription: { endpoint: "https://push.example/abc", keys } }).success).toBe(false);
+  });
+});
+
+describe("Menu (F6)", () => {
+  const drink = { name: " Teh Tarik ", description: " Teh susu yang ditarik. ", group: "non-kopi", temperatures: ["es", "panas"] };
+  it("takes a drink with a name, a group and what it comes in; Panas always before Es; shown unless said otherwise", () => {
+    expect(drinkSchema.parse(drink)).toEqual({ name: "Teh Tarik", description: "Teh susu yang ditarik.", group: "non-kopi", temperatures: ["panas", "es"], active: true });
+    expect(drinkSchema.parse({ ...drink, description: undefined, temperatures: ["es"], active: false })).toMatchObject({ description: "", temperatures: ["es"], active: false });
+    expect(drinkSchema.parse({ ...drink, description: null }).description).toBe("");
+    expect(drinkSchema.parse({ ...drink, temperatures: ["es", "es"] }).temperatures).toEqual(["es"]);
+    expect(fields(drinkSchema.safeParse({ ...drink, name: " " }))).toEqual({ name: "Tulis nama minumannya." });
+    expect(fields(drinkSchema.safeParse({ ...drink, name: "x".repeat(61) }))).toEqual({ name: "Nama paling panjang 60 huruf." });
+    expect(fields(drinkSchema.safeParse({ ...drink, description: "x".repeat(201) }))).toEqual({ description: "Keterangan paling panjang 200 huruf." });
+    expect(fields(drinkSchema.safeParse({ ...drink, group: "jus" }))).toEqual({ group: "Pilih Kopi atau Non-kopi." });
+    expect(fields(drinkSchema.safeParse({ ...drink, temperatures: [] }))).toEqual({ temperatures: "Pilih Panas, Es, atau keduanya." });
+    expect(drinkSchema.safeParse({ ...drink, temperatures: ["panas", "es", "panas"] }).success).toBe(false);
+  });
+  it("makes a slug from a name: plain letters and digits, words joined by a dash, 40 at most, never a reserved word", () => {
+    expect(slugOf("Café Latte")).toBe("cafe-latte");
+    expect(slugOf("  Teh  Tarik (Baru)! ")).toBe("teh-tarik-baru");
+    expect(slugOf("Kopi 3-in-1")).toBe("kopi-3-in-1");
+    expect(slugOf("Es Kopi Susu Gula Aren Spesial Werkudara Edisi Akhir Tahun")).toBe("es-kopi-susu-gula-aren-spesial-werkudara");
+    expect(slugOf("x".repeat(39) + " y")).toBe("x".repeat(39));
+    expect(slugOf("Lainnya")).toBe("lainnya-1");
+    expect(slugOf("urutan")).toBe("urutan-1");
+    expect(slugOf("!!!")).toBe("minuman");
+    for (const name of ["Café Latte", "Teh  Tarik (Baru)!", "Lainnya", "!!!", "ÉÈ ñ ü"]) expect(drinkSlugSchema.safeParse(slugOf(name)).success, name).toBe(true);
+  });
+  it("knows a slug, a hide-or-show and an order when it sees one", () => {
+    for (const good of ["kopi-susu", "teh-tarik-2", "a", "3-in-1"]) expect(drinkSlugSchema.safeParse(good).success, good).toBe(true);
+    for (const bad of ["Kopi-Susu", "kopi susu", "kopi_susu", "-kopi", "kopi-", "kopi--susu", "", "a".repeat(41), "../x", 5]) expect(drinkSlugSchema.safeParse(bad).success, String(bad)).toBe(false);
+    expect(drinkShownSchema.parse({ active: false })).toEqual({ active: false });
+    expect(drinkShownSchema.safeParse({}).success).toBe(false);
+    expect(drinkOrderSchema.parse({ slugs: ["b", "a"] })).toEqual({ slugs: ["b", "a"] });
+    for (const bad of [{}, { slugs: [] }, { slugs: ["a", "a"] }, { slugs: ["A"] }, { slugs: Array.from({ length: 501 }, (_, index) => `d${index}`) }]) expect(drinkOrderSchema.safeParse(bad).success).toBe(false);
   });
 });

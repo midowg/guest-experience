@@ -27,7 +27,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
      hidup di memori (PGlite, Postgres versi WASM), di atas tabel `employees` dan `admin_grants` yang
      dibuat dari migrasi aslinya. Hasil: **keduanya berjalan tanpa galat, tidak ada SQL yang perlu
      diperbaiki**; dijalankan ulang 3 kali (tabel kosong dan sudah berisi) tetap aman, isi tabel, nomor
-     urut, PIN, dan akses tidak berubah. 325 pemeriksaan aturan lulus (jatah 4/2/2 per bulan WIB, kunci
+     urut, PIN, dan akses tidak berubah. 325 pemeriksaan aturan lulus saat itu (715 sejak migrasi menu, lihat "Pembaruan 26 Nov") (jatah 4/2/2 per bulan WIB, kunci
      kiriman, Catat manual, Batalkan catatan, Urungkan, pesanan rapat, Tambah lagi, PIN, notifikasi,
      akses admin, hak akses), dan hasilnya **sama** dengan tiruan yang dipakai tes (`fake-db.ts`).
      Ulangi kapan saja, tanpa memasang apa pun dan tanpa menyentuh database asli:
@@ -135,3 +135,83 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
 - Keluar dari WAM, WG People, atau Booking (bukan dari Coffee) belum menghentikan notifikasi Coffee di
   perangkat itu sampai Coffee dibuka lagi di sana.
 - Keputusan pemilik di langkah 11.
+
+## Pembaruan 26 Nov: menu dan opsi
+
+Dua hal baru setelah WG Coffee tayang (F6): **opsi minuman per audiens** (karyawan tidak lagi ditanya
+suhu, gula, dan takaran es; tamu dan tim rapat tetap) dan **Menu** yang dikelola pengelola di
+`/admin/coffee` → Menu. Butuh satu migrasi baru. Dua migrasi yang sudah berjalan
+(`202612010001_coffee.sql`, `202612010002_coffee_push.sql`) **tidak diubah dan tidak perlu dijalankan lagi**.
+
+### Yang harus dilakukan pemilik
+
+1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main` (tidak ada langkah lain).
+2. **Jalankan `supabase/migrations/202612020001_coffee_menu.sql`** di SQL Editor Supabase (salin seluruh
+   isi berkas, Run). Satu kali cukup; dijalankan dua kali pun aman.
+3. **Buka `/admin/coffee` → Pengaturan → Opsi minuman**, cek bawaannya (di bawah), ubah bila perlu, Simpan opsi.
+4. **Buka `/admin/coffee` → Menu**, cek 15 minuman tampil dengan fotonya.
+
+Urutan 1 lalu 2 itu penting: kode dulu, baru migrasi. Dibalik pun aplikasi lama tetap jalan
+(migrasinya hanya menambah), tetapi klaim baru akan tersimpan dengan nama minuman kosong sampai kode baru naik.
+
+### Sebelum dan sesudah migrasi dijalankan
+
+| | Sebelum `202612020001` dijalankan (kode baru sudah naik) | Sesudah |
+| --- | --- | --- |
+| Aplikasi karyawan, tablet GA, buku menu | Jalan seperti kemarin: **semua opsi masih ditanya ke semua orang**, menu dari 15 minuman bawaan | Karyawan langsung "Ajukan klaim" tanpa opsi; tamu dan tim ditanya sesuai Pengaturan; menu dari database |
+| Antrean, Rekap, Catat manual, notifikasi | Jalan seperti kemarin | Sama, dan opsi yang tidak ditanya tidak ditulis ("Café Latte" saja) |
+| Pengaturan → Opsi minuman | Tampil, semua nyala, **tidak bisa disimpan**; tertulis "Menunggu migrasi 202612020001_coffee_menu.sql" | Bisa diubah; berlaku mulai pesanan berikutnya |
+| Menu | 15 minuman bawaan, **hanya dilihat**; tertulis menunggu migrasi yang sama | Tambah, ubah, ganti foto, atur urutan, sembunyikan, hapus |
+| Kesalahan 500 | Tidak ada: aplikasi memeriksa sendiri apakah migrasi sudah ada | Tidak ada |
+
+Setelah migrasi dijalankan aplikasi **mengetahuinya sendiri paling lama 30 detik kemudian**; tidak perlu
+deploy ulang atau memuat ulang server.
+
+### Bawaan opsi (anggapan PM, ubah di Pengaturan bila tidak cocok)
+
+| Audiens | Suhu (Panas/Es) | Gula | Takaran es | Alasan |
+| --- | --- | --- | --- | --- |
+| Karyawan (klaim) | mati | mati | mati | Karyawan mengambil sendiri di mesin |
+| Tim · rapat | nyala | nyala | nyala | Disiapkan GA, sama dengan tamu |
+| Tamu | nyala | nyala | nyala | Disiapkan GA |
+
+Takaran es hanya bisa nyala bersama Suhu.
+
+### Apa yang dilakukan migrasi ini pada data yang sudah ada
+
+- **Tidak ada yang dihapus atau ditimpa.** Pesanan lama tetap menyimpan suhu, gula, dan takaran esnya.
+- Satu-satunya yang ditulis ke baris lama: kolom baru `drink_name` diisi nama minumannya (dari 15
+  minuman bawaan), supaya riwayat dan rekap tetap benar walau minuman nanti diganti nama atau dihapus.
+- Suhu, gula, dan takaran es kini **boleh kosong** (untuk pesanan yang memang tidak ditanya).
+- Tabel baru `coffee_drinks` diisi 15 minuman bawaan **hanya bila masih kosong**: dijalankan ulang
+  nanti, minuman yang sudah dihapus atau diganti nama pengelola tidak kembali, dan opsi yang sudah
+  diubah tidak direset.
+- Dua fungsi database (`coffee_submit_claim`, `coffee_submit_meeting`) diganti dengan versi baru
+  bertanda tangan sama; aturan lama (jatah, kunci kiriman, Tambah lagi) tidak berubah.
+
+**Sudah diuji (26 Nov 2026) di Postgres WASM (PGlite), bukan di Supabase:** migrasi 1 dan 2 dijalankan,
+pesanan dibuat dengan skema lama, lalu migrasi 3 dijalankan di atasnya, diulang, diulang lagi setelah
+menu dan opsi diubah, lalu ketiganya berurutan. 715 pemeriksaan lulus, 0 gagal
+(`npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs`). **Belum diuji:**
+di database Supabase asli, dan balapan sungguhan (dua transaksi bersamaan).
+
+### Jangan
+
+- **Jangan menjalankan lagi `202612010001_coffee.sql` setelah `202612020001`.** Berkas pertama memuat
+  versi lama kedua fungsi itu dan akan menimpanya (klaim lalu tersimpan tanpa nama minuman, dan takaran
+  es terisi "Normal" karangan). Bila terlanjur: jalankan `202612020001_coffee_menu.sql` sekali lagi.
+- Jangan mengubah isi `coffee_drinks.slug` dengan tangan: pesanan menunjuk minuman lewat slug itu.
+
+### Foto minuman
+
+Foto yang diunggah pengelola disimpan di penyimpanan Supabase yang sama dengan foto acara (bucket
+`event-photos`, folder `coffee/drinks/`), dipotong persegi 640 px, WebP. Bila bucket itu belum ada di
+server, Ganti foto menjawab "Penyimpanan foto belum disiapkan"; hal lain tetap jalan. 15 minuman
+bawaan memakai berkas foto di aplikasi sampai fotonya diganti.
+
+### Kalau harus mundur
+
+Kode lama (sebelum F6) tetap bisa membaca database yang sudah dimigrasi **selama belum ada pesanan
+tanpa opsi**. Setelah karyawan mengajukan klaim tanpa opsi, kode lama akan menampilkan baris itu
+dengan suhu kosong. Jadi bila kode harus dimundurkan: nyalakan dulu ketiga opsi untuk Karyawan di
+Pengaturan (dengan kode baru), baru mundurkan. Cara membatalkan migrasinya ada di kepala berkas SQL.

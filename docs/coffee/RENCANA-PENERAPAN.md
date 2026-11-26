@@ -925,3 +925,61 @@ notifikasi admin 375 px (tawaran 57 px, fokus pindah), bilah atas tablet 1024 px
 lembar Akun 375×812 (Notifikasi di atas Keluar). Keadaan "aktif" baris admin di HP setelah penyesuaian terakhir
 belum terlihat: halaman pratinjau admin berhenti di "Memuat halaman" pada dua percobaan terakhir (penyebab tidak dicari).
 `public/dev/coffee` dibiarkan (lihat F5-13).
+
+---
+
+## Catatan pelaksanaan F6: opsi per audiens dan kelola menu (26 Nov 2026)
+
+Aplikasi sudah tayang dan migrasi 1 dan 2 sudah berjalan di database asli, jadi F6 tidak menyentuh
+kedua berkas itu: semua perubahan skema ada di **`202612020001_coffee_menu.sql`**. Skill desain yang
+dipakai: `ui-ux-pro-max` (formulir, sakelar, sentuhan 44/48 px, alternatif tombol untuk mengurutkan)
+dan `design-taste-frontend` (selera dan kata; alur pembuat situsnya tidak berlaku di dalam produk).
+Tampilan mengikuti `docs/standar-admin.md` (daftar + panel samping, satu aksi utama, hapus lewat konfirmasi).
+
+**A. Opsi suhu, gula, es per audiens**
+- `coffee_settings` mendapat sembilan sakelar (`opt_{klaim,tim,tamu}_{suhu,gula,es}`); bawaan: klaim
+  mati semua, tim dan tamu nyala semua. `src/lib/coffee/menu.ts`: `DrinkOptions`, `CoffeeOptions`,
+  `startChoice`, `fitChoice`, `fillChoice`, `optionsLabel` (kosong bila tidak ada yang ditanya).
+- Skema zod hanya memeriksa bentuk; **`settleLine` + `src/lib/server/coffee/lines.ts`** yang memutuskan
+  di server (opsi mati dibuang jadi NULL, opsi nyala wajib ada, minuman harus ada di menu dan tampil).
+- `MyState.options` (klaim), `GaState.options` (tim, tamu), `SettingsData.options`; API baru
+  `PUT /api/admin/coffee/settings/opsi`.
+
+**B. Menu**
+- Tabel `coffee_drinks`; pesanan menyimpan `drink_name`. Pembaca: `readMenu()` di `store.ts` (disimpan
+  15 detik per instans, dilupakan saat diubah), `toOrders()` mengisi nama dan foto tiap minuman.
+- Admin: bagian **Menu** (`MenuView`, `DrinkEditor`), API `/api/admin/coffee/menu`, `…/menu/[slug]`
+  (PUT, PATCH, DELETE), `…/menu/[slug]/foto`, `…/menu/urutan`; server di `src/lib/server/coffee/menu.ts`.
+- Foto: bucket Supabase `event-photos` (yang dipakai foto acara), folder `coffee/drinks/`, sharp
+  memotong persegi 640 px WebP.
+
+**Kode baru di atas skema lama** (`menuReady()` di `store.ts`): satu pertanyaan ke database ("ada
+`coffee_drinks`?"), diingat selamanya bila ya, ditanya lagi tiap 30 detik bila belum. Selama belum:
+kolom `drink_name` tidak diminta, opsi = semua nyala, menu = `DRINKS` di kode, Menu dan Opsi minuman
+hanya dibaca. Diuji di semua tes server dengan `menuMigrated = false` pada `fake-db.ts`.
+
+**Selisih dari tugas, dan keputusan agen:**
+1. **Takaran es terikat pada Suhu** (tanpa Suhu tidak ada "Es" yang ditakar): sakelarnya istirahat
+   selama Suhu mati, dan server memaksa hal yang sama.
+2. **Untuk minuman panas, takaran es kini NULL** (dulu fungsi lama menulis "Normal"). Baris lama tidak
+   diubah; tampilan memang tidak pernah menulisnya.
+3. Slug dibuat dari nama saat ditambah dan **tidak pernah berubah**; "lainnya" dan "urutan" tidak
+   pernah jadi slug. Tidak ada foreign key dari pesanan ke menu ("lainnya" bukan minuman menu); yang
+   menjaga adalah `coffee_delete_drink` (kunci baris, tolak bila pernah dipesan).
+4. Urutan diatur dengan tombol **naik/turun** (bisa dipakai papan ketik dan HP), bukan seret-lepas.
+5. Hapus foto (kembali tanpa foto) tidak dibuat: hanya Ganti foto.
+6. Minuman tersembunyi **masih bisa dicatat manual lewat API**, tetapi lembar Catat manual hanya
+   menawarkan yang tampil + "Lainnya".
+7. Pesan stale: bila pengelola menyalakan opsi saat lembar minuman karyawan sedang terbuka, server
+   menjawab 422 "Pilihan minuman berubah…"; aplikasi membaca ulang keadaan setelah galat itu.
+8. Tes `GaPush.dom.test.tsx` yang berkedip: bukan balapan di kode (fokus dipindah dalam efek setelah
+   tekan selesai); batas tunggu satu detik habis saat seluruh suite berjalan. Batas tunggunya dilonggarkan.
+
+**Belum diuji (apa adanya):**
+- Migrasi 3 **belum dijalankan di Supabase**; hanya di PGlite (715 pemeriksaan, lihat GO-LIVE).
+- **Unggah foto ke Supabase Storage sungguhan belum pernah dijalankan** (tes memakai penyimpanan
+  tiruan dan sharp asli). Belum dipastikan bucket `event-photos` ada di produksi.
+- Halaman asli setelah masuk admin tidak dibuka (agen tidak memakai sandi); yang dilihat di browser
+  adalah `/dev-preview/coffee/nyata/…` dengan server tiruan, plus 401/307 pada alamat aslinya.
+- Pratinjau tablet GA punya galat hidrasi lama (jam "14.28" vs "14.29" saat render server dan browser
+  berbeda menit); bukan dari F6 dan hanya di pratinjau.

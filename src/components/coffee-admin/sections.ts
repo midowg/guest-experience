@@ -1,12 +1,13 @@
-import { ChartColumn, Inbox, Settings, type LucideIcon } from "lucide-react";
+import { ChartColumn, CupSoda, Inbox, Settings, type LucideIcon } from "lucide-react";
 import { coffeeAdminPath } from "@/lib/routes";
 
 /*
  * WG Coffee's admin (25 Nov 2026): the pengelola's pages in Journey Admin (/admin/coffee),
  * given per person in Super admin → Akses admin ("WG Coffee"). The menu, the phone's tab bar
- * and the page titles read this list.
+ * and the page titles read this list, so the desktop menu and the phone's bottom menu are always
+ * the same four: Antrean, Rekap, Menu (F6), Pengaturan.
  */
-export type CoffeeAdminSectionKey = "antrean" | "rekap" | "pengaturan";
+export type CoffeeAdminSectionKey = "antrean" | "rekap" | "menu" | "pengaturan";
 export type CoffeeAdminSection = {
   key: CoffeeAdminSectionKey;
   label: string;
@@ -25,6 +26,7 @@ export const COFFEE_MENU_MIGRATION_NAME = "202612020001_coffee_menu.sql";
 export const coffeeAdminSections: readonly CoffeeAdminSection[] = [
   { key: "antrean", label: "Antrean", group: "Pesanan", href: coffeeAdminPath.home, icon: Inbox, summary: "Pesanan menunggu, terlama di atas. Beli di aplikasi JumpStart, lalu tandai selesai. Terlihat oleh semua pemegang akses." },
   { key: "rekap", label: "Rekap", group: "Pesanan", href: coffeeAdminPath.recap(), icon: ChartColumn, summary: "Satu baris per minuman. Filter, lalu unduh untuk diolah sendiri." },
+  { key: "menu", label: "Menu", group: "Pengaturan", href: coffeeAdminPath.menu, icon: CupSoda, summary: "Minuman yang bisa dipesan: tambah, ubah, ganti foto, atur urutan, sembunyikan." },
   { key: "pengaturan", label: "Pengaturan", group: "Pengaturan", href: coffeeAdminPath.settings, icon: Settings, summary: "Jatah per bulan, opsi minuman, PIN GA, pemegang akses, dan ruangan." },
 ];
 

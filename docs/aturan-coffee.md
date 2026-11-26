@@ -11,7 +11,7 @@ pemeriksaan) tetap mengikuti `docs/aturan-wam.md` §1–§2.
 | --- | --- | --- | --- |
 | Aplikasi karyawan | `/coffee` (Menu), `/coffee/pesanan` (Pesanan saya), `/coffee/masuk` | Semua karyawan aktif yang punya akun (akun yang sama dengan WAM, Booking Kantor, WG People) | Mengajukan klaim, melihat status, membatalkan yang belum diproses |
 | Tablet GA | `/coffee/ga` | Kelompok GA (kategori `dw`), Admin Booking, dan pemegang akses WG Coffee | Pesanan rapat: minuman tamu dan tim di ruangan, buku menu untuk tamu |
-| Pengelola | `/admin/coffee` (Antrean), `/admin/coffee/rekap`, `/admin/coffee/pengaturan` | Super admin, dan orang yang dicentang **WG Coffee** di Super admin → Akses admin | Membeli di mesin, menekan Selesai atau Tolak, Catat manual, Rekap, Pengaturan |
+| Pengelola | `/admin/coffee` (Antrean), `/admin/coffee/rekap`, `/admin/coffee/menu`, `/admin/coffee/pengaturan` | Super admin, dan orang yang dicentang **WG Coffee** di Super admin → Akses admin | Membeli di mesin, menekan Selesai atau Tolak, Catat manual, Rekap, Menu, Pengaturan |
 
 - Pengelola masuk ke admin dengan **akun karyawan sendiri**. Super admin bisa memproses, tetapi tidak
   bisa menerima notifikasi (masuknya bukan milik satu orang).
@@ -108,7 +108,43 @@ Untuk kopi yang sudah dibeli tanpa lewat aplikasi (HP mati, tamu mendadak). Peng
 - Tidak ada nomor telepon, tidak ada foto orang. Foto minuman adalah gambar buatan AI.
 - Data contoh di pratinjau dan tes selalu rekaan ("Contoh …").
 
-## 9. Tidak ada di versi pertama
+## 9. Opsi minuman (sejak 26 Nov 2026)
+
+Suhu (Panas/Es), gula, dan takaran es **tidak selalu ditanya**. Pengelola mengaturnya per audiens di
+`/admin/coffee` → Pengaturan → **Opsi minuman**.
+
+| Audiens | Bawaan | Alasan |
+| --- | --- | --- |
+| Karyawan (klaim) | Tidak ditanya apa pun | Karyawan mengambil sendiri di mesin |
+| Tim · rapat | Suhu, gula, takaran es | Disiapkan GA |
+| Tamu | Suhu, gula, takaran es | Disiapkan GA; ini juga yang tampil di buku menu tamu |
+
+- Opsi yang mati **tidak tampil** saat memesan (lembar minuman karyawan tinggal foto, nama, keterangan,
+  baris jatah, dan "Ajukan klaim"), **tidak dicatat** (kosong, bukan "Panas · gula Normal" karangan),
+  dan tidak ditulis di kartu status, antrean, Salin rincian, rekap, maupun notifikasi.
+- Server yang memutuskan: nilai yang dikirim browser untuk opsi yang mati dibuang.
+- Takaran es hanya ditanya bersama Suhu, dan hanya untuk minuman Es.
+- Perubahan berlaku **mulai pesanan berikutnya**; pesanan yang sudah ada tidak berubah.
+- Catat manual mengikuti jenis yang dipilih (Klaim, Tamu, Tim · rapat).
+
+## 10. Menu (sejak 26 Nov 2026)
+
+Pengelola mengelola minuman di `/admin/coffee` → **Menu**: tambah, ubah nama dan keterangan, Kopi atau
+Non-kopi, tersedia Panas/Es, ganti foto, atur urutan, sembunyikan, hapus.
+
+- **Urutan** di Menu = urutan di aplikasi karyawan, tablet GA, dan buku menu tamu.
+- **Sembunyikan**: minuman tidak bisa dipesan lagi (server menolak), tetapi tetap ada di riwayat dan
+  rekap. Untuk minuman yang sedang habis atau tidak dijual lagi.
+- **Hapus hanya untuk minuman yang belum pernah dipesan.** Yang sudah pernah dipesan (termasuk yang
+  ditolak atau dibatalkan) hanya bisa disembunyikan.
+- **Ganti nama tidak mengubah masa lalu:** pesanan menyimpan nama minuman saat dipesan.
+- **Foto:** JPG, PNG, atau WebP, paling besar 5 MB; dipotong persegi di tengah oleh server. Bukan SVG.
+  Foto unggahan yang lama dihapus saat diganti. Minuman tanpa foto digambar cangkir.
+- Perubahan terlihat pengelola saat itu juga; di aplikasi karyawan dan tablet paling lama **15 detik**
+  kemudian (plus saat layarnya membaca ulang).
+- "Lainnya (tulis sendiri)" tetap hanya ada di Catat manual; minuman tersembunyi masih bisa dicatat manual.
+
+## 11. Tidak ada di versi pertama
 
 WhatsApp, kode ambil, sambungan langsung ke mesin JumpStart, pembayaran, pesan untuk hari lain,
 "pilih nama" tanpa masuk, saldo jatah yang dibawa ke bulan berikutnya, notifikasi yang ditarik saat

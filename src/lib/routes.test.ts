@@ -187,6 +187,13 @@ describe("WG Coffee addresses (25 Nov 2026)", () => {
     expect(coffeeAdminApi.recapExport("xlsx", { dari: "2026-11-01", sampai: "2026-11-30" })).toBe("/api/admin/coffee/rekap/export?format=xlsx&dari=2026-11-01&sampai=2026-11-30");
     for (const path of [coffeeAdminApi.queue, coffeeAdminApi.manual, coffeeAdminApi.settings, coffeeAdminApi.push]) expect(path.startsWith("/api/admin/coffee/")).toBe(true);
     expect(JUMPSTART_URL).toBe("https://jumpstart.id/outlet/menu");
+    // F6: the menu's page and its APIs, and the option switches.
+    expect(coffeeAdminPath.menu).toBe("/admin/coffee/menu");
+    expect(coffeeAdminApi.menu).toBe("/api/admin/coffee/menu");
+    expect(coffeeAdminApi.drink("cafe-latte")).toBe("/api/admin/coffee/menu/cafe-latte");
+    expect(coffeeAdminApi.drinkPhoto("cafe-latte")).toBe("/api/admin/coffee/menu/cafe-latte/foto");
+    expect(coffeeAdminApi.menuOrder).toBe("/api/admin/coffee/menu/urutan");
+    expect(coffeeAdminApi.options).toBe("/api/admin/coffee/settings/opsi");
   });
 
   it("write Coffee's addresses only in routes.ts (dev previews aside)", () => {

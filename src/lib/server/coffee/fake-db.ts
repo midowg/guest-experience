@@ -53,6 +53,9 @@ export function fakeDb() {
     tables: {} as Record<string, Row[]>,
     seq: { claim: 418, meeting: 113, id: 0 },
     calls: [] as string[],
+    /** What is in storage (the drink photos), by path; `storageFails`: the message an upload is refused with. */
+    files: new Map<string, { bucket: string; size: number; type: string }>(),
+    storageFails: "",
   };
   const rows = (table: string) => (state.tables[table] ??= []);
   const uuid = () => `00000000-0000-4000-8000-${String(++state.seq.id).padStart(12, "0")}`;
@@ -323,7 +326,24 @@ export function fakeDb() {
     return functions[name] ? functions[name](args) : absent(name);
   };
 
-  return { state, rows, client: { from, rpc } };
+  /** Supabase Storage, as much of it as the drink photos use: upload, the public address, remove. */
+  const storage = {
+    from: (bucket: string) => ({
+      async upload(key: string, bytes: Uint8Array, options?: { contentType?: string }) {
+        state.calls.push(`upload:${bucket}/${key}`);
+        if (state.storageFails) return { data: null, error: { message: state.storageFails } };
+        state.files.set(key, { bucket, size: bytes.byteLength, type: options?.contentType ?? "" });
+        return { data: { path: key }, error: null };
+      },
+      getPublicUrl: (key: string) => ({ data: { publicUrl: `https://storage.contoh.test/${bucket}/${key}` } }),
+      async remove(keys: string[]) {
+        for (const key of keys) { state.calls.push(`remove:${bucket}/${key}`); state.files.delete(key); }
+        return { data: null, error: null };
+      },
+    }),
+  };
+
+  return { state, rows, client: { from, rpc, storage } };
 }
 
 export const PEOPLE = {

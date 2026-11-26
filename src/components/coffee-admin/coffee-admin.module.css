@@ -289,6 +289,39 @@
 .quotaRow input[aria-invalid="true"] { border-color: var(--no); }
 .quotaRow > span { color: var(--ink-2); }
 .formFoot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Menu: one row per drink (photo, name, what it is, status, order and hide/show); the row itself opens the editor. */
+.menuHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.menuHead h2 { font-size: 17px; font-weight: 800; }
+.chipCount { margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--fill); color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.chips button[aria-pressed="true"] .chipCount { background: var(--surface); color: var(--act-strong); }
+.menuList { list-style: none; margin: 0; padding: 0; display: grid; }
+.menuList li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.menuList li:last-child { border-bottom: 0; }
+.menuMain {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 72px; padding: 6px 8px; margin-left: -8px; border: 0; border-radius: 12px;
+  background: none; text-align: left; transition: background .15s ease;
+}
+.menuMain:hover:not(:disabled) { background: var(--cs-hover); }
+.menuMain:disabled { cursor: default; }
+.menuThumb { display: grid; place-items: center; flex: none; border-radius: 12px; object-fit: cover; background: var(--fill); color: var(--ink-3); }
+.menuText { display: grid; gap: 1px; min-width: 0; }
+.menuText strong { font-size: 16px; overflow-wrap: anywhere; }
+.menuText > span { color: var(--ink-2); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menuText .menuMeta { color: var(--ink-3); }
+.menuList li[data-hidden] .menuThumb { opacity: .55; }
+.menuList li[data-hidden] .menuText strong { color: var(--ink-2); }
+.menuSide { display: flex; align-items: center; gap: 8px; flex: none; }
+.menuActions { display: flex; align-items: center; }
+.menuActions .iconButton:disabled { opacity: .35; cursor: not-allowed; }
+.menuActions .iconButton[aria-disabled="true"] { opacity: .55; }
+.empty .secondary { margin-top: 8px; }
+/* The editor: the photo beside its button; the switch row without the list's top line; Hapus in its own box. */
+.photoField { display: flex; align-items: flex-start; gap: 14px; }
+.photoText { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.photoLabel { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.switchRowTop { border-top: 0; padding: 0; }
+.dangerZone { display: grid; gap: 6px; justify-items: start; padding-top: 12px; border-top: 1px solid var(--line); }
+
 /* Pengaturan → Opsi minuman: one group per audience, a switch per option (a checkbox with role="switch"; the track is drawn beside it). */
 .panelWide { grid-column: 1 / -1; }
 .optionGroups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
@@ -362,7 +395,8 @@
 
   /* bottom tab bar */
   .tabBar {
-    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr);
+    /* one column per section (four since F6), each as wide as the others */
+    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
     padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     background: var(--surface); border-top: 1px solid var(--line);
   }
@@ -448,6 +482,13 @@
   .peoplePanel { grid-row: auto; }
   .bars li { grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 32px; font-size: 15px; }
   .settingsGrid { grid-template-columns: minmax(0, 1fr); }
+  /* Menu: the row's controls go under its text, so the name keeps the whole width */
+  .menuList li { flex-wrap: wrap; padding: 6px 0; }
+  .menuMain { flex-basis: 100%; margin-left: 0; padding: 6px 0 0; min-height: 62px; align-items: flex-start; }
+  .menuSide { flex: 1; justify-content: space-between; padding-left: 68px; margin-top: -4px; }
+  .menuActions .iconButton { width: 48px; height: 48px; }
+  .menuHead .chips { width: 100%; }
+  .photoField { gap: 12px; }
 }
 @keyframes rise { from { transform: translateY(32px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
@@ -455,6 +496,11 @@
   .primary, .secondary, .danger, .dangerText, .stale, .switch, .switch::after { transition: none; }
 }
 @media (max-width: 360px) {
+  .tabBar a { font-size: 12px; }
+  .switchWord { width: 74px; font-size: 13px; }
+  .optionGroup { padding: 12px 12px 6px; }
+  .tabIcon { width: 48px; }
+  .menuSide { padding-left: 0; }
   .tallyPanel > h2 { display: none; }
   .twoCol { grid-template-columns: minmax(0, 1fr); }
   .quotaRow { grid-template-columns: minmax(0, 1fr) 80px auto; }

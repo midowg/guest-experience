@@ -135,6 +135,38 @@ const quota = (label: string) => z.number(`Jatah ${label} berupa angka.`).int(`J
 /** PIN GA: exactly four digits, as text (a leading zero counts). */
 export const gaPinSchema = z.object({ pin: z.string("Isi PIN 4 angka.").regex(/^\d{4}$/, "PIN berupa 4 angka.") });
 export const settingsSchema = z.object({ karyawan: quota("karyawan"), ga: quota("Tim GA"), intern: quota("intern") });
+/** A drink's slug, as the database keeps it: lower-case words joined by "-", 40 letters at most. */
+export const drinkSlugSchema = z.string("Minuman tidak dikenali.").regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Minuman tidak dikenali.").max(40, "Minuman tidak dikenali.");
+/** Names that are addresses or have a meaning of their own, never a drink's slug. */
+const RESERVED_SLUGS = [OTHER_DRINK, "urutan"];
+/**
+ * The slug a new drink gets from its name: "Café Latte" → "cafe-latte", "Teh  Tarik (Baru)!" →
+ * "teh-tarik-baru". Accents are dropped, anything that is not a letter or a digit joins words, 40
+ * letters at most; a name with nothing to keep becomes "minuman", and a reserved word gets "-1".
+ */
+export function slugOf(name: string): string {
+  const plain = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
+  const slug = plain || "minuman";
+  return RESERVED_SLUGS.includes(slug) ? `${slug}-1` : slug;
+}
+/** Tambah / Ubah minuman (the pengelola's Menu). Panas comes before Es, whatever order they were sent in. */
+export const drinkSchema = z.object({
+  name: z.string("Tulis nama minumannya.").trim().min(1, "Tulis nama minumannya.").max(60, "Nama paling panjang 60 huruf."),
+  description: z.preprocess(value => value == null ? "" : value, z.string("Keterangan berupa teks.").trim().max(200, "Keterangan paling panjang 200 huruf.")),
+  group: z.enum(["kopi", "non-kopi"], "Pilih Kopi atau Non-kopi."),
+  temperatures: z.array(z.enum(["panas", "es"], "Pilih Panas, Es, atau keduanya."), "Pilih Panas, Es, atau keduanya.").min(1, "Pilih Panas, Es, atau keduanya.").max(2, "Pilih Panas, Es, atau keduanya.")
+    .transform(value => (["panas", "es"] as const).filter(item => value.includes(item))),
+  active: z.boolean("Pilih tampil atau tersembunyi.").default(true),
+});
+export type DrinkInput = z.infer<typeof drinkSchema>;
+/** Sembunyikan / Tampilkan from the list. */
+export const drinkShownSchema = z.object({ active: z.boolean("Pilih tampil atau tersembunyi.") });
+/** Atur urutan: every drink of the menu once, in its new order. */
+export const drinkOrderSchema = z.object({
+  slugs: z.array(drinkSlugSchema, "Urutan tidak dikenali.").min(1, "Urutan tidak dikenali.").max(500, "Urutan tidak dikenali.")
+    .refine(value => new Set(value).size === value.length, "Urutan tidak dikenali."),
+});
+
 const flag = z.boolean("Pilih nyala atau mati.");
 const audienceOptions = z.object({ suhu: flag, gula: flag, es: flag });
 /** Pengaturan → Opsi minuman: which options each audience is asked. Takaran es never stays on without the temperature. */

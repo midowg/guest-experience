@@ -101,6 +101,14 @@ export type MeetingOrder = Pick<QueueOrder, "id" | "no" | "number" | "round" | "
 };
 
 export type CoffeeSettings = { karyawan: number; ga: number; intern: number };
+/**
+ * A drink as the pengelola's Menu shows it: its place in the order, how many orders ever used it
+ * (only at zero may it be deleted), whether its photo is an upload (else a static file or none),
+ * and who changed it last.
+ */
+export type AdminDrink = Drink & { sort: number; orders: number; uploaded: boolean; updatedAt: string | null; updatedLabel: string };
+/** `ready` false: migration 202612020001 has not run; the menu is the code's and cannot be changed yet. */
+export type MenuData = { drinks: AdminDrink[]; ready: boolean };
 export type { CoffeeOptions, DrinkOptions };
 
 /** Someone the pickers offer: an active employee. `used`: claims that count in the month asked for. */

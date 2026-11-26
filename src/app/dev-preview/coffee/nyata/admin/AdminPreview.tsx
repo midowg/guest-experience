@@ -9,9 +9,9 @@ import type { CoffeePushState } from "@/lib/coffee/notify";
 import type { CoffeeAdminSectionKey } from "@/components/coffee-admin/sections";
 
 /** The real screen on the make-believe server, with two buttons that play the other people: an employee who claims, and a second pengelola. */
-export function AdminPreview({ view, now, routing, push }: { view: CoffeeAdminSectionKey; now: string; routing: "history" | "memory"; push: CoffeePushState }) {
+export function AdminPreview({ view, now, routing, push, menu }: { view: CoffeeAdminSectionKey; now: string; routing: "history" | "memory"; push: CoffeePushState; menu: "ready" | "waiting" | "empty" }) {
   const [port] = useState(() => samplePush(push));
-  const [server] = useState(() => { const made = createSampleServer(); made.seedManual(); return made; });
+  const [server] = useState(() => { const made = createSampleServer(Date.now, { menu }); made.seedManual(); return made; });
   const [note, setNote] = useState("Data contoh, tidak tersimpan.");
   const tools = (
     <div className={css.preview}>

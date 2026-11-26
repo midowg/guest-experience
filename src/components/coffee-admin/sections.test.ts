@@ -15,9 +15,9 @@ function routes(dir: URL): string[] {
 }
 
 describe("WG Coffee admin's sections", () => {
-  it("are Antrean, Rekap and Pengaturan, each with its own key, an address under /admin/coffee, and a page", () => {
+  it("are Antrean, Rekap, Menu and Pengaturan, each with its own key, an address under /admin/coffee, and a page", () => {
     expect(COFFEE_ADMIN_LABEL).toBe("WG Coffee");
-    expect(coffeeAdminSections.map(section => section.label)).toEqual(["Antrean", "Rekap", "Pengaturan"]);
+    expect(coffeeAdminSections.map(section => section.label)).toEqual(["Antrean", "Rekap", "Menu", "Pengaturan"]);
     expect(new Set(coffeeAdminSections.map(section => section.key)).size).toBe(coffeeAdminSections.length);
     expect(coffeeAdminSections[0].href).toBe(coffeeAdminPath.home);
     for (const section of coffeeAdminSections) {
@@ -28,13 +28,16 @@ describe("WG Coffee admin's sections", () => {
     expect(existsSync(fsPath(new URL("../../app/admin/coffee/loading.tsx", import.meta.url)))).toBe(true);
   });
   it("group the menu: the orders, then the settings", () => {
-    expect(coffeeAdminGroups().map(group => group.label)).toEqual(["Pesanan", "Pengaturan"]);
+    expect(coffeeAdminGroups().map(group => [group.label, group.sections.map(section => section.key)])).toEqual([["Pesanan", ["antrean", "rekap"]], ["Pengaturan", ["menu", "pengaturan"]]]);
+    // The desktop menu holds exactly the sections the phone's bottom menu is drawn from (CoffeeAdminApp maps the same list).
+    expect(coffeeAdminNavGroups().flatMap(group => group.items.map(item => [item.key, item.label, item.href]))).toEqual(coffeeAdminSections.map(section => [section.key, section.label, section.href]));
   });
   it("find the section of an address, with or without a query", () => {
     expect(sectionOfPath(coffeeAdminPath.home)).toBe("antrean");
     expect(sectionOfPath(coffeeAdminPath.manual)).toBe("antrean");
     expect(sectionOfPath(coffeeAdminPath.recap("2026-11"))).toBe("rekap");
     expect(sectionOfPath(`${coffeeAdminPath.settings}/`)).toBe("pengaturan");
+    expect(sectionOfPath(coffeeAdminPath.menu)).toBe("menu");
     expect(sectionOfPath("/admin")).toBeNull();
     expect(sectionOfPath(null)).toBeNull();
   });
@@ -49,7 +52,9 @@ describe("WG Coffee admin's sections", () => {
 describe("who may use WG Coffee admin's APIs", () => {
   it("every one checks the admin session first (the area check gives coffee holders and the super admin only)", () => {
     const files = routes(new URL("../../app/api/admin/coffee/", import.meta.url));
-    expect(files.length).toBeGreaterThan(8);
+    expect(files.length).toBeGreaterThan(13);
+    // F6: the four routes of the menu are among them.
+    expect(files.filter(file => /[\\/]menu[\\/]/.test(file))).toHaveLength(4);
     for (const file of files) expect(readFileSync(file, "utf8"), file).toContain("requireApiAdmin()");
   });
 });

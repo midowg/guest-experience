@@ -1,18 +1,19 @@
 import { AdminApiError } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
 import { claim, item, meeting, person } from "@/lib/coffee/fixtures";
-import { DEFAULT_OPTIONS, DRINKS, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { claimNumbers, countsForQuota, previousMonth, wibDay, wibMonth } from "@/lib/coffee/quota";
 import { expandRows, filterRows, recapTitle, summarize } from "@/lib/coffee/recap";
 import { roomSpot } from "@/lib/coffee/rooms";
-import { isDrinkIssue, manualAt, settleLine } from "@/lib/coffee/schemas";
-import { KIND_LABEL, orderNo, type CoffeePerson, type CoffeeSettings, type QueueOrder, type QueueState } from "@/lib/coffee/types";
+import { drinkSchema, isDrinkIssue, manualAt, settleLine, slugOf } from "@/lib/coffee/schemas";
+import { KIND_LABEL, orderNo, type AdminDrink, type CoffeePerson, type CoffeeSettings, type MenuData, type QueueOrder, type QueueState } from "@/lib/coffee/types";
 import { coffeeAdminClient, type CoffeeAdminApi, type CoffeeHolder } from "./api";
 import { UNDO_MS } from "./format";
 
 /*
  * A make-believe server for the pengelola's screens: the same answers and refusals as the F0 APIs
- * (409 when someone else processed the order, 409 when the quota is full, the Urungkan window),
+ * (409 when someone else processed the order, 409 when the quota is full, the Urungkan window; a
+ * drink that was ordered cannot be deleted, a photo must be a JPEG, PNG or WebP of 5 MB at most),
  * kept in memory. Used by the preview (/dev-preview/coffee/nyata/admin) and by the tests, so the
  * real components can be looked at and exercised before the migration runs. Every name is made up
  * and says so ("Rina Putri (contoh)": the first name stays in front, as the short lines show it).
@@ -43,17 +44,28 @@ const byId = new Map(SAMPLE_PEOPLE.map(who => [who.id, who]));
 
 export type SampleServer = ReturnType<typeof createSampleServer>;
 
-/** `clock`: the make-believe server's time (the tests hold it still). */
-export function createSampleServer(clock: () => number = Date.now) {
+const MENU_WAITS = "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.";
+const PHOTO_KINDS = ["image/jpeg", "image/png", "image/webp"];
+
+/**
+ * `clock`: the make-believe server's time (the tests hold it still). `menu`: "waiting" plays the
+ * database before migration 202612020001 (the code's menu, read only, every option asked);
+ * "empty" a menu with no drinks yet.
+ */
+export function createSampleServer(clock: () => number = Date.now, { menu: menuState = "ready" }: { menu?: "ready" | "waiting" | "empty" } = {}) {
+  const menuReady = menuState !== "waiting";
   const iso = (msAgo: number) => new Date(clock() - msAgo).toISOString();
   const minute = 60_000, day = 86_400_000;
   let settings: CoffeeSettings = { ...MONTHLY_QUOTA };
   /** What each audience is asked with a drink, at the real defaults, and the menu (the code's 15 drinks). */
-  let options: CoffeeOptions = { klaim: { ...DEFAULT_OPTIONS.klaim }, tim: { ...DEFAULT_OPTIONS.tim }, tamu: { ...DEFAULT_OPTIONS.tamu } };
-  const menu: Drink[] = DRINKS.map(drink => ({ ...drink }));
+  let options: CoffeeOptions = menuReady ? { klaim: { ...DEFAULT_OPTIONS.klaim }, tim: { ...DEFAULT_OPTIONS.tim }, tamu: { ...DEFAULT_OPTIONS.tamu } } : { klaim: { ...LEGACY_OPTIONS.klaim }, tim: { ...LEGACY_OPTIONS.tim }, tamu: { ...LEGACY_OPTIONS.tamu } };
+  const menu: Drink[] = menuState === "empty" ? [] : DRINKS.map(drink => ({ ...drink }));
+  /** Which drinks carry an uploaded photo, and who changed a drink last. */
+  const uploaded = new Set<string>();
+  const changed = new Map<string, { at: string; label: string }>();
   /** An order's drinks as the server sends them: the name kept with the order, the photo of today's menu. */
   const dressed = (order: QueueOrder): QueueOrder => ({ ...order, items: order.items.map(line => line.slug === OTHER_DRINK ? line : { ...line, name: line.name ?? drinkIn(menu, line.slug)?.name ?? line.slug, photo: drinkIn(menu, line.slug)?.photo ?? null }) });
-  const drinkSettings = () => ({ options, optionsReady: true, menu: menu.map(drink => ({ ...drink })) });
+  const drinkSettings = () => ({ options, optionsReady: menuReady, menu: menu.map(drink => ({ ...drink })) });
   /** Whether a PIN GA is set (the make-believe keeps no PIN at all). */
   let gaPin = false;
   let claimSeq = 418, meetingSeq = 113, idSeq = 1;
@@ -96,6 +108,23 @@ export function createSampleServer(clock: () => number = Date.now) {
     if (order.kind !== "klaim") return { ...order, undoable };
     const claimNo = claimNumbers(counted()).get(order.id);
     return { ...order, undoable, ...(claimNo ? { claimNo } : {}), quota: settings[order.person.group ?? "karyawan"], used: usedOf(order.person.id, wibMonth(order.orderedAt)) };
+  };
+  // The menu as the pengelola's Menu shows it, and the rules of changing it.
+  const usedBy = (slug: string) => orders.filter(order => order.items.some(line => line.slug === slug)).length;
+  const adminDrink = (drink: Drink, index: number): AdminDrink => ({ ...drink, sort: (index + 1) * 10, orders: usedBy(drink.slug), uploaded: uploaded.has(drink.slug), updatedAt: changed.get(drink.slug)?.at ?? null, updatedLabel: changed.get(drink.slug)?.label ?? "" });
+  const at = (slug: string): Drink => {
+    const drink = menu.find(entry => entry.slug === slug);
+    if (!drink) throw refusal(404, "Minuman tidak ditemukan. Muat ulang halaman.");
+    return drink;
+  };
+  const found = (slug: string): AdminDrink => adminDrink(at(slug), menu.findIndex(entry => entry.slug === slug));
+  const touch = (slug: string) => changed.set(slug, { at: iso(0), label: SAMPLE_ACTOR.label });
+  /** A drink's fields as the real schema reads them, refused the same way. */
+  const checked = (body: unknown) => {
+    if (!menuReady) throw refusal(503, MENU_WAITS);
+    const read = drinkSchema.safeParse(body);
+    if (!read.success) throw refusal(422, "Periksa kembali isian formulir.", Object.fromEntries(read.error.issues.map(issue => [String(issue.path[0] ?? "form"), [issue.message]])));
+    return read.data;
   };
   const keys = new Map<string, { order: QueueOrder; message: string }>();
   const find = (id: string) => {
@@ -193,7 +222,58 @@ export function createSampleServer(clock: () => number = Date.now) {
     },
     async settings() { return { settings, holders: HOLDERS, gaPin, ...drinkSettings() }; },
     async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, ...drinkSettings(), message: "Jatah disimpan." }; },
+    async menu(): Promise<MenuData> { return { ready: menuReady, drinks: menu.map(adminDrink) }; },
+    async createDrink(body) {
+      const input = checked(body);
+      const taken = new Set(menu.map(drink => drink.slug));
+      const base = slugOf(input.name);
+      let slug = base;
+      for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 40 - String(n).length - 1)}-${n}`;
+      menu.push({ slug, name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, photo: null, active: input.active });
+      touch(slug);
+      return { drink: found(slug), message: `${input.name} ditambahkan ke menu.` };
+    },
+    async updateDrink(slug, body) {
+      const input = checked(body);
+      Object.assign(at(slug), { name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, active: input.active });
+      touch(slug);
+      return { drink: found(slug), message: `${input.name} disimpan.` };
+    },
+    async showDrink(slug, active) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
+      const drink = at(slug);
+      drink.active = active;
+      touch(slug);
+      return { drink: found(slug), message: active ? `${drink.name} tampil lagi di menu.` : `${drink.name} disembunyikan. Tidak bisa dipesan, riwayatnya tetap ada.` };
+    },
+    async deleteDrink(slug) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
+      at(slug);
+      if (usedBy(slug)) throw refusal(409, "Minuman ini sudah pernah dipesan, jadi tidak bisa dihapus. Sembunyikan saja supaya tidak bisa dipesan lagi.");
+      menu.splice(menu.findIndex(drink => drink.slug === slug), 1);
+      uploaded.delete(slug);
+      return { message: "Minuman dihapus dari menu." };
+    },
+    async sortDrinks(slugs) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
+      const placed = slugs.map(slug => menu.find(drink => drink.slug === slug)).filter((drink): drink is Drink => !!drink);
+      const rest = menu.filter(drink => !placed.includes(drink));
+      menu.splice(0, menu.length, ...placed, ...rest);
+      return { ready: true, drinks: menu.map(adminDrink) };
+    },
+    async uploadDrinkPhoto(slug, file) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
+      const drink = at(slug);
+      if (!PHOTO_KINDS.includes(file.type)) throw refusal(415, "Format foto tidak dikenali. Pakai JPG, PNG, atau WebP.", { photo: ["Format foto tidak dikenali. Pakai JPG, PNG, atau WebP."] });
+      if (file.size > 5 * 1024 * 1024) throw refusal(413, "Ukuran foto paling besar 5 MB.", { photo: ["Ukuran foto paling besar 5 MB."] });
+      // The make-believe keeps the file in the browser only: a local address stands in for the stored photo.
+      drink.photo = typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `blob:contoh/${file.name}`;
+      uploaded.add(slug);
+      touch(slug);
+      return { drink: found(slug), message: `Foto ${drink.name} diganti.` };
+    },
     async saveOptions(input) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
       options = { klaim: { ...input.klaim, es: input.klaim.es && input.klaim.suhu }, tim: { ...input.tim, es: input.tim.es && input.tim.suhu }, tamu: { ...input.tamu, es: input.tamu.es && input.tamu.suhu } };
       return { options, message: "Opsi minuman disimpan. Berlaku mulai pesanan berikutnya." };
     },

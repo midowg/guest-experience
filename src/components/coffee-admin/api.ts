@@ -1,9 +1,9 @@
 import { AdminApiError, adminRequest } from "@/components/admin/shared/api";
 import { browserDevice, type PushApi, type PushPort } from "@/components/coffee/usePush";
-import type { CoffeeOptions, Drink, Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import type { CoffeeOptions, Drink, DrinkGroup, Ice, Sugar, Temperature } from "@/lib/coffee/menu";
 import type { CoffeePushInfo } from "@/lib/coffee/notify";
 import type { RecapSummary } from "@/lib/coffee/recap";
-import type { CoffeePerson, CoffeeSettings, ItemFor, QueueOrder, QueueState, RecapRow, Status } from "@/lib/coffee/types";
+import type { AdminDrink, CoffeePerson, CoffeeSettings, ItemFor, MenuData, QueueOrder, QueueState, RecapRow, Status } from "@/lib/coffee/types";
 import { coffeeAdminApi } from "@/lib/routes";
 
 /*
@@ -27,6 +27,9 @@ export type ManualBody = {
   temperature?: Temperature; sugar?: Sugar; ice?: Ice; qty?: number; room?: string; guest?: string; guestCount?: number; key: string;
 };
 export type Done = { order: QueueOrder; message: string };
+/** Tambah / Ubah minuman: what the editor sends. */
+export type DrinkBody = { name: string; description: string; group: DrinkGroup; temperatures: Temperature[]; active: boolean };
+export type DrinkDone = { drink: AdminDrink; message: string };
 /** A record made by hand that the pengelola is about to cancel: its order, and the words the question shows. */
 export type CancelTarget = { id: string; title: string; claim: boolean };
 
@@ -42,6 +45,18 @@ export type CoffeeAdminApi = {
   recap(query: RecapQuery): Promise<RecapData>;
   settings(): Promise<SettingsData>;
   saveSettings(input: CoffeeSettings): Promise<SettingsData & { message: string }>;
+  /** Menu (F6): every drink, hidden ones included, with how often each was ordered. Always read fresh. */
+  menu(): Promise<MenuData>;
+  createDrink(body: DrinkBody): Promise<DrinkDone>;
+  updateDrink(slug: string, body: DrinkBody): Promise<DrinkDone>;
+  /** Sembunyikan / Tampilkan. */
+  showDrink(slug: string, active: boolean): Promise<DrinkDone>;
+  /** Only a drink no order ever used; 409 otherwise. */
+  deleteDrink(slug: string): Promise<{ message: string }>;
+  /** The whole menu in its new order; answers the menu as it is afterwards. */
+  sortDrinks(slugs: string[]): Promise<MenuData>;
+  /** The drink's photo (JPEG, PNG or WebP, 5 MB at most); the server crops it square. */
+  uploadDrinkPhoto(slug: string, file: File): Promise<DrinkDone>;
   /** Pengaturan → Opsi minuman: which options each audience is asked from the next order on. */
   saveOptions(input: CoffeeOptions): Promise<{ options: CoffeeOptions; message: string }>;
   /** Sets or replaces the PIN GA (four digits) the tablet asks for when the guest menu book is left. */
@@ -61,6 +76,11 @@ async function act(url: string, body?: unknown): Promise<Done> {
   return { order: result.data!.order, message: result.message };
 }
 
+async function drinkCall(url: string, method: string, body: BodyInit): Promise<DrinkDone> {
+  const result = await adminRequest<{ drink: AdminDrink }>(url, { method, body });
+  return { drink: result.data!.drink, message: result.message };
+}
+
 export const coffeeAdminClient: CoffeeAdminApi = {
   queue: () => read<QueueState>(coffeeAdminApi.queue),
   finish: id => act(coffeeAdminApi.finish(id)),
@@ -74,6 +94,17 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   async saveSettings(input) {
     const result = await adminRequest<SettingsData>(coffeeAdminApi.settings, { method: "PUT", body: JSON.stringify(input) });
     return { ...result.data!, message: result.message };
+  },
+  menu: () => read<MenuData>(coffeeAdminApi.menu),
+  createDrink: body => drinkCall(coffeeAdminApi.menu, "POST", JSON.stringify(body)),
+  updateDrink: (slug, body) => drinkCall(coffeeAdminApi.drink(slug), "PUT", JSON.stringify(body)),
+  showDrink: (slug, active) => drinkCall(coffeeAdminApi.drink(slug), "PATCH", JSON.stringify({ active })),
+  async deleteDrink(slug) { return { message: (await adminRequest(coffeeAdminApi.drink(slug), { method: "DELETE" })).message }; },
+  async sortDrinks(slugs) { return (await adminRequest<MenuData>(coffeeAdminApi.menuOrder, { method: "PUT", body: JSON.stringify({ slugs }) })).data as MenuData; },
+  uploadDrinkPhoto(slug, file) {
+    const form = new FormData();
+    form.append("file", file);
+    return drinkCall(coffeeAdminApi.drinkPhoto(slug), "POST", form);
   },
   async saveOptions(input) {
     const result = await adminRequest<{ options: CoffeeOptions }>(coffeeAdminApi.options, { method: "PUT", body: JSON.stringify(input) });

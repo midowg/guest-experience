@@ -35,6 +35,11 @@ const span = "dari=2026-11-01&sampai=2026-11-30";
 const ALL = { suhu: true, gula: true, es: true }, NONE = { suhu: false, gula: false, es: false };
 /** Pengaturan → Opsi minuman, changed from the defaults: claims are asked their sugar. */
 const OPTIONS = { klaim: { suhu: false, gula: true, es: false }, tim: ALL, tamu: ALL };
+/** Menu (F6): a new drink, and a real 1 × 1 PNG for its photo. */
+const DRINK = { name: "Teh Tarik", description: "Teh susu yang ditarik.", group: "non-kopi", temperatures: ["panas"], active: true };
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+/** The calls that belong to migration 202612020001: before it runs they wait for it by name. */
+const MENU_WRITES = ["options", "addDrink", "changeDrink", "showDrink", "deleteDrink", "sortDrinks", "photo"];
 const send = (path: string, method = "GET", body?: unknown, headers: Record<string, string> = {}) => new Request(`${SITE}${path}`, {
   method, headers: { ...(method === "GET" ? {} : { origin: SITE }), ...(body === undefined ? {} : { "content-type": "application/json" }), ...headers }, body: body === undefined ? undefined : JSON.stringify(body),
 });
@@ -44,9 +49,11 @@ const body = async (response: Response) => await response.json() as { ok: boolea
 const load = () => Promise.all([
   import("./queue/route"), import("./orders/[id]/selesai/route"), import("./orders/[id]/tolak/route"), import("./orders/[id]/urungkan/route"),
   import("./manual/route"), import("./people/route"), import("./rekap/route"), import("./rekap/export/route"), import("./settings/route"), import("./orders/[id]/batalkan/route"), import("./settings/pin/route"), import("./settings/opsi/route"),
+  import("./menu/route"), import("./menu/[slug]/route"), import("./menu/[slug]/foto/route"), import("./menu/urutan/route"),
 ]);
 const routes = async (headers: Record<string, string> = {}) => {
-  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel, pin, options] = await load();
+  const [queue, finish, reject, reopen, manualRoute, people, recap, exported, settings, cancel, pin, options, menu, oneDrink, photo, menuOrder] = await load();
+  const slugOf = (slug: string) => ({ params: Promise.resolve({ slug }) });
   const order = (name: string, id: string) => `/api/admin/coffee/orders/${id}/${name}`;
   return {
     reads: {
@@ -55,6 +62,7 @@ const routes = async (headers: Record<string, string> = {}) => {
       recap: (query = `?${span}`) => recap.GET(send(`/api/admin/coffee/rekap${query}`)),
       exported: (query = `?format=csv&${span}`, extra: Record<string, string> = {}) => exported.GET(send(`/api/admin/coffee/rekap/export${query}`, "GET", undefined, extra)),
       settings: () => settings.GET(),
+      menu: () => menu.GET(),
     },
     writes: {
       finish: (id = NOBODY) => finish.POST(send(order("selesai", id), "POST", undefined, headers), params(id)),
@@ -65,6 +73,16 @@ const routes = async (headers: Record<string, string> = {}) => {
       settings: (input: unknown = { karyawan: 5, ga: 2, intern: 2 }) => settings.PUT(send("/api/admin/coffee/settings", "PUT", input, headers)),
       pin: (input: unknown = { pin: "4821" }) => pin.PUT(send("/api/admin/coffee/settings/pin", "PUT", input, headers)),
       options: (input: unknown = OPTIONS) => options.PUT(send("/api/admin/coffee/settings/opsi", "PUT", input, headers)),
+      addDrink: (input: unknown = DRINK) => menu.POST(send("/api/admin/coffee/menu", "POST", input, headers)),
+      changeDrink: (slug = "kopi-susu", input: unknown = DRINK) => oneDrink.PUT(send(`/api/admin/coffee/menu/${slug}`, "PUT", input, headers), slugOf(slug)),
+      showDrink: (slug = "kopi-susu", input: unknown = { active: false }) => oneDrink.PATCH(send(`/api/admin/coffee/menu/${slug}`, "PATCH", input, headers), slugOf(slug)),
+      deleteDrink: (slug = "classic-tea") => oneDrink.DELETE(send(`/api/admin/coffee/menu/${slug}`, "DELETE", undefined, headers), slugOf(slug)),
+      sortDrinks: (input: unknown = { slugs: ["espresso", "kopi-susu"] }) => menuOrder.PUT(send("/api/admin/coffee/menu/urutan", "PUT", input, headers)),
+      photo: (slug = "kopi-susu", file: File | null = new File([PNG], "foto.png", { type: "image/png" })) => {
+        const form = new FormData();
+        if (file) form.append("file", file);
+        return photo.POST(new Request(`${SITE}/api/admin/coffee/menu/${slug}/foto`, { method: "POST", headers: { origin: SITE, ...headers }, body: form }), slugOf(slug));
+      },
     },
   };
 };
@@ -84,12 +102,18 @@ it("answers 401 without an admin session and 403 without the grant, on every rou
   expect(db.rows("coffee_orders")).toMatchObject([{ status: "diproses" }]);
   expect(db.rows("coffee_settings")[0].quota_karyawan).toBe(4);
   expect(db.rows("coffee_settings")[0].opt_klaim_gula).toBe(false);
+  expect(db.rows("coffee_drinks")).toHaveLength(15);
+  expect(db.rows("coffee_drinks").every(drink => drink.active)).toBe(true);
 });
 
 it("refuses a write from another site, and a download asked for by another site", async () => {
   const id = await claim();
   const foreign = await routes({ origin: "https://evil.test" });
-  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings, foreign.writes.pin, foreign.writes.options]) expect((await call()).status).toBe(403);
+  for (const call of [() => foreign.writes.finish(id), () => foreign.writes.reject(id), () => foreign.writes.reopen(id), () => foreign.writes.cancel(id), foreign.writes.manual, foreign.writes.settings, foreign.writes.pin, foreign.writes.options,
+    foreign.writes.addDrink, foreign.writes.changeDrink, foreign.writes.showDrink, foreign.writes.deleteDrink, foreign.writes.sortDrinks, foreign.writes.photo]) expect((await call()).status).toBe(403);
+  expect(db.rows("coffee_drinks").map(drink => drink.slug)).toHaveLength(15);
+  expect(db.rows("coffee_drinks")[0]).toMatchObject({ slug: "kopi-susu", name: "Kopi Susu", active: true });
+  expect(db.state.files.size).toBe(0);
   expect(db.rows("coffee_settings")[0].opt_klaim_gula).toBe(false);
   expect(db.rows("coffee_settings")[0].ga_pin_hash).toBeUndefined();
   expect((await foreign.reads.exported(undefined, { "sec-fetch-site": "cross-site" })).status).toBe(403);
@@ -151,12 +175,16 @@ it("sets the PIN GA as four digits, keeps only its hash, and never hands it out 
 it("answers 503 with the migration's name before it runs", async () => {
   db.state.migrated = false;
   const all = await routes();
+  const later = MENU_WRITES.map(name => all.writes[name as keyof typeof all.writes] as () => Promise<Response>);
   for (const call of everyCall(all)) {
+    // Reading the menu never fails for the migration: it falls back to the code's menu (the page itself says what waits).
+    if (call === all.reads.menu) continue;
     const response = await call();
     expect(response.status).toBe(503);
-    // The option switches belong to the later migration, and say so.
-    expect((await body(response)).message).toBe(call === all.writes.options ? "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql." : "WG Coffee menunggu migrasi 202612010001_coffee.sql.");
+    // The option switches and the menu belong to the later migration, and say so.
+    expect((await body(response)).message).toBe(later.includes(call) ? "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql." : "WG Coffee menunggu migrasi 202612010001_coffee.sql.");
   }
+  expect((await body(await all.reads.menu())).data).toMatchObject({ ready: false });
 });
 
 it("processes the queue: done once, refused with a note, put back by the processor only", async () => {
@@ -266,4 +294,80 @@ it("before migration 202612020001: the settings still read (everything asked, th
   const month = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date()).slice(0, 7);
   expect((await all.writes.manual({ ...manual, employeeId: PEOPLE.fajar, date: `${month}-01`, time: "00:00" })).status).toBe(200);
   expect(db.rows("coffee_order_items").at(-1)).toMatchObject({ temperature: "panas", sugar: "Normal", ice: "Normal" });
+});
+
+// F6: the pengelola's Menu.
+it("manages the menu: read, add, change, hide, order, delete, with the words the screen shows", async () => {
+  const all = await routes();
+  const read = async () => (await body(await all.reads.menu())).data as { ready: boolean; drinks: { slug: string; name: string; active: boolean; orders: number; sort: number }[] };
+  expect(await read()).toMatchObject({ ready: true, drinks: { length: 15 } });
+  const added = await all.writes.addDrink();
+  expect(added.headers.get("cache-control")).toBe("no-store");
+  expect(await body(added)).toMatchObject({ ok: true, message: "Teh Tarik ditambahkan ke menu.", data: { drink: { slug: "teh-tarik", name: "Teh Tarik", group: "non-kopi", temperatures: ["panas"], sort: 160, orders: 0, photo: null, updatedLabel: "Dewi" } } });
+  expect(await body(await all.writes.changeDrink("teh-tarik", { ...DRINK, name: "Teh Tarik Aceh", temperatures: ["es", "panas"] }))).toMatchObject({ message: "Teh Tarik Aceh disimpan.", data: { drink: { slug: "teh-tarik", name: "Teh Tarik Aceh", temperatures: ["panas", "es"] } } });
+  expect(await body(await all.writes.showDrink("teh-tarik"))).toMatchObject({ message: "Teh Tarik Aceh disembunyikan. Tidak bisa dipesan, riwayatnya tetap ada.", data: { drink: { active: false } } });
+  expect(await body(await all.writes.showDrink("teh-tarik", { active: true }))).toMatchObject({ message: "Teh Tarik Aceh tampil lagi di menu." });
+  const slugs = (await read()).drinks.map(drink => drink.slug).reverse();
+  const sorted = await body(await all.writes.sortDrinks({ slugs }));
+  expect(sorted).toMatchObject({ message: "Urutan menu disimpan.", data: { ready: true } });
+  expect((sorted.data!.drinks as { slug: string; sort: number }[]).slice(0, 2)).toMatchObject([{ slug: "teh-tarik", sort: 10 }, { slug: "classic-tea", sort: 20 }]);
+  // A drink that was ordered once stays: only hiding is left.
+  await claim();
+  const used = await all.writes.deleteDrink("cafe-latte");
+  expect(used.status).toBe(409);
+  expect((await body(used)).message).toBe("Minuman ini sudah pernah dipesan, jadi tidak bisa dihapus. Sembunyikan saja supaya tidak bisa dipesan lagi.");
+  expect((await read()).drinks.find(drink => drink.slug === "cafe-latte")).toMatchObject({ orders: 1 });
+  expect(await body(await all.writes.deleteDrink("teh-tarik"))).toEqual({ ok: true, data: { slug: "teh-tarik" }, message: "Minuman dihapus dari menu." });
+  expect((await all.writes.deleteDrink("teh-tarik")).status).toBe(404);
+  expect((await read()).drinks).toHaveLength(15);
+});
+
+it("names what is wrong with a drink, an order or an address of the menu", async () => {
+  const all = await routes();
+  for (const [wrong, field] of [
+    [{ ...DRINK, name: "  " }, "name"], [{ ...DRINK, name: "x".repeat(61) }, "name"], [{ ...DRINK, description: "x".repeat(201) }, "description"],
+    [{ ...DRINK, group: "jus" }, "group"], [{ ...DRINK, temperatures: [] }, "temperatures"], [{ ...DRINK, temperatures: ["hangat"] }, "temperatures.0"], [{ ...DRINK, active: "ya" }, "active"],
+  ] as const) {
+    for (const call of [() => all.writes.addDrink(wrong), () => all.writes.changeDrink("kopi-susu", wrong)]) {
+      const response = await call();
+      expect(response.status, JSON.stringify(wrong)).toBe(422);
+      expect((await body(response)).fieldErrors).toHaveProperty(field);
+    }
+  }
+  expect((await body(await all.writes.addDrink({ ...DRINK, name: "" }))).fieldErrors).toEqual({ name: ["Tulis nama minumannya."] });
+  for (const bad of ["Kopi Susu", "kopi_susu", "..", "a".repeat(41)]) {
+    for (const call of [() => all.writes.changeDrink(bad), () => all.writes.showDrink(bad), () => all.writes.deleteDrink(bad), () => all.writes.photo(bad)]) expect((await call()).status, bad).toBe(422);
+  }
+  expect((await all.writes.showDrink("kopi-susu", { active: "tidak" })).status).toBe(422);
+  for (const wrong of [{}, { slugs: [] }, { slugs: ["kopi-susu", "kopi-susu"] }, { slugs: ["Kopi Susu"] }, { slugs: "kopi-susu" }]) expect((await all.writes.sortDrinks(wrong)).status, JSON.stringify(wrong)).toBe(422);
+  expect((await all.writes.changeDrink("tidak-ada")).status).toBe(404);
+  expect(db.rows("coffee_drinks")).toHaveLength(15);
+  expect(db.rows("coffee_drinks")[0]).toMatchObject({ name: "Kopi Susu", sort: 10 });
+});
+
+it("takes a drink's photo as a real image only, and replaces the one before it", async () => {
+  const all = await routes();
+  const saved = await all.writes.photo();
+  expect(saved.status).toBe(200);
+  const first = await body(saved);
+  expect(first).toMatchObject({ ok: true, message: "Foto Kopi Susu diganti.", data: { drink: { slug: "kopi-susu", uploaded: true } } });
+  expect((first.data!.drink as { photo: string }).photo).toMatch(/^https:\/\/storage\.contoh\.test\/event-photos\/coffee\/drinks\/kopi-susu-[0-9a-f-]{36}\.webp$/);
+  expect(db.state.files.size).toBe(1);
+  await all.writes.photo();
+  expect(db.state.files.size).toBe(1);
+  // An SVG that calls itself a PNG, a text file, no file at all, an empty one.
+  const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'], "foto.png", { type: "image/png" });
+  const refused = await all.writes.photo("kopi-susu", svg);
+  expect(refused.status).toBe(415);
+  expect((await body(refused)).fieldErrors).toEqual({ photo: ["Format foto tidak dikenali. Pakai JPG, PNG, atau WebP."] });
+  expect((await all.writes.photo("kopi-susu", new File(["halo"], "catatan.txt", { type: "text/plain" }))).status).toBe(415);
+  expect((await all.writes.photo("kopi-susu", null)).status).toBe(422);
+  expect((await all.writes.photo("kopi-susu", new File([], "kosong.png", { type: "image/png" }))).status).toBe(422);
+  const big = new Uint8Array(5 * 1024 * 1024 + 1);
+  big.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const tooBig = await all.writes.photo("kopi-susu", new File([big], "besar.png", { type: "image/png" }));
+  expect(tooBig.status).toBe(413);
+  expect((await body(tooBig)).message).toBe("Ukuran foto paling besar 5 MB.");
+  expect((await all.writes.photo("tidak-ada")).status).toBe(404);
+  expect(db.state.files.size).toBe(1);
 });

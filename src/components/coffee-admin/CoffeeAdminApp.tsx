@@ -10,6 +10,7 @@ import { consoleThemeClass } from "@/components/console";
 import { firstName } from "@/lib/coffee/access";
 import { wibDay } from "@/lib/coffee/quota";
 import type { QueueOrder, QueueState } from "@/lib/coffee/types";
+import type { MenuData } from "@/lib/coffee/types";
 import { coffeeAdminClient, coffeeAdminPush, type CancelTarget, type CoffeeAdminApi, type Done, type RecapData, type RecapQuery, type SettingsData } from "./api";
 import { CancelDialog } from "./CancelDialog";
 import { CoffeeAdminNav } from "./CoffeeAdminNav";
@@ -17,6 +18,7 @@ import { orderTitle } from "./format";
 import { PushBar } from "./PushBar";
 import { usePhone } from "./Layer";
 import { ManualSheet } from "./ManualSheet";
+import { MenuView } from "./MenuView";
 import { QueueView } from "./QueueView";
 import { RecapView } from "./RecapView";
 import { RefuseDialog } from "./RefuseDialog";
@@ -25,11 +27,11 @@ import { SettingsView } from "./SettingsView";
 import { useQueue } from "./useQueue";
 import css from "./coffee-admin.module.css";
 
-export type CoffeeAdminInitial = { queue?: QueueState; recap?: { query: RecapQuery; data: RecapData }; settings?: SettingsData };
+export type CoffeeAdminInitial = { queue?: QueueState; recap?: { query: RecapQuery; data: RecapData }; settings?: SettingsData; menu?: MenuData };
 type Toast = { tone: "success" | "error"; title: string; body?: string; undo?: QueueOrder };
 
 /**
- * The pengelola's whole admin as one screen (25 Nov 2026): Antrean, Rekap and Pengaturan inside
+ * The pengelola's whole admin as one screen (25 Nov 2026): Antrean, Rekap, Menu (F6) and Pengaturan inside
  * Journey Admin's console frame. Like an app, the frame stays: choosing a section only changes
  * the address (history.pushState, which Next.js keeps in step) and shows that section; nothing
  * reloads, the back button walks back through them, and a section opened before shows at once
@@ -248,6 +250,11 @@ export function CoffeeAdminApp({ view: firstView, initial = {}, now: startedAt, 
         {opened.includes("rekap") && (
           <div className={css.view} hidden={view !== "rekap"}>
             <RecapView api={api} initial={initial.recap} today={today} phone={phone} active={view === "rekap"} version={version} onCancel={openCancel} />
+          </div>
+        )}
+        {opened.includes("menu") && (
+          <div className={css.view} hidden={view !== "menu"}>
+            <MenuView api={api} initial={initial.menu} active={view === "menu"} onSaid={(tone, title, body) => notify({ tone, title, body })} />
           </div>
         )}
         {opened.includes("pengaturan") && (
