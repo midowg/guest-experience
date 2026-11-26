@@ -10,12 +10,22 @@ pemeriksaan) tetap mengikuti `docs/aturan-wam.md` §1–§2.
 | Tempat | Alamat | Siapa | Untuk apa |
 | --- | --- | --- | --- |
 | Aplikasi karyawan | `/coffee` (Menu), `/coffee/pesanan` (Pesanan saya), `/coffee/masuk` | Semua karyawan aktif yang punya akun (akun yang sama dengan WAM, Booking Kantor, WG People) | Mengajukan klaim, melihat status, membatalkan yang belum diproses |
-| Tablet GA | `/coffee/ga` | Kelompok GA (kategori `dw`), Admin Booking, dan pemegang akses WG Coffee | Pesanan rapat: minuman tamu dan tim di ruangan, buku menu untuk tamu |
+| Tablet GA | `/coffee/ga` (Mode GA), `/coffee/ga/masuk` (masuk khusus tablet) | Kelompok GA (kategori `dw`), Admin Booking, dan pemegang akses WG Coffee | Pesanan rapat: minuman tamu dan tim di ruangan, buku menu untuk tamu |
 | Pengelola | `/admin/coffee` (Antrean), `/admin/coffee/rekap`, `/admin/coffee/menu`, `/admin/coffee/pengaturan` | Super admin, dan orang yang dicentang **WG Coffee** di Super admin → Akses admin | Membeli di mesin, menekan Selesai atau Tolak, Catat manual, Rekap, Menu, Pengaturan |
 
 - Pengelola masuk ke admin dengan **akun karyawan sendiri**. Super admin bisa memproses, tetapi tidak
   bisa menerima notifikasi (masuknya bukan milik satu orang).
-- Karyawan biasa yang membuka `/coffee/ga` dikembalikan ke `/coffee` dengan keterangan.
+- **Tablet GA: buka `journey.werkudara.group/coffee/ga`, masuk dengan akun karyawan GA** (email kantor
+  dan password yang sama dengan Journey; tidak ada akun khusus tablet). Tanpa sesi, `/coffee/ga`
+  membuka `/coffee/ga/masuk`; setelah masuk langsung ke Mode GA. Password awal → "Buat password baru"
+  → Mode GA. "Lupa password?" di sana kembali ke halaman masuk tablet.
+- Akun yang masuk tetapi tidak berhak Mode GA melihat "Akun ini belum punya akses Mode GA. Minta
+  pengelola WG Coffee." dengan tombol **Keluar dan masuk dengan akun lain** dan tautan ke aplikasi
+  karyawan (tidak lagi dikembalikan diam-diam ke `/coffee`).
+- **Keluar di tablet:** tombol **Keluar** di bilah atas (setelah "Aplikasi saya"), dengan konfirmasi;
+  bila ada minuman yang belum dikirim, diperingatkan dulu. Notifikasi tablet itu ikut berhenti, lalu
+  tablet kembali ke `/coffee/ga/masuk` tanpa data orang sebelumnya. Dari buku menu tamu tidak ada
+  jalan keluar selain PIN GA; membuka `/coffee/ga/masuk` saat tablet di mode tamu kembali ke buku menu.
 - Tablet GA dipasang ke layar utama dan **layarnya disematkan** (screen pinning). Mode tamu hanya
   menjaga halaman tablet, bukan bilah alamat browser.
 - Kode: `src/lib/coffee/`, `src/lib/server/coffee/`, `src/components/coffee/`, `src/components/coffee-admin/`,

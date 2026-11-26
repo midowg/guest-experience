@@ -147,7 +147,7 @@ it("stops taking choices when the order is full", () => {
 
 it("inside the tablet: while the guest holds it, the page has no GA screen, no employee but the PIC, and asks the server nothing", () => {
   const server = createSampleGa({ seeded: true });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin), signOut: vi.fn(server.api.signOut) };
   render(<GaApp initial={server.initial()} me={{ name: SAMPLE_GA }} api={api} tools={<p>kotak pratinjau</p>} />);
   rest();
   fireEvent.click(screen.getByRole("button", { name: "Pesanan baru" }));

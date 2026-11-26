@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/console";
 import { AUDIENCES, AUDIENCE_LABEL, GROUP_LABEL, OPTION_KEYS, OPTION_LABEL, type Audience, type CoffeeOptions, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
 import { COFFEE_MENU_MIGRATION_NAME } from "./sections";
 import { OTHER_ROOM, ROOMS } from "@/lib/coffee/rooms";
+import { coffeePath } from "@/lib/routes";
 import { fieldErrorsOf, type CoffeeAdminApi, type SettingsData } from "./api";
 import { Layer } from "./Layer";
 import { coffeeAdminSection } from "./sections";
@@ -273,6 +274,7 @@ export function SettingsView({ api, data, error, onRetry, onSaved }: {
             </ul>
           ) : <p className={css.small}>Belum ada yang diberi akses. Super admin tetap bisa memproses.</p>}
           <p className={css.small} style={{ marginTop: 12 }}>Siapa pun yang lebih dulu membuka pesanan memprosesnya; pemesan melihat namanya. Akses diatur di Super admin → Akses admin.</p>
+          <p className={css.small} style={{ marginTop: 8 }}>Mode GA (tablet, <code>{coffeePath.ga}</code>) bisa dibuka oleh kelompok GA (kategori DW di Data karyawan), Admin Booking, dan pemegang akses di atas. Masuknya di tablet dengan akun karyawan masing-masing.</p>
         </section>
         <section className={css.panel} aria-labelledby={`${uid}-room`}>
           <h2 id={`${uid}-room`}>Ruangan</h2>

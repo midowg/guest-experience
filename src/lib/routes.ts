@@ -995,6 +995,8 @@ export const hrAdminApi = {
 export const COFFEE_PATH = "/coffee";
 /** The address parameter of Mode GA that names one sent order. */
 export const COFFEE_GA_ORDER = "pesanan";
+/** ?dari=ga on Lupa password: the tablet's sign-in is the way back. */
+export const COFFEE_FROM = "dari";
 const COFFEE_API = "/api/coffee";
 export const coffeePath = {
   /** Menu: the drinks and what is left of this month's quota. */
@@ -1003,8 +1005,12 @@ export const coffeePath = {
   orders: `${COFFEE_PATH}/pesanan`,
   /** Mode GA: the tablet for meeting orders (GA and the pengelola only). */
   ga: `${COFFEE_PATH}/ga`,
-  /** Where someone without Mode GA lands, with a note saying so. */
+  /** The note on the employee app's Menu for someone without Mode GA (older links; the tablet's own sign-in says it since 26 Nov 2026). */
   gaDenied: `${COFFEE_PATH}?pesan=ga`,
+  /** The tablet's own sign-in (26 Nov 2026): the GA officer's employee account, then straight to Mode GA. Signed in without Mode GA, it says so. */
+  gaLogin: (next?: string) => `${COFFEE_PATH}/ga/masuk${next ? `?next=${enc(next)}` : ""}`,
+  /** Lupa password as reached from the tablet's sign-in: it leads back there. */
+  gaForgot: `${COFFEE_PATH}/lupa-password?${COFFEE_FROM}=ga`,
   /** Mode GA opened on one sent order (where a notification about it leads; the tablet stays in the guest book while a guest holds it). */
   gaOrder: (id: string) => `${COFFEE_PATH}/ga?${COFFEE_GA_ORDER}=${enc(id)}`,
   login: (next?: string) => `${COFFEE_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,

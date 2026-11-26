@@ -1,7 +1,7 @@
 import type { Ice, Sugar, Temperature } from "@/lib/coffee/menu";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
-import { coffeeApi } from "@/lib/routes";
-import { request } from "../api";
+import { coffeeApi, coffeePath } from "@/lib/routes";
+import { endSession, request } from "../api";
 
 /*
  * What GA's tablet asks the server (the F0 APIs under /api/coffee/ga). The screens take this as a
@@ -29,6 +29,8 @@ export type GaApi = {
   send(body: MeetingBody): Promise<MeetingDone>;
   /** Is this the PIN GA? Resolves when it is; refuses with the server's words otherwise (409 when no PIN is set). */
   checkPin(pin: string): Promise<void>;
+  /** Keluar on the tablet: the session ends and the tablet's own sign-in opens. Throws when the server could not be told. */
+  signOut(): Promise<void>;
 };
 
 export const gaClient: GaApi = {
@@ -38,4 +40,5 @@ export const gaClient: GaApi = {
     return { order: result.data.order, message: result.message };
   },
   async checkPin(pin) { await request(coffeeApi.gaPin, { method: "POST", body: JSON.stringify({ pin }) }); },
+  signOut: () => endSession(coffeePath.gaLogin()),
 };

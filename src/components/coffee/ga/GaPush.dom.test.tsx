@@ -14,7 +14,7 @@ import { forget, NOW, rest } from "./testing";
 type Port = ReturnType<typeof samplePush>;
 function open(port: Port | null, more: { held?: boolean; openId?: string } = {}) {
   const server = createSampleGa({ seeded: true });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin), signOut: vi.fn(server.api.signOut) };
   const initial = server.initial();
   render(<GaApp initial={more.held ? server.held() : initial} me={{ name: SAMPLE_GA }} api={api} push={port} {...more} tools={<p>kotak pratinjau</p>} />);
   rest();

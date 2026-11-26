@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { coffeePath } from "@/lib/routes";
-import { SETUP_COOKIE, monthName, phoneKind, resetDay, safeCoffeeNext, setupCookie } from "./setup";
+import { SETUP_COOKIE, monthName, phoneKind, resetDay, safeCoffeeNext, safeGaNext, setupCookie } from "./setup";
 
 it("lets signing in lead back to the app's own pages only", () => {
   expect(safeCoffeeNext(coffeePath.home)).toBe(coffeePath.home);
@@ -8,7 +8,8 @@ it("lets signing in lead back to the app's own pages only", () => {
   expect(safeCoffeeNext(coffeePath.ga)).toBe(coffeePath.ga);
   expect(safeCoffeeNext(coffeePath.gaDenied)).toBe(coffeePath.gaDenied);
   for (const bad of [null, undefined, "", "https://jahat.example", "//jahat.example", "/wam", "/coffeeshop", "/admin/coffee-x", `${coffeePath.home}\\x`, `${coffeePath.home} x`,
-    coffeePath.login(), coffeePath.login(coffeePath.home), coffeePath.forgot, coffeePath.newPassword(coffeePath.home)]) {
+    coffeePath.login(), coffeePath.login(coffeePath.home), coffeePath.forgot, coffeePath.gaForgot, coffeePath.newPassword(coffeePath.home),
+    coffeePath.gaLogin(), coffeePath.gaLogin(coffeePath.ga), `${coffeePath.gaLogin()}/x`]) {
     expect(safeCoffeeNext(bad), String(bad)).toBeNull();
   }
 });
@@ -32,6 +33,19 @@ it("F2-08 refuses dot segments, anything encoded and the app's files as the way 
   for (const good of [coffeePath.home, coffeePath.orders, coffeePath.ga, coffeePath.gaDenied]) {
     expect(new URL(safeCoffeeNext(good)!, "https://journey.example").pathname.startsWith(coffeePath.home)).toBe(true);
   }
+});
+
+it("lets the tablet's sign-in lead to Mode GA only", () => {
+  const order = coffeePath.gaOrder("0b9d6f0e-1c1c-4c39-9d0b-3d1b3a0d7b11");
+  expect(safeGaNext(coffeePath.ga)).toBe(coffeePath.ga);
+  expect(safeGaNext(order)).toBe(order);
+  for (const bad of [null, undefined, "", coffeePath.home, coffeePath.orders, coffeePath.gaDenied, "/coffee/gaa", "/coffee/ga/", "/coffee/ga/..", "/coffee/ga/../pesanan", "/coffee/ga/%2e%2e/admin",
+    "/coffee/ga//jahat.example", "/coffee/ga\\@jahat.example", "https://jahat.example/coffee/ga", "//jahat.example/coffee/ga", "/admin/coffee", "/COFFEE/ga",
+    coffeePath.gaLogin(), coffeePath.gaLogin(coffeePath.ga), coffeePath.login(coffeePath.ga), coffeePath.newPassword(coffeePath.ga), `${coffeePath.ga}?next=https://jahat.example `]) {
+    expect(safeGaNext(bad), String(bad)).toBeNull();
+  }
+  // A query that merely mentions another site is still the tablet's own page.
+  expect(new URL(safeGaNext(`${coffeePath.ga}?x=https://jahat.example`)!, "https://journey.example").origin).toBe("https://journey.example");
 });
 
 it("remembers the one-time setup for the app's addresses", () => {

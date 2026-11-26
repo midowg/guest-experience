@@ -14,9 +14,9 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Mode GA" };
 
 /**
- * The GA tablet: meeting orders for guests and the team in the room. A stranger goes to Coffee's
- * sign-in and comes back here; an employee without Mode GA lands on the employee app with a note
- * (coffeePath.gaDenied). Before the migration ran (503) the page says it is not open yet, with the
+ * The GA tablet: meeting orders for guests and the team in the room. A stranger goes to the
+ * tablet's own sign-in (coffeePath.gaLogin) and comes back here; an employee without Mode GA goes
+ * there too, where the page says so. Before the migration ran (503) the page says it is not open yet, with the
  * migration's name for the pengelola only; any other refusal says it could not load, with a way to
  * try again.
  *

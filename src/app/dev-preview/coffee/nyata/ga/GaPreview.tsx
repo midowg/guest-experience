@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GaApp } from "@/components/coffee/ga/GaApp";
+import { GaDenied } from "@/components/coffee/ga/GaAuth";
 import css from "@/components/coffee/ga/ga.module.css";
 import { SAMPLE_GA, createSampleGa } from "@/components/coffee/ga/sample";
 import { samplePush } from "@/components/coffee/pushSample";
@@ -18,7 +19,7 @@ const OPTIONS = {
   "tim-tanpa": { tim: NO_OPTIONS, tamu: ALL_OPTIONS },
 };
 
-export function GaPreview({ empty, slow, pin, held, push, options }: { empty: boolean; slow: boolean; pin: boolean; held: boolean; push: CoffeePushState; options: keyof typeof OPTIONS }) {
+export function GaPreview({ empty, slow, pin, held, push, options, denied = false }: { empty: boolean; slow: boolean; pin: boolean; held: boolean; push: CoffeePushState; options: keyof typeof OPTIONS; denied?: boolean }) {
   const [port] = useState(() => samplePush(push));
   const [server] = useState(() => createSampleGa({ seeded: !empty, delay: slow ? 1500 : 0, pin: pin ? "1234" : "", options: OPTIONS[options] }));
   // Loaded in guest mode: no GA data comes with the page, only the menu and the options, as on the real one.
@@ -46,8 +47,11 @@ export function GaPreview({ empty, slow, pin, held, push, options }: { empty: bo
         <a href={`${HERE}?lambat=1`}>Jaringan lambat (1,5 detik)</a>
         <a href={`${HERE}?notif=on`}>Notifikasi aktif</a>
         <a href={`${HERE}?notif=denied`}>Notifikasi diblokir</a>
+        <a href={`${HERE}?layar=ditolak`}>Masuk tanpa akses Mode GA</a>
       </div>
     </details>
   );
+  // Signed in without Mode GA, as the tablet's sign-in page draws it; Keluar ends nothing here.
+  if (denied) return <GaDenied name="Rina (contoh)" signOut={async () => undefined} push={null} />;
   return <GaApp initial={initial} me={{ name: SAMPLE_GA }} api={server.api} held={held} push={port} tools={tools} />;
 }

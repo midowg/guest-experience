@@ -29,8 +29,20 @@ export function safeCoffeeNext(value: string | null | undefined): string | null 
   if (!APP_PAGE.test(path)) return null;
   // Belt and braces: what the browser will really open is still that page of the app.
   try { if (new URL(value, "http://x").pathname !== path) return null; } catch { return null; }
-  if ([coffeePath.login(), coffeePath.forgot, coffeePath.newPassword()].some(page => path === page || path.startsWith(`${page}/`))) return null;
+  if ([coffeePath.login(), coffeePath.gaLogin(), coffeePath.forgot, coffeePath.newPassword()].some(page => path === page || path.startsWith(`${page}/`))) return null;
   return value;
+}
+
+/**
+ * Where the tablet's sign-in (/coffee/ga/masuk) may lead: Mode GA only (the tablet, or one of its
+ * orders), by the same rules as above. Anything else, the employee app included, is dropped and
+ * the tablet opens on its first page.
+ */
+export function safeGaNext(value: string | null | undefined): string | null {
+  const safe = safeCoffeeNext(value);
+  if (!safe) return null;
+  const path = safe.split(/[?#]/)[0];
+  return path === coffeePath.ga || path.startsWith(`${coffeePath.ga}/`) ? safe : null;
 }
 
 /** "November", from a WIB month ("2026-11"). */

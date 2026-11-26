@@ -96,19 +96,22 @@ export function CoffeeLogin({ next, forget = false }: { next: string | null; for
   );
 }
 
-/** Lupa password: a request to the admin to reset the account to its first password; the same answer for every email. */
-export function CoffeeForgot() {
+/**
+ * Lupa password: a request to the admin to reset the account to its first password; the same answer for every email.
+ * `back`: the sign-in page it came from (the page passes the tablet's own; otherwise the employee app's).
+ */
+export function CoffeeForgot({ back = coffeePath.login() }: { back?: string } = {}) {
   const { email, setEmail, note, setNote, busy, error, done, submit } = useForgot();
   return (
     <Page title="Lupa password">
       <header className={css.stepbar}>
-        <Link href={coffeePath.login()} className={css.iconButton} aria-label="Kembali"><ChevronLeft aria-hidden size={24} /></Link>
+        <Link href={back} className={css.iconButton} aria-label="Kembali"><ChevronLeft aria-hidden size={24} /></Link>
       </header>
       {done ? (
         <section className={css.stepBody}>
           <h1>Permintaan terkirim</h1>
           <p className={css.okBox} role="status"><CheckCircle2 size={20} aria-hidden /><span>Kalau email itu terdaftar, admin mengatur ulang password-mu ke password awal. Setelah dikabari, masuk dengan password awal lalu buat password baru.</span></p>
-          <div className={css.footer}><Link href={coffeePath.login()} className={css.primary}><ArrowLeft size={18} aria-hidden />Kembali ke Masuk</Link></div>
+          <div className={css.footer}><Link href={back} className={css.primary}><ArrowLeft size={18} aria-hidden />Kembali ke Masuk</Link></div>
         </section>
       ) : (
         <section className={css.stepBody}>

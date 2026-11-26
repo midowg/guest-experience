@@ -983,3 +983,41 @@ hanya dibaca. Diuji di semua tes server dengan `menuMigrated = false` pada `fake
   adalah `/dev-preview/coffee/nyata/…` dengan server tiruan, plus 401/307 pada alamat aslinya.
 - Pratinjau tablet GA punya galat hidrasi lama (jam "14.28" vs "14.29" saat render server dan browser
   berbeda menit); bukan dari F6 dan hanya di pratinjau.
+
+---
+
+## Catatan: halaman masuk khusus tablet GA dan tombol Keluar (26 Nov 2026)
+
+Permintaan pemilik: petugas GA / `dw` sudah punya akun karyawan Journey, jadi tablet mendapat halaman
+masuknya sendiri. Tanpa migrasi, tanpa sistem masuk baru, tanpa cookie baru. Skill desain: `ui-ux-pro-max`
+(formulir, sentuhan ≥ 48 px, keyboard layar, aksi keluar lewat konfirmasi).
+
+- **`/coffee/ga/masuk`** (`coffeePath.gaLogin`, `src/app/coffee/ga/masuk/page.tsx`, `ga/GaAuth.tsx`):
+  hook dan API yang sama dengan `/coffee/masuk` (`useSignIn` → `praWamApi.login`). `next` hanya alamat
+  Mode GA (`safeGaNext` di `src/lib/coffee/setup.ts`); selain itu dibuang dan tablet membuka `/coffee/ga`.
+  `safeCoffeeNext` kini juga menolak `/coffee/ga/masuk` sebagai tujuan.
+- **`requireGaPage`**: tanpa sesi → `/coffee/ga/masuk` (bukan lagi `/coffee/masuk?next=…`); masuk tetapi
+  tidak berhak → halaman yang sama, yang menampilkan `GaDenied` ("Akun ini belum punya akses Mode GA.
+  Minta pengelola WG Coffee.", Keluar dan masuk dengan akun lain, tautan aplikasi karyawan). Aturan siapa
+  yang berhak (`opensGaMode`) tidak berubah. `coffeePath.gaDenied` (`/coffee?pesan=ga`) tidak dipakai
+  penjaga lagi; pesannya di Menu dibiarkan untuk tautan lama.
+- **Mode tamu:** dengan cookie `coffee_ga_tamu` dan sesi yang masih berlaku, `/coffee/ga/masuk` selalu
+  mengalihkan ke `/coffee/ga` (buku menu), tidak pernah ke `next`. Sesi habis saat mode tamu: formulir
+  masuk, lalu `/coffee/ga` membuka buku menu lagi; PIN GA tetap diminta.
+- **Keluar di tablet** (`GaApp`): tombol di bilah atas setelah "Aplikasi saya" → dialog konfirmasi (dengan
+  peringatan bila ada minuman belum dikirim) → `dropPush` → `GaApi.signOut` (`endSession` di
+  `src/components/coffee/api.ts`, dipakai juga aplikasi karyawan) → `location.replace('/coffee/ga/masuk')`.
+  Sesudahnya layar hanya berisi "Kamu sudah keluar", tablet berhenti membaca server, dan pertanyaan
+  bawaan browser soal minuman belum terkirim tidak muncul lagi. Tidak ada di buku menu tamu.
+- **Lupa password** dari tablet: `/coffee/lupa-password?dari=ga` (`coffeePath.gaForgot`), kembali ke masuk
+  tablet. **Password baru:** `/coffee/password-baru?next=/coffee/ga`, lalu Mode GA; tanpa sesi kembali ke
+  masuk tablet.
+- Service worker tidak diubah: tidak pernah menyimpan halaman (hanya meneruskan permintaan; halaman
+  offline bila gagal). Tes menjaga itu.
+- Pratinjau penolakan: `/dev-preview/coffee/nyata/ga?layar=ditolak`.
+
+**Belum diuji (apa adanya):** masuk sungguhan, password awal sungguhan, Keluar sungguhan, dan akun tanpa
+akses sungguhan tidak dijalankan (agen tidak memakai sandi): semuanya lewat tes dengan server tiruan dan
+pratinjau. Tablet dan keyboard layar sungguhan tidak dipakai; ukuran 1280×800, 1024×768, 768×1024, 375
+dicek dengan layar tiruan di panel browser. Pengalihan tanpa sesi dicek dengan curl di server dev (jawaban
+200 berisi pengalihan yang dialirkan, seperti halaman Coffee lain yang punya `loading.tsx`).

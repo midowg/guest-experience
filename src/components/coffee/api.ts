@@ -74,6 +74,21 @@ export async function request<T>(url: string, init: RequestInit = {}): Promise<{
   return { data: result.data as T, message: result.message ?? "" };
 }
 
+/**
+ * Keluar: the employee session ends on the server, then the browser goes to a sign-in page (`to`:
+ * the employee app's, or the tablet's own). Throws when the server could not be told.
+ */
+export async function endSession(to: string): Promise<void> {
+  try { await request(praWamApi.logout, { method: "POST" }); }
+  catch (problem) {
+    // No answer, or the server failed: the session still lives, so the app must not pretend it ended.
+    // Any other refusal (the session is already gone) leaves for the sign-in page all the same.
+    if (!(problem instanceof CoffeeApiError) || answerUnknown(problem)) throw new CoffeeApiError("Belum bisa keluar. Periksa jaringan lalu coba lagi.");
+  }
+  // replace, not assign: the page with the person's data does not stay behind the sign-in page.
+  window.location.replace(to);
+}
+
 export const coffeeClient: CoffeeApi = {
   state: async () => (await request<MyState>(coffeeApi.state)).data,
   async claim(body) {
@@ -85,14 +100,7 @@ export const coffeeClient: CoffeeApi = {
     return { ...result.data, message: result.message };
   },
   async signOut() {
-    try { await request(praWamApi.logout, { method: "POST" }); }
-    catch (problem) {
-      // No answer, or the server failed: the session still lives, so the app must not pretend it ended.
-      // Any other refusal (the session is already gone) leaves for the sign-in page all the same.
-      if (!(problem instanceof CoffeeApiError) || answerUnknown(problem)) throw new CoffeeApiError("Belum bisa keluar. Periksa jaringan lalu coba lagi.");
-    }
-    // replace, not assign: the page with the person's data does not stay behind the sign-in page.
-    window.location.replace(coffeePath.login());
+    await endSession(coffeePath.login());
   },
 };
 

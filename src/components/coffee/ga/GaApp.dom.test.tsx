@@ -19,7 +19,7 @@ const PIC = SAMPLE_PEOPLE[0], TEAM = SAMPLE_PEOPLE[3];
 
 function open(options: Options = {}) {
   const server = createSampleGa({ seeded: true, ...options });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin), signOut: vi.fn(server.api.signOut) };
   render(<GaApp initial={server.initial()} me={{ name: SAMPLE_GA }} api={api} />);
   rest();
   return { server, api };
@@ -365,7 +365,7 @@ it("F3-01 comes back to the menu book after a reload in guest mode: no GA data o
   expect(document.cookie).toContain("coffee_ga_tamu=1");
   // The reload: the page is gone; the server saw the cookie and sends no GA data with the new one.
   cleanup();
-  const api = { state: vi.fn(first.server.api.state), send: vi.fn(first.server.api.send), checkPin: vi.fn(first.server.api.checkPin) };
+  const api = { state: vi.fn(first.server.api.state), send: vi.fn(first.server.api.send), checkPin: vi.fn(first.server.api.checkPin), signOut: vi.fn(first.server.api.signOut) };
   render(<GaApp held initial={EMPTY} me={{ name: SAMPLE_GA }} api={api} tools={<p>kotak pratinjau</p>} />);
   rest();
   expect(screen.getByRole("region", { name: "Buku menu tamu" })).toBeTruthy();
@@ -392,7 +392,7 @@ it("F3-01 comes back to the menu book after a reload in guest mode: no GA data o
 
 it("F3-01 stays locked on the cover when guest mode was on and nothing can be restored", async () => {
   const server = createSampleGa({ seeded: true });
-  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin) };
+  const api = { state: vi.fn(server.api.state), send: vi.fn(server.api.send), checkPin: vi.fn(server.api.checkPin), signOut: vi.fn(server.api.signOut) };
   render(<GaApp held initial={EMPTY} me={{ name: SAMPLE_GA }} api={api} />);
   rest();
   expect(screen.getByRole("button", { name: "Buku menu tertutup" })).toBeTruthy();

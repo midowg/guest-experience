@@ -59,8 +59,10 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
    pengelola (HR/admin). Mereka masuk ke admin dengan **akun karyawan sendiri**; super admin tidak bisa
    menerima notifikasi. Pemegang akses otomatis bisa memakai Mode GA di tablet.
 7. **Atur PIN GA.** `/admin/coffee` → Pengaturan → PIN GA (4 angka) → beri tahu petugas GA.
-8. **Siapkan tablet GA.** Masuk dengan akun petugas, buka `/coffee/ga`, **pasang ke layar utama, lalu
-   sematkan layarnya** (screen pinning). Mode tamu hanya menjaga halaman tablet; tanpa disematkan, tamu
+8. **Siapkan tablet GA.** **Tablet GA: buka `journey.werkudara.group/coffee/ga`, masuk dengan akun
+   karyawan GA** (halaman masuk khusus tablet, `/coffee/ga/masuk`; akun dan password sama dengan
+   Journey). Lalu **pasang ke layar utama, dan sematkan layarnya** (screen pinning). Ganti petugas:
+   **Keluar** di bilah atas tablet, lalu petugas berikutnya masuk dengan akunnya sendiri. Mode tamu hanya menjaga halaman tablet; tanpa disematkan, tamu
    masih bisa mengetik alamat lain di browser.
 9. **Uji dengan akun asli (belum pernah dilakukan).**
    - Masuk dari `/coffee` → kembali ke halaman yang dituju.
@@ -68,7 +70,11 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
    - Pengelola tekan Selesai, lalu coba Tolak pada klaim lain → berubah di HP dalam 15 detik.
    - Batalkan klaim yang belum diproses → jatah kembali.
    - Keluar di HP → layar "Kamu sudah keluar".
-   - Karyawan biasa membuka `/coffee/ga` → kembali ke `/coffee` dengan keterangan.
+   - Karyawan biasa membuka `/coffee/ga` → halaman masuk tablet berkata "Akun ini belum punya akses
+     Mode GA. Minta pengelola WG Coffee." dengan Keluar dan tautan ke aplikasi karyawan.
+   - Tablet: tanpa sesi `/coffee/ga` membuka `/coffee/ga/masuk`; masuk → Mode GA; **Keluar** di bilah
+     atas → kembali ke halaman masuk tablet, tanpa nama atau pesanan orang sebelumnya. Saat Serahkan
+     ke tamu terbuka, ketik `/coffee/ga/masuk` di alamat → tetap buku menu.
    - Catat manual, lalu Batalkan catatan.
    - Rekap → Unduh CSV dan Unduh Excel → buka di Excel, lembar Detail berisi 23 kolom dengan lebar yang pas.
    - Dua pengelola menekan Selesai bersamaan pada pesanan yang sama → satu yang menang.

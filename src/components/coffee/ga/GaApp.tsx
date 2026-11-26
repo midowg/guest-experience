@@ -1,16 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Bell, BellRing, Coffee, RefreshCw, Smartphone, WifiOff } from "lucide-react";
+import { Bell, BellRing, CircleAlert, Coffee, LogOut, RefreshCw, Smartphone, WifiOff } from "lucide-react";
 import { DEFAULT_OPTIONS, DRINKS } from "@/lib/coffee/menu";
 import { pushNote } from "@/lib/coffee/notify";
 import type { GaState, MeetingOrder } from "@/lib/coffee/types";
 import { COFFEE_GA_ORDER, coffeePath } from "@/lib/routes";
 import { CoffeeApiError, coffeePush, newKey } from "../api";
-import { Layer } from "../Layer";
+import { Layer, leavePage } from "../Layer";
 import { coffeeWorker } from "../pwa";
 import { Toast, type ToastMessage } from "../Toast";
-import { useFocusAfter, usePush, useWorkerNews, type PushPort } from "../usePush";
+import { dropPush, useFocusAfter, usePush, useWorkerNews, type PushPort } from "../usePush";
 import { gaClient, type GaApi, type MeetingBody } from "./api";
 import type { PinAnswer } from "./ExitDialog";
 import { GuestBook } from "./GuestBook";
@@ -45,6 +45,12 @@ import css from "./ga.module.css";
  * itself says in guest mode is the service worker's doing: one neutral line, see public/coffee/sw.js.)
  * After the final audit: "Matikan" beside "Notifikasi aktif" (F5-07), the focus follows Nyalakan and
  * Matikan (F5-09), and the guest-mode cookie is written again while the book is open (F5-06).
+ *
+ * Keluar (26 Nov 2026): the tablet has its own sign-in (/coffee/ga/masuk), so it has its own way
+ * out, in the top bar after "Aplikasi saya". It asks first (and warns about drinks that were not
+ * sent), lets go of this device's notifications as the employee app does, ends the session and
+ * opens the tablet's sign-in; meanwhile nothing of the person or of today's orders stays on screen.
+ * It does not exist in the guest's book: leaving the book still takes the PIN GA.
  */
 
 type Screen = "home" | "new" | "quick" | "sent";
@@ -96,7 +102,14 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
     });
   }, []);
   const closeToast = useCallback(() => { const next = queued.current; queued.current = null; setToast(next); }, []);
-  const askId = useId();
+  const askId = useId(), outId = useId();
+  /** Keluar: the question is open; the session is being ended; why it could not be; it ended (nothing of GA is drawn any more). */
+  const [outAsk, setOutAsk] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [outError, setOutError] = useState("");
+  const [left, setLeft] = useState(false);
+  /** The sign-in page is on its way: the browser must not ask about unsent drinks the person just agreed to drop. */
+  const going = useRef(false);
   const pending = useRef<Pending | null>(null);
   const checking = useRef(false);
 
@@ -121,7 +134,7 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
       ? { tone: "ok", title: `#${order.no} ${order.room}: siap diambil`, body: `${doneLine(order)}. Ambil di mesin kopi pantry.`, onOpen }
       : { tone: "no", title: `#${order.no} ${order.room}: ditolak`, body: `${doneLine(order)}. Lihat catatannya.`, onOpen, sticky: true });
   }, [open, say]);
-  const { state, refresh, send, sending, stale, retry, retrying } = useGa(api, initial, onDecided, guest);
+  const { state, refresh, send, sending, stale, retry, retrying } = useGa(api, initial, onDecided, guest || left);
   const { today, people, rooms } = state;
   // The menu and what the team and guests are asked come with the state (F6); the code's menu and the defaults only if an answer ever lacks them.
   const menu = state.menu ?? DRINKS, options = state.options ?? DEFAULT_OPTIONS;
@@ -210,7 +223,7 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
   const unsent = lines.length > 0 || guest;
   useEffect(() => {
     if (!unsent) return;
-    const ask = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    const ask = (event: BeforeUnloadEvent) => { if (!going.current) event.preventDefault(); };
     window.addEventListener("beforeunload", ask);
     return () => window.removeEventListener("beforeunload", ask);
   }, [unsent]);
@@ -280,6 +293,27 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
     } else setProblem(`${result.message} Tekan Kirim lagi.`);
   }, [draft, lines, refresh, say, send, today]);
 
+  const signOut = async () => {
+    if (going.current) return;
+    going.current = true;
+    setLeaving(true); setOutError("");
+    // This tablet stops getting this person's notifications before the session ends (afterwards the server would not listen).
+    await dropPush(port);
+    try { await api.signOut(); }
+    catch (failure) {
+      // The server was not told: the session still lives, so the question stays and says so.
+      going.current = false;
+      setLeaving(false);
+      setOutError(failure instanceof CoffeeApiError ? failure.message : "Belum bisa keluar. Periksa jaringan lalu coba lagi.");
+      return;
+    }
+    // The sign-in page is on its way. The dialog must not walk the history back now (that would cancel
+    // the navigation), and nothing of this person or of today's orders stays on the screen meanwhile.
+    leavePage();
+    pending.current = null;
+    setLines([]); setDraft(null); setOutAsk(false); setLeft(true);
+  };
+
   const backFromGuest = (picks: Line[]) => {
     setLines(list => [...list, ...picks].slice(0, MAX_LINES));
     setGuest(false); setBook(undefined);
@@ -326,6 +360,17 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  if (left) return (
+    <div className={`${css.ga} ${css.stage}`} data-left>
+      <div className={css.emptyState} role="status">
+        <h1>Kamu sudah keluar</h1>
+        <p>Membuka halaman masuk tablet…</p>
+        {/* A plain link: the way on when the browser did not move by itself. */}
+        <a className={css.primary} href={coffeePath.gaLogin()}>Masuk lagi</a>
+      </div>
+    </div>
+  );
+
   if (guest) return (
     <div className={`${css.ga} ${css.stage}`} data-guest>
       {restored
@@ -348,7 +393,8 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
           {port && (push.state === "off" || push.state === "denied" || push.state === "ios-install" || push.state === "unsupported") && (
             <button type="button" ref={pushButton} className={css.topLink} aria-disabled={push.busy || undefined} onClick={() => void turnOn()}><Bell aria-hidden size={18} /><span>Nyalakan notifikasi</span></button>
           )}
-          <a className={css.topLink} href={coffeePath.home}><Smartphone aria-hidden size={18} />Aplikasi saya</a>
+          <a className={css.topLink} href={coffeePath.home}><Smartphone aria-hidden size={18} /><span>Aplikasi saya</span></a>
+          <button type="button" className={css.topLink} aria-disabled={sending || undefined} onClick={() => { if (!sending) { setOutError(""); setOutAsk(true); } }}><LogOut aria-hidden size={18} /><span>Keluar</span></button>
           <span className={css.userText}><strong>{me.name}</strong><span>Mode GA</span></span>
           <span className={css.avatar} aria-hidden>{me.name.trim().slice(0, 1).toUpperCase()}</span>
         </span>
@@ -393,6 +439,20 @@ export function GaApp({ initial, me, api = gaClient, held = false, openId, push:
           <div className={css.askFoot}>
             <button type="button" className={css.secondary} data-autofocus onClick={() => setAsking(null)}>Lanjutkan pesanan</button>
             <button type="button" className={css.danger} onClick={asking.then}>Buang</button>
+          </div>
+        </Layer>
+      )}
+      {outAsk && (
+        <Layer kind="dialog" alert labelledBy={outId} onClose={() => { if (!leaving) setOutAsk(false); }} rootClass={css.ga} panelClass={css.askDialog}>
+          <h2 id={outId}>Keluar dari tablet ini?</h2>
+          {lines.length > 0 && (
+            <p className={css.problem} role="alert"><CircleAlert aria-hidden size={18} /><span>{counts(lines).total} minuman untuk {draft?.room} belum dikirim ke pengelola. Kalau keluar sekarang, minuman itu dibuang.</span></p>
+          )}
+          <p>{me.name} keluar dari Mode GA di tablet ini, dan notifikasi di tablet ini berhenti. Orang berikutnya masuk dengan akunnya sendiri.</p>
+          {outError && <p className={css.pinSaid} role="alert">{outError}</p>}
+          <div className={css.askFoot}>
+            <button type="button" className={css.secondary} data-autofocus aria-disabled={leaving || undefined} onClick={() => { if (!leaving) setOutAsk(false); }}>{lines.length > 0 ? "Kembali ke pesanan" : "Batal"}</button>
+            <button type="button" className={css.danger} aria-disabled={leaving || undefined} onClick={() => void signOut()}><LogOut aria-hidden size={18} />{leaving ? "Keluar…" : lines.length > 0 ? "Buang dan keluar" : "Keluar"}</button>
           </div>
         </Layer>
       )}

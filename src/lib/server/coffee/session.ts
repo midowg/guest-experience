@@ -30,13 +30,19 @@ export async function holdsCoffeeGrant(employeeId: string): Promise<boolean> {
   return ((data as { apps: string[] | null }).apps ?? []).includes("coffee");
 }
 
-const opensGa = async (member: Member) => opensGaMode({ category: member.category, roles: member.roles, holdsCoffee: await holdsCoffeeGrant(member.id) });
+/** May this person use Mode GA? The GA group (category dw/ga), Admin Booking, or a holder of the WG Coffee grant. */
+export const opensGa = async (member: Member) => opensGaMode({ category: member.category, roles: member.roles, holdsCoffee: await holdsCoffeeGrant(member.id) });
 export const GA_ONLY = "Mode GA hanya untuk tim GA dan pengelola WG Coffee.";
 
-/** For the tablet page: someone signed in who may use Mode GA; anyone else lands on the app with a note. */
+/**
+ * For the tablet page: someone signed in who may use Mode GA. A stranger goes to the tablet's own
+ * sign-in (26 Nov 2026) and comes back here; someone signed in without Mode GA goes there too,
+ * where the page says so and offers to sign out (never a silent bounce to the employee app).
+ */
 export async function requireGaPage(here: string): Promise<Member> {
-  const member = await requireCoffeePage(here);
-  if (!(await opensGa(member))) redirect(coffeePath.gaDenied);
+  const member = await currentMember();
+  if (!member) redirect(coffeePath.gaLogin(here === coffeePath.ga ? undefined : here));
+  if (!(await opensGa(member))) redirect(coffeePath.gaLogin());
   return member;
 }
 

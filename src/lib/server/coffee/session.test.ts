@@ -19,16 +19,19 @@ const member = (id: string, category: string, roles: string[] = []) => ({ id, na
 
 beforeEach(() => { db = fakeDb(); seedPeople(db); state.member = null; state.admin = null; });
 
-it("sends a stranger to Coffee's own sign-in, and back to where they were", async () => {
+it("sends a stranger to Coffee's own sign-in, and back to where they were; the tablet has a sign-in of its own", async () => {
   await expect(requireCoffeePage("/coffee/pesanan")).rejects.toThrow("REDIRECT /coffee/masuk?next=%2Fcoffee%2Fpesanan");
-  await expect(requireGaPage("/coffee/ga")).rejects.toThrow("REDIRECT /coffee/masuk?next=%2Fcoffee%2Fga");
+  // Never the employee sign-in (26 Nov 2026). The tablet's first page needs no way back spelled out.
+  await expect(requireGaPage("/coffee/ga")).rejects.toThrow(/REDIRECT \/coffee\/ga\/masuk$/);
+  await expect(requireGaPage("/coffee/ga?pesanan=o1")).rejects.toThrow("REDIRECT /coffee/ga/masuk?next=%2Fcoffee%2Fga%3Fpesanan%3Do1");
   state.member = member(PEOPLE.rina, "karyawan");
   expect(await requireCoffeePage("/coffee")).toBe(state.member);
 });
 
-it("opens Mode GA for the GA group, Admin Booking and holders of the Coffee grant; others land on the app with a note", async () => {
+it("opens Mode GA for the GA group, Admin Booking and holders of the Coffee grant; others are told so on the tablet's sign-in", async () => {
   state.member = member(PEOPLE.rina, "karyawan");
-  await expect(requireGaPage("/coffee/ga")).rejects.toThrow("REDIRECT /coffee?pesan=ga");
+  await expect(requireGaPage("/coffee/ga")).rejects.toThrow(/REDIRECT \/coffee\/ga\/masuk$/);
+  await expect(requireGaPage("/coffee/ga?pesanan=o1")).rejects.toThrow(/REDIRECT \/coffee\/ga\/masuk$/);
   await expect(requireApiGa()).rejects.toMatchObject({ status: 403, message: "Mode GA hanya untuk tim GA dan pengelola WG Coffee." });
   for (const allowed of [member(PEOPLE.bagas, "dw"), member(PEOPLE.rina, "karyawan", ["ga"]), member(PEOPLE.dewi, "karyawan")]) {
     state.member = allowed;

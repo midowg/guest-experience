@@ -401,7 +401,7 @@
 .ga .secondary[aria-disabled="true"] { opacity: .55; }
 /* A search field and the names found for it: one block that rises to the top when the field is typed in. */
 .ga .searchBlock { display: grid; gap: 8px; scroll-margin-top: 12px; }
-.ga .danger { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border: 1px solid transparent; border-radius: 12px; background: var(--no); color: #fff; font-size: 16px; font-weight: 600; }
+.ga .danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border: 1px solid transparent; border-radius: 12px; background: var(--no); color: #fff; font-size: 16px; font-weight: 600; }
 .ga .input { border-color: var(--field-line); }
 .ga .search { border-color: var(--field-line); }
 .ga .topLink { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; border-radius: 12px; color: var(--emp-strong); font-size: 15px; font-weight: 600; white-space: nowrap; }
@@ -503,4 +503,47 @@
 .ga button.topOff { color: var(--ink-2); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 640px) {
   .ga .topNote span, .ga button.topLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* ---------- the tablet's own sign-in (/coffee/ga/masuk, 26 Nov 2026) and Keluar
+   Lying down: two panes side by side, so the whole form stays above an on-screen keyboard.
+   Upright or on a phone: one column. The page itself scrolls (the stage of the tablet does not). */
+.signPage { display: flex; min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--cream); }
+.ga .signCard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: min(960px, 100%); margin: auto; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); overflow: hidden; }
+.ga .signIntro { display: flex; flex-direction: column; gap: 12px; padding: 40px; background: var(--emp-c); }
+.ga .signIntro .brand { margin: 0 0 auto; padding-bottom: 32px; }
+.ga .signSub { margin-left: 4px; padding-left: 10px; border-left: 1px solid var(--emp); color: var(--emp-strong); font-weight: 600; font-size: 15px; }
+.ga .signIntro h1 { font-size: 32px; overflow-wrap: anywhere; }
+.ga .signLead { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+.ga .signBody { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 40px; }
+.ga .signForm { display: grid; gap: 8px; min-width: 0; }
+.ga .signForm .label { margin-top: 8px; }
+.ga .signForm .input { scroll-margin: 96px 0; }
+.ga .signForm .big { width: 100%; margin-top: 16px; }
+.ga .signForm .secondary { width: 100%; white-space: normal; text-align: center; }
+.ga .signForm .big { white-space: normal; text-align: center; }
+.ga .signSecret { position: relative; display: block; }
+.ga .signSecret .input { padding-right: 56px; }
+.ga .signSecret .iconButton { position: absolute; top: 2px; right: 2px; color: var(--ink-2); }
+.ga .signLinks { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin: 4px -12px 0; }
+.ga .signDenied { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 8px; padding: 16px; border-radius: 16px; background: var(--wait-c); color: var(--wait); font-size: 17px; font-weight: 600; line-height: 1.45; }
+.ga .signDenied svg { flex: none; margin-top: 1px; }
+.ga .emptyState h1 { font-size: 24px; }
+@media (max-width: 900px) {
+  .ga .signCard { grid-template-columns: minmax(0, 1fr); width: min(520px, 100%); }
+  .ga .signIntro { padding: 28px 28px 24px; }
+  .ga .signIntro .brand { padding-bottom: 12px; }
+  .ga .signIntro h1 { font-size: 28px; }
+  .ga .signBody { padding: 24px 28px 28px; }
+}
+@media (max-width: 640px) {
+  /* Top bar on a phone: the words give way to icons, which stay full targets. */
+  .ga .topLink { min-width: 48px; justify-content: center; }
+  .ga a.topLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ga .user { gap: 4px; }
+  .ga .brand { white-space: nowrap; }
+  .ga .topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .signPage { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .ga .signIntro { padding: 20px 20px 16px; }
+  .ga .signBody { padding: 16px 20px 20px; }
 }

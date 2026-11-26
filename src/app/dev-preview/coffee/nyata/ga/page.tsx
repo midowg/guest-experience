@@ -24,13 +24,15 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
  *               the real default: everything for both.
  *   ?notif=on|denied|ios-install|unsupported|not-ready   the state web push is found in (F4;
  *               otherwise it can be turned on). A make-believe device: nothing is registered or sent.
+ *   ?layar=ditolak   the tablet's sign-in page for someone signed in without Mode GA (the sign-in
+ *               form itself needs no preview: /coffee/ga/masuk shows it to anyone not signed in)
  * A reload while "Serahkan ke tamu" is open lands on the menu book again, as on the real page.
  * The prototype it was built from stays at /dev-preview/coffee/ga.
  */
 export default async function DevCoffeeGaRealPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { kosong, lambat, pin, notif, opsi } = await searchParams;
+  const { kosong, lambat, pin, notif, opsi, layar } = await searchParams;
   const held = (await cookies()).get(HOLD_COOKIE)?.value === "1";
   // The same wrapper as src/app/coffee/layout.tsx, so the tablet is seen inside the employee app's theme as on the real page.
-  return <div className={css.theme} lang="id"><GaPreview options={opsi === "tanpa" || opsi === "tamu-gula" || opsi === "tim-tanpa" ? opsi : ""} empty={kosong === "1"} slow={lambat === "1"} pin={pin === "1"} held={held} push={sampleState(notif)} /></div>;
+  return <div className={css.theme} lang="id"><GaPreview options={opsi === "tanpa" || opsi === "tamu-gula" || opsi === "tim-tanpa" ? opsi : ""} empty={kosong === "1"} slow={lambat === "1"} pin={pin === "1"} held={held} push={sampleState(notif)} denied={layar === "ditolak"} /></div>;
 }

@@ -110,12 +110,14 @@ it("F2-04 the worker answers a failed page of the app with the offline page, and
     listeners.fetch({ request: { mode, url }, respondWith: (value: Promise<Response>) => { answer = value; } });
     return answer as Promise<Response> | null;
   };
-  for (const page of [coffeePath.home, coffeePath.orders, coffeePath.ga, `${coffeePath.home}?pesan=ga`]) {
+  for (const page of [coffeePath.home, coffeePath.orders, coffeePath.ga, coffeePath.gaLogin(), coffeePath.gaLogin(coffeePath.ga), `${coffeePath.home}?pesan=ga`]) {
     const answer = await ask(`https://journey.example${page}`);
     expect(answer, page).not.toBeNull();
     expect(await answer!.text()).toContain("Sinyalnya hilang");
     expect(answer!.headers.get("Content-Type")).toMatch(/text\/html/);
   }
+  // Pages are personal (the tablet's sign-in included): the worker keeps no copy of any, it only passes the request on.
+  expect(worker).not.toMatch(/\bcaches\b|\.put\(|cache\.add/);
   // Not a page of the app, or not a page at all: the browser handles it as if there were no worker.
   expect(ask("https://journey.example/coffeeshop")).toBeNull();
   expect(ask("https://journey.example/admin/coffee")).toBeNull();

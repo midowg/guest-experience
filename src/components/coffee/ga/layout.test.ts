@@ -93,3 +93,20 @@ it("F3-05 and F3-07: the offline banner's button is a full target, and the searc
   expect(contrast(token("wait"), token("wait-c"))).toBeGreaterThanOrEqual(4.5);
   expect(rule(".ga .searchBlock")).toContain("scroll-margin-top");
 });
+
+/* ---------- the tablet's own sign-in (26 Nov 2026) */
+
+it("lays the sign-in out in two panes lying down, one column upright, and lets the page scroll under a keyboard", () => {
+  expect(rule(".ga .signCard")).toContain("grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)");
+  const upright = sheet.slice(sheet.lastIndexOf("@media (max-width: 900px)"));
+  expect(upright).toContain(".ga .signCard { grid-template-columns: minmax(0, 1fr);");
+  // The page grows with its contents (the tablet's stage does not): a field under the keyboard can be scrolled to.
+  expect(rule(".signPage")).toContain("min-height: 100dvh");
+  expect(rule(".signPage")).not.toContain("overflow: hidden");
+  expect(rule(".ga .signForm .input")).toContain("scroll-margin");
+  // Its fields and buttons are the tablet's own: 52 px fields at 17 px, 56 px for the one main button.
+  expect(rule(".ga .input")).toMatch(/min-height: 5\dpx/);
+  expect(rule(".ga .big")).toMatch(/min-height: 5\dpx/);
+  expect(contrast(token("wait"), token("wait-c"))).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(token("ink"), token("emp-c"))).toBeGreaterThanOrEqual(4.5);
+});

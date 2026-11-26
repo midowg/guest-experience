@@ -159,6 +159,10 @@ describe("WG Coffee addresses (25 Nov 2026)", () => {
       manifest: "/coffee/manifest.webmanifest", serviceWorker: "/coffee/sw.js", scope: "/coffee", oldScope: "/coffee/" });
     expect(coffeePath.login()).toBe("/coffee/masuk");
     expect(coffeePath.login("/coffee/ga")).toBe("/coffee/masuk?next=%2Fcoffee%2Fga");
+    // The tablet's own sign-in (26 Nov 2026).
+    expect(coffeePath.gaLogin()).toBe("/coffee/ga/masuk");
+    expect(coffeePath.gaLogin("/coffee/ga?pesanan=o1")).toBe("/coffee/ga/masuk?next=%2Fcoffee%2Fga%3Fpesanan%3Do1");
+    expect(coffeePath.gaForgot).toBe("/coffee/lupa-password?dari=ga");
     expect(coffeePath.newPassword("/coffee")).toBe("/coffee/password-baru?next=%2Fcoffee");
     expect(coffeePath.photo("cafe-latte")).toBe("/coffee/drinks/cafe-latte.jpg");
     expect(coffeePath.icon("icon-192.png")).toBe("/coffee/icon-192.png");

@@ -54,7 +54,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
   let number = 113, idSeq = 1, itemSeq = 1;
   const orders: MeetingOrder[] = [];
   const keys = new Map<string, string>();
-  const calls = { state: 0, send: 0, pin: 0 };
+  const calls = { state: 0, send: 0, pin: 0, signOut: 0 };
   let offline = false;
   /** Answers that get lost on the way back (the server did the work), and requests that never answer. */
   let lose = 0, hang = 0;
@@ -119,6 +119,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
       await wait();
       return { ...book(), today: today().map(snapshot), people: SAMPLE_PEOPLE.map(item => ({ ...item })), rooms: ROOMS.map(room => ({ ...room })), pin: Boolean(pin) };
     },
+    async signOut() { calls.signOut += 1; await wait(); },
     async checkPin(typed) {
       calls.pin += 1;
       await wait();
