@@ -26,7 +26,7 @@ export default async function PreviewAgenda({ searchParams }: { searchParams: Pr
   const event = sampleSettings().event;
   if (params.status === "memuat") return <Frame path={mainWamPath.agenda()} now={now} lang={lang}><AgendaSkeleton /></Frame>;
   const sessions = previewSessions(now).map(session => params.status === "batal" && session.id === sampleSessionIds.bns ? { ...session, status: "batal" as const } : session);
-  // ?ceklis=0–5: module Ceklis on, with the Persiapan tab ("H-3") and this many items ticked (the first Absen then waits for it).
+  // ?ceklis=0–5: module Ceklis on, with the Persiapan tab ("H-3") and this many items ticked.
   const ceklis = params.ceklis !== undefined && /^[0-5]$/.test(params.ceklis);
   const all = ceklis ? [...sessions, samplePrepSession] : sessions;
   const prepDates = ceklis ? prepDatesOf(all, event) : [];

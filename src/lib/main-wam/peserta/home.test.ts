@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { QR_ABSEN_VISIBLE } from "../modules";
 import { defaultSettings } from "../settings";
 import {
   sampleAttendance, sampleAwards, sampleNotifications, sampleSeats, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings, sampleSilentQuestion,
@@ -17,7 +18,8 @@ const at = (date: string, time: string) => new Date(`${date}T${time}:00+07:00`);
 const rani = sampleViewers.peserta.id;
 const checkedBy = (now: Date) => new Map(sampleAttendance.filter(row => row.employeeId === rani && Date.parse(row.checkedInAt) <= now.getTime()).map(row => [row.sessionId, row.checkedInAt]));
 const sessionsAt = (now: Date) => (now.getTime() >= Date.parse("2027-01-05T10:20:00+07:00") ? sampleSessionsChanged() : sampleSessions);
-const view = (now: Date, absenOn = true) => nowView({ sessions: sessionsAt(now), now, event, absenOn, checkedIn: checkedBy(now) });
+// `qr`: the QR check-in is shown (true here: these tests check the card of that flow; the hidden state, the default, is below).
+const view = (now: Date, absenOn = true, qr = true) => nowView({ sessions: sessionsAt(now), now, event, absenOn, checkedIn: checkedBy(now), qr });
 
 describe("the Sekarang card", () => {
   it("berangkat (Sen 05.05): Kumpul, absen open, 25 minutes to go, with Absen", () => {
@@ -53,6 +55,25 @@ describe("the Sekarang card", () => {
     expect(view(sampleTime("pagi"), false)).toMatchObject({ title: "Pemaparan departemen", status: "next", absen: false });
     expect(view(at("2027-01-05", "07:52"), false)).toMatchObject({ status: "next", statusText: null });
     expect(view(sampleTime("bod"), false)).toMatchObject({ title: "Refleksi & arah bersama", status: "live" });
+  });
+
+  it("QR check-in hidden (QR_ABSEN_VISIBLE false, KONTRAK 41): no open absen anywhere, the card keeps its normal order, and 'Hadir' shows once recorded", () => {
+    expect(QR_ABSEN_VISIBLE).toBe(false);
+    // The default (no qr passed) is the hidden state.
+    const plain = (now: Date) => nowView({ sessions: sessionsAt(now), now, event, absenOn: true, checkedIn: checkedBy(now) });
+    expect(plain(sampleTime("berangkat"))).toMatchObject({ kind: "sesi", absen: false });
+    expect(plain(sampleTime("berangkat"))).not.toHaveProperty("absenCloses");
+    expect(plain(sampleTime("pagi"))).toMatchObject({ title: "Pemaparan departemen", status: "next", absen: false, statusText: null });
+    expect(plain(sampleTime("silent"))).toMatchObject({ absen: false, statusText: null });
+    // The ended Silent Meeting no longer holds the card for its 30 minutes of absen: nothing for the person to do on it.
+    const ended = plain(sampleTime("teamBuilding"));
+    expect(ended).toMatchObject({ kind: "sesi", absen: false });
+    expect(ended).not.toMatchObject({ when: "Absen sampai 15.30" });
+    // Recorded (by the tablet or panitia): the check line stays, whatever the switch.
+    expect(plain(at("2027-01-05", "07:52"))).toMatchObject({ title: "Pemaparan departemen", status: "present", statusText: "Hadir 07.52", absen: false });
+    expect(plain(sampleTime("pemaparan"))).toMatchObject({ status: "live", statusText: "Hadir 07.52", absen: false });
+    // Explicitly on again: the same as before.
+    expect(view(sampleTime("berangkat"))).toMatchObject({ absen: true, absenCloses: expect.any(String) });
   });
 
   it("22.10: today is done, tomorrow's first session and its Agenda day", () => {

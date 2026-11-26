@@ -49,10 +49,10 @@ const at = (date: string, time: string) => new Date(`${date}T${time}:00+07:00`);
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe("Beranda's loader", () => {
-  it("peserta at 07.30: Pemaparan with Absen (not checked in yet); own check-ins only", async () => {
+  it("peserta at 07.30: Pemaparan, no Absen button while the QR check-in is hidden (KONTRAK 41); own check-ins only", async () => {
     read.attendanceOf.mockResolvedValueOnce({ data: [], migrated: true });
     const data = await loadHome(context(sampleViewers.peserta), at("2027-01-05", "07:30"));
-    expect(data.now).toMatchObject({ kind: "sesi", title: "Pemaparan departemen", absen: true });
+    expect(data.now).toMatchObject({ kind: "sesi", title: "Pemaparan departemen", status: "next", absen: false });
     expect(data.session?.title).toBe("Pemaparan departemen");
     expect(read.attendanceOf).toHaveBeenCalledWith({ employeeId: sampleViewers.peserta.id });
     expect(read.listTrips).not.toHaveBeenCalled();

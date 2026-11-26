@@ -2,11 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import {
-  ceklisBlock, checklistProgress, photoVersion, type CeklisBlock, type ChecklistItem, type ChecklistItemView, type ChecklistProgress, type ChecklistTick, type SessionChecklist,
+  checklistProgress, photoVersion, type ChecklistItem, type ChecklistItemView, type ChecklistProgress, type ChecklistTick, type SessionChecklist,
 } from "@/lib/main-wam/ceklis/ceklis";
 import { DEMO_CEKLIS_COOKIE, parseDemoTicks, sampleChecklists } from "@/lib/main-wam/ceklis/sample";
 import { isSampleId } from "@/lib/main-wam/demo-sample";
-import type { MwSession } from "@/lib/main-wam/types";
 import { isSupabaseConfigured, ServiceError } from "../../config";
 import { databaseError } from "../../http";
 import { createPrivilegedClient } from "../../supabase/admin";
@@ -16,7 +15,7 @@ import { allSessions } from "../read";
 
 /*
  * Ceklis persiapan on the server (agen S1; migration 202611250001): what each agenda has, what a
- * person ticked, ticking, and the check that stops absen. Before the migration every reader answers
+ * person ticked and ticking (never a condition for absen, KONTRAK 42). Before the migration every reader answers
  * "nothing" (`migrated: false`) and nothing is asked of anyone, so the app runs as it did. Mode demo:
  * the sample's checklist stands in while the sample rundown does, its ticks kept in a cookie (a sample
  * item cannot be saved).
@@ -34,25 +33,18 @@ export function itemFromRow(row: ItemRow): ChecklistItem {
   };
 }
 
-/** The saved checklists, every agenda that has items or the switch: what Admin WAM edits (never the sample). */
+/** The saved checklists, every agenda that has items: what Admin WAM edits (never the sample). The old column mw_sessions.checklist_required is not read. */
 async function realChecklistsUncached(): Promise<Read<Map<string, SessionChecklist>>> {
   const empty = new Map<string, SessionChecklist>();
   if (!isSupabaseConfigured()) return { data: empty, migrated: false };
-  const [items, flags] = await Promise.all([
-    db().from("mw_checklist_items").select(ITEM_COLUMNS).order("sort").order("created_at").limit(3000),
-    db().from("mw_sessions").select("id").eq("checklist_required", true).limit(500),
-  ]);
+  const items = await db().from("mw_checklist_items").select(ITEM_COLUMNS).order("sort").order("created_at").limit(3000);
   if (items.error) { if (mwMissing(items.error)) return { data: empty, migrated: false }; databaseError({ message: items.error.message, code: items.error.code }); }
-  // The switch's column comes with the table (one migration); a missing one reads as "off".
-  if (flags.error && !mwMissing(flags.error)) databaseError({ message: flags.error.message, code: flags.error.code });
-  const required = new Set(((flags.error ? [] : flags.data) ?? []).map(row => row.id as string));
   const map = new Map<string, SessionChecklist>();
   for (const row of (items.data ?? []) as ItemRow[]) {
-    const list = map.get(row.session_id) ?? { required: required.has(row.session_id), items: [] };
+    const list = map.get(row.session_id) ?? { items: [] };
     list.items.push(itemFromRow(row));
     map.set(row.session_id, list);
   }
-  for (const id of required) if (!map.has(id)) map.set(id, { required: true, items: [] });
   return { data: map, migrated: true };
 }
 export const realChecklists = cache(realChecklistsUncached);
@@ -82,32 +74,13 @@ async function myChecksUncached(employeeId: string): Promise<Set<string>> {
 export const myChecks = cache(myChecksUncached);
 
 /** An agenda's checklist as the person reads it, or null when it has none. */
-export function checklistView(list: SessionChecklist | undefined, checked: ReadonlySet<string>): { required: boolean; items: ChecklistItemView[]; progress: ChecklistProgress; sample: boolean } | null {
+export function checklistView(list: SessionChecklist | undefined, checked: ReadonlySet<string>): { items: ChecklistItemView[]; progress: ChecklistProgress; sample: boolean } | null {
   if (!list || !list.items.length) return null;
   return {
-    required: list.required,
     items: list.items.map(item => ({ id: item.id, text: item.text, note: item.note, photoVersion: item.photo?.version ?? null, checked: checked.has(item.id) })),
     progress: checklistProgress(list.items, checked),
     sample: list.items.some(item => isSampleId(item.id)),
   };
-}
-
-/**
- * The checklist that stops this person's absen at `session`, or null (no gate, the module off, nothing
- * unfinished, or the migration not run yet). A read that FAILS throws a 503 ("coba lagi"): the QR check-in
- * must not slip past a gate that could not be read. Only the QR scan goes through this gate; panitia's
- * manual absen (Kelola absen) deliberately does not, as panitia vouch for the person present.
- */
-export async function absenBlock(session: MwSession, employeeId: string): Promise<CeklisBlock | null> {
-  if (!session.usesAttendance) return null;
-  try {
-    const [lists, sessions] = await Promise.all([readChecklists(), allSessions()]);
-    if (!lists.migrated || lists.data.size === 0) return null;
-    return ceklisBlock(session, sessions.data, lists.data, await myChecks(employeeId));
-  } catch (error) {
-    console.error("absenBlock: the checklist could not be read", error);
-    throw new ServiceError(503, "Ceklis persiapan belum dapat diperiksa. Coba lagi sebentar.");
-  }
 }
 
 /* ── Ticking ──────────────────────────────────────────────────────────────────────────────────── */

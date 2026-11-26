@@ -10,6 +10,9 @@ let viewer: MainWamViewer | null;
 let member: { id: string; roles: string[] } | null;
 let tester = false;
 let settingsFail = false;
+const qrSwitch = vi.hoisted(() => ({ visible: false }));
+// The QR check-in switch (modules.ts QR_ABSEN_VISIBLE, KONTRAK 41), flipped per test below.
+vi.mock("@/lib/main-wam/modules", async importOriginal => ({ ...(await importOriginal<typeof import("@/lib/main-wam/modules")>()), get QR_ABSEN_VISIBLE() { return qrSwitch.visible; } }));
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => { throw new Error(`REDIRECT ${url}`); },
@@ -30,7 +33,38 @@ const person = (roles: MainWamViewer["roles"], isTester: boolean): MainWamViewer
 const withMode = (mode: MainWamMode, modules: Partial<ModuleSwitches> = {}) => { settings = { ...defaultSettings(), migrated: true, mode, modules: { ...defaultSettings().modules, ...modules } }; };
 const status = async (promise: Promise<unknown>) => promise.then(() => 200, (error: { status?: number; message?: string }) => error.status ?? error.message);
 
-beforeEach(() => { withMode("pra"); viewer = null; member = null; tester = false; settingsFail = false; shown = true; });
+beforeEach(() => { withMode("pra"); viewer = null; member = null; tester = false; settingsFail = false; shown = true; qrSwitch.visible = false; });
+
+describe("the QR check-in pages and APIs (one gate each)", () => {
+  const here = mainWamPath.scan;
+
+  it("do not exist while the QR check-in is hidden, even with module Absen on, for every role", async () => {
+    withMode("semua", { absen: true });
+    for (const roles of [[], ["panitia"], ["bod"]] as MainWamViewer["roles"][]) {
+      viewer = person(roles, true);
+      await expect(gate.requireQrAbsenPage(here)).rejects.toThrow("NOT_FOUND");
+      expect(await status(gate.requireQrAbsenApi())).toBe(404);
+    }
+  });
+
+  it("open again with the switch on, and only with module Absen on", async () => {
+    qrSwitch.visible = true;
+    viewer = person([], false);
+    withMode("semua", { absen: true });
+    await expect(gate.requireQrAbsenPage(here)).resolves.toMatchObject({ viewer: { name: "Rani" } });
+    expect(await status(gate.requireQrAbsenApi())).toBe(200);
+    withMode("semua", { absen: false });
+    await expect(gate.requireQrAbsenPage(here)).rejects.toThrow("NOT_FOUND");
+    expect(await status(gate.requireQrAbsenApi())).toBe(404);
+  });
+
+  it("leave the face tablet and the manual list to their own gate (module Absen and role)", async () => {
+    withMode("semua", { absen: true });
+    viewer = person(["panitia"], true);
+    await expect(gate.requireActionPage("kelola", mainWamPath.attendanceTablet())).resolves.toBeTruthy();
+    await expect(gate.requireModulePage("absen", mainWamPath.attendanceManual())).resolves.toBeTruthy();
+  });
+});
 
 describe("a Main WAM page", () => {
   const here = mainWamPath.agenda();

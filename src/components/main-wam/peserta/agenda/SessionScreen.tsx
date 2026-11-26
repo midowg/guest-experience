@@ -15,7 +15,7 @@ import info from "./info.module.css";
 import own from "./agenda.module.css";
 
 /** An agenda's checklist as Detail sesi draws it (module Ceklis; the data is the server's, SessionData.checklist). */
-export type SessionChecklistProps = { sessionId: string; items: ChecklistItemView[]; required: boolean; sample?: boolean };
+export type SessionChecklistProps = { sessionId: string; items: ChecklistItemView[]; sample?: boolean };
 
 export type SessionBodyProps = {
   view: SessionView;

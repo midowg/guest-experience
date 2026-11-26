@@ -746,7 +746,7 @@ export const mainWamAdminApi = {
   /* E · isi acara */
   sessions: `${MAIN_WAM_ADMIN_API}/sesi`,
   session: (id: string) => `${MAIN_WAM_ADMIN_API}/sesi/${enc(id)}`,
-  /** PUT {required, items}: an agenda's checklist (the list replaces the old one) and its "wajib lengkap sebelum absen" switch. */
+  /** PUT {items}: an agenda's checklist (the list replaces the old one). */
   sessionChecklist: (id: string) => `${MAIN_WAM_ADMIN_API}/sesi/${enc(id)}/ceklis`,
   /** POST {mime, size}: an upload address for one checklist photo. */
   checklistPhotoStart: `${MAIN_WAM_ADMIN_API}/ceklis/unggah`,

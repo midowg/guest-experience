@@ -43,14 +43,13 @@ describe("rows with checklist chips", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].ceklis).toEqual({ done: 2, total: 5, complete: false });
   });
-  it("marks the first absen as waiting for the checklist until it is complete", () => {
-    const first = (n: number) => agendaRowsOfTab(all, "1", event, at("2027-01-01", "08:00"), [], "id", { lists, checked: ticked(n) }).find(row => row.title.startsWith("Kumpul"))!;
-    expect(first(2).ceklisFirst).toBe(true);
-    expect(first(5).ceklisFirst).toBe(false);
+  it("never holds back another agenda for an unfinished checklist (KONTRAK 42)", () => {
+    const rows = agendaRowsOfTab(all, "1", event, at("2027-01-01", "08:00"), [], "id", { lists, checked: ticked(2) });
+    expect(rows.every(row => !("ceklisFirst" in row))).toBe(true);
   });
   it("has no chips without the module's data", () => {
     const rows = agendaRowsOfTab(all, "1", event, at("2027-01-01", "08:00"), [], "id");
-    expect(rows.every(row => row.ceklis === undefined && row.ceklisFirst === undefined)).toBe(true);
+    expect(rows.every(row => row.ceklis === undefined)).toBe(true);
   });
 });
 
@@ -70,9 +69,8 @@ describe("the admin's draft", () => {
     expect(draftChanged(saved, draft)).toBe(false);
     expect(checklistInputSchema.safeParse(draftToInput(draft)).success).toBe(true);
   });
-  it("sees edits, a new item, a reorder and the switch; drops empty rows", () => {
+  it("sees edits, a new item and a reorder; drops empty rows", () => {
     const draft = draftFromChecklist(saved, address);
-    expect(draftChanged(saved, { ...draft, required: false })).toBe(true);
     expect(draftChanged(saved, { ...draft, items: moveItem(draft.items, 0, 1) })).toBe(true);
     const added = { ...draft, items: [...draft.items, { ...blankItem(), text: "Charger" }] };
     expect(draftChanged(saved, added)).toBe(true);

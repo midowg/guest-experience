@@ -10,7 +10,10 @@ import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-
  * The work itself is mocked.
  */
 
-const state = vi.hoisted(() => ({ settings: null as unknown as MainWamSettings, viewer: null as MainWamViewer | null, admin: true, calls: [] as string[] }));
+const state = vi.hoisted(() => ({ settings: null as unknown as MainWamSettings, viewer: null as MainWamViewer | null, admin: true, calls: [] as string[], qr: true }));
+
+// The QR check-in switch (KONTRAK 41): on for the QR tests below, off in the last describe (the owner's decision: hidden).
+vi.mock("@/lib/main-wam/modules", async importOriginal => ({ ...(await importOriginal<typeof import("@/lib/main-wam/modules")>()), get QR_ABSEN_VISIBLE() { return state.qr; } }));
 
 vi.mock("@/lib/pra-wam/session-token", () => ({ praWamSecret: () => "x".repeat(40) }));
 vi.mock("@/lib/server/main-wam/settings", () => ({ readMainWamSettings: async () => state.settings }));
@@ -79,7 +82,7 @@ async function statuses(names?: Name[]) {
   return out;
 }
 
-beforeEach(() => { withModules(ALL_ON); state.viewer = person([]); state.admin = true; state.calls = []; });
+beforeEach(() => { withModules(ALL_ON); state.viewer = person([]); state.admin = true; state.calls = []; state.qr = true; });
 
 describe("agen D's participant APIs", () => {
   it("ask to sign in first", async () => {
@@ -162,5 +165,26 @@ describe("Admin WAM → Main WAM module APIs", () => {
     expect(state.calls).toEqual([]);
     state.admin = true;
     for (const call of await adminCalls()) expect((await call()).status).toBe(200);
+  });
+});
+
+describe("the QR check-in hidden (QR_ABSEN_VISIBLE false, KONTRAK 41)", () => {
+  beforeEach(() => { state.qr = false; });
+
+  it("answers 404 to a participant's scan and to panitia's QR sheet and new QR, for every role, and records nothing", async () => {
+    for (const roles of [[], ["panitia"], ["bod"], ["admin"]] as MainWamViewer["roles"][]) {
+      state.viewer = person(roles);
+      expect(await statuses(["absen", "qrGet", "qrNew"])).toEqual({ absen: 404, qrGet: 404, qrNew: 404 });
+    }
+    expect(state.calls).toEqual([]);
+  });
+
+  it("leaves every other module as it was", async () => {
+    expect(await statuses(["silent", "opened", "feedback", "awards", "vote"])).toEqual({ silent: 200, opened: 200, feedback: 200, awards: 200, vote: 200 });
+  });
+
+  it("answers 404 even to someone not signed in: no trace of the QR flow", async () => {
+    state.viewer = null;
+    expect(await statuses(["absen", "qrGet", "qrNew"])).toEqual({ absen: 404, qrGet: 404, qrNew: 404 });
   });
 });

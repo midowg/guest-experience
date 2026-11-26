@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CircleCheck, Clock, CloudOff, Info, ListChecks, Phone, QrCode, TimerOff } from "lucide-react";
+import { CircleCheck, Clock, CloudOff, Info, Phone, QrCode, TimerOff } from "lucide-react";
 import { useLang, useT } from "@/components/main-wam/i18n";
 import { ScreenContent } from "@/components/main-wam/shell";
 import { ActionBar, Button, LoadingDialog } from "@/components/main-wam/ui";
@@ -15,7 +15,7 @@ import { AbsenQueue } from "./AbsenQueue";
 import { enqueueScan, retryable, sendScan } from "./queue";
 import css from "../modul.module.css";
 
-const ICONS: Record<OutcomeText["icon"], typeof CircleCheck> = { check: CircleCheck, clock: Clock, "timer-off": TimerOff, info: Info, qr: QrCode, list: ListChecks };
+const ICONS: Record<OutcomeText["icon"], typeof CircleCheck> = { check: CircleCheck, clock: Clock, "timer-off": TimerOff, info: Info, qr: QrCode };
 const TONES = { success: "success", warning: "warning", error: "error", neutral: "neutral" } as const;
 
 /** A02–A04 and the other answers to a scan, with the one action that helps. */
@@ -31,12 +31,7 @@ export function CheckInResultView({ outcome, contact, now = new Date(), initialC
       <Result icon={<Icon />} tone={TONES[text.tone]} title={text.title} sub={text.sub || undefined} body={text.body || undefined} />
     </ScreenContent>
     <ActionBar>
-      {outcome.kind === "ceklis"
-        ? <div className={css.stackActions}>
-          <Button block icon={<ListChecks />} href={mainWamPath.session(outcome.block.sessionId)}>{t("absen.ceklisOpen")}</Button>
-          <Button block variant="text" href={mainWamPath.home}>{t("ui.close")}</Button>
-        </div>
-        : closed
+      {closed
         ? <div className={css.stackActions}>
           <Button block icon={<Phone />} onClick={() => setContactOpen(true)}>{t("absen.contactTitle")}</Button>
           <Button block variant="text" href={mainWamPath.home}>{t("ui.close")}</Button>

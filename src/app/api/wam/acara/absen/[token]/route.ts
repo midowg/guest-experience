@@ -1,7 +1,7 @@
 import { checkInBodySchema, isQrToken } from "@/lib/main-wam/modul/absen";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireModuleApi } from "@/lib/server/main-wam/gate";
+import { requireQrAbsenApi } from "@/lib/server/main-wam/gate";
 import { checkInWithQr } from "@/lib/server/main-wam/modul/absen";
 import { limitPerson } from "@/lib/server/main-wam/modul/rate";
 
@@ -15,13 +15,13 @@ type Params = { params: Promise<{ token: string }> };
  */
 export async function POST(request: Request, { params }: Params) {
   return handle(async () => {
-    const { viewer, settings } = await requireModuleApi("absen");
+    const { viewer } = await requireQrAbsenApi();
     checkOrigin(request);
     const { token } = await params;
     if (!isQrToken(token)) throw new ServiceError(404, "QR tidak dikenali.");
     const body = validate(checkInBodySchema, await readJson(request, 1_000));
     await limitPerson("absen", viewer.id, 30);
-    const outcome = await checkInWithQr(token, viewer, { now: new Date(), scannedAt: body.scannedAt, ceklis: settings.modules.ceklis });
+    const outcome = await checkInWithQr(token, viewer, { now: new Date(), scannedAt: body.scannedAt });
     return success(outcome, outcome.kind === "tercatat" ? "Absen tercatat." : "");
   });
 }

@@ -5,7 +5,7 @@ import { Scanner } from "@/components/main-wam/modul/absen/Scanner";
 import { Result } from "@/components/main-wam/modul/Result";
 import { mainWamCan } from "@/lib/main-wam/access";
 import { mainWamPath } from "@/lib/routes";
-import { requireModulePage } from "@/lib/server/main-wam/gate";
+import { requireQrAbsenPage } from "@/lib/server/main-wam/gate";
 import { serverT } from "@/lib/server/main-wam/lang";
 import { openForMe } from "@/lib/server/main-wam/modul/absen";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
@@ -13,9 +13,9 @@ import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Absen · WAM", robots: { index: false } };
 
-/** A01 Scan QR absen (A05 when the camera is refused). Module Absen QR; BOD do not check in. */
+/** A01 Scan QR absen (A05 when the camera is refused). Hidden (404) while QR_ABSEN_VISIBLE is false (KONTRAK 41); BOD do not check in. */
 export default async function ScanPage() {
-  const { viewer, settings } = await requireModulePage("absen", mainWamPath.scan);
+  const { viewer, settings } = await requireQrAbsenPage(mainWamPath.scan);
   if (!mainWamCan(viewer, "absen")) {
     const t = await serverT();
     return <>

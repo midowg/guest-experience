@@ -1,6 +1,7 @@
 import { safePraWamNext } from "@/lib/pra-wam/next-path";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import { t, type Lang } from "../i18n";
+import { QR_ABSEN_VISIBLE } from "../modules";
 import type { ModuleSwitches } from "../types";
 
 /*
@@ -26,12 +27,13 @@ export type OnboardingReason = "jadwal" | "absen" | "kumpul";
 
 /**
  * What O03 shows (audit T-P02, "modul mati tanpa jejak", ANALISA §3): the example note and the
- * reasons name only modules that are on. "Absen dibuka" only with Absen QR; the example note is
+ * reasons name only modules that are on. "Absen dibuka" only with Absen on and the QR check-in shown (QR_ABSEN_VISIBLE); the example note is
  * the prototype's Silent Meeting one only while Silent Meeting is on, else a plain session.
  */
-export function onboardingNews(modules: Pick<ModuleSwitches, "absen" | "silent">, lang: Lang = "id"): { example: { title: string; body: string }; reasons: OnboardingReason[] } {
+export function onboardingNews(modules: Pick<ModuleSwitches, "absen" | "silent">, lang: Lang = "id", qr: boolean = QR_ABSEN_VISIBLE): { example: { title: string; body: string }; reasons: OnboardingReason[] } {
   return {
     example: { title: t(lang, "peserta.onboard.exampleTitle"), body: t(lang, modules.silent ? "peserta.onboard.exampleSilent" : "peserta.onboard.exampleTeam") },
-    reasons: modules.absen ? ["jadwal", "absen", "kumpul"] : ["jadwal", "kumpul"],
+    // "Absen dibuka" tells people to go and scan; with the QR hidden (KONTRAK 41) the tablet at the door does the work, so no such reason.
+    reasons: modules.absen && qr ? ["jadwal", "absen", "kumpul"] : ["jadwal", "kumpul"],
   };
 }

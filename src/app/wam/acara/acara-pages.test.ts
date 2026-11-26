@@ -28,7 +28,7 @@ describe("Main WAM's pages and APIs", () => {
     // The @sheet slot's catch-all draws nothing (it only clears the sheet), so it has no data to gate.
     const pages = files(join(root, "(app)"), "page.tsx").filter(path => !/@sheet[\\/]\[\.\.\.catchAll\]/.test(path));
     expect(pages.length).toBeGreaterThanOrEqual(4);
-    for (const page of pages) expect(code(page), page).toMatch(/require(MainWam|Module|Action)Page\(/);
+    for (const page of pages) expect(code(page), page).toMatch(/require(MainWam|Module|Action|QrAbsen)Page\(/);
   });
 
   it("draw no sheet from the @sheet slot's catch-all and answer the frame's own page with a 404 (an unknown address stays one)", () => {
@@ -39,7 +39,7 @@ describe("Main WAM's pages and APIs", () => {
 
   it("call the gate in every API, except the theme's images (public: the splash shows before signing in)", () => {
     const routes = files(apiRoot, "route.ts").filter(path => !/[\\/]tema[\\/]/.test(path));
-    for (const route of routes) expect(code(route), route).toMatch(/require(MainWam|Module|Action)Api\(/);
+    for (const route of routes) expect(code(route), route).toMatch(/require(MainWam|Module|Action|QrAbsen)Api\(/);
   });
 
   it("leave /wam to Pra WAM unless Main WAM is on for the person (checked before anything else)", () => {

@@ -243,10 +243,12 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | `TextLink` | `href`/`onClick`, `chevron` | "Lihat semua", "Semua" |
 
 ```tsx
-<Button block icon={<QrCode />}>Absen</Button>
+<Button variant="tonal" block icon={<ScanFace />} href={mainWamPath.attendanceTablet()}>Mode tablet</Button>
 <Button variant="tonal" size="m" href={mainWamPath.moments()}>Lihat</Button>
 <Button loading={saving} loadingLabel="Menyimpan…" type="submit">Simpan</Button>
 ```
+
+> Tombol **Absen** emas (`QrCode`, "Absen sekarang" di kartu Sekarang) disembunyikan di aplikasi sejak 26 Nov (KONTRAK 41): absen hanya scan wajah di tablet panitia. Saklarnya `QR_ABSEN_VISIBLE` di `src/lib/main-wam/modules.ts`; selama `false`, kartu Sekarang tidak punya kaki "Wajib absen", Detail sesi hanya "Hadir 07.52" atau satu baris tenang tentang tablet (`AbsenView` jenis `tablet`, ikon `ScanFace`). Kodenya tetap dan hidup kembali bila saklar `true`.
 
 ### Kartu dan daftar
 

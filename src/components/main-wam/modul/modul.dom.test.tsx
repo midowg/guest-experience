@@ -161,6 +161,13 @@ describe("Detail sesi slots", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("while the QR check-in is hidden: one calm line about the tablet, no button, no link", () => {
+    const { container } = render(<ToastProvider><AbsenView slot={{ kind: "tablet" }} /></ToastProvider>);
+    expect(screen.getByText("Absen lewat scan wajah di tablet pintu ruang")).toBeTruthy();
+    expect(container.querySelectorAll("a, button")).toHaveLength(0);
+    expect(container.textContent).not.toMatch(/QR|scan QR|Absen sekarang/i);
+  });
+
   it("offers Kirim masukan with when it closes", () => {
     render(<ToastProvider><ModuleActionView slot={{ action: { kind: "silent-buka", href: mainWamPath.silentMeeting("s"), closesAt: "2027-01-05T08:00:00Z" }, qr: null }} /></ToastProvider>);
     expect(screen.getByText("Tanpa nama · sampai 15.00")).toBeTruthy();

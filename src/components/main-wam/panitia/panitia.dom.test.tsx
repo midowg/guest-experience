@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/main-wam/ui";
 import { mainWamPath } from "@/lib/routes";
 import { sampleSessionIds } from "@/lib/main-wam/sample";
 import { announceSample, attendanceData, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays } from "@/app/dev-preview/wam2026/panitia/sample";
+import { ActionsSlotContext } from "@/components/main-wam/shell/ShellSlots";
 import { PanitiaApiContext, PanitiaError, type PanitiaApi } from "./api";
 import { AbsenManual } from "./AbsenManual";
 import { AnnounceForm } from "./AnnounceForm";
@@ -217,6 +218,30 @@ describe("Absen sesi (K05)", () => {
   });
 });
 
+describe("Absen sesi: the QR hidden (QR_ABSEN_VISIBLE false, KONTRAK 41)", () => {
+  const slotted = (ui: ReactNode) => {
+    const slot = document.body.appendChild(document.createElement("div"));
+    return render(<ActionsSlotContext.Provider value={slot}><ToastProvider><PanitiaApiContext.Provider value={fakeApi()}>{ui}</PanitiaApiContext.Provider></ToastProvider></ActionsSlotContext.Provider>);
+  };
+
+  it("has no \"Tampilkan QR sesi\" button by default, but shows it when the QR is on; Mode tablet and the manual list stay", () => {
+    const data = attendanceData();
+    slotted(<AbsenManual {...data} />);
+    expect(screen.queryByRole("link", { name: "Tampilkan QR sesi" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Mode tablet" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Catat hadir Bima" })).toBeTruthy();
+    cleanup();
+    slotted(<AbsenManual {...data} qr />);
+    expect(screen.getByRole("link", { name: "Tampilkan QR sesi" })).toBeTruthy();
+  });
+
+  it("does not mention a QR scan in the hint of the Hadir tab", () => {
+    slotted(<AbsenManual {...attendanceData()} initialTab="hadir" />);
+    expect(screen.getByText("Ketuk nama yang dicatat panitia untuk membatalkan.")).toBeTruthy();
+    expect(screen.queryByText(/Scan QR tidak bisa dibatalkan/)).toBeNull();
+  });
+});
+
 describe("Absen sesi: Mode tablet", () => {
   it("offers Mode tablet for the session on screen, a link to the tablet screen", () => {
     const data = attendanceData();
@@ -230,7 +255,7 @@ describe("Absen sesi: Batalkan hadir (audit L8)", () => {
     const data = attendanceData();
     const sari = data.rows.find(row => row.name === "Sari")!;
     const api = fakeApi({ setPresent: vi.fn(async () => ({ rows: data.rows.map(row => row.id === sari.id ? { ...row, checkedInAt: null, method: null } : row) })) });
-    withApi(api, <AbsenManual {...data} initialTab="hadir" />);
+    withApi(api, <AbsenManual {...data} initialTab="hadir" qr />);
     // Rani scanned the QR herself: her row is not a button.
     expect(screen.getByText("Rani")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Rani/ })).toBeNull();

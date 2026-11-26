@@ -38,6 +38,7 @@ export const enModul: Record<keyof typeof idModul, string> = {
   "absen.notSent": "Check-in not sent",
   "absen.recording": "Recording check-in",
   "absen.recordingDots": "Recording check-in…",
+  "absen.tabletLine": "Check in by face scan on the tablet at the room door",
   "absen.present": "Present {time}",
   "absen.presentOf": "Present {present} of {expected}",
   "absen.missed": "Not recorded as present",

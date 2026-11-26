@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Bus, CalendarClock, QrCode, Smartphone, type LucideIcon } from "lucide-react";
 import { ONBOARDED_KEY, onboardingNews, type OnboardingReason } from "@/lib/main-wam/peserta/onboarding";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import type { ModuleSwitches } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { useLang, useT } from "@/components/main-wam/i18n";
@@ -29,9 +30,11 @@ export function markOnboarded() {
  * first and "Lihat caranya" (and "Izinkan") open the guide. "Nanti" goes to Beranda; Pengaturan can
  * turn it on later. Only modules that are on are named (onboardingNews).
  */
-export function OnboardingScreen({ name, modules, preview }: {
+export function OnboardingScreen({ name, modules, preview, qr = QR_ABSEN_VISIBLE }: {
   name: string;
   modules: Pick<ModuleSwitches, "absen" | "silent">;
+  /** The QR check-in is shown (default QR_ABSEN_VISIBLE, KONTRAK 41): only then "Absen dibuka" is a reason. */
+  qr?: boolean;
   preview?: { push?: PushState; guide?: boolean };
 }) {
   const router = useRouter();
@@ -41,7 +44,7 @@ export function OnboardingScreen({ name, modules, preview }: {
   const push = usePushDevice({ preview: preview ? preview.push ?? "off" : undefined });
   const [guide, setGuide] = useState(!!preview?.guide);
   const [leaving, setLeaving] = useState(false);
-  const news = onboardingNews(modules, lang);
+  const news = onboardingNews(modules, lang, qr);
 
   function home() { markOnboarded(); setLeaving(true); router.replace(mainWamPath.home); }
 

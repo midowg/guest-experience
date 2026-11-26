@@ -12,7 +12,7 @@ import { MAIN_WAM_MODULES, type MainWamModule, type ModuleSwitches } from "./typ
  * (`note` is shown with its switch in Admin WAM → Main WAM → Pengaturan).
  */
 export const moduleInfo: Record<MainWamModule, { label: string; hint: string; note?: string }> = {
-  absen: { label: "Absen QR", hint: "Scan QR di sesi yang ditandai pakai absen; panitia bisa mencatat manual." },
+  absen: { label: "Absen wajah", hint: "Absen wajah di tablet; panitia bisa mencatat manual." },
   voting: { label: "Voting Awarding", hint: "Kartu Beranda saat voting dibuka, aksi di sesi Awarding, persetujuan BOD." },
   silent: { label: "Silent Meeting", hint: "Masukan tanpa nama, dibuka dan ditutup mengikuti jam sesinya.", note: "Silent Meeting dipakai di Pra WAM; nyalakan hanya bila acara WAM memang memakainya." },
   survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
@@ -20,7 +20,7 @@ export const moduleInfo: Record<MainWamModule, { label: string; hint: string; no
   misi: { label: "Misi dan poin", hint: "Kartu Misi di Beranda, halaman Misi dan Peringkat; misi foto, check-in lokasi, dan sesi bernilai poin." },
   karbon: { label: "Jejak karbon", hint: "Kartu di Beranda, baris di Saya, dan halaman rinciannya; angka dihitung dari data acara." },
   kuis: { label: "Kuis live", hint: "Kuis pilihan ganda bersama: soal di layar besar dan HP, peserta menjawab sebagai tokohnya. Kartu Beranda saat lobi dibuka; soal dan pengendali di Modul acara → Kuis." },
-  ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan syarat ceklis lengkap sebelum absen." },
+  ceklis: { label: "Ceklis persiapan", hint: "Daftar yang dicentang peserta per agenda (mis. Persiapan berangkat), tab H-n di Agenda, dan tombol Setuju semua. Hanya pengingat: tidak memengaruhi absen." },
 };
 
 /**
@@ -39,6 +39,18 @@ export function appModules(modules: ModuleSwitches): ModuleSwitches {
 /** Shown beside the switch of a module in APP_HIDDEN_MODULES (Admin → Modul acara). */
 export const APP_HIDDEN_NOTE = "Disembunyikan di aplikasi untuk sementara; pengaturan tetap bisa disiapkan di sini.";
 export const appHidden = (key: MainWamModule) => APP_HIDDEN_MODULES.includes(key);
+
+/**
+ * The participant's own QR check-in (scan the printed session QR with the phone), hidden from the app on purpose
+ * (owner, 26 Nov 2026, KONTRAK 41): attendance at WAM is ONLY the face scan on the panitia's tablet at the room door
+ * (Absen mode tablet, KONTRAK 39), no printed QR and no paper list. With this `false` the participant sees no Absen
+ * button (Beranda's Sekarang card, Detail sesi), the pages /absen and /absen/{token} and the APIs absen/{token} and
+ * kelola/qr/{sesi} answer 404 (gated in gate.ts: requireQrAbsenPage, requireQrAbsenApi), the offline-scan runner is not
+ * mounted, and panitia's "Tampilkan QR sesi" is gone. What stays: module Absen, "pakai absen" on a session, Absen mode
+ * tablet, panitia's manual list, the attendance record, "Hadir 07.52" once recorded, and the 30-minute window.
+ * No code of the QR flow was deleted. To bring it back (the tablet fails in the field): set this to `true`; nothing else.
+ */
+export const QR_ABSEN_VISIBLE = false;
 
 export const moduleOn = (modules: ModuleSwitches, key: MainWamModule) => modules[key] === true;
 

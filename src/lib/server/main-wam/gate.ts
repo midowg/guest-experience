@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { DEMO_WRITE_MESSAGE, isSimulated } from "@/lib/main-wam/demo";
 import { mainWamGate, moduleAllows, opensMainWamHome, type MainWamAction } from "@/lib/main-wam/access";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import type { MainWamModule, MainWamSettings, MainWamViewer } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { mainWamPath, praWamPath } from "@/lib/routes";
@@ -95,6 +96,21 @@ export async function requireModuleApi(module: MainWamModule): Promise<MainWamCo
   const context = await requireMainWamApi();
   if (!context.settings.modules[module]) throw notThere();
   return context;
+}
+
+/**
+ * The participant's QR check-in pages (/absen, /absen/{token}): module Absen on AND QR_ABSEN_VISIBLE (modules.ts, KONTRAK 41).
+ * While the QR is hidden they are not found, for everyone; the one place that decides it for pages.
+ */
+export async function requireQrAbsenPage(here: string): Promise<MainWamContext> {
+  if (!QR_ABSEN_VISIBLE) notFound();
+  return requireModulePage("absen", here);
+}
+
+/** The QR check-in APIs (absen/{token}, kelola/qr/{sesi}): 404 while the QR is hidden (QR_ABSEN_VISIBLE); the one place that decides it for APIs. */
+export async function requireQrAbsenApi(): Promise<MainWamContext> {
+  if (!QR_ABSEN_VISIBLE) throw notThere();
+  return requireModuleApi("absen");
 }
 
 /** An action's page (panitia tools, a module's action): not found for anyone it is not for. */

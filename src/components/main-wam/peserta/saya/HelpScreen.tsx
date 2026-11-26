@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, House, Images, MessageCircle } from "lucide-react";
 import type { MessageKey } from "@/lib/main-wam/i18n";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { useT } from "@/components/main-wam/i18n";
 import type { Contact } from "@/lib/main-wam/peserta/contact";
 import { mainWamPath } from "@/lib/routes";
@@ -13,7 +14,7 @@ import css from "../peserta.module.css";
 
 /** Pertanyaan umum: short, in the words of the screens ("Absen", "Momen", "Notifikasi"). */
 const questions = [
-  { id: "absen", title: "peserta.help.q.absen.title", text: "peserta.help.q.absen.text" },
+  { id: "absen", title: "peserta.help.q.absen.title", text: QR_ABSEN_VISIBLE ? "peserta.help.q.absen.textQr" : "peserta.help.q.absen.text" },
   { id: "momen", title: "peserta.help.q.momen.title", text: "peserta.help.q.momen.text" },
   { id: "notifikasi", title: "peserta.help.q.notif.title", text: "peserta.help.q.notif.text" },
   { id: "layar-utama", title: "peserta.help.q.install.title", text: "peserta.help.q.install.text" },

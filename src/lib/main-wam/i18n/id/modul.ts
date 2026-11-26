@@ -43,6 +43,7 @@ export const idModul = {
   "absen.recording": "Mencatat absen",
   "absen.recordingDots": "Mencatat absen…",
   "absen.present": "Hadir {time}",
+  "absen.tabletLine": "Absen lewat scan wajah di tablet pintu ruang",
   "absen.presentOf": "Hadir {present} dari {expected}",
   "absen.missed": "Tidak tercatat hadir",
   "absen.toastOne": "Absen tercatat",

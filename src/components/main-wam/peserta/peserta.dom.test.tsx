@@ -283,8 +283,13 @@ describe("Izin notifikasi (T-P02): only modules that are on", () => {
     expect(document.body.textContent).not.toMatch(/Silent Meeting/);
     expect(screen.getByText("Team building mundur ke 15.30.")).toBeTruthy();
     unmount();
-    render(<OnboardingScreen name="Rani" modules={{ absen: true, silent: true }} preview={{ push: "off" }} />);
+    const shown = render(<OnboardingScreen name="Rani" modules={{ absen: true, silent: true }} preview={{ push: "off" }} qr />);
     expect(screen.getByText("Absen dibuka")).toBeTruthy();
+    expect(screen.getByText("Silent Meeting mundur ke 13.30.")).toBeTruthy();
+    shown.unmount();
+    // The QR check-in hidden (the default, KONTRAK 41): the tablet at the door does the work, so no "Absen dibuka" even with the module on.
+    render(<OnboardingScreen name="Rani" modules={{ absen: true, silent: true }} preview={{ push: "off" }} />);
+    expect(screen.queryByText("Absen dibuka")).toBeNull();
     expect(screen.getByText("Silent Meeting mundur ke 13.30.")).toBeTruthy();
   });
 });

@@ -227,7 +227,7 @@ function SessionRow({ session, names, clash, busy, showDate = false, prepOf, onE
           {session.required && <Pill tone="brass">Wajib</Pill>}
           {session.optional && <Pill>Opsional</Pill>}
           {session.module && <Pill tone="purple">{sessionModuleLabels[session.module]}</Pill>}
-          {session.checklist && session.checklist.items.length > 0 && <Pill tone="teal" title={session.checklist.required ? "Wajib lengkap sebelum absen" : "Hanya pengingat"}><ListChecks size={12} aria-hidden /> Ceklis {session.checklist.items.length}{session.checklist.required ? " · wajib" : ""}</Pill>}
+          {session.checklist && session.checklist.items.length > 0 && <Pill tone="teal" title="Hanya pengingat"><ListChecks size={12} aria-hidden /> Ceklis {session.checklist.items.length}</Pill>}
           {session.changedAt && <Pill tone="warn" title="Perubahan terakhir setelah terbit">diubah {changedBy} · {dot(wibTime(session.changedAt))}</Pill>}
           {clash && <Pill tone="bad">Bentrok tempat</Pill>}
         </div>

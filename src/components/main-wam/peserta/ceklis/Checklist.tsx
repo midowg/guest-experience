@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CircleCheck, Info, Lock } from "lucide-react";
+import { Check, CircleCheck, Info } from "lucide-react";
 import { useT } from "@/components/main-wam/i18n";
 import { DEMO_CEKLIS_COOKIE } from "@/lib/main-wam/ceklis/sample";
 import type { ChecklistItemView } from "@/lib/main-wam/ceklis/ceklis";
@@ -12,7 +12,7 @@ import css from "./ceklis.module.css";
 
 type Answer = { checked: string[]; progress: { done: number; total: number; complete: boolean } };
 
-/** How long after the last tick the screens behind (Agenda's chips, Absen's lock) are read again. */
+/** How long after the last tick the screens behind (Agenda's chips, Beranda's reminder) are read again. */
 const REFRESH_AFTER_MS = 700;
 
 /** Mode demo: the ticked sample items, kept in a cookie of this device for a day. */
@@ -22,13 +22,13 @@ function writeDemoTicks(ids: ReadonlySet<string>) {
 
 /**
  * The checklist of an agenda (Persiapan berangkat: jaket, perlengkapan ibadah, ...): the progress, a
- * line saying whether it is required before absen, each item with its photo and note and a check, and
+ * reminder line (it never stops absen, KONTRAK 42), each item with its photo and note and a check, and
  * "Setuju semua". A tick shows at once and is sent in the background (a refusal puts it back and says
  * so in the sheet, not in a toast: a toast would be behind the open sheet). Mode demo's sample items
  * cannot be saved (every write is refused there), so their ticks live in a cookie of this device,
- * which the server reads for the lock on Absen.
+ * which the server reads for the progress on Agenda and Beranda.
  */
-export function Checklist({ sessionId, items, required, sample = false }: { sessionId: string; items: ChecklistItemView[]; required: boolean; sample?: boolean }) {
+export function Checklist({ sessionId, items, sample = false }: { sessionId: string; items: ChecklistItemView[]; sample?: boolean }) {
   const t = useT();
   const router = useRouter();
   const [checked, setChecked] = useState(() => new Set(items.filter(item => item.checked).map(item => item.id)));
@@ -87,7 +87,7 @@ export function Checklist({ sessionId, items, required, sample = false }: { sess
     <span className={css.bar} role="progressbar" aria-label={t("ceklis.progressSr", { done, total })} aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
       <span className={css.barFill} style={{ width: `${total ? Math.round((done / total) * 100) : 0}%` }} />
     </span>
-    <p className={css.rule}>{required ? <Lock aria-hidden /> : <Info aria-hidden />}<span>{required ? t("ceklis.required") : t("ceklis.reminder")}</span></p>
+    <p className={css.rule}><Info aria-hidden /><span>{t("ceklis.reminder")}</span></p>
     <ul className={css.list}>
       {items.map(item => {
         const on = checked.has(item.id);

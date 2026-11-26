@@ -34,7 +34,8 @@ export const dynamic = "force-dynamic";
  * the slide's conditions are real times: ?hari=2&jam=10:05 (three sessions), ?hari=2&jam=06:00 (nothing has ended), ?hari=2&jam=20:30 (a later day: "Sampai jumpa besok"),
  * ?hari=4&jam=16:00 (nothing after it), ?hari=2&jam=22:30 (Hari ini selesai), ?status=kosong (nothing published); ?slide=sendiri: only the Sekarang card (a placeholder on both sides).
  * ?survei=terisi (the survey already sent: no card), ?karbon=mati|belum (Jejak karbon's card: module off, nothing counted yet),
- * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off).
+ * ?mozaik=mati (the Mozaik card: module off), ?misi=mati (the Misi card: module off),
+ * ?qr=1 (the QR check-in shown again: "Wajib absen" and the Absen button; the default follows QR_ABSEN_VISIBLE, KONTRAK 41, hidden).
  */
 /** The Mozaik card with a sample: "WAM 2026" on 50 × 36, most letter cells already holding a photo. */
 function MozaikStandIn({ lang }: { lang: Lang }) {
@@ -62,7 +63,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
   const lang = previewLang(params);
   const viewer = previewViewer(params.peran);
   if (params.status === "memuat") return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang}><BerandaSkeleton /></Frame>;
-  const base = previewHome(now, viewer, undefined, (params.kartu as PreviewCard | undefined) ?? null, params.survei === "terisi", lang);
+  const base = previewHome(now, viewer, undefined, (params.kartu as PreviewCard | undefined) ?? null, params.survei === "terisi", lang, params.qr === "1" ? true : undefined);
   const alone = params.slide === "sendiri" ? { ...base, slides: EMPTY_SLIDES } : base;
   const data = params.status === "kosong" ? { ...alone, now: { kind: "kosong" as const }, slides: EMPTY_SLIDES, card: null }
     : params.status === "migrasi" ? { ...alone, migrated: false, card: null }
@@ -71,7 +72,7 @@ export default async function PreviewBeranda({ searchParams }: { searchParams: P
           : alone;
   return <Frame path={mainWamPath.home} peran={params.peran} now={now} lang={lang} unread={params.waktu === "berangkat" ? 0 : 3}>
     <BerandaScreen data={data} serverNow={now.toISOString()} since={hhmm(new Date(now.getTime() - 2 * 60_000).toISOString(), lang)} live={false} forceOffline={params.status === "offline"}
-      slots={{ absen: <AbsenStandIn home />, misi: misiStandIn(now, params.misi),
+      slots={{ absen: <AbsenStandIn home qr={params.qr === "1" ? true : undefined} />, misi: misiStandIn(now, params.misi),
         momen: <MomenCard photos={[demoPicture(5), demoPicture(0), demoPicture(2)]} unseen={params.waktu === "berangkat" ? 3 : 12} by={uploadedByText("Sari", "Aula Utama", new Date(now.getTime() - 2 * 60_000).toISOString(), now, lang)} sub={`${params.waktu === "berangkat" ? 3 : 12} foto baru`} runner={false} />,
         mozaik: params.mozaik === "mati" ? null : <MozaikStandIn lang={lang} />,
         carbon: params.karbon === "mati" ? null : <CarbonCard view={carbonPageView(params.karbon === "belum" ? null : samplePersonalCarbon(), sampleCarbon(), now, lang).mine} /> }} />

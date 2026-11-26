@@ -71,7 +71,7 @@ describe("a text that arrives in Indonesian", () => {
   it("knows what the Kuis and Ceklis servers say, 'Waktu habis.' as the quiz's own time-up words", () => {
     for (const text of [
       "Ketuk Ikut dulu untuk bermain.", "Soal ini sudah ditutup.", "Soal belum dibuka.", "Kuis sedang dijeda.", "Waktu habis.", "Permainan ini sudah diganti.",
-      "Item tidak ditemukan. Muat ulang ceklisnya.", "Agenda ini tidak punya ceklis.", "Ceklis persiapan belum dapat diperiksa. Coba lagi sebentar.",
+      "Item tidak ditemukan. Muat ulang ceklisnya.", "Agenda ini tidak punya ceklis.",
     ]) expect(translateKnown("en", text), text).not.toBe(text);
     expect(translateKnown("en", "Waktu habis.")).toBe(t("en", "kuis.timeUp"));
   });
