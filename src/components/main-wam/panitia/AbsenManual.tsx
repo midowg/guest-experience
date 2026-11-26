@@ -5,6 +5,7 @@ import { CircleCheck, QrCode, ScanFace, Search, UserCheck } from "lucide-react";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Avatar, Banner, Button, ConfirmDialog, EmptyState, IconButton, List, ListRow, Segmented, SelectField, Sheet, SrOnly, Text, TextField, useToast } from "@/components/main-wam/ui";
 import { attendeeLine, mayUndo, presentLine, searchAttendees, splitAttendance, type AttendeeRow } from "@/lib/main-wam/panitia/attendance";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { count } from "@/lib/main-wam/panitia/format";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import type { AttendanceData } from "@/lib/server/main-wam/panitia/attendance";
@@ -20,9 +21,11 @@ type Tab = "belum" | "hadir";
  * Belum hadir / Hadir, Cari nama, "Catat hadir" (with Urungkan), and on the Hadir tab how each one
  * checked in (Scan QR, Dicatat panitia); tapping someone panitia recorded offers "Batalkan hadir"
  * (a QR scan is the person's own and cannot be taken back here: audit L8). Scans show here within
- * 20 seconds; "Tampilkan QR sesi" is area D's printable QR.
+ * 20 seconds; "Tampilkan QR sesi" is area D's printable QR, shown only while QR_ABSEN_VISIBLE (KONTRAK 41; `qr` overrides it in tests).
+ * The tablet's face check-ins are recorded as panitia's ("Dicatat panitia"), so they can be taken back here.
  */
-export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
+export function AbsenManual(props: AttendanceData & { initialTab?: Tab; qr?: boolean }) {
+  const qr = props.qr ?? QR_ABSEN_VISIBLE;
   const api = usePanitiaApi();
   const toast = useToast();
   const online = useOnline();
@@ -71,7 +74,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
 
   const percent = total ? Math.round((present.length / total) * 100) : 0;
   return <ScreenContent>
-    <ShellActions><IconButton icon={QrCode} label="Tampilkan QR sesi" href={mainWamApi.sessionQr(session.id)} external /></ShellActions>
+    {qr && <ShellActions><IconButton icon={QrCode} label="Tampilkan QR sesi" href={mainWamApi.sessionQr(session.id)} external /></ShellActions>}
     {(!online || stale) && <Banner tone="offline" title="Tidak ada koneksi">Daftar hadir mungkin belum yang terbaru.</Banner>}
     {!props.migrated && <Banner tone="info" title="Menunggu pembaruan sistem">Absen sesi aktif setelah pembaruan sistem dijalankan.</Banner>}
     <SelectField label="Sesi" className={css.noLabel} value={session.label} onClick={() => setPicking(true)} expanded={picking} />
@@ -86,7 +89,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
         options={[{ value: "belum", label: `Belum hadir (${count(absent.length)})` }, { value: "hadir", label: `Hadir (${count(present.length)})` }]} />
       <TextField label={<SrOnly>Cari nama</SrOnly>} className={css.noLabel} search icon={<Search />} placeholder="Cari nama" value={query} onChange={event => setQuery(event.target.value)} type="search" enterKeyHint="search" autoComplete="off" />
       {!session.canRecord && tab === "belum" && <Text variant="caption" color="2">Catat hadir bisa setelah absen dibuka.</Text>}
-      {tab === "hadir" && present.length > 0 && <Text id={undoHint} variant="caption" color="2">Ketuk nama yang dicatat panitia untuk membatalkan. Scan QR tidak bisa dibatalkan.</Text>}
+      {tab === "hadir" && present.length > 0 && <Text id={undoHint} variant="caption" color="2">Ketuk nama yang dicatat panitia untuk membatalkan.{qr && " Scan QR tidak bisa dibatalkan."}</Text>}
       {shown.length > 0
         ? <List label={tab === "belum" ? "Belum hadir" : "Hadir"}>
           {shown.map(person => tab === "belum"

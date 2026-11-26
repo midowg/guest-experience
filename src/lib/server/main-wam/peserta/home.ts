@@ -5,6 +5,7 @@ import {
   type HomeCandidate, type HomeData,
 } from "@/lib/main-wam/peserta/home";
 import { checklistProgress, visibleSessions } from "@/lib/main-wam/ceklis/ceklis";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { wibDate } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { myChecks, readChecklists } from "../ceklis/data";
@@ -56,7 +57,7 @@ export async function loadHome(context: MainWamContext, now: Date): Promise<Home
   // Module Ceklis off: the Persiapan agendas (before the first day) do not exist for participants.
   const sessions = visibleSessions(sessionsRead.data, settings.event, modules.ceklis);
   const checkedIn = new Map(attendance.map(row => [row.sessionId, row.checkedInAt]));
-  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, lang });
+  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, qr: QR_ABSEN_VISIBLE, lang });
   // Survei reads the questionnaire only once its session has started (surveyFor, audit R7).
   const survey = await surveyFor(context, sessions, now).catch(() => null);
   const session = view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null;

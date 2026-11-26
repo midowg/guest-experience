@@ -1,6 +1,7 @@
 import { pickHomeCard, type HomeCardCandidate } from "../home-card";
 import { t, type Lang } from "../i18n";
 import { noteTone } from "../notify";
+import { QR_ABSEN_VISIBLE } from "../modules";
 import { silentClosesAt, silentState, votingState } from "../module-state";
 import { checkInWindow, dayWord, eventDay, hasEnded, isLive, isRunning, nowCard, sessionEnd, timeRange, wibDate, type NowCard } from "../rundown";
 import type { MainWamEventInfo, ModuleSwitches, MwAwardCategory, MwNotification, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, NoteTone } from "../types";
@@ -32,7 +33,7 @@ export type NowView =
     when: string | null;
     /** The instant "20 menit lagi" counts to (the screen keeps counting); null for words that do not change. */
     whenAt: string | null;
-    /** Absen is open and the person has not checked in: the card carries agen D's Absen (SessionAbsen). */
+    /** Absen is open and the person has not checked in: the card carries agen D's Absen (SessionAbsen). Always false while the QR check-in is hidden. */
     absen: boolean;
     /** How far the session has run, 0 to 1 (the thin bar on the card); null before it starts. */
     /** The session kind (the little tag at the top right: Sesi, Makan, Perjalanan, Jeda). */
@@ -56,14 +57,19 @@ export type NowInput = {
   absenOn: boolean;
   /** The person's check-ins: session id → when. */
   checkedIn: ReadonlyMap<string, string>;
+  /**
+   * The QR check-in is shown (default QR_ABSEN_VISIBLE, KONTRAK 41). Off: the card never keeps an open absen ("Wajib absen",
+   * the Absen button), there is nothing for the person to do; only "Hadir 07.52" shows once the tablet or panitia recorded them.
+   */
+  qr?: boolean;
   /** The words' language (default Indonesian). */
   lang?: Lang;
 };
 
 /** The Sekarang card (nowCard of the fondasi, in the card's words). */
-export function nowView({ sessions, now, event, absenOn, checkedIn, lang = "id" }: NowInput): NowView {
+export function nowView({ sessions, now, event, absenOn, checkedIn, qr = QR_ABSEN_VISIBLE, lang = "id" }: NowInput): NowView {
   const attended = absenOn ? checkedIn : new Map<string, string>();
-  const card: NowCard = mealGivesWay(nowCard(sessions, now, { absenOn, checkedIn: new Set(attended.keys()) }), sessions, now);
+  const card: NowCard = mealGivesWay(nowCard(sessions, now, { absenOn: absenOn && qr, checkedIn: new Set(attended.keys()) }), sessions, now);
   if (card.kind === "kosong") return { kind: "kosong" };
   if (card.kind === "selesai") {
     const next = card.tomorrow;

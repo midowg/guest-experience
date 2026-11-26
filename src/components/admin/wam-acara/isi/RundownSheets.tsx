@@ -10,6 +10,7 @@ import {
 import { checklistInputSchema, type ChecklistInput, type SessionChecklist } from "@/lib/main-wam/ceklis/ceklis";
 import { draftChanged, draftFromChecklist, draftToInput, type ChecklistDraft } from "@/lib/main-wam/ceklis/draft";
 import { daysBeforeEvent, isPrepDate, prepLabel, prepRange, timeRange, wibDate, wibTime } from "@/lib/main-wam/rundown";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { mainWamAdminApi } from "@/lib/routes";
 import { SESSION_KINDS, SESSION_MODULES, SESSION_STATUSES, type MwSession, type RundownChange, type SessionModule } from "@/lib/main-wam/types";
 import { ChecklistEditor } from "./ChecklistEditor";
@@ -145,7 +146,7 @@ export function SessionSheet({ session, cancel = false, dates, date, people, gui
     <fieldset className={css.group}>
       <legend>Absen dan modul</legend>
       <div className={css.switches}>
-        <SwitchRow title="Pakai absen" sub={draft.kind === "makan" ? "Sesi makan tanpa absen." : "Peserta scan QR sesi ini."} checked={draft.usesAttendance} disabled={draft.kind === "makan"}
+        <SwitchRow title="Pakai absen" sub={draft.kind === "makan" ? "Sesi makan tanpa absen." : QR_ABSEN_VISIBLE ? "Peserta scan QR sesi ini." : "Absen lewat scan wajah di tablet pintu ruang."} checked={draft.usesAttendance} disabled={draft.kind === "makan"}
           onChange={usesAttendance => set({ usesAttendance, ...(usesAttendance ? {} : { required: false }) })} />
         <SwitchRow title="Wajib hadir" sub="Panitia melihat siapa yang belum absen." checked={draft.required} disabled={draft.kind === "makan"}
           onChange={required => set({ required, ...(required ? { usesAttendance: true, optional: false } : {}) })} />

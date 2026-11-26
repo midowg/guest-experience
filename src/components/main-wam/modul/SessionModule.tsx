@@ -3,6 +3,7 @@ import { DEMO_QUIZ_ID } from "@/lib/main-wam/kuis/demo";
 import { absenCard } from "@/lib/main-wam/modul/absen";
 import { isAnnounced, shownCategories } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { checkInState } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath, praWamPath } from "@/lib/routes";
@@ -26,11 +27,14 @@ import { AbsenView, ModuleActionView, type AbsenSlot, type ModuleSlot } from "./
  *   tercatat hadir · Hubungi panitia" after the window, and for the BOD "Hadir 96 dari 120".
  * - SessionModuleAction: Detail sesi only, under SessionAbsen: Silent Meeting "Kirim masukan" /
  *   "Sudah ditutup", Awarding "Pilih nominasi", Survei "Isi survei"; for panitia the session's QR.
+ * While QR_ABSEN_VISIBLE is false (KONTRAK 41: attendance is the face scan on the panitia's tablet only) there is no Absen button, no
+ * ceklis lock and no QR for panitia: the slot says "Hadir 07.52" once recorded, and before that one calm line pointing at the tablet.
  * Nothing for a cancelled session, a module that is off, or a session without it. A read that
  * fails leaves the slot empty, never the page.
  */
 
-export async function absenSlot({ session, context, now }: { session: MwSession; context: MainWamContext; now: Date }): Promise<AbsenSlot> {
+/** `qr`: the QR check-in is shown (default QR_ABSEN_VISIBLE; the tests pass it to check both states). */
+export async function absenSlot({ session, context, now, qr = QR_ABSEN_VISIBLE }: { session: MwSession; context: MainWamContext; now: Date; qr?: boolean }): Promise<AbsenSlot> {
   const { viewer, settings } = context;
   if (!settings.modules.absen || session.status !== "terbit" || !session.usesAttendance) return { kind: "none" };
   if (!mainWamCan(viewer, "absen")) {
@@ -40,6 +44,8 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   }
   const card = absenCard(session, await myCheckIn(session.id, viewer.id), now);
   if (card.kind === "terlewat") return { kind: "terlewat", contact: await panitiaContact(settings, session).catch(() => null) };
+  // No QR to scan: recorded → "Hadir 07.52", else one line about the tablet (before and while absen is open).
+  if (!qr) return card.kind === "hadir" ? card : { kind: "tablet" };
   // Module Ceklis: while an agenda's checklist that asks "lengkap sebelum absen" is unfinished, the button is a lock that leads to it.
   if (card.kind === "buka" && settings.modules.ceklis) {
     // Only the screen's hint: when the checklist cannot be read the button stays, and the scan itself refuses (503).
@@ -49,17 +55,19 @@ export async function absenSlot({ session, context, now }: { session: MwSession;
   return card;
 }
 
-export async function SessionAbsen({ session, context, now, home }: { session: MwSession; context: MainWamContext; now: Date; home?: boolean }) {
-  const slot = await absenSlot({ session, context, now }).catch((): AbsenSlot => ({ kind: "none" }));
+export async function SessionAbsen({ session, context, now, home, qr = QR_ABSEN_VISIBLE }: { session: MwSession; context: MainWamContext; now: Date; home?: boolean; qr?: boolean }) {
+  // Beranda's Sekarang card has no absen action without the QR ("Hadir 07.52" is the card's own line).
+  if (home && !qr) return null;
+  const slot = await absenSlot({ session, context, now, qr }).catch((): AbsenSlot => ({ kind: "none" }));
   return <AbsenView slot={slot} home={home} />;
 }
 
-export async function moduleSlot({ session, context, now }: { session: MwSession; context: MainWamContext; now: Date }): Promise<ModuleSlot> {
+export async function moduleSlot({ session, context, now, qr = QR_ABSEN_VISIBLE }: { session: MwSession; context: MainWamContext; now: Date; qr?: boolean }): Promise<ModuleSlot> {
   const { viewer, settings } = context;
   const actions: ModuleSlot = { action: null, qr: null };
   if (session.status !== "terbit") return actions;
-  // Panitia print or show the session's QR (Absen QR on, session "pakai absen").
-  if (settings.modules.absen && session.usesAttendance && mainWamCan(viewer, "kelola")) actions.qr = { sessionId: session.id };
+  // Panitia print or show the session's QR (Absen on, session "pakai absen"); not while the QR check-in is hidden (KONTRAK 41).
+  if (qr && settings.modules.absen && session.usesAttendance && mainWamCan(viewer, "kelola")) actions.qr = { sessionId: session.id };
   if (session.module === "silent" && settings.modules.silent) {
     const { view } = await silentNow(now, session.id);
     if (view?.state === "buka" && mainWamCan(viewer, "silent-kirim")) actions.action = { kind: "silent-buka", href: mainWamPath.silentMeeting(session.id), closesAt: view.closesAt };

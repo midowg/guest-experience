@@ -6,7 +6,7 @@ import { SessionSheetPending } from "@/components/main-wam/peserta/agenda/Sessio
 import { MainWamShell, SignInFirst } from "@/components/main-wam/shell";
 import { mainWamGate, mainWamRole, showsCommitteeTab } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
-import { moduleOn } from "@/lib/main-wam/modules";
+import { QR_ABSEN_VISIBLE, moduleOn } from "@/lib/main-wam/modules";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { readLang } from "@/lib/server/main-wam/lang";
 import { readMainWamSettings } from "@/lib/server/main-wam/settings";
@@ -35,8 +35,8 @@ export default async function MainWamAppLayout({ children, sheet }: { children: 
     {children}
     {sheet}
     <SessionSheetPending />
-    {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
-    {moduleOn(settings.modules, "absen") && <AbsenQueue />}
+    {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D); only while the QR check-in is shown (QR_ABSEN_VISIBLE, KONTRAK 41). */}
+    {moduleOn(settings.modules, "absen") && QR_ABSEN_VISIBLE && <AbsenQueue />}
     {/* Photos taken offline go out (and say "2 foto terkirim") from any screen (agen B, U03). */}
     <MomenQueueRunner />
   </MainWamShell>;

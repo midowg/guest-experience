@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, Timer, Trophy, UserCheck, Users } from "lucide-react";
+import { ClipboardList, Gamepad2, ListChecks, Lock, Printer, QrCode, RefreshCw, ScanFace, Timer, Trophy, UserCheck, Users } from "lucide-react";
 import { useKnown, useLang, useT } from "@/components/main-wam/i18n";
 import { Banner, Button, ConfirmDialog, Pill, ProgressBar, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
 import type { CeklisBlock } from "@/lib/main-wam/ceklis/ceklis";
@@ -22,6 +22,8 @@ export type AbsenSlot =
   | Exclude<AbsenCard, { kind: "terlewat" }>
   | { kind: "terlewat"; contact: PanitiaContact | null }
   | { kind: "bod"; present: number; expected: number }
+  /** The QR check-in is hidden (KONTRAK 41): not recorded yet; the one calm line about the tablet at the room door. */
+  | { kind: "tablet" }
   /** Module Ceklis: absen is open but a checklist that must be finished first is not (the lock and the way to it). */
   | { kind: "ceklis"; block: CeklisBlock };
 
@@ -45,6 +47,7 @@ export function AbsenView({ slot, home }: { slot: AbsenSlot; /** On Beranda's Se
   const [contactOpen, setContactOpen] = useState(false);
   switch (slot.kind) {
     case "none": return null;
+    case "tablet": return <p className={css.gateInfo}><ScanFace aria-hidden /><span>{t("absen.tabletLine")}</span></p>;
     case "buka": return <>
       <AbsenQueue />
       <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? t("peserta.now.absenNow") : t("absen.button")}</Button>

@@ -4,6 +4,7 @@ import { canSee } from "@/lib/main-wam/momen/access";
 import { GALLERY_PAGE, parsePhotoId, parseSession, STACK_PAGE } from "@/lib/main-wam/momen/filters";
 import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
 import { UMUM, type FeedPhoto, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import type { MwSession, PhotoStatus } from "@/lib/main-wam/types";
 import type { MainWamContext } from "../gate";
 import { readLang } from "../lang";
@@ -142,7 +143,7 @@ export async function cameraScreen(context: MainWamContext, search: Search, now 
   const probe = await listFeed(context, { view: "saya", session: null, mode: "semua", limit: 1 });
   const sesi = parseSession(search.sesi);
   return {
-    sessions, nowIso: now.toISOString(), absen: settings.modules.absen,
+    sessions, nowIso: now.toISOString(), absen: settings.modules.absen && QR_ABSEN_VISIBLE, // the permission card names "scan the check-in QR" only while the QR check-in is shown (KONTRAK 41)
     migrated: settings.migrated && probe.migrated, initialSession: sesi,
   };
 }

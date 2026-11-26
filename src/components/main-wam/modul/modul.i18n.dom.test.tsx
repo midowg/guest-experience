@@ -63,6 +63,14 @@ describe("Check in", () => {
     within("id", <AbsenView slot={{ kind: "hadir", at: now.toISOString() }} />);
     expect(screen.getByText("Hadir 07.52")).toBeTruthy();
   });
+
+  it("the tablet line (QR check-in hidden) in both languages", () => {
+    within("en", <AbsenView slot={{ kind: "tablet" }} />);
+    expect(screen.getByText("Check in by face scan on the tablet at the room door")).toBeTruthy();
+    cleanup();
+    within("id", <AbsenView slot={{ kind: "tablet" }} />);
+    expect(screen.getByText("Absen lewat scan wajah di tablet pintu ruang")).toBeTruthy();
+  });
 });
 
 describe("Awarding nominee picker", () => {

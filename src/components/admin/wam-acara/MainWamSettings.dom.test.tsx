@@ -69,7 +69,7 @@ it("waits for the migration: nothing can be saved", () => {
   expect(screen.queryByText(/202611200001|migrasi/)).toBeNull();
   // The radios sit in a disabled fieldset.
   expect(screen.getByRole("radio", { name: /WAM 2026 \(uji\)/ }).matches(":disabled")).toBe(true);
-  expect((screen.getByRole("switch", { name: "Absen QR" }) as HTMLInputElement).disabled).toBe(true);
+  expect((screen.getByRole("switch", { name: "Absen wajah" }) as HTMLInputElement).disabled).toBe(true);
 });
 
 it("shows Mode demo, off by default, and saves it on its own without touching the modules", async () => {

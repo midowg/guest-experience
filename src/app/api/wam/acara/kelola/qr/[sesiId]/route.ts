@@ -4,7 +4,7 @@ import { mainWamCan } from "@/lib/main-wam/access";
 import { absolute, mainWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, success, validate } from "@/lib/server/http";
-import { requireModuleApi } from "@/lib/server/main-wam/gate";
+import { requireQrAbsenApi } from "@/lib/server/main-wam/gate";
 import { sessionQrSheet, sessionQrToken } from "@/lib/server/main-wam/modul/absen";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,9 @@ type Params = { params: Promise<{ sesiId: string }> };
 // Never localhost (24 Nov 2026): the address the request came to, else the public site.
 const origin = (request: Request) => qrOrigin(new URL(request.url).origin);
 
-/** Panitia and Admin WAM only, while module Absen QR is on; 404 for anyone else (one answer for "not for you", KONTRAK §9 #4). */
+/** Panitia and Admin WAM only, while module Absen is on and QR_ABSEN_VISIBLE is true (404 otherwise, KONTRAK 41); 404 for anyone else (one answer for "not for you", KONTRAK §9 #4). */
 async function panitia() {
-  const context = await requireModuleApi("absen");
+  const context = await requireQrAbsenApi();
   if (!mainWamCan(context.viewer, "kelola")) throw new ServiceError(404, "Halaman tidak ditemukan.");
   return context;
 }

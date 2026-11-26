@@ -1,5 +1,7 @@
 import { Camera, Images, QrCode } from "lucide-react";
 import { mainWamPath } from "@/lib/routes";
+import { AbsenView } from "@/components/main-wam/modul/SessionViews";
+import { QR_ABSEN_VISIBLE } from "@/lib/main-wam/modules";
 import { Button, Card, List, ListRow, StackPreview } from "@/components/main-wam/ui";
 
 /*
@@ -8,7 +10,10 @@ import { Button, Card, List, ListRow, StackPreview } from "@/components/main-wam
  * them so Beranda's four blocks and Detail sesi can be checked. Never used in the app.
  */
 
-export const AbsenStandIn = ({ home }: { home?: boolean }) => <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? "Absen sekarang" : "Absen"}</Button>;
+/** The QR button while the QR check-in is shown (`qr`, default QR_ABSEN_VISIBLE); else the calm tablet line (Detail sesi) or nothing (Beranda). */
+export const AbsenStandIn = ({ home, qr = QR_ABSEN_VISIBLE }: { home?: boolean; qr?: boolean }) => qr
+  ? <Button block={!home} icon={<QrCode />} href={mainWamPath.scan}>{home ? "Absen sekarang" : "Absen"}</Button>
+  : home ? null : <AbsenView slot={{ kind: "tablet" }} />;
 
 export const MomenStandIn = ({ count = 12 }: { count?: number }) => <Card as="article">
   <StackPreview photos={[]} sub={`${count} foto baru`} href={mainWamPath.moments()} />

@@ -71,11 +71,11 @@ export const previewSurveyForm: SurveyForm = { slug: "survei-wam", status: "buka
  * Beranda at `now` for `viewer`, built by the same functions as the server's loadHome. `surveyDone`:
  * the person already sent the survey (its card is gone).
  */
-export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null, surveyDone = false, lang: Lang = "id"): HomeData {
+export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null, surveyDone = false, lang: Lang = "id", qr?: boolean): HomeData {
   const sessions = previewSessions(now);
   const absenOn = settings.modules.absen && mainWamCan(viewer, "absen");
   const checkedIn = new Map(sampleAttendance.filter(row => row.employeeId === viewer.id && Date.parse(row.checkedInAt) <= now.getTime()).map(row => [row.sessionId, row.checkedInAt]));
-  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, lang });
+  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn, lang, ...(qr === undefined ? {} : { qr }) });
   const pinned = previewNotifications(now);
   const candidates: HomeCandidate[] = [
     ...announcementCandidates(pinned, now),
