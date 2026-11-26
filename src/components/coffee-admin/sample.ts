@@ -59,7 +59,7 @@ export function createSampleServer(clock: () => number = Date.now) {
     claim(nextId(), claimSeq++, rina, "cafe-latte", { orderedAt: iso(14 * minute) }),
     meet(nextId(), meetingSeq++, sari, [
       item("a", "tamu", "kopi-susu", { qty: 3, temperature: "es" }),
-      item("b", "tamu", "classic-tea", { qty: 2 }),
+      item("b", "tamu", "classic-tea", { qty: 2, guestName: "Budi (contoh)" }),
       item("c", "tim", "americano", { person: sari }),
     ], { orderedAt: iso(9 * minute), guest: "PT Sinar Jaya (contoh)", guestCount: 5 }),
     claim(nextId(), claimSeq++, fajar, "matcha-latte", { orderedAt: iso(3 * minute), items: [item("a", "klaim", "matcha-latte", { temperature: "es", sugar: "Sedikit" })] }),

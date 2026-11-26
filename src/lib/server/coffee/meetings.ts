@@ -38,7 +38,7 @@ export async function submitMeeting(member: Member, input: MeetingInput, now = n
       pic_id: input.picId, room: input.room, room_spot: roomSpot(input.room), guest: input.guest ?? null, guest_count: input.guestCount ?? null,
       parent_id: input.parentId ?? null, actor_id: member.id, actor_label: (member.nickname || member.name).slice(0, 120), ordered_at: now.toISOString(), manual: false,
     },
-    p_items: input.items.map(item => ({ for: item.for, person_id: item.personId ?? null, slug: item.slug, temperature: item.temperature, sugar: item.sugar, ice: item.ice, qty: item.qty })),
+    p_items: input.items.map(item => ({ for: item.for, person_id: item.personId ?? null, guest_name: item.guestName ?? null, slug: item.slug, temperature: item.temperature, sugar: item.sugar, ice: item.ice, qty: item.qty })),
     p_key: input.key,
   });
   let id = data as string | null;

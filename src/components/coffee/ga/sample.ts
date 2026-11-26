@@ -66,6 +66,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0 }: 
       return {
         id: `item-${itemSeq++}`, for: item.for, qty: item.qty, slug: item.slug, temperature: item.temperature, sugar: item.sugar, ice: item.temperature === "es" ? item.ice : "Normal",
         person: who ? { id: who.id, name: who.name, group: "karyawan", position: who.position, bu: who.bu } : null,
+        ...(item.for === "tamu" && item.guestName ? { guestName: item.guestName } : {}),
       };
     });
     const order: MeetingOrder = {

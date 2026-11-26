@@ -41,15 +41,20 @@ export const drinklineSchema = z.object(drinkShape).superRefine(checkDrink).tran
 export const claimSchema = z.object({ ...drinkShape, key }).superRefine(checkDrink).transform(tidyIce);
 export type ClaimInput = z.infer<typeof claimSchema>;
 
+/** How long a guest's own name on a drink may be (the column and the database function hold the same limit). */
+export const GUEST_NAME_MAX = 40;
+
 const meetingItemSchema = z.object({
   for: z.enum(["tamu", "tim"], "Pilih Tamu atau Tim · rapat."),
   personId: z.preprocess(blank, z.uuid("Pilih orangnya.").optional()),
+  /** tamu: the guest's own name from the menu book. Optional, trimmed, GUEST_NAME_MAX letters at most. */
+  guestName: optionalText(GUEST_NAME_MAX, `Nama tamu paling panjang ${GUEST_NAME_MAX} huruf.`),
   ...drinkShape,
   qty,
 }).superRefine((value, ctx) => {
   checkDrink(value, ctx);
   if (value.for === "tim" && !value.personId) ctx.addIssue({ code: "custom", message: "Pilih orangnya.", path: ["personId"] });
-}).transform(value => tidyIce({ ...value, personId: value.for === "tim" ? value.personId : undefined }));
+}).transform(value => tidyIce({ ...value, personId: value.for === "tim" ? value.personId : undefined, guestName: value.for === "tamu" ? value.guestName : undefined }));
 
 /** GA's meeting order: the room and the PIC are enough; guest and count are optional. */
 export const meetingSchema = z.object({

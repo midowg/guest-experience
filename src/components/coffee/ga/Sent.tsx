@@ -15,10 +15,10 @@ const TITLE = { diproses: "Pesanan terkirim", selesai: "Siap diambil di mesin pa
 /**
  * Terkirim: what was sent, and where it stands (Dikirim → Diproses → Ambil di mesin pantry). The
  * status changes by itself while the screen is open. `more`: the meeting can still be added to;
- * otherwise the same room and PIC start a replacement order. `guestNames`: the names guests typed
- * in the menu book for this sending, by row (kept on this tablet only).
+ * otherwise the same room and PIC start a replacement order. A guest's own name from the menu
+ * book comes back with the order ("Tamu · Budi"), so it also shows after a reload and on another tablet.
  */
-export function Sent({ order, more, guestNames, onMore, onHome }: { order: MeetingOrder; more: boolean; guestNames?: readonly (string | undefined)[]; onMore: () => void; onHome: () => void }) {
+export function Sent({ order, more, onMore, onHome }: { order: MeetingOrder; more: boolean; onMore: () => void; onHome: () => void }) {
   const settled = useSettled(order.id);
   const status = STATUS[order.status];
   const ice = order.items.filter(item => item.temperature === "es").reduce((sum, item) => sum + item.qty, 0);
@@ -45,14 +45,14 @@ export function Sent({ order, more, guestNames, onMore, onHome }: { order: Meeti
             {order.round > 1 && <div><dt>Putaran</dt><dd>Tambahan ke-{order.round - 1}</dd></div>}
           </dl>
           <ul className={css.summary}>
-            {order.items.map((item, index) => (
+            {order.items.map(item => (
               <li key={item.id}>
                 <DrinkPhoto slug={item.slug} size={44} />
                 <span className={css.grow}>
                   <strong>{item.qty}× {drinkLabel(item.slug, item.other)}</strong>
                   <span>{optionsLabel(item.temperature, item.sugar, item.ice)}</span>
                 </span>
-                <span className={css.tag} data-for={item.for === "tim" ? "tim" : "tamu"}>{lineTag(item.for, item.for === "tim" ? item.person?.name : guestNames?.[index])}</span>
+                <span className={css.tag} data-for={item.for === "tim" ? "tim" : "tamu"}>{lineTag(item.for, item.for === "tim" ? item.person?.name : item.guestName)}</span>
               </li>
             ))}
           </ul>

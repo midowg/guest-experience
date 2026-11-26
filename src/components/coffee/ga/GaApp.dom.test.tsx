@@ -283,7 +283,7 @@ it("opens an order's status from its card", () => {
   expect(screen.getByText("1 minuman Es: tambahkan es di pantry sebelum diantar.")).toBeTruthy();
 });
 
-it("keeps the name a guest gave on the sent screen, on this tablet", async () => {
+it("sends the name a guest gave with that drink, and shows what the server kept", async () => {
   const { api } = open({ seeded: false });
   press("Pesanan baru");
   fireEvent.click(screen.getByRole("button", { name: "Pilih Vasuki Room" }));
@@ -299,7 +299,11 @@ it("keeps the name a guest gave on the sent screen, on this tablet", async () =>
   tile("Americano");
   fireEvent.click(screen.getByRole("button", { name: "Kirim 2 minuman" }));
   await sentHeading("Pesanan terkirim");
-  // The server takes no name for a guest's drink: none is sent.
-  expect(JSON.stringify(api.send.mock.calls[0][0])).not.toContain("Budi");
+  // The name goes with the guest's own drink, and with nothing else (PM decision 26 Nov: the pengelola and the recap see it).
+  const items = api.send.mock.calls[0][0].items;
+  expect(items.map(item => [item.slug, item.for, item.guestName])).toEqual([["kopi-susu", "tamu", "Pak Budi"], ["americano", "tamu", undefined]]);
+  // What shows is what the server answered with, so it survives a reload and shows on another tablet.
   expect(screen.getByText("Tamu · Pak Budi")).toBeTruthy();
+  const { server } = { server: api };
+  expect((await server.state()).today[0].items.map(item => item.guestName)).toEqual(["Pak Budi", undefined]);
 });

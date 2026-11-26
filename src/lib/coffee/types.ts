@@ -35,6 +35,8 @@ export type QueueItem = Drinkline & {
   qty: number;
   /** tim: the team member the drink is recorded under. */
   person: OrderPerson | null;
+  /** tamu: the name the guest gave in the menu book (optional, 40 letters at most), shown as "Tamu · Budi". */
+  guestName?: string;
 };
 
 /** Who processed an order (Selesai or Tolak) and when; `label` is what the claimant sees ("Dewi"). */
@@ -122,6 +124,8 @@ export type RecapRow = {
   bu: string;
   pic: string;
   guest: string;
+  /** tamu: the guest's own name, when one was given. */
+  guestName: string;
   guestCount: number | null;
   room: string;
   drink: string;

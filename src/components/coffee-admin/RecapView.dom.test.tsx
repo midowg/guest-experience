@@ -46,7 +46,7 @@ it("counts on top what the Detail rows hold", async () => {
   expect(rows.filter(row => /Ditolak/.test(row.textContent ?? ""))).toHaveLength(stat("Ditolak"));
   // The table's columns are the file's, in the same order (the last one shows as a pill).
   expect(within(screen.getByRole("table")).getAllByRole("columnheader").map(cell => cell.textContent?.replace(/,.*/, ""))).toEqual([
-    "Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Jumlah tamu", "Ruangan",
+    "Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu", "Ruangan",
     "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-",
   ]);
 });
@@ -206,8 +206,15 @@ it("marks the name as the row's header and dates a processing that fell on anoth
   const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
   expect(within(rows[0]).getByRole("rowheader").textContent).toMatch(/\(contoh\)/);
   const cells = (row: HTMLElement) => [...row.children].map(cell => cell.textContent);
-  expect(rows.every(row => /^(–|\d{2}\.\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}\.\d{2})$/.test(cells(row)[19] ?? ""))).toBe(true);
+  expect(rows.every(row => /^(–|\d{2}\.\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}\.\d{2})$/.test(cells(row)[20] ?? ""))).toBe(true);
   // The sample's meeting of five days ago was processed ten minutes later, past midnight UTC but the same WIB day or the next.
-  const dated = rows.filter(row => /^\d{2}\/\d{2}\/\d{4} /.test(cells(row)[19] ?? ""));
-  for (const row of dated) expect(cells(row)[19]!.slice(0, 10)).not.toBe(cells(row)[0]);
+  const dated = rows.filter(row => /^\d{2}\/\d{2}\/\d{4} /.test(cells(row)[20] ?? ""));
+  for (const row of dated) expect(cells(row)[20]!.slice(0, 10)).not.toBe(cells(row)[0]);
+  // "Nama tamu": the guest's own name on the cups of that line, a dash everywhere else.
+  const head = within(screen.getByRole("table")).getAllByRole("columnheader").map(cell => cell.textContent);
+  const at = head.indexOf("Nama tamu");
+  expect(at).toBe(10);
+  const names = rows.map(row => cells(row)[at]);
+  expect(names.filter(name => name === "Budi (contoh)")).toHaveLength(2);
+  expect(names.every(name => name === "–" || name === "Budi (contoh)")).toBe(true);
 });

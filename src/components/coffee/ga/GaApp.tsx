@@ -45,8 +45,6 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
   const [guest, setGuest] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
-  /** The names guests typed in the menu book, by sent order and row: the server keeps no name per guest drink. */
-  const [guestNames, setGuestNames] = useState<Record<string, (string | undefined)[]>>({});
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastNo = useRef(0);
   const say = useCallback((message: Omit<ToastMessage, "id">) => setToast({ ...message, id: ++toastNo.current }), []);
@@ -117,11 +115,6 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
     const result = await send(toBody(draft, lines, key.current));
     if (result.ok) {
       key.current = "";
-      const names = lines.map(line => line.for === "tamu" ? line.guestName : undefined);
-      // By row: only when the server kept the rows as they were sent.
-      if (names.some(Boolean) && result.order.items.length === lines.length && result.order.items.every((item, index) => item.slug === lines[index].slug)) {
-        setGuestNames(current => ({ ...current, [result.order.id]: names }));
-      }
       setLines([]); setSentId(result.order.id); setScreen("sent");
       say({ tone: "ok", title: result.message || "Pesanan terkirim ke pengelola." });
       return;
@@ -171,7 +164,7 @@ export function GaApp({ initial, me, api = gaClient, tools }: GaAppProps) {
             onGuest={() => setGuest(true)} onBack={() => { if (sending) return; if (draft.parent) leave(); else { setProblem(null); setScreen("new"); } }} />
         )}
         {screen === "sent" && (sent
-          ? <Sent order={sent} more={canAddTo(sent, today)} guestNames={guestNames[sent.id]} onMore={() => startRound(sent)} onHome={toHome} />
+          ? <Sent order={sent} more={canAddTo(sent, today)} onMore={() => startRound(sent)} onHome={toHome} />
           : (
             <div className={css.emptyState}>
               <h1>Pesanan ini sudah tidak ada di daftar hari ini</h1>

@@ -28,7 +28,7 @@ beforeEach(async () => {
   Object.assign(db.rows("coffee_orders").find(row => row.id === refused)!, { status: "ditolak", reject_note: "=SUM(A1) habis", processed_by: PEOPLE.dewi, processed_label: "Dewi", processed_at: "2026-11-10T02:30:00.000Z" });
   await db.client.rpc("coffee_submit_meeting", {
     p_order: { pic_id: PEOPLE.dewi, room: "Vasuki Room", room_spot: "vasuki", guest: "Contoh PT Sinar", guest_count: 5, actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-12T03:00:00.000Z" },
-    p_items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 3 }, { for: "tim", person_id: PEOPLE.fajar, slug: "americano", temperature: "panas", sugar: "Tanpa", ice: "Normal", qty: 1 }], p_key: key(100),
+    p_items: [{ for: "tamu", slug: "kopi-susu", temperature: "panas", sugar: "Normal", ice: "Normal", qty: 3, guest_name: "Budi" }, { for: "tim", person_id: PEOPLE.fajar, slug: "americano", temperature: "panas", sugar: "Tanpa", ice: "Normal", qty: 1 }], p_key: key(100),
   });
 });
 
@@ -79,10 +79,12 @@ describe("Rekap's files", () => {
   it("writes a CSV with the table's cells, safe from formulas", async () => {
     const { csv } = await recapFiles(november);
     const lines = csv.split("\r\n");
-    expect(lines[0]).toBe("﻿\"Tanggal\",\"Jam diajukan\",\"Nomor pesanan\",\"Jenis\",\"Nama\",\"Kelompok\",\"Jabatan\",\"BU\",\"PIC\",\"Tamu/instansi\",\"Jumlah tamu\",\"Ruangan\",\"Minuman\",\"Suhu\",\"Gula\",\"Takaran es\",\"Status\",\"Catatan tolak\",\"Diproses oleh\",\"Jam diproses\",\"Klaim ke-\",\"Dicatat manual\"");
+    expect(lines[0]).toBe("﻿\"Tanggal\",\"Jam diajukan\",\"Nomor pesanan\",\"Jenis\",\"Nama\",\"Kelompok\",\"Jabatan\",\"BU\",\"PIC\",\"Tamu/instansi\",\"Nama tamu\",\"Jumlah tamu\",\"Ruangan\",\"Minuman\",\"Suhu\",\"Gula\",\"Takaran es\",\"Status\",\"Catatan tolak\",\"Diproses oleh\",\"Jam diproses\",\"Klaim ke-\",\"Dicatat manual\"");
     expect(lines).toHaveLength(1 + 7 + 1);
-    expect(lines[1]).toBe("\"20/11/2026\",\"09:00\",\"K-420\",\"Klaim\",\"Contoh Rina Putri\",\"Karyawan\",\"Contoh karyawan\",\"WNS\",\"\",\"\",\"\",\"\",\"Café Latte\",\"Es\",\"Sedikit\",\"Ekstra\",\"Diproses\",\"\",\"\",\"\",\"2\",\"\"");
-    expect(lines[2]).toContain("\"Tamu\",\"Contoh Dewi Lestari\",\"Tamu\",\"Contoh karyawan\",\"TEE\",\"Contoh Dewi Lestari\",\"Contoh PT Sinar\",\"5\",\"Vasuki Room\",\"Kopi Susu\"");
+    expect(lines[1]).toBe("\"20/11/2026\",\"09:00\",\"K-420\",\"Klaim\",\"Contoh Rina Putri\",\"Karyawan\",\"Contoh karyawan\",\"WNS\",\"\",\"\",\"\",\"\",\"\",\"Café Latte\",\"Es\",\"Sedikit\",\"Ekstra\",\"Diproses\",\"\",\"\",\"\",\"2\",\"\"");
+    expect(lines[2]).toContain("\"Tamu\",\"Contoh Dewi Lestari\",\"Tamu\",\"Contoh karyawan\",\"TEE\",\"Contoh Dewi Lestari\",\"Contoh PT Sinar\",\"Budi\",\"5\",\"Vasuki Room\",\"Kopi Susu\"");
+    // The team member's drink of the same meeting has no guest name.
+    expect(lines.find(line => line.includes("\"Tim · rapat\""))).toContain("\"Contoh Dewi Lestari\",\"\",\"\",\"\",\"Vasuki Room\"");
     expect(lines[6]).toContain("\"Ditolak\",\"'=SUM(A1) habis\",\"Dewi\",\"09:30\",\"\",\"\"");
   });
 
@@ -93,6 +95,8 @@ describe("Rekap's files", () => {
     const detail = part(xlsx, "xl/worksheets/sheet1.xml");
     expect(detail.match(/<row /g)).toHaveLength(8);
     expect(detail).toContain("Nomor pesanan");
+    expect(detail).toContain("Nama tamu");
+    expect(detail.match(/>Budi</g)).toHaveLength(3);
     expect(detail).toContain("=SUM(A1) habis");
     expect(detail).not.toContain("<f>");
     const summary = part(xlsx, "xl/worksheets/sheet2.xml");

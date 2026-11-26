@@ -1,5 +1,6 @@
 "use client";
 
+import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, Lock } from "lucide-react";
 import { DRINKS, ICE_LEVELS, SUGAR_LEVELS, drinkLabel, optionsLabel, type Drink, type DrinkGroup, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
@@ -182,7 +183,7 @@ function GuestOptions({ drink, onBack, onPick }: { drink: Drink; onBack: () => v
           </fieldset>
         )}
         <label className={css.bookLabel} htmlFor="ga-tamu-nama-anda">Nama Anda <span>(opsional, agar minuman tidak tertukar)</span></label>
-        <input id="ga-tamu-nama-anda" className={css.bookInput} value={name} maxLength={40} onChange={event => setName(event.target.value)} autoComplete="off" spellCheck={false} />
+        <input id="ga-tamu-nama-anda" className={css.bookInput} value={name} maxLength={GUEST_NAME_MAX} onChange={event => setName(event.target.value)} autoComplete="off" spellCheck={false} />
         <div className={css.bookActions}>
           <button type="button" className={css.inkButton} onClick={() => onPick({ slug: drink.slug, temperature, sugar, ice, name })}>Pilih minuman ini</button>
         </div>

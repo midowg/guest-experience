@@ -739,3 +739,22 @@ Temuan `docs/coffee/AUDIT-F2.md` diperbaiki (kolom Status di sana). Yang berubah
 - Panel browser agen menolak pendaftaran SW apa pun ("unknown error occurred when fetching the script"), jadi SW dan
   push hanya bisa diuji di Chrome sungguhan atau di perangkat.
 
+---
+
+## Catatan: nama tamu per minuman (26 Nov 2026, keputusan PM: dipertahankan)
+
+Menutup selisih 1 di catatan F3. Nama yang diketik tamu di buku menu ("Nama Anda", opsional) kini sampai ke server:
+
+- **Data:** kolom `coffee_order_items.guest_name` (`text`, null atau 1–40 huruf) dan `coffee_submit_meeting` mengisinya
+  untuk baris `tamu` saja (dirapikan; lebih dari 40 huruf → `COFFEE_INVALID`). **Migrasi `202612010001_coffee.sql`
+  diubah di tempat dan tetap belum pernah dijalankan.** `fake-db.ts` meniru aturan yang sama.
+- **API:** `meetingSchema.items[].guestName` (opsional, dirapikan, paling panjang `GUEST_NAME_MAX` = 40; dibuang untuk
+  baris tim). `QueueItem.guestName` ikut di jawaban antrean, `gaState`, dan kiriman.
+- **Tablet GA:** `toBody` mengirim nama itu; layar Terkirim membaca nama dari jawaban server (bukan lagi simpanan
+  tablet), jadi tetap ada setelah muat ulang dan di tablet lain.
+- **Pengelola:** kartu antrean menulis "Tamu · Budi"; Salin rincian menulis `(Tamu · Budi)` di baris minumannya.
+- **Rekap:** kolom baru **"Nama tamu"** setelah "Tamu/instansi" di tabel, CSV, dan .xlsx (Detail kini 23 kolom); kata
+  pencarian juga mencocokkan nama itu. Baris dengan jumlah lebih dari satu membawa nama yang sama di tiap cangkirnya.
+- Catat manual tidak punya isian nama tamu. Notifikasi (F4) **tidak** memuat nama tamu: `notify.ts` tidak diubah, dan
+  aturan F4 "isi notifikasi hanya nama panggilan, minuman, ruangan" tetap berlaku.
+

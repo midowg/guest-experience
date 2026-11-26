@@ -14,6 +14,7 @@ it("writes a claim as two lines for JumpStart", () => {
 it("writes a meeting order with guests, team and the total", () => {
   const order = meeting("m1", 112, dimas, [
     item("a", "tamu", "kopi-susu", { qty: 3 }), item("b", "tamu", "cappuccino", { qty: 2, sugar: "Sedikit" }),
+    item("d", "tamu", "classic-tea", { guestName: "Budi" }),
     item("c", "tim", "americano", { sugar: "Tanpa", person: person("e3", "Andi Wijaya") }),
   ]);
   expect(meetingText(order)).toBe([
@@ -21,9 +22,10 @@ it("writes a meeting order with guests, team and the total", () => {
     "Tamu Contoh PT Sinar (5 orang):",
     "- 3× Kopi Susu · Panas · gula Normal",
     "- 2× Cappuccino · Panas · gula Sedikit",
+    "- 1× Classic Tea · Panas · gula Normal (Tamu · Budi)",
     "Tim · rapat:",
     "- 1× Americano · Panas · gula Tanpa (Andi Wijaya)",
-    "Total 6 minuman",
+    "Total 7 minuman",
   ].join("\n"));
   expect(orderText(order)).toBe(meetingText(order));
 });

@@ -17,6 +17,8 @@ const orders = [
   meeting("m2", 112, dimas, [item("c", "tamu", "cappuccino", { qty: 2 })], { round: 2, parentId: "m1", guestCount: null }),
   meeting("m3", 113, dimas, [item("d", "tamu", "classic-tea", { qty: 4 })], { status: "ditolak", rejectNote: "Dobel.", guestCount: 9 }),
 ];
+// A guest who gave a name in the menu book (26 Nov): two cups of the same line carry it, the team's drink never does.
+const named = meeting("m4", 114, dimas, [item("e", "tamu", "matcha-latte", { qty: 2, guestName: "Budi" }), item("f", "tim", "americano", { person: andi, guestName: "Bukan tamu" })]);
 
 describe("Rekap's rows", () => {
   const rows = expandRows(orders);
@@ -36,21 +38,30 @@ describe("Rekap's rows", () => {
     expect(numbered.filter(row => row.kind === "klaim").map(row => row.claimNo)).toEqual([1, undefined, 2]);
     expect(expandRows([claim("k9", 1, rina, "espresso", { claimNo: 3 })])[0].claimNo).toBe(3);
   });
-  it("fill the 22 columns of the sheet in WIB", () => {
-    expect(DETAIL_HEAD).toHaveLength(22);
+  it("fill the 23 columns of the sheet in WIB", () => {
+    expect(DETAIL_HEAD).toHaveLength(23);
+    expect(DETAIL_HEAD.slice(8, 12)).toEqual(["PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu"]);
     const numbered = expandRows(orders, new Map([["k1", 1]]));
-    expect(detailCells(numbered[0])).toEqual(["25/11/2026", "09:12", "K-415", "Klaim", "Contoh Rina Putri", "Karyawan", "Contoh Staf", "WNS", "", "", "", "", "Café Latte",
+    expect(detailCells(numbered[0])).toEqual(["25/11/2026", "09:12", "K-415", "Klaim", "Contoh Rina Putri", "Karyawan", "Contoh Staf", "WNS", "", "", "", "", "", "Café Latte",
       "Es", "Sedikit", "Ekstra", "Selesai", "", "Dewi", "09:30", "1", ""]);
     const guest = detailCells(rows.find(row => row.kind === "tamu")!);
-    expect(guest.slice(3, 16)).toEqual(["Tamu", "Contoh Dimas Pratama", "Tamu", "Contoh Account Executive", "TEE", "Contoh Dimas Pratama", "Contoh PT Sinar", "5", "Kaliya Limasan", "Kopi Susu", "Panas", "Normal", ""]);
-    expect(detailCells(rows.find(row => row.kind === "tim")!)[10]).toBe("");
-    expect(detailCells({ ...rows[1], manual: true }).slice(16)).toEqual(["Ditolak", "Susu segar sedang habis.", "Dewi", "09:30", "", "Ya"]);
+    expect(guest.slice(3, 17)).toEqual(["Tamu", "Contoh Dimas Pratama", "Tamu", "Contoh Account Executive", "TEE", "Contoh Dimas Pratama", "Contoh PT Sinar", "", "5", "Kaliya Limasan", "Kopi Susu", "Panas", "Normal", ""]);
+    expect(detailCells(rows.find(row => row.kind === "tim")!)[11]).toBe("");
+    expect(detailCells({ ...rows[1], manual: true }).slice(17)).toEqual(["Ditolak", "Susu segar sedang habis.", "Dewi", "09:30", "", "Ya"]);
+  });
+  it("carry the guest's own name on each of that line's cups, find it by a word, and never on a team drink", () => {
+    const cups = expandRows([named]);
+    expect(cups.map(row => [row.kind, row.guestName])).toEqual([["tamu", "Budi"], ["tamu", "Budi"], ["tim", ""]]);
+    expect(detailCells(cups[0]).slice(8, 12)).toEqual(["Contoh Dimas Pratama", "Contoh PT Sinar", "Budi", "5"]);
+    expect(detailCells(cups[0])).toHaveLength(DETAIL_HEAD.length);
+    expect(filterRows(expandRows([...orders, named]), { q: "budi" }).map(row => row.no)).toEqual(["T-0114", "T-0114"]);
+    expect(rows.every(row => row.guestName === "")).toBe(true);
   });
   it("carry the order's id, and word a cancelled record made by hand as Dibatalkan", () => {
     expect(rows.filter(row => row.no === "T-0112" && row.kind === "tamu").map(row => row.orderId)).toEqual(["m1", "m1", "m1"]);
     const [cancelled] = expandRows([claim("k8", 420, rina, "americano", { status: "batal", manual: true, processed: done })]);
     expect(rowStatus(cancelled)).toBe("Dibatalkan");
-    expect(detailCells(cancelled).slice(16)).toEqual(["Dibatalkan", "", "Dewi", "09:30", "", "Ya"]);
+    expect(detailCells(cancelled).slice(17)).toEqual(["Dibatalkan", "", "Dewi", "09:30", "", "Ya"]);
     expect(cancelled.claimNo).toBeUndefined();
     // The claimant's own cancelling keeps its word.
     expect(rowStatus(expandRows([claim("k7", 421, rina, "americano", { status: "batal" })])[0])).toBe("Batal");

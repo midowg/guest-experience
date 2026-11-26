@@ -32,6 +32,28 @@ describe("a meeting order", () => {
     expect(db.rows("coffee_orders")).toHaveLength(4);
   });
 
+  it("keeps the name a guest gave on that drink: for the tablet, the pengelola's queue and the copied text", async () => {
+    const named = order(1, { items: [{ for: "tamu" as const, ...drink, qty: 1, guestName: "  Pak Budi " }, { for: "tamu" as const, ...drink, slug: "americano", qty: 2 }, { for: "tim" as const, personId: PEOPLE.fajar, ...drink, qty: 1, guestName: "Bukan tamu" }] });
+    const { order: sent } = await submitMeeting(bagas, named, now);
+    expect(sent.items.map(item => [item.for, item.guestName])).toEqual([["tamu", "Pak Budi"], ["tamu", undefined], ["tim", undefined]]);
+    expect(db.rows("coffee_order_items").map(row => row.guest_name)).toEqual(["Pak Budi", null, null]);
+    expect((await gaState(bagas, now)).today[0].items[0].guestName).toBe("Pak Budi");
+    const { queue } = await import("./queue");
+    const waiting = (await queue({ employeeId: PEOPLE.dewi, label: "Dewi" }, now)).waiting[0];
+    expect(waiting.items[0]).toMatchObject({ for: "tamu", guestName: "Pak Budi" });
+    const { orderText } = await import("@/lib/coffee/copy-text");
+    expect(orderText(waiting)).toContain("- 1× Kopi Susu · Panas · gula Normal (Tamu · Pak Budi)");
+  });
+
+  it("is refused by the database when a guest's name is longer than forty letters, however it got past the form", async () => {
+    const { error } = await db.client.rpc("coffee_submit_meeting", {
+      p_order: { pic_id: PEOPLE.rina, room: "Vasuki Room", actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: now.toISOString() },
+      p_items: [{ for: "tamu", ...drink, qty: 1, guest_name: "x".repeat(41) }], p_key: key(9),
+    });
+    expect(error?.message).toBe("COFFEE_INVALID");
+    expect(db.rows("coffee_orders")).toHaveLength(0);
+  });
+
   it("keeps the number and takes the next round for Tambah lagi", async () => {
     const first = await submitMeeting(bagas, order(1), now);
     const second = await submitMeeting(bagas, order(2, { parentId: first.order.id }), now);

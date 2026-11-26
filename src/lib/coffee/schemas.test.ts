@@ -47,6 +47,12 @@ describe("a meeting order", () => {
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, qty: 0 }] }))).toEqual({ "items.0.qty": "Jumlah minimal 1." });
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, qty: 51 }] }))).toHaveProperty("items.0.qty");
     expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, slug: "espresso", qty: 1 }] }))).toHaveProperty("items.0.temperature");
+    // The guest's own name (26 Nov): optional, trimmed, 40 letters at most, and only on a guest's drink.
+    expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "  Pak Budi " }] }).items[0].guestName).toBe("Pak Budi");
+    expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "   " }] }).items[0].guestName).toBeUndefined();
+    expect(meetingSchema.parse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "x".repeat(40) }] }).items[0].guestName).toHaveLength(40);
+    expect(fields(meetingSchema.safeParse({ ...order, items: [{ for: "tamu", ...drink, qty: 1, guestName: "x".repeat(41) }] }))).toEqual({ "items.0.guestName": "Nama tamu paling panjang 40 huruf." });
+    expect(meetingSchema.parse({ ...order, items: [{ for: "tim", personId: PERSON, ...drink, qty: 1, guestName: "Budi" }] }).items[0].guestName).toBeUndefined();
     expect(meetingSchema.safeParse({ ...order, items: Array.from({ length: 41 }, () => ({ for: "tamu", ...drink, qty: 1 })) }).success).toBe(false);
     expect(meetingSchema.safeParse({ ...order, guestCount: 501 }).success).toBe(false);
   });

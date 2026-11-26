@@ -93,6 +93,8 @@ create table if not exists public.coffee_order_items (
   person_group text check (person_group is null or person_group in ('karyawan', 'ga', 'intern')),
   person_position text check (person_position is null or char_length(person_position) <= 200),
   person_bu text check (person_bu is null or char_length(person_bu) <= 120),
+  -- tamu only, optional: the name a guest gave in the menu book ("Tamu · Budi"), so the cups are not mixed up.
+  guest_name text check (guest_name is null or char_length(guest_name) between 1 and 40),
   -- A slug of src/lib/coffee/menu.ts, or 'lainnya' (Catat manual only) with its name in drink_other.
   drink_slug text not null check (char_length(drink_slug) between 1 and 40),
   drink_other text check (drink_other is null or char_length(btrim(drink_other)) between 1 and 60),
@@ -279,8 +281,11 @@ begin
           item->>'slug', nullif(btrim(coalesce(item->>'other', '')), ''), item->>'temperature', item->>'sugar', coalesce(item->>'ice', 'Normal'),
           coalesce((item->>'qty')::smallint, 1), place);
     elsif item->>'for' = 'tamu' then
-      insert into coffee_order_items (order_id, for_whom, drink_slug, drink_other, temperature, sugar, ice, qty, sort)
-      values (saved, 'tamu', item->>'slug', nullif(btrim(coalesce(item->>'other', '')), ''), item->>'temperature', item->>'sugar',
+      -- The guest's own name is optional, trimmed, and 40 letters at most (the form and the API cap it too).
+      if char_length(btrim(coalesce(item->>'guest_name', ''))) > 40 then raise exception 'COFFEE_INVALID'; end if;
+      insert into coffee_order_items (order_id, for_whom, guest_name, drink_slug, drink_other, temperature, sugar, ice, qty, sort)
+      values (saved, 'tamu', nullif(btrim(coalesce(item->>'guest_name', '')), ''),
+          item->>'slug', nullif(btrim(coalesce(item->>'other', '')), ''), item->>'temperature', item->>'sugar',
           coalesce(item->>'ice', 'Normal'), coalesce((item->>'qty')::smallint, 1), place);
     else
       raise exception 'COFFEE_INVALID';

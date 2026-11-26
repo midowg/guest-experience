@@ -39,7 +39,9 @@ it("shows what waits, oldest first, with the claim's place in the quota and the 
   expect(card(/Café Latte/).textContent).toMatch(/menunggu 14 mnt/);
   expect(card(/Kaliya Limasan/).textContent).toMatch(/PIC Sari Wulandari \(contoh\) · PT Sinar Jaya \(contoh\) · 5 tamu/);
   expect(within(card(/Kaliya Limasan/)).getAllByRole("listitem").map(item => item.textContent)).toEqual([
-    expect.stringMatching(/^Tamu3×Kopi Susu · Es/), expect.stringMatching(/^Tamu2×Classic Tea/), expect.stringMatching(/^Tim · rapat1×Americano.*Sari Wulandari/),
+    expect.stringMatching(/^Tamu3×Kopi Susu · Es/),
+    // A guest who gave a name in the menu book: the cup can be marked.
+    expect.stringMatching(/^Tamu · Budi \(contoh\)2×Classic Tea/), expect.stringMatching(/^Tim · rapat1×Americano.*Sari Wulandari/),
   ]);
   const jumpstart = within(card(/Café Latte/)).getByRole("link", { name: /Buka JumpStart/ });
   expect(jumpstart.getAttribute("href")).toBe(JUMPSTART_URL);
@@ -131,6 +133,10 @@ it("Salin rincian copies the order as text for JumpStart, and says so when the b
   fireEvent.click(button);
   await waitFor(() => expect(button.textContent).toBe("Tersalin"));
   expect(writeText).toHaveBeenCalledWith(["Klaim K-418 · Rina (Karyawan)", "1× Café Latte · Panas · gula Normal"].join("\n"));
+  // A meeting order: the guest's own name goes into the text too.
+  fireEvent.click(within(card(/Kaliya Limasan/)).getByRole("button", { name: /Salin rincian/ }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+  expect(writeText.mock.calls[1][0]).toContain("- 2× Classic Tea · Panas · gula Normal (Tamu · Budi (contoh))");
   writeText.mockRejectedValueOnce(new Error("denied"));
   const other = within(card(/Matcha Latte/)).getByRole("button", { name: /Salin rincian/ });
   fireEvent.click(other);

@@ -76,7 +76,7 @@ export function QueueCard({ order, now, phone, onFinish, onRefuse }: {
           <ul className={css.lines}>
             {order.items.map(line => (
               <li key={line.id}>
-                <span className={css.lineFor} data-for={line.for}>{line.for === "tamu" ? "Tamu" : "Tim · rapat"}</span>
+                <span className={css.lineFor} data-for={line.for}>{line.for === "tamu" ? `Tamu${line.guestName ? ` · ${line.guestName}` : ""}` : "Tim · rapat"}</span>
                 <span className={css.qty}>{line.qty}×</span>
                 <span className={css.grow}><strong>{drinkLabel(line.slug, line.other)}</strong> · {optionsLabel(line.temperature, line.sugar, line.ice)}</span>
                 {line.person && <span className={css.linePerson}>{line.person.name}</span>}

@@ -99,7 +99,7 @@ export function fakeDb() {
   const usedBy = (person: unknown, month: unknown) => rows("coffee_orders")
     .filter(row => row.employee_id === person && row.kind === "klaim" && row.quota_month === month && ["diproses", "selesai"].includes(row.status as string)).length;
   const itemRow = (orderId: string, item: Row, more: Row, sort: number): Row => ({
-    id: uuid(), order_id: orderId, employee_id: null, person_name: null, person_group: null, person_position: null, person_bu: null,
+    id: uuid(), order_id: orderId, employee_id: null, person_name: null, person_group: null, person_position: null, person_bu: null, guest_name: null,
     drink_slug: item.slug, drink_other: item.other ?? null, temperature: item.temperature, sugar: item.sugar, ice: item.ice ?? "Normal", qty: item.qty ?? 1, sort, ...more,
   });
   const processed = (manual: boolean, actor: unknown, label: unknown) => manual
@@ -177,6 +177,7 @@ export function fakeDb() {
       const team = items.map(item => item.for === "tim" ? employee(item.person_id) : null);
       if (items.some((item, index) => item.for === "tim" && !team[index])) return fail("COFFEE_NOT_EMPLOYEE");
       if (items.some(item => item.for !== "tim" && item.for !== "tamu")) return fail("COFFEE_INVALID");
+      if (items.some(item => item.for === "tamu" && (tidy(item.guest_name)?.length ?? 0) > 40)) return fail("COFFEE_INVALID");
       if (byKey(args.p_key)) return duplicate();
       if (number < 0) number = state.seq.meeting++;
       const id = uuid();
@@ -189,7 +190,7 @@ export function fakeDb() {
         const who = team[index];
         rows("coffee_order_items").push(itemRow(id, { ...item, other: tidy(item.other) }, who
           ? { for_whom: "tim", employee_id: who.id, person_name: who.full_name, person_group: groupOf(who.category), person_position: who.position, person_bu: who.business_unit }
-          : { for_whom: "tamu" }, index + 1));
+          : { for_whom: "tamu", guest_name: tidy(item.guest_name) }, index + 1));
       });
       return { data: id, error: null };
     },

@@ -16,7 +16,7 @@ export type MeetingBody = {
   guestCount?: number;
   /** "Tambah lagi": the first sending of the same meeting. */
   parentId?: string;
-  items: { for: "tamu" | "tim"; personId?: string; slug: string; temperature: Temperature; sugar: Sugar; ice: Ice; qty: number }[];
+  items: { for: "tamu" | "tim"; personId?: string; /** tamu: the name the guest gave in the menu book. */ guestName?: string; slug: string; temperature: Temperature; sugar: Sugar; ice: Ice; qty: number }[];
   /** One per sending: the same key sent twice is one order. */
   key: string;
 };

@@ -1,4 +1,5 @@
 import { drinkBySlug, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import type { GaState, ItemFor, MeetingOrder, Status } from "@/lib/coffee/types";
 import { clock } from "../format";
 import type { MeetingBody } from "./api";
@@ -28,7 +29,7 @@ export type Line = {
   for: LineFor;
   /** tim: the team member the drink is recorded under. */
   person?: { id: string; name: string };
-  /** tamu: the name a guest typed in the menu book, so the cups are not mixed up. Kept on this tablet only. */
+  /** tamu: the name a guest typed in the menu book, so the cups are not mixed up. Sent with the order: the pengelola's card and the recap show it. */
   guestName?: string;
   qty: number;
   temperature: Temperature;
@@ -115,7 +116,7 @@ export function toBody(draft: Draft, lines: readonly Line[], key: string): Meeti
   return {
     room: draft.room, picId: draft.pic.id, guest: draft.guest, guestCount: draft.guestCount, parentId: draft.parent?.id, key,
     items: lines.map(line => ({
-      for: line.for, personId: line.for === "tim" ? line.person?.id : undefined, slug: line.slug, temperature: line.temperature, sugar: line.sugar,
+      for: line.for, personId: line.for === "tim" ? line.person?.id : undefined, guestName: line.for === "tamu" ? line.guestName?.trim().slice(0, GUEST_NAME_MAX) || undefined : undefined, slug: line.slug, temperature: line.temperature, sugar: line.sugar,
       ice: line.temperature === "es" ? line.ice : "Normal", qty: line.qty,
     })),
   };

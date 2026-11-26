@@ -15,7 +15,8 @@ export function claimText(order: QueueOrder): string {
 }
 
 export function meetingText(order: QueueOrder): string {
-  const row = (item: QueueItem) => `- ${line(item)}${item.person ? ` (${item.person.name})` : ""}`;
+  // A guest who gave a name in the menu book: "(Tamu · Budi)", so the cup can be marked.
+  const row = (item: QueueItem) => `- ${line(item)}${item.person ? ` (${item.person.name})` : item.guestName ? ` (Tamu · ${item.guestName})` : ""}`;
   const guests = order.items.filter(item => item.for === "tamu");
   const team = order.items.filter(item => item.for === "tim");
   const total = order.items.reduce((sum, item) => sum + item.qty, 0);

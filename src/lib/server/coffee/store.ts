@@ -45,10 +45,10 @@ export const db = () => createPrivilegedClient();
 export type CoffeeActor = { employeeId: string | null; label: string };
 
 export const ORDER_COLUMNS = "id,kind,number,round,parent_id,employee_id,person_name,person_group,person_position,person_bu,room,room_spot,guest,guest_count,status,reject_note,processed_by,processed_label,processed_at,created_label,manual,ordered_at,"
-  + "coffee_order_items(id,for_whom,employee_id,person_name,person_group,person_position,person_bu,drink_slug,drink_other,temperature,sugar,ice,qty,sort)";
+  + "coffee_order_items(id,for_whom,employee_id,person_name,person_group,person_position,person_bu,guest_name,drink_slug,drink_other,temperature,sugar,ice,qty,sort)";
 
 type ItemRow = {
-  id: string; for_whom: QueueItem["for"]; employee_id: string | null; person_name: string | null; person_group: QuotaGroup | null; person_position: string | null; person_bu: string | null;
+  id: string; for_whom: QueueItem["for"]; employee_id: string | null; person_name: string | null; person_group: QuotaGroup | null; person_position: string | null; person_bu: string | null; guest_name?: string | null;
   drink_slug: string; drink_other: string | null; temperature: Temperature; sugar: Sugar; ice: Ice; qty: number; sort: number;
 };
 export type OrderRow = {
@@ -66,6 +66,7 @@ export function toOrder(row: OrderRow): QueueOrder {
     id: item.id, for: item.for_whom, qty: item.qty, slug: item.drink_slug, ...(item.drink_other ? { other: item.drink_other } : {}),
     temperature: item.temperature, sugar: item.sugar, ice: item.ice,
     person: item.for_whom === "tim" ? { id: item.employee_id, name: item.person_name ?? "—", group: item.person_group, position: item.person_position ?? "", bu: item.person_bu ?? "" } : null,
+    ...(item.for_whom === "tamu" && item.guest_name ? { guestName: item.guest_name } : {}),
   }));
   return {
     id: row.id, kind: row.kind, no: orderNo(row.kind, row.number, row.round), number: row.number, round: row.round, parentId: row.parent_id,

@@ -79,7 +79,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                   Tanggal<ArrowUpDown size={14} aria-hidden /><span className={css.srOnly}>, urutkan {newest ? "terlama dulu" : "terbaru dulu"}</span>
                 </button>
               </th>
-              {DETAIL_HEAD.slice(1, 21).map(head => <th key={head} scope="col">{head}</th>)}
+              {DETAIL_HEAD.slice(1, 22).map(head => <th key={head} scope="col">{head}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -95,6 +95,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                 <td>{row.bu || "–"}</td>
                 <td>{row.pic || "–"}</td>
                 <td>{row.guest || "–"}</td>
+                <td>{row.guestName || "–"}</td>
                 <td className={css.num}>{row.kind === "tamu" && row.guestCount ? row.guestCount : "–"}</td>
                 <td>{row.room || "–"}</td>
                 <td className={css.nameCell}>{row.drink}</td>

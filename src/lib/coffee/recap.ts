@@ -24,7 +24,7 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
         rows.push({
           ...shared, ...drink, key: `${order.id}:${item.id}`, kind: "klaim", employeeId: order.person.id, name: order.person.name,
           group: order.person.group ? GROUP_LABEL[order.person.group] : "—", quotaGroup: order.person.group,
-          position: order.person.position, bu: order.person.bu, pic: "", guest: "", guestCount: null, room: "", claimNo,
+          position: order.person.position, bu: order.person.bu, pic: "", guest: "", guestName: "", guestCount: null, room: "", claimNo,
         });
         continue;
       }
@@ -34,23 +34,23 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
         ...shared, ...drink, key: `${order.id}:${item.id}:${index}`, kind: team ? "tim" : "tamu", employeeId: person?.id ?? null, name: person?.name ?? "—",
         group: team ? (person?.group ? GROUP_LABEL[person.group] : "—") : "Tamu", quotaGroup: team ? person?.group ?? null : null,
         position: person?.position || "—", bu: person?.bu || "—", pic: order.person.name,
-        guest: team ? "" : order.guest, guestCount: order.guestCount, room: order.room,
+        guest: team ? "" : order.guest, guestName: team ? "" : item.guestName ?? "", guestCount: order.guestCount, room: order.room,
       });
     }
   }
   return rows;
 }
 
-export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Jumlah tamu", "Ruangan",
+export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu", "Ruangan",
   "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-", "Dicatat manual"] as const;
 
 const sheetDate = (iso: string) => wibDay(iso).split("-").reverse().join("/");
 /** The status as Rekap words it: a record made by hand and cancelled by a pengelola reads "Dibatalkan". */
 export const rowStatus = (row: Pick<RecapRow, "status" | "manual">): string => row.status === "batal" && row.manual ? "Dibatalkan" : STATUS_LABEL[row.status];
-/** A row's 22 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. */
+/** A row's 23 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. */
 export const detailCells = (row: RecapRow): string[] => [
   sheetDate(row.at), wibClock(row.at), row.no, KIND_LABEL[row.kind], row.name, row.group, row.position, row.bu,
-  row.pic, row.guest, row.guestCount && row.kind === "tamu" ? String(row.guestCount) : "", row.room, row.drink,
+  row.pic, row.guest, row.guestName, row.guestCount && row.kind === "tamu" ? String(row.guestCount) : "", row.room, row.drink,
   row.temperature === "es" ? "Es" : "Panas", row.sugar, row.temperature === "es" ? row.ice : "", rowStatus(row), row.reason,
   row.doneBy, row.doneAt ? wibClock(row.doneAt) : "", row.claimNo ? String(row.claimNo) : "", row.manual ? "Ya" : "",
 ];
@@ -65,7 +65,7 @@ export function filterRows(rows: RecapRow[], filter: RecapFilter): RecapRow[] {
     if (filter.sampai && day > filter.sampai) return false;
     if (filter.jenis && row.kind !== filter.jenis) return false;
     if (filter.status && row.status !== filter.status) return false;
-    return !word || [row.name, row.pic, row.guest, row.room, row.drink, row.no, row.bu, row.position].some(text => text.toLowerCase().includes(word));
+    return !word || [row.name, row.pic, row.guest, row.guestName, row.room, row.drink, row.no, row.bu, row.position].some(text => text.toLowerCase().includes(word));
   });
 }
 
