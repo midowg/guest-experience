@@ -556,3 +556,74 @@ Temuan `docs/coffee/AUDIT-F1.md` diperbaiki (kolom Status di sana). Yang perlu d
 - Catat manual bertanya sebelum membuang isian; Pengaturan bertanya sebelum jatah menjadi 0 dan dibaca ulang tiap dibuka.
 - Semua target ≥ 44 px di semua lebar; antrean satu kolom sampai 1100 px; pesan di HP tampil di bawah bilah atas.
 
+
+---
+
+## Catatan pelaksanaan F2 (26 Nov 2026)
+
+F2 (aplikasi karyawan, `/coffee`) selesai di cabang `feat/werkudara-coffee`. Tidak ada berkas F0/F1 yang diubah
+(`src/lib/server/coffee/**`, API, `src/components/coffee-admin/**`, prototipe). Skill desain yang dipakai:
+`ui-ux-pro-max` (aksesibilitas, sentuhan, navigasi) dan `design-taste-frontend` (selera; alur pembuat situsnya tidak
+berlaku untuk aplikasi di dalam produk).
+
+**Belum diuji (apa adanya):**
+- Halaman asli `/coffee` dan `/coffee/pesanan` **belum pernah dibuka setelah masuk**: agen tidak memakai sandi. Yang
+  dicek di browser: tanpa sesi keduanya mengalihkan ke `/coffee/masuk?next=…`, `/coffee/password-baru` juga,
+  `/api/coffee/state` 401, manifest dan `sw.js` terlayani. Keadaan "belum dibuka" (sebelum migrasi) hanya dilihat lewat
+  `/dev-preview/coffee/nyata?layar=tunggu` (komponen yang sama, `CoffeeWaiting`), bukan lewat jalur server sesungguhnya.
+- Masuk sungguhan, lupa password sungguhan, dan password baru sungguhan tidak dikirim di browser (hanya di tes dengan
+  server tiruan). Keluar hanya di tes.
+- Pasang ke layar utama (Android/iPhone), layar pembuka, service worker aktif, halaman offline, dan Lighthouse
+  "installable" **tidak diuji** di perangkat. Yang diuji: isi manifest, ikon ada, isi `sw.js` (tes `layout.test.ts`).
+- "Ajukan → muncul di antrean pengelola" dan "selesai/tolak di admin → berubah di HP" diuji dengan server tiruan
+  (kotak Pratinjau memainkan pengelola), bukan dua sesi asli. Butuh migrasi.
+- Lebar yang dicek di browser: 375×812, 320×640, dan desktop 1024. 390×844 (angka rencana) tidak dicek terpisah.
+- Tiga perubahan kecil dibuat setelah cek browser dan hanya dicek dengan tes: fokus pindah ke layar setelah Ajukan,
+  kotak Pratinjau berada di bawah lembar, judul pesan "Tidak bisa dibatalkan". Mode gelap tidak ada (hanya terang).
+
+**Selisih dari rencana:**
+1. **Tanpa `(app)/layout.tsx`.** Kerangka (bilah atas, tab bawah) ada di `CoffeeFrame`, dipakai oleh `CoffeeApp`, supaya
+   pratinjau dan tes menjalankan kerangka yang sama. Pindah tab = `history.pushState` (alamat berubah, tidak ada
+   permintaan). `CoffeeApp` punya `routing="history" | "memory"` seperti admin F1.
+2. **`next` setelah masuk** dicek dengan `safeCoffeeNext` (baru, `src/lib/coffee/setup.ts`), bukan `safePraWamNext`:
+   yang terakhir menolak semua alamat di luar WAM/Booking/Wellbeing, jadi `/coffee/pesanan` tidak akan pernah kembali.
+3. **Manifest:** `id`, `start_url`, `scope` = `/coffee` (tanpa garis miring di akhir). Dengan `/coffee/`, halaman pertama
+   `/coffee` berada di luar scope dan HP menampilkan bilah browser. Service worker tetap `scope: /coffee/` (batas
+   bawaan letak berkasnya), jadi `/coffee` sendiri tidak dikendalikan SW: halaman offline buatan sendiri hanya muncul di
+   `/coffee/pesanan` dan halaman masuk. Push (F4) tidak terpengaruh. Bila ingin `/coffee` ikut, perlu header
+   `Service-Worker-Allowed` di `next.config.ts`. (WG People memakai `/people/` untuk ketiganya; mungkin terkena hal yang
+   sama, belum dicek.)
+4. **Atur sekali** diingat lewat cookie `coffee_atur` (dibaca server, jadi menu tidak berkedip dulu), tampil sekali
+   setelah masuk pertama, dan bisa dibuka lagi dari lembar Akun ("Pasang di layar utama"). "Pasang sekarang" memakai
+   tawaran pasang milik browser bila ada; bila tidak ada, menjelaskan lewat menu ⋮. Langkah notifikasi sebelum F4
+   berjudul **"Notifikasi menyusul"** dengan satu tombol "Mulai pesan" (tidak ada tombol izin yang tidak berbuat apa-apa).
+5. **Layar masuk:** "welcome" hanya tampil pada HP yang belum pernah masuk (`localStorage coffee:kenal`) dan tanpa `next`.
+   "Lupa password?" membuka halaman permintaan reset yang sesungguhnya (prototipe hanya menampilkan satu kalimat).
+6. **Lembar Akun** (ketuk huruf di kanan atas; tidak ada di prototipe): nama, kelompok, sisa jatah, tautan Mode GA dan
+   Pengelola (hanya yang berhak), Pasang di layar utama, Keluar.
+7. **Pesanan saya:** semua pengajuan yang masih diproses tampil penuh, masing-masing dengan Batalkan (prototipe hanya
+   yang terbaru; aturan membolehkan lebih dari satu menunggu). Di "Sebelumnya" yang selesai ditulis "Selesai"
+   (kartu penuh tetap "Siap diambil") dan barisnya memuat tanggal. Klaim catat manual tampil "Klaim dicatat pengelola"
+   tanpa garis waktu. Minuman "Lainnya" (catat manual) tanpa foto.
+8. **Kata:** kotak "Siapa yang memproses?" diakhiri "Status di sini berubah sendiri." (prototipe: "lalu kamu diberi
+   notifikasi"; push baru ada di F4). Tombol lembar: "Ajukan klaim" (prototipe), bukan "Ajukan".
+9. **Pesan di atas** (toast): status berubah, pengajuan terkirim, batal, galat. Galat menetap sampai ditutup; yang lain
+   6 detik. Galat saat mengajukan tampil di dalam lembar (lembar tetap terbuka, kunci yang sama dipakai untuk coba lagi).
+10. **Layer sendiri** (`src/components/coffee/Layer.tsx`): salinan aturan `coffee-admin/Layer.tsx` dengan tampilan
+    aplikasi karyawan; yang admin tidak disentuh. `newKey()` juga disalin ke `src/components/coffee/api.ts`.
+11. **Layar lebar:** kolom 480 px di tengah (bukan bingkai HP seperti prototipe).
+12. Berkas di luar daftar rencana: `Layer.tsx`, `useCoffee.ts`, `pwa.ts`, `format.ts`, `sample.ts`, `layout.test.ts`,
+    `src/lib/coffee/setup.ts` + tes, `src/app/dev-preview/coffee/nyata/EmployeePreview.tsx`. `tabs.test.ts` sudah ada
+    sejak F0. Logo kartu admin (`EventList.tsx`, catatan F0 nomor 1) tidak diganti.
+
+**Untuk F3 (tablet GA + buku menu tamu):**
+- Tautan "Mode GA" sudah ada di lembar Akun (`state.ga` → `coffeePath.ga`); pesan `?pesan=ga` sudah tampil di Menu.
+  `/coffee/ga` berada di bawah `src/app/coffee/layout.tsx`: tema (`css.theme`: token krem/hijau, font), manifest dan
+  viewport HP ikut berlaku; tablet perlu `viewport` sendiri dan boleh menimpa `min-height`/latar.
+- Pola yang bisa dipakai ulang dari `src/components/coffee/`: `Layer` (lembar/dialog; `kind="dialog"`, `alert`),
+  `Toast`, `useCoffee` (polling 15 detik hanya selama ada yang diproses, penjaga baca vs aksi, kirim ganda), `newKey()`
+  dan `CoffeeApiError`/`request` di `api.ts`, `DrinkPhoto`, `PantryMap`, `sample.ts` sebagai contoh server tiruan.
+- Tes penjaga alamat tetap berlaku; `src/components/coffee/layout.test.ts` menolak `min-height` di bawah 44 px di
+  `coffee.module.css` (tablet GA butuh 48 px di CSS-nya sendiri).
+- SW: lihat selisih 3. F4 menambah `push`/`notificationclick` di `public/coffee/sw.js` dan mengisi prop `notify` milik
+  `CoffeeApp`/`SetupSteps` (`NotifySetup.allow()` → "granted" | "denied" | "unsupported"); pendaftaran SW ada di `pwa.ts`.
