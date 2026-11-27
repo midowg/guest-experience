@@ -1027,7 +1027,7 @@ dicek dengan layar tiruan di panel browser. Pengalihan tanpa sesi dicek dengan c
 ## Catatan pelaksanaan F7: Buku tamu / Menu biasa, menu biasa mengikuti mesin JS Mini (27 Nov 2026)
 
 Aplikasi tayang dan migrasi 1 sampai 3 sudah berjalan di database asli, jadi semua perubahan skema ada di
-**`202612030001_coffee_menu_audience.sql`**. Skill desain: `ui-ux-pro-max` (kotak centang berlabel,
+**`202612030003_coffee_menu_audience.sql`**. Skill desain: `ui-ux-pro-max` (kotak centang berlabel,
 sasaran 44/48 px, saringan chip, pencarian, bilah menempel). Tampilan mengikuti `docs/standar-admin.md` §3
 (saringan chip dengan jumlah, kolom cari, aksi di baris).
 

@@ -45,7 +45,7 @@ const byId = new Map(SAMPLE_PEOPLE.map(who => [who.id, who]));
 export type SampleServer = ReturnType<typeof createSampleServer>;
 
 const MENU_WAITS = "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.";
-const PLACES_WAIT = "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030001_coffee_menu_audience.sql.";
+const PLACES_WAIT = "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030003_coffee_menu_audience.sql.";
 export type SampleMenu = "ready" | "waiting" | "empty" | "places-waiting" | "many";
 const PHOTO_KINDS = ["image/jpeg", "image/png", "image/webp"];
 

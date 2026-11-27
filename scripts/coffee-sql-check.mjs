@@ -11,7 +11,7 @@
  * functions are shown to keep every rule they had.
  *
  * Since F7 (27 Nov 2026) it goes one step further, again as on the live database: migration 4
- * (202612030001_coffee_menu_audience.sql) on top of orders AND a menu the pengelola has edited (a
+ * (202612030003_coffee_menu_audience.sql) on top of orders AND a menu the pengelola has edited (a
  * renamed drink, a deleted one, a hidden one, one of their own), run again and again; the owner's
  * starting ticks are shown to be written once, and the audience rule (a claim and a team member's
  * line need a "Menu biasa" drink, a guest's line a "Buku tamu" drink, Catat manual any) is asked of
@@ -959,7 +959,7 @@ await menuPostgresOnly(pg);
 // 9. Migration 4 on top of the orders AND a menu the pengelola has edited (what happens on the live database).
 console.log("\n9. Migrasi 4 di atas data lama dan menu yang sudah diubah pengelola");
 await pg.exec("reset role;");
-const AUDIENCE = "202612030001_coffee_menu_audience.sql";
+const AUDIENCE = "202612030003_coffee_menu_audience.sql";
 // By now the menu holds the 15 and "teh-tarik" (the pengelola's own, ordered once). Edit it as a pengelola would have:
 await pg.query("update public.coffee_drinks set name = 'Latte Susu' where slug = 'cafe-latte'");                 // a renamed drink
 await pg.query("update public.coffee_drinks set active = false where slug = 'classic-tea'");                     // a hidden one (and one of the three)

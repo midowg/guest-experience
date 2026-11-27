@@ -491,7 +491,7 @@ it("F7 the editor holds both ticks: a new drink starts in both, and what is unti
 
 it("F7 before migration 202612030001: every drink in both menus, the ticks rest, and the page says what waits", async () => {
   const { api } = await open({ menu: "places-waiting" });
-  expect(screen.getByRole("status").textContent).toBe("Menunggu migrasi 202612030001_coffee_menu_audience.sql. Sampai dijalankan, semua minuman tampil di Buku tamu dan Menu biasa, dan centangnya belum bisa diubah.");
+  expect(screen.getByRole("status").textContent).toBe("Menunggu migrasi 202612030003_coffee_menu_audience.sql. Sampai dijalankan, semua minuman tampil di Buku tamu dan Menu biasa, dan centangnya belum bisa diubah.");
   expect(rows()).toHaveLength(15);
   const tick = tickOf("Classic Tea", "Menu biasa");
   expect([tick.checked, tick.disabled]).toEqual([true, true]);

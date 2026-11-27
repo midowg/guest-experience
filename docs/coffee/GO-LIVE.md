@@ -234,7 +234,7 @@ satu migrasi baru; tiga migrasi yang sudah berjalan tidak diubah.
 ### Yang harus dilakukan pemilik
 
 1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main` (tidak ada langkah lain).
-2. **Jalankan `supabase/migrations/202612030001_coffee_menu_audience.sql`** di SQL Editor Supabase (salin
+2. **Jalankan `supabase/migrations/202612030003_coffee_menu_audience.sql`** di SQL Editor Supabase (salin
    seluruh isi berkas, Run). Satu kali cukup; dijalankan dua kali pun aman.
 3. **Buka `/admin/coffee` → Menu**, cek centangnya (tabel di bawah) dan ubah bila perlu.
 
@@ -260,7 +260,7 @@ dipesankan untuk Tim · rapat; tamu tetap bisa memesannya dari buku menu. Bila t
 | Tablet GA, input cepat | Seperti kemarin: semua minuman untuk Tamu dan Tim · rapat; ada tulisan kecil "Menampilkan Buku tamu / Menu biasa" | Tamu: Buku tamu (15); Tim · rapat: Menu biasa (12) |
 | Buku menu tamu | Seperti kemarin: 15 minuman | Hanya minuman Buku tamu (15, sama) |
 | Catat manual | Daftar semua minuman | Daftar mengikuti jenis; "Lainnya" tetap ada |
-| Menu (admin) | Cari, saringan, tambah, ubah, sembunyikan jalan; **kedua centang tampil tercentang tetapi belum bisa diubah**; tertulis "Menunggu migrasi 202612030001_coffee_menu_audience.sql" | Centang bisa diubah di daftar dan di panel |
+| Menu (admin) | Cari, saringan, tambah, ubah, sembunyikan jalan; **kedua centang tampil tercentang tetapi belum bisa diubah**; tertulis "Menunggu migrasi 202612030003_coffee_menu_audience.sql" | Centang bisa diubah di daftar dan di panel |
 | Antrean, Rekap, notifikasi, pesanan lama | Tidak berubah | Tidak berubah |
 | Kesalahan 500 | Tidak ada: aplikasi memeriksa sendiri apakah kolomnya sudah ada | Tidak ada |
 
@@ -288,7 +288,7 @@ database Supabase asli, dan balapan sungguhan (dua transaksi bersamaan).
 - **Jangan menjalankan lagi `202612010001_coffee.sql` atau `202612020001_coffee_menu.sql` setelah
   `202612030001`.** Keduanya memuat versi lama kedua fungsi dan akan menimpanya: centangnya tetap,
   tetapi database berhenti menjaganya (aplikasi masih menolak, penjaga kedua hilang). Bila terlanjur:
-  jalankan `202612030001_coffee_menu_audience.sql` sekali lagi (aman, centang tidak berubah).
+  jalankan `202612030003_coffee_menu_audience.sql` sekali lagi (aman, centang tidak berubah).
 
 ### Foto
 

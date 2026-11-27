@@ -15,7 +15,7 @@ export const COFFEE_MIGRATION = "202612010001_coffee.sql";
 /** F6: the menu in the database, the option switches, and the drink's name kept with each order. */
 export const COFFEE_MENU_MIGRATION = "202612020001_coffee_menu.sql";
 /** F7: where each drink shows (Buku tamu, Menu biasa). */
-export const COFFEE_AUDIENCE_MIGRATION = "202612030001_coffee_menu_audience.sql";
+export const COFFEE_AUDIENCE_MIGRATION = "202612030003_coffee_menu_audience.sql";
 type DbError = { code?: string; message?: string };
 
 /**

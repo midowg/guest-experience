@@ -39,7 +39,7 @@ const applyDefaults = () => { for (const slug of GUEST_BOOK_ONLY_SLUGS) row(slug
 beforeEach(() => { forgetMenu(true); db = fakeDb(); seedPeople(db); db.state.now = now; applyDefaults(); });
 
 describe("the owner's starting ticks (27 Nov 2026)", () => {
-  const sql = readFileSync(new URL("../../../../supabase/migrations/202612030001_coffee_menu_audience.sql", import.meta.url), "utf8");
+  const sql = readFileSync(new URL("../../../../supabase/migrations/202612030003_coffee_menu_audience.sql", import.meta.url), "utf8");
   const code = sql.replace(/\/\*[\s\S]*?\*\/|--.*$/gm, "");
   it("are the same three guest-book-only drinks in the code, in the migration and in the stand-in", () => {
     const off = code.match(/set in_regular_menu = false\s+where slug in \(([^)]+)\)/)?.[1].replace(/'|\s/g, "").split(",");
@@ -203,7 +203,7 @@ describe("the app is deployed before migration 202612030001 runs", () => {
     expect((await readMenu())[0].name).toBe("Kopi Susu");
   });
   it("the menu can still be changed, but a tick cannot be taken away yet: 503 with the migration's name, nothing stored", async () => {
-    const waits = { status: 503, message: "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030001_coffee_menu_audience.sql." };
+    const waits = { status: 503, message: "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030003_coffee_menu_audience.sql." };
     const input = (more: object = {}) => drinkSchema.parse({ name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas", "es"], ...more });
     expect(await createDrink(input(), dewi, now)).toMatchObject({ slug: "teh-tarik", guestBook: true, regular: true });
     expect(await updateDrink("teh-tarik", input({ name: "Teh Tarik Aceh" }), dewi, now)).toMatchObject({ name: "Teh Tarik Aceh" });
