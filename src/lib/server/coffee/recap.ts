@@ -7,7 +7,7 @@ import { csvCell } from "../responses";
 import { writeXlsx } from "../xlsx-write";
 import { activePeople } from "./people";
 import { readSettings } from "./settings";
-import { coffeeError, countingClaims, db, orderColumns, toOrders, type OrderRow } from "./store";
+import { coffeeError, countingClaims, db, orderColumns, priceReady, toOrders, type OrderRow } from "./store";
 
 /*
  * Rekap (/admin/coffee/rekap): a span of WIB days as one row per drink, its summary, and the same
@@ -33,20 +33,21 @@ export async function recapRows(query: RecapQuery): Promise<RecapRow[]> {
   return filterRows(expandRows(await toOrders(orders), numbers), { jenis: query.jenis, status: query.status, q: query.q });
 }
 
-export async function recap(query: RecapQuery): Promise<{ rows: RecapRow[]; summary: RecapSummary; title: string }> {
-  const [rows, people, settings] = await Promise.all([recapRows(query), activePeople(), readSettings()]);
-  return { rows, summary: summarize(rows, people, settings), title: recapTitle(query.dari, query.sampai) };
+/** `prices` false: migration 202612050001 has not run, so no order carries a price yet and Rekap shows "–" for money. */
+export async function recap(query: RecapQuery): Promise<{ rows: RecapRow[]; summary: RecapSummary; title: string; prices: boolean }> {
+  const [rows, people, settings, prices] = await Promise.all([recapRows(query), activePeople(), readSettings(), priceReady()]);
+  return { rows, summary: summarize(rows, people, settings), title: recapTitle(query.dari, query.sampai), prices };
 }
 
 /** The same rows as files: .csv (Detail) and .xlsx (Detail and Ringkasan). */
 export async function recapFiles(query: RecapQuery): Promise<{ csv: string; xlsx: Buffer }> {
   const { rows, summary, title } = await recap(query);
-  const detail = [[...DETAIL_HEAD], ...rows.map(detailCells)];
+  const detail: (string | number)[][] = [[...DETAIL_HEAD], ...rows.map(detailCells)];
   return {
-    csv: `﻿${detail.map(line => line.map(csvCell).join(",")).join("\r\n")}\r\n`,
+    csv: `﻿${detail.map(line => line.map(cell => csvCell(String(cell))).join(",")).join("\r\n")}\r\n`,
     xlsx: writeXlsx([
       { name: "Detail", rows: detail, widths: DETAIL_WIDTHS },
-      { name: "Ringkasan", rows: summarySheet(summary, title), widths: [34, 16, 14, 14, 10, 12, 10] },
+      { name: "Ringkasan", rows: summarySheet(summary, title), widths: [34, 16, 14, 14, 10, 12, 10, 16] },
     ]),
   };
 }

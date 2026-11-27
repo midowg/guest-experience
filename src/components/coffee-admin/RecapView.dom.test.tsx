@@ -47,7 +47,7 @@ it("counts on top what the Detail rows hold", async () => {
   // The table's columns are the file's, in the same order (the last one shows as a pill).
   expect(within(screen.getByRole("table")).getAllByRole("columnheader").map(cell => cell.textContent?.replace(/,.*/, ""))).toEqual([
     "Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu", "Ruangan",
-    "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-",
+    "Minuman", "Suhu", "Gula", "Takaran es", "Harga satuan", "Subtotal", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-",
   ]);
 });
 
@@ -111,13 +111,13 @@ it("F8 Minuman: ranked bars, count and share, and a Total that is the number on 
   await open();
   choose("Minuman");
   const table = within(shown()).getByRole("table");
-  expect(within(table).getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Minuman", "Grafik", "Jumlah", "Porsi"]);
+  expect(within(table).getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Minuman", "Grafik", "Jumlah", "Porsi", "Pengeluaran"]);
   const body = within(table).getAllByRole("row").slice(1, -1).map(row => [...row.children].map(cell => cell.textContent));
   const counts = body.map(cells => Number(cells[2]));
   expect(counts).toEqual([...counts].sort((a, b) => b - a));
   expect(body[0][3]).toMatch(/^\d+%$/);
   const total = within(table).getAllByRole("row").at(-1)!;
-  expect(total.textContent).toBe(`Total${stat("Total minuman")}100%`);
+  expect(total.textContent).toMatch(new RegExp(`^Total${stat("Total minuman")}100%Rp [0-9.]+$`));
   expect(counts.reduce((sum, count) => sum + count, 0)).toBe(stat("Total minuman"));
   // a bar is for the eyes only
   expect(table.querySelectorAll(`.${css.barTrack}[aria-hidden="true"]`).length).toBe(counts.length);
@@ -329,10 +329,10 @@ it("marks the name as the row's header and dates a processing that fell on anoth
   const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
   expect(within(rows[0]).getByRole("rowheader").textContent).toMatch(/\(contoh\)/);
   const cells = (row: HTMLElement) => [...row.children].map(cell => cell.textContent);
-  expect(rows.every(row => /^(–|\d{2}\.\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}\.\d{2})$/.test(cells(row)[20] ?? ""))).toBe(true);
+  expect(rows.every(row => /^(–|\d{2}\.\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}\.\d{2})$/.test(cells(row)[22] ?? ""))).toBe(true);
   // The sample's meeting of five days ago was processed ten minutes later, past midnight UTC but the same WIB day or the next.
-  const dated = rows.filter(row => /^\d{2}\/\d{2}\/\d{4} /.test(cells(row)[20] ?? ""));
-  for (const row of dated) expect(cells(row)[20]!.slice(0, 10)).not.toBe(cells(row)[0]);
+  const dated = rows.filter(row => /^\d{2}\/\d{2}\/\d{4} /.test(cells(row)[22] ?? ""));
+  for (const row of dated) expect(cells(row)[22]!.slice(0, 10)).not.toBe(cells(row)[0]);
   // "Nama tamu": the guest's own name on the cups of that line, a dash everywhere else.
   const head = within(screen.getByRole("table")).getAllByRole("columnheader").map(cell => cell.textContent);
   const at = head.indexOf("Nama tamu");

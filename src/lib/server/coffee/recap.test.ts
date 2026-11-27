@@ -62,7 +62,7 @@ describe("Rekap", () => {
     expect(title).toBe("November 2026");
     expect(summary).toMatchObject({ total: 6, klaim: 2, tamu: 3, tim: 1, refused: 1, meetings: 1 });
     expect(summary.total).toBe(rows.filter(row => row.status !== "ditolak" && row.status !== "batal").length);
-    expect(summary.pics).toEqual([{ pic: "Contoh Dewi Lestari", meetings: 1, guests: 5, drinks: 3 }]);
+    expect(summary.pics).toEqual([{ pic: "Contoh Dewi Lestari", meetings: 1, guests: 5, drinks: 3, spend: 0 }]);
     expect(summary.people.find(entry => entry.person.id === PEOPLE.rina)).toMatchObject({ used: 2, quota: 4, refused: 1 });
     expect(summary.people.find(entry => entry.person.id === PEOPLE.bagas)).toMatchObject({ used: 0, quota: 2 });
     expect(summary.bus.find(bu => bu.bu === "TEE")).toMatchObject({ tamu: 3, total: 3 });
@@ -81,9 +81,9 @@ describe("Rekap's files", () => {
   it("writes a CSV with the table's cells, safe from formulas", async () => {
     const { csv } = await recapFiles(november);
     const lines = csv.split("\r\n");
-    expect(lines[0]).toBe("﻿\"Tanggal\",\"Jam diajukan\",\"Nomor pesanan\",\"Jenis\",\"Nama\",\"Kelompok\",\"Jabatan\",\"BU\",\"PIC\",\"Tamu/instansi\",\"Nama tamu\",\"Jumlah tamu\",\"Ruangan\",\"Minuman\",\"Suhu\",\"Gula\",\"Takaran es\",\"Status\",\"Catatan tolak\",\"Diproses oleh\",\"Jam diproses\",\"Klaim ke-\",\"Dicatat manual\"");
+    expect(lines[0]).toBe("﻿\"Tanggal\",\"Jam diajukan\",\"Nomor pesanan\",\"Jenis\",\"Nama\",\"Kelompok\",\"Jabatan\",\"BU\",\"PIC\",\"Tamu/instansi\",\"Nama tamu\",\"Jumlah tamu\",\"Ruangan\",\"Minuman\",\"Suhu\",\"Gula\",\"Takaran es\",\"Harga satuan\",\"Subtotal\",\"Status\",\"Catatan tolak\",\"Diproses oleh\",\"Jam diproses\",\"Klaim ke-\",\"Dicatat manual\"");
     expect(lines).toHaveLength(1 + 7 + 1);
-    expect(lines[1]).toBe("\"20/11/2026\",\"09:00\",\"K-420\",\"Klaim\",\"Contoh Rina Putri\",\"Karyawan\",\"Contoh karyawan\",\"WNS\",\"\",\"\",\"\",\"\",\"\",\"Café Latte\",\"Es\",\"Sedikit\",\"Ekstra\",\"Diproses\",\"\",\"\",\"\",\"2\",\"\"");
+    expect(lines[1]).toBe("\"20/11/2026\",\"09:00\",\"K-420\",\"Klaim\",\"Contoh Rina Putri\",\"Karyawan\",\"Contoh karyawan\",\"WNS\",\"\",\"\",\"\",\"\",\"\",\"Café Latte\",\"Es\",\"Sedikit\",\"Ekstra\",\"\",\"\",\"Diproses\",\"\",\"\",\"\",\"2\",\"\"");
     expect(lines[2]).toContain("\"Tamu\",\"Contoh Dewi Lestari\",\"Tamu\",\"Contoh karyawan\",\"TEE\",\"Contoh Dewi Lestari\",\"Contoh PT Sinar\",\"Budi\",\"5\",\"Vasuki Room\",\"Kopi Susu\"");
     // The team member's drink of the same meeting has no guest name.
     expect(lines.find(line => line.includes("\"Tim · rapat\""))).toContain("\"Contoh Dewi Lestari\",\"\",\"\",\"\",\"Vasuki Room\"");
@@ -101,11 +101,12 @@ describe("Rekap's files", () => {
     expect(detail.match(/>Budi</g)).toHaveLength(3);
     expect(detail).toContain("=SUM(A1) habis");
     expect(detail).not.toContain("<f>");
-    // Audit F5-08: all 23 columns have their own width ("Nama tamu" had none, and the rest slid one to the left).
+    // Audit F5-08: all 25 columns have their own width ("Nama tamu" had none, and the rest slid one to the left).
     const widths = [...detail.matchAll(/<col min="(\d+)" max="\d+" width="(\d+)"/g)].map(match => Number(match[2]));
-    expect(widths).toHaveLength(23);
+    expect(widths).toHaveLength(25);
     expect(widths.slice(9, 14)).toEqual([24, 18, 10, 20, 24]);
-    expect(widths.slice(17)).toEqual([10, 30, 16, 10, 8, 10]);
+    expect(widths.slice(16, 19)).toEqual([10, 14, 14]);
+    expect(widths.slice(19)).toEqual([10, 30, 16, 10, 8, 10]);
     const summary = part(xlsx, "xl/worksheets/sheet2.xml");
     expect(summary).toContain("Rekap WG Coffee · November 2026");
     expect(summary).toContain("Per PIC");
@@ -170,5 +171,76 @@ describe("Rekap after F6 (options per audience, the drink's kept name)", () => {
     const rows = await recapRows(november);
     expect(rows.map(row => row.drink)).toEqual(["Café Latte", "Kopi Susu", "Kopi Susu", "Kopi Susu", "Americano", "Café Latte", "Café Latte"]);
     expect(rows[0]).toMatchObject({ temperature: "es", sugar: "Sedikit", ice: "Ekstra" });
+  });
+});
+
+/*
+ * F9: the price of a drink at the moment of ordering, spent money in Rekap, and the app before the
+ * price migration has run. Prices here are made up.
+ */
+describe("Rekap with prices (F9)", () => {
+  const price = (slug: string, value: number | null) => { db.rows("coffee_drinks").find(row => row.slug === slug)!.price = value; };
+  const dayOnly = recapQuerySchema.parse({ dari: "2026-11-21", sampai: "2026-11-21" });
+  const order = async (slug: string, at: string, who: string = PEOPLE.dewi) =>
+    (await db.client.rpc("coffee_submit_claim", { p_employee: who, p_item: { slug }, p_at: at, p_manual: true, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: key(++n + 300) })).data as string;
+
+  it("carries the price kept on each order line, so a later price change never reaches an old order", async () => {
+    price("espresso", 8900);
+    await order("espresso", "2026-11-21T02:00:00.000Z");
+    price("espresso", 9500);
+    price("cafe-latte", 8000);
+    await order("espresso", "2026-11-21T03:00:00.000Z", PEOPLE.rina);
+    const rows = await recapRows(dayOnly);
+    expect(rows.map(row => [row.drink, row.unitPrice])).toEqual([["Espresso", 9500], ["Espresso", 8900]]);
+  });
+
+  it("adds up spending from Selesai orders only (a hand record is Selesai), guests and the team included", async () => {
+    price("cafe-latte", 8000); price("kopi-susu", 6900); price("americano", 8000);
+    // The beforeEach orders were made when no drink had a price: they stay without one.
+    await db.client.rpc("coffee_submit_meeting", {
+      p_order: { pic_id: PEOPLE.dewi, room: "Vasuki Room", room_spot: "vasuki", guest: "Contoh PT", guest_count: 2, actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: "2026-11-22T03:00:00.000Z", manual: true },
+      p_items: [{ for: "tamu", slug: "kopi-susu", qty: 2 }, { for: "tim", person_id: PEOPLE.fajar, slug: "americano", qty: 1 }, { for: "tamu", slug: "lainnya", other: "Teh tarik", qty: 1 }], p_key: key(400),
+    });
+    await order("cafe-latte", "2026-11-23T02:00:00.000Z");
+    const { summary } = await recap(november);
+    // 2 guest cups (6900) + 1 team (8000) + 1 claim (8000); "lainnya" and the earlier unpriced orders add nothing.
+    expect(summary.spend.total).toBe(2 * 6900 + 8000 + 8000);
+    expect(summary.spend.drinks).toBe(5);
+    expect(summary.spend.unpriced).toBe(1);
+    expect(summary.bus.reduce((sum, entry) => sum + entry.spend, 0)).toBe(summary.spend.total);
+  });
+
+  it("writes the price and the subtotal as numbers in the CSV and the Detail sheet", async () => {
+    price("espresso", 8900);
+    await order("espresso", "2026-11-21T02:00:00.000Z");
+    const { csv, xlsx } = await recapFiles(dayOnly);
+    const cells = csv.split("\r\n")[1].split(",");
+    expect(cells.slice(17, 20)).toEqual(['"8900"', '"8900"', '"Selesai"']);
+    const detail = part(xlsx, "xl/worksheets/sheet1.xml");
+    expect(detail).toContain("<v>8900</v>");
+    expect(part(xlsx, "xl/worksheets/sheet2.xml")).toContain("Pengeluaran (Rp)");
+  });
+
+  it("before migration 202612050001 reads no price column at all and says prices are not there yet", async () => {
+    price("espresso", 8900);
+    await order("espresso", "2026-11-21T02:00:00.000Z");
+    db.state.priceMigrated = false;
+    forgetMenu(true);
+    const result = await recap(november);
+    expect(result.prices).toBe(false);
+    expect(result.rows.every(row => row.unitPrice === null)).toBe(true);
+    expect(result.summary.spend).toMatchObject({ total: 0 });
+    const files = await recapFiles(november);
+    expect(files.csv.split("\r\n")[1]).toContain('"","","Selesai"');
+  });
+
+  it("after the migration the same app asks again within half a minute and then reads prices", async () => {
+    price("espresso", 8900);
+    db.state.priceMigrated = false;
+    forgetMenu(true);
+    expect((await recap(november)).prices).toBe(false);
+    db.state.priceMigrated = true;
+    forgetMenu(true);
+    expect((await recap(november)).prices).toBe(true);
   });
 });

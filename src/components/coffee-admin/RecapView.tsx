@@ -4,13 +4,14 @@ import { useEffect, useId, useState } from "react";
 import { Download, FileSpreadsheet, Search, SlidersHorizontal, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { ConsoleButton, ConsoleButtonLink, PageHeader } from "@/components/console";
+import { formatRupiah } from "@/lib/coffee/money";
 import { ITEM_KINDS, KIND_LABEL, STATUS_LABEL, type ItemFor, type Status } from "@/lib/coffee/types";
 import type { CancelTarget, CoffeeAdminApi, RecapData, RecapQuery } from "./api";
 import { DetailTable } from "./DetailTable";
 import { monthEnd, monthName, recentMonths } from "./format";
 import { Layer } from "./Layer";
 import { RecapBreakdown, RecapViewPicker, type RecapView } from "./RecapBreakdown";
-import { coffeeAdminSection } from "./sections";
+import { COFFEE_PRICE_MIGRATION_NAME, coffeeAdminSection } from "./sections";
 import css from "./coffee-admin.module.css";
 
 type RecapTab = "ringkasan" | "detail";
@@ -83,6 +84,8 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
   const loading = wanted && !failed;
   const stale = !hit && !!data;
   const summary = data?.summary;
+  /** false: migration 202612050001 has not run, so no order has a price and every money figure reads "–". */
+  const prices = data?.prices !== false;
   const rows = data?.rows ?? [];
   const title = hit?.data.title ?? data?.title ?? "";
   const months = recentMonths(current);
@@ -182,7 +185,7 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
 
       {!summary ? (
         !failed && <div aria-busy="true" aria-label="Memuat rekap" className={css.stack}>
-          <div className={css.stats}>{Array.from({ length: 5 }, (_, index) => <span key={index} className={css.skeleton} style={{ height: 92 }} />)}</div>
+          <div className={css.stats}>{Array.from({ length: 6 }, (_, index) => <span key={index} className={css.skeleton} style={{ height: 92 }} />)}</div>
           <span className={css.skeleton} style={{ height: 320 }} />
         </div>
       ) : (
@@ -196,6 +199,13 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
             <div className={css.stat}><span>Tamu</span><strong>{summary.tamu}</strong><small>dari {summary.meetings} rapat</small></div>
             <div className={css.stat}><span>Tim · rapat</span><strong>{summary.tim}</strong><small>tanpa jatah</small></div>
             <div className={css.stat} data-tone="no"><span>Ditolak</span><strong>{summary.refused}</strong><small>jatah tidak terpakai</small></div>
+            <div className={css.stat} data-money="true">
+              <span>Pengeluaran</span><strong>{prices ? formatRupiah(summary.spend.total) : "–"}</strong>
+              <small>dari pesanan Selesai diproses saja</small>
+              {!prices
+                ? <small className={css.statNote}>Menunggu migrasi {COFFEE_PRICE_MIGRATION_NAME}</small>
+                : summary.spend.unpriced > 0 && <small className={css.statNote}><a href={coffeeAdminSection("menu").href}>{summary.spend.unpriced} minuman belum berharga, tidak terhitung</a></small>}
+            </div>
           </section>
 
           <div className={css.tabs}>
@@ -219,11 +229,11 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
           {tab === "ringkasan" ? (
             <div id={`${uid}-panel-ringkasan`} role="tabpanel" aria-labelledby={`${uid}-tab-ringkasan`} className={`${css.panel} ${css.summaryPanel}`}>
               <RecapViewPicker value={lihat} onChange={setLihat} />
-              <RecapBreakdown view={lihat} summary={summary} title={title} phone={phone} manyMonths={manyMonths} />
+              <RecapBreakdown view={lihat} summary={summary} title={title} phone={phone} manyMonths={manyMonths} prices={prices} />
             </div>
           ) : (
             <div id={`${uid}-panel-detail`} role="tabpanel" aria-labelledby={`${uid}-tab-detail`} className={css.panel}>
-              <DetailTable key={key} rows={rows} phone={phone} onCancel={onCancel} />
+              <DetailTable key={key} rows={rows} phone={phone} prices={prices} onCancel={onCancel} />
             </div>
           )}
         </div>

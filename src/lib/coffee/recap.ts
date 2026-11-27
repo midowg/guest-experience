@@ -7,6 +7,12 @@ import { KIND_LABEL, STATUS_LABEL, type CoffeeSettings, type ItemFor, type Queue
  * guest's drink is recorded under the meeting's PIC and the PIC's BU; a team member's under that
  * person; neither touches a quota. Only drinks being processed or done are counted in the totals.
  * Moved from the approved prototype (PengelolaPrototype.tsx). Pure, so it is tested without a server.
+ *
+ * F9 (27 Nov 2026): every row carries what its drink cost when it was ordered (`unitPrice`, null
+ * when it had no price), and the summary adds up Pengeluaran. Only an order that is Selesai
+ * (made by hand included) is money spent: waiting, refused and cancelled ones never count, guests'
+ * and Tim · rapat drinks do (it is money spent, even though they use no quota). A done drink with
+ * no price adds nothing and is counted in `spend.unpriced`, so the screen can say so.
  */
 
 /** One row per drink: a line of three is three rows. `numbers`: "Klaim ke-" worked out over whole months. */
@@ -18,7 +24,7 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
       doneBy: order.processed?.label ?? "", doneAt: order.processed?.at ?? "", manual: order.manual,
     };
     for (const item of order.items) {
-      const drink = { drink: drinkName(item), temperature: item.temperature, sugar: item.sugar, ice: item.ice };
+      const drink = { drink: drinkName(item), unitPrice: item.unitPrice ?? null, temperature: item.temperature, sugar: item.sugar, ice: item.ice };
       if (order.kind === "klaim") {
         const claimNo = countsForQuota(order.status) ? numbers?.get(order.id) ?? order.claimNo : undefined;
         rows.push({
@@ -42,7 +48,7 @@ export function expandRows(orders: QueueOrder[], numbers?: Map<string, number>):
 }
 
 export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis", "Nama", "Kelompok", "Jabatan", "BU", "PIC", "Tamu/instansi", "Nama tamu", "Jumlah tamu", "Ruangan",
-  "Minuman", "Suhu", "Gula", "Takaran es", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-", "Dicatat manual"] as const;
+  "Minuman", "Suhu", "Gula", "Takaran es", "Harga satuan", "Subtotal", "Status", "Catatan tolak", "Diproses oleh", "Jam diproses", "Klaim ke-", "Dicatat manual"] as const;
 /**
  * The Detail sheet's column widths, by column name (audit F5-08: a list of numbers beside the head
  * fell one short when "Nama tamu" was added, and every width after it slid one column to the left).
@@ -50,7 +56,7 @@ export const DETAIL_HEAD = ["Tanggal", "Jam diajukan", "Nomor pesanan", "Jenis",
  */
 const DETAIL_WIDTH: Record<(typeof DETAIL_HEAD)[number], number> = {
   "Tanggal": 12, "Jam diajukan": 10, "Nomor pesanan": 12, "Jenis": 12, "Nama": 26, "Kelompok": 12, "Jabatan": 26, "BU": 10, "PIC": 26, "Tamu/instansi": 24, "Nama tamu": 18,
-  "Jumlah tamu": 10, "Ruangan": 20, "Minuman": 24, "Suhu": 8, "Gula": 10, "Takaran es": 10, "Status": 10, "Catatan tolak": 30, "Diproses oleh": 16, "Jam diproses": 10,
+  "Jumlah tamu": 10, "Ruangan": 20, "Minuman": 24, "Suhu": 8, "Gula": 10, "Takaran es": 10, "Harga satuan": 14, "Subtotal": 14, "Status": 10, "Catatan tolak": 30, "Diproses oleh": 16, "Jam diproses": 10,
   "Klaim ke-": 8, "Dicatat manual": 10,
 };
 export const DETAIL_WIDTHS: number[] = DETAIL_HEAD.map(name => DETAIL_WIDTH[name]);
@@ -61,11 +67,17 @@ export const rowStatus = (row: Pick<RecapRow, "status" | "manual">): string => r
 /** Suhu and Takaran es as the table and the files write them; empty when the option was not asked (F6). */
 export const temperatureCell = (row: Pick<RecapRow, "temperature">): string => row.temperature === "es" ? "Es" : row.temperature === "panas" ? "Panas" : "";
 export const iceCell = (row: Pick<RecapRow, "temperature" | "ice">): string => row.temperature === "es" && row.ice ? row.ice : "";
-/** A row's 23 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. */
-export const detailCells = (row: RecapRow): string[] => [
+/** Is a row money spent? Only Selesai counts (made by hand included); waiting, refused and cancelled never do. */
+export const isSpend = (row: Pick<RecapRow, "status">): boolean => row.status === "selesai";
+/** What a row adds to Pengeluaran: its price when it is spent and has one, else nothing. */
+export const spendOf = (row: Pick<RecapRow, "status" | "unitPrice">): number => isSpend(row) && row.unitPrice != null ? row.unitPrice : 0;
+/** "Subtotal": one drink per row (a line of three is three rows), so the price itself; blank until the order is Selesai or when there is no price. */
+export const subtotalOf = (row: Pick<RecapRow, "status" | "unitPrice">): number | null => isSpend(row) && row.unitPrice != null ? row.unitPrice : null;
+/** A row's 25 cells, in DETAIL_HEAD's order: the table, the .csv and the .xlsx all show these. The two money cells are numbers (Excel can sum them), "" when there is none. */
+export const detailCells = (row: RecapRow): (string | number)[] => [
   sheetDate(row.at), wibClock(row.at), row.no, KIND_LABEL[row.kind], row.name, row.group, row.position, row.bu,
   row.pic, row.guest, row.guestName, row.guestCount && row.kind === "tamu" ? String(row.guestCount) : "", row.room, row.drink,
-  temperatureCell(row), row.sugar ?? "", iceCell(row), rowStatus(row), row.reason,
+  temperatureCell(row), row.sugar ?? "", iceCell(row), row.unitPrice ?? "", subtotalOf(row) ?? "", rowStatus(row), row.reason,
   row.doneBy, row.doneAt ? wibClock(row.doneAt) : "", row.claimNo ? String(row.claimNo) : "", row.manual ? "Ya" : "",
 ];
 
@@ -98,6 +110,7 @@ export type RecapSummary = ReturnType<typeof summarize>;
  */
 export function summarize(rows: RecapRow[], people: RecapPerson[], settings: CoffeeSettings) {
   const live = rows.filter(row => countsForQuota(row.status));
+  const spentRows = rows.filter(isSpend);
   const by = (kind: ItemFor) => live.filter(row => row.kind === kind).length;
   const known = new Map(people.map(person => [person.id, person]));
   for (const row of rows) {
@@ -107,6 +120,8 @@ export function summarize(rows: RecapRow[], people: RecapPerson[], settings: Cof
     const mine = rows.filter(row => row.employeeId === person.id);
     return {
       person, quota: settings[person.group],
+      // Their own drinks (claims and Tim · rapat); the guests they ordered for are the PIC's, counted in PIC tamu, Ruangan and BU.
+      spend: mine.filter(row => row.kind !== "tamu").reduce((sum, row) => sum + spendOf(row), 0),
       used: mine.filter(row => row.kind === "klaim" && countsForQuota(row.status)).length,
       team: mine.filter(row => row.kind === "tim" && countsForQuota(row.status)).length,
       refused: mine.filter(row => row.kind === "klaim" && row.status === "ditolak").length,
@@ -114,72 +129,90 @@ export function summarize(rows: RecapRow[], people: RecapPerson[], settings: Cof
   }).sort((a, b) => b.used / Math.max(b.quota, 1) - a.used / Math.max(a.quota, 1) || a.person.name.localeCompare(b.person.name, "id"));
 
   // A meeting's guests are counted once: the largest count among its rounds (a later round may carry none).
-  const picMap = new Map<string, { pic: string; meetings: Map<string, number>; drinks: number }>();
+  const picMap = new Map<string, { pic: string; meetings: Map<string, number>; drinks: number; spend: number }>();
   for (const row of live.filter(row => row.kind === "tamu")) {
     const key = row.employeeId ?? row.pic;
-    const entry = picMap.get(key) ?? { pic: row.pic, meetings: new Map<string, number>(), drinks: 0 };
+    const entry = picMap.get(key) ?? { pic: row.pic, meetings: new Map<string, number>(), drinks: 0, spend: 0 };
     const meeting = meetingOf(row.no);
     entry.meetings.set(meeting, Math.max(entry.meetings.get(meeting) ?? 0, row.guestCount ?? 0));
     entry.drinks += 1;
     picMap.set(key, entry);
   }
-  const pics = [...picMap.values()].map(entry => ({ pic: entry.pic, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), drinks: entry.drinks }))
+  // Money for a PIC's guests is added from the rows that were spent (a waiting guest drink counts as a drink, not yet as money).
+  for (const row of spentRows.filter(row => row.kind === "tamu")) {
+    const entry = picMap.get(row.employeeId ?? row.pic);
+    if (entry) entry.spend += spendOf(row);
+  }
+  const pics = [...picMap.values()].map(entry => ({ pic: entry.pic, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), drinks: entry.drinks, spend: entry.spend }))
     .sort((a, b) => b.drinks - a.drinks || a.pic.localeCompare(b.pic, "id"));
 
-  const buMap = new Map<string, Record<ItemFor, number>>();
+  const buMap = new Map<string, Record<ItemFor, number> & { spend: number }>();
   for (const row of live) {
-    const entry = buMap.get(row.bu) ?? { klaim: 0, tamu: 0, tim: 0 };
+    const entry = buMap.get(row.bu) ?? { klaim: 0, tamu: 0, tim: 0, spend: 0 };
     entry[row.kind] += 1;
+    entry.spend += spendOf(row);
     buMap.set(row.bu, entry);
   }
   const bus = [...buMap].map(([bu, entry]) => ({ bu, ...entry, total: entry.klaim + entry.tamu + entry.tim })).sort((a, b) => b.total - a.total || a.bu.localeCompare(b.bu, "id"));
 
-  const drinkMap = new Map<string, number>();
-  for (const row of live) drinkMap.set(row.drink, (drinkMap.get(row.drink) ?? 0) + 1);
-  const drinks = [...drinkMap].map(([drink, count]) => ({ drink, count })).sort((a, b) => b.count - a.count || a.drink.localeCompare(b.drink, "id"));
+  const drinkMap = new Map<string, { count: number; spend: number }>();
+  for (const row of live) {
+    const entry = drinkMap.get(row.drink) ?? { count: 0, spend: 0 };
+    entry.count += 1;
+    entry.spend += spendOf(row);
+    drinkMap.set(row.drink, entry);
+  }
+  const drinks = [...drinkMap].map(([drink, entry]) => ({ drink, count: entry.count, spend: entry.spend })).sort((a, b) => b.count - a.count || a.drink.localeCompare(b.drink, "id"));
 
   // Per Kelompok (Karyawan, Tim GA, Intern): the people in it and what they claimed; guests belong to no group.
   const groups = (Object.keys(GROUP_LABEL) as QuotaGroup[]).map(group => {
     const members = perPerson.filter(entry => entry.person.group === group);
     const klaim = members.reduce((sum, entry) => sum + entry.used, 0), tim = members.reduce((sum, entry) => sum + entry.team, 0);
-    return { group, people: members.length, klaim, tim, refused: members.reduce((sum, entry) => sum + entry.refused, 0), total: klaim + tim };
+    return { group, people: members.length, klaim, tim, refused: members.reduce((sum, entry) => sum + entry.refused, 0), total: klaim + tim, spend: members.reduce((sum, entry) => sum + entry.spend, 0) };
   }).filter(entry => entry.people > 0);
 
   // Per Ruangan: the meeting orders (guests and team) by the room they were ordered for; guests once per meeting like the PIC.
-  const roomMap = new Map<string, { meetings: Map<string, number>; tamu: number; tim: number }>();
+  const roomMap = new Map<string, { meetings: Map<string, number>; tamu: number; tim: number; spend: number }>();
   for (const row of live.filter(row => row.kind !== "klaim")) {
     const room = row.room.trim() || NO_ROOM;
-    const entry = roomMap.get(room) ?? { meetings: new Map<string, number>(), tamu: 0, tim: 0 };
+    const entry = roomMap.get(room) ?? { meetings: new Map<string, number>(), tamu: 0, tim: 0, spend: 0 };
+    entry.spend += spendOf(row);
     const meeting = meetingOf(row.no);
     entry.meetings.set(meeting, Math.max(entry.meetings.get(meeting) ?? 0, row.kind === "tamu" ? row.guestCount ?? 0 : 0));
     entry[row.kind === "tamu" ? "tamu" : "tim"] += 1;
     roomMap.set(room, entry);
   }
   const rooms = [...roomMap].map(([room, entry]) => ({
-    room, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), tamu: entry.tamu, tim: entry.tim, total: entry.tamu + entry.tim,
+    room, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), tamu: entry.tamu, tim: entry.tim, total: entry.tamu + entry.tim, spend: entry.spend,
   })).sort((a, b) => (a.room === NO_ROOM ? 1 : 0) - (b.room === NO_ROOM ? 1 : 0) || b.total - a.total || a.room.localeCompare(b.room, "id"));
 
   return {
     total: live.length, klaim: by("klaim"), tamu: by("tamu"), tim: by("tim"),
     meetings: new Set(rows.filter(row => row.kind !== "klaim").map(row => meetingOf(row.no))).size,
     refused: rows.filter(row => row.status === "ditolak").length, waiting: rows.filter(row => row.status === "diproses").length,
+    // Pengeluaran: Selesai drinks only. `unpriced`: Selesai drinks whose price was not filled in, so they add nothing.
+    spend: { total: spentRows.reduce((sum, row) => sum + spendOf(row), 0), drinks: spentRows.length, unpriced: spentRows.filter(row => row.unitPrice == null).length },
     people: perPerson, pics, bus, drinks, groups, rooms,
   };
 }
 
-/** The Ringkasan sheet of the .xlsx: the same numbers as the screen; counts are number cells. */
+/**
+ * The Ringkasan sheet of the .xlsx: the same numbers as the screen; counts and money are number
+ * cells. "Pengeluaran (Rp)" closes each block: Selesai drinks at the price they had when ordered.
+ */
 export function summarySheet(summary: RecapSummary, title: string): (string | number)[][] {
   return [
     [`Rekap WG Coffee · ${title}`],
     ["Total minuman", summary.total], ["Klaim", summary.klaim], ["Tamu", summary.tamu],
-    ["Tim · rapat", summary.tim], ["Ditolak", summary.refused], [],
-    ["Per orang", "Kelompok", "BU", "Klaim terpakai", "Jatah", "Tim · rapat", "Ditolak"],
-    ...summary.people.map(({ person, quota, used, team, refused }) => [person.name, GROUP_LABEL[person.group], person.bu, used, quota, team, refused]),
-    [], ["Per PIC", "Rapat", "Tamu (orang)", "Minuman tamu"],
-    ...summary.pics.map(pic => [pic.pic, pic.meetings, pic.guests, pic.drinks]),
-    [], ["Per BU", "Klaim", "Tamu", "Tim · rapat", "Total"],
-    ...summary.bus.map(bu => [bu.bu, bu.klaim, bu.tamu, bu.tim, bu.total]),
-    [], ["Per minuman", "Jumlah"], ...summary.drinks.map(drink => [drink.drink, drink.count]),
+    ["Tim · rapat", summary.tim], ["Ditolak", summary.refused],
+    ["Pengeluaran (Rp)", summary.spend.total], ["Selesai tanpa harga (tidak terhitung)", summary.spend.unpriced], [],
+    ["Per orang", "Kelompok", "BU", "Klaim terpakai", "Jatah", "Tim · rapat", "Ditolak", "Pengeluaran (Rp)"],
+    ...summary.people.map(({ person, quota, used, team, refused, spend }) => [person.name, GROUP_LABEL[person.group], person.bu, used, quota, team, refused, spend]),
+    [], ["Per PIC", "Rapat", "Tamu (orang)", "Minuman tamu", "Pengeluaran (Rp)"],
+    ...summary.pics.map(pic => [pic.pic, pic.meetings, pic.guests, pic.drinks, pic.spend]),
+    [], ["Per BU", "Klaim", "Tamu", "Tim · rapat", "Total", "Pengeluaran (Rp)"],
+    ...summary.bus.map(bu => [bu.bu, bu.klaim, bu.tamu, bu.tim, bu.total, bu.spend]),
+    [], ["Per minuman", "Jumlah", "Pengeluaran (Rp)"], ...summary.drinks.map(drink => [drink.drink, drink.count, drink.spend]),
   ];
 }
 

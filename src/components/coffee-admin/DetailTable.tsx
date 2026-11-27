@@ -4,7 +4,8 @@ import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { wibClock, wibDay } from "@/lib/coffee/quota";
 import { optionsLabel } from "@/lib/coffee/menu";
-import { DETAIL_HEAD, iceCell, rowStatus, temperatureCell } from "@/lib/coffee/recap";
+import { formatAmount, formatRupiah } from "@/lib/coffee/money";
+import { DETAIL_HEAD, iceCell, rowStatus, subtotalOf, temperatureCell } from "@/lib/coffee/recap";
 import { KIND_LABEL, type RecapRow } from "@/lib/coffee/types";
 import type { CancelTarget } from "./api";
 import { STATUS_TONE, canCancel, cancelOfRow } from "./format";
@@ -19,8 +20,11 @@ const clock = (iso: string) => wibClock(iso).replace(":", ".");
  * own box with the name held in place; on a phone it is a list. A hundred rows at a time; the
  * files always hold all of them. A record made by hand offers Batalkan catatan; once cancelled it
  * stays, as "Dibatalkan".
+ * F9: "Harga satuan" is what the drink cost when it was ordered; "Subtotal" is the same amount for a
+ * drink that is Selesai (what Pengeluaran adds up), blank before that. A drink with no price, or
+ * every drink while `prices` is false (migration 202612050001 has not run), reads "–".
  */
-export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone: boolean; onCancel?: (target: CancelTarget) => void }) {
+export function DetailTable({ rows, phone, prices = true, onCancel }: { rows: RecapRow[]; phone: boolean; prices?: boolean; onCancel?: (target: CancelTarget) => void }) {
   const [newest, setNewest] = useState(true);
   const [limit, setLimit] = useState(PAGE);
   if (!rows.length) return <p className={css.small}>Tidak ada baris untuk filter ini.</p>;
@@ -56,6 +60,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
             <span className={css.cardListMain}>
               <strong>{row.drink}</strong>
               {optionsLabel(row.temperature, row.sugar, row.ice) && <span>{optionsLabel(row.temperature, row.sugar, row.ice)}</span>}
+              {prices && row.unitPrice != null && <span className={css.num}>{formatRupiah(row.unitPrice)}</span>}
               <span>{row.name} · {KIND_LABEL[row.kind]}{row.claimNo ? ` ke-${row.claimNo}` : ""}{row.guest ? ` · ${row.guest}` : ""}{row.room ? ` · ${row.room}` : ""}</span>
               <span>{sheetDate(row.at)} {clock(row.at)} · {row.no}{row.doneBy ? ` · oleh ${row.doneBy}` : ""}</span>
               {row.reason && <span>Catatan tolak: {row.reason}</span>}
@@ -80,7 +85,7 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                   Tanggal<ArrowUpDown size={14} aria-hidden /><span className={css.srOnly}>, urutkan {newest ? "terlama dulu" : "terbaru dulu"}</span>
                 </button>
               </th>
-              {DETAIL_HEAD.slice(1, 22).map(head => <th key={head} scope="col">{head}</th>)}
+              {DETAIL_HEAD.slice(1, 24).map(head => <th key={head} scope="col" className={head === "Harga satuan" || head === "Subtotal" ? css.num : undefined}>{head}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -103,6 +108,8 @@ export function DetailTable({ rows, phone, onCancel }: { rows: RecapRow[]; phone
                 <td>{temperatureCell(row) || "–"}</td>
                 <td>{row.sugar ?? "–"}</td>
                 <td>{iceCell(row) || "–"}</td>
+                <td className={css.num}>{prices && row.unitPrice != null ? formatAmount(row.unitPrice) : "–"}</td>
+                <td className={css.num}>{prices && subtotalOf(row) != null ? formatAmount(subtotalOf(row)!) : "–"}</td>
                 <td><span className={css.statusCell}>{status(row)}{cancel(row)}</span></td>
                 <td>{row.reason || "–"}</td>
                 <td>{row.doneBy || "–"}</td>
