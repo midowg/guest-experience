@@ -152,7 +152,7 @@ suhu, gula, dan takaran es; tamu dan tim rapat tetap) dan **Menu** yang dikelola
 ### Yang harus dilakukan pemilik
 
 1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main` (tidak ada langkah lain).
-2. **Jalankan `supabase/migrations/202612020001_coffee_menu.sql`** di SQL Editor Supabase (salin seluruh
+2. **Jalankan `supabase/migrations/coffee/202612020001_coffee_menu.sql`** di SQL Editor Supabase (salin seluruh
    isi berkas, Run). Satu kali cukup; dijalankan dua kali pun aman.
 3. **Buka `/admin/coffee` → Pengaturan → Opsi minuman**, cek bawaannya (di bawah), ubah bila perlu, Simpan opsi.
 4. **Buka `/admin/coffee` → Menu**, cek 15 minuman tampil dengan fotonya.
@@ -234,7 +234,7 @@ satu migrasi baru; tiga migrasi yang sudah berjalan tidak diubah.
 ### Yang harus dilakukan pemilik
 
 1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main` (tidak ada langkah lain).
-2. **Jalankan `supabase/migrations/202612030003_coffee_menu_audience.sql`** di SQL Editor Supabase (salin
+2. **Jalankan `supabase/migrations/coffee/202612030003_coffee_menu_audience.sql`** di SQL Editor Supabase (salin
    seluruh isi berkas, Run). Satu kali cukup; dijalankan dua kali pun aman.
 3. **Buka `/admin/coffee` → Menu**, cek centangnya (tabel di bawah) dan ubah bila perlu.
 

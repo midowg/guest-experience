@@ -42,7 +42,9 @@ docker cp tests/backend/personal-invitations-bootstrap.sql "$cid:/tmp/bootstrap.
 docker cp tests/backend/personal-invitations-before.sql "$cid:/tmp/before.sql"
 run_sql /tmp/bootstrap.sql
 
-for migration in supabase/migrations/*.sql; do
+# One folder per app (supabase/migrations/<app>/), applied in timestamp order across all of them.
+mapfile -t migrations < <(find supabase/migrations -mindepth 2 -maxdepth 2 -name '*.sql' | awk -F/ '{ print $NF "	" $0 }' | sort | cut -f2)
+for migration in "${migrations[@]}"; do
   file=${migration##*/}
   if [ "$file" = 202610110001_personal_invitations.sql ]; then
     printf 'Menyiapkan acara dan RSVP lama sintetis sebelum migrasi baru...\n'

@@ -122,7 +122,7 @@ describe("where a drink shows (F7)", () => {
 });
 
 describe("the menu's seed", () => {
-  const sql = readFileSync(new URL("../../../supabase/migrations/202612020001_coffee_menu.sql", import.meta.url), "utf8");
+  const sql = readFileSync(new URL("../../../supabase/migrations/coffee/202612020001_coffee_menu.sql", import.meta.url), "utf8");
   it("is the same 15 drinks in the code, in the migration and in the tests' stand-in", () => {
     const seeded = [...sql.matchAll(/^\s*\('([a-z0-9-]+)', '([^']+)', '([^']+)', '(kopi|non-kopi)', array\[([^\]]+)\], (\d+)\)/gm)]
       .map(([, slug, name, description, group, temperatures, sort]) => ({ slug, name, description, group, temperatures: temperatures.replace(/'|\s/g, "").split(","), sort: Number(sort) }));

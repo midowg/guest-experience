@@ -31,7 +31,7 @@ describe("the position of a photo", () => {
   });
 
   it("the table behind it is closed to everyone but the server", () => {
-    const sql = readFileSync(join(process.cwd(), "supabase/migrations/202611300003_main_wam_misi_deteksi.sql"), "utf8");
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/wam-2026/202611300003_main_wam_misi_deteksi.sql"), "utf8");
     expect(sql).toMatch(/enable row level security/);
     expect(sql).toMatch(/revoke all on public\.mw_photo_signals[^;]*from public, anon, authenticated/);
     expect(sql).not.toMatch(/grant [^;]*mw_photo_signals[^;]*(anon|authenticated)/);

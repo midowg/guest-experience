@@ -5,7 +5,7 @@ Memeriksa bahwa migrasi benar-benar melindungi data tamu, bukan hanya terlihat b
 ```bash
 docker run -d --rm --name gh-pgtest -e POSTGRES_PASSWORD=testonly -p 55433:5432 postgres:17-alpine
 docker exec -i gh-pgtest psql -U postgres -v ON_ERROR_STOP=1 -q < tests/sql/harness.sql
-docker exec -i gh-pgtest psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/migrations/202610090001_guest_experience.sql
+docker exec -i gh-pgtest psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/migrations/journey/202610090001_guest_experience.sql
 docker exec -i gh-pgtest psql -U postgres -v ON_ERROR_STOP=1    < tests/sql/policies.sql
 docker stop gh-pgtest
 ```

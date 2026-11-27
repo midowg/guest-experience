@@ -12,6 +12,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Gunakan subjek singkat dan jelas dalam bahasa Indonesia dengan awalan Conventional Commits, misalnya `feat: tambah formulir RSVP`, `fix: rapikan navigasi`, `refactor: sederhanakan editor`, `docs: perbarui panduan`, atau `chore: siapkan CI`. Kelompokkan perubahan berdasarkan tujuan; hindari nama agen, promosi, atau footer tambahan yang tidak diwajibkan instruksi sesi.
 
+## Migrasi Supabase
+
+Semua file migrasi di `supabase/migrations/<aplikasi>/` (journey, karyawan, wam, wam-2026, tv, booking, wlm,
+people, coffee, refleksi; aplikasi baru = folder baru). Nama `YYYYMMDDNNNN_nama.sql` dengan nomor unik di
+semua folder: cek nomor terakhir di semua folder sebelum membuat yang baru. Rincian:
+`supabase/migrations/README.md`; dijaga `src/lib/migrations-layout.test.ts`. Folder `.claude/` dan
+`supabase/.temp/` tidak pernah masuk git.
+
 ## Aturan WAM
 
 Sebelum mengubah aplikasi WAM, Admin WAM, atau super admin, baca `docs/aturan-wam.md`: aturan yang

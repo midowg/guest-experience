@@ -255,7 +255,7 @@ dijalankan pemilik, halaman asli menampilkan pemberitahuan "menunggu migrasi" da
 
 ### F0 Fondasi
 
-**Buat:** `supabase/migrations/202612010001_coffee.sql`; `src/lib/coffee/{types,schemas,quota,access,recap,copy-text,notify,tabs}.ts` + tes;
+**Buat:** `supabase/migrations/coffee/202612010001_coffee.sql`; `src/lib/coffee/{types,schemas,quota,access,recap,copy-text,notify,tabs}.ts` + tes;
 `src/lib/server/coffee/{session,store,settings,claims,meetings,queue,recap,people}.ts` + tes; semua route di §3.4 kecuali push;
 `public/coffee/drinks/*.jpg` (salinan dari `public/dev/coffee/`, yang lama tetap untuk prototipe).
 **Ubah:** `src/lib/routes.ts` (+ `routes.test.ts`); `src/lib/coffee/{menu,rooms}.ts`; `src/lib/admin-access.ts` (`ADMIN_APPS` + `"coffee"`,
@@ -342,7 +342,7 @@ pesan; API GA menolak non-GA (403).
 
 ### F4 Web push ujung ke ujung
 
-**Buat:** `supabase/migrations/202612010002_coffee_push.sql`; `src/lib/server/coffee/push.ts` + tes; `src/app/api/coffee/push/route.ts`,
+**Buat:** `supabase/migrations/coffee/202612010002_coffee_push.sql`; `src/lib/server/coffee/push.ts` + tes; `src/app/api/coffee/push/route.ts`,
 `push/test/route.ts`, `src/app/api/admin/coffee/push/route.ts`; `src/components/coffee/usePush.ts` (izin, `pushSupport`,
 `keyBytes`, langganan pada registrasi `/coffee/sw.js`), `NotifySetup.tsx`.
 **Ubah:** `public/coffee/sw.js` (handler `push` dan `notificationclick` seperti `public/wam/sw.js`; klik membuka `url` dari

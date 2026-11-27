@@ -33,7 +33,7 @@ sampai admin menyalakannya. Ditulis agen fondasi, 17 Nov 2026.
 | Komponen | `src/components/main-wam/{ui,theme,shell}` (UI KIT), `dev/` (fondasi), `<area>/` (agen) | |
 | Admin komponen | `src/components/admin/wam-acara/` (fondasi: `sections.ts`, `WamAcaraNav`, `WamAcaraFrame`, `WamAcaraHome`, `StaffAdmin`, Pengaturan), `.../wam-acara/<isi|modul|kuis>/` (agen E, D, F) | |
 | Pratinjau | `src/app/dev-preview/wam2026/<area>/` | tanpa login, 404 di produksi |
-| Migrasi | `supabase/migrations/202611200001–0003_*.sql` + `tests/backend/main-wam-check.sql` | fondasi (0003 milik modul) |
+| Migrasi | `supabase/migrations/wam-2026/202611200001–0003_*.sql` + `tests/backend/main-wam-check.sql` | fondasi (0003 milik modul) |
 
 ## 2. Arsitektur rute
 

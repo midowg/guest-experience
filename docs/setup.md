@@ -218,7 +218,7 @@ Server MCP baca-saja agar BOD bisa menghubungkan Claude atau ChatGPT ke data
 WAM. Setiap jawaban dijalankan sebagai pemilik tautan, jadi aturan aplikasi tetap berlaku (draf,
 jawaban "Hanya dibaca fasilitator", Data HR, profil per orang).
 
-- **Migrasi:** `supabase/migrations/202611060010_pra_wam_mcp.sql` (tabel `pw_mcp_access` dan
+- **Migrasi:** `supabase/migrations/wam/202611060010_pra_wam_mcp.sql` (tabel `pw_mcp_access` dan
   `pw_mcp_log`), dijalankan pemilik di Supabase SQL Editor. Sebelum itu semua tautan ditolak (401),
   Akses MCP di Pengaturan (kalau ditampilkan) menampilkan "Belum diberikan", dan Admin WAM → Akses MCP menampilkan pemberitahuan.
 - **Memberi akses:** Admin WAM → Orang → Akses MCP (`/admin/wam/mcp`). Pilih akun BOD yang aktif,

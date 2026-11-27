@@ -3,7 +3,7 @@
  * (A peserta, B momen, C panitia/BOD, D modul, E admin) reads these and adds its own types in its
  * own folder (src/lib/main-wam/<area>/). A field added here is a change to the contract.
  *
- * Names follow the tables (supabase/migrations/202611200001–0003): mw_sessions → MwSession, and so
+ * Names follow the tables (supabase/migrations/wam-2026/202611200001–0003): mw_sessions → MwSession, and so
  * on, in camelCase. Times are ISO instants (timestamptz); dates are "YYYY-MM-DD" in WIB.
  */
 import type { PraWamRole } from "@/lib/pra-wam/roles";
