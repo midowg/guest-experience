@@ -419,3 +419,23 @@ describe("Akun WAM", () => {
     expect(screen.getByRole("button", { name: "Buat akun WAM untuk 1 karyawan" })).toHaveProperty("disabled", true);
   });
 });
+
+it("gives a person added by hand their sign-in at once, and says so (27 Nov 2026)", async () => {
+  const added = { ...person, id: "6a000000-0000-4000-8000-000000000011", full_name: "Orang Baru", department: "Corporate", position: "Staff", email: "baru@contoh.id" };
+  const note = "Akun login dibuat untuk 1 orang: satu akun untuk WAM, Booking Kantor, WG People, WG Coffee, dan Wellbeing, dengan password awal.";
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => init.method === "PATCH" ? jobsReply(added, JSON.parse(init.body as string))
+    : reply({ ok: true, message: `Orang Baru ditambahkan. ${note}`, data: { ...added, accounts: { created: 1, withAccount: [added.id], note } } }));
+  vi.stubGlobal("fetch", fetch);
+  render(<EmployeeDirectory initial={[person]} migrated wamAccounts={{ migrated: true, passwordReady: true, withAccount: [], roles: {} }} />);
+  expect(screen.getByText(/0 dari 1 karyawan aktif sudah punya akun/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Tambah karyawan/ }));
+  const panel = within(screen.getByRole("dialog", { name: "Tambah karyawan" }));
+  fireEvent.change(panel.getByLabelText("Nama lengkap *"), { target: { value: "Orang Baru" } });
+  fireEvent.change(panel.getByLabelText("Departemen *"), { target: { value: "Corporate" } });
+  fireEvent.change(panel.getByLabelText("Nama jabatan *"), { target: { value: "Staff" } });
+  fireEvent.click(panel.getByRole("button", { name: "Tambah karyawan" }));
+  expect(await screen.findByText(`Orang Baru ditambahkan. ${note}`)).toBeTruthy();
+  expect(screen.getByText(/1 dari 2 karyawan aktif sudah punya akun/)).toBeTruthy();
+  // The server made the account with the save: no separate account request.
+  expect(fetch.mock.calls.map(call => call[0])).toEqual(["/api/admin/employees", `/api/admin/employees/${added.id}`]);
+});

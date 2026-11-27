@@ -1,4 +1,5 @@
 import { employeeCreateSchema, employeeImportSchema } from "@/lib/employees";
+import { autoAccounts } from "@/lib/server/pra-wam/accounts";
 import { createEmployee, importEmployees, listEmployees } from "@/lib/server/employees";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
@@ -21,10 +22,14 @@ export async function POST(request: Request) {
     const body = await readJson(request, 1_000_000) as { employee?: unknown };
     if (body && typeof body === "object" && "employee" in body) {
       const saved = await createEmployee(validate(employeeCreateSchema, body.employee));
-      return success(saved, `${saved.full_name} ditambahkan.`);
+      // Their sign-in at once (27 Nov 2026): the same account opens every employee app.
+      const accounts = await autoAccounts([saved.id]);
+      return success({ ...saved, accounts }, `${saved.full_name} ditambahkan.${accounts?.note ? ` ${accounts.note}` : ""}`);
     }
     const { rows } = validate(employeeImportSchema, body);
     const result = await importEmployees(rows);
-    return success(result, `${result.added} karyawan baru, ${result.updated} diperbarui, ${result.unchanged} tetap.`);
+    // Everyone active without a sign-in gets one, the newcomers of this import among them.
+    const accounts = await autoAccounts("all");
+    return success({ ...result, accounts }, `${result.added} karyawan baru, ${result.updated} diperbarui, ${result.unchanged} tetap.${accounts?.note ? ` ${accounts.note}` : ""}`);
   });
 }

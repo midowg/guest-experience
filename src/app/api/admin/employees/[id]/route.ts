@@ -4,6 +4,7 @@ import { deleteEmployee, updateEmployee } from "@/lib/server/employees";
 import { JOBS_GM_MIGRATION, JOBS_MIGRATION, setJobs } from "@/lib/server/employee-jobs";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
+import { autoAccounts } from "@/lib/server/pra-wam/accounts";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
@@ -21,15 +22,22 @@ export async function PATCH(request: Request, { params }: Params) {
     const body = await readJson(request, 40_000);
     const { jobs: rawJobs, ...rest } = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
     const patch = validate(employeePatchSchema, rest);
-    if (rawJobs === undefined) return success(await updateEmployee(id, patch), "Data karyawan disimpan.");
+    // Someone given an email or made active again gets their sign-in now (27 Nov 2026), if they had none.
+    const said = (accounts: Awaited<ReturnType<typeof autoAccounts>>) => accounts?.note ? ` ${accounts.note}` : "";
+    if (rawJobs === undefined) {
+      const employee = await updateEmployee(id, patch);
+      const accounts = await autoAccounts([id]);
+      return success({ ...employee, accounts }, `Data karyawan disimpan.${said(accounts)}`);
+    }
     const jobs = validate(employeeJobsSchema, rawJobs);
     if (Object.keys(patch).length) await updateEmployee(id, patch);
     const saved = await setJobs(id, jobs);
+    const accounts = await autoAccounts([id]);
     const waits = [
       !saved.migrated && jobs.length > 1 ? `pekerjaan lain menunggu migrasi ${JOBS_MIGRATION}` : "",
       saved.migrated && !saved.gmReady ? `GM, tim, dan atasan HOD menunggu migrasi ${JOBS_GM_MIGRATION} (sementara GM disimpan sebagai HOD)` : "",
     ].filter(Boolean);
-    return success(saved, waits.length ? `Pekerjaan utama disimpan; ${waits.join("; ")}.` : "Data karyawan disimpan.");
+    return success({ ...saved, accounts }, `${waits.length ? `Pekerjaan utama disimpan; ${waits.join("; ")}.` : "Data karyawan disimpan."}${said(accounts)}`);
   });
 }
 
