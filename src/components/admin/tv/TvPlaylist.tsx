@@ -11,7 +11,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { uploadSlide } from "@/components/admin/wam/PraWamTv";
 import akun from "@/components/admin/wam/akun/akun.module.css";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoLength, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, videoSeconds, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { isTemplateKind, liteNote, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoLength, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, videoSeconds, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { cutOutPerson } from "./cutout";
@@ -270,7 +270,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           { value: "tayang", label: "Tayang", count: active },
           { value: "sembunyi", label: "Disembunyikan", count: items.length - active },
         ]} />
-        <p className={css.plHint}>{shown === "semua" ? "Ketuk satu tayangan untuk mengaturnya. Panah mengubah urutan tayang." : "Urutan diubah di tampilan Semua."}</p>
+        <p className={css.plHint}>{shown === "semua" ? "Ketuk satu tayangan untuk mengaturnya. Panah mengubah urutan tayang." : "Urutan diubah di tampilan Semua."} Tanda <strong>TV</strong> = tayang di papan biasa, <strong>Lite</strong> = tayang juga di TV lama.</p>
       </div>
       {items.length === 0 ? <div className={css.plEmpty}>
         <p>Belum ada tayangan, jadi TV menulis &quot;Belum ada yang ditayangkan&quot;.</p>
@@ -284,11 +284,11 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           const where = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
           const long = item.kind === "video" ? "Sampai video selesai" : `${item.seconds} detik`;
           const line = [sourceOf(item.kind), long, where, days,
-            item.kind === "video" ? (item.sound ? "Dengan suara" : "Tanpa suara") : "",
             item.kind === "gambar" && list.rowsReady && item.strip ? "Baris foto bawah" : ""].filter(Boolean).join(" · ");
           const note = item.kind === "sambutan" ? (list.welcomes.length ? `Hari ini: ${list.welcomes.join(", ")}` : "Tidak ada kunjungan terbit hari ini, jadi dilewati.")
             : item.kind === "ultah" ? [item.call && `Happy Birthday ${item.call}`, item.slideId ? "" : "Belum ada foto."].filter(Boolean).join(" · ")
             : isTyped(item.kind) ? item.body : item.kind === "video" && !item.videoFile ? youtubeWatch(item.body) : "";
+          const lite = liteNote(item);
           return <li key={item.id} className={css.plRow} data-off={!item.active}>
             <span className={css.plOrder} aria-label={`Urutan ${index + 1}`}>{index + 1}</span>
             <button type="button" className={css.plOpen} aria-label={`Atur ${name}`} aria-describedby={`baris-${item.id}`} disabled={!!busy}
@@ -305,6 +305,12 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
                 <strong className={css.plName}>{name}</strong>
                 <span className={css.plLine}>{line}</span>
                 {note && <span className={css.plNote}>{note}</span>}
+                {/* Where it plays: the board every TV gets, and the one for old TVs (which passes some videos over). */}
+                <span className={css.plChips}>
+                  <span className={css.plChip} title="Tayang di papan biasa (/tv)">TV</span>
+                  <span className={css.plChip} data-off={!lite.plays || undefined} title={lite.plays ? "Tayang juga di papan lite untuk TV lama (/tv/lite)" : lite.why}>{lite.plays ? "Lite" : "Tidak di lite"}</span>
+                  {item.kind === "video" && item.sound && <span className={css.plChip} title="Diputar dengan suara di TV yang boleh bersuara">Bersuara</span>}
+                </span>
               </span>
               <span className={css.plState}>
                 {isTaking ? <Pill tone="warn">Mengambil alih</Pill> : <Pill tone={item.active ? "ok" : "neutral"}>{item.active ? "Tayang" : "Disembunyikan"}</Pill>}

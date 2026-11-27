@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { tvApi } from "@/lib/routes";
+import { tvApi, tvPath } from "@/lib/routes";
+import { looksLikeTvSlug } from "@/lib/pra-wam/tv";
 import { handle } from "@/lib/server/http";
 import { ServiceError } from "@/lib/server/config";
 import { screenForKey, tvFeed } from "@/lib/server/pra-wam/tv";
+import { noteVisit } from "@/lib/server/pra-wam/tv-visits";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ key: string }> };
@@ -23,6 +25,8 @@ export async function GET(request: Request, { params }: Params) {
     const width = side(search.get("w")), height = side(search.get("h"));
     const screen = await screenForKey(key, width && height ? { width, height } : undefined, new Date(), search.get("item") ?? undefined);
     if (!screen) throw new ServiceError(404, "Tautan TV ini tidak berlaku.");
+    // Which device asks, for Pantauan. A TV still on its long key is noted without the key, which is a secret.
+    await noteVisit(request, { address: looksLikeTvSlug(key) ? tvPath(key) : "/tv/(tautan lama)", version: search.get("v") === "hp" ? "hp" : "papan", width, height });
     return NextResponse.json({ ok: true, data: await tvFeed(slideId => tvApi.image(key, slideId), new Date(), screen) }, { headers: HEADERS });
   });
 }

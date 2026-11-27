@@ -51,7 +51,11 @@ describe("Admin TV → Tayangan", () => {
     expect(rows[0].textContent).toContain("Dari WAM · 15 detik · Semua TV · Setiap hari");
     expect(rows[1].textContent).toContain("Disembunyikan");
     expect(rows[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
-    expect(rows[4].textContent).toContain("Sampai video selesai · Semua TV · Setiap hari · Tanpa suara");
+    expect(rows[4].textContent).toContain("Sampai video selesai · Semua TV · Setiap hari");
+    // Small chips say where each row plays: every row on the board, and on the one for old TVs unless that passes it over (a YouTube video).
+    expect(rows[0].textContent).toContain("TVLite");
+    expect(rows[4].textContent).toContain("TVTidak di lite");
+    expect(within(rows[4]).getByText("Tidak di lite").getAttribute("title")).toContain("YouTube");
     expect(rows[5].textContent).toContain("Lobi · 1 Des – 10 Des · 08.00–17.00");
     // Each row opens with a drawing of its slide; a typed one shows its own words in it.
     expect(rows.every(item => !!item.querySelector("svg[viewBox='0 0 160 90']"))).toBe(true);

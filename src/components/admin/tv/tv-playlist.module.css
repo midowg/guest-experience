@@ -27,6 +27,10 @@
 .plRow[data-off="true"] .plName { color: var(--cs-muted); }
 .plLine { color: var(--cs-muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
 .plNote { display: -webkit-box; overflow: hidden; color: var(--cs-subtle); font-size: 13px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow-wrap: anywhere; }
+/* Where a row plays, as small chips under its line: TV, Lite (struck out when the old-TV board passes it over), Bersuara. */
+.plChips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.plChip { padding: 2px 8px; border: 1px solid var(--cs-line); border-radius: 999px; background: var(--cs-surface); color: var(--cs-text); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.plChip[data-off] { border-style: dashed; color: var(--cs-subtle); }
 .plState { display: flex; align-items: center; gap: 8px; color: var(--cs-subtle); }
 .plMove { display: flex; gap: 4px; }
 .plStep { display: grid; width: 44px; height: 44px; place-items: center; padding: 0; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); color: var(--cs-text); cursor: pointer; }

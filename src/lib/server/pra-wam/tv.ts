@@ -14,6 +14,8 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignDownload, presignUpload, readObject, removeObjects, uploadedStart, verifyUpload } from "../r2";
 import { createPrivilegedClient, createPublicClient } from "../supabase/admin";
+import { readVisits } from "./tv-visits";
+import type { TvVisit } from "@/lib/pra-wam/tv-visits";
 import type { WamLook } from "@/lib/pra-wam/theme";
 import { listRooms } from "./appraisal";
 import { roomUsesBetween, timelineItems } from "./sessions";
@@ -162,6 +164,8 @@ export type TvAdmin = {
   rowsReady?: boolean;
   /** Whether a TV can be kept silent (migration 202612030001 has run). */
   soundReady?: boolean;
+  /** The devices that opened a TV address in the last days, latest first; `visitsReady` is false before migration 202612030002. */
+  visits?: TvVisit[]; visitsReady?: boolean;
 };
 
 /** The board's mode and QR code arrive with this one; before it the board is dark, without a QR code. */
@@ -226,10 +230,11 @@ export async function tvAdmin(): Promise<TvAdmin> {
   // Which TVs are kept silent: a column of its own migration; every TV may play sound before it.
   const { data: heard, error: soundError } = await client.from("pw_tv_screens").select("id,sound");
   const quiet = new Set(soundError ? [] : ((heard ?? []) as { id: string; sound: boolean }[]).filter(row => row.sound === false).map(row => row.id));
+  const opened = await readVisits(new Date(now));
   return {
     items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), videoFile: row.kind === "video" && isVideoFile(row.body), ...(row.kind === "video" ? { sound: row.extra?.sound === true, length: row.extra?.length ?? null } : {}), call: row.extra?.call ?? "", date: row.extra?.date ?? "", ...(row.kind === "gambar" ? { strip: inStrip({ kind: row.kind, strip: row.extra?.strip, fromMeeting: !!row.slide_id && fromMeeting.has(row.slide_id) }) } : {}), ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
-    videoReady: !videoError, rowsReady: !layoutError, soundReady: !soundError, welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
+    videoReady: !videoError, rowsReady: !layoutError, soundReady: !soundError, visits: opened.visits, visitsReady: opened.ready, welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
     screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null, playsVideo: !silent.has(row.id), layout: layouts.get(row.id) ?? "penuh", sound: !quiet.has(row.id) })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,

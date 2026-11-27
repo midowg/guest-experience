@@ -10,6 +10,8 @@ import css from "@/components/admin/wam/tv-admin.module.css";
 import { agoLabel, tvIsOn } from "@/lib/pra-wam/tv";
 import { absolute, praWamTvApi, TV_HOME_PATH, tvAdminPath, tvPath } from "@/lib/routes";
 import type { TvAdmin, TvScreen } from "@/lib/server/pra-wam/tv";
+import { wibDate } from "@/lib/pra-wam/appraisal";
+import { TvVisitors, visitorCards } from "./TvVisitors";
 
 /** How often the page asks again while it is open: a TV asks every ten seconds itself. */
 const REFRESH_MS = 15_000;
@@ -52,6 +54,8 @@ export function TvMonitor({ initial, crumbs, title, origin }: { initial: TvAdmin
 
   const on = list.screens.filter(screen => tvIsOn(screen.lastSeenAt, now)).length;
   const playing = list.items?.filter(item => item.active).length ?? null;
+  const today = wibDate(list.now);
+  const opened = visitorCards(list.visits ?? [], today, now);
   return <>
     <PageHeader crumbs={crumbs} title={title} subtitle="TV mana yang menyala dan sedang menayangkan apa. Halaman ini memperbarui diri tiap 15 detik."
       actions={list.migrated ? <>
@@ -64,6 +68,8 @@ export function TvMonitor({ initial, crumbs, title, origin }: { initial: TvAdmin
       <StatRow label="Angka penting">
         <StatCard label="TV menyala" value={`${on}/${list.screens.length}`} tone={list.screens.length > 0 && on === 0 ? "warn" : undefined} note={list.screens.length ? "dari TV yang punya alamat sendiri" : "Belum ada TV beralamat sendiri"} href={tvAdminPath.screens} />
         {playing != null && <StatCard label="Tayangan aktif" value={playing} note={`${list.items!.length} baris di daftar tayangan`} href={tvAdminPath.playlist} />}
+        {list.visitsReady && <StatCard label="Pembuka hari ini" value={opened.today} note={opened.kinds} href="#tv-pembuka" />}
+        {list.visitsReady && <StatCard label="Sedang membuka" value={opened.now} note={opened.lite ? `${opened.lite} memakai papan lite hari ini` : "Tidak ada yang memakai papan lite hari ini"} href="#tv-pembuka" />}
         <StatCard label="Mode papan" value={list.settings.mode === "light" ? "Terang" : "Gelap"} note={list.settings.qrShow ? "Kode QR tampil" : "Tanpa kode QR"} href={tvAdminPath.look} />
       </StatRow>
 
@@ -93,6 +99,8 @@ export function TvMonitor({ initial, crumbs, title, origin }: { initial: TvAdmin
         {list.items == null && <p className={akun.hint}>Muat ulang TV dari jauh dan &quot;sedang menayangkan&quot; menunggu migrasi 202611100007_pw_tv_playlist.sql.</p>}
         <p className={akun.hint}>Yang dicatat adalah tayangan terakhir yang dilaporkan TV, jadi bisa tertinggal beberapa detik.</p>
       </section>
+
+      <TvVisitors visits={list.visits ?? []} ready={!!list.visitsReady} today={today} now={now} migration="202612030002_pw_tv_visits.sql" />
     </>}
   </>;
 }

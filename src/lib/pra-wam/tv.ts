@@ -510,6 +510,15 @@ export type TvVideoStart = z.infer<typeof tvVideoStartSchema>;
  * for a YouTube video, that board passes the video over, as before.
  */
 export const tvVideoLength = { least: 3, most: 30 * 60 } as const;
+/**
+ * Whether a row plays on the board for old TVs (/tv/lite), and why not when it does not: that
+ * board plays everything but a YouTube video and a video file whose length is not known.
+ */
+export function liteNote(row: { kind: string; videoFile?: boolean; length?: number | null }): { plays: boolean; why: string } {
+  if (row.kind !== "video") return { plays: true, why: "" };
+  if (!row.videoFile) return { plays: false, why: "TV lama tidak bisa memutar video YouTube. Unggah videonya sebagai berkas." };
+  return row.length ? { plays: true, why: "" } : { plays: false, why: "Lama videonya belum diisi, jadi TV lama melewatinya. Isi di bagian Suara." };
+}
 const videoLength = z.number().int().min(tvVideoLength.least, "Lama video paling singkat 3 detik.").max(tvVideoLength.most, "Lama video paling lama 30 menit.");
 /** A length as read from a file: whole seconds within the limits, or null for one that cannot be used. */
 export function videoSeconds(duration: unknown): number | null {
