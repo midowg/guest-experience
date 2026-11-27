@@ -1,0 +1,50 @@
+/* RSVP (27 Nov 2026, docs/standar-admin.md): chips, search, Unduh CSV; a table on a wide screen, cards on a phone. */
+.page { --r-line: var(--line, #e4e7ec); --r-card: #fff; --r-ink: var(--color-text, #0f172a); --r-soft: #5b6472; --r-accent: var(--blue, #1f4fd1);
+  display: grid; gap: 14px; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { height: 36px; padding: 0 14px; border: 1px solid var(--r-line); border-radius: 999px; background: var(--r-card); color: var(--r-soft); font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--r-ink); border-color: var(--r-ink); color: #fff; }
+.tools { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.search { display: flex; align-items: center; gap: 8px; height: 44px; width: 18rem; flex: 0 1 18rem; min-width: 0; margin: 0; padding: 0 12px; border: 1px solid var(--r-line); border-radius: 12px; background: var(--r-card); color: var(--r-soft); }
+.search:focus-within { border-color: var(--r-accent); }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--r-ink); font: inherit; font-size: 16px; outline: none; }
+.export { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border: 1px solid var(--r-line); border-radius: 12px; background: var(--r-card); color: var(--r-ink); font-weight: 700; text-decoration: none; }
+.export:hover { border-color: var(--r-accent); color: var(--r-accent); }
+.note { display: flex; align-items: flex-start; line-height: 1.5; gap: 6px; margin: 0; color: var(--r-soft); font-size: .8125rem; }
+.note svg { flex: none; margin-top: 3px; }
+.empty { padding: 20px; border: 1px dashed var(--r-line); border-radius: 16px; color: var(--r-soft); }
+.wrap { overflow-x: auto; border: 1px solid var(--r-line); border-radius: 16px; background: var(--r-card); }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th { padding: 10px 14px; border-bottom: 1px solid var(--r-line); color: var(--r-soft); font-size: .75rem; font-weight: 700; text-align: left; white-space: nowrap; }
+.table td { padding: 12px 14px; border-top: 1px solid var(--r-line); vertical-align: top; }
+.table tbody tr:first-child td { border-top: 0; }
+.table tbody tr:hover { background: #f8f9fb; }
+.table td strong { display: block; color: var(--r-ink); }
+.table td small { display: block; color: var(--r-soft); }
+.kind { display: inline-block; margin-top: 4px; color: var(--r-soft); font-size: .75rem; }
+.pill { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.pill[data-tone="ok"] { background: #dcfce7; color: #15803d; }
+.pill[data-tone="no"] { background: #ffe4e6; color: #be123c; }
+.line { display: block; }
+.muted { color: #8a93a3; }
+.when { color: var(--r-soft); white-space: nowrap; }
+
+/* A phone: each answer is a card, its fields labelled. */
+@media (max-width: 48rem) {
+  .tools, .search { width: 100%; }
+  .search { flex: 1; }
+  .wrap { overflow: visible; border: 0; background: none; }
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tbody { display: grid; gap: 10px; }
+  .table tr { padding: 12px 14px; border: 1px solid var(--r-line); border-radius: 14px; background: var(--r-card); }
+  .table td { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--r-line); }
+  .table td::before { content: attr(data-label); color: var(--r-soft); font-size: .75rem; font-weight: 700; }
+  .table td:first-child { display: block; padding-top: 0; border-top: 0; }
+  .table td:first-child::before { content: none; }
+  .table tbody tr:first-child td:not(:first-child) { border-top: 1px solid var(--r-line); }
+  .table tbody tr:hover { background: var(--r-card); }
+  .pill { justify-self: start; }
+  .when { white-space: normal; }
+}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
-import { CircleCheck, CircleX, Copy, Eye, EyeOff, FileUp, Link2, MessageCircle, Pencil, RefreshCw, Send, Upload, UserPlus, Users, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Ban, CircleCheck, CircleX, Copy, Eye, EyeOff, FileUp, Link2, MessageCircle, MoreHorizontal, Pencil, RefreshCw, Search, Send, ShieldAlert, Upload, UserPlus, Users, X } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { localPhone, MAX_COMPANIONS, MAX_IMPORT, parseGuestList, type ParsedGuest } from "@/lib/guest-import";
@@ -11,6 +11,7 @@ import type { EventRecord } from "@/lib/types";
 import type { EventInvitation } from "@/lib/server/invitations";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import styles from "@/components/admin/admin.module.css";
+import g from "./guests.module.css";
 import { adminApi } from "@/lib/routes";
 
 type Filter = "all" | "unsent" | "unopened" | "unanswered" | "yes" | "no" | "revoked";
@@ -58,7 +59,7 @@ export function InvitationManager({ event, initial, migrated, origin = "" }: { e
     catch (err) { setError(errorMessage(err)); }
   }
   async function patch(item: EventInvitation, body: object, done: string) {
-    await run(() => adminRequest<EventInvitation>(`${base}/${item.id}`, { method: "PATCH", body: JSON.stringify(body) }), result => { if (result.data) merge([result.data]); say(done); setEditing(null); });
+    await run(() => adminRequest<EventInvitation>(`${base}/${item.id}`, { method: "PATCH", body: JSON.stringify(body) }), result => { if (result.data) merge([result.data]); say(done); });
   }
   async function copyLinks(rows: EventInvitation[]) {
     try {
@@ -70,23 +71,54 @@ export function InvitationManager({ event, initial, migrated, origin = "" }: { e
   const current = queue ? items.find(item => item.id === queue.ids[queue.index]) : undefined;
   function advance() { setQueue(q => q && q.index + 1 < q.ids.length ? { ...q, index: q.index + 1 } : null); }
 
-  return <div className="stack">
+  const [sheet, setSheet] = useState<"add" | "edit" | null>(null);
+  const [query, setQuery] = useState("");
+  const term = query.trim().toLowerCase();
+  // A number is searched only when the search is a number (4 digits or more, spaces and + allowed).
+  const digits = /^[\d\s+()-]+$/.test(term) ? term.replace(/\D/g, "").replace(/^0/, "") : "";
+  const visible = term ? shown.filter(item => item.name.toLowerCase().includes(term) || (digits.length >= 4 && (item.phone ?? "").includes(digits))) : shown;
+  const editingItem = editing ? items.find(item => item.id === editing) : undefined;
+  // A row menu closes on a tap elsewhere or on Escape, like the one on Beranda.
+  useEffect(() => {
+    const close = (target: EventTarget | null) => document.querySelectorAll<HTMLDetailsElement>("details[data-card-menu][open]").forEach(menu => { if (!(target instanceof Node && menu.contains(target))) menu.open = false; });
+    const onClick = (e: MouseEvent) => close(e.target);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(null); };
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("click", onClick); document.removeEventListener("keydown", onKey); };
+  }, []);
+  function openEdit(id: string) { setEditing(id); setSheet("edit"); }
+  function closeSheet() { setSheet(null); setEditing(null); }
+
+  return <div className={g.page}>
     {!migrated && <Notice tone="warning">Nomor WA, jumlah pendamping, impor massal, dan status terkirim/dibuka menunggu migrasi <code>202610200003_guest_operations.sql</code>. Sampai migrasi diterapkan, Anda tetap bisa menambah tamu satu per satu dan menyalin tautannya.</Notice>}
     {event.invitation_mode !== "personal" && <Notice>Mode acara masih tautan umum. Ubah ke “Tautan per tamu” di editor dan simpan agar tautan individual dapat dibuka.</Notice>}
-    <p className={styles.lead}>Tautan pribadi bukan bukti identitas: siapa pun yang memegangnya dapat membuka undangan dan mengubah RSVP. Kirim satu per satu, jangan sebar daftar tautan di grup.</p>
 
-    <div className={styles.guestStats} role="list" aria-label="Ringkasan tamu">
-      <span role="listitem"><Users size={16} aria-hidden="true" /> {items.length} tamu</span>
-      {migrated && <span role="listitem"><Send size={16} aria-hidden="true" /> {items.length - counts.unsent - counts.revoked} terkirim</span>}
-      {migrated && <span role="listitem"><Eye size={16} aria-hidden="true" /> {items.filter(item => item.first_opened_at).length} dibuka</span>}
-      <span role="listitem"><CircleCheck size={16} aria-hidden="true" /> {counts.yes} hadir · {counts.no} tidak</span>
+    <div className={g.stats} role="list" aria-label="Ringkasan tamu">
+      <span role="listitem" className={g.stat}><Users size={18} aria-hidden="true" /><b>{items.length}</b> tamu</span>
+      {migrated && <span role="listitem" className={g.stat}><Send size={18} aria-hidden="true" /><b>{items.length - counts.unsent - counts.revoked}</b> terkirim</span>}
+      {migrated && <span role="listitem" className={g.stat}><Eye size={18} aria-hidden="true" /><b>{items.filter(item => item.first_opened_at).length}</b> dibuka</span>}
+      <span role="listitem" className={g.stat}><CircleCheck size={18} aria-hidden="true" /><b>{counts.yes}</b> hadir · {counts.no} tidak</span>
+    </div>
+
+    <div className={g.head}>
+      <nav className={g.chips} aria-label="Saring tamu">
+        {filters.filter(f => migrated || !["unsent", "unopened"].includes(f.key)).map(f => <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label} <span>{counts[f.key]}</span></button>)}
+      </nav>
+      <div className={g.tools}>
+        <label className={g.search}><Search size={16} aria-hidden="true" /><input type="search" value={query} onChange={change => setQuery(change.target.value)} placeholder="Cari nama atau nomor" aria-label="Cari tamu" /></label>
+        <button type="button" className={g.primary} disabled={busy || items.length >= 1000} onClick={() => { setEditing(null); setSheet("add"); }}><UserPlus size={18} aria-hidden="true" /> Tambah tamu</button>
+      </div>
     </div>
 
     {error && <Notice tone="error" role="alert">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
 
-    <AddGuest disabled={busy || items.length >= 1000} migrated={migrated} onAdd={(body, reset) => run(() => adminRequest<EventInvitation>(base, { method: "POST", body: JSON.stringify(body) }), result => { if (result.data) setItems(list => [...list, result.data!]); reset(); say(`Undangan untuk ${body.name} dibuat.`); })} />
-    {migrated && <ImportGuests existing={items} disabled={busy} remaining={1000 - items.length} onImport={(rows, reset) => run(() => adminRequest<EventInvitation[]>(base, { method: "POST", body: JSON.stringify({ rows }) }), result => { setItems(list => [...list, ...(result.data ?? [])]); reset(); say(`${result.data?.length ?? 0} tamu diimpor.`); })} />}
+    {active.length > 0 && <div className={g.bulk}>
+      <button type="button" onClick={() => copyLinks(active)}><Copy size={16} aria-hidden="true" /> Salin {active.length} tautan</button>
+      <button type="button" onClick={() => setQueue({ kind: "invite", ids: active.map(item => item.id), index: 0 })}><MessageCircle size={16} aria-hidden="true" /> Kirim undangan via WhatsApp ({active.length})</button>
+      {unanswered.length > 0 && <button type="button" onClick={() => setQueue({ kind: "reminder", ids: unanswered.map(item => item.id), index: 0 })}><Send size={16} aria-hidden="true" /> Kirim pengingat ({unanswered.length} belum menjawab)</button>}
+    </div>}
 
     {queue && <div className={styles.sendQueue} role="region" aria-label="Kirim WhatsApp berurutan">
       {current ? <>
@@ -101,41 +133,68 @@ export function InvitationManager({ event, initial, migrated, origin = "" }: { e
       </> : <p>Antrean selesai.</p>}
     </div>}
 
-    <nav className={styles.filterChips} aria-label="Saring tamu">
-      {filters.filter(f => migrated || !["unsent", "unopened"].includes(f.key)).map(f => <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label} <span>{counts[f.key]}</span></button>)}
-    </nav>
-    {active.length > 0 && <div className={styles.actions}>
-      <Button type="button" variant="secondary" onClick={() => copyLinks(active)}><Copy size={16} aria-hidden="true" /> Salin {active.length} tautan</Button>
-      <Button type="button" variant="secondary" onClick={() => setQueue({ kind: "invite", ids: active.map(item => item.id), index: 0 })}><MessageCircle size={16} aria-hidden="true" /> Kirim undangan via WhatsApp ({active.length})</Button>
-      {unanswered.length > 0 && <Button type="button" variant="secondary" onClick={() => setQueue({ kind: "reminder", ids: unanswered.map(item => item.id), index: 0 })}><Send size={16} aria-hidden="true" /> Kirim pengingat ({unanswered.length} belum menjawab)</Button>}
-    </div>}
-
-    {shown.length === 0 ? <p className="muted">{items.length ? "Tidak ada tamu untuk saringan ini." : "Belum ada tamu. Tambahkan satu per satu atau impor dari Excel."}</p>
-      : <ul className={styles.guestList}>{shown.map(item => <li key={item.id} className={styles.guestItem}>
-        {editing === item.id ? <EditGuest item={item} migrated={migrated} disabled={busy} onCancel={() => setEditing(null)} onSave={body => patch(item, migrated ? { action: "update", ...body } : { action: "rename", name: body.name }, "Data tamu diperbarui.")} />
-          : <>
-            <div className={styles.guestHead}>
-              <strong>{item.name}</strong>
-              {migrated && item.party_size_max > 1 && <span className={styles.guestBadge}>+{item.party_size_max - 1} pendamping</span>}
-              {!item.active && <span className={`${styles.guestBadge} ${styles.badgeMuted}`}>Tautan dicabut</span>}
-            </div>
-            <p className={styles.guestMeta}>
+    {visible.length === 0 ? <div className={g.empty}>
+      <p>{items.length ? term ? "Tidak ada tamu yang cocok dengan pencarian." : "Tidak ada tamu untuk saringan ini." : "Belum ada tamu. Tambahkan satu per satu atau impor dari Excel."}</p>
+      {!items.length && <button type="button" className={g.primary} onClick={() => setSheet("add")}><UserPlus size={18} aria-hidden="true" /> Tambah tamu pertama</button>}
+    </div>
+      : <ul className={g.rows} aria-label="Daftar tamu">{visible.map(item => {
+        const initials = item.name.split(/\s+/).filter(Boolean).slice(-2).map(word => word[0]).join("").toUpperCase();
+        return <li key={item.id} className={g.row} data-off={!item.active || undefined}>
+          <span className={g.avatar} aria-hidden="true">{initials}</span>
+          <div className={g.main}>
+            <button type="button" className={g.name} onClick={() => openEdit(item.id)} aria-label={`Ubah ${item.name}`}><strong>{item.name}</strong></button>
+            <p className={g.meta}>
               {item.phone ? localPhone(item.phone) : migrated ? "Tanpa nomor WA" : ""}
-              {migrated && <> · {item.last_sent_at ? `Dikirim ${formatDateTime(item.last_sent_at)}${item.send_count > 1 ? ` (${item.send_count}×)` : ""}` : "Belum dikirim"}</>}
+              {migrated && item.party_size_max > 1 && <span className={g.tag}>+{item.party_size_max - 1} pendamping</span>}
+              {!item.active && <span className={`${g.tag} ${g.tagMuted}`}>Tautan dicabut</span>}
+              {migrated && <span>{item.last_sent_at ? `Dikirim ${formatDateTime(item.last_sent_at)}${item.send_count > 1 ? ` (${item.send_count}×)` : ""}` : "Belum dikirim"}</span>}
             </p>
-            <p className={styles.guestStatus}>
-              {migrated && (item.first_opened_at ? <span><Eye size={14} aria-hidden="true" /> Dibuka {item.open_count}× · terakhir {formatDateTime(item.last_opened_at!)}</span> : <span className={styles.statusQuiet}><EyeOff size={14} aria-hidden="true" /> Belum dibuka</span>)}
-              {item.rsvp ? <span className={item.rsvp.attendance === "yes" ? styles.statusYes : styles.statusNo}>{item.rsvp.attendance === "yes" ? <CircleCheck size={14} aria-hidden="true" /> : <CircleX size={14} aria-hidden="true" />} {item.rsvp.attendance === "yes" ? "Hadir" : "Tidak hadir"}</span> : <span className={styles.statusQuiet}>Belum menjawab</span>}
-            </p>
-            <div className={styles.guestActions}>
-              {item.active && <a className="button button--secondary" href={whatsappUrl(item.phone, textOf(item.rsvp ? "invite" : item.last_sent_at ? "reminder" : "invite", item))} target="_blank" rel="noopener noreferrer" onClick={() => void markSent([item.id])}><MessageCircle size={16} aria-hidden="true" /> {item.last_sent_at && !item.rsvp ? "Ingatkan" : "Kirim WA"}<span className="sr-only"> ke {item.name} (tab baru)</span></a>}
-              {item.active && <Button type="button" variant="secondary" onClick={() => copyLinks([item])}><Link2 size={16} aria-hidden="true" /> Salin tautan</Button>}
-              <Button type="button" variant="quiet" disabled={busy} onClick={() => setEditing(item.id)}><Pencil size={16} aria-hidden="true" /> Ubah<span className="sr-only"> {item.name}</span></Button>
-              <Button type="button" variant="quiet" disabled={busy} onClick={() => window.confirm("Terbitkan tautan baru? Tautan lama langsung tidak berlaku; RSVP tersimpan tetap ada.") && patch(item, { action: "rotate" }, "Tautan baru diterbitkan.")}><RefreshCw size={16} aria-hidden="true" /> Tautan baru</Button>
-              {item.active && <Button type="button" variant="danger" disabled={busy} onClick={() => window.confirm("Cabut tautan ini? Tamu tidak dapat membuka halaman atau memperbarui RSVP melalui tautan lama.") && patch(item, { action: "revoke" }, "Tautan dicabut.")}>Cabut</Button>}
-            </div>
-          </>}
-      </li>)}</ul>}
+          </div>
+          <div className={g.state}>
+            {migrated && (item.first_opened_at ? <span className={g.pill} data-tone="info" title={`Terakhir ${formatDateTime(item.last_opened_at!)}`}><Eye size={13} aria-hidden="true" /> Dibuka {item.open_count}×</span> : <span className={g.pill} data-tone="muted"><EyeOff size={13} aria-hidden="true" /> Belum dibuka</span>)}
+            {item.rsvp ? <span className={g.pill} data-tone={item.rsvp.attendance === "yes" ? "ok" : "no"}>{item.rsvp.attendance === "yes" ? <CircleCheck size={13} aria-hidden="true" /> : <CircleX size={13} aria-hidden="true" />} {item.rsvp.attendance === "yes" ? "Hadir" : "Tidak hadir"}</span> : <span className={g.pill} data-tone="wait">Belum menjawab</span>}
+          </div>
+          <div className={g.actions}>
+            {item.active && <a className={g.wa} href={whatsappUrl(item.phone, textOf(item.rsvp ? "invite" : item.last_sent_at ? "reminder" : "invite", item))} target="_blank" rel="noopener noreferrer" onClick={() => void markSent([item.id])}><MessageCircle size={16} aria-hidden="true" /><span>{item.last_sent_at && !item.rsvp ? "Ingatkan" : "Kirim WA"}</span><span className="sr-only"> ke {item.name} (tab baru)</span></a>}
+            {item.active && <button type="button" className={g.icon} onClick={() => copyLinks([item])} aria-label={`Salin tautan ${item.name}`} title="Salin tautan"><Link2 size={16} aria-hidden="true" /></button>}
+            <details className={g.menu} data-card-menu>
+              <summary aria-label={`Aksi lain untuk ${item.name}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
+              <div className={g.menuList} role="group" aria-label={`Aksi lain untuk ${item.name}`}>
+                <button type="button" disabled={busy} onClick={click => { click.currentTarget.closest("details")?.removeAttribute("open"); openEdit(item.id); }}><Pencil size={16} aria-hidden="true" /> Ubah<span className="sr-only"> {item.name}</span></button>
+                <button type="button" disabled={busy} onClick={click => { click.currentTarget.closest("details")?.removeAttribute("open"); if (window.confirm("Terbitkan tautan baru? Tautan lama langsung tidak berlaku; RSVP tersimpan tetap ada.")) void patch(item, { action: "rotate" }, "Tautan baru diterbitkan."); }}><RefreshCw size={16} aria-hidden="true" /> Tautan baru</button>
+                {item.active && <button type="button" className={g.danger} disabled={busy} onClick={click => { click.currentTarget.closest("details")?.removeAttribute("open"); if (window.confirm("Cabut tautan ini? Tamu tidak dapat membuka halaman atau memperbarui RSVP melalui tautan lama.")) void patch(item, { action: "revoke" }, "Tautan dicabut."); }}><Ban size={16} aria-hidden="true" /> Cabut tautan</button>}
+              </div>
+            </details>
+          </div>
+        </li>;
+      })}</ul>}
+
+    <p className={g.note}><ShieldAlert size={15} aria-hidden="true" /> Tautan pribadi bukan bukti identitas: siapa pun yang memegangnya dapat membuka undangan dan mengubah RSVP. Kirim satu per satu, jangan sebar daftar tautan di grup.</p>
+
+    {sheet && <Sheet title={sheet === "edit" && editingItem ? `Ubah ${editingItem.name}` : "Tambah tamu"} onClose={closeSheet}>
+      {sheet === "edit" && editingItem
+        ? <EditGuest item={editingItem} migrated={migrated} disabled={busy} onCancel={closeSheet} onSave={body => patch(editingItem, migrated ? { action: "update", ...body } : { action: "rename", name: body.name }, "Data tamu diperbarui.").then(closeSheet)} />
+        : <>
+          <AddGuest disabled={busy || items.length >= 1000} migrated={migrated} onAdd={(body, reset) => run(() => adminRequest<EventInvitation>(base, { method: "POST", body: JSON.stringify(body) }), result => { if (result.data) setItems(list => [...list, result.data!]); reset(); say(`Undangan untuk ${body.name} dibuat.`); })} />
+          {migrated && <ImportGuests existing={items} disabled={busy} remaining={1000 - items.length} onImport={(rows, reset) => run(() => adminRequest<EventInvitation[]>(base, { method: "POST", body: JSON.stringify({ rows }) }), result => { setItems(list => [...list, ...(result.data ?? [])]); reset(); say(`${result.data?.length ?? 0} tamu diimpor.`); })} />}
+        </>}
+    </Sheet>}
+  </div>;
+}
+
+/** A side panel on a wide screen, a sheet from the bottom on a phone (docs/standar-admin.md). Esc closes it. */
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (key: KeyboardEvent) => { if (key.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return <div className={g.layer}>
+    <div className={g.backdrop} onClick={onClose} aria-hidden="true" />
+    <div className={g.sheet} role="dialog" aria-modal="true" aria-label={title}>
+      <header className={g.sheetHead}><strong>{title}</strong><button type="button" className={g.icon} onClick={onClose} aria-label="Tutup"><X size={18} aria-hidden="true" /></button></header>
+      <div className={g.sheetBody}>{children}</div>
+    </div>
   </div>;
 }
 
@@ -164,10 +223,9 @@ function AddGuest({ disabled, migrated, onAdd }: { disabled: boolean; migrated: 
     if (!body.name) return;
     onAdd(body, () => setValues(empty));
   }
-  return <form onSubmit={submit} className={styles.guestCard} aria-labelledby="add-guest-title">
-    <h2 id="add-guest-title" className={styles.guestCardTitle}><UserPlus size={18} aria-hidden="true" /> Tambah tamu</h2>
+  return <form onSubmit={submit} className={g.form} aria-label="Tambah satu tamu">
     {guestFields("add", values, patch => { setValues(v => ({ ...v, ...patch })); setPhoneError(""); }, migrated, phoneError)}
-    <Button type="submit" disabled={disabled || !values.name.trim()}>Tambah</Button>
+    <Button type="submit" disabled={disabled || !values.name.trim()}><UserPlus size={17} aria-hidden="true" /> Tambah</Button>
   </form>;
 }
 
@@ -202,8 +260,8 @@ function ImportGuests({ existing, disabled, remaining, onImport }: { existing: E
   const bad = (rows ?? []).filter(row => row.errors.length).length;
   const duplicates = (rows ?? []).filter(row => !row.errors.length && row.duplicate).length;
   const limit = Math.min(MAX_IMPORT, remaining);
-  return <details className={styles.guestCard}>
-    <summary className={styles.guestCardTitle}><Upload size={18} aria-hidden="true" /> Impor dari Excel / Google Sheets / CSV</summary>
+  return <details className={g.import}>
+    <summary><Upload size={18} aria-hidden="true" /> Impor dari Excel / Google Sheets / CSV</summary>
     <div className="stack">
       <p className="field-hint">Salin kolom <strong>Nama</strong>, <strong>Nomor WA</strong>, dan <strong>Pendamping</strong> (angka 0–{MAX_COMPANIONS}) dari spreadsheet, lalu tempel di sini. Baris judul kolom boleh ikut; tanpa judul, urutannya nama, nomor, pendamping. Maksimal {MAX_IMPORT} baris sekali impor.</p>
       <Field name="import-text" label="Tempel daftar tamu"><textarea id="import-text" className="textarea" rows={6} value={text} onChange={e => { setText(e.target.value); check(e.target.value); }} placeholder={"Nama\tNomor WA\tPendamping\nIbu Sari Wulandari\t0812 3456 7890\t1\nBapak Budi Santoso\t0813 1111 2222\t0"} /></Field>

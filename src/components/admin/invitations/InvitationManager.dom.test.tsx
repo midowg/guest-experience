@@ -35,13 +35,14 @@ it("counts and filters guests by sending, opening, and answer", () => {
   const chips = screen.getByRole("navigation", { name: "Saring tamu" });
   expect(within(chips).getByRole("button", { name: /Belum dikirim/ }).textContent).toContain("1");
   fireEvent.click(within(chips).getByRole("button", { name: /Belum menjawab/ }));
-  expect(screen.getAllByRole("listitem").map(item => item.querySelector("strong")?.textContent).filter(Boolean)).toEqual(["Tamu 1", "Tamu 3"]);
+  expect(within(screen.getByRole("list", { name: "Daftar tamu" })).getAllByRole("listitem").map(item => item.querySelector("strong")?.textContent)).toEqual(["Tamu 1", "Tamu 3"]);
   fireEvent.click(within(chips).getByRole("button", { name: /^Hadir/ }));
   expect(screen.getByText(/Dibuka 3×/)).toBeTruthy();
 });
 
 it("previews a pasted list, flags problems, and imports only the good rows", async () => {
   render(<InvitationManager event={event} initial={guests} migrated />);
+  fireEvent.click(screen.getByRole("button", { name: "Tambah tamu" }));
   fireEvent.click(screen.getByText(/Impor dari Excel/));
   fireEvent.change(screen.getByLabelText("Tempel daftar tamu"), { target: { value: "Nama\tNomor WA\tPendamping\nIbu Sari\t0812 0000 1111\t1\nPak Budi\t123\t\nDuplikat\t0812 3456 7890\t" } });
   expect(screen.getByRole("status").textContent).toContain("1 siap diimpor · 1 baris perlu diperbaiki · 1 kemungkinan duplikat");
@@ -66,8 +67,20 @@ it("sends WhatsApp invitations one guest at a time and records each send", async
 it("keeps single adds and links working before the migration", () => {
   render(<InvitationManager event={event} initial={guests.map(g => ({ ...g, last_sent_at: null, first_opened_at: null }))} migrated={false} />);
   expect(screen.getByText(/menunggu migrasi/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Tambah tamu" }));
   expect(screen.queryByText(/Impor dari Excel/)).toBeNull();
   expect(screen.queryByLabelText("Nomor WA (opsional)")).toBeNull();
   expect(screen.queryByRole("button", { name: /Belum dibuka/ })).toBeNull();
   expect(screen.getByLabelText("Nama sapaan")).toBeTruthy();
+});
+
+it("finds a guest by name, and edits one in a sheet that Escape closes", () => {
+  render(<InvitationManager event={event} initial={guests} migrated />);
+  fireEvent.change(screen.getByRole("searchbox", { name: "Cari tamu" }), { target: { value: "tamu 3" } });
+  expect(within(screen.getByRole("list", { name: "Daftar tamu" })).getAllByRole("listitem").map(item => item.querySelector("strong")?.textContent)).toEqual(["Tamu 3"]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Ubah Tamu 3" })[0]);
+  expect(screen.getByRole("dialog", { name: "Ubah Tamu 3" })).toBeTruthy();
+  expect((screen.getByLabelText("Nama sapaan") as HTMLInputElement).value).toBe("Tamu 3");
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
 });

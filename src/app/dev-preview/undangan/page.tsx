@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { AdminShell, EventNavigation } from "@/components/admin/shared/AdminShell";
 import { InvitationManager } from "@/components/admin/invitations/InvitationManager";
 import { PublicLinkCard } from "@/components/admin/invitations/PublicLinkCard";
 import { createSeedEvent } from "@/lib/seed-event";
@@ -24,5 +24,5 @@ export default function DevInvitationsPage() {
     guest(4, "Contoh Tamu Empat", { phone: "6281200000004", last_sent_at: now, send_count: 1, rsvp: answer("no") }),
     guest(5, "Contoh Tamu Lima", { active: false }),
   ];
-  return <AdminShell bare><h1>Undangan tamu (contoh)</h1><PublicLinkCard event={event} origin="https://journey.werkudara.group" /><InvitationManager event={event} initial={guests} migrated origin="https://journey.werkudara.group" /></AdminShell>;
+  return <AdminShell><EventNavigation event={{ ...event, status: "published" }} current="invitations" /><PublicLinkCard event={event} origin="https://journey.werkudara.group" /><InvitationManager event={event} initial={guests} migrated origin="https://journey.werkudara.group" /></AdminShell>;
 }

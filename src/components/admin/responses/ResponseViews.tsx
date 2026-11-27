@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ButtonLink, Field, Notice } from "@/components/ui";
+import { Download, Lock, Search } from "lucide-react";
+import { Button, Notice } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import type { FeedbackRecord, PageResult, RsvpRecord } from "@/lib/types";
 import styles from "@/components/admin/admin.module.css";
+import r from "./responses.module.css";
 import { accessText, foodText, partyText } from "@/lib/rsvp-labels";
 import { adminApi, adminEventPath } from "@/lib/routes";
 
@@ -20,6 +22,10 @@ function Pagination({ page, total, pageSize, onPage, busy }: { page: number; tot
 
 function timestamp(value: string) { return formatDateTime(value); }
 
+/**
+ * RSVP (27 Nov 2026, docs/standar-admin.md): Semua / Hadir / Tidak hadir as chips, search by name or
+ * organisation, Unduh CSV on the right, and one row per answer (a table on a wide screen, cards on a phone).
+ */
 export function ResponsesView({ eventId, initial, initialFilters }: { eventId: string; initial: PageResult<RsvpRecord>; initialFilters: { attendance: string; q: string } }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialFilters.q);
@@ -38,23 +44,32 @@ export function ResponsesView({ eventId, initial, initialFilters }: { eventId: s
     router.refresh();
     setTimeout(() => setBusy(false), 400);
   }
-  return <div className="stack" aria-busy={busy}>
-    <form className={styles.filters} onSubmit={e => { e.preventDefault(); navigate({ page: 1 }); }} role="search">
-      <Field name="q" label="Cari nama atau instansi"><input className="input" id="q" value={query} maxLength={100} onChange={e => setQuery(e.target.value)} /></Field>
-      <Field name="attendance" label="Kehadiran"><select className="select" id="attendance" value={attendance} onChange={e => { setAttendance(e.target.value); navigate({ page: 1, attendance: e.target.value }); }}><option value="">Semua</option><option value="yes">Hadir</option><option value="no">Tidak hadir</option></select></Field>
-      <div className={styles.actions}><Button type="submit" disabled={busy}>Terapkan</Button><ButtonLink variant="secondary" href={adminApi(eventId, "responses/export")}>Unduh CSV</ButtonLink></div>
-    </form>
-    <Notice>Daftar ini memuat data pribadi tamu, termasuk kebutuhan makanan dan akses. Gunakan hanya untuk koordinasi acara dan jangan membagikannya di luar panitia.</Notice>
-    {!initial.items.length ? <Notice>Belum ada konfirmasi yang sesuai filter ini.</Notice> : <>
-      <div className={styles.tableWrap}><table className={styles.table}>
-        <caption>Konfirmasi kehadiran tamu</caption>
-        <thead><tr><th scope="col">Waktu</th><th scope="col">Nama</th><th scope="col">Jenis</th><th scope="col">Instansi</th><th scope="col">Kehadiran</th><th scope="col">Rombongan</th><th scope="col">Kontak</th><th scope="col">Kebutuhan</th></tr></thead>
+  const chips: { value: string; label: string }[] = [{ value: "", label: "Semua" }, { value: "yes", label: "Hadir" }, { value: "no", label: "Tidak hadir" }];
+  return <div className={r.page} aria-busy={busy}>
+    <div className={r.head}>
+      <div className={r.chips} role="group" aria-label="Kehadiran">{chips.map(chip =>
+        <button key={chip.value || "all"} type="button" aria-pressed={attendance === chip.value} disabled={busy} onClick={() => { setAttendance(chip.value); navigate({ page: 1, attendance: chip.value }); }}>{chip.label}</button>)}</div>
+      <div className={r.tools}>
+        <form className={r.search} role="search" onSubmit={e => { e.preventDefault(); navigate({ page: 1 }); }}>
+          <Search size={16} aria-hidden="true" />
+          <input type="search" id="q" value={query} maxLength={100} onChange={e => setQuery(e.target.value)} placeholder="Cari nama atau instansi" aria-label="Cari nama atau instansi" />
+          <button type="submit" className="sr-only" disabled={busy}>Cari</button>
+        </form>
+        <a className={r.export} href={adminApi(eventId, "responses/export")}><Download size={16} aria-hidden="true" /> Unduh CSV</a>
+      </div>
+    </div>
+    <p className={r.note}><Lock size={14} aria-hidden="true" /> Berisi data pribadi tamu (kontak, makanan, akses). Pakai hanya untuk koordinasi acara, jangan dibagikan di luar panitia.</p>
+    {!initial.items.length ? <div className={r.empty}>{initialFilters.q || initialFilters.attendance ? "Belum ada konfirmasi yang cocok dengan saringan ini." : "Belum ada tamu yang mengonfirmasi."}</div> : <>
+      <div className={r.wrap}><table className={r.table}>
+        <caption className="sr-only">Konfirmasi kehadiran tamu</caption>
+        <thead><tr><th scope="col">Tamu</th><th scope="col">Kehadiran</th><th scope="col">Rombongan</th><th scope="col">Kontak</th><th scope="col">Kebutuhan</th><th scope="col">Waktu</th></tr></thead>
         <tbody>{initial.items.map(row => <tr key={row.id}>
-          <td>{timestamp(row.updated_at ?? row.created_at)}</td><td>{row.name}</td><td>{row.invitation_id ? "Personal" : "Umum"}</td><td>{row.organization}</td>
-          <td>{row.attendance === "yes" ? "Hadir" : "Tidak hadir"}</td>
-          <td>{partyText(row) || <span className="muted">—</span>}</td>
-          <td>{row.phone || row.email ? <>{row.phone && <p>{row.phone}{row.whatsapp_consent && " · boleh WA"}</p>}{row.email && <p>{row.email}</p>}</> : <span className="muted">Tidak diisi</span>}</td>
-          <td>{foodText(row) || accessText(row) || row.photo_opt_out ? <>{foodText(row) && <p>{foodText(row)}</p>}{accessText(row) && <p>{accessText(row)}</p>}{row.photo_opt_out && <p>Jangan tampilkan foto</p>}</> : <span className="muted">Tidak ada</span>}</td>
+          <td data-label="Tamu"><strong>{row.name}</strong>{row.organization && <small>{row.organization}</small>}<span className={r.kind}>{row.invitation_id ? "Tautan pribadi" : "Tautan umum"}</span></td>
+          <td data-label="Kehadiran"><span className={r.pill} data-tone={row.attendance === "yes" ? "ok" : "no"}>{row.attendance === "yes" ? "Hadir" : "Tidak hadir"}</span></td>
+          <td data-label="Rombongan">{partyText(row) || <span className={r.muted}>—</span>}</td>
+          <td data-label="Kontak">{row.phone || row.email ? <>{row.phone && <span className={r.line}>{row.phone}{row.whatsapp_consent && " · boleh WA"}</span>}{row.email && <span className={r.line}>{row.email}</span>}</> : <span className={r.muted}>Tidak diisi</span>}</td>
+          <td data-label="Kebutuhan">{foodText(row) || accessText(row) || row.photo_opt_out ? <>{foodText(row) && <span className={r.line}>{foodText(row)}</span>}{accessText(row) && <span className={r.line}>{accessText(row)}</span>}{row.photo_opt_out && <span className={r.line}>Jangan tampilkan foto</span>}</> : <span className={r.muted}>Tidak ada</span>}</td>
+          <td data-label="Waktu" className={r.when}>{timestamp(row.updated_at ?? row.created_at)}</td>
         </tr>)}</tbody>
       </table></div>
       <Pagination page={initial.page} total={initial.total} pageSize={initial.pageSize} busy={busy} onPage={page => navigate({ page })} />

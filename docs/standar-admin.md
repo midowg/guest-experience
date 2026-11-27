@@ -101,7 +101,7 @@ Sesuai `brain/aturan/desain-ui.md`:
 1. Beranda — selesai (21 Nov 2026).
 2. Kepala dan tab semua halaman acara — selesai (21 Nov 2026).
 3. Isi editor acara: menu samping + pratinjau besar — selesai (22 Nov 2026). Simpan otomatis menyusul.
-4. Tamu, RSVP, Check-in: daftar sesuai bagian 3.
+4. Tamu dan RSVP: daftar sesuai bagian 3, tambah dan ubah tamu di lembar samping — selesai (27 Nov 2026). Check-in menyusul.
 5. BEO, Galeri, Survei, Donasi.
 6. Super admin.
 7. Admin WAM, TV, HR.
