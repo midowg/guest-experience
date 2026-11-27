@@ -27,12 +27,25 @@
  * the advisory lock is only shown to be taken with the expected key. "20 claims at once for one
  * place left" must still be run on a real Postgres (docs/coffee/GO-LIVE.md, step 1).
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = join(ROOT, "supabase", "migrations");
+
+/**
+ * Migrations live in one folder per app (supabase/migrations/<app>/, since 27 Nov 2026), and a file
+ * name is unique across them: find a file by its name. Stops with a clear message when it is
+ * missing or when two folders hold the same name.
+ */
+function migrationPath(file) {
+  const found = readdirSync(MIGRATIONS, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => join(MIGRATIONS, entry.name, file)).filter(path => existsSync(path));
+  if (found.length === 1) return found[0];
+  console.error(found.length ? `Migrasi ${file} ada di lebih dari satu folder: ${found.join(", ")}` : `Migrasi ${file} tidak ditemukan di folder mana pun di ${MIGRATIONS}`);
+  process.exit(2);
+}
+const readMigration = file => readFileSync(migrationPath(file), "utf8");
 const VERBOSE = process.argv.includes("--verbose");
 
 /** PGlite from wherever npx put it: a normal import first, then the node_modules next to npx's .bin on PATH. */
@@ -790,10 +803,10 @@ const PARTS = ["202611040002_pra_wam_roles.sql", "202611060002_pra_wam_departmen
 /** Roles, employees, admin_grants and the five made-up people, on a database that has nothing yet. */
 async function prepare(db, say = true) {
   await db.exec("create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls; grant usage on schema public to anon, authenticated, service_role;");
-  for (const file of WHOLE) await db.exec(readFileSync(join(MIGRATIONS, file), "utf8"));
+  for (const file of WHOLE) await db.exec(readMigration(file));
   for (const file of PARTS) {
     // Only the statements about employees and admin_grants: the other tables these files touch are not needed here.
-    const kept = statements(readFileSync(join(MIGRATIONS, file), "utf8")).filter(s => /\bpublic\.(employees|admin_grants)\b/.test(s.text) && !/\bpw_|staff_members|admin_access_log/.test(s.text));
+    const kept = statements(readMigration(file)).filter(s => /\bpublic\.(employees|admin_grants)\b/.test(s.text) && !/\bpw_|staff_members|admin_access_log/.test(s.text));
     for (const statement of kept) await db.exec(statement.text);
     if (say) console.log(`  ${file}: ${kept.length} pernyataan`);
   }
@@ -812,7 +825,7 @@ console.log("\n2. Migrasi 1 dan 2 dijalankan apa adanya (skema LAMA, seperti dat
 const COFFEE = ["202612010001_coffee.sql", "202612010002_coffee_push.sql"];
 const MENU = "202612020001_coffee_menu.sql";
 async function migrate(file, label, db = pg) {
-  const sql = readFileSync(join(MIGRATIONS, file), "utf8");
+  const sql = readMigration(file);
   try { await db.exec(sql); console.log(`  ${label}: ${file} berjalan tanpa galat`); return true; } catch (error) {
     await db.exec("rollback;").catch(() => {});
     console.log(`  ${label}: ${file} GAGAL: ${error.code} ${error.message}`);
