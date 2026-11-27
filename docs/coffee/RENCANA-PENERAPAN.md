@@ -55,7 +55,7 @@ Acuan yang wajib dibaca tiap agen sebelum mulai:
 | Alamat | `src/lib/routes.ts` + tes penjaga di `src/lib/routes.test.ts` (alamat tidak boleh ditulis tangan di luar `routes.ts`; `dev-preview` dikecualikan) | Semua alamat Coffee di `routes.ts`. |
 | Data langsung | Tidak ada Supabase Realtime di browser (RLS menutup semua untuk anon). Pola repo: ambil ulang saat `visibilitychange` + timer (`ClockInFlow.tsx`) | **Polling**, bukan realtime. |
 | RPC atomik | `pw_save_booking` (migrasi `202611040001`): `pg_advisory_xact_lock(hashtext(...))`, `raise exception 'KODE'`, `set search_path = public, pg_temp` | Pola yang sama untuk jatah. |
-| Migrasi | `supabase/migrations/YYYYMMDDNNNN_nama.sql`, baris pertama `-- LOCAL REVIEW ONLY. Apply to a remote database only with separate authorization.`, catatan ROLLBACK, `begin; … commit;`, RLS nyala, `revoke all … from public, anon, authenticated`, `grant … to service_role`. Kode harus tetap jalan sebelum migrasi (jawab 503 "menunggu migrasi …") | Sama. Nomor terakhir sekarang `202611300003`; cek lagi sebelum menulis. |
+| Migrasi | `supabase/migrations/<aplikasi>/YYYYMMDDNNNN_nama.sql` (Coffee: `supabase/migrations/coffee/`; sejak 27 Nov satu folder per aplikasi, nomor unik lintas folder), baris pertama `-- LOCAL REVIEW ONLY. Apply to a remote database only with separate authorization.`, catatan ROLLBACK, `begin; … commit;`, RLS nyala, `revoke all … from public, anon, authenticated`, `grant … to service_role`. Kode harus tetap jalan sebelum migrasi (jawab 503 "menunggu migrasi …") | Sama. Nomor terakhir sekarang `202611300003`; cek lagi sebelum menulis. |
 | Tes | vitest dua proyek (`vitest.config.ts`): `*.test.ts` node, `*.dom.test.tsx` jsdom. Server diuji dengan tiruan Supabase di memori (`src/lib/server/hr/leave.test.ts`) | Sama. |
 | Pratinjau | `src/app/dev-preview/hr-admin/page.tsx`: komponen asli dengan data contoh, `notFound()` di produksi | Dipakai untuk verifikasi di browser sebelum migrasi dijalankan. |
 
@@ -1087,3 +1087,33 @@ minuman baru, Kopi Gula Aren), lalu ke **mesin JS Mini** (12 minuman, semuanya s
   ditiru `fake-db.ts`, belum dilihat di Supabase asli. Pembacaan tidak bergantung pada kodenya (diuji
   dengan kode lain); penulisan centang sebelum migrasi dengan kode lain akan tampil sebagai galat
   database biasa, bukan "menunggu migrasi" (layarnya memang tidak mengizinkan centang diubah saat itu).
+
+## Catatan pelaksanaan F8 (27 Nov 2026): Rekap → Ringkasan dengan pilihan tampilan
+
+Masukan pemilik: tampilan Per minuman dan Per PIC jaraknya masih jauh-jauh; sebaiknya satu rincian
+saja yang tampil, dipilih per karyawan dan seterusnya.
+
+**Penyebab jarak.** Empat panel dalam satu kisi (`.summaryGrid` 2fr + 1fr) dengan tabel `width: 100%`.
+Lebar tabel mengikuti lebar layar, sisa lebar dibagi ke semua kolom: di 1920 kolom nama PIC 217 px dan
+Per karyawan 1001 px dengan nama 286 px; di 1440 dan 1024 tabel PIC (421 px) tidak muat di panel 324 px
+dan 186 px sehingga bergulir ke samping; bar Per minuman 238 px (1920) tetapi 37 px (1024).
+
+**Sekarang.** Satu panel, pilihan "Lihat per" (radio group: Karyawan, Minuman, PIC tamu, BU, Kelompok,
+Ruangan; panah, Home, End; satu perhentian Tab; keterangan dibacakan lewat `aria-live`). Tabel selebar
+isinya (`width: auto`, angka rata kanan tepat di samping nama, nama dipotong 260 px dengan `title`),
+tinggi baris 44 px, baris Total, kepala dan kolom pertama lengket, gulir di kotaknya sendiri. Per minuman:
+nama, bar (280 px), jumlah, porsi. HP: chip gulir di atas, kartu ≥56 px, kartu Total. Pilihan diingat
+selama Rekap terpasang (juga saat pindah Ringkasan/Detail); tidak masuk alamat karena tab Ringkasan/Detail
+dan filter pun belum ada di alamat (routing hanya per bagian).
+
+**Kode.** `RecapBreakdown.tsx` (pilihan + satu penggambar untuk keenam tampilan), `recap.ts`
+(`summarize` menambah `groups` dan `rooms`, `NO_ROOM`), contoh data (lima rapat di beberapa ruangan, satu
+PIC tanpa ruangan, satu nama panjang).
+
+**Keputusan agen.** Kelompok = Karyawan/Tim GA/Intern dari klaim dan minuman tim (tamu tidak masuk
+kelompok). Ruangan = pesanan rapat (tamu + tim) per ruangan, tamu dihitung sekali per rapat, tanpa ruangan
+ditaruh terakhir sebagai "Tanpa ruangan". Lembar Ringkasan di Excel tidak diubah; menambah lembar
+Kelompok dan Ruangan mudah (dua blok baris di `summarySheet`), tunggu keputusan pemilik.
+
+**Skrip uji SQL.** `scripts/coffee-sql-check.mjs` mencari berkas migrasi menurut namanya di semua folder
+aplikasi (gagal dengan pesan jelas bila tidak ada atau kembar); 794 lulus, 0 gagal.

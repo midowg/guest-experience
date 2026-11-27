@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { claim, item, meeting, person } from "./fixtures";
-import { DETAIL_HEAD, DETAIL_WIDTHS, detailCells, expandRows, filterRows, recapTitle, rowStatus, summarize, summarySheet } from "./recap";
+import { DETAIL_HEAD, NO_ROOM, DETAIL_WIDTHS, detailCells, expandRows, filterRows, recapTitle, rowStatus, summarize, summarySheet } from "./recap";
 
 const rina = person("e1", "Contoh Rina Putri");
 const dimas = person("e2", "Contoh Dimas Pratama", "karyawan", "TEE", "Contoh Account Executive");
@@ -109,6 +109,28 @@ describe("Rekap's summary", () => {
     expect(summary.bus).toEqual([{ bu: "TEE", klaim: 0, tamu: 5, tim: 0, total: 5 }, { bu: "WNS", klaim: 2, tamu: 0, tim: 0, total: 2 }, { bu: "CoE", klaim: 0, tamu: 0, tim: 1, total: 1 }]);
     expect(summary.drinks[0]).toEqual({ drink: "Kopi Susu", count: 4 });
     expect(summary.drinks.reduce((sum, drink) => sum + drink.count, 0)).toBe(summary.total);
+  });
+  it("adds up per Kelompok: people, claims and team drinks, never guests", () => {
+    expect(summary.groups).toEqual([
+      { group: "karyawan", people: 1, klaim: 2, tim: 0, refused: 1, total: 2 },
+      { group: "ga", people: 1, klaim: 0, tim: 0, refused: 0, total: 0 },
+      { group: "intern", people: 1, klaim: 0, tim: 1, refused: 0, total: 1 },
+    ]);
+    expect(summary.groups.reduce((sum, entry) => sum + entry.total, 0)).toBe(summary.klaim + summary.tim);
+  });
+  it("adds up per Ruangan: meetings, guests once per meeting, guest and team drinks; no room last", () => {
+    expect(summary.rooms).toEqual([{ room: "Kaliya Limasan", meetings: 1, guests: 5, tamu: 5, tim: 1, total: 6 }]);
+    const more = expandRows([
+      ...orders,
+      meeting("r1", 130, dimas, [item("x", "tamu", "kopi-susu", { qty: 2 })], { room: "Vasuki Room", guestCount: 2 }),
+      meeting("r2", 130, dimas, [item("y", "tamu", "kopi-susu", { qty: 1 })], { room: "Vasuki Room", round: 2, parentId: "r1", guestCount: 6 }),
+      meeting("r3", 131, dimas, [item("z", "tamu", "kopi-susu", { qty: 4 })], { room: "", guestCount: 3 }),
+    ]);
+    const rooms = summarize(more, [], settings).rooms;
+    expect(rooms.map(entry => entry.room)).toEqual(["Kaliya Limasan", "Vasuki Room", NO_ROOM]);
+    expect(rooms[1]).toEqual({ room: "Vasuki Room", meetings: 1, guests: 6, tamu: 3, tim: 0, total: 3 });
+    expect(rooms[2]).toMatchObject({ meetings: 1, guests: 3, tamu: 4 });
+    expect(rooms.reduce((sum, entry) => sum + entry.total, 0)).toBe(summarize(more, [], settings).tamu + summarize(more, [], settings).tim);
   });
   it("writes the Ringkasan sheet with numbers as numbers", () => {
     const sheet = summarySheet(summary, "November 2026");

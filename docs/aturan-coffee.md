@@ -109,6 +109,11 @@ Untuk kopi yang sudah dibeli tanpa lewat aplikasi (HP mati, tamu mendadak). Peng
 
 - Satu baris per minuman, rentang paling lama satu tahun; saring jenis, status, dan kata.
 - **Unduh CSV** dan **Unduh Excel** (lembar Detail 23 kolom dan Ringkasan) berisi persis baris di layar.
+- **Ringkasan** menampilkan satu rincian dalam satu waktu, dipilih lewat "Lihat per": Karyawan (jatah
+  terpakai), Minuman, PIC tamu, BU, Kelompok (Karyawan, Tim GA, Intern), Ruangan (pesanan rapat per ruang).
+  Awalnya Karyawan; pilihan diingat selama Rekap terbuka. Tiap rincian punya baris Total kecuali Karyawan.
+  Lembar Ringkasan di Excel tetap memuat Per orang, PIC, BU, dan minuman.
+- Migrasi Coffee ada di `supabase/migrations/coffee/`.
 - Nama, jabatan, BU, dan kelompok disalin ke pesanan saat dibuat, jadi rekap bulan lalu tidak berubah
   ketika Data karyawan berubah.
 

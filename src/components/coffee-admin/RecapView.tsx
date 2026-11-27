@@ -4,13 +4,12 @@ import { useEffect, useId, useState } from "react";
 import { Download, FileSpreadsheet, Search, SlidersHorizontal, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { ConsoleButton, ConsoleButtonLink, PageHeader } from "@/components/console";
-import { GROUP_LABEL } from "@/lib/coffee/menu";
 import { ITEM_KINDS, KIND_LABEL, STATUS_LABEL, type ItemFor, type Status } from "@/lib/coffee/types";
 import type { CancelTarget, CoffeeAdminApi, RecapData, RecapQuery } from "./api";
 import { DetailTable } from "./DetailTable";
 import { monthEnd, monthName, recentMonths } from "./format";
 import { Layer } from "./Layer";
-import { Dots } from "./QueueCard";
+import { RecapBreakdown, RecapViewPicker, type RecapView } from "./RecapBreakdown";
 import { coffeeAdminSection } from "./sections";
 import css from "./coffee-admin.module.css";
 
@@ -49,6 +48,8 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
   const [query, setQuery] = useState<RecapQuery>(() => initial?.query ?? monthQuery(current));
   const [search, setSearch] = useState(query.q ?? "");
   const [tab, setTab] = useState<RecapTab>("ringkasan");
+  // Which breakdown Ringkasan shows: kept while Rekap stays mounted, also over Ringkasan and Detail.
+  const [lihat, setLihat] = useState<RecapView>("karyawan");
   const [filterSheet, setFilterSheet] = useState(false);
   const [kept, setKept] = useState<Record<string, { data: RecapData; version: number }>>(() => initial ? { [keyOf(initial.query)]: { data: initial.data, version } } : {});
   const [shownKey, setShownKey] = useState(() => initial ? keyOf(initial.query) : "");
@@ -216,108 +217,9 @@ export function RecapView({ api, initial, today, phone, active, version, onCance
           </div>
 
           {tab === "ringkasan" ? (
-            <div id={`${uid}-panel-ringkasan`} role="tabpanel" aria-labelledby={`${uid}-tab-ringkasan`} className={css.summaryGrid}>
-              <section className={`${css.panel} ${css.peoplePanel}`} aria-labelledby={`${uid}-people`}>
-                <h2 id={`${uid}-people`}>Per orang</h2>
-                {manyMonths && <p className={css.small} style={{ marginBottom: 12 }}>Rentang lebih dari satu bulan: yang tampil jumlah klaim saja, tanpa perbandingan dengan jatah bulanan.</p>}
-                {!summary.people.length ? <p className={css.small}>Belum ada karyawan untuk ditampilkan.</p> : phone ? (
-                  <ul className={css.cardList}>
-                    {summary.people.map(({ person, quota, used, team, refused }) => (
-                      <li key={person.id}>
-                        <span className={css.cardListMain}>
-                          <strong>{person.name}</strong>
-                          <span>{[GROUP_LABEL[person.group], person.bu].filter(Boolean).join(" · ")}{team ? ` · tim · rapat ${team}` : ""}{refused ? ` · ditolak ${refused}` : ""}</span>
-                        </span>
-                        {manyMonths
-                          ? <span className={css.cardListSide}><strong className={css.num}>{used}</strong> klaim</span>
-                          : <span className={css.cardListSide}><Dots used={used} quota={quota} /><span className={css.num}>{quota > 0 && used >= quota ? "Habis" : `${used}/${quota}`}</span></span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className={css.tableBox}>
-                    <table className={css.table}>
-                      <thead><tr><th scope="col">Nama</th><th scope="col">Kelompok</th><th scope="col">BU</th><th scope="col" className={manyMonths ? css.num : undefined}>{manyMonths ? "Klaim" : "Jatah terpakai"}</th><th scope="col" className={css.num}>Tim · rapat</th><th scope="col" className={css.num}>Ditolak</th></tr></thead>
-                      <tbody>
-                        {summary.people.map(({ person, quota, used, team, refused }) => (
-                          <tr key={person.id}>
-                            <th scope="row">{person.name}</th>
-                            <td>{GROUP_LABEL[person.group]}</td>
-                            <td>{person.bu || "–"}</td>
-                            {manyMonths ? <td className={css.num}>{used || "–"}</td> : (
-                              <td><span className={css.quotaCell}><Dots used={used} quota={quota} /><span className={css.num}>{used}/{quota}</span>{quota > 0 && used >= quota && <span className={css.pill} data-tone="off">Habis</span>}</span></td>
-                            )}
-                            <td className={css.num}>{team || "–"}</td>
-                            <td className={css.num}>{refused || "–"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-              <section className={css.panel} aria-labelledby={`${uid}-drinks`}>
-                <h2 id={`${uid}-drinks`}>Per minuman</h2>
-                <ul className={css.bars}>
-                  {summary.drinks.map(item => (
-                    <li key={item.drink}>
-                      <span className={css.barName}>{item.drink}</span>
-                      <span className={css.barTrack} aria-hidden><span style={{ width: `${(item.count / (summary.drinks[0]?.count || 1)) * 100}%` }} /></span>
-                      <span className={css.num}>{item.count}</span>
-                    </li>
-                  ))}
-                  {!summary.drinks.length && <li className={css.small} style={{ display: "block" }}>Tidak ada data untuk filter ini.</li>}
-                </ul>
-              </section>
-              <section className={css.panel} aria-labelledby={`${uid}-pic`}>
-                <h2 id={`${uid}-pic`}>Per PIC tamu</h2>
-                {!summary.pics.length ? <p className={css.small}>Tidak ada tamu untuk filter ini.</p> : phone ? (
-                  <ul className={css.cardList}>
-                    {summary.pics.map(pic => (
-                      <li key={pic.pic}>
-                        <span className={css.cardListMain}><strong>{pic.pic}</strong><span>{pic.meetings} rapat · {pic.guests} tamu</span></span>
-                        <span className={css.cardListSide}><strong className={css.num}>{pic.drinks}</strong> minuman</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className={css.tableBox}>
-                    <table className={css.table}>
-                      <thead><tr><th scope="col">PIC</th><th scope="col" className={css.num}>Rapat</th><th scope="col" className={css.num}>Tamu (orang)</th><th scope="col" className={css.num}>Minuman</th></tr></thead>
-                      <tbody>
-                        {summary.pics.map(pic => (
-                          <tr key={pic.pic}><th scope="row">{pic.pic}</th><td className={css.num}>{pic.meetings}</td><td className={css.num}>{pic.guests}</td><td className={css.num}>{pic.drinks}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-              <section className={css.panel} aria-labelledby={`${uid}-bu`}>
-                <h2 id={`${uid}-bu`}>Per BU</h2>
-                {!summary.bus.length ? <p className={css.small}>Tidak ada data untuk filter ini.</p> : phone ? (
-                  <ul className={css.cardList}>
-                    {summary.bus.map(bu => (
-                      <li key={bu.bu}>
-                        <span className={css.cardListMain}><strong>{bu.bu || "Tanpa BU"}</strong><span>Klaim {bu.klaim} · tamu {bu.tamu} · tim · rapat {bu.tim}</span></span>
-                        <span className={css.cardListSide}><strong className={css.num}>{bu.total}</strong></span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className={css.tableBox}>
-                    <table className={css.table}>
-                      <thead><tr><th scope="col">BU</th><th scope="col" className={css.num}>Klaim</th><th scope="col" className={css.num}>Tamu</th><th scope="col" className={css.num}>Tim · rapat</th><th scope="col" className={css.num}>Total</th></tr></thead>
-                      <tbody>
-                        {summary.bus.map(bu => (
-                          <tr key={bu.bu}><th scope="row">{bu.bu || "Tanpa BU"}</th><td className={css.num}>{bu.klaim}</td><td className={css.num}>{bu.tamu}</td><td className={css.num}>{bu.tim}</td><td className={css.num}><strong>{bu.total}</strong></td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                <p className={css.small} style={{ marginTop: 10 }}>Tamu dihitung ke BU PIC-nya.</p>
-              </section>
+            <div id={`${uid}-panel-ringkasan`} role="tabpanel" aria-labelledby={`${uid}-tab-ringkasan`} className={`${css.panel} ${css.summaryPanel}`}>
+              <RecapViewPicker value={lihat} onChange={setLihat} />
+              <RecapBreakdown view={lihat} summary={summary} title={title} phone={phone} manyMonths={manyMonths} />
             </div>
           ) : (
             <div id={`${uid}-panel-detail`} role="tabpanel" aria-labelledby={`${uid}-tab-detail`} className={css.panel}>

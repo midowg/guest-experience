@@ -31,6 +31,8 @@ export const SAMPLE_PEOPLE = [
   P("p-raka", "Raka Aditya", "karyawan", "IT Support", "Holding"),
   P("p-bagas", "Bagas Saputra", "ga", "General Affair", "WNS"),
   P("p-fajar", "Fajar Nugroho", "intern", "Design Intern", "CoE"),
+  // A long name, to judge Rekap's columns on (F8).
+  P("p-raden", "Raden Mas Aditya Wicaksono Kusumaningrat Prasetyo", "ga", "General Affair Officer", "Holding"),
 ];
 const HOLDERS: CoffeeHolder[] = [{ id: "p-dewi", name: "Dewi Lestari (contoh)", position: "HR Officer" }, { id: "p-raka", name: "Raka Aditya (contoh)", position: "IT Support" }];
 /** Who the viewer is in the make-believe: the label and id of "diproses oleh". */
@@ -79,7 +81,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
   const nextId = () => `s-${idSeq++}`;
   const done = (order: QueueOrder, actor: { employeeId: string; label: string }, msAgo: number, status: "selesai" | "ditolak" = "selesai", note = ""): QueueOrder =>
     ({ ...order, status, rejectNote: note, processed: { employeeId: actor.employeeId, label: actor.label, at: iso(msAgo) } });
-  const [rina, maya, arief, dimas, sari, yoga, dewi, , bagas, fajar] = SAMPLE_PEOPLE;
+  const [rina, maya, arief, dimas, sari, yoga, dewi, , bagas, fajar, raden] = SAMPLE_PEOPLE;
 
   // What waits now, what was processed today, and a made-up history for this month and the last.
   const orders: QueueOrder[] = [
@@ -107,6 +109,14 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
   orders.push(done(meet(nextId(), meetingSeq++, rina, [item("a", "tamu", "kopi-susu", { qty: 6 }), item("b", "tim", "cafe-latte", { person: rina })], { orderedAt: iso(5 * day), guest: "PT Arunika Media (contoh)", guestCount: 6 }), SAMPLE_ACTOR, 5 * day - 10 * minute));
   orders.push(done(meet(nextId(), meetingSeq++, sari, [item("a", "tamu", "classic-tea", { qty: 3 })], { orderedAt: iso(36 * day), room: "CFC Ananta Room", spot: "ananta", guest: "Yayasan Cipta Karsa (contoh)", guestCount: 3 }), OTHER_ACTOR, 36 * day - 10 * minute));
 
+  // More meetings this month in other rooms, from other PICs (F8: Rekap's Per ruangan and Per PIC tamu on realistic data).
+  const rooms: [typeof rina, string, string, number, number, string, number][] = [
+    [dimas, "CFC Ananta Room", "ananta", 2, 4, "PT Mitra Sejahtera (contoh)", 3], [raden, "Komunal Space", "communal", 3, 8, "Komite Pendidikan Kota (contoh)", 3],
+    [yoga, "Vasuki Room", "vasuki", 4, 2, "Studio Cahaya (contoh)", 2], [maya, "", "", 6, 3, "PT Lintas Benua (contoh)", 2], [raden, "Nagapadma", "nagapadma", 7, 6, "Asosiasi Perajin (contoh)", 4],
+  ];
+  for (const [pic, room, spot, daysAgo, guests, guest, cups] of rooms) {
+    orders.push(done(meet(nextId(), meetingSeq++, pic, [item("a", "tamu", "kopi-susu", { qty: cups })], { orderedAt: iso(daysAgo * day), room, spot: spot || null, guest, guestCount: guests }), OTHER_ACTOR, daysAgo * day - 10 * minute));
+  }
   const counted = () => orders.filter(order => order.kind === "klaim").map(order => ({ id: order.id, kind: order.kind, status: order.status, employeeId: order.person.id, orderedAt: order.orderedAt }));
   const usedOf = (employeeId: string | null, month: string) => orders.filter(order => order.kind === "klaim" && order.person.id === employeeId && countsForQuota(order.status) && wibMonth(order.orderedAt) === month).length;
   const shown = (raw: QueueOrder): QueueOrder => {

@@ -239,8 +239,25 @@
 }
 .tabs button[aria-selected="true"] { color: var(--act-strong); border-bottom-color: var(--act); }
 .tabsNote { margin-left: auto; color: var(--ink-3); font-size: 14px; }
-.summaryGrid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.peoplePanel { grid-row: span 3; }
+/* Ringkasan: one panel, one breakdown at a time ("Lihat per"). */
+.summaryPanel { display: grid; gap: 14px; }
+.viewPicker { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.viewPickerLabel { flex: none; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.viewChoices { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.viewChoices::-webkit-scrollbar { display: none; }
+.viewChoices button {
+  flex: none; min-height: 44px; min-width: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: 10px; background: none;
+  color: var(--ink-2); font-weight: 700; white-space: nowrap; transition: background-color .15s var(--ease), color .15s var(--ease);
+}
+.viewChoices button:hover { background: var(--fill); color: var(--ink); }
+.viewChoices button[aria-checked="true"] { background: var(--surface); border-color: var(--line-strong); color: var(--act-strong); box-shadow: 0 1px 2px color-mix(in srgb, var(--cs-text) 12%, transparent); }
+@media (max-width: 1180px) { .viewPicker { display: grid; gap: 6px; } }
+.breakdown { display: grid; gap: 10px; min-width: 0; justify-items: start; align-content: start; }
+.breakdown > * { max-width: 100%; }
+.breakdownHead { display: grid; gap: 2px; }
+.breakdown h2 { font-size: 18px; font-weight: 800; }
+.viewCaption { color: var(--ink-2); font-size: 14px; }
+.viewNote { color: var(--ink-3); font-size: 14px; }
 /* relative: what is positioned inside (the screen-reader text of a row's button) stays in the scroll box instead of widening the page */
 .tableBox { position: relative; overflow: auto; border-radius: 12px; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -250,10 +267,21 @@
 .table tbody tr:hover { background: var(--surface-2); }
 .table .num { text-align: right; }
 .quotaCell { display: inline-flex; align-items: center; gap: 8px; }
-.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.bars li { display: grid; grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 32px; align-items: center; gap: 10px; font-size: 14px; }
-.barName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.barTrack { height: 10px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+/* The summary tables: as wide as their content (names left, the numbers right beside them), never stretched over the panel; a wide one scrolls inside its own box. */
+.sumTable { border-collapse: separate; border-spacing: 0; width: auto; min-width: min(100%, 360px); font-size: 14px; }
+.sumTable th, .sumTable td { height: 44px; padding: 6px 16px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
+.sumTable thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); color: var(--ink-2); font-weight: 700; font-size: 13px; height: 40px; }
+.sumTable th:first-child { position: sticky; left: 0; z-index: 1; }
+.sumTable thead th:first-child { z-index: 3; }
+.sumTable tbody th { font-weight: 700; }
+.sumTable .num { text-align: right; width: 1%; }
+.sumTable tbody tr:hover > * { background: var(--surface-2); }
+.sumTable tfoot th, .sumTable tfoot td { background: var(--surface-2); font-weight: 800; border-top: 2px solid var(--line-strong); border-bottom: 0; }
+.cellName { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.sumTable[data-bars] .cellName { max-width: 220px; }
+.sumTable .barCell { width: 280px; min-width: 160px; padding-right: 8px; }
+.barTrack { display: block; height: 10px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.cardList .cardTotal { background: var(--surface-2); padding: 8px 12px; border-radius: 10px; border-bottom: 0; }
 .barTrack span { display: block; height: 100%; border-radius: 999px; background: var(--act); }
 .detailBox { max-height: calc(100dvh - 120px); min-height: 320px; border: 1px solid var(--line); }
 .detail tbody th:nth-child(5), .detail thead th:nth-child(5) { position: sticky; left: 0; }
@@ -525,9 +553,14 @@
   .stat strong { font-size: 24px; }
   .tabs button { min-height: 48px; font-size: 16px; }
   .tabsNote { display: none; }
-  .summaryGrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .peoplePanel { grid-row: auto; }
-  .bars li { grid-template-columns: minmax(96px, 40%) minmax(0, 1fr) 32px; font-size: 15px; }
+  .summaryPanel { gap: 12px; padding: 12px; }
+  .viewPicker { display: grid; gap: 6px; }
+  .viewChoices { margin: 0 -12px; padding: 4px 12px; border-radius: 0; border-left: 0; border-right: 0; background: none; border-color: transparent; }
+  .viewChoices button { border-color: var(--line); background: var(--surface); }
+  .viewChoices button[aria-checked="true"] { background: var(--act-c); border-color: var(--act); color: var(--act-strong); box-shadow: none; }
+  .breakdown { justify-items: stretch; }
+  .breakdown .cardList li { min-height: 56px; }
+  .breakdown .cardListMain .barTrack { margin-top: 6px; max-width: 240px; }
   .settingsGrid { grid-template-columns: minmax(0, 1fr); }
   /* Menu: the row's controls go under its text, so the name keeps the whole width */
   .menuList li { flex-wrap: wrap; padding: 6px 0; }

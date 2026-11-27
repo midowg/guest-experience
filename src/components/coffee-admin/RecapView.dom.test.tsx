@@ -53,11 +53,119 @@ it("counts on top what the Detail rows hold", async () => {
 
 it("shows each person's quota as dots within one month", async () => {
   await open();
-  const people = screen.getByRole("heading", { name: "Per orang" }).parentElement!;
+  const people = screen.getByRole("heading", { name: "Per karyawan" }).closest("section")!;
   const maya = within(people).getByRole("rowheader", { name: /Maya Lestari/ }).closest("tr")!;
   expect(maya.textContent).toMatch(/4\/4Habis/);
   expect(within(maya).getByRole("img", { name: "4 dari 4 terpakai" })).toBeTruthy();
   expect(within(people).getByRole("columnheader", { name: "Jatah terpakai" })).toBeTruthy();
+});
+
+// F8: one breakdown at a time, chosen with a radio group (27 Nov 2026).
+const choose = (name: string) => fireEvent.click(screen.getByRole("radio", { name }));
+const shown = () => screen.getByRole("heading", { level: 2, name: /^Per / }).closest("section")!;
+
+it("F8 shows one breakdown at a time, Karyawan first, chosen with a labelled radio group", async () => {
+  await open();
+  const group = screen.getByRole("radiogroup", { name: "Lihat per" });
+  const choices = within(group).getAllByRole("radio");
+  expect(choices.map(radio => radio.textContent)).toEqual(["Karyawan", "Minuman", "PIC tamu", "BU", "Kelompok", "Ruangan"]);
+  expect(choices.map(radio => radio.getAttribute("aria-checked"))).toEqual(["true", "false", "false", "false", "false", "false"]);
+  expect(screen.getAllByRole("heading", { level: 2, name: /^Per / })).toHaveLength(1);
+  expect(shown().textContent).toMatch(/Jatah terpakai per karyawan · November 2026/);
+  expect(screen.queryByRole("columnheader", { name: "Rapat" })).toBeNull();
+});
+
+it("F8 moves with the arrow keys, Home and End, one Tab stop, and announces the caption", async () => {
+  await open();
+  const radios = within(screen.getByRole("radiogroup", { name: "Lihat per" })).getAllByRole("radio") as HTMLElement[];
+  expect(radios.map(radio => radio.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+  radios[0].focus();
+  fireEvent.keyDown(radios[0], { key: "ArrowRight" });
+  expect(document.activeElement).toBe(radios[1]);
+  expect(radios[1].getAttribute("aria-checked")).toBe("true");
+  expect(radios.map(radio => radio.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+  expect(shown().textContent).toMatch(/Minuman paling banyak dibuat/);
+  expect(shown().querySelector("[aria-live]")).toBeTruthy();
+  fireEvent.keyDown(radios[1], { key: "End" });
+  expect(document.activeElement).toBe(radios[5]);
+  expect(screen.getByRole("heading", { level: 2, name: "Per ruangan" })).toBeTruthy();
+  fireEvent.keyDown(radios[5], { key: "ArrowRight" });
+  expect(document.activeElement).toBe(radios[0]);
+  fireEvent.keyDown(radios[0], { key: "ArrowLeft" });
+  expect(document.activeElement).toBe(radios[5]);
+  fireEvent.keyDown(radios[5], { key: "Home" });
+  expect(radios[0].getAttribute("aria-checked")).toBe("true");
+});
+
+it("F8 remembers the choice over Detail and back", async () => {
+  await open();
+  choose("PIC tamu");
+  fireEvent.click(screen.getByRole("tab", { name: /^Detail/ }));
+  expect(screen.queryByRole("radiogroup")).toBeNull();
+  fireEvent.click(screen.getByRole("tab", { name: "Ringkasan" }));
+  expect(screen.getByRole("radio", { name: "PIC tamu" }).getAttribute("aria-checked")).toBe("true");
+  expect(screen.getByRole("heading", { level: 2, name: "Per PIC tamu" })).toBeTruthy();
+});
+
+it("F8 Minuman: ranked bars, count and share, and a Total that is the number on top", async () => {
+  await open();
+  choose("Minuman");
+  const table = within(shown()).getByRole("table");
+  expect(within(table).getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Minuman", "Grafik", "Jumlah", "Porsi"]);
+  const body = within(table).getAllByRole("row").slice(1, -1).map(row => [...row.children].map(cell => cell.textContent));
+  const counts = body.map(cells => Number(cells[2]));
+  expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  expect(body[0][3]).toMatch(/^\d+%$/);
+  const total = within(table).getAllByRole("row").at(-1)!;
+  expect(total.textContent).toBe(`Total${stat("Total minuman")}100%`);
+  expect(counts.reduce((sum, count) => sum + count, 0)).toBe(stat("Total minuman"));
+  // a bar is for the eyes only
+  expect(table.querySelectorAll(`.${css.barTrack}[aria-hidden="true"]`).length).toBe(counts.length);
+});
+
+it("F8 PIC tamu, BU, Kelompok and Ruangan each add up to a Total row", async () => {
+  await open();
+  const totals = async (name: string, columns: number) => {
+    choose(name);
+    const rows = within(shown()).getAllByRole("row").slice(1);
+    const cells = rows.map(row => [...row.children].map(cell => cell.textContent ?? ""));
+    const total = cells.at(-1)!;
+    expect(total[0]).toBe("Total");
+    for (let column = 1; column <= columns; column++) {
+      const sum = cells.slice(0, -1).reduce((all, row) => all + (Number(row[column]) || 0), 0);
+      expect(Number(total[column]) || 0, `${name} column ${column}`).toBe(sum);
+    }
+    return cells;
+  };
+  const pics = await totals("PIC tamu", 3);
+  expect(pics.length).toBeGreaterThan(2);
+  const bus = await totals("BU", 4);
+  expect(bus.at(-1)![4]).toBe(String(stat("Total minuman")));
+  const groups = await totals("Kelompok", 5);
+  expect(groups.slice(0, -1).map(row => row[0])).toEqual(["Karyawan", "Tim GA", "Intern"]);
+  expect(shown().textContent).toMatch(/Tamu tidak masuk kelompok mana pun/);
+  const rooms = await totals("Ruangan", 5);
+  const names = rooms.slice(0, -1).map(row => row[0]);
+  expect(names).toEqual(expect.arrayContaining(["Vasuki Room", "CFC Ananta Room"]));
+  expect(names.at(-1)).toBe("Tanpa ruangan");
+});
+
+it("F8 says so when a view has nothing to show", async () => {
+  await open();
+  fireEvent.click(screen.getByRole("button", { name: "Klaim" }));
+  await waitFor(() => expect(stat("Tamu")).toBe(0));
+  choose("PIC tamu");
+  expect(screen.getByText("Tidak ada tamu untuk filter ini.")).toBeTruthy();
+  choose("Ruangan");
+  expect(screen.getByText("Tidak ada pesanan rapat untuk filter ini.")).toBeTruthy();
+  choose("Minuman");
+  expect(within(shown()).getAllByRole("row").length).toBeGreaterThan(2);
+});
+
+it("F8 truncates a long name with its full name as the title", async () => {
+  await open();
+  const long = within(shown()).getAllByRole("rowheader").map(cell => cell.firstElementChild as HTMLElement).find(cell => /Wicaksono/.test(cell.textContent ?? ""));
+  expect(long?.getAttribute("title")).toBe(long?.textContent);
 });
 
 it("asks the server again when a filter changes, and the downloads carry the same filter", async () => {
@@ -87,7 +195,7 @@ it("for a span longer than one month shows the claims as a number only, with a n
   const { api } = await open();
   fireEvent.change(screen.getByLabelText("Dari tanggal"), { target: { value: "2026-10-01" } });
   await waitFor(() => expect(api.recap).toHaveBeenLastCalledWith(expect.objectContaining({ dari: "2026-10-01", sampai: "2026-11-30" })));
-  const people = screen.getByRole("heading", { name: "Per orang" }).parentElement!;
+  const people = screen.getByRole("heading", { name: "Per karyawan" }).closest("section")!;
   await waitFor(() => expect(within(people).getByRole("columnheader", { name: "Klaim" })).toBeTruthy());
   expect(people.textContent).toMatch(/Rentang lebih dari satu bulan: yang tampil jumlah klaim saja/);
   expect(within(people).queryByRole("img")).toBeNull();
@@ -127,6 +235,21 @@ it("is a list, not a table, on a phone", async () => {
   expect(screen.queryByRole("table")).toBeNull();
   expect(screen.getAllByRole("listitem").length).toBeGreaterThan(5);
   expect(screen.getByRole("button", { name: /^Filter/ }).getAttribute("aria-haspopup")).toBe("dialog");
+});
+
+it("F8 on a phone: the chips on top, the chosen breakdown as cards of at least a name and a value, a Total card where it makes sense", async () => {
+  const server = createSampleServer();
+  const query = monthQuery("2026-11");
+  render(<div className={css.root}><RecapView api={server.api} initial={{ query, data: await server.api.recap(query) }} today="2026-11-25" phone active version={0} /></div>);
+  fireEvent.click(screen.getByRole("tab", { name: "Ringkasan" }));
+  for (const name of ["Karyawan", "Minuman", "PIC tamu", "BU", "Kelompok", "Ruangan"]) {
+    choose(name);
+    expect(screen.queryByRole("table")).toBeNull();
+    const lines = within(shown()).getAllByRole("listitem");
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.every(line => line.querySelector("strong"))).toBe(true);
+    expect(/Total/.test(lines.at(-1)!.textContent ?? "")).toBe(name !== "Karyawan");
+  }
 });
 
 // Audit B-1: Rekap → Detail offers Batalkan catatan on a record made by hand, and words a cancelled one "Dibatalkan".

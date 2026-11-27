@@ -86,6 +86,8 @@ export function filterRows(rows: RecapRow[], filter: RecapFilter): RecapRow[] {
 /** A meeting's rounds ("T-0113", "T-0113-2") are one meeting. */
 const meetingOf = (no: string) => no.replace(/^(T-\d+)-\d+$/, "$1");
 
+/** The name Per ruangan gives a meeting order that carries no room. */
+export const NO_ROOM = "Tanpa ruangan";
 export type RecapPerson = { id: string; name: string; group: QuotaGroup; bu: string };
 export type RecapSummary = ReturnType<typeof summarize>;
 
@@ -136,11 +138,32 @@ export function summarize(rows: RecapRow[], people: RecapPerson[], settings: Cof
   for (const row of live) drinkMap.set(row.drink, (drinkMap.get(row.drink) ?? 0) + 1);
   const drinks = [...drinkMap].map(([drink, count]) => ({ drink, count })).sort((a, b) => b.count - a.count || a.drink.localeCompare(b.drink, "id"));
 
+  // Per Kelompok (Karyawan, Tim GA, Intern): the people in it and what they claimed; guests belong to no group.
+  const groups = (Object.keys(GROUP_LABEL) as QuotaGroup[]).map(group => {
+    const members = perPerson.filter(entry => entry.person.group === group);
+    const klaim = members.reduce((sum, entry) => sum + entry.used, 0), tim = members.reduce((sum, entry) => sum + entry.team, 0);
+    return { group, people: members.length, klaim, tim, refused: members.reduce((sum, entry) => sum + entry.refused, 0), total: klaim + tim };
+  }).filter(entry => entry.people > 0);
+
+  // Per Ruangan: the meeting orders (guests and team) by the room they were ordered for; guests once per meeting like the PIC.
+  const roomMap = new Map<string, { meetings: Map<string, number>; tamu: number; tim: number }>();
+  for (const row of live.filter(row => row.kind !== "klaim")) {
+    const room = row.room.trim() || NO_ROOM;
+    const entry = roomMap.get(room) ?? { meetings: new Map<string, number>(), tamu: 0, tim: 0 };
+    const meeting = meetingOf(row.no);
+    entry.meetings.set(meeting, Math.max(entry.meetings.get(meeting) ?? 0, row.kind === "tamu" ? row.guestCount ?? 0 : 0));
+    entry[row.kind === "tamu" ? "tamu" : "tim"] += 1;
+    roomMap.set(room, entry);
+  }
+  const rooms = [...roomMap].map(([room, entry]) => ({
+    room, meetings: entry.meetings.size, guests: [...entry.meetings.values()].reduce((sum, count) => sum + count, 0), tamu: entry.tamu, tim: entry.tim, total: entry.tamu + entry.tim,
+  })).sort((a, b) => (a.room === NO_ROOM ? 1 : 0) - (b.room === NO_ROOM ? 1 : 0) || b.total - a.total || a.room.localeCompare(b.room, "id"));
+
   return {
     total: live.length, klaim: by("klaim"), tamu: by("tamu"), tim: by("tim"),
     meetings: new Set(rows.filter(row => row.kind !== "klaim").map(row => meetingOf(row.no))).size,
     refused: rows.filter(row => row.status === "ditolak").length, waiting: rows.filter(row => row.status === "diproses").length,
-    people: perPerson, pics, bus, drinks,
+    people: perPerson, pics, bus, drinks, groups, rooms,
   };
 }
 
