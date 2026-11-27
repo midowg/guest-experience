@@ -57,11 +57,11 @@ describe("Admin TV → Pantauan, who opens the TV addresses", () => {
     expect(rows[0].textContent).toContain("TV Samsung · Samsung Internet 2");
     expect(rows[0].textContent).toContain("Membuka /tv · Papan biasa · layar 1920×1080");
     expect(rows[0].textContent).toContain("sejak 08.00");
-    expect(rows[0].textContent).toContain("Sedang membuka");
+    expect(rows[0].textContent).toContain("Membuka");
     expect(rows[1].textContent).toContain("Membuka /tv/lite · Papan lite (TV lama)");
     // A phone on the network a TV is on is in the office; a computer on another network is not.
     expect(rows[2].textContent).toContain("Tampilan HP · layar 390×844 · satu jaringan dengan TV kantor");
-    expect(rows[2].textContent).toContain("Sudah tidak membuka");
+    expect(rows[2].textContent).toContain("Sudah tutup");
     expect(rows[3].textContent).toContain("jaringan lain");
   });
 
@@ -90,8 +90,9 @@ describe("Admin TV → Pantauan, who opens the TV addresses", () => {
 describe("Admin TV → Layar TV, the two addresses", () => {
   it("gives every TV, and the address for all, its lite address too, and says what each version plays", () => {
     const { container } = render(<PraWamTv initial={admin()} crumbs={["Admin TV", "Layar TV"]} title="Layar TV" origin="https://contoh.test" view="layar" standalone />);
+    // What the two versions play folds away under one line, so the addresses come first on a phone.
     const versions = within(screen.getByRole("group", { name: "Dua versi papan" }));
-    expect(versions.getByText("Papan biasa")).toBeTruthy();
+    expect(versions.getByText("Apa beda papan biasa dan papan lite?")).toBeTruthy();
     expect(versions.getByText(/Tidak menayangkan video YouTube/)).toBeTruthy();
     for (const address of ["https://contoh.test/tv", "https://contoh.test/tv/lite", "https://contoh.test/tv/lobi", "https://contoh.test/tv/lobi/lite"]) expect(screen.getByText(address)).toBeTruthy();
     for (const name of ["Salin alamat papan biasa untuk semua TV", "Salin alamat lite untuk semua TV", "Salin alamat papan biasa Lobi", "Salin alamat lite Lobi"]) expect(screen.getByRole("button", { name })).toBeTruthy();

@@ -94,3 +94,42 @@
   .visit > :last-child { grid-column: 2; justify-self: start; }
   .addresses dd { grid-template-columns: minmax(0, 1fr); }
 }
+
+/*
+ * Revision (27 Nov 2026, asked by the owner): tighter on a phone, no stack of big cards. What the
+ * two versions of the board play folds away under one line. An address is its label, the address
+ * and a small Salin on one line. The TVs and the devices are rows of one surface, not a card each.
+ */
+.fold { border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); }
+.fold summary { display: flex; align-items: center; min-height: 44px; padding: 0 12px; color: var(--cs-text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.fold summary:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; border-radius: 12px; }
+.fold dl { display: grid; gap: 12px; margin: 0; padding: 4px 12px 12px; }
+.fold dt { display: flex; align-items: center; gap: 8px; color: var(--cs-text); font-size: 14px; font-weight: 700; }
+.fold dt svg { flex: none; color: var(--cs-primary); }
+.fold dd { margin: 2px 0 0; color: var(--cs-muted); font-size: 13px; line-height: 1.5; }
+.created { gap: 8px; padding: 12px; }
+.addresses { gap: 6px; }
+.addresses > div { grid-template-columns: 7rem minmax(0, 1fr); align-items: center; gap: 8px; }
+.addresses dd { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.addresses .link { padding: 8px 10px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screens { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.screen { gap: 8px; padding: 12px; border: 0; border-radius: 0; background: transparent; }
+.screen + .screen { border-top: 1px solid var(--cs-line); }
+.week { gap: 6px; max-width: 24rem; padding: 10px 12px; border-radius: 12px; }
+.weekBar { max-width: 24px; height: 36px; border-radius: 6px; }
+.weekBar i { border-radius: 6px 6px 0 0; }
+.weekCount { font-size: 13px; }
+.weekName { font-size: 11px; }
+.visits { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.visit { gap: 10px; padding: 8px 12px; border: 0; border-radius: 0; background: transparent; }
+.visit + .visit { border-top: 1px solid var(--cs-line); }
+.visitIcon { width: 36px; height: 36px; border-radius: 10px; }
+.visitText { font-size: 12px; }
+.visitText strong { font-size: 14px; }
+@media (max-width: 30rem) {
+  .addresses > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .addresses dd { grid-template-columns: minmax(0, 1fr) auto; }
+  .copyWord { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .visit { grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; }
+  .visit > :last-child { grid-column: auto; justify-self: end; }
+}

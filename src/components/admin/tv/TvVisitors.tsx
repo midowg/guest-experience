@@ -62,7 +62,7 @@ export function TvVisitors({ visits, ready, today, now, migration }: { visits: r
               <span>Membuka <code>{visit.address}</code> · {tvVisitVersionLabels[visit.version]}{screen ? ` · ${screen}` : ""}{place ? ` · ${place}` : ""}</span>
               <span>{when}</span>
             </div>
-            {on ? <Pill tone="ok">Sedang membuka</Pill> : <Pill tone="neutral">{visit.day === today ? "Sudah tidak membuka" : "Hari lain"}</Pill>}
+            {on ? <Pill tone="ok">Membuka</Pill> : <Pill tone="neutral">{visit.day === today ? "Sudah tutup" : "Hari lain"}</Pill>}
           </li>;
         })}</ul>}
       <p className={akun.hint}>Satu perangkat tercatat sekali per alamat per hari. Alamat jaringannya tidak disimpan. Catatan lebih dari 30 hari dihapus sendiri.</p>

@@ -120,3 +120,54 @@
   .plActions > button { flex: 1 1 100%; }
   .plActions .plDanger { margin-left: 0; }
 }
+
+/*
+ * Revision (27 Nov 2026, asked by the owner): no big card a row, which was hard to look through on
+ * a phone. The list is one surface with a thin line between rows; a row is as low as its picture.
+ * Name and facts keep to one line each. On a phone a row is the picture, two lines and its state:
+ * the arrows are in the open sheet instead (Naikkan urutan, Turunkan urutan), and the note is left out.
+ */
+.plList { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.plRow { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 4px; padding: 4px 8px 4px 6px; border: 0; border-bottom: 1px solid var(--cs-line); border-radius: 0; background: transparent; }
+.plRow:last-child { border-bottom: 0; }
+.plRow:hover { background: var(--cs-hover); }
+.plOpen { grid-template-columns: 88px minmax(0, 1fr) auto; gap: 12px; min-height: 56px; }
+.plOpen:hover:not(:disabled) { background: transparent; }
+.plOrder { min-width: 24px; height: 24px; background: transparent; color: var(--cs-muted); font-size: 12px; }
+.plName, .plLine { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plName { font-size: 15px; }
+.plChips { margin-top: 2px; }
+.plChip { padding: 0 6px; font-size: 11px; }
+.plStep { border-color: transparent; background: transparent; color: var(--cs-muted); }
+@media (max-width: 40rem) {
+  .plBar > p { display: none; }
+  .plRow { grid-template-columns: 22px minmax(0, 1fr); gap: 0; padding: 0 8px 0 2px; }
+  .plOpen { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; min-height: 60px; padding: 6px 0; }
+  .plOrder { min-width: 20px; }
+  .plNote { display: none; }
+  .plState { grid-column: auto; justify-content: flex-end; }
+  .plState > svg { display: none; }
+  .plMove { display: none; }
+}
+
+/* Tambah tayangan: the kinds as one tight list too, each a row with a small icon, its name and one line. */
+.plKinds { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; }
+.plKinds li + li { border-top: 1px solid var(--cs-line); }
+.plKindTile { gap: 12px; min-height: 56px; padding: 8px 12px; border: 0; border-radius: 0; }
+.plKindTile:hover { border-color: transparent; }
+.plKindTile > span:nth-child(2) { font-size: 13px; line-height: 1.35; }
+.plKindTile > span:nth-child(2) > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plKindTile strong { font-size: 15px; }
+.plKind { width: 36px; height: 36px; border-radius: 10px; }
+.plKind svg { width: 20px; height: 20px; }
+.plTemplates { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; }
+.plTemplate { grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; border: 0; border-radius: 0; }
+.plTemplate + .plTemplate { border-top: 1px solid var(--cs-line); }
+.plMini { width: 64px; grid-row: auto; border-radius: 6px; }
+.plTemplate p { display: -webkit-box; margin-top: 2px; overflow: hidden; font-size: 12px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.plTemplate > button { grid-column: auto; }
+@media (max-width: 30rem) {
+  .plTemplate { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .plMini { width: 56px; }
+  .plTemplate > button { grid-column: auto; }
+}

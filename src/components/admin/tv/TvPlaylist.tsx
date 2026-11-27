@@ -242,6 +242,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
 
   // The open row, for its sheet.
   const open = editing ? items.find(item => item.id === editing.id) : undefined;
+  const openIndex = open ? items.indexOf(open) : -1;
   const edit = open && editing ? editing.draft : null;
   const take = open && editing ? editing.take : null;
   const change = (more: Partial<Draft>) => { if (editing) setEditing({ ...editing, draft: { ...editing.draft, ...more } }); };
@@ -270,7 +271,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           { value: "tayang", label: "Tayang", count: active },
           { value: "sembunyi", label: "Disembunyikan", count: items.length - active },
         ]} />
-        <p className={css.plHint}>{shown === "semua" ? "Ketuk satu tayangan untuk mengaturnya. Panah mengubah urutan tayang." : "Urutan diubah di tampilan Semua."} Tanda <strong>TV</strong> = tayang di papan biasa, <strong>Lite</strong> = tayang juga di TV lama.</p>
+        <p className={css.plHint}>{shown === "semua" ? "Ketuk satu tayangan untuk mengatur isi dan urutannya." : "Urutan diubah di tampilan Semua."} Tanda <strong>TV</strong> = tayang di papan biasa, <strong>Lite</strong> = tayang juga di TV lama.</p>
       </div>
       {items.length === 0 ? <div className={css.plEmpty}>
         <p>Belum ada tayangan, jadi TV menulis &quot;Belum ada yang ditayangkan&quot;.</p>
@@ -330,7 +331,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
 
     {/* One tayangan, opened: its words, when and where it plays, a video's sound, and the other actions. */}
     {open && edit && editing && <SheetError.Provider value={refused}>
-      <Sheet title={nameOf(open)} subtitle={`${sourceOf(open.kind)} · ${open.active ? "Tayang" : "Disembunyikan"}`} busy={!!busy} onClose={() => setEditing(null)} onSubmit={() => { if (!lengthBad) void save(open, edit); }}
+      <Sheet title={nameOf(open)} subtitle={`Urutan ${openIndex + 1} dari ${items.length} · ${sourceOf(open.kind)} · ${open.active ? "Tayang" : "Disembunyikan"}`} busy={!!busy} onClose={() => setEditing(null)} onSubmit={() => { if (!lengthBad) void save(open, edit); }}
         footer={<>
           <ConsoleButton disabled={!!busy} onClick={() => setEditing(null)}>Batal</ConsoleButton>
           <ConsoleButton type="submit" variant="primary" disabled={!!busy || lengthBad}>{busy === `baris-${open.id}` ? "Menyimpan…" : "Simpan"}</ConsoleButton>
@@ -428,6 +429,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
         <div className={css.plGroup} role="group" aria-label="Tindakan lain">
           <p className={css.plLegend}>Tindakan lain</p>
           <div className={css.plActions}>
+            <ConsoleButton icon={<ArrowUp size={18} aria-hidden />} disabled={!!busy || openIndex <= 0} onClick={() => void move(openIndex, -1)}>Naikkan urutan</ConsoleButton>
+            <ConsoleButton icon={<ArrowDown size={18} aria-hidden />} disabled={!!busy || openIndex < 0 || openIndex >= items.length - 1} onClick={() => void move(openIndex, 1)}>Turunkan urutan</ConsoleButton>
             {list.welcomeReady && <ConsoleButton icon={<Zap size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!take} onClick={() => setEditing({ ...editing, take: take ? null : { minutes: 15, screenIds: [] } })}>Tayangkan sekarang</ConsoleButton>}
             <ConsoleButton icon={open.active ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />} disabled={!!busy} onClick={() => void patch(open, { active: !open.active })}>{open.active ? "Sembunyikan" : "Tayangkan lagi"}</ConsoleButton>
             <ConsoleButton className={css.plDanger} icon={<Trash2 size={18} aria-hidden />} disabled={!!busy} onClick={() => void remove(open)}>Hapus</ConsoleButton>

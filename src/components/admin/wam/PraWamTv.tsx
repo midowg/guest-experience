@@ -191,23 +191,22 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
       {view === "layar" && <section className={akun.section} aria-labelledby="tv-layar">
         <SectionToolbar title={<span id="tv-layar">Layar TV</span>} count={`${list.screens.length} TV`} />
         <p className={akun.lead}>Buka alamat di browser TV, lalu tekan Layar penuh. Alamat TV terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
-        <div className={css.versions} role="group" aria-label="Dua versi papan">
-          <div>
-            <p className={css.versionName}><MonitorPlay size={18} aria-hidden />Papan biasa</p>
-            <p>Untuk TV dan browser yang baru. Menayangkan semua tayangan: kalender, gambar, tulisan, sambutan, ulang tahun, video YouTube dan video berkas (bisa bersuara), susunan dua baris, dan kode QR.</p>
-          </div>
-          <div>
-            <p className={css.versionName}><Tv size={18} aria-hidden />Papan lite, untuk TV lama</p>
-            <p>Alamatnya sama, ditambah <code>/lite</code>. Pakai kalau papan biasa tidak mau terbuka di TV itu. Tanpa animasi, satu tayangan per muat halaman. Tidak menayangkan video YouTube, video berkas yang lamanya belum diisi, baris foto berjalan, dan kode QR.</p>
-          </div>
-        </div>
+        <details className={css.fold} aria-label="Dua versi papan">
+          <summary>Apa beda papan biasa dan papan lite?</summary>
+          <dl>
+            <div><dt><MonitorPlay size={16} aria-hidden />Papan biasa</dt>
+              <dd>Untuk TV dan browser yang baru. Menayangkan semua tayangan: kalender, gambar, tulisan, sambutan, ulang tahun, video YouTube dan video berkas (bisa bersuara), susunan dua baris, dan kode QR.</dd></div>
+            <div><dt><Tv size={16} aria-hidden />Papan lite, untuk TV lama</dt>
+              <dd>Alamatnya sama, ditambah <code>/lite</code>. Pakai kalau papan biasa tidak mau terbuka di TV itu. Tanpa animasi, satu tayangan per muat halaman. Tidak menayangkan video YouTube, video berkas yang lamanya belum diisi, baris foto berjalan, dan kode QR.</dd></div>
+          </dl>
+        </details>
         <div className={css.created}>
           <p><strong>Alamat untuk semua TV.</strong> Cukup alamat ini di TV mana pun; isinya sama.</p>
           <dl className={css.addresses}>
             <div><dt>Papan biasa</dt><dd><code className={css.link}>{absolute(origin, TV_HOME_PATH)}</code>
-              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat papan biasa untuk semua TV" onClick={() => void copyLink("semua", absolute(origin, TV_HOME_PATH))}>{copied === "semua" ? "Tersalin" : "Salin"}</ConsoleButton></dd></div>
+              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat papan biasa untuk semua TV" onClick={() => void copyLink("semua", absolute(origin, TV_HOME_PATH))}><span className={css.copyWord}>{copied === "semua" ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
             <div><dt>TV lama (lite)</dt><dd><code className={css.link}>{absolute(origin, tvLitePath(null))}</code>
-              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat lite untuk semua TV" onClick={() => void copyLink("semua-lite", absolute(origin, tvLitePath(null)))}>{copied === "semua-lite" ? "Tersalin" : "Salin"}</ConsoleButton></dd></div>
+              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat lite untuk semua TV" onClick={() => void copyLink("semua-lite", absolute(origin, tvLitePath(null)))}><span className={css.copyWord}>{copied === "semua-lite" ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
           </dl>
           <p className={css.meta}>TV yang memakai alamat umum tidak punya nama, tetapi perangkatnya tetap terlihat di Pantauan → Siapa yang membuka. Beri TV alamat sendiri kalau ingin mengaturnya satu per satu.</p>
         </div>
@@ -228,9 +227,9 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
                 </div>
                 : screen.slug && <dl className={css.addresses}>
                   <div><dt>Papan biasa</dt><dd><code className={css.link}>{addressOf(screen.slug)}</code>
-                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat papan biasa ${screen.name}`} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}>{copied === screen.id ? "Tersalin" : "Salin"}</ConsoleButton></dd></div>
+                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat papan biasa ${screen.name}`} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}><span className={css.copyWord}>{copied === screen.id ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
                   <div><dt>TV lama (lite)</dt><dd><code className={css.link}>{absolute(origin, tvLitePath(screen.slug))}</code>
-                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat lite ${screen.name}`} onClick={() => void copyLink(`${screen.id}-lite`, absolute(origin, tvLitePath(screen.slug)))}>{copied === `${screen.id}-lite` ? "Tersalin" : "Salin"}</ConsoleButton></dd></div>
+                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat lite ${screen.name}`} onClick={() => void copyLink(`${screen.id}-lite`, absolute(origin, tvLitePath(screen.slug)))}><span className={css.copyWord}>{copied === `${screen.id}-lite` ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
                 </dl>}
               {meta && <p className={css.meta}>{meta}</p>}
               <div className={css.buttons}>

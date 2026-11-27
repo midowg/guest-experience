@@ -96,6 +96,10 @@ describe("Admin TV → Tayangan", () => {
     expect([...design.options].map(option => option.value)).toEqual(["werkudara", "polos"]);
     for (const name of ["Isi", "Kapan tayang", "Di TV mana"]) expect(sheet.getByRole("group", { name })).toBeTruthy();
     for (const name of ["Simpan", "Batal", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(sheet.getByRole("button", { name })).toBeTruthy();
+    // The order can be changed from here too: a phone's rows carry no arrows.
+    expect(screen.getByText(/^Urutan 4 dari 6 · /)).toBeTruthy();
+    expect((sheet.getByRole("button", { name: "Naikkan urutan" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(sheet.getByRole("button", { name: "Turunkan urutan" })).toBeTruthy();
     fireEvent.click(sheet.getByRole("button", { name: "Tayangkan sekarang" }));
     expect((sheet.getByLabelText("Lama") as HTMLSelectElement).value).toBe("15");
     expect(sheet.getByRole("button", { name: "Mulai tayangkan" })).toBeTruthy();
