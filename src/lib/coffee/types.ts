@@ -42,6 +42,12 @@ export type QueueItem = Drinkline & {
   person: OrderPerson | null;
   /** tamu: the name the guest gave in the menu book (optional, 40 letters at most), shown as "Tamu · Budi". */
   guestName?: string;
+  /**
+   * What one drink cost when it was ordered (rupiah; F9). Absent: the drink had no price then, or
+   * migration 202612050001 has not run. Only the pengelola's screens read it: the server leaves it
+   * out of what the employee app and the GA tablet receive.
+   */
+  unitPrice?: number;
 };
 
 /** Who processed an order (Selesai or Tolak) and when; `label` is what the claimant sees ("Dewi"). */
@@ -106,13 +112,14 @@ export type CoffeeSettings = { karyawan: number; ga: number; intern: number };
  * (only at zero may it be deleted), whether its photo is an upload (else a static file or none),
  * and who changed it last.
  */
-export type AdminDrink = Drink & { sort: number; orders: number; uploaded: boolean; updatedAt: string | null; updatedLabel: string };
+export type AdminDrink = Drink & { sort: number; orders: number; uploaded: boolean; updatedAt: string | null; updatedLabel: string; /** Rupiah per drink (F9); null: not filled in yet. */ price: number | null };
 /**
  * `ready` false: migration 202612020001 has not run; the menu is the code's and cannot be changed yet.
  * `places` false: migration 202612030001 has not run; every drink shows in both menus and the two
  * ticks (Buku tamu, Menu biasa) cannot be changed yet.
+ * `prices` false: migration 202612050001 has not run; no drink has a price and none can be saved yet.
  */
-export type MenuData = { drinks: AdminDrink[]; ready: boolean; places: boolean };
+export type MenuData = { drinks: AdminDrink[]; ready: boolean; places: boolean; prices: boolean };
 export type { CoffeeOptions, DrinkOptions };
 
 /** Someone the pickers offer: an active employee. `used`: claims that count in the month asked for. */
@@ -151,6 +158,8 @@ export type RecapRow = {
   guestCount: number | null;
   room: string;
   drink: string;
+  /** What this drink cost when ordered (F9); null: no price then. */
+  unitPrice: number | null;
   temperature: Temperature | null;
   sugar: Sugar | null;
   ice: Ice | null;

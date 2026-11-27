@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Check, Coffee, ImagePlus, Trash2, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { DRINK_GROUPS, DRINK_GROUP_LABEL, MENU_PLACES, PLACE_LABEL, type DrinkGroup, type MenuPlace, type Temperature } from "@/lib/coffee/menu";
+import { priceText, readPrice, typedPrice } from "@/lib/coffee/money";
 import type { AdminDrink } from "@/lib/coffee/types";
 import { fieldErrorsOf, type CoffeeAdminApi, type DrinkBody } from "./api";
 import { Layer } from "./Layer";
+import { COFFEE_PRICE_MIGRATION_NAME } from "./sections";
 import css from "./coffee-admin.module.css";
 
 /**
@@ -35,9 +37,13 @@ const PHOTO_HELP = "JPG, PNG, atau WebP, paling besar 5 MB. Dipotong persegi di 
  * and the panel says so. Both ask before they act.
  * F7: "Masuk menu mana" holds the two ticks, Buku tamu and Menu biasa (a new drink starts in both).
  * `places` false: migration 202612030001 has not run, so both stay on and rest.
+ * F9: "Harga satuan (Rp)" holds the drink's price, the base of the expense recap. It is typed with
+ * thousand separators ("8000" becomes "8.000" as the digits come in), empty means "belum diisi",
+ * and a negative or a decimal is refused under the field. `prices` false: migration 202612050001
+ * has not run, so the field rests (and the price is not sent).
  */
-export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRemoved }: {
-  api: CoffeeAdminApi; drink: AdminDrink | null; places?: boolean; onClose: () => void; onSaved: (drink: AdminDrink, message: string) => void; onRemoved: (drink: AdminDrink, message: string) => void;
+export function DrinkEditor({ api, drink, places = true, prices = true, onClose, onSaved, onRemoved }: {
+  api: CoffeeAdminApi; drink: AdminDrink | null; places?: boolean; prices?: boolean; onClose: () => void; onSaved: (drink: AdminDrink, message: string) => void; onRemoved: (drink: AdminDrink, message: string) => void;
 }) {
   const titleId = useId(), uid = useId();
   const [name, setName] = useState(drink?.name ?? "");
@@ -46,6 +52,10 @@ export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRem
   const [temperatures, setTemperatures] = useState<Temperature[]>(drink?.temperatures ?? ["panas", "es"]);
   const [active, setActive] = useState(drink?.active ?? true);
   const [shows, setShows] = useState<Record<MenuPlace, boolean>>({ guestBook: drink?.guestBook ?? true, regular: drink?.regular ?? true });
+  const [price, setPrice] = useState(() => priceText(drink?.price));
+  const priceInput = useRef<HTMLInputElement>(null);
+  /** How many digits stood left of the caret when a key was pressed: the caret goes back after the digits are regrouped. */
+  const caret = useRef<number | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
@@ -67,6 +77,21 @@ export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRem
     return () => { URL.revokeObjectURL?.(address); };
   }, [photo]);
 
+  useLayoutEffect(() => {
+    const input = priceInput.current;
+    if (caret.current === null || !input) return;
+    let digits = caret.current, at = 0;
+    while (at < input.value.length && digits > 0) { if (/\d/.test(input.value[at])) digits--; at++; }
+    caret.current = null;
+    input.setSelectionRange?.(at, at);
+  }, [price]);
+  const typePrice = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    caret.current = raw.slice(0, event.target.selectionStart ?? raw.length).replace(/\D/g, "").length;
+    setServerErrors(current => ({ ...current, price: [] }));
+    setPrice(typedPrice(raw, price));
+  };
+
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const chosen = event.target.files?.[0] ?? null;
     event.target.value = "";
@@ -78,15 +103,19 @@ export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRem
     setPhoto(chosen);
   };
 
+  const priceRead = readPrice(price);
   const errors = {
     name: !name.trim() ? "Tulis nama minumannya." : name.trim().length > 60 ? "Nama paling panjang 60 huruf." : "",
     description: description.trim().length > 200 ? "Keterangan paling panjang 200 huruf." : "",
     temperatures: temperatures.length === 0 ? "Pilih Panas, Es, atau keduanya." : "",
+    price: prices && !priceRead.ok ? priceRead.message : "",
   };
-  const shown = (key: keyof typeof errors) => (tried ? errors[key] : "") || serverErrors[key]?.[0] || "";
+  // A refused price is said at once (it is a typing mistake, not a missing answer); the others wait for the first Simpan.
+  const shown = (key: keyof typeof errors) => (tried || (key === "price" && price !== priceText(base?.price)) ? errors[key] : "") || serverErrors[key]?.[0] || "";
   const invalid = Object.values(errors).some(Boolean);
   const base = kept ?? drink;
-  const touched = !!photo || name !== (base?.name ?? "") || description !== (base?.description ?? "") || group !== (base?.group ?? "kopi")
+  const wantedPrice = priceRead.ok ? priceRead.value : undefined;
+  const touched = !!photo || (prices && price !== priceText(base?.price)) || name !== (base?.name ?? "") || description !== (base?.description ?? "") || group !== (base?.group ?? "kopi")
     || active !== (base?.active ?? true) || shows.guestBook !== (base?.guestBook ?? true) || shows.regular !== (base?.regular ?? true) || temperatures.join() !== (base?.temperatures ?? ["panas", "es"]).join();
   const requestClose = () => {
     if (busy) return;
@@ -100,12 +129,13 @@ export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRem
     setTried(true); setFailure("");
     if (invalid || busy) return;
     setServerErrors({});
-    const body: DrinkBody = { name: name.trim(), description: description.trim(), group, temperatures, active, guestBook: shows.guestBook, regular: shows.regular };
+    const body: DrinkBody = { name: name.trim(), description: description.trim(), group, temperatures, active, guestBook: shows.guestBook, regular: shows.regular, ...(prices && wantedPrice !== undefined && wantedPrice !== (kept?.price ?? null) ? { price: wantedPrice } : {}) };
     let saved = kept;
     let message = "";
     try {
       // The drink first (a new one needs its slug before a photo can belong to it), then the photo.
-      const changed = !saved || saved.name !== body.name || saved.description !== body.description || saved.group !== group || saved.active !== active || (saved.guestBook ?? true) !== shows.guestBook || (saved.regular ?? true) !== shows.regular || saved.temperatures.join() !== temperatures.join();
+      const changed = !saved || saved.name !== body.name || saved.description !== body.description || saved.group !== group || saved.active !== active || (saved.guestBook ?? true) !== shows.guestBook || (saved.regular ?? true) !== shows.regular || saved.temperatures.join() !== temperatures.join()
+        || (prices && wantedPrice !== undefined && (saved.price ?? null) !== wantedPrice);
       if (changed) {
         setBusy("save");
         const done = saved ? await api.updateDrink(saved.slug, body) : await api.createDrink(body);
@@ -207,6 +237,19 @@ export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRem
               ? <p id={`${uid}-temp-error`} className={css.error}>{shown("temperatures")}</p>
               : <p id={`${uid}-temp-help`} className={css.small}>Suhu yang bisa dipilih bila opsi Suhu ditanyakan.</p>}
           </fieldset>
+
+          <div className={css.field}>
+            <label htmlFor={`${uid}-price`}>Harga satuan (Rp)</label>
+            <div className={css.priceBox} data-rests={prices ? undefined : "true"}>
+              <span className={css.pricePrefix} aria-hidden>Rp</span>
+              <input ref={priceInput} id={`${uid}-price`} value={prices ? price : ""} inputMode="numeric" autoComplete="off" placeholder="mis. 8.000" disabled={!prices} maxLength={14}
+                onChange={typePrice} onBlur={() => { if (priceRead.ok) setPrice(priceText(priceRead.value)); }}
+                aria-invalid={!!shown("price")} aria-describedby={`${uid}-price-help`} />
+            </div>
+            {shown("price")
+              ? <p id={`${uid}-price-help`} className={css.error} role="alert">{shown("price")}</p>
+              : <p id={`${uid}-price-help`} className={css.small}>{prices ? "Dipakai untuk rekap pengeluaran. Harga pesanan yang sudah masuk tidak berubah. Kosongkan bila belum tahu." : `Menunggu migrasi ${COFFEE_PRICE_MIGRATION_NAME}. Sampai dijalankan, harga belum bisa diisi.`}</p>}
+          </div>
 
           <fieldset className={css.fieldset} disabled={!places} aria-describedby={`${uid}-places-help`}>
             <legend>Masuk menu mana</legend>

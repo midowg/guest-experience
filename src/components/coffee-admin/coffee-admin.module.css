@@ -142,6 +142,11 @@
 .field input[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: var(--no); }
 .field input:disabled { background: var(--surface-2); color: var(--ink-3); }
 .optional { font-weight: 400; color: var(--ink-3); }
+/* Harga satuan: the "Rp" stands inside the field, in front of the digits */
+.priceBox { position: relative; display: grid; }
+.pricePrefix { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: 15px; font-weight: 700; pointer-events: none; }
+.field .priceBox input { padding-left: 38px; font-variant-numeric: tabular-nums; }
+.priceBox[data-rests] .pricePrefix { opacity: .5; }
 .error { color: var(--no); font-size: 14px; font-weight: 700; }
 .combo { position: relative; }
 .combo input { padding-left: 38px; }
@@ -223,7 +228,7 @@
 }
 .filterError { grid-column: 1 / -1; }
 .kindFilter { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
 .stat { display: grid; gap: 2px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); min-width: 0; }
 .stat span { font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .stat strong { font-size: 28px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
@@ -231,6 +236,9 @@
 .stat[data-main] { background: var(--act-c); border-color: transparent; }
 .stat[data-main] strong, .stat[data-main] span, .stat[data-main] small { color: var(--act-strong); }
 .stat[data-tone="no"] strong { color: var(--no); }
+.stat[data-money] strong { font-size: 24px; white-space: nowrap; }
+.stat .statNote { margin-top: 2px; }
+.stat .statNote a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); }
 .tabs [role="tablist"] { display: flex; gap: 4px; }
 .tabs button {
@@ -304,6 +312,9 @@
 .detailList .statusCell { display: grid; justify-items: end; }
 .cardListSide { display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--ink-2); font-size: 15px; }
 .cardListSide strong { color: var(--ink); font-size: 18px; }
+.sideStack { display: grid; justify-items: end; gap: 1px; }
+.sideTop { display: inline-flex; align-items: center; gap: 8px; }
+.sideMoney { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .detailList li { align-items: flex-start; }
 .detailList .cardListSide { display: grid; justify-items: end; gap: 4px; }
 .filterSheet { display: grid; gap: 14px; margin: 4px 0 8px; }
@@ -336,6 +347,8 @@
 .menuText strong { font-size: 16px; overflow-wrap: anywhere; }
 .menuText > span { color: var(--ink-2); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menuText .menuMeta { color: var(--ink-3); }
+.menuText .menuMeta .menuPrice { font-size: inherit; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.menuText .menuMeta .menuPrice[data-empty] { color: var(--ink-3); font-weight: 400; }
 /* No photo (or one that did not load): a cup on the kind's tint. Decorative; the name is beside it. */
 .menuThumb[data-empty] { background: color-mix(in srgb, var(--ink-3) 14%, var(--surface)); color: var(--ink-2); }
 .menuThumb[data-empty][data-group="kopi"] { background: color-mix(in srgb, #b45309 16%, var(--surface)); color: color-mix(in srgb, #b45309 70%, var(--ink)); }
@@ -614,4 +627,12 @@
   .pushBar[data-offer] > span { position: absolute; width: 1px; height: 1px; min-width: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .pushBar[data-offer] > button { flex: 1; min-height: 44px; }
   .pushBar[data-offer] > .error { position: static; }
+}
+
+/* F9: the Pengeluaran card and column need room. On a narrower desktop the six cards wrap to two rows of three, and the summary tables
+   tighten (names a little shorter, less air between columns) so the money column stays in view. */
+@media (min-width: 761px) and (max-width: 1280px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sumTable th, .sumTable td { padding-inline: 8px; }
+  .cellName, .sumTable[data-bars] .cellName { max-width: 180px; }
 }

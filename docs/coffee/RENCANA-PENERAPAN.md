@@ -1117,3 +1117,31 @@ Kelompok dan Ruangan mudah (dua blok baris di `summarySheet`), tunggu keputusan 
 
 **Skrip uji SQL.** `scripts/coffee-sql-check.mjs` mencari berkas migrasi menurut namanya di semua folder
 aplikasi (gagal dengan pesan jelas bila tidak ada atau kembar); 794 lulus, 0 gagal.
+
+## Catatan pelaksanaan F9 (27 Nov 2026): harga per minuman dan pengeluaran
+
+Permintaan pemilik: "Di admin harus ada harga tiap minuman, karena untuk rekap pengeluaran sekalian nantinya."
+
+**Migrasi.** `supabase/migrations/coffee/202612050001_coffee_price.sql` (nomor unik di semua folder; yang
+terakhir sebelumnya `202612040001` di `karyawan/`). Kolom `coffee_drinks.price` dan
+`coffee_order_items.unit_price`; harga awal (menu mesin JS Mini 27 Nov) dan pengisian baris pesanan lama
+ditulis **sekali** di blok yang menambah kolom; dua fungsi pesanan diganti (tanda tangan sama, semua aturan
+tetap) dan menulis harga saat pesanan dibuat.
+
+**Kode.** `lib/coffee/money.ts` (satu tempat untuk `formatRupiah`, membaca isian harga, daftar harga awal);
+`priceReady()` di `store.ts` (memeriksa kolomnya seperti `audienceReady`); `menu.ts` (server) membaca dan
+menyimpan harga, 503 dengan nama migrasi sebelum migrasi; `recap.ts` (`unitPrice` per baris, `spend` di
+ringkasan, `spendOf`, `subtotalOf`, kolom Detail Harga satuan dan Subtotal, lembar Ringkasan); admin Menu
+(kolom Harga satuan, saringan Tanpa harga, pemberitahuan), Rekap (kartu Pengeluaran, dua kolom Detail,
+kolom Pengeluaran di enam rincian). Contoh data (`sample.ts`) punya minuman berharga dan tidak;
+`?menu=tunggu-harga` menunjukkan keadaan sebelum migrasi.
+
+**Keputusan agen.** (1) Pengeluaran hanya status Selesai. (2) **Subtotal hanya terisi untuk baris Selesai**
+(bukan semua baris yang berharga) supaya jumlah kolomnya sama dengan Pengeluaran; Harga satuan terisi untuk
+semua. (3) Rincian Karyawan menghitung minuman milik orang itu saja; minuman tamu dihitung di PIC tamu,
+Ruangan, dan BU. (4) Pesanan lama diberi harga minumannya sekali saat migrasi (terbaik yang ada). (5) Harga
+tidak masuk ke tipe `Drink` yang dikirim ke karyawan dan GA; `toMeetingOrder` membuang `unitPrice`.
+(6) Pada layar desktop sempit (761 sampai 1280 px) kartu angka menjadi 3 x 2 dan tabel ringkasan dirapatkan
+supaya kolom uang tetap terlihat. (7) Mengisi harga langsung dari daftar (tanpa panel) tidak dibuat.
+
+**Skrip uji SQL.** `scripts/coffee-sql-check.mjs`: 1225 lulus, 0 gagal (sebelumnya 794).

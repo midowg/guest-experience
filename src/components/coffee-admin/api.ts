@@ -13,7 +13,8 @@ import { coffeeAdminApi } from "@/lib/routes";
  */
 
 export type RecapQuery = { dari: string; sampai: string; jenis?: ItemFor; status?: Status; q?: string };
-export type RecapData = { rows: RecapRow[]; summary: RecapSummary; title: string };
+/** `prices` false: migration 202612050001 has not run; money shows as "–". */
+export type RecapData = { rows: RecapRow[]; summary: RecapSummary; title: string; prices: boolean };
 export type CoffeeHolder = { id: string; name: string; position: string };
 /**
  * `gaPin`: a PIN GA is set (the PIN itself never reaches the browser). `options`: what each
@@ -28,7 +29,7 @@ export type ManualBody = {
 };
 export type Done = { order: QueueOrder; message: string };
 /** Tambah / Ubah minuman: what the editor sends. */
-export type DrinkBody = { name: string; description: string; group: DrinkGroup; temperatures: Temperature[]; active: boolean; guestBook: boolean; regular: boolean };
+export type DrinkBody = { name: string; description: string; group: DrinkGroup; temperatures: Temperature[]; active: boolean; guestBook: boolean; regular: boolean; /** Harga satuan in rupiah; null clears it; left out: unchanged (also what is sent before migration 202612050001). */ price?: number | null };
 export type DrinkDone = { drink: AdminDrink; message: string };
 /** A record made by hand that the pengelola is about to cancel: its order, and the words the question shows. */
 export type CancelTarget = { id: string; title: string; claim: boolean };

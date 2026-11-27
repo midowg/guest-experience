@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { pushSubscriptionSchema } from "@/lib/pra-wam/push";
+import { PRICE_MAX, formatRupiah } from "./money";
 import { ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, fitChoice, type Choice, type Drink, type DrinkOptions, type Ice, type Sugar, type Temperature } from "./menu";
 import { ITEM_KINDS, STATUSES } from "./types";
 
@@ -160,6 +161,8 @@ export const drinkSchema = z.object({
   /** Where it shows (F7). Left out: both, as every drink was before. */
   guestBook: z.boolean("Pilih tampil di Buku tamu atau tidak.").default(true),
   regular: z.boolean("Pilih tampil di Menu biasa atau tidak.").default(true),
+  /** Harga satuan in whole rupiah (F9). Left out: unchanged; null: back to "belum diisi". */
+  price: z.number("Harga berupa angka.").int("Isi rupiah penuh, tanpa koma atau sen.").min(0, "Harga tidak boleh negatif.").max(PRICE_MAX, `Harga paling besar ${formatRupiah(PRICE_MAX)}.`).nullable().optional(),
 });
 export type DrinkInput = z.infer<typeof drinkSchema>;
 /** From the list, without opening the editor: Sembunyikan / Tampilkan, or one of the two "where it shows" ticks. At least one of them. */

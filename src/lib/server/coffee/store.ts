@@ -16,6 +16,8 @@ export const COFFEE_MIGRATION = "202612010001_coffee.sql";
 export const COFFEE_MENU_MIGRATION = "202612020001_coffee_menu.sql";
 /** F7: where each drink shows (Buku tamu, Menu biasa). */
 export const COFFEE_AUDIENCE_MIGRATION = "202612030003_coffee_menu_audience.sql";
+/** F9: the price of each drink, kept with every order (coffee_drinks.price, coffee_order_items.unit_price). */
+export const COFFEE_PRICE_MIGRATION = "202612050001_coffee_price.sql";
 type DbError = { code?: string; message?: string };
 
 /**
@@ -81,6 +83,18 @@ async function menuSchemaNow(now: number): Promise<{ ready: boolean; audience: b
   const { error } = await db().from("coffee_drinks").select("slug").limit(1);
   return menuSchema = { ready: !error, audience: false, at: now };
 }
+/**
+ * F9 adds a third step the same way: migration 202612050001 gives coffee_drinks its price and
+ * every order item its unit_price (one transaction, so both arrive together). `priceReady` says
+ * they are there. "Yes" is remembered for good; "no" is asked again after half a minute. Any fault
+ * reads as "no" for now: the app then leaves both columns out of every question, as before F9.
+ */
+let priceSchema: { ready: boolean; at: number } | null = null;
+export async function priceReady(now = Date.now()): Promise<boolean> {
+  if (priceSchema && (priceSchema.ready || now - priceSchema.at < NOT_READY_FOR)) return priceSchema.ready;
+  const [drinks, items] = await Promise.all([db().from("coffee_drinks").select("slug,price").limit(1), db().from("coffee_order_items").select("id,unit_price").limit(1)]);
+  return (priceSchema = { ready: !drinks.error && !items.error, at: now }).ready;
+}
 export async function menuReady(now = Date.now()): Promise<boolean> { return (await menuSchemaNow(now)).ready; }
 /** Migration 202612030001 has run: drinks carry where they show, and the database enforces it. */
 export async function audienceReady(now = Date.now()): Promise<boolean> { return (await menuSchemaNow(now)).audience; }
@@ -88,9 +102,10 @@ export async function audienceReady(now = Date.now()): Promise<boolean> { return
 const ORDER_HEAD = "id,kind,number,round,parent_id,employee_id,person_name,person_group,person_position,person_bu,room,room_spot,guest,guest_count,status,reject_note,processed_by,processed_label,processed_at,created_label,manual,ordered_at,";
 const ITEM_COLUMNS = "id,for_whom,employee_id,person_name,person_group,person_position,person_bu,guest_name,drink_slug,drink_other,temperature,sugar,ice,qty,sort";
 /** An order with its drinks; the drink's kept name only once the column exists. */
-export const orderColumns = async (): Promise<string> => `${ORDER_HEAD}coffee_order_items(${ITEM_COLUMNS}${await menuReady() ? ",drink_name" : ""})`;
+export const orderColumns = async (): Promise<string> => `${ORDER_HEAD}coffee_order_items(${ITEM_COLUMNS}${await menuReady() ? ",drink_name" : ""}${await priceReady() ? ",unit_price" : ""})`;
 
 type ItemRow = {
+  unit_price?: number | null;
   id: string; for_whom: QueueItem["for"]; employee_id: string | null; person_name: string | null; person_group: QuotaGroup | null; person_position: string | null; person_bu: string | null; guest_name?: string | null;
   drink_slug: string; drink_other: string | null; drink_name?: string | null; temperature: Temperature | null; sugar: Sugar | null; ice: Ice | null; qty: number; sort: number;
 };
@@ -108,7 +123,7 @@ const PLACE_COLUMNS = ",in_guest_book,in_regular_menu";
 type DrinkRow = { slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; active: boolean; in_guest_book?: boolean | null; in_regular_menu?: boolean | null };
 let menuKept: { drinks: Drink[]; at: number } | null = null;
 /** Forget what is kept (after an edit; `schema` also asks again whether the migration has run: the tests). */
-export function forgetMenu(schema = false) { menuKept = null; if (schema) menuSchema = null; }
+export function forgetMenu(schema = false) { menuKept = null; if (schema) { menuSchema = null; priceSchema = null; } }
 export async function readMenu(fresh = false, now = Date.now()): Promise<Drink[]> {
   if (!fresh && menuKept && now - menuKept.at < MENU_KEEP_MS) return menuKept.drinks;
   if (!(await menuReady(now))) return DRINKS;
@@ -147,6 +162,7 @@ export function toOrder(row: OrderRow, menu: ReadonlyMap<string, Drink> = codeMe
     temperature: item.temperature ?? null, sugar: item.sugar ?? null, ice: item.temperature === "es" ? item.ice ?? null : null,
     person: item.for_whom === "tim" ? { id: item.employee_id, name: item.person_name ?? "—", group: item.person_group, position: item.person_position ?? "", bu: item.person_bu ?? "" } : null,
     ...(item.for_whom === "tamu" && item.guest_name ? { guestName: item.guest_name } : {}),
+    ...(item.unit_price != null ? { unitPrice: item.unit_price } : {}),
   }));
   return {
     id: row.id, kind: row.kind, no: orderNo(row.kind, row.number, row.round), number: row.number, round: row.round, parentId: row.parent_id,
@@ -172,7 +188,9 @@ export function toMyOrder(order: QueueOrder, claimNo?: number): MyOrder {
 export function toMeetingOrder(order: QueueOrder): MeetingOrder {
   return {
     id: order.id, no: order.no, number: order.number, round: order.round, parentId: order.parentId, room: order.room, spot: order.spot, guest: order.guest,
-    guestCount: order.guestCount, status: order.status, rejectNote: order.rejectNote, orderedAt: order.orderedAt, items: order.items, sentBy: order.sentBy, manual: order.manual,
+    guestCount: order.guestCount, status: order.status, rejectNote: order.rejectNote, orderedAt: order.orderedAt,
+    // What a drink cost is the pengelola's business: the GA tablet never receives it.
+    items: order.items.map(line => { const copy = { ...line }; delete copy.unitPrice; return copy; }), sentBy: order.sentBy, manual: order.manual,
     pic: { id: order.person.id, name: order.person.name }, processedLabel: order.processed?.label ?? "", processedAt: order.processed?.at ?? null,
   };
 }

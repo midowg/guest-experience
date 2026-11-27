@@ -2,6 +2,7 @@ import { AdminApiError } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
 import { claim, item, meeting, person } from "@/lib/coffee/fixtures";
 import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MACHINE_MENU, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, placesWords, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
+import { STARTING_PRICES } from "@/lib/coffee/money";
 import { claimNumbers, countsForQuota, previousMonth, wibDay, wibMonth } from "@/lib/coffee/quota";
 import { expandRows, filterRows, recapTitle, summarize } from "@/lib/coffee/recap";
 import { roomSpot } from "@/lib/coffee/rooms";
@@ -48,7 +49,8 @@ export type SampleServer = ReturnType<typeof createSampleServer>;
 
 const MENU_WAITS = "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.";
 const PLACES_WAIT = "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030003_coffee_menu_audience.sql.";
-export type SampleMenu = "ready" | "waiting" | "empty" | "places-waiting" | "many";
+const PRICE_WAIT = "Harga minuman menunggu migrasi 202612050001_coffee_price.sql.";
+export type SampleMenu = "ready" | "waiting" | "empty" | "places-waiting" | "prices-waiting" | "many";
 const PHOTO_KINDS = ["image/jpeg", "image/png", "image/webp"];
 
 /**
@@ -56,12 +58,15 @@ const PHOTO_KINDS = ["image/jpeg", "image/png", "image/webp"];
  * database before migration 202612020001 (the code's menu, read only, every option asked);
  * "empty" a menu with no drinks yet; "places-waiting" the database before migration 202612030001
  * (every drink in both menus, the two ticks cannot be saved); "many" a long menu (the 15 and 48
- * made-up drinks without photos) to try the search and the filters on.
+ * made-up drinks without photos) to try the search and the filters on; "prices-waiting" the
+ * database before migration 202612050001 (no drink has a price, none can be saved, Rekap shows "–").
+ * With the menu ready, the drinks carry the starting prices of the JS Mini machine (three have none).
  * With the menu ready, the drinks carry the owner's starting ticks (MACHINE_MENU).
  */
 export function createSampleServer(clock: () => number = Date.now, { menu: menuState = "ready" }: { menu?: SampleMenu } = {}) {
   const menuReady = menuState !== "waiting";
   const placesReady = menuReady && menuState !== "places-waiting";
+  const pricesReady = menuReady && menuState !== "prices-waiting";
   const iso = (msAgo: number) => new Date(clock() - msAgo).toISOString();
   const minute = 60_000, day = 86_400_000;
   let settings: CoffeeSettings = { ...MONTHLY_QUOTA };
@@ -69,6 +74,16 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
   let options: CoffeeOptions = menuReady ? { klaim: { ...DEFAULT_OPTIONS.klaim }, tim: { ...DEFAULT_OPTIONS.tim }, tamu: { ...DEFAULT_OPTIONS.tamu } } : { klaim: { ...LEGACY_OPTIONS.klaim }, tim: { ...LEGACY_OPTIONS.tim }, tamu: { ...LEGACY_OPTIONS.tamu } };
   const menu: Drink[] = menuState === "empty" ? [] : (placesReady ? MACHINE_MENU : DRINKS).map(drink => ({ ...drink }));
   if (menuState === "many") for (let n = 1; n <= 48; n++) menu.push({ slug: `contoh-minuman-${n}`, name: `Contoh Minuman ${n}`, description: "", group: n % 3 ? "kopi" : "non-kopi", temperatures: ["panas", "es"], photo: null, active: true, guestBook: n % 4 === 0, regular: true });
+  /** Each drink's price (rupiah; none: not filled in yet). Orders keep the price they were made with (`stamp`), so an edit here never reaches them. */
+  const prices = new Map<string, number>();
+  if (pricesReady) {
+    for (const drink of menu) {
+      const start = STARTING_PRICES[drink.slug] ?? (drink.slug.startsWith("contoh-minuman-") ? (Number(drink.slug.slice(15)) % 3 ? 6000 + Number(drink.slug.slice(15)) * 100 : undefined) : undefined);
+      if (start !== undefined) prices.set(drink.slug, start);
+    }
+  }
+  /** What the database functions do: the price of the moment is written on every item of a new order. */
+  const stamp = (order: QueueOrder): QueueOrder => ({ ...order, items: order.items.map(line => line.slug !== OTHER_DRINK && prices.has(line.slug) ? { ...line, unitPrice: prices.get(line.slug) } : line) });
   /** Which drinks carry an uploaded photo, and who changed a drink last. */
   const uploaded = new Set<string>();
   const changed = new Map<string, { at: string; label: string }>();
@@ -117,6 +132,8 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
   for (const [pic, room, spot, daysAgo, guests, guest, cups] of rooms) {
     orders.push(done(meet(nextId(), meetingSeq++, pic, [item("a", "tamu", "kopi-susu", { qty: cups })], { orderedAt: iso(daysAgo * day), room, spot: spot || null, guest, guestCount: guests }), OTHER_ACTOR, daysAgo * day - 10 * minute));
   }
+  // Everything above was ordered after the prices were filled in.
+  orders.forEach((order, index) => { orders[index] = stamp(order); });
   const counted = () => orders.filter(order => order.kind === "klaim").map(order => ({ id: order.id, kind: order.kind, status: order.status, employeeId: order.person.id, orderedAt: order.orderedAt }));
   const usedOf = (employeeId: string | null, month: string) => orders.filter(order => order.kind === "klaim" && order.person.id === employeeId && countsForQuota(order.status) && wibMonth(order.orderedAt) === month).length;
   const shown = (raw: QueueOrder): QueueOrder => {
@@ -128,7 +145,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
   };
   // The menu as the pengelola's Menu shows it, and the rules of changing it.
   const usedBy = (slug: string) => orders.filter(order => order.items.some(line => line.slug === slug)).length;
-  const adminDrink = (drink: Drink, index: number): AdminDrink => ({ ...drink, sort: (index + 1) * 10, orders: usedBy(drink.slug), uploaded: uploaded.has(drink.slug), updatedAt: changed.get(drink.slug)?.at ?? null, updatedLabel: changed.get(drink.slug)?.label ?? "" });
+  const adminDrink = (drink: Drink, index: number): AdminDrink => ({ ...drink, price: prices.get(drink.slug) ?? null, sort: (index + 1) * 10, orders: usedBy(drink.slug), uploaded: uploaded.has(drink.slug), updatedAt: changed.get(drink.slug)?.at ?? null, updatedLabel: changed.get(drink.slug)?.label ?? "" });
   const at = (slug: string): Drink => {
     const drink = menu.find(entry => entry.slug === slug);
     if (!drink) throw refusal(404, "Minuman tidak ditemukan. Muat ulang halaman.");
@@ -141,7 +158,13 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
     if (!menuReady) throw refusal(503, MENU_WAITS);
     const read = drinkSchema.safeParse(body);
     if (!read.success) throw refusal(422, "Periksa kembali isian formulir.", Object.fromEntries(read.error.issues.map(issue => [String(issue.path[0] ?? "form"), [issue.message]])));
+    // A price is saved only once its migration has run; clearing one that cannot exist is nothing to refuse.
+    if (!pricesReady && typeof read.data.price === "number") throw refusal(503, PRICE_WAIT);
     return read.data;
+  };
+  const setPrice = (slug: string, price: number | null | undefined) => {
+    if (price === undefined || !pricesReady) return;
+    if (price === null) prices.delete(slug); else prices.set(slug, price);
   };
   const keys = new Map<string, { order: QueueOrder; message: string }>();
   const find = (id: string) => {
@@ -213,7 +236,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
           guest: body.guest ?? "", guestCount: body.guestCount ?? null,
         });
       }
-      orders.push(done(order, SAMPLE_ACTOR, 0));
+      orders.push(stamp(done(order, SAMPLE_ACTOR, 0)));
       const saved = shown(orders[orders.length - 1]);
       const name = drinkLabel(body.slug, body.other, onMenu?.name);
       const answer = {
@@ -235,11 +258,11 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       const inSpan = orders.filter(order => { const at = wibDay(order.orderedAt); return at >= query.dari && at <= query.sampai; })
         .sort((a, b) => Date.parse(b.orderedAt) - Date.parse(a.orderedAt));
       const rows = filterRows(expandRows(inSpan.map(dressed), numbers), { jenis: query.jenis, status: query.status, q: query.q });
-      return { rows, summary: summarize(rows, SAMPLE_PEOPLE, settings), title: recapTitle(query.dari, query.sampai) };
+      return { rows, summary: summarize(rows, SAMPLE_PEOPLE, settings), title: recapTitle(query.dari, query.sampai), prices: pricesReady };
     },
     async settings() { return { settings, holders: HOLDERS, gaPin, ...drinkSettings() }; },
     async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, ...drinkSettings(), message: "Jatah disimpan." }; },
-    async menu(): Promise<MenuData> { return { ready: menuReady, places: placesReady, drinks: menu.map(adminDrink) }; },
+    async menu(): Promise<MenuData> { return { ready: menuReady, places: placesReady, prices: pricesReady, drinks: menu.map(adminDrink) }; },
     async createDrink(body) {
       const input = checked(body);
       const taken = new Set(menu.map(drink => drink.slug));
@@ -248,6 +271,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 40 - String(n).length - 1)}-${n}`;
       if (!placesReady && (!input.guestBook || !input.regular)) throw refusal(503, PLACES_WAIT);
       menu.push({ slug, name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, photo: null, active: input.active, guestBook: input.guestBook, regular: input.regular });
+      setPrice(slug, input.price);
       touch(slug);
       return { drink: found(slug), message: `${input.name} ditambahkan ke menu.` };
     },
@@ -255,6 +279,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       const input = checked(body);
       if (!placesReady && (!input.guestBook || !input.regular)) throw refusal(503, PLACES_WAIT);
       Object.assign(at(slug), { name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, active: input.active, guestBook: input.guestBook, regular: input.regular });
+      setPrice(slug, input.price);
       touch(slug);
       return { drink: found(slug), message: `${input.name} disimpan.` };
     },
@@ -279,6 +304,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       if (usedBy(slug)) throw refusal(409, "Minuman ini sudah pernah dipesan, jadi tidak bisa dihapus. Sembunyikan saja supaya tidak bisa dipesan lagi.");
       menu.splice(menu.findIndex(drink => drink.slug === slug), 1);
       uploaded.delete(slug);
+      prices.delete(slug);
       return { message: "Minuman dihapus dari menu." };
     },
     async sortDrinks(slugs) {
@@ -286,7 +312,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       const placed = slugs.map(slug => menu.find(drink => drink.slug === slug)).filter((drink): drink is Drink => !!drink);
       const rest = menu.filter(drink => !placed.includes(drink));
       menu.splice(0, menu.length, ...placed, ...rest);
-      return { ready: true, places: placesReady, drinks: menu.map(adminDrink) };
+      return { ready: true, places: placesReady, prices: pricesReady, drinks: menu.map(adminDrink) };
     },
     async uploadDrinkPhoto(slug, file) {
       if (!menuReady) throw refusal(503, MENU_WAITS);
@@ -325,7 +351,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       // As the app sends it: a claim carries only what Pengaturan asks of one (by default nothing).
       const choice = settleLine({ slug: drink.slug, temperature: drink.temperatures[0], sugar: "Normal", ice: "Normal" }, drink, options.klaim);
       const order = claim(nextId(), claimSeq++, who, drink.slug, { orderedAt: iso(0), items: [item("a", "klaim", drink.slug, { name: drink.name, ...(isDrinkIssue(choice) ? {} : choice) })] });
-      orders.push(order);
+      orders.push(stamp(order));
       return order;
     },
     /** Another pengelola processes the oldest waiting order in their own window. */
@@ -337,7 +363,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
     /** A claim recorded by hand a few minutes ago (the preview shows "Batalkan catatan" on it). */
     seedManual(): QueueOrder {
       const order = done(claim(nextId(), claimSeq++, arief, "kopi-susu", { orderedAt: iso(40 * minute), manual: true, sentBy: SAMPLE_ACTOR.label }), SAMPLE_ACTOR, 8 * minute);
-      orders.push(order);
+      orders.push(stamp(order));
       return order;
     },
   };

@@ -24,6 +24,8 @@ export const COFFEE_ADMIN_LABEL = "WG Coffee";
 export const COFFEE_MENU_MIGRATION_NAME = "202612020001_coffee_menu.sql";
 /** F7: where each drink shows (Buku tamu, Menu biasa). */
 export const COFFEE_AUDIENCE_MIGRATION_NAME = "202612030003_coffee_menu_audience.sql";
+/** F9: the price of each drink, kept with every order (Menu's Harga, Rekap's Pengeluaran). */
+export const COFFEE_PRICE_MIGRATION_NAME = "202612050001_coffee_price.sql";
 
 export const coffeeAdminSections: readonly CoffeeAdminSection[] = [
   { key: "antrean", label: "Antrean", group: "Pesanan", href: coffeeAdminPath.home, icon: Inbox, summary: "Pesanan menunggu, terlama di atas. Beli di aplikasi JumpStart, lalu tandai selesai. Terlihat oleh semua pemegang akses." },

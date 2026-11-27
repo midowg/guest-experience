@@ -108,7 +108,9 @@ Untuk kopi yang sudah dibeli tanpa lewat aplikasi (HP mati, tamu mendadak). Peng
 ## 7. Rekap
 
 - Satu baris per minuman, rentang paling lama satu tahun; saring jenis, status, dan kata.
-- **Unduh CSV** dan **Unduh Excel** (lembar Detail 23 kolom dan Ringkasan) berisi persis baris di layar.
+- **Unduh CSV** dan **Unduh Excel** (lembar Detail 25 kolom dan Ringkasan) berisi persis baris di layar.
+  Sejak 27 Nov 2026 Detail punya **Harga satuan** dan **Subtotal** (angka, bisa dijumlah di Excel), dan
+  Ringkasan memuat **Pengeluaran** per blok (lihat bagian 10, "Harga minuman dan pengeluaran").
 - **Ringkasan** menampilkan satu rincian dalam satu waktu, dipilih lewat "Lihat per": Karyawan (jatah
   terpakai), Minuman, PIC tamu, BU, Kelompok (Karyawan, Tim GA, Intern), Ruangan (pesanan rapat per ruang).
   Awalnya Karyawan; pilihan diingat selama Rekap terbuka. Tiap rincian punya baris Total kecuali Karyawan.
@@ -185,6 +187,29 @@ jumpstart.id/machine/2/menu; semuanya sudah ada di menu kertas). Tiap minuman pu
 - Perubahan terlihat pengelola saat itu juga; di aplikasi karyawan dan tablet paling lama **15 detik**
   kemudian (plus saat layarnya membaca ulang).
 - "Lainnya (tulis sendiri)" tetap hanya ada di Catat manual; minuman tersembunyi masih bisa dicatat manual.
+
+### Harga minuman dan pengeluaran (sejak 27 Nov 2026, F9)
+
+- **Harga satuan (Rp)** per minuman diisi pengelola di Menu → buka minumannya. Rupiah penuh, 0 sampai
+  10.000.000, kosong = "belum diisi". Diketik dengan titik ribuan ("8000" menjadi "8.000"); angka negatif
+  dan desimal ditolak. Harga awal ditulis sekali oleh migrasi dari menu mesin JS Mini yang dibaca
+  27 Nov 2026 (harga promo hari itu; pemilik yang meninjau): Americano, Cappuccino, Café Latte, Café
+  Mocha, Piccolo Latte, Milk Chocolate, Dark Chocolate, Matcha Espresso, Matcha Latte Rp 8.000; Espresso
+  Rp 8.900; Kopi Hitam dan Kopi Susu Rp 6.900. Cappuccino Double Shot, Cucumber Ice, Classic Tea (tidak
+  dijual mesin) dan minuman tambahan pengelola kosong sampai diisi.
+- **Harga tersimpan di tiap baris pesanan** saat pesanan dibuat (klaim, rapat, dan Catat manual lewat
+  fungsi yang sama). Mengubah harga di Menu **tidak pernah** mengubah pesanan yang sudah masuk. Pesanan
+  yang dibuat sebelum ada harga diberi harga minumannya pada saat migrasi (sekali); yang minumannya
+  belum berharga, dan baris "Lainnya", tetap kosong.
+- **Pengeluaran** di Rekap = jumlah harga minuman pada pesanan berstatus **Selesai** saja (catatan manual
+  ikut, karena langsung Selesai). Menunggu, ditolak, dan dibatalkan tidak pernah dihitung. Minuman tamu
+  dan Tim · rapat ikut dihitung (uang keluar walau tidak memakai jatah). Minuman Selesai tanpa harga
+  tidak menambah apa pun dan dihitung sebagai "N minuman belum berharga, tidak terhitung" (tautan ke Menu).
+- Di rincian "Lihat per": Karyawan = minuman milik orang itu (klaim dan Tim · rapat); minuman tamu
+  dihitung di PIC tamu, Ruangan, dan BU. Total BU dan Minuman sama dengan angka Pengeluaran di atas.
+- Di Detail, **Subtotal** hanya terisi untuk baris Selesai (satu baris = satu minuman), supaya jumlah kolom
+  itu sama dengan Pengeluaran; **Harga satuan** terisi untuk semua baris yang berharga.
+- Harga hanya terlihat oleh pengelola: aplikasi karyawan dan tablet GA tidak menerimanya.
 
 ## 11. Tidak ada di versi pertama
 

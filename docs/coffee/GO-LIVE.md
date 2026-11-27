@@ -303,3 +303,70 @@ menampilkan ke-15 minuman di aplikasi karyawan, tetapi database menolak klaim ti
 tamu ("Minuman ini sudah tidak ada di menu"). Bila kode harus dimundurkan lama: centang "Menu biasa"
 pada ketiganya dulu (dengan kode baru), atau jalankan lagi dua blok fungsi dari
 `202612020001_coffee_menu.sql`. Cara membatalkan migrasinya ada di kepala berkas SQL.
+
+## Pembaruan 27 Nov: harga minuman
+
+Permintaan pemilik 27 Nov 2026 (F9): "Di admin harus ada harga tiap minuman, karena untuk rekap pengeluaran
+sekalian nantinya." Tiap minuman punya **harga satuan**, harganya **disimpan di tiap baris pesanan**, dan Rekap
+menampilkan **Pengeluaran**. Butuh satu migrasi baru; empat migrasi sebelumnya tidak diubah.
+
+### Yang harus dilakukan pemilik
+
+1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main`.
+2. **Jalankan `supabase/migrations/coffee/202612050001_coffee_price.sql`** di SQL Editor Supabase (salin seluruh
+   isi berkas, Run). **Jalankan paling akhir** (setelah `202612030003`). Satu kali cukup; dua kali pun aman.
+3. **Buka `/admin/coffee` → Menu, tinjau harga awal, dan isi tiga yang kosong** (Cappuccino Double Shot,
+   Cucumber Ice, Classic Tea) serta minuman tambahan sendiri. Harga awal adalah harga promo yang tampil di
+   menu mesin JS Mini pada 27 Nov 2026; ubah bila harga sebenarnya lain.
+
+Kode dulu, baru migrasi. Aplikasi mengetahui migrasinya sendiri paling lama 30 detik kemudian.
+
+### Harga awal (ditulis sekali oleh migrasi)
+
+| Minuman | Harga |
+| --- | --- |
+| Americano, Cappuccino, Café Latte, Café Mocha, Piccolo Latte, Milk Chocolate, Dark Chocolate, Matcha Espresso, Matcha Latte | Rp 8.000 |
+| Espresso | Rp 8.900 |
+| Kopi Hitam, Kopi Susu | Rp 6.900 |
+| Cappuccino Double Shot, Cucumber Ice, Classic Tea, dan minuman tambahan pengelola | kosong |
+
+### Sebelum dan sesudah migrasi dijalankan
+
+| | Sebelum `202612050001` dijalankan (kode baru sudah naik) | Sesudah |
+| --- | --- | --- |
+| Aplikasi karyawan dan tablet GA | Tidak berubah (tidak pernah menampilkan harga) | Tidak berubah |
+| Menu (admin) | Daftar, tambah, ubah, urutan, sembunyikan jalan; kolom harga tidak tampil; kolom **Harga satuan** di panel mati dan bertuliskan "Menunggu migrasi 202612050001_coffee_price.sql"; menyimpan harga dijawab 503 dengan nama migrasi (bukan 500) | Harga tampil di daftar ("Rp 8.000" atau "Harga belum diisi"), bisa diisi di panel; saringan "Tanpa harga"; pemberitahuan "N minuman belum berharga" |
+| Rekap | Angka Pengeluaran dan kolom uang bertanda "–", dengan catatan menunggu migrasi; unduhan tetap jalan (kolom harga kosong) | Pengeluaran, Harga satuan, Subtotal, dan kolom Pengeluaran di enam rincian |
+| Pesanan baru | Dibuat seperti biasa, tanpa harga | Menyimpan harga minuman saat itu |
+| Pesanan lama | Tidak berubah | Diberi harga minumannya **sekali** saat migrasi; yang minumannya belum berharga tetap kosong |
+| Antrean, notifikasi, kuota | Tidak berubah | Tidak berubah |
+
+### Apa yang dilakukan migrasi ini pada data yang sudah ada
+
+- **Tidak ada yang dihapus dan tidak ada minuman yang ditambah.** Dua kolom baru yang boleh kosong:
+  `coffee_drinks.price` dan `coffee_order_items.unit_price` (bilangan bulat 0 sampai 10.000.000).
+- **Harga awal dan pengisian pesanan lama ditulis sekali saja**, di dalam blok yang menambah kolomnya
+  (blok hanya jalan selama kolomnya belum ada; seluruh berkas satu transaksi). Dijalankan lagi: bloknya
+  dilewati, **harga yang diubah pengelola tidak kembali**, dan pesanan lama tidak diberi harga yang tidak
+  dimilikinya saat dibuat (mis. Classic Tea lama tetap kosong walau harganya kini diisi).
+- Dua fungsi (`coffee_submit_claim`, `coffee_submit_meeting`) diganti dengan tanda tangan yang sama dan
+  semua aturan yang ada (Buku tamu / Menu biasa, jatah, kunci ganda, nama tamu), ditambah satu hal:
+  harga minuman saat itu ditulis di baris pesanan. Mengubah harga kemudian tidak menyentuh pesanan lama.
+
+Diuji di Postgres dalam memori (PGlite): pesanan lama dan menu yang sudah diubah pengelola, migrasi 5 di
+atasnya, diulang dua kali, diulang setelah harga diubah pengelola, kelimanya berurutan, dan database baru
+dengan kelima migrasi (aturan lama, aturan Buku tamu / Menu biasa, aturan harga; Postgres dan tiruan
+JavaScript sama). **1225 pemeriksaan lulus, 0 gagal**
+(`npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs`). **Belum diuji:** di database
+Supabase asli, dan balapan sungguhan.
+
+### Jangan
+
+- **Jangan menjalankan lagi `202612020001_coffee_menu.sql` atau `202612030003_coffee_menu_audience.sql`
+  setelah `202612050001`.** Keduanya memuat versi lama kedua fungsi (tanpa harga): pesanan baru disimpan
+  **tanpa harga** sampai `202612050001_coffee_price.sql` dijalankan lagi (aman). Harga di Menu tidak hilang.
+
+### Kalau harus mundur
+
+Kode lama tetap jalan di atas database yang sudah dimigrasi (kolom baru boleh kosong dan tidak dibaca).
+Cara membatalkan migrasinya ada di kepala berkas SQL.

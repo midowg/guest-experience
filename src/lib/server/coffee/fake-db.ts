@@ -18,6 +18,13 @@
  * need a regular-menu drink, a guest's line a guest-book drink, Catat manual any drink). With it
  * false, asking for or writing either column fails as on a database without them (42703 for a
  * read, PGRST204 for a write), and the functions do not look at them.
+ *
+ * F9: `priceMigrated` is migration 202612050001 (coffee_drinks.price, coffee_order_items.unit_price,
+ * and the two order functions writing the drink's price at the moment of ordering; 'lainnya' and a
+ * drink without a price keep NULL). With it false, asking for either column fails as on a database
+ * without it (42703 for a read, PGRST204 for a write) and the functions write no price. The
+ * starting prices the migration seeds are STARTING_PRICES of src/lib/coffee/money.ts; seedPeople
+ * leaves every price empty, a test that is about them sets them.
  */
 type Row = Record<string, unknown>;
 type Failure = { code?: string; message: string };
@@ -56,6 +63,8 @@ export function fakeDb() {
     menuMigrated: true,
     /** The "where it shows" migration ran (in_guest_book, in_regular_menu, enforced by the order functions). */
     audienceMigrated: true,
+    /** The price migration ran (coffee_drinks.price, coffee_order_items.unit_price, written by the order functions). */
+    priceMigrated: true,
     /** Skip the functions' first look for the key, so a repeated key meets the unique index. */
     race: false,
     /** consume_rate_limit's counters, by key. */
@@ -72,7 +81,8 @@ export function fakeDb() {
   const uuid = () => `00000000-0000-4000-8000-${String(++state.seq.id).padStart(12, "0")}`;
   const absent = (what: string): Result => ({ data: null, error: { code: what.startsWith("coffee_") && !COFFEE_TABLES.includes(what) && !PUSH_TABLES.includes(what) && !MENU_TABLES.includes(what) ? "PGRST202" : "PGRST205", message: `Could not find '${what}' in the schema cache` } });
   const fail = (message: string): Result => ({ data: null, error: { code: "P0001", message } });
-  const withItems = (row: Row): Row => ({ ...row, coffee_order_items: rows("coffee_order_items").filter(item => item.order_id === row.id) });
+  // Before migration 202612050001 there is no unit_price column: an item never carries one (what an earlier test left on the row is not "in the database").
+  const withItems = (row: Row): Row => ({ ...row, coffee_order_items: rows("coffee_order_items").filter(item => item.order_id === row.id).map(item => { if (state.priceMigrated) return item; const rest = { ...item }; delete rest.unit_price; return rest; }) });
 
   function from(table: string) {
     const filters: ((row: Row) => boolean)[] = [];
@@ -83,6 +93,7 @@ export function fakeDb() {
     let limit = Infinity;
     let asked = "";
     const noPlaces = table === "coffee_drinks" && !state.audienceMigrated;
+    const noPrice = !state.priceMigrated && (table === "coffee_drinks" || table === "coffee_order_items" || table === "coffee_orders");
     const run = (): Result => {
       state.calls.push(`${mode.kind}:${table}`);
       if (!state.migrated && COFFEE_TABLES.includes(table)) return absent(table);
@@ -91,14 +102,17 @@ export function fakeDb() {
       if ((!state.menuMigrated || !state.migrated) && MENU_TABLES.includes(table)) return absent(table);
       // Before migration 202612030001: the two columns cannot be read (42703) or written (PGRST204).
       if (noPlaces && PLACE_COLUMNS.some(column => asked.split(",").includes(column))) return { data: null, error: { code: "42703", message: "column coffee_drinks.in_guest_book does not exist" } };
+      // Before migration 202612050001: the price columns cannot be read (42703) or written (PGRST204).
+      if (noPrice && /(^|[,(])(price|unit_price)(?=[,)]|$)/.test(asked)) return { data: null, error: { code: "42703", message: "column price does not exist" } };
       const written: Row | null = mode.kind === "insert" || mode.kind === "upsert" ? mode.row : mode.kind === "update" ? mode.patch : null;
       if (noPlaces && written && PLACE_COLUMNS.some(column => column in written)) return { data: null, error: { code: "PGRST204", message: "Could not find the 'in_guest_book' column of 'coffee_drinks' in the schema cache" } };
+      if (noPrice && written && ("price" in written || "unit_price" in written)) return { data: null, error: { code: "PGRST204", message: "Could not find the 'price' column of 'coffee_drinks' in the schema cache" } };
       if (mode.kind === "insert") {
         const { row } = mode;
         // coffee_drinks' primary key: one drink per slug.
         if (table === "coffee_drinks") {
           if (rows(table).some(item => item.slug === row.slug)) return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_drinks_pkey"' } };
-          const saved = { sort: 0, active: true, description: "", photo_url: null, photo_key: null, ...(state.audienceMigrated ? { in_guest_book: true, in_regular_menu: true } : {}), ...row };
+          const saved = { sort: 0, active: true, description: "", photo_url: null, photo_key: null, ...(state.audienceMigrated ? { in_guest_book: true, in_regular_menu: true } : {}), ...(state.priceMigrated ? { price: null } : {}), ...row };
           rows(table).push(saved);
           return { data: single ? { ...saved } : [{ ...saved }], error: null };
         }
@@ -177,6 +191,7 @@ export function fakeDb() {
   const itemRow = (orderId: string, item: Row, more: Row, sort: number): Row => ({
     id: uuid(), order_id: orderId, employee_id: null, person_name: null, person_group: null, person_position: null, person_bu: null, guest_name: null,
     drink_slug: item.slug, drink_other: item.other ?? null,
+    ...(state.priceMigrated ? { unit_price: item.unit_price ?? null } : {}),
     ...(state.menuMigrated ? { drink_name: item.drink_name ?? null, temperature: item.temperature ?? null, sugar: item.sugar ?? null, ice: item.ice ?? null } : { temperature: item.temperature, sugar: item.sugar, ice: item.ice ?? "Normal" }),
     qty: item.qty ?? 1, sort, ...more,
   });
@@ -184,17 +199,17 @@ export function fakeDb() {
    * The drink check of the new functions: on the menu, shown unless recorded by hand, and in a
    * temperature it comes in. Answers the name to keep with the row, or the function's refusal.
    */
-  const drinkFor = (item: Row, manual: boolean, place?: "in_guest_book" | "in_regular_menu"): { name: string | null } | Result => {
-    if (!state.menuMigrated) return { name: null };
-    if (item.slug === "lainnya") return manual ? { name: null } : fail("COFFEE_INVALID");
+  const drinkFor = (item: Row, manual: boolean, place?: "in_guest_book" | "in_regular_menu"): { name: string | null; price: number | null } | Result => {
+    if (!state.menuMigrated) return { name: null, price: null };
+    if (item.slug === "lainnya") return manual ? { name: null, price: null } : fail("COFFEE_INVALID");
     const drink = rows("coffee_drinks").find(row => row.slug === item.slug);
     if (!drink || (!drink.active && !manual)) return fail("COFFEE_DRINK_GONE");
     // F7: the drink must be ticked for the menu its audience is served from (not for Catat manual).
     if (state.audienceMigrated && !manual && place && drink[place] === false) return fail("COFFEE_DRINK_GONE");
     if (item.temperature != null && !(drink.temperatures as string[]).includes(String(item.temperature))) return fail("COFFEE_INVALID");
-    return { name: drink.name as string };
+    return { name: drink.name as string, price: state.priceMigrated ? (drink.price as number | null | undefined) ?? null : null };
   };
-  const refusal = (value: { name: string | null } | Result): value is Result => "error" in value;
+  const refusal = (value: { name: string | null; price: number | null } | Result): value is Result => "error" in value;
   const processed = (manual: boolean, actor: unknown, label: unknown) => manual
     ? { status: "selesai", processed_by: actor ?? null, processed_label: label ?? null, processed_at: state.now.toISOString() }
     : { status: "diproses", processed_by: null, processed_label: null, processed_at: null };
@@ -229,7 +244,7 @@ export function fakeDb() {
         ...processed(manual, args.p_actor, args.p_actor_label), created_by: args.p_actor ?? null, created_label: args.p_actor_label ?? null, manual,
         ordered_at: at, quota_month: month, idempotency_key: args.p_key ?? null,
       });
-      rows("coffee_order_items").push(itemRow(id, { ...(args.p_item as Row), other: tidy((args.p_item as Row).other), drink_name: drink.name }, { for_whom: "klaim", employee_id: person.id }, 0));
+      rows("coffee_order_items").push(itemRow(id, { ...(args.p_item as Row), other: tidy((args.p_item as Row).other), drink_name: drink.name, unit_price: drink.price }, { for_whom: "klaim", employee_id: person.id }, 0));
       return { data: id, error: null };
     },
     coffee_submit_meeting(args) {
@@ -274,10 +289,12 @@ export function fakeDb() {
       const team = items.map(item => item.for === "tim" ? employee(item.person_id) : null);
       // Line by line, in the function's own order: the drink first, then who it is for.
       const names: (string | null)[] = [];
+      const prices: (number | null)[] = [];
       for (const [index, item] of items.entries()) {
         const drink = drinkFor(item, manual, item.for === "tamu" ? "in_guest_book" : item.for === "tim" ? "in_regular_menu" : undefined);
         if (refusal(drink)) return drink;
         names.push(drink.name);
+        prices.push(drink.price);
         if (item.for === "tim") { if (!team[index]) return fail("COFFEE_NOT_EMPLOYEE"); }
         else if (item.for !== "tamu") return fail("COFFEE_INVALID");
         else if ((tidy(item.guest_name)?.length ?? 0) > 40) return fail("COFFEE_INVALID");
@@ -292,7 +309,7 @@ export function fakeDb() {
       });
       items.forEach((item, index) => {
         const who = team[index];
-        rows("coffee_order_items").push(itemRow(id, { ...item, other: tidy(item.other), drink_name: names[index] }, who
+        rows("coffee_order_items").push(itemRow(id, { ...item, other: tidy(item.other), drink_name: names[index], unit_price: prices[index] }, who
           ? { for_whom: "tim", employee_id: who.id, person_name: who.full_name, person_group: groupOf(who.category), person_position: who.position, person_bu: who.business_unit }
           : { for_whom: "tamu", guest_name: tidy(item.guest_name) }, index + 1));
       });

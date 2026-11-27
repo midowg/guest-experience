@@ -17,7 +17,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
  * screens before the migration runs. ?layar=rekap, ?layar=menu or ?layar=pengaturan opens that
  * section first; ?menu=tunggu shows Menu and Opsi minuman as they are before migration
  * 202612020001 runs (the code's menu, read only), ?menu=kosong an empty menu, ?menu=tunggu-tampil
- * the menu before migration 202612030001 (the two ticks rest), ?menu=banyak a long menu (63 drinks).
+ * the menu before migration 202612030001 (the two ticks rest), ?menu=tunggu-harga the menu before migration
+ * 202612050001 (no price yet, the field rests, Rekap shows a dash for money), ?menu=banyak a long menu (63 drinks).
  * ?alamat=1 lets the sections change the address as the real pages do (a reload then asks for the
  * admin sign-in); ?tunggu=1 shows what every page shows before the migration runs (the frame and the notice).
  * ?notif=on|denied|unsupported|not-ready|account shows that state of "Nyalakan notifikasi" above the
@@ -29,5 +30,5 @@ export default async function DevCoffeeAdminPage({ searchParams }: { searchParam
   const { layar, tunggu, alamat, notif, menu } = await searchParams;
   const view = sectionOfPath(layar === "rekap" ? coffeeAdminPath.recap() : layar === "menu" ? coffeeAdminPath.menu : layar === "pengaturan" ? coffeeAdminPath.settings : coffeeAdminPath.home) ?? "antrean";
   if (tunggu) return <CoffeeAdminWaiting current={view} notice="WG Coffee menunggu migrasi 202612010001_coffee.sql." personName="Dewi Lestari (contoh)" className={admin.shell} />;
-  return <AdminPreview view={view} now={new Date().toISOString()} routing={alamat ? "history" : "memory"} push={sampleState(notif)} menu={menu === "tunggu" ? "waiting" : menu === "kosong" ? "empty" : menu === "tunggu-tampil" ? "places-waiting" : menu === "banyak" ? "many" : "ready"} />;
+  return <AdminPreview view={view} now={new Date().toISOString()} routing={alamat ? "history" : "memory"} push={sampleState(notif)} menu={menu === "tunggu" ? "waiting" : menu === "kosong" ? "empty" : menu === "tunggu-tampil" ? "places-waiting" : menu === "tunggu-harga" ? "prices-waiting" : menu === "banyak" ? "many" : "ready"} />;
 }

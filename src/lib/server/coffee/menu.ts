@@ -5,7 +5,7 @@ import { slugOf, type DrinkInput, type DrinkPatch } from "@/lib/coffee/schemas";
 import type { AdminDrink, MenuData } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
 import { waitingForMenu } from "./settings";
-import { COFFEE_AUDIENCE_MIGRATION, audienceReady, coffeeError, db, forgetMenu, menuReady, missing, readMenu, type CoffeeActor } from "./store";
+import { COFFEE_AUDIENCE_MIGRATION, COFFEE_PRICE_MIGRATION, audienceReady, coffeeError, db, forgetMenu, menuReady, missing, priceReady, readMenu, type CoffeeActor } from "./store";
 
 /*
  * Menu (F6, /admin/coffee → Menu): the pengelola adds, changes, orders, hides and deletes the
@@ -24,19 +24,28 @@ import { COFFEE_AUDIENCE_MIGRATION, audienceReady, coffeeError, db, forgetMenu, 
  * Tamu lines) and "Menu biasa" (the employee app, Tim · rapat lines and claims). Before migration
  * 202612030001 the two columns are not there: every drink reads as shown in both, a write leaves
  * them out, and switching one off answers 503 with that migration's name.
+ *
+ * F9 (27 Nov 2026): each drink also has a price (rupiah, null = not filled in), the base of the
+ * expense recap. Every order item keeps the price its drink had when ordered (written by the
+ * database functions), so a later edit here never touches an old order. Before migration
+ * 202612050001 the column is not there: every drink reads as without a price, a write that leaves
+ * the price out or clears it goes without it, and saving a price answers 503 with that migration's
+ * name. Prices are only ever read here, never in what the employee app or the GA tablet get.
  */
 
 const BASE_COLUMNS = "slug,name,description,drink_group,temperatures,photo_url,photo_key,sort,active,updated_at,updated_label";
-const columns = async () => `${BASE_COLUMNS}${await audienceReady() ? ",in_guest_book,in_regular_menu" : ""}`;
+const columns = async () => `${BASE_COLUMNS}${await audienceReady() ? ",in_guest_book,in_regular_menu" : ""}${await priceReady() ? ",price" : ""}`;
+export const waitingForPrice = () => new ServiceError(503, `Harga minuman menunggu migrasi ${COFFEE_PRICE_MIGRATION}.`);
 export const waitingForPlaces = () => new ServiceError(503, `Pilihan Buku tamu dan Menu biasa menunggu migrasi ${COFFEE_AUDIENCE_MIGRATION}.`);
 type Row = {
+  price?: number | null;
   in_guest_book?: boolean | null; in_regular_menu?: boolean | null;
   slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; photo_key: string | null;
   sort: number; active: boolean; updated_at?: string | null; updated_label?: string | null;
 };
 const toDrink = (row: Row, orders = 0): AdminDrink => ({
   slug: row.slug, name: row.name, description: row.description ?? "", group: row.drink_group, temperatures: row.temperatures?.length ? row.temperatures : ["panas"],
-  photo: row.photo_url, active: row.active, guestBook: row.in_guest_book ?? true, regular: row.in_regular_menu ?? true, sort: row.sort, orders, uploaded: !!row.photo_key,
+  photo: row.photo_url, active: row.active, guestBook: row.in_guest_book ?? true, regular: row.in_regular_menu ?? true, price: row.price ?? null, sort: row.sort, orders, uploaded: !!row.photo_key,
   updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null, updatedLabel: row.updated_label ?? "",
 });
 /** A fault of the menu's own tables: 503 with the migration's name while it has not run. */
@@ -57,11 +66,11 @@ export async function adminMenu(): Promise<MenuData> {
   if (!(await menuReady())) {
     // Before the migration: the code's menu, to look at only.
     const drinks = await readMenu(true);
-    return { ready: false, places: false, drinks: drinks.map((drink: Drink, index): AdminDrink => ({ ...drink, sort: (index + 1) * 10, orders: 0, uploaded: false, updatedAt: null, updatedLabel: "" })) };
+    return { ready: false, places: false, prices: false, drinks: drinks.map((drink: Drink, index): AdminDrink => ({ ...drink, price: null, sort: (index + 1) * 10, orders: 0, uploaded: false, updatedAt: null, updatedLabel: "" })) };
   }
-  const [found, used, places] = await Promise.all([db().from("coffee_drinks").select(await columns()).order("sort").order("name").limit(500), usage(), audienceReady()]);
+  const [found, used, places, prices] = await Promise.all([db().from("coffee_drinks").select(await columns()).order("sort").order("name").limit(500), usage(), audienceReady(), priceReady()]);
   if (found.error) menuError(found.error);
-  return { ready: true, places, drinks: ((found.data ?? []) as unknown as Row[]).map(row => toDrink(row, used.get(row.slug) ?? 0)) };
+  return { ready: true, places, prices, drinks: ((found.data ?? []) as unknown as Row[]).map(row => toDrink(row, used.get(row.slug) ?? 0)) };
 }
 
 async function ready(): Promise<void> {
@@ -84,7 +93,18 @@ async function places(input: { guestBook?: boolean; regular?: boolean }): Promis
   if (input.guestBook === false || input.regular === false) throw waitingForPlaces();
   return {};
 }
-const fields = async (input: DrinkInput) => ({ name: input.name, description: input.description, drink_group: input.group, temperatures: input.temperatures, active: input.active, ...await places(input) });
+/**
+ * The price column of a write. Left out of the request: untouched. Before migration 202612050001
+ * there is no column: clearing a price (null) simply goes without it, and saving a number is
+ * refused with the migration's name rather than silently dropped.
+ */
+async function priceField(input: { price?: number | null }): Promise<Record<string, number | null>> {
+  if (input.price === undefined) return {};
+  if (await priceReady()) return { price: input.price };
+  if (input.price === null) return {};
+  throw waitingForPrice();
+}
+const fields = async (input: DrinkInput) => ({ name: input.name, description: input.description, drink_group: input.group, temperatures: input.temperatures, active: input.active, ...await places(input), ...await priceField(input) });
 
 /**
  * Tambah minuman: a new drink at the end of the menu. Its slug comes from the name ("Teh Tarik" →

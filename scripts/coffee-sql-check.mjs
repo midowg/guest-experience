@@ -23,6 +23,14 @@
  * string anywhere in this file, and .env is never read. Needs Node 22.18 or newer (it imports the
  * TypeScript stand-in directly).
  *
+ * Since F9 (27 Nov 2026) migration 5 (202612050001_coffee_price.sql: the price of each drink, kept
+ * on every order line) goes on top of that same state, run again and again: the starting prices are
+ * written once (an owner's later edit survives a re-run), old order lines are given their drink's price
+ * once (never again, so a price filled in later does not rewrite history), new orders keep the price
+ * of the moment, a later price change never reaches an old line, a drink without a price leaves NULL,
+ * and a fresh database with all five migrations passes every older rule again. The price rules are asked
+ * of Postgres and of the stand-in alike.
+ *
  * What it cannot prove: a true race. PGlite has ONE connection, so two transactions never overlap;
  * the advisory lock is only shown to be taken with the expected key. "20 claims at once for one
  * place left" must still be run on a real Postgres (docs/coffee/GO-LIVE.md, step 1).
@@ -599,6 +607,71 @@ async function audienceRules(b) {
   await b.patchDrink("espresso", { in_guest_book: true, in_regular_menu: true });
 }
 
+const PRICE_PEOPLE = { satu: "93333333-3333-4333-8333-333333333333", dua: "94444444-4444-4444-8444-444444444444" };
+/** What migration 5 writes once into coffee_drinks.price (the JumpStart JS Mini menu of 27 Nov 2026): the harness's own copy, held against the code's. */
+const STARTING_PRICES = { americano: 8000, cappuccino: 8000, "cafe-latte": 8000, "cafe-mocha": 8000, "piccolo-latte": 8000, "milk-chocolate": 8000, "dark-chocolate": 8000, "matcha-espresso": 8000, "matcha-latte": 8000, espresso: 8900, "kopi-hitam": 6900, "kopi-susu": 6900 };
+
+/** The price rules (F9): the drink's price of the moment is kept on each order line; later edits never reach it. Asked of either backend. */
+async function priceRules(b) {
+  const tag = label => `[${b.name}] ${label}`;
+  for (const [name, id] of Object.entries(PRICE_PEOPLE)) await b.addPerson(id, `Contoh Harga ${name}`);
+  const claim = (slug, more = {}) => b.rpc("coffee_submit_claim", {
+    p_employee: more.who ?? PRICE_PEOPLE.satu, p_item: { slug, other: more.other }, p_at: new Date().toISOString(), p_manual: more.manual ?? false,
+    p_actor: more.manual ? PEOPLE.dewi : more.who ?? PRICE_PEOPLE.satu, p_actor_label: "Contoh", p_key: "key" in more ? more.key : key(),
+  });
+  const meeting = (items, more = {}) => b.rpc("coffee_submit_meeting", {
+    p_order: { pic_id: PRICE_PEOPLE.dua, room: "Ruang Harga", room_spot: null, guest: null, guest_count: null, parent_id: more.parent ?? null, actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: new Date().toISOString(), manual: more.manual ?? false },
+    p_items: items, p_key: "key" in more ? more.key : key(),
+  });
+  const guest = (slug, qty = 1) => ({ for: "tamu", person_id: null, guest_name: null, slug, qty });
+  const team = slug => ({ for: "tim", person_id: PRICE_PEOPLE.dua, guest_name: null, slug, qty: 1 });
+  const prices = async id => (await b.order(id)).items.map(item => item.unit_price ?? null);
+  const ok = async (label, promise) => { const result = await promise; check(tag(label), "err" in result ? result : "ok", "ok"); return result.id; };
+  const set = (slug, price) => b.patchDrink(slug, { price });
+
+  await set("americano", 8000); await set("kopi-hitam", 6900); await set("kopi-susu", null); await set("dark-chocolate", 0); await set("milk-chocolate", 7500);
+  const first = await ok("klaim Americano", claim("americano"));
+  check(tag("klaim: harga minuman saat itu tersimpan di baris pesanan"), await prices(first), [8000]);
+  await set("americano", 9500);
+  check(tag("harga naik sesudahnya: pesanan lama tidak berubah"), await prices(first), [8000]);
+  check(tag("pesanan baru memakai harga baru"), await prices(await ok("klaim Americano lagi", claim("americano"))), [9500]);
+  check(tag("minuman tanpa harga: harga baris NULL"), await prices(await ok("klaim Kopi Susu (tanpa harga)", claim("kopi-susu"))), [null]);
+  check(tag("harga 0 adalah harga (bukan NULL)"), await prices(await ok("klaim Dark Chocolate (gratis)", claim("dark-chocolate"))), [0]);
+  await set("kopi-susu", 6900);
+  check(tag("harga diisi kemudian: pesanan tanpa harga tetap NULL"), (await prices(first)).concat(await prices((await ok("klaim Kopi Susu setelah diberi harga", claim("kopi-susu", { who: PRICE_PEOPLE.dua }))))), [8000, 6900]);
+  await set("kopi-susu", null);
+
+  // The same sending twice is one order, and its line keeps the price it had.
+  const again = key();
+  const sent = await ok("klaim dengan kunci", claim("kopi-hitam", { who: PRICE_PEOPLE.dua, key: again }));
+  await set("kopi-hitam", 7200);
+  check(tag("kunci yang sama dikirim lagi setelah harga berubah: pesanan yang sama, harga lama"), [(await claim("kopi-hitam", { who: PRICE_PEOPLE.dua, key: again })).id === sent, await prices(sent)], [true, [6900]]);
+
+  // A meeting: every line keeps its own drink's price; "lainnya" and a drink without a price keep NULL; a later round is priced as of then.
+  await set("kopi-hitam", 6900); await set("cafe-mocha", null);
+  const m1 = await ok("rapat: tamu, tim dan tanpa harga", meeting([guest("americano", 2), team("kopi-hitam"), guest("cafe-mocha"), guest("milk-chocolate", 3)]));
+  check(tag("rapat: harga per baris"), await prices(m1), [9500, 6900, null, 7500]);
+  await set("kopi-hitam", 7200);
+  const m2 = await ok("tambah lagi (ronde 2)", meeting([team("kopi-hitam"), guest("americano")], { parent: m1 }));
+  check(tag("tambah lagi: harga saat ronde 2, ronde 1 tidak berubah"), [await prices(m1), await prices(m2)], [[9500, 6900, null, 7500], [7200, 9500]]);
+  const mm = await ok("Catat manual rapat dengan minuman 'lainnya'", meeting([{ ...guest("lainnya"), other: "Teh tarik" }, guest("milk-chocolate")], { manual: true }));
+  check(tag("Catat manual: 'lainnya' tanpa harga, minuman menu berharga"), await prices(mm), [null, 7500]);
+
+  // Catat manual goes through the same functions; a hidden drink may be recorded and still has its price.
+  await b.patchDrink("milk-chocolate", { active: false });
+  check(tag("Catat manual klaim minuman yang disembunyikan: tetap berharga"), await prices(await ok("klaim manual", claim("milk-chocolate", { manual: true, who: PRICE_PEOPLE.dua }))), [7500]);
+  await b.patchDrink("milk-chocolate", { active: true });
+  check(tag("Catat manual klaim 'lainnya': NULL"), await prices(await ok("klaim manual lainnya", claim("lainnya", { manual: true, who: PRICE_PEOPLE.dua, other: "Teh" }))), [null]);
+
+  // A refused order leaves nothing behind.
+  const before = await b.orderCount();
+  const refused = await meeting([guest("americano"), guest("tidak-ada")]);
+  check(tag("pesanan ditolak (minuman tidak ada) tidak meninggalkan baris"), [refused.err, await b.orderCount()], ["COFFEE_DRINK_GONE", before]);
+
+  // Back to nothing, so what runs after sees the menu as it was.
+  for (const slug of ["americano", "kopi-hitam", "kopi-susu", "dark-chocolate", "milk-chocolate", "cafe-mocha"]) await set(slug, STARTING_PRICES[slug] ?? null);
+}
+
 /* ---------- Postgres only: constraints, rights, the helper tables, the lock ---------- */
 
 async function postgresOnly(pg, b) {
@@ -871,6 +944,8 @@ await rules(postgres);
 console.log(`  ${results.fail.length - failsBefore} gagal`);
 
 console.log("\n4b. Aturan yang sama di tiruan JavaScript (fake-db.ts)");
+let moneyModule = null;
+try { moneyModule = await import(pathToFileURL(join(ROOT, "src", "lib", "coffee", "money.ts")).href); } catch { /* the comparison with the code's list is then reported as a failure below */ }
 let fakeModule = null;
 try { fakeModule = await import(pathToFileURL(join(ROOT, "src", "lib", "server", "coffee", "fake-db.ts")).href); } catch (error) {
   note(`fake-db.ts tidak bisa dimuat (${error.code ?? error.message}); perbandingan dilewati. Perlu Node 22.18+.`);
@@ -1065,6 +1140,136 @@ if (fresh) {
     await rules(stand);
     await audienceRules(stand);
     console.log(`  fake-db.ts: ${results.fail.length - failsFake} gagal`);
+  }
+}
+
+
+// 11. Migration 5 (the price of each drink) on top of the same live-like state: orders from every earlier schema, and a menu the pengelola has edited.
+console.log("\n11. Migrasi 5 (harga) di atas data lama dan menu yang sudah diubah pengelola");
+await pg.exec("reset role;");
+const PRICE = "202612050001_coffee_price.sql";
+const noPriceItems = async () => JSON.stringify((await pg.query("select id, order_id, for_whom, drink_slug, drink_name, drink_other, temperature, sugar, ice, qty, sort, guest_name from public.coffee_order_items order by id")).rows);
+const noPriceMenu = async () => JSON.stringify((await pg.query("select slug, name, description, drink_group, temperatures, photo_url, photo_key, sort, active, in_guest_book, in_regular_menu from public.coffee_drinks order by slug")).rows);
+const priceMenu = async () => (await pg.query("select slug, price from public.coffee_drinks order by slug")).rows.map(row => `${row.slug}=${row.price}`).join(",");
+const priceItems = async () => JSON.stringify((await pg.query("select id, unit_price from public.coffee_order_items order by id")).rows);
+const priceColumns = async () => (await pg.query("select table_name, column_name, is_nullable, data_type from information_schema.columns where table_schema = 'public' and column_name in ('price', 'unit_price') and table_name like 'coffee\\_%' order by table_name")).rows.map(row => `${row.table_name}.${row.column_name}:${row.data_type}:${row.is_nullable}`);
+check("[Postgres] sebelum migrasi 5: belum ada kolom harga", await priceColumns(), []);
+const menuBefore5 = await noPriceMenu(), itemsBefore5 = await noPriceItems(), contentBefore5 = await content(), shapeBefore5 = await shape();
+const slugsBefore5 = JSON.parse(menuBefore5).map(row => row.slug);
+check("[Postgres] sebelum migrasi 5: menu sudah diubah pengelola (satu dihapus, satu milik pengelola) dan ada banyak pesanan", [!slugsBefore5.includes("cappuccino-double-shot"), slugsBefore5.includes("contoh-baru"), JSON.parse(itemsBefore5).length > 50], [true, true, true]);
+// An order made right before the migration with the functions of migration 4 (no price column yet).
+await pg.exec("set role service_role;");
+const oldOrder = await postgres.rpc("coffee_submit_claim", { p_employee: PEOPLE.dewi, p_item: { slug: "kopi-hitam" }, p_at: new Date(Date.now() - 400 * 86_400_000).toISOString(), p_manual: true, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: null });
+check("[Postgres] sebelum migrasi 5: pesanan dengan fungsi lama berjalan", oldOrder.err, undefined);
+await pg.exec("reset role;");
+const itemsOldPlus = await noPriceItems();
+if (!(await migrate(PRICE, "pertama"))) { console.log("\nMigrasi 5 tidak berjalan; sisanya tidak diuji."); process.exit(1); }
+check("[Postgres] migrasi 5: dua kolom baru, boleh kosong, bilangan bulat", await priceColumns(), ["coffee_drinks.price:integer:YES", "coffee_order_items.unit_price:integer:YES"]);
+check("[Postgres] migrasi 5: menu tidak berubah selain harga (nama, urutan, sembunyi, foto, centang), tidak ada minuman bertambah atau kembali", await noPriceMenu(), menuBefore5);
+check("[Postgres] migrasi 5: semua baris pesanan tidak berubah selain harga barisnya", await noPriceItems(), itemsOldPlus);
+check("[Postgres] migrasi 5: isi tabel, nomor urut, PIN, push dan akses tidak berubah", (JSON.parse(await content()).orders - 1), JSON.parse(contentBefore5).orders);
+const wantPrices = Object.fromEntries([...slugsBefore5].sort().map(slug => [slug, STARTING_PRICES[slug] ?? null]));
+const gotPrices = Object.fromEntries((await pg.query("select slug, price from public.coffee_drinks order by slug")).rows.map(row => [row.slug, row.price]));
+check("[Postgres] harga awal: 12 minuman mesin JS Mini sesuai daftar; yang tidak dijual mesin, dan minuman pengelola, kosong", gotPrices, wantPrices);
+check("[Postgres] harga awal dalam angka", { berharga: Object.values(gotPrices).filter(v => v !== null).length, kosong: Object.keys(gotPrices).filter(slug => gotPrices[slug] === null).sort() }, { berharga: 12, kosong: slugsBefore5.filter(slug => !(slug in STARTING_PRICES)).sort() });
+check("[Postgres] daftar harga awal di skrip sama dengan di kode (src/lib/coffee/money.ts)", JSON.stringify(Object.entries(STARTING_PRICES).sort()), JSON.stringify(Object.entries(moneyModule?.STARTING_PRICES ?? {}).sort()));
+// Old order lines: given their drink's price once.
+const lines5 = (await pg.query("select i.drink_slug, i.unit_price, d.price from public.coffee_order_items i left join public.coffee_drinks d on d.slug = i.drink_slug")).rows;
+check("[Postgres] isi ulang: setiap baris pesanan lama memakai harga minumannya saat migrasi; minuman yang sudah dihapus dan 'lainnya' kosong", lines5.filter(row => row.unit_price !== row.price).length, 0);
+check("[Postgres] isi ulang dalam angka", { berharga: lines5.filter(row => row.unit_price !== null).length > 20, lainnyaKosong: lines5.filter(row => row.drink_slug === "lainnya").every(row => row.unit_price === null), tanpaHargaKosong: lines5.filter(row => ["classic-tea", "cucumber-ice", "contoh-baru"].includes(row.drink_slug)).every(row => row.unit_price === null) }, { berharga: true, lainnyaKosong: true, tanpaHargaKosong: true });
+const code5 = async (sql, params) => { try { await pg.query(sql, params); return "ok"; } catch (error) { return error.code; } };
+check("[Postgres] batasan: harga minuman -1 dan 10.000.001 ditolak; 0 dan kosong diterima", [await code5("update public.coffee_drinks set price = -1 where slug = 'americano'"), await code5("update public.coffee_drinks set price = 10000001 where slug = 'americano'"), await code5("update public.coffee_drinks set price = 0 where slug = 'americano'"), await code5("update public.coffee_drinks set price = null where slug = 'americano'")], ["23514", "23514", "ok", "ok"]);
+await pg.query("update public.coffee_drinks set price = 8000 where slug = 'americano'");
+check("[Postgres] batasan: harga baris pesanan -1 dan 10.000.001 ditolak", [await code5("update public.coffee_order_items set unit_price = -1 where id = (select id from public.coffee_order_items limit 1)"), await code5("update public.coffee_order_items set unit_price = 10000001 where id = (select id from public.coffee_order_items limit 1)")], ["23514", "23514"]);
+const shape5 = await shape();
+const menuPriced = await priceMenu(), itemsPriced = await priceItems();
+for (const label of ["kedua", "ketiga"]) await migrate(PRICE, label);
+check("[Postgres] migrasi 5 diulang dua kali: bentuk, menu, harga, pesanan sama", [await shape(), await noPriceMenu(), await priceMenu(), await priceItems(), await noPriceItems()], [shape5, menuBefore5, menuPriced, itemsPriced, itemsOldPlus]);
+// The pengelola edits prices; another run must not undo any of it, nor give old orders a price they did not have.
+await pg.query("update public.coffee_drinks set price = 9000 where slug = 'americano'");       // raised
+await pg.query("update public.coffee_drinks set price = null where slug = 'kopi-susu'");       // cleared
+await pg.query("update public.coffee_drinks set price = 5000 where slug = 'classic-tea'");     // filled in (the machine did not sell it)
+await pg.query("update public.coffee_drinks set price = 7000 where slug = 'contoh-baru'");     // their own drink
+const menuEdited5 = await priceMenu();
+await migrate(PRICE, "keempat (setelah harga diubah pengelola)");
+check("[Postgres] harga yang diubah pengelola bertahan; harga awal tidak ditulis ulang", await priceMenu(), menuEdited5);
+check("[Postgres] baris pesanan lama tidak ikut berubah: Americano lama tetap 8.000 (bukan 9.000), Kopi Susu lama tetap 6.900, Classic Tea lama tetap kosong (tidak diisi ulang)", {
+  americano: [...new Set((await pg.query("select unit_price from public.coffee_order_items where drink_slug = 'americano'")).rows.map(row => row.unit_price))],
+  kopiSusu: [...new Set((await pg.query("select unit_price from public.coffee_order_items where drink_slug = 'kopi-susu'")).rows.map(row => row.unit_price))],
+  classicTea: [...new Set((await pg.query("select unit_price from public.coffee_order_items where drink_slug = 'classic-tea'")).rows.map(row => row.unit_price))],
+}, { americano: [8000], kopiSusu: [6900], classicTea: [null] });
+check("[Postgres] baris pesanan sama persis setelah migrasi diulang", await priceItems(), itemsPriced);
+for (const file of [...COFFEE, MENU, AUDIENCE, PRICE]) await migrate(file, "kelima (1, 2, 3, 4, 5 berurutan)");
+check("[Postgres] kelimanya berurutan lagi: menu, harga, pesanan tetap (migrasi 3 dan 4 mengembalikan fungsi lama sebentar, harga tidak hilang)", [await priceMenu(), await priceItems()], [menuEdited5, itemsPriced]);
+await pg.exec("set role service_role;");
+const unitOf = async slug => { const made = await postgres.rpc("coffee_submit_claim", { p_employee: PEOPLE.dewi, p_item: { slug }, p_at: new Date(Date.now() - 410 * 86_400_000).toISOString(), p_manual: true, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: null }); return (await postgres.order(made.id)).items[0].unit_price; };
+check("[Postgres] setelah 1-5 berurutan: pesanan baru Americano memakai harga sekarang (9.000)", await unitOf("americano"), 9000);
+await pg.exec("reset role;");
+await migrate(AUDIENCE, "keenam (migrasi 4 sendirian setelah 5)");
+await pg.exec("set role service_role;");
+const lost = await unitOf("americano");
+if (lost === null) note("Migrasi 3 atau 4 dijalankan ulang SETELAH migrasi 5 mengembalikan fungsi lama (tanpa harga) sampai migrasi 5 dijalankan lagi: pesanan baru disimpan tanpa harga. Harga di Menu tidak hilang. Jalankan migrasi 5 terakhir.");
+check("[Postgres] migrasi 4 sendirian setelah 5: pesanan baru kehilangan harga (jalankan 5 lagi)", lost, null);
+await pg.exec("reset role;");
+await migrate(PRICE, "ketujuh (migrasi 5 lagi)");
+await pg.exec("set role service_role;");
+check("[Postgres] migrasi 5 dijalankan lagi: pesanan baru berharga lagi, harga di Menu tetap", [await unitOf("americano"), await (async () => { await pg.exec("reset role;"); const t = await priceMenu(); await pg.exec("set role service_role;"); return t; })()], [9000, menuEdited5]);
+for (const role of ["anon", "authenticated"]) {
+  await pg.exec(`reset role; set role ${role};`);
+  check(`[Postgres] ${role}: kolom harga dan kedua fungsi tetap tertutup setelah migrasi 5`, [await code5("select price from public.coffee_drinks limit 1"), await code5("select unit_price from public.coffee_order_items limit 1"), await code5(`select public.coffee_submit_claim('${PEOPLE.rina}'::uuid, '{}'::jsonb, now(), false, null, 'x', null)`), await code5("select public.coffee_submit_meeting('{}'::jsonb, '[]'::jsonb, null)")], ["42501", "42501", "42501", "42501"]);
+}
+await pg.exec("reset role;");
+check("[Postgres] RLS tetap nyala di semua tabel coffee_, tanpa policy (setelah migrasi 5)", [(await pg.query(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relname like 'coffee\\_%' and c.relkind = 'r' and not c.relrowsecurity`)).rows, (await pg.query("select tablename from pg_policies where tablename like 'coffee\\_%'")).rows], [[], []]);
+// The ticks of the earlier run (espresso off in both) and the prices: the rules below set what they need.
+await pg.exec("set role service_role;");
+keyNo = 100_000; // keys the earlier sections already used on this database stay theirs
+console.log("\n11a. Aturan harga di Postgres (setelah migrasi 1-5 di atas data lama)");
+const failsPrice = results.fail.length;
+await priceRules(postgres);
+console.log(`  ${results.fail.length - failsPrice} gagal`);
+console.log("\n11b. Aturan harga yang sama di tiruan JavaScript (fake-db.ts)");
+if (fakeModule) {
+  const fake = fakeModule.fakeDb();
+  fakeModule.seedPeople(fake);
+  const failsFakePrice = results.fail.length;
+  await priceRules(fakeBackend(fake));
+  console.log(`  ${results.fail.length - failsFakePrice} gagal (setiap baris GAGAL [fake-db.ts] di atas = tiruan berbeda dari Postgres)`);
+}
+await pg.exec("reset role;");
+
+// 12. A fresh database with all five migrations: the starting prices, every older rule, the audience rules and the price rules, on both sides.
+console.log("\n12. Database baru dengan migrasi 1, 2, 3, 4, 5: harga awal, aturan lama, aturan Buku tamu / Menu biasa, aturan harga");
+const pg3 = new PGlite();
+await prepare(pg3, false);
+let fresh5 = true;
+for (const file of [...COFFEE, MENU, AUDIENCE, PRICE]) fresh5 = await migrate(file, "database ketiga", pg3) && fresh5;
+if (fresh5) {
+  const freshPrices = Object.fromEntries((await pg3.query("select slug, price from public.coffee_drinks order by sort")).rows.map(row => [row.slug, row.price]));
+  check("[Postgres 1+2+3+4+5] harga awal di database yang belum diubah: 12 berharga, 3 kosong", freshPrices, Object.fromEntries(Object.keys(NAMES).map(slug => [slug, STARTING_PRICES[slug] ?? null])));
+  console.log(`  harga awal per minuman: ${Object.entries(freshPrices).map(([slug, price]) => `${slug}=${price ?? "kosong"}`).join(", ")}`);
+  check("[Postgres 1+2+3+4+5] tidak ada baris pesanan yang diisi harga (belum ada pesanan)", (await pg3.query("select count(*)::int as n from public.coffee_order_items")).rows[0].n, 0);
+  await pg3.exec("set role service_role;");
+  keyNo = 0;
+  const failsFresh5 = results.fail.length;
+  const third = { ...pgBackend(pg3), name: "Postgres 1+2+3+4+5" };
+  await rules(third);
+  await audienceRules(third);
+  await priceRules(third);
+  console.log(`  Postgres: ${results.fail.length - failsFresh5} gagal`);
+  if (fakeModule) {
+    keyNo = 0;
+    const fake = fakeModule.fakeDb();
+    fakeModule.seedPeople(fake);
+    for (const row of fake.rows("coffee_drinks")) {
+      if (fakeModule.GUEST_BOOK_ONLY_SLUGS.includes(row.slug)) row.in_regular_menu = false;
+      row.price = STARTING_PRICES[row.slug] ?? null;
+    }
+    const failsFake5 = results.fail.length;
+    const stand = { ...fakeBackend(fake), name: "fake-db.ts 1+2+3+4+5" };
+    await rules(stand);
+    await audienceRules(stand);
+    await priceRules(stand);
+    console.log(`  fake-db.ts: ${results.fail.length - failsFake5} gagal`);
   }
 }
 

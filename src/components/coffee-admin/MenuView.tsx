@@ -4,21 +4,22 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Coffee, Eye, EyeOff, Plus, Search, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { ConsoleButton, PageHeader } from "@/components/console";
+import { formatRupiah } from "@/lib/coffee/money";
 import { DRINK_GROUP_LABEL, MENU_PLACES, PLACE_LABEL, placesWords, showsIn, type DrinkGroup, type MenuPlace } from "@/lib/coffee/menu";
 import type { AdminDrink, MenuData } from "@/lib/coffee/types";
 import type { CoffeeAdminApi } from "./api";
 import { DrinkEditor, DrinkThumb } from "./DrinkEditor";
-import { COFFEE_AUDIENCE_MIGRATION_NAME, COFFEE_MENU_MIGRATION_NAME, coffeeAdminSection } from "./sections";
+import { COFFEE_AUDIENCE_MIGRATION_NAME, COFFEE_MENU_MIGRATION_NAME, COFFEE_PRICE_MIGRATION_NAME, coffeeAdminSection } from "./sections";
 import css from "./coffee-admin.module.css";
 
-type Filter = "semua" | DrinkGroup | MenuPlace | "tanpa-foto" | "tersembunyi";
+type Filter = "semua" | DrinkGroup | MenuPlace | "tanpa-foto" | "tanpa-harga" | "tersembunyi";
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "semua", label: "Semua" }, { key: "kopi", label: "Kopi" }, { key: "non-kopi", label: "Non-kopi" },
-  { key: "guestBook", label: PLACE_LABEL.guestBook }, { key: "regular", label: PLACE_LABEL.regular }, { key: "tanpa-foto", label: "Tanpa foto" }, { key: "tersembunyi", label: "Tersembunyi" },
+  { key: "guestBook", label: PLACE_LABEL.guestBook }, { key: "regular", label: PLACE_LABEL.regular }, { key: "tanpa-foto", label: "Tanpa foto" }, { key: "tanpa-harga", label: "Tanpa harga" }, { key: "tersembunyi", label: "Tersembunyi" },
 ];
 const GROUP = DRINK_GROUP_LABEL;
 const fits = (drink: AdminDrink, filter: Filter): boolean =>
-  filter === "semua" ? true : filter === "tersembunyi" ? !drink.active : filter === "tanpa-foto" ? !drink.photo : filter === "guestBook" || filter === "regular" ? showsIn(drink, filter) : drink.group === filter;
+  filter === "semua" ? true : filter === "tersembunyi" ? !drink.active : filter === "tanpa-foto" ? !drink.photo : filter === "tanpa-harga" ? drink.price == null : filter === "guestBook" || filter === "regular" ? showsIn(drink, filter) : drink.group === filter;
 /** What an empty list says, per filter: [title, advice]. */
 const EMPTY: Record<Exclude<Filter, "semua">, [string, string]> = {
   kopi: ["Belum ada minuman Kopi", "Tambah minuman, atau pilih saringan lain."],
@@ -26,6 +27,7 @@ const EMPTY: Record<Exclude<Filter, "semua">, [string, string]> = {
   guestBook: ["Belum ada minuman di Buku tamu", "Centang Buku tamu pada minuman yang boleh dipilih tamu."],
   regular: ["Belum ada minuman di Menu biasa", "Centang Menu biasa pada minuman yang boleh diklaim karyawan."],
   "tanpa-foto": ["Semua minuman sudah punya foto", "Tidak ada yang perlu dilengkapi."],
+  "tanpa-harga": ["Semua minuman sudah berharga", "Tidak ada yang perlu dilengkapi."],
   tersembunyi: ["Tidak ada yang disembunyikan", "Semua minuman tampil di menu."],
 };
 export const temperatureWords = (drink: Pick<AdminDrink, "temperatures">) => drink.temperatures.map(item => item === "es" ? "Es" : "Panas").join(" dan ");
@@ -46,6 +48,12 @@ export const temperatureWords = (drink: Pick<AdminDrink, "temperatures">) => dri
  * and by chip (kind, place, without a photo, hidden); the bar with both stays in view while the
  * list scrolls. `places` false (migration 202612030001 has not run): every drink shows in both
  * and the ticks rest.
+ *
+ * F9 (27 Nov 2026): every row says what the drink costs ("Rp 8.000", or "Harga belum diisi" in a
+ * muted voice), the editor changes it, the chip "Tanpa harga" finds the ones still empty, and a
+ * notice at the top counts the shown drinks without a price (their orders add nothing to Rekap's
+ * Pengeluaran). `prices` false (migration 202612050001 has not run): no price shows, the field
+ * rests, and the notice is replaced by one that names the migration.
  */
 export function MenuView({ api, initial, active, onSaid }: {
   api: CoffeeAdminApi; initial?: MenuData; active: boolean;
@@ -94,6 +102,9 @@ export function MenuView({ api, initial, active, onSaid }: {
   }, [filter, words]);
   const ready = data?.ready ?? false;
   const places = ready && (data?.places ?? false);
+  const prices = ready && (data?.prices ?? false);
+  /** Drinks that can be ordered now but have no price: their orders are not counted as spending. */
+  const unpriced = drinks.filter(drink => drink.active && drink.price == null).length;
 
   // Order: the list changes at once; the newest order is sent when the one before it has been answered.
   const order = useRef<{ sending: boolean; next: string[] | null; before: AdminDrink[] | null }>({ sending: false, next: null, before: null });
@@ -202,6 +213,18 @@ export function MenuView({ api, initial, active, onSaid }: {
         </div>
       )}
 
+      {data && ready && !data.prices && (
+        <div className={css.banner} role="status">
+          <span>Menunggu migrasi {COFFEE_PRICE_MIGRATION_NAME}. Sampai dijalankan, harga minuman belum bisa diisi dan Rekap belum menghitung pengeluaran.</span>
+        </div>
+      )}
+      {prices && unpriced > 0 && (
+        <div className={css.banner} data-note="price">
+          <span>{unpriced} minuman belum berharga: pengeluarannya tidak terhitung.</span>
+          <button type="button" className={css.textButton} onClick={() => { setQuery(""); setFilter("tanpa-harga"); }}>Lihat yang kosong</button>
+        </div>
+      )}
+
       <section ref={panel} className={`${css.panel} ${css.menuPanel}`} aria-labelledby={titleId} aria-busy={!data && !error}>
         <div className={css.menuHead}>
           <div className={css.menuTitle}>
@@ -243,7 +266,9 @@ export function MenuView({ api, initial, active, onSaid }: {
                   <span className={css.menuText}>
                     <strong>{drink.name}</strong>
                     {drink.description && <span>{drink.description}</span>}
-                    <span className={css.menuMeta}>{GROUP[drink.group]} · {temperatureWords(drink)}{drink.orders ? ` · ${drink.orders} pesanan` : ""}</span>
+                    <span className={css.menuMeta}>{prices && (drink.price == null
+                      ? <><span className={css.menuPrice} data-empty="true">Harga belum diisi</span> · </>
+                      : <><strong className={css.menuPrice}>{formatRupiah(drink.price)}</strong> · </>)}{GROUP[drink.group]} · {temperatureWords(drink)}{drink.orders ? ` · ${drink.orders} pesanan` : ""}</span>
                   </span>
                 </button>
                 <span className={css.menuSide}>
@@ -282,7 +307,7 @@ export function MenuView({ api, initial, active, onSaid }: {
         )}
       </section>
 
-      {editing && <DrinkEditor api={api} places={places} drink={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={saved} onRemoved={removed} />}
+      {editing && <DrinkEditor api={api} places={places} prices={prices} drink={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={saved} onRemoved={removed} />}
     </>
   );
 }
