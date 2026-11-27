@@ -341,8 +341,8 @@ const pictureHtml = (slide: TvSlide) =>
  * when the row and the TV say so (an old TV browser does not refuse sound nobody asked for by
  * hand; one that does shows its own play button). The meta refresh moves on after its length.
  */
-const videoHtml = (src: string, title: string, sound: boolean, alone: boolean) =>
-  `<div class="slide picture" data-item="video" data-sound="${sound}"><video src="${esc(src)}" autoplay${sound ? "" : " muted"}${alone ? " loop" : ""} playsinline preload="auto" title="${esc(title || "Video")}"></video></div>`;
+const videoHtml = (src: string, title: string, sound: boolean, alone: boolean, titleShow: string) =>
+  `<div class="slide picture" data-item="video" data-sound="${sound}"><video src="${esc(src)}" autoplay${sound ? "" : " muted"}${alone ? " loop" : ""} playsinline preload="auto" title="${esc(title || "Video")}"></video>${title.trim() && titleShow !== "tidak" ? `<p class="chip" data-mode="${titleShow === "terus" ? "terus" : "awal"}">${esc(title)}</p>` : ""}</div>`;
 
 /* ---- The page ------------------------------------------------------------------------------------- */
 
@@ -477,7 +477,11 @@ function styles(p: Palette, stars: string): string {
     + ".bdayWish p{display:-webkit-box;overflow:hidden;font-weight:600;line-height:1.22;white-space:pre-line;-webkit-box-orient:vertical;-webkit-line-clamp:5;word-wrap:break-word}"
     // A picture, whole, on black
     + ".picture{background-color:#000000}"
-    + ".picture img,.picture video{display:block;width:100%;height:100%;object-fit:contain}";
+    + ".picture img,.picture video{display:block;width:100%;height:100%;object-fit:contain}"
+    // A video's name in a corner, in the page's own units; "awal" goes after six seconds (no script: a CSS animation, which these TVs have).
+    + ".chip{position:absolute;top:3vmin;left:3vmin;max-width:46%;margin:0;padding:1.2vmin 2.4vmin;border-radius:1.6vmin;background-color:rgba(0,0,0,.68);color:#ffffff;font-size:3.2vmin;font-weight:700;line-height:1.25;overflow:hidden}"
+    + ".chip[data-mode=awal]{-webkit-animation:chipaway .6s ease 6s forwards;animation:chipaway .6s ease 6s forwards}"
+    + "@-webkit-keyframes chipaway{to{opacity:0;visibility:hidden}}@keyframes chipaway{to{opacity:0;visibility:hidden}}";
 }
 
 function page(p: Palette, stars: string, refresh: string, body: string): string {
@@ -512,7 +516,7 @@ export function tvLiteHtml(feed: TvFeed, options: { ask?: { s?: string | null; v
   if (item.kind === "sambutan") return page(p, stars, refresh, welcomeHtml(item.welcome, item.design));
   if (item.kind === "ultah") return page(p, stars, refresh, birthdayHtml(item.birthday));
   if (item.kind === "gambar") return page(p, stars, refresh, pictureHtml(item.slide));
-  if (item.kind === "video") return page(p, stars, refresh, videoHtml(item.file ?? "", item.title, item.sound === true, items.length < 2));
+  if (item.kind === "video") return page(p, stars, refresh, videoHtml(item.file ?? "", item.title, item.sound === true, items.length < 2, item.titleShow ?? "awal"));
   if (item.kind === "timeline") {
     return page(p, stars, refresh, `<main class="schedule" data-item="timeline">${head("Timeline Pra WAM", "Forum dan acara", "", clock, null)}<div class="body">${timelineHtml(p, feed.timeline ?? [], ROOM.height)}</div></main>`);
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowUp, Cake, CalendarDays, CalendarRange, ChevronRight, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, Images, FileVideo, ListOrdered, Megaphone, Play, Plus, Sparkles, Square, Trash2, Type, UserRound, Volume2, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Cake, CalendarDays, CalendarRange, ChevronRight, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, Images, FileVideo, ListOrdered, Megaphone, Play, Plus, Sparkles, Square, Trash2, Type, UserRound, Volume2, Zap, Captions } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, FilterChips, PageHeader, Pill, type Crumb } from "@/components/console";
 import { Sheet, SheetError } from "@/components/admin/wam-acara/isi/Sheet";
@@ -11,7 +11,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { uploadSlide } from "@/components/admin/wam/PraWamTv";
 import akun from "@/components/admin/wam/akun/akun.module.css";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { isTemplateKind, liteNote, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoLength, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, videoSeconds, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { isTemplateKind, liteNote, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, tvTitleShowLabels, tvTitleShows, TV_BIRTHDAY_WISH, tvVideoLength, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, videoSeconds, youtubeId, youtubeWatch, type TvItemKind, type TvTitleShow, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { cutOutPerson } from "./cutout";
@@ -33,12 +33,12 @@ type Draft = { title: string; body: string; call: string; date: string; design: 
   /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
   strip: boolean;
   /** A video's: whether it plays with its sound, and its length in seconds as typed ("" = not known). */
-  sound: boolean; length: string };
+  sound: boolean; length: string; titleShow: TvTitleShow };
 /** What "Tayangkan sekarang" is asked with (`minutes` null: until stopped). */
 type Take = { minutes: number | null; screenIds: string[] };
 const draftOf = (item: TvAdminItem): Draft => ({
   title: item.title, body: item.body, call: item.call, date: item.date, design: item.design, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
-  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds, strip: item.strip ?? false, sound: item.sound ?? false, length: item.length ? String(item.length) : "",
+  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds, strip: item.strip ?? false, sound: item.sound ?? false, length: item.length ? String(item.length) : "", titleShow: item.titleShow ?? "awal",
 });
 /** What can be added, said the way someone who has never seen this page would ask for it. */
 const adds = [
@@ -140,6 +140,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
       // Sent only when changed, so saving anything else never waits for the migration these are kept by.
       ...(item.kind === "gambar" && draft.strip !== (item.strip ?? false) ? { strip: draft.strip } : {}),
       ...(item.kind === "video" && draft.sound !== (item.sound ?? false) ? { sound: draft.sound } : {}),
+      ...(item.kind === "video" && draft.titleShow !== (item.titleShow ?? "awal") ? { titleShow: draft.titleShow } : {}),
       ...(item.kind === "video" && item.videoFile && length !== (item.length ?? null) ? { length } : {}),
       showFrom: draft.showFrom || null, showUntil: draft.showUntil || null, timeFrom: draft.timeFrom || null, timeUntil: draft.timeUntil || null,
       screenIds: draft.screenIds,
@@ -385,6 +386,15 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             </select>
           </div>}
         </fieldset>
+
+        {open.kind === "video" && <fieldset className={css.plGroup} disabled={!!busy}>
+          <legend><Captions size={18} aria-hidden />Judul di layar</legend>
+          <div className={css.plChoice} role="radiogroup" aria-label="Judul video di layar">
+            {tvTitleShows.map(mode => <label key={mode} className={css.plRadio}><input type="radio" name={`judul-layar-${open.id}`} checked={edit.titleShow === mode} onChange={() => change({ titleShow: mode })} />
+              <span><strong>{tvTitleShowLabels[mode]}</strong>{mode === "awal" ? "Beberapa detik pertama, lalu hilang." : mode === "terus" ? "Selama video diputar." : "Video tanpa tulisan."}</span></label>)}
+          </div>
+          <p className={css.plHint}>{edit.title.trim() ? <>Tampil sebagai chip kecil di pojok kiri atas, berisi <strong>{edit.title.trim()}</strong>. Ukurannya menyesuaikan tiap TV, tegak maupun mendatar. Ubah tulisannya di Nama video.</> : "Video ini belum punya nama, jadi tidak ada yang ditampilkan. Isi Nama video di atas."}</p>
+        </fieldset>}
 
         {open.kind === "video" && <fieldset className={css.plGroup} disabled={!!busy}>
           <legend><Volume2 size={18} aria-hidden />Suara</legend>

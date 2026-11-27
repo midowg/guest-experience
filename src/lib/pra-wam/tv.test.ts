@@ -184,7 +184,7 @@ describe("a YouTube video", () => {
   it("is a slide of its own, left out when its id is not one", () => {
     const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
     const video = { id: "v", kind: "video" as const, title: "Annual Meeting", body: "FWN1B1B7Gu8", seconds: 15 };
-    expect(playlistOf({ ...base, playlist: [video] })).toEqual([{ key: "item-v", kind: "video", title: "Annual Meeting", video: "FWN1B1B7Gu8", seconds: 15 }]);
+    expect(playlistOf({ ...base, playlist: [video] })).toEqual([{ key: "item-v", kind: "video", title: "Annual Meeting", video: "FWN1B1B7Gu8", seconds: 15, titleShow: "awal" }]);
     expect(itemLabel(playlistOf({ ...base, playlist: [video] })[0])).toBe("Annual Meeting");
     expect(playlistOf({ ...base, playlist: [{ ...video, body: "rusak" }] })).toEqual([]);
     expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://youtu.be/FWN1B1B7Gu8" }).success).toBe(true);
@@ -223,7 +223,7 @@ describe("a video file", () => {
   it("is played from its own address, whatever its row's body says", () => {
     const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
     const [item] = playlistOf({ ...base, playlist: [{ id: "v", kind: "video" as const, title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v" }] });
-    expect(item).toEqual({ key: "item-v", kind: "video", title: "Profil", video: "", file: "/api/tv/video/v", seconds: 15 });
+    expect(item).toEqual({ key: "item-v", kind: "video", title: "Profil", video: "", file: "/api/tv/video/v", seconds: 15, titleShow: "awal" });
   });
 
   it("is told from other files by its first bytes, and has a size limit", () => {
@@ -622,5 +622,20 @@ describe("a video with sound", () => {
     expect(tvScreenPatchSchema.safeParse({ sound: false }).success).toBe(true);
     expect(tvScreenPatchSchema.safeParse({}).success).toBe(false);
     expect(tvVideoConfirmSchema.safeParse({ mime: "video/mp4", size: 10, key: "k", token: "t", length: 95 }).success).toBe(true);
+  });
+});
+
+describe("a video's name on the screen", () => {
+  it("is shown for a few seconds at the start unless the row says otherwise, and anything unknown is that", async () => {
+    const { tvTitleShow, playlistOf, TV_DEFAULT_SETTINGS, tvItemPatchSchema, TV_TITLE_SECONDS } = await import("./tv");
+    expect([tvTitleShow(undefined), tvTitleShow("awal"), tvTitleShow("terus"), tvTitleShow("tidak"), tvTitleShow("lain")]).toEqual(["awal", "awal", "terus", "tidak", "awal"]);
+    expect(TV_TITLE_SECONDS).toBe(6);
+    const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+    const [file] = playlistOf({ ...base, playlist: [{ id: "v1", kind: "video", title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v1", titleShow: "terus" }] });
+    expect(file).toMatchObject({ titleShow: "terus" });
+    const [youtube] = playlistOf({ ...base, playlist: [{ id: "v2", kind: "video", title: "Profil", body: "dQw4w9WgXcQ", seconds: 15 }] });
+    expect(youtube).toMatchObject({ titleShow: "awal" });
+    expect(tvItemPatchSchema.safeParse({ titleShow: "tidak" }).success).toBe(true);
+    expect(tvItemPatchSchema.safeParse({ titleShow: "selalu" }).success).toBe(false);
   });
 });
