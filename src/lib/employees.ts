@@ -289,3 +289,6 @@ export function compareImport(rows: EmployeeRow[], current: Employee[]): { row: 
     return { row, change: changed.length ? "berubah" : "sama", changed };
   });
 }
+
+/** The apps one employee account opens (27 Nov 2026: made with the person in Data karyawan), said once. */
+export const ACCOUNT_APPS = "WAM, Booking Kantor, WG People, WG Coffee, dan Wellbeing";

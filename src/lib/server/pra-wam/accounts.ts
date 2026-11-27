@@ -1,5 +1,5 @@
 import "server-only";
-import { asCategory, type EmployeeCategory } from "@/lib/employees";
+import { ACCOUNT_APPS, asCategory, type EmployeeCategory } from "@/lib/employees";
 import { LOGIN_NAME_MIGRATION, loginSlug, nextLoginName, noEmailAddress } from "@/lib/pra-wam/login-name";
 import { checkRoleChange, normalizeRoles, praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -122,6 +122,34 @@ export async function createMissingAccounts(): Promise<CreateResult> {
   const { rows, migrated } = await listAccounts();
   if (!migrated) throw waitingForMigration();
   return createFor(rows.filter(row => row.active && !row.hasAccount), password);
+}
+
+/** What Data karyawan says after a save about the sign-ins it made (autoAccounts). */
+export type AutoAccounts = { created: number; withAccount: string[]; note: string };
+
+/**
+ * After Data karyawan adds or changes people (27 Nov 2026): whoever is active and still has no
+ * sign-in gets one right away, the same account every employee app uses, with the shared first
+ * password. Only these people ("all" after an import). Never throws: a save in Data karyawan stands
+ * even when no account could be made, and `note` says why (no first password on the server, no
+ * email and no login names yet, an email already taken). Null before the accounts migration.
+ */
+export async function autoAccounts(employeeIds: string[] | "all"): Promise<AutoAccounts | null> {
+  try {
+    const { rows, migrated } = await listAccounts();
+    if (!migrated) return null;
+    const withAccount = (list: AccountRow[]) => list.filter(row => row.hasAccount).map(row => row.employeeId);
+    const missing = rows.filter(row => row.active && !row.hasAccount && (employeeIds === "all" || employeeIds.includes(row.employeeId)));
+    if (!missing.length) return { created: 0, withAccount: withAccount(rows), note: "" };
+    if (!defaultPasswordReady()) return { created: 0, withAccount: withAccount(rows), note: "Akun login belum dibuat otomatis: password awal (WAM_DEFAULT_PASSWORD) belum diisi di server." };
+    const { created, skipped } = await createFor(missing, defaultPassword());
+    const after = await listAccounts().then(result => withAccount(result.rows)).catch(() => withAccount(rows));
+    const made = created ? `Akun login dibuat untuk ${created} orang: satu akun untuk ${ACCOUNT_APPS}, dengan password awal.` : "";
+    const left = skipped.length ? `Akun belum dibuat: ${skipped.join("; ")}` : "";
+    return { created, withAccount: after, note: [made, left].filter(Boolean).join(" ") };
+  } catch {
+    return { created: 0, withAccount: [], note: "Akun login belum dapat dibuat otomatis. Coba simpan lagi sebentar lagi." };
+  }
 }
 
 /**

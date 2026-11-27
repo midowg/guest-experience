@@ -5,9 +5,9 @@ import { FileSpreadsheet, Pencil, Plus, Upload, UserPlus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, departmentShort, departmentShorts, jobPostLabels, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { ACCOUNT_APPS, categoryLabels, departmentShort, departmentShorts, jobPostLabels, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
-import type { AccountRow } from "@/lib/server/pra-wam/accounts";
+import type { AccountRow, AutoAccounts } from "@/lib/server/pra-wam/accounts";
 import { BUSINESS_UNITS, buCode, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
 import { EmployeeEditor, blankJob, type EmployeeDraft } from "./EmployeeEditor";
@@ -117,6 +117,16 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(null); }
   }
+  /** The sign-ins the server made with a save (27 Nov 2026): the list's account status follows, and what it says is kept. */
+  type WithAccounts = { accounts?: AutoAccounts | null };
+  function takeAccounts(data: WithAccounts | undefined): string {
+    const accounts = data?.accounts;
+    if (!accounts) return "";
+    if (accounts.withAccount.length) setWithAccount(new Set(accounts.withAccount));
+    return accounts.note ? ` ${accounts.note}` : "";
+  }
+  /** The person alone, as the list keeps them. */
+  const withoutAccounts = (data: Employee & WithAccounts): Employee => { const employee = { ...data }; delete employee.accounts; return employee; };
   async function reload() {
     const result = await adminRequest<{ employees: Employee[] }>(employeesApi());
     setPeople(result.data?.employees ?? []);
@@ -125,7 +135,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     if (!plan || busy) return;
     setBusy("save"); setError(""); setMessage(""); setSkipped([]);
     try {
-      const result = await adminRequest(employeesApi(), { method: "POST", body: JSON.stringify({ rows: plan.plan.map(item => item.row) }) });
+      const result = await adminRequest<WithAccounts>(employeesApi(), { method: "POST", body: JSON.stringify({ rows: plan.plan.map(item => item.row) }) });
+      takeAccounts(result.data);
       setMessage(result.message); setPlan(null); setFile(null);
       await reload();
     } catch (err) { setError(errorMessage(err)); }
@@ -148,7 +159,9 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
         setRoles(current => ({ ...current, [id]: nextRoles }));
       };
       const rolesFirst = !nextRoles.includes("bod");
-      let saved: Employee | undefined = person ?? (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
+      let accountNote = "";
+      let saved: Employee | undefined = person ?? await adminRequest<Employee & WithAccounts>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })
+        .then(result => { accountNote += takeAccounts(result.data); return result.data && withoutAccounts(result.data); });
       if (!saved) throw new Error("Belum tersimpan.");
       const id = saved.id;
       if (rolesFirst) await saveRoles(id);
@@ -159,22 +172,25 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       const jobsChanged = !person || !sameJobs(jobsOf(person), nextJobs);
       let note = "";
       if (jobsChanged) {
-        const result = await adminRequest<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean; gmReady?: boolean }>(employeesApi(id), { method: "PATCH", body: JSON.stringify({ ...changed, jobs: nextJobs }) });
+        const result = await adminRequest<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean; gmReady?: boolean } & WithAccounts>(employeesApi(id), { method: "PATCH", body: JSON.stringify({ ...changed, jobs: nextJobs }) });
         if (!result.data) throw new Error("Belum tersimpan.");
+        accountNote += takeAccounts(result.data);
         const { employee, jobs: savedJobs, leads: savedLeads, migrated: jobsSaved, gmReady } = result.data;
         saved = employee;
         setLeads(current => ({ ...current, [id]: savedLeads }));
         // Before migration 202611090003 only the Utama job stays: the rest is read from the columns again.
         setJobs(current => { const next = { ...current }; if (jobsSaved) next[id] = savedJobs; else delete next[id]; return next; });
         // What waits for a migration (other jobs, or GM and Tim) is said, not hidden.
-        if ((!jobsSaved && nextJobs.length > 1) || gmReady === false) note = ` ${result.message}`;
+        if ((!jobsSaved && nextJobs.length > 1) || gmReady === false) note = ` ${result.message.replace(accountNote.trim(), "").trim()}`;
       } else if (Object.keys(changed).length) {
-        saved = (await adminRequest<Employee>(employeesApi(id), { method: "PATCH", body: JSON.stringify(changed) })).data ?? saved;
+        const result = await adminRequest<Employee & WithAccounts>(employeesApi(id), { method: "PATCH", body: JSON.stringify(changed) });
+        accountNote += takeAccounts(result.data);
+        if (result.data) saved = withoutAccounts(result.data);
       }
       if (!rolesFirst) await saveRoles(id);
       const done = saved;
       setPeople(list => person ? list.map(item => item.id === done.id ? done : item) : [done, ...list]);
-      setMessage(`${done.full_name} ${person ? "disimpan" : "ditambahkan"}.${note}`);
+      setMessage(`${done.full_name} ${person ? "disimpan" : "ditambahkan"}.${note}${accountNote}`);
       setEditor(undefined);
     } catch (err) { setEditorError(errorMessage(err)); }
     finally { setBusy(null); }
@@ -258,7 +274,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       {wamAccounts === null && <Notice tone="warning">Status akun WAM belum dapat dimuat. Muat ulang halaman ini sebentar lagi.</Notice>}
       {wamAccounts && !wamAccounts.migrated && <Notice tone="warning">Akun WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>}
       {wamAccounts?.migrated && <div className="stack">
-        <p><strong>Akun WAM:</strong> {activeWithAccount} dari {activeCount} karyawan aktif sudah punya akun. Peran diatur di Admin WAM.</p>
+        <p><strong>Akun login:</strong> {activeWithAccount} dari {activeCount} karyawan aktif sudah punya akun. Karyawan yang ditambah, diimpor, atau diaktifkan lagi langsung dibuatkan akun: satu akun untuk {ACCOUNT_APPS}, masuk dengan email atau nama panggilan dan password awal.</p>
         {!wamAccounts.passwordReady && <Notice tone="warning">Password awal WAM belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
         {wamManage && canCreate.length > 0 && <div className={styles.qrActions}>
           <Button type="button" variant="secondary" disabled={!!busy || !wamReady} onClick={() => createAccounts()}><UserPlus size={17} aria-hidden="true" /> {busy === "accounts" ? "Membuat akun…" : `Buat akun WAM untuk ${canCreate.length} karyawan`}</Button>

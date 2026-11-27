@@ -35,7 +35,7 @@ const auth = {
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query, auth }) }));
 vi.mock("./leads", () => ({ listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadsOf: async () => ({ departments: [], lead: false }) }));
 
-const { createAccount, createMissingAccounts } = await import("./accounts");
+const { autoAccounts, createAccount, createMissingAccounts } = await import("./accounts");
 
 const person = (id: string, name: string, email: string, active = true) => ({ id, full_name: name, department: "Accounting", email, active });
 
@@ -97,5 +97,32 @@ describe("createMissingAccounts", () => {
     const result = await createMissingAccounts();
     expect(result).toEqual({ created: 2, skipped: ["Lima: email sudah dipakai akun lain."] });
     expect(users.map(user => user.email)).toEqual(["satu@werkudara.com", "tiga@tanpa-email.wam.invalid"]);
+  });
+});
+
+describe("autoAccounts (27 Nov 2026: a sign-in as soon as Data karyawan saves someone)", () => {
+  it("makes the missing sign-in of the people saved only, and says so", async () => {
+    const result = await autoAccounts(["e1", "e2", "e4"]);
+    expect(users).toEqual([{ email: "satu@werkudara.com", password: "password-uji-saja" }]);
+    expect(result?.created).toBe(1);
+    expect(result?.note).toContain("Akun login dibuat untuk 1 orang");
+    expect(result?.note).toContain("WG People");
+  });
+  it("after an import makes everyone's that is missing, and names who was left out", async () => {
+    const result = await autoAccounts("all");
+    expect(users.map(user => user.email)).toEqual(["satu@werkudara.com", "tiga@tanpa-email.wam.invalid"]);
+    expect(result?.created).toBe(2);
+    expect(result?.note).toContain("Lima: email sudah dipakai akun lain.");
+  });
+  it("says nothing when everyone saved already has one", async () => {
+    expect(await autoAccounts(["e2"])).toEqual({ created: 0, withAccount: ["e2"], note: "" });
+    expect(users).toEqual([]);
+  });
+  it("never throws: without the first password the save stands and the note says why", async () => {
+    vi.stubEnv("WAM_DEFAULT_PASSWORD", "");
+    const result = await autoAccounts(["e1"]);
+    expect(result?.created).toBe(0);
+    expect(result?.note).toContain("WAM_DEFAULT_PASSWORD");
+    expect(users).toEqual([]);
   });
 });
