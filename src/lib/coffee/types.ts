@@ -107,8 +107,12 @@ export type CoffeeSettings = { karyawan: number; ga: number; intern: number };
  * and who changed it last.
  */
 export type AdminDrink = Drink & { sort: number; orders: number; uploaded: boolean; updatedAt: string | null; updatedLabel: string };
-/** `ready` false: migration 202612020001 has not run; the menu is the code's and cannot be changed yet. */
-export type MenuData = { drinks: AdminDrink[]; ready: boolean };
+/**
+ * `ready` false: migration 202612020001 has not run; the menu is the code's and cannot be changed yet.
+ * `places` false: migration 202612030001 has not run; every drink shows in both menus and the two
+ * ticks (Buku tamu, Menu biasa) cannot be changed yet.
+ */
+export type MenuData = { drinks: AdminDrink[]; ready: boolean; places: boolean };
 export type { CoffeeOptions, DrinkOptions };
 
 /** Someone the pickers offer: an active employee. `used`: claims that count in the month asked for. */

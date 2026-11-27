@@ -80,6 +80,7 @@
 .ga .options[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
 .ga .options[data-cols="6"] { grid-template-columns: repeat(6, 1fr); }
 .ga .option { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 6px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); font-size: 16px; font-weight: 600; }
+.ga .option:disabled { opacity: .45; cursor: not-allowed; }
 .ga .option[aria-pressed="true"] { border-color: var(--emp); background: var(--emp-c); color: var(--emp-strong); box-shadow: inset 0 0 0 1px var(--emp); }
 
 .ga .stepper { display: inline-flex; align-items: center; gap: 4px; padding: 2px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); flex: none; }
@@ -213,6 +214,9 @@
 .ga .tile:active { transform: scale(.97); }
 /* A drink without a photo (added by the pengelola, none uploaded yet): a cup in the box the photo would take. */
 .ga .noPhoto { display: grid; place-items: center; flex: none; background: var(--soft); color: var(--ink-2); }
+/* The cup's tile takes the tint of the drink's kind where it is known (F7). */
+.ga .noPhoto[data-group="kopi"] { background: color-mix(in srgb, #b45309 15%, var(--surface)); color: color-mix(in srgb, #b45309 65%, var(--ink)); }
+.ga .noPhoto[data-group="non-kopi"] { background: color-mix(in srgb, #0d9488 15%, var(--surface)); color: color-mix(in srgb, #0d9488 65%, var(--ink)); }
 .ga .tile .noPhoto { width: 100%; aspect-ratio: 4 / 3; }
 .ga .lineBody .noPhoto { width: 44px; height: 44px; border-radius: 10px; }
 .ga .dialogHead .noPhoto { width: 64px; height: 64px; border-radius: 12px; }

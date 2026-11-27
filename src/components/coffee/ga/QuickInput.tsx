@@ -2,7 +2,7 @@
 
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { BookOpen, CircleAlert, Coffee, CupSoda, Info, Plus, Send } from "lucide-react";
-import { drinkIn, drinkLabel, offered, optionsLabel, startChoice, type Drink, type DrinkGroup } from "@/lib/coffee/menu";
+import { DRINK_GROUPS, DRINK_GROUP_LABEL, PLACE_LABEL, drinkIn, drinkLabel, groupsIn, offeredTo, optionsLabel, placeOf, startChoice, type Drink, type DrinkGroup } from "@/lib/coffee/menu";
 import { LineDialog } from "./LineDialog";
 import { MAX_LINES, MAX_QTY, countLabel, counts, defaultLine, lineTag, type Draft, type GaOptions, type GaPerson, type Line, type LineFor } from "./model";
 import { Photo, ScreenHead, Stepper, useSettled } from "./parts";
@@ -13,18 +13,26 @@ import css from "./ga.module.css";
  * (Panas · gula Normal while Pengaturan asks both; nothing when it asks nothing); "Ketuk untuk" switches
  * the taps to a team member, who is then asked for by name. Each row can be changed or removed.
  * Kirim sends the whole order to the pengelola once; while it is being sent nothing can be pressed twice.
+ * F7: the grid follows "Ketuk untuk": Tamu shows the drinks of Buku tamu, Tim · rapat those of
+ * Menu biasa (the pengelola ticks them in Menu), and says which; a kind without a drink there has no tab.
  */
+const GROUP_ICON: Record<DrinkGroup, typeof Coffee> = { kopi: Coffee, "non-kopi": CupSoda };
 export function QuickInput({ draft, lines, setLines, people, menu, options, sending, problem, onSend, onGuest, onBack }: {
   draft: Draft; lines: Line[]; setLines: Dispatch<SetStateAction<Line[]>>; people: GaPerson[]; menu: readonly Drink[]; options: GaOptions; sending: boolean; problem: string | null;
   onSend: () => void; onGuest: () => void; onBack: () => void;
 }) {
-  const [group, setGroup] = useState<DrinkGroup>("kopi");
+  const [picked, setGroup] = useState<DrinkGroup>("kopi");
   const [tapFor, setTapFor] = useState<LineFor>("tamu");
   const [editing, setEditing] = useState<{ line: Line; isNew: boolean } | null>(null);
   /** A tap that could not add anything because the order is full: said out loud, not swallowed. */
   const [refused, setRefused] = useState(0);
   const settled = useSettled();
-  const drinks = offered(menu).filter(drink => drink.group === group);
+  const listed = offeredTo(menu, tapFor);
+  const present = groupsIn(listed);
+  const groups: readonly DrinkGroup[] = present.length ? present : DRINK_GROUPS;
+  const group = groups.includes(picked) ? picked : groups[0];
+  const drinks = listed.filter(drink => drink.group === group);
+  const place = PLACE_LABEL[placeOf(tapFor)];
   // What a tapped drink starts with for a guest, in words ("" when guests are asked nothing).
   const first = startChoice(undefined, options.tamu);
   const bawaan = optionsLabel(first.temperature, first.sugar, first.ice);
@@ -60,8 +68,10 @@ export function QuickInput({ draft, lines, setLines, people, menu, options, send
         <section className={css.menuPane} aria-label="Menu minuman">
           <div className={css.menuBar}>
             <div className={css.segmented} role="group" aria-label="Jenis minuman">
-              <button type="button" aria-pressed={group === "kopi"} onClick={() => setGroup("kopi")}><Coffee aria-hidden size={18} />Kopi</button>
-              <button type="button" aria-pressed={group === "non-kopi"} onClick={() => setGroup("non-kopi")}><CupSoda aria-hidden size={18} />Non-kopi</button>
+              {groups.map(key => {
+                const Icon = GROUP_ICON[key];
+                return <button key={key} type="button" aria-pressed={group === key} onClick={() => setGroup(key)}><Icon aria-hidden size={18} />{DRINK_GROUP_LABEL[key]}</button>;
+              })}
             </div>
             <div className={css.tapFor} role="group" aria-label="Minuman yang diketuk untuk">
               <span className={css.mutedSmall} aria-hidden>Ketuk untuk</span>
@@ -69,14 +79,14 @@ export function QuickInput({ draft, lines, setLines, people, menu, options, send
               <button type="button" aria-pressed={tapFor === "tim"} onClick={() => setTapFor("tim")}>Tim · rapat</button>
             </div>
           </div>
-          {!drinks.length && <p className={css.mutedSmall}>Belum ada minuman {group === "kopi" ? "kopi" : "non-kopi"} di menu.</p>}
+          <p className={css.mutedSmall} role="status">{drinks.length ? `Menampilkan ${place}.` : `Belum ada minuman ${DRINK_GROUP_LABEL[group].toLowerCase()} di ${place}.`}</p>
           <ul className={css.drinkGrid}>
             {drinks.map(drink => {
               const qty = qtyOf(drink.slug);
               return (
                 <li key={drink.slug}>
                   <button type="button" className={css.tile} onClick={() => add(drink)} aria-label={`Tambah ${drink.name}${qty ? `, sudah ${qty}` : ""}`}>
-                    <Photo src={drink.photo} width={200} height={150} />
+                    <Photo src={drink.photo} width={200} height={150} group={drink.group} />
                     <span className={css.tileName}>{drink.name}</span>
                     <span className={css.tilePlus} aria-hidden><Plus size={20} /></span>
                     {qty > 0 && <span className={css.tileCount} aria-hidden>{qty}</span>}
@@ -103,7 +113,7 @@ export function QuickInput({ draft, lines, setLines, people, menu, options, send
                 return (
                   <li key={line.id}>
                     <button type="button" className={css.lineBody} disabled={sending} onClick={() => setEditing({ line, isNew: false })} aria-label={`Ubah ${name}, ${lineTag(line.for, line.for === "tim" ? line.person?.name : line.guestName)}`}>
-                      <Photo src={drink?.photo} width={44} height={44} />
+                      <Photo src={drink?.photo} width={44} height={44} group={drink?.group} />
                       <span className={css.grow}>
                         <strong>{name}</strong>
                         {chosen && <span>{chosen}</span>}

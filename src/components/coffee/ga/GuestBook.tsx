@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, Lock } from "lucide-react";
-import { ICE_LEVELS, SUGAR_LEVELS, asksIce, drinkIn, drinkLabel, fitChoice, offered, optionsLabel, startChoice, type Drink, type DrinkGroup, type DrinkOptions } from "@/lib/coffee/menu";
+import { DRINK_GROUPS, DRINK_GROUP_LABEL, ICE_LEVELS, SUGAR_LEVELS, asksIce, drinkIn, drinkLabel, fitChoice, groupsIn, offeredTo, optionsLabel, startChoice, type Drink, type DrinkGroup, type DrinkOptions } from "@/lib/coffee/menu";
 import { GUEST_NAME_MAX } from "@/lib/coffee/schemas";
 import { ExitDialog, type BookExit } from "./ExitDialog";
 import type { BookState, Pick } from "./hold";
@@ -16,7 +16,8 @@ import css from "./ga.module.css";
  * employee data but the name of the PIC GA chose. It is given no API and no list of people: what
  * the guests pick goes back to GA's order panel as Tamu rows, and GA sends. Leaving needs the PIN
  * GA (`exit`; a question while the pengelola has not set one). `menu` is the pengelola's menu and
- * `options` what a guest is asked with a drink (Pengaturan): the pages show only those.
+ * `options` what a guest is asked with a drink (Pengaturan): the pages show only those. Of the
+ * menu the book shows the drinks ticked "Buku tamu" (F7), and a tab only for a kind that has one.
  *
  * After the F3 audit: what the guests picked is handed up as it changes (`onKeep`) and given back
  * after a reload (`saved`), so a reload lands on this book again and loses nothing. `locked`: the
@@ -27,7 +28,7 @@ export function GuestBook({ room, picName, guest, max, menu, options, saved, loc
   room: string; picName: string; guest?: string; max: number; menu: readonly Drink[]; options: DrinkOptions; saved?: BookState; locked?: boolean; exit: BookExit; onKeep?: (book: BookState) => void; onDone: (lines: Line[]) => void;
 }) {
   const [open, setOpen] = useState(saved?.open ?? false);
-  const [group, setGroup] = useState<DrinkGroup>("kopi");
+  const [picked, setGroup] = useState<DrinkGroup>("kopi");
   const [drink, setDrink] = useState<Drink | null>(null);
   const [picks, setPicks] = useState<Pick[]>(saved?.picks ?? []);
   const [thanks, setThanks] = useState(false);
@@ -47,7 +48,11 @@ export function GuestBook({ room, picName, guest, max, menu, options, saved, loc
   const finish = () => onDone(picks.map(pick => ({
     id: newLineId(), for: "tamu", slug: pick.slug, ...fitChoice(pick, options), qty: 1, guestName: pick.name.trim() || undefined,
   })));
-  const drinks = offered(menu).filter(item => item.group === group);
+  const listed = offeredTo(menu, "tamu");
+  const present = groupsIn(listed);
+  const groups: readonly DrinkGroup[] = present.length ? present : DRINK_GROUPS;
+  const group = groups.includes(picked) ? picked : groups[0];
+  const drinks = listed.filter(item => item.group === group);
   const nameOf = (slug: string) => drinkLabel(slug, null, drinkIn(menu, slug)?.name);
   const asksAny = options.suhu || options.gula;
   const split = Math.ceil(drinks.length * 0.4);
@@ -103,14 +108,13 @@ export function GuestBook({ room, picName, guest, max, menu, options, saved, loc
             <>
               {/* The book’s tabs: on the right page when it lies open, on top when the tablet stands upright. */}
               <div className={css.ribbons} role="group" aria-label="Bagian menu">
-                <button type="button" aria-pressed={group === "kopi"} onClick={() => setGroup("kopi")}>Kopi</button>
-                <button type="button" aria-pressed={group === "non-kopi"} onClick={() => setGroup("non-kopi")}>Non-kopi</button>
+                {groups.map(key => <button key={key} type="button" aria-pressed={group === key} onClick={() => setGroup(key)}>{DRINK_GROUP_LABEL[key]}</button>)}
               </div>
               <div className={css.page}>
                 <span className={css.goldMarkSmall} aria-hidden />
                 <p className={css.greeting}>{guest ? <>Disajikan khusus untuk <em>{guest}</em></> : <>Selamat datang di Werkudara</>}</p>
                 <p className={css.bookMeta}>Bersama {picName} · {room}</p>
-                <h2 className={css.bookTitle}>{group === "kopi" ? "Kopi" : "Non-kopi"}</h2>
+                <h2 className={css.bookTitle}>{DRINK_GROUP_LABEL[group]}</h2>
                 <Ornament />
                 {full
                   ? <p className={css.bookLead} role="status">Pesanan untuk meja ini sudah penuh. Silakan serahkan kembali ke petugas kami.</p>
@@ -150,7 +154,7 @@ function BookItems({ drinks, onPick }: { drinks: Drink[]; onPick: (drink: Drink)
       {drinks.map(drink => (
         <li key={drink.slug}>
           <button type="button" onClick={() => onPick(drink)}>
-            <Photo src={drink.photo} width={72} height={72} />
+            <Photo src={drink.photo} width={72} height={72} group={drink.group} />
             <span><strong>{drink.name}</strong><span>{drink.description}</span></span>
           </button>
         </li>
@@ -170,7 +174,7 @@ function GuestOptions({ drink, options, full, onBack, onPick }: { drink: Drink; 
     <>
       <div className={css.page}>
         <button type="button" className={css.bookBack} onClick={onBack}><ChevronLeft aria-hidden size={20} />Kembali ke menu</button>
-        <Photo className={css.bookPhoto} src={drink.photo} alt={drink.name} width={360} height={360} />
+        <Photo className={css.bookPhoto} src={drink.photo} alt={drink.name} width={360} height={360} group={drink.group} />
         <h2 className={css.bookTitle}>{drink.name}</h2>
         <Ornament />
         <p className={css.bookLead}>{drink.description}</p>

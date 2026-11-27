@@ -25,7 +25,32 @@ export type Drink = {
   photo: string | null;
   /** Hidden drinks (false) cannot be ordered; they still show in the history. */
   active: boolean;
+  /**
+   * Where the drink shows (F7, 27 Nov 2026). "Buku tamu": the GA tablet's guest menu book, and what
+   * a Tamu line may be. "Menu biasa": the employee app, and what a Tim · rapat line and a claim may
+   * be. Absent reads as true: a menu from before migration 202612030001 shows every drink in both.
+   */
+  guestBook?: boolean;
+  regular?: boolean;
 };
+
+/** The two places a drink can show in. */
+export type MenuPlace = "guestBook" | "regular";
+export const MENU_PLACES = ["guestBook", "regular"] as const satisfies readonly MenuPlace[];
+export const PLACE_LABEL: Record<MenuPlace, string> = { guestBook: "Buku tamu", regular: "Menu biasa" };
+/** Which menu an audience is served from: guests from the guest book; employees and the team in a meeting from the regular menu. */
+export const placeOf = (audience: "klaim" | "tim" | "tamu"): MenuPlace => audience === "tamu" ? "guestBook" : "regular";
+/** Is the drink ticked for that place? (Says nothing about hidden: see `offeredTo`.) */
+export const showsIn = (drink: Pick<Drink, MenuPlace>, place: MenuPlace): boolean => drink[place] !== false;
+/** "tampil di Buku tamu dan Menu biasa", "hanya tampil di Buku tamu", "hanya tampil di Menu biasa", "tidak tampil di menu mana pun". */
+export const placesWords = (drink: Pick<Drink, MenuPlace>): string => {
+  const book = showsIn(drink, "guestBook"), regular = showsIn(drink, "regular");
+  return book && regular ? "tampil di Buku tamu dan Menu biasa" : book ? "hanya tampil di Buku tamu" : regular ? "hanya tampil di Menu biasa" : "tidak tampil di menu mana pun";
+};
+export const DRINK_GROUPS = ["kopi", "non-kopi"] as const satisfies readonly DrinkGroup[];
+export const DRINK_GROUP_LABEL: Record<DrinkGroup, string> = { kopi: "Kopi", "non-kopi": "Non-kopi" };
+/** The groups that have a drink in this list, in their usual order: a tab is only drawn for these. */
+export const groupsIn = (drinks: readonly Pick<Drink, "group">[]): DrinkGroup[] => DRINK_GROUPS.filter(group => drinks.some(drink => drink.group === group));
 
 const both: Temperature[] = ["panas", "es"];
 /** The static photo of one of the first 15 drinks (public/coffee/drinks). */
@@ -145,3 +170,14 @@ export const drinkName = (line: { slug: string; other?: string | null; name?: st
 
 /** The menu in its order, hidden drinks left out: what can be ordered now. */
 export const offered = (menu: readonly Drink[]): Drink[] => menu.filter(drink => drink.active);
+/** What can be ordered now for that audience: shown, and ticked for the menu the audience is served from. */
+export const offeredTo = (menu: readonly Drink[], audience: "klaim" | "tim" | "tamu"): Drink[] => menu.filter(drink => drink.active && showsIn(drink, placeOf(audience)));
+/**
+ * The owner's starting choice (27 Nov 2026, the defaults of migration 202612030001): the paper
+ * menu (all 15 drinks) is the guest book; the regular menu is what the office machine (JS Mini)
+ * makes, because employees serve themselves there. These three paper-menu drinks the machine does
+ * not make are guest book only.
+ */
+export const GUEST_BOOK_ONLY = ["cappuccino-double-shot", "cucumber-ice", "classic-tea"] as const;
+/** The menu as that migration leaves it on a database nobody edited: for the previews and the tests. */
+export const MACHINE_MENU: Drink[] = DRINKS.map(drink => ({ ...drink, guestBook: true, regular: !(GUEST_BOOK_ONLY as readonly string[]).includes(drink.slug) }));

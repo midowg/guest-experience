@@ -1,4 +1,4 @@
-import { DEFAULT_OPTIONS, DRINKS, drinkIn, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, drinkIn, placeOf, showsIn, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { wibDay } from "@/lib/coffee/quota";
 import { ROOMS, roomSpot } from "@/lib/coffee/rooms";
 import { isDrinkIssue, meetingSchema, settleLine } from "@/lib/coffee/schemas";
@@ -148,7 +148,7 @@ export function createSampleGa({ seeded = false, clock = Date.now, delay = 0, pi
       } else if (!SAMPLE_PEOPLE.some(item => item.id === body.picId)) throw new CoffeeApiError("Karyawan tidak ditemukan atau sudah tidak aktif.", 422);
       if (body.items.some(item => item.for === "tim" && !SAMPLE_PEOPLE.some(found => found.id === item.personId))) throw new CoffeeApiError("Karyawan tidak ditemukan atau sudah tidak aktif.", 422);
       // A drink that left the menu (hidden or deleted) is gone; an option that is asked must be there.
-      if (read.data.items.some(item => !drinkIn(menu, item.slug)?.active)) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
+      if (read.data.items.some(item => { const drink = drinkIn(menu, item.slug); return !drink?.active || !showsIn(drink, placeOf(item.for)); })) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
       const issue = read.data.items.map(item => settleLine(item, drinkIn(menu, item.slug), options[item.for])).find(isDrinkIssue);
       if (issue) throw new CoffeeApiError("Pilihan minuman berubah. Tutup lalu buka lagi minumannya, kemudian pilih ulang.", 422, { [issue.field]: [issue.message] });
       const order = add(read.data);

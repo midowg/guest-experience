@@ -157,10 +157,18 @@ export const drinkSchema = z.object({
   temperatures: z.array(z.enum(["panas", "es"], "Pilih Panas, Es, atau keduanya."), "Pilih Panas, Es, atau keduanya.").min(1, "Pilih Panas, Es, atau keduanya.").max(2, "Pilih Panas, Es, atau keduanya.")
     .transform(value => (["panas", "es"] as const).filter(item => value.includes(item))),
   active: z.boolean("Pilih tampil atau tersembunyi.").default(true),
+  /** Where it shows (F7). Left out: both, as every drink was before. */
+  guestBook: z.boolean("Pilih tampil di Buku tamu atau tidak.").default(true),
+  regular: z.boolean("Pilih tampil di Menu biasa atau tidak.").default(true),
 });
 export type DrinkInput = z.infer<typeof drinkSchema>;
-/** Sembunyikan / Tampilkan from the list. */
-export const drinkShownSchema = z.object({ active: z.boolean("Pilih tampil atau tersembunyi.") });
+/** From the list, without opening the editor: Sembunyikan / Tampilkan, or one of the two "where it shows" ticks. At least one of them. */
+export const drinkShownSchema = z.object({
+  active: z.boolean("Pilih tampil atau tersembunyi.").optional(),
+  guestBook: z.boolean("Pilih tampil di Buku tamu atau tidak.").optional(),
+  regular: z.boolean("Pilih tampil di Menu biasa atau tidak.").optional(),
+}).refine(value => value.active !== undefined || value.guestBook !== undefined || value.regular !== undefined, "Tidak ada yang diubah.");
+export type DrinkPatch = z.infer<typeof drinkShownSchema>;
 /** Atur urutan: every drink of the menu once, in its new order. */
 export const drinkOrderSchema = z.object({
   slugs: z.array(drinkSlugSchema, "Urutan tidak dikenali.").min(1, "Urutan tidak dikenali.").max(500, "Urutan tidak dikenali.")

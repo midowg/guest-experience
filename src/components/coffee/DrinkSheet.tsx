@@ -48,7 +48,7 @@ export function DrinkSheet({ drink, me, options, onClose, onSubmit }: {
     <Layer onClose={() => { if (!busy) onClose(); }} labelledBy={titleId}>
       <span className={css.grabber} aria-hidden />
       <div className={css.sheetHead}>
-        <DrinkPhoto src={drink.photo} size={88} eager />
+        <DrinkPhoto src={drink.photo} size={88} eager group={drink.group} />
         <div><h2 id={titleId}>{drink.name}</h2><p>{drink.description}</p></div>
         <button type="button" className={css.iconButton} aria-label="Tutup" disabled={busy} onClick={onClose}><X aria-hidden size={22} /></button>
       </div>

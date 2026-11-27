@@ -307,6 +307,12 @@ it("manages the menu: read, add, change, hide, order, delete, with the words the
   expect(await body(await all.writes.changeDrink("teh-tarik", { ...DRINK, name: "Teh Tarik Aceh", temperatures: ["es", "panas"] }))).toMatchObject({ message: "Teh Tarik Aceh disimpan.", data: { drink: { slug: "teh-tarik", name: "Teh Tarik Aceh", temperatures: ["panas", "es"] } } });
   expect(await body(await all.writes.showDrink("teh-tarik"))).toMatchObject({ message: "Teh Tarik Aceh disembunyikan. Tidak bisa dipesan, riwayatnya tetap ada.", data: { drink: { active: false } } });
   expect(await body(await all.writes.showDrink("teh-tarik", { active: true }))).toMatchObject({ message: "Teh Tarik Aceh tampil lagi di menu." });
+  // F7: the two ticks through the same PATCH, one at a time; the answer says where the drink shows now.
+  expect(await body(await all.writes.showDrink("teh-tarik", { guestBook: false }))).toMatchObject({ message: "Teh Tarik Aceh kini hanya tampil di Menu biasa.", data: { drink: { guestBook: false, regular: true, active: true } } });
+  expect(await body(await all.writes.showDrink("teh-tarik", { regular: false }))).toMatchObject({ message: "Teh Tarik Aceh kini tidak tampil di menu mana pun.", data: { drink: { guestBook: false, regular: false } } });
+  expect(await body(await all.writes.showDrink("teh-tarik", { guestBook: true, regular: true }))).toMatchObject({ message: "Teh Tarik Aceh kini tampil di Buku tamu dan Menu biasa." });
+  expect((await all.writes.showDrink("teh-tarik", {})).status).toBe(422);
+  expect((await all.writes.showDrink("teh-tarik", { guestBook: "ya" })).status).toBe(422);
   const slugs = (await read()).drinks.map(drink => drink.slug).reverse();
   const sorted = await body(await all.writes.sortDrinks({ slugs }));
   expect(sorted).toMatchObject({ message: "Urutan menu disimpan.", data: { ready: true } });

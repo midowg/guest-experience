@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Coffee, Info } from "lucide-react";
-import { drinkName, optionsLabel } from "@/lib/coffee/menu";
+import { drinkName, optionsLabel, type DrinkGroup } from "@/lib/coffee/menu";
 import type { MyOrder } from "@/lib/coffee/types";
 import { STATUS_PILL, STATUS_TITLE, clock, dayShort } from "./format";
 import { PantryMap } from "./PantryMap";
@@ -11,11 +12,14 @@ import css from "./coffee.module.css";
  * The drink's photo, square. `src` null: a drink typed in by the pengelola ("Lainnya"), one that
  * has no photo yet, or one that has left the menu: a cup is drawn instead. `fill`: as wide as its
  * box (the menu's cards); `eager`: no lazy loading (the sheet's head, on screen at once).
+ * `group`: the drink's kind, when it is known, tints the cup's tile. A photo that does not load
+ * is replaced by the same tile, never left as a broken image. Decorative: the name is beside it.
  */
-export function DrinkPhoto({ src, size, fill = false, eager = false }: { src: string | null | undefined; size: number; fill?: boolean; eager?: boolean }) {
-  if (!src) return <span className={css.noPhoto} data-fill={fill || undefined} style={fill ? undefined : { width: size, height: size }} aria-hidden><Coffee size={Math.round(Math.min(size, 120) / 2.4)} /></span>;
+export function DrinkPhoto({ src, size, fill = false, eager = false, group }: { src: string | null | undefined; size: number; fill?: boolean; eager?: boolean; group?: DrinkGroup }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!src || failed === src) return <span className={css.noPhoto} data-fill={fill || undefined} data-group={group} style={fill ? undefined : { width: size, height: size }} aria-hidden><Coffee size={Math.round(Math.min(size, 120) / 2.4)} /></span>;
   // eslint-disable-next-line @next/next/no-img-element -- small square photos (static files or the pengelola's uploads), sized here
-  return <img src={src} alt="" width={size} height={size} loading={eager ? undefined : "lazy"} />;
+  return <img src={src} alt="" width={size} height={size} loading={eager ? undefined : "lazy"} onError={() => setFailed(src)} />;
 }
 
 /**

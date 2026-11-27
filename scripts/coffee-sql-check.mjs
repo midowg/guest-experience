@@ -10,6 +10,13 @@
  * second, fresh database then runs all three and the old rules once more, so the replaced
  * functions are shown to keep every rule they had.
  *
+ * Since F7 (27 Nov 2026) it goes one step further, again as on the live database: migration 4
+ * (202612030001_coffee_menu_audience.sql) on top of orders AND a menu the pengelola has edited (a
+ * renamed drink, a deleted one, a hidden one, one of their own), run again and again; the owner's
+ * starting ticks are shown to be written once, and the audience rule (a claim and a team member's
+ * line need a "Menu biasa" drink, a guest's line a "Buku tamu" drink, Catat manual any) is asked of
+ * Postgres and of the stand-in alike.
+ *
  *   npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs
  *
  * Nothing is installed in the project and NO real database is touched: there is no connection
@@ -520,6 +527,65 @@ async function menuRules(b) {
   check(tag("pemakaian: per pesanan, 'lainnya' tidak dihitung"), { tehTarik: usage["teh-tarik"], lainnya: usage.lainnya ?? null, espresso: usage.espresso >= 2 }, { tehTarik: 1, lainnya: null, espresso: true });
 }
 
+/* ---------- F7: the rules of migration 4 (where a drink shows decides who may be given it), asked of either one ---------- */
+
+const PLACE_PEOPLE = { satu: "91111111-1111-4111-8111-111111111111", dua: "92222222-2222-4222-8222-222222222222" };
+const GUEST_BOOK_ONLY = ["cappuccino-double-shot", "cucumber-ice", "classic-tea"];
+
+async function audienceRules(b) {
+  const tag = label => `[${b.name}] ${label}`;
+  for (const [name, id] of Object.entries(PLACE_PEOPLE)) await b.addPerson(id, `Contoh Tempat ${name}`);
+  const claim = (slug, manual = false, who = PLACE_PEOPLE.satu) => b.rpc("coffee_submit_claim", { p_employee: who, p_item: { slug }, p_at: new Date().toISOString(), p_manual: manual, p_actor: manual ? PEOPLE.dewi : who, p_actor_label: "Contoh", p_key: key() });
+  const meeting = (items, manual = false) => b.rpc("coffee_submit_meeting", {
+    p_order: { pic_id: PLACE_PEOPLE.dua, room: "Ruang Contoh", room_spot: null, guest: null, guest_count: null, parent_id: null, actor_id: PEOPLE.bagas, actor_label: "Bagas", ordered_at: new Date().toISOString(), manual },
+    p_items: items, p_key: key(),
+  });
+  const guest = slug => ({ for: "tamu", person_id: null, guest_name: null, slug, qty: 1 });
+  const team = slug => ({ for: "tim", person_id: PLACE_PEOPLE.dua, guest_name: null, slug, qty: 1 });
+  const ok = async (label, promise) => { const result = await promise; check(tag(label), "err" in result ? result : "ok", "ok"); return result.id; };
+  const refused = async (label, promise, code = "COFFEE_DRINK_GONE") => { const result = await promise; check(tag(label), result.err ?? "ok", code); };
+  const before = await b.orderCount();
+
+  // The starting ticks: all 15 in the guest book; the regular menu without the three the machine does not make.
+  for (const slug of GUEST_BOOK_ONLY) await refused(`klaim ${slug} (hanya Buku tamu)`, claim(slug));
+  await refused("Tim · rapat dengan minuman yang hanya di Buku tamu", meeting([team("classic-tea")]));
+  await refused("baris kedua yang salah menggagalkan seluruh pesanan", meeting([guest("kopi-susu"), team("cucumber-ice")]));
+  check(tag("pesanan yang ditolak tidak meninggalkan baris"), await b.orderCount(), before);
+  await ok("klaim minuman Menu biasa", claim("kopi-susu"));
+  await ok("Tamu memesan minuman yang hanya di Buku tamu", meeting([guest("classic-tea"), guest("cucumber-ice"), guest("cappuccino-double-shot")]));
+  await ok("Tamu dan Tim · rapat, masing-masing dari menunya", meeting([guest("cucumber-ice"), team("americano")]));
+  const hand = await ok("Catat manual klaim: minuman apa pun di menu", claim("classic-tea", true));
+  check(tag("catatan manual itu membawa nama minumannya"), (await b.order(hand)).items[0].drink_name, "Classic Tea");
+  await ok("Catat manual rapat: minuman apa pun di menu", meeting([team("classic-tea")], true));
+
+  // The pengelola changes a tick: it holds from the next order on, both ways.
+  check(tag("Americano dikeluarkan dari Buku tamu"), await b.patchDrink("americano", { in_guest_book: false }), 1);
+  await refused("Tamu tidak bisa lagi memesan Americano", meeting([guest("americano")]));
+  await ok("Tim · rapat masih bisa memesan Americano", meeting([team("americano")]));
+  await ok("klaim Americano masih bisa", claim("americano"));
+  check(tag("Classic Tea dimasukkan ke Menu biasa"), await b.patchDrink("classic-tea", { in_regular_menu: true }), 1);
+  await ok("klaim Classic Tea sekarang bisa", claim("classic-tea"));
+  // Neither tick: nobody, except by hand.
+  check(tag("Espresso tanpa centang"), await b.patchDrink("espresso", { in_guest_book: false, in_regular_menu: false }), 1);
+  await refused("klaim minuman tanpa centang", claim("espresso"));
+  await refused("Tamu memesan minuman tanpa centang", meeting([guest("espresso")]));
+  await refused("Tim · rapat memesan minuman tanpa centang", meeting([team("espresso")]));
+  await ok("Catat manual minuman tanpa centang", claim("espresso", true, PLACE_PEOPLE.dua));
+  // Hidden is above both ticks.
+  check(tag("Kopi Hitam disembunyikan (kedua centang tetap nyala)"), await b.patchDrink("kopi-hitam", { active: false }), 1);
+  await refused("klaim minuman tersembunyi", claim("kopi-hitam"));
+  await refused("Tamu memesan minuman tersembunyi", meeting([guest("kopi-hitam")]));
+  check(tag("Kopi Hitam ditampilkan lagi"), await b.patchDrink("kopi-hitam", { active: true }), 1);
+  await ok("Tamu memesan Kopi Hitam lagi, tanpa mencentang ulang", meeting([guest("kopi-hitam")]));
+  // The rules of migration 3 still stand.
+  await refused("minuman tak dikenal", claim("tidak-ada"));
+  await refused("'lainnya' di luar Catat manual", claim("lainnya"), "COFFEE_INVALID");
+  // Back to the starting ticks.
+  await b.patchDrink("americano", { in_guest_book: true });
+  await b.patchDrink("classic-tea", { in_regular_menu: false });
+  await b.patchDrink("espresso", { in_guest_book: true, in_regular_menu: true });
+}
+
 /* ---------- Postgres only: constraints, rights, the helper tables, the lock ---------- */
 
 async function postgresOnly(pg, b) {
@@ -890,24 +956,101 @@ if (fakeModule) {
 console.log("\n8c. Hanya di Postgres: batasan menu, hak akses, kunci baris minuman");
 await menuPostgresOnly(pg);
 
-// 9. A fresh database with all three migrations: every old rule still holds with the replaced functions.
-console.log("\n9. Database baru dengan migrasi 1, 2, 3: aturan lama diuji lagi dengan fungsi yang diganti");
+// 9. Migration 4 on top of the orders AND a menu the pengelola has edited (what happens on the live database).
+console.log("\n9. Migrasi 4 di atas data lama dan menu yang sudah diubah pengelola");
+await pg.exec("reset role;");
+const AUDIENCE = "202612030001_coffee_menu_audience.sql";
+// By now the menu holds the 15 and "teh-tarik" (the pengelola's own, ordered once). Edit it as a pengelola would have:
+await pg.query("update public.coffee_drinks set name = 'Latte Susu' where slug = 'cafe-latte'");                 // a renamed drink
+await pg.query("update public.coffee_drinks set active = false where slug = 'classic-tea'");                     // a hidden one (and one of the three)
+await pg.query("delete from public.coffee_drinks where slug = 'cappuccino-double-shot'");                        // a deleted one (and one of the three)
+const menuRows = async () => (await pg.query("select slug, name, description, drink_group, temperatures, photo_url, photo_key, sort, active from public.coffee_drinks order by slug")).rows;
+const ticks = async () => Object.fromEntries((await pg.query("select slug, in_guest_book, in_regular_menu from public.coffee_drinks order by slug")).rows.map(row => [row.slug, `${row.in_guest_book ? "B" : "-"}${row.in_regular_menu ? "M" : "-"}`]));
+const allItems = async () => JSON.stringify((await pg.query("select id, order_id, for_whom, drink_slug, drink_name, drink_other, temperature, sugar, ice, qty, sort from public.coffee_order_items order by id")).rows);
+const menuEdited = JSON.stringify(await menuRows());
+const itemsEdited = await allItems();
+const editedCount = JSON.parse(menuEdited).length;
+check("[Postgres] sebelum migrasi 4: menu 15 (satu dihapus, satu milik pengelola), ada pesanan", [editedCount, JSON.parse(itemsEdited).length > 50], [15, true]);
+check("[Postgres] sebelum migrasi 4: kolom tempat belum ada", (await pg.query("select count(*)::int as n from information_schema.columns where table_schema = 'public' and table_name = 'coffee_drinks' and column_name in ('in_guest_book', 'in_regular_menu')")).rows[0].n, 0);
+// Before it runs, the function of migration 3 takes any shown drink for a claim: that is "as today".
+await pg.exec("set role service_role;");
+check("[Postgres] sebelum migrasi 4: klaim Cucumber Ice masih diterima", (await postgres.rpc("coffee_submit_claim", { p_employee: PEOPLE.dewi, p_item: { slug: "cucumber-ice" }, p_at: new Date(Date.now() - 300 * 86_400_000).toISOString(), p_manual: true, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: null })).err, undefined);
+await pg.exec("reset role;");
+const itemsBefore4 = await allItems(), contentBefore4 = await content();
+if (!(await migrate(AUDIENCE, "pertama"))) { console.log("\nMigrasi 4 tidak berjalan; sisanya tidak diuji."); process.exit(1); }
+check("[Postgres] migrasi 4: menu tidak berubah (nama, urutan, sembunyi, foto), tidak ada minuman bertambah atau kembali", JSON.stringify(await menuRows()), menuEdited);
+check("[Postgres] migrasi 4: semua baris pesanan dan minumannya tidak berubah", [await allItems(), await content()], [itemsBefore4, contentBefore4]);
+check("[Postgres] migrasi 4: dua kolom baru, wajib isi, bawaan true", (await pg.query("select column_name, is_nullable, column_default from information_schema.columns where table_schema = 'public' and table_name = 'coffee_drinks' and column_name in ('in_guest_book', 'in_regular_menu') order by column_name")).rows.map(row => `${row.column_name}:${row.is_nullable}:${row.column_default}`), ["in_guest_book:NO:true", "in_regular_menu:NO:true"]);
+const ticksFirst = await ticks();
+const expectTicks = Object.fromEntries(JSON.parse(menuEdited).map(row => [row.slug, GUEST_BOOK_ONLY.includes(row.slug) ? "B-" : "BM"]));
+check("[Postgres] centang awal: semua di Buku tamu; Menu biasa tanpa cucumber-ice dan classic-tea (cappuccino-double-shot sudah dihapus, tidak kembali); minuman pengelola dan yang berganti nama di keduanya", ticksFirst, expectTicks);
+check("[Postgres] centang awal dalam angka", { minuman: Object.keys(ticksFirst).length, bukuTamu: Object.values(ticksFirst).filter(v => v[0] === "B").length, menuBiasa: Object.values(ticksFirst).filter(v => v[1] === "M").length }, { minuman: 15, bukuTamu: 15, menuBiasa: 13 });
+const shapeAudience = await shape();
+for (const label of ["kedua", "ketiga"]) await migrate(AUDIENCE, label);
+check("[Postgres] migrasi 4 diulang dua kali: bentuk, menu, centang, pesanan sama", [await shape(), JSON.stringify(await menuRows()), await ticks(), await allItems()], [shapeAudience, menuEdited, ticksFirst, itemsBefore4]);
+// The pengelola changes ticks, deletes another of the three and adds a drink: another run must not undo any of it.
+await pg.query("update public.coffee_drinks set in_regular_menu = true where slug = 'classic-tea'");
+await pg.query("update public.coffee_drinks set in_guest_book = false where slug = 'kopi-susu'");
+await pg.query("update public.coffee_drinks set in_guest_book = false, in_regular_menu = false where slug = 'espresso'");
+await pg.query("insert into public.coffee_drinks (slug, name, drink_group, temperatures, sort, in_guest_book) values ('contoh-baru', 'Contoh Baru', 'kopi', array['panas'], 990, false)");
+const ticksChanged = await ticks();
+const menuChanged = JSON.stringify(await menuRows());
+await migrate(AUDIENCE, "keempat (setelah centang diubah pengelola)");
+check("[Postgres] centang yang diubah pengelola bertahan; bawaan tidak ditulis ulang", [await ticks(), JSON.stringify(await menuRows())], [ticksChanged, menuChanged]);
+check("[Postgres] minuman baru tanpa menyebut centang mendapat bawaan true", ticksChanged["contoh-baru"], "-M");
+for (const file of [...COFFEE, MENU, AUDIENCE]) await migrate(file, "kelima (1, 2, 3, 4 berurutan)");
+check("[Postgres] keempatnya berurutan lagi: bentuk, menu, centang, pesanan tetap", [await shape(), JSON.stringify(await menuRows()), await ticks(), await allItems()], [shapeAudience, menuChanged, ticksChanged, itemsBefore4]);
+// Migration 3 alone, run again AFTER 4, puts the old functions back (no audience rule) until 4 runs again: said in GO-LIVE.
+await pg.exec("set role service_role;");
+const oldClaim = slug => postgres.rpc("coffee_submit_claim", { p_employee: PEOPLE.dewi, p_item: { slug }, p_at: new Date(Date.now() - 330 * 86_400_000).toISOString(), p_manual: false, p_actor: PEOPLE.dewi, p_actor_label: "Dewi", p_key: null });
+check("[Postgres] setelah 1-4: klaim Cucumber Ice ditolak", (await oldClaim("cucumber-ice")).err, "COFFEE_DRINK_GONE");
+await pg.exec("reset role;");
+await migrate(MENU, "keenam (migrasi 3 sendirian setelah 4)");
+await pg.exec("set role service_role;");
+const slipped = await oldClaim("cucumber-ice");
+if (!slipped.err) note("Migrasi 3 dijalankan ulang SETELAH migrasi 4 mengembalikan fungsi lama (tanpa aturan Buku tamu / Menu biasa) sampai migrasi 4 dijalankan lagi. Centangnya sendiri tidak hilang. Jalankan 4 terakhir.");
+await pg.exec("reset role;");
+await migrate(AUDIENCE, "ketujuh (migrasi 4 lagi)");
+await pg.exec("set role service_role;");
+check("[Postgres] migrasi 4 dijalankan lagi: aturan kembali, centang tetap", [(await oldClaim("cucumber-ice")).err, await (async () => { await pg.exec("reset role;"); const t = await ticks(); await pg.exec("set role service_role;"); return t; })()], ["COFFEE_DRINK_GONE", ticksChanged]);
+// Rights and RLS after the two functions were replaced once more.
+for (const role of ["anon", "authenticated"]) {
+  await pg.exec(`reset role; set role ${role};`);
+  const code = async sql => { try { await pg.query(sql); return "ok"; } catch (error) { return error.code; } };
+  check(`[Postgres] ${role}: menu dan kedua fungsi tetap tertutup setelah migrasi 4`, [await code("select in_guest_book from public.coffee_drinks limit 1"), await code(`select public.coffee_submit_claim('${PEOPLE.rina}'::uuid, '{}'::jsonb, now(), false, null, 'x', null)`), await code("select public.coffee_submit_meeting('{}'::jsonb, '[]'::jsonb, null)")], ["42501", "42501", "42501"]);
+}
+await pg.exec("reset role;");
+check("[Postgres] RLS tetap nyala di semua tabel coffee_, tanpa policy", [(await pg.query(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relname like 'coffee\\_%' and c.relkind = 'r' and not c.relrowsecurity`)).rows, (await pg.query("select tablename from pg_policies where tablename like 'coffee\\_%'")).rows], [[], []]);
+console.log(`  centang awal (B = Buku tamu, M = Menu biasa): ${JSON.stringify(ticksFirst)}`);
+
+// 10. A fresh database with all four migrations: every old rule still holds, and the audience rule on both sides.
+console.log("\n10. Database baru dengan migrasi 1, 2, 3, 4: aturan lama diuji lagi, lalu aturan Buku tamu / Menu biasa");
 const pg2 = new PGlite();
 await prepare(pg2, false);
 let fresh = true;
-for (const file of [...COFFEE, MENU]) fresh = await migrate(file, "database kedua", pg2) && fresh;
+for (const file of [...COFFEE, MENU, AUDIENCE]) fresh = await migrate(file, "database kedua", pg2) && fresh;
 if (fresh) {
+  const freshTicks = Object.fromEntries((await pg2.query("select slug, in_guest_book, in_regular_menu from public.coffee_drinks order by sort")).rows.map(row => [row.slug, `${row.in_guest_book ? "B" : "-"}${row.in_regular_menu ? "M" : "-"}`]));
+  check("[Postgres 1+2+3+4] centang awal di database yang belum diubah: 15 di Buku tamu, 12 di Menu biasa", freshTicks, Object.fromEntries(Object.keys(NAMES).map(slug => [slug, GUEST_BOOK_ONLY.includes(slug) ? "B-" : "BM"])));
+  console.log(`  centang awal per minuman: ${Object.entries(freshTicks).map(([slug, value]) => `${slug}=${value}`).join(", ")}`);
   await pg2.exec("set role service_role;");
   keyNo = 0;
   const failsFresh = results.fail.length;
-  await rules({ ...pgBackend(pg2), name: "Postgres 1+2+3" });
+  const second = { ...pgBackend(pg2), name: "Postgres 1+2+3+4" };
+  await rules(second);
+  await audienceRules(second);
   console.log(`  Postgres: ${results.fail.length - failsFresh} gagal`);
   if (fakeModule) {
     keyNo = 0;
     const fake = fakeModule.fakeDb();
     fakeModule.seedPeople(fake);
+    // The ticks as the migration leaves them (the stand-in is seeded with both on).
+    for (const row of fake.rows("coffee_drinks")) if (fakeModule.GUEST_BOOK_ONLY_SLUGS.includes(row.slug)) row.in_regular_menu = false;
+    check("[fake-db.ts] daftar minuman khusus Buku tamu sama dengan migrasi", fakeModule.GUEST_BOOK_ONLY_SLUGS, GUEST_BOOK_ONLY);
     const failsFake = results.fail.length;
-    await rules({ ...fakeBackend(fake), name: "fake-db.ts 1+2+3" });
+    const stand = { ...fakeBackend(fake), name: "fake-db.ts 1+2+3+4" };
+    await rules(stand);
+    await audienceRules(stand);
     console.log(`  fake-db.ts: ${results.fail.length - failsFake} gagal`);
   }
 }

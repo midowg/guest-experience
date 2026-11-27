@@ -1,11 +1,11 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { OTHER_DRINK, type Drink, type DrinkGroup, type Temperature } from "@/lib/coffee/menu";
-import { slugOf, type DrinkInput } from "@/lib/coffee/schemas";
+import { slugOf, type DrinkInput, type DrinkPatch } from "@/lib/coffee/schemas";
 import type { AdminDrink, MenuData } from "@/lib/coffee/types";
 import { ServiceError } from "../config";
 import { waitingForMenu } from "./settings";
-import { coffeeError, db, forgetMenu, menuReady, missing, readMenu, type CoffeeActor } from "./store";
+import { COFFEE_AUDIENCE_MIGRATION, audienceReady, coffeeError, db, forgetMenu, menuReady, missing, readMenu, type CoffeeActor } from "./store";
 
 /*
  * Menu (F6, /admin/coffee → Menu): the pengelola adds, changes, orders, hides and deletes the
@@ -19,21 +19,29 @@ import { coffeeError, db, forgetMenu, menuReady, missing, readMenu, type CoffeeA
  * Every write forgets the kept menu, so the pengelola (and everyone served by this instance) sees
  * it at once; other instances follow within a quarter of a minute (store.ts, MENU_KEEP_MS).
  * Before migration 202612020001 the menu is the code's, read only: every write answers 503.
+ *
+ * F7 (27 Nov 2026): each drink also says where it shows, "Buku tamu" (the guest menu book and
+ * Tamu lines) and "Menu biasa" (the employee app, Tim · rapat lines and claims). Before migration
+ * 202612030001 the two columns are not there: every drink reads as shown in both, a write leaves
+ * them out, and switching one off answers 503 with that migration's name.
  */
 
-const COLUMNS = "slug,name,description,drink_group,temperatures,photo_url,photo_key,sort,active,updated_at,updated_label";
+const BASE_COLUMNS = "slug,name,description,drink_group,temperatures,photo_url,photo_key,sort,active,updated_at,updated_label";
+const columns = async () => `${BASE_COLUMNS}${await audienceReady() ? ",in_guest_book,in_regular_menu" : ""}`;
+export const waitingForPlaces = () => new ServiceError(503, `Pilihan Buku tamu dan Menu biasa menunggu migrasi ${COFFEE_AUDIENCE_MIGRATION}.`);
 type Row = {
+  in_guest_book?: boolean | null; in_regular_menu?: boolean | null;
   slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; photo_key: string | null;
   sort: number; active: boolean; updated_at?: string | null; updated_label?: string | null;
 };
 const toDrink = (row: Row, orders = 0): AdminDrink => ({
   slug: row.slug, name: row.name, description: row.description ?? "", group: row.drink_group, temperatures: row.temperatures?.length ? row.temperatures : ["panas"],
-  photo: row.photo_url, active: row.active, sort: row.sort, orders, uploaded: !!row.photo_key,
+  photo: row.photo_url, active: row.active, guestBook: row.in_guest_book ?? true, regular: row.in_regular_menu ?? true, sort: row.sort, orders, uploaded: !!row.photo_key,
   updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null, updatedLabel: row.updated_label ?? "",
 });
 /** A fault of the menu's own tables: 503 with the migration's name while it has not run. */
 function menuError(error: { code?: string; message?: string }): never {
-  if (missing(error) || error.code === "42703") throw waitingForMenu();
+  if (missing(error) || error.code === "42703" || error.code === "PGRST204") throw waitingForMenu();
   coffeeError(error);
 }
 
@@ -49,24 +57,34 @@ export async function adminMenu(): Promise<MenuData> {
   if (!(await menuReady())) {
     // Before the migration: the code's menu, to look at only.
     const drinks = await readMenu(true);
-    return { ready: false, drinks: drinks.map((drink: Drink, index): AdminDrink => ({ ...drink, sort: (index + 1) * 10, orders: 0, uploaded: false, updatedAt: null, updatedLabel: "" })) };
+    return { ready: false, places: false, drinks: drinks.map((drink: Drink, index): AdminDrink => ({ ...drink, sort: (index + 1) * 10, orders: 0, uploaded: false, updatedAt: null, updatedLabel: "" })) };
   }
-  const [found, used] = await Promise.all([db().from("coffee_drinks").select(COLUMNS).order("sort").order("name").limit(500), usage()]);
+  const [found, used, places] = await Promise.all([db().from("coffee_drinks").select(await columns()).order("sort").order("name").limit(500), usage(), audienceReady()]);
   if (found.error) menuError(found.error);
-  return { ready: true, drinks: ((found.data ?? []) as unknown as Row[]).map(row => toDrink(row, used.get(row.slug) ?? 0)) };
+  return { ready: true, places, drinks: ((found.data ?? []) as unknown as Row[]).map(row => toDrink(row, used.get(row.slug) ?? 0)) };
 }
 
 async function ready(): Promise<void> {
   if (!(await menuReady())) throw waitingForMenu();
 }
 async function one(slug: string): Promise<AdminDrink> {
-  const [found, used] = await Promise.all([db().from("coffee_drinks").select(COLUMNS).eq("slug", slug).maybeSingle(), usage()]);
+  const [found, used] = await Promise.all([db().from("coffee_drinks").select(await columns()).eq("slug", slug).maybeSingle(), usage()]);
   if (found.error) menuError(found.error);
   if (!found.data) coffeeError({ message: "COFFEE_DRINK_NOT_FOUND" });
   return toDrink(found.data as unknown as Row, used.get(slug) ?? 0);
 }
 const stamp = (actor: CoffeeActor, now: Date) => ({ updated_at: now.toISOString(), updated_label: actor.label.slice(0, 120) });
-const fields = (input: DrinkInput) => ({ name: input.name, description: input.description, drink_group: input.group, temperatures: input.temperatures, active: input.active });
+/**
+ * The two "where it shows" columns of a write. Before migration 202612030001 there are none: a
+ * write that leaves both on (what every drink is until then) simply goes without them, and one
+ * that switches a place off is refused with the migration's name rather than silently dropped.
+ */
+async function places(input: { guestBook?: boolean; regular?: boolean }): Promise<Record<string, boolean>> {
+  if (await audienceReady()) return { ...(input.guestBook === undefined ? {} : { in_guest_book: input.guestBook }), ...(input.regular === undefined ? {} : { in_regular_menu: input.regular }) };
+  if (input.guestBook === false || input.regular === false) throw waitingForPlaces();
+  return {};
+}
+const fields = async (input: DrinkInput) => ({ name: input.name, description: input.description, drink_group: input.group, temperatures: input.temperatures, active: input.active, ...await places(input) });
 
 /**
  * Tambah minuman: a new drink at the end of the menu. Its slug comes from the name ("Teh Tarik" →
@@ -84,7 +102,7 @@ export async function createDrink(input: DrinkInput, actor: CoffeeActor, now = n
   for (let attempt = 1; attempt <= 30; attempt++) {
     const slug = attempt === 1 ? base : `${base.slice(0, 40 - String(attempt).length - 1).replace(/-+$/, "")}-${attempt}`;
     if (taken.has(slug) || slug === OTHER_DRINK) continue;
-    const saved = await db().from("coffee_drinks").insert({ slug, ...fields(input), sort, ...stamp(actor, now) }).select(COLUMNS).single();
+    const saved = await db().from("coffee_drinks").insert({ slug, ...await fields(input), sort, ...stamp(actor, now) }).select(await columns()).single();
     if (saved.error?.code === "23505") { taken.add(slug); continue; }
     if (saved.error) menuError(saved.error);
     forgetMenu();
@@ -93,25 +111,29 @@ export async function createDrink(input: DrinkInput, actor: CoffeeActor, now = n
   throw new ServiceError(409, "Nama minuman ini sudah terlalu sering dipakai. Pakai nama lain.");
 }
 
-/** Ubah minuman: its name, description, group, temperatures, and whether it is shown. The slug stays. */
+/** Ubah minuman: its name, description, group, temperatures, whether it is shown, and where. The slug stays. */
 export async function updateDrink(slug: string, input: DrinkInput, actor: CoffeeActor, now = new Date()): Promise<AdminDrink> {
   await ready();
-  const { data, error } = await db().from("coffee_drinks").update({ ...fields(input), ...stamp(actor, now) }).eq("slug", slug).select("slug");
+  const { data, error } = await db().from("coffee_drinks").update({ ...await fields(input), ...stamp(actor, now) }).eq("slug", slug).select("slug");
   if (error) menuError(error);
   if (!data?.length) coffeeError({ message: "COFFEE_DRINK_NOT_FOUND" });
   forgetMenu();
   return one(slug);
 }
 
-/** Sembunyikan / Tampilkan, on its own (the list's quick switch). */
-export async function showDrink(slug: string, active: boolean, actor: CoffeeActor, now = new Date()): Promise<AdminDrink> {
+/** From the list, on its own: Sembunyikan / Tampilkan, and the two ticks "Buku tamu" and "Menu biasa". Only what is named changes. */
+export async function patchDrink(slug: string, patch: DrinkPatch, actor: CoffeeActor, now = new Date()): Promise<AdminDrink> {
   await ready();
-  const { data, error } = await db().from("coffee_drinks").update({ active, ...stamp(actor, now) }).eq("slug", slug).select("slug");
+  const change = { ...(patch.active === undefined ? {} : { active: patch.active }), ...await places(patch) };
+  const { data, error } = await db().from("coffee_drinks").update({ ...change, ...stamp(actor, now) }).eq("slug", slug).select("slug");
   if (error) menuError(error);
   if (!data?.length) coffeeError({ message: "COFFEE_DRINK_NOT_FOUND" });
   forgetMenu();
   return one(slug);
 }
+
+/** Sembunyikan / Tampilkan alone. */
+export const showDrink = (slug: string, active: boolean, actor: CoffeeActor, now = new Date()): Promise<AdminDrink> => patchDrink(slug, { active }, actor, now);
 
 /** Atur urutan: the whole menu in its new order. Answers the menu as it is afterwards. */
 export async function sortDrinks(slugs: string[]): Promise<MenuData> {

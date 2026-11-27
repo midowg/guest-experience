@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { Flame, Snowflake, X } from "lucide-react";
-import { ICE_LEVELS, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, type Drink } from "@/lib/coffee/menu";
+import { ICE_LEVELS, PLACE_LABEL, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, showsIn, type Drink } from "@/lib/coffee/menu";
 import { Layer } from "../Layer";
 import { MAX_QTY, matches, type Draft, type GaOptions, type GaPerson, type Line } from "./model";
 import { Option, Photo, Stepper, raiseOnFocus } from "./parts";
@@ -38,11 +38,13 @@ export function LineDialog({ line, isNew, pic, people, menu, options, onClose, o
   // What this row's audience is asked now, and the row's values made whole for it (a row that was a guest's may lack what the team is asked).
   const asked = options[next.for];
   const shown = fillChoice(next, drink, asked);
+  // F7: a guest is served from Buku tamu, the team from Menu biasa. A drink that is in one only cannot be moved to the other audience (the server refuses it).
+  const forGuest = showsIn(drink, "guestBook") || next.for === "tamu", forTeam = showsIn(drink, "regular") || next.for === "tim";
 
   return (
     <Layer kind="dialog" labelledBy={titleId} onClose={onClose} rootClass={css.ga} panelClass={css.lineDialog}>
       <div className={css.dialogHead}>
-        <Photo src={drink.photo} width={64} height={64} />
+        <Photo src={drink.photo} width={64} height={64} group={drink.group} />
         <div className={css.grow}><h2 id={titleId} tabIndex={-1} data-autofocus>{drink.name}</h2><p className={css.mutedSmall}>{drink.description}</p></div>
         <button type="button" className={css.iconButton} aria-label="Tutup" onClick={onClose}><X aria-hidden size={22} /></button>
       </div>
@@ -81,9 +83,10 @@ export function LineDialog({ line, isNew, pic, people, menu, options, onClose, o
         <fieldset className={css.field}>
           <legend>Untuk</legend>
           <div className={css.options} data-cols="2">
-            <Option on={next.for === "tamu"} onClick={() => patch({ for: "tamu" })}>Tamu</Option>
-            <Option on={next.for === "tim"} onClick={() => patch({ for: "tim" })}>Tim · rapat</Option>
+            <Option on={next.for === "tamu"} disabled={!forGuest} onClick={() => patch({ for: "tamu" })}>Tamu</Option>
+            <Option on={next.for === "tim"} disabled={!forTeam} onClick={() => patch({ for: "tim" })}>Tim · rapat</Option>
           </div>
+          {(!forGuest || !forTeam) && <p className={css.mutedSmall}>{drink.name} hanya ada di {PLACE_LABEL[forGuest ? "guestBook" : "regular"]}, jadi hanya untuk {forGuest ? "Tamu" : "Tim · rapat"}.</p>}
           {next.for === "tim" && (next.person ? (
             <div className={css.picked}>
               <span className={css.initial} aria-hidden>{next.person.name.trim().slice(0, 1).toUpperCase()}</span>

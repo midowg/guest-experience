@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { Check, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
-import { DEFAULT_OPTIONS, DRINKS, ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, offered, type CoffeeOptions, type Drink, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, ICE_LEVELS, OTHER_DRINK, SUGAR_LEVELS, asksIce, drinkIn, fillChoice, offeredTo, type CoffeeOptions, type Drink, type Ice, type Sugar, type Temperature } from "@/lib/coffee/menu";
 import { previousMonth, wibClock, wibDay } from "@/lib/coffee/quota";
 import { OTHER_ROOM, ROOMS } from "@/lib/coffee/rooms";
 import { manualAt } from "@/lib/coffee/schemas";
@@ -37,13 +37,13 @@ export function newKey(): string {
  * and Suhu, Gula and Takaran es are asked only as far as Pengaturan asks them of the kind chosen
  * (`options`: a claim, a guest's drink, the team's). Both come with Pengaturan's data; until that
  * has arrived the code's menu and the starting options stand in, and the server has the last word.
+ * F7: the drinks offered follow the kind (Tamu: Buku tamu; Klaim and Tim · rapat: Menu biasa); a
+ * drink that is not in that list is recorded as "Lainnya".
  */
 export function ManualSheet({ api, now, actorName, settings, menu, options, onClose, onSaved }: {
   api: CoffeeAdminApi; now: number; actorName: string; settings: CoffeeSettings | null; menu?: readonly Drink[] | null; options?: CoffeeOptions | null;
   onClose: () => void; onSaved: (done: Done) => void;
 }) {
-  const drinks = offered(menu ?? DRINKS);
-  const firstSlug = drinks[0]?.slug ?? OTHER_DRINK;
   const titleId = useId();
   const uid = useId();
   const [start] = useState(() => new Date(now).toISOString());
@@ -53,6 +53,9 @@ export function ManualSheet({ api, now, actorName, settings, menu, options, onCl
   const [day, setDay] = useState(() => wibDay(start));
   const [time, setTime] = useState(() => wibClock(start));
   const [kind, setKind] = useState<ItemFor>("klaim");
+  // F7: the list follows the kind recorded: Buku tamu for a guest's drink, Menu biasa for a claim and the team's.
+  const drinks = offeredTo(menu ?? DRINKS, kind);
+  const firstSlug = drinks[0]?.slug ?? OTHER_DRINK;
   const [person, setPerson] = useState<CoffeePerson | null>(null);
   const [guest, setGuest] = useState("");
   const [guestCount, setGuestCount] = useState("");
@@ -233,6 +236,7 @@ export function ManualSheet({ api, now, actorName, settings, menu, options, onCl
                 {drinks.some(item => item.group === "non-kopi") && <optgroup label="Non-kopi">{drinks.filter(item => item.group === "non-kopi").map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</optgroup>}
                 <option value={OTHER_DRINK}>Lainnya (tulis sendiri)</option>
               </select>
+              <p className={css.small}>{kind === "tamu" ? "Daftar Buku tamu." : "Daftar Menu biasa."} Minuman lain: pilih Lainnya.</p>
             </div>
             {kind !== "klaim" && (
               <div className={css.field}>

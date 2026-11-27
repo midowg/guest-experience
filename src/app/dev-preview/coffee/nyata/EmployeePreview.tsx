@@ -5,6 +5,7 @@ import { CoffeeApp } from "@/components/coffee/CoffeeApp";
 import css from "@/components/coffee/coffee.module.css";
 import { samplePush } from "@/components/coffee/pushSample";
 import { createSampleCoffee } from "@/components/coffee/sample";
+import { PREVIEW_MENU } from "@/lib/coffee/fixtures";
 import { MONTHLY_QUOTA, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
 import type { CoffeePushState } from "@/lib/coffee/notify";
 import type { PhoneKind } from "@/lib/coffee/setup";
@@ -16,7 +17,7 @@ const HERE = "/dev-preview/coffee/nyata";
 export function EmployeePreview({ group, full, history, access, tab, setup, options, push, phone, note }: {
   group: QuotaGroup; full: boolean; history: boolean; access: boolean; tab: CoffeeTab; setup: boolean; options: DrinkOptions; push: CoffeePushState; phone: PhoneKind; note?: string;
 }) {
-  const [server] = useState(() => createSampleCoffee({ group, used: full ? MONTHLY_QUOTA[group] : history ? 2 : 0, ga: access, pengelola: access, options }));
+  const [server] = useState(() => createSampleCoffee({ group, used: full ? MONTHLY_QUOTA[group] : history ? 2 : 0, ga: access, pengelola: access, options, menu: PREVIEW_MENU }));
   const [initial] = useState(() => server.initial());
   // A make-believe device in the state the address asked for; "tolak" answers the permission question with no.
   const [port] = useState(() => samplePush(push, { answer: push === "denied" ? "denied" : "granted" }));

@@ -4,7 +4,7 @@ import { AdminApiError } from "@/components/admin/shared/api";
 import { coffeeAdminPath } from "@/lib/routes";
 import { CoffeeAdminApp } from "./CoffeeAdminApp";
 import { MenuView } from "./MenuView";
-import { SAMPLE_ACTOR, createSampleServer, type SampleServer } from "./sample";
+import { SAMPLE_ACTOR, createSampleServer, type SampleMenu, type SampleServer } from "./sample";
 import { coffeeAdminSections } from "./sections";
 import css from "./coffee-admin.module.css";
 
@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => null }));
 const NOW = "2026-11-25T03:00:00.000Z";
 type Spied = { [K in keyof SampleServer["api"]]: SampleServer["api"][K] & ReturnType<typeof vi.fn> };
 
-async function open(more: { menu?: "ready" | "waiting" | "empty"; change?: (api: SampleServer["api"]) => Partial<SampleServer["api"]> } = {}) {
+async function open(more: { menu?: SampleMenu; change?: (api: SampleServer["api"]) => Partial<SampleServer["api"]> } = {}) {
   const server = createSampleServer(() => Date.parse(NOW), { menu: more.menu });
   const spied = Object.fromEntries(Object.entries(server.api).map(([name, call]) => [name, vi.fn(call as (...args: never[]) => unknown)])) as unknown as Spied;
   const api = { ...spied, ...more.change?.(server.api) } as Spied;
@@ -88,7 +88,7 @@ it("adds a drink from the side panel: the name is asked for, the rest has a sens
   fireEvent.click(within(editor()).getByRole("checkbox", { name: "Es" }));
   save();
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(api.createDrink).toHaveBeenCalledWith({ name: "Teh Tarik", description: "Teh susu yang ditarik.", group: "non-kopi", temperatures: ["panas"], active: true });
+  expect(api.createDrink).toHaveBeenCalledWith({ name: "Teh Tarik", description: "Teh susu yang ditarik.", group: "non-kopi", temperatures: ["panas"], active: true, guestBook: true, regular: true });
   expect(api.uploadDrinkPhoto).not.toHaveBeenCalled();
   expect(names().at(-1)).toBe("Teh Tarik");
   expect(row("Teh Tarik").querySelector("img")).toBeNull();
@@ -267,7 +267,7 @@ it("offers Hapus only for a drink that was never ordered, asks first, and says w
   expect(within(editor()).getByText(/^Sudah dipesan \d+ kali, jadi tidak bisa dihapus \(riwayat dan rekap memakainya\)\. Sembunyikan saja/)).toBeTruthy();
   fireEvent.click(within(editor()).getByRole("button", { name: "Batal" }));
   // A new drink nobody ordered yet may go.
-  await act(async () => { await server.api.createDrink({ name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], active: true }); });
+  await act(async () => { await server.api.createDrink({ name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], active: true, guestBook: true, regular: true }); });
   cleanup();
   render(<div className={css.root}><MenuView api={api} initial={await server.api.menu()} active onSaid={said} /></div>);
   fireEvent.click(within(row("Teh Tarik")).getByRole("button", { name: "Ubah Teh Tarik" }));
@@ -288,7 +288,7 @@ it("offers Hapus only for a drink that was never ordered, asks first, and says w
 
 it("shows the server's refusal when the drink was ordered while its panel was open", async () => {
   const { api, server } = await open();
-  await act(async () => { await server.api.createDrink({ name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], active: true }); });
+  await act(async () => { await server.api.createDrink({ name: "Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas"], active: true, guestBook: true, regular: true }); });
   cleanup();
   render(<div className={css.root}><MenuView api={api} initial={await server.api.menu()} active onSaid={vi.fn()} /></div>);
   fireEvent.click(within(row("Teh Tarik")).getByRole("button", { name: "Ubah Teh Tarik" }));
@@ -366,4 +366,141 @@ it("is the third of four sections, with the same four in the phone's bottom menu
   fireEvent.click(phone[2]);
   expect(rows()).toHaveLength(15);
   await waitFor(() => expect(api.menu).toHaveBeenCalledTimes(2));
+});
+
+/* ---------- F7: where a drink shows (Buku tamu, Menu biasa), the search and the new filters ---------- */
+
+const tickOf = (drink: string, place: "Buku tamu" | "Menu biasa") => within(row(drink)).getByRole("checkbox", { name: `${place}: ${drink}` }) as HTMLInputElement;
+
+it("F7 shows on every row where the drink shows, with the owner's starting ticks", async () => {
+  await open();
+  expect(within(row("Kopi Susu")).getByRole("group", { name: "Tampil di mana: Kopi Susu" })).toBeTruthy();
+  expect([tickOf("Kopi Susu", "Buku tamu").checked, tickOf("Kopi Susu", "Menu biasa").checked]).toEqual([true, true]);
+  for (const name of ["Cappuccino Double Shot", "Cucumber Ice", "Classic Tea"]) expect([tickOf(name, "Buku tamu").checked, tickOf(name, "Menu biasa").checked]).toEqual([true, false]);
+  expect(chip(/^Buku tamu/).textContent).toBe("Buku tamu15");
+  expect(chip(/^Menu biasa/).textContent).toBe("Menu biasa12");
+  expect(chip(/^Tanpa foto/).textContent).toBe("Tanpa foto0");
+  // The words under the list say what each tick means and how Sembunyikan relates to them.
+  const notes = screen.getByRole("region", { name: "Daftar minuman" }).textContent ?? "";
+  expect(notes).toMatch(/Buku tamu: tampil di buku menu tamu \(tablet GA\) dan bisa dipesankan untuk Tamu\./);
+  expect(notes).toMatch(/Sembunyikan mematikan minuman di semua tempat tanpa mengubah centangnya/);
+});
+
+it("F7 ticks and unticks on the row at once, tells the server, and says what the drink is now", async () => {
+  const { api, said, server } = await open();
+  fireEvent.click(tickOf("Classic Tea", "Menu biasa"));
+  expect(tickOf("Classic Tea", "Menu biasa").checked).toBe(true);
+  await waitFor(() => expect(said).toHaveBeenCalledWith("success", "Masuk Menu biasa", "Classic Tea kini tampil di Buku tamu dan Menu biasa."));
+  expect(api.placeDrink).toHaveBeenCalledWith("classic-tea", "regular", true);
+  expect(server.menu.find(drink => drink.slug === "classic-tea")).toMatchObject({ guestBook: true, regular: true });
+  fireEvent.click(tickOf("Classic Tea", "Buku tamu"));
+  await waitFor(() => expect(said).toHaveBeenCalledWith("success", "Keluar dari Buku tamu", "Classic Tea kini hanya tampil di Menu biasa."));
+  fireEvent.click(tickOf("Classic Tea", "Menu biasa"));
+  await waitFor(() => expect(said).toHaveBeenCalledWith("success", "Keluar dari Menu biasa", "Classic Tea kini tidak tampil di menu mana pun."));
+  // Shown, but in no menu: the row says so instead of "Tampil".
+  expect(within(row("Classic Tea")).getByText("Tanpa menu")).toBeTruthy();
+  expect(chip(/^Menu biasa/).textContent).toBe("Menu biasa12");
+  expect(chip(/^Buku tamu/).textContent).toBe("Buku tamu14");
+});
+
+it("F7 puts the tick back and says why when the server refuses; a second press waits for the first", async () => {
+  let release: (value?: unknown) => void = () => {};
+  const { api, said } = await open({ change: real => ({ placeDrink: vi.fn(async (slug, place, on) => { await new Promise(resolve => { release = resolve; }); if (slug === "kopi-susu") throw new AdminApiError("Server belum dapat memberikan jawaban.", undefined, 503); return real.placeDrink(slug, place, on); }) }) });
+  fireEvent.click(tickOf("Kopi Susu", "Buku tamu"));
+  expect(tickOf("Kopi Susu", "Buku tamu").checked).toBe(false);
+  expect(tickOf("Kopi Susu", "Buku tamu").getAttribute("aria-busy")).toBe("true");
+  fireEvent.click(tickOf("Kopi Susu", "Buku tamu"));
+  expect(api.placeDrink).toHaveBeenCalledTimes(1);
+  // The other tick of the same drink is its own: it can be sent meanwhile.
+  await act(async () => { release(); });
+  await waitFor(() => expect(said).toHaveBeenCalledWith("error", "Buku tamu belum berubah", "Server belum dapat memberikan jawaban."));
+  expect(tickOf("Kopi Susu", "Buku tamu").checked).toBe(true);
+  expect(tickOf("Kopi Susu", "Buku tamu").getAttribute("aria-busy")).toBeNull();
+});
+
+it("F7 finds a drink by name and by chip, counts what is shown, and offers the way back when nothing fits", async () => {
+  await open();
+  const search = screen.getByRole("searchbox", { name: "Cari minuman" });
+  fireEvent.change(search, { target: { value: "  LATTE " } });
+  expect(names()).toEqual(["Café Latte", "Piccolo Latte", "Matcha Latte"]);
+  expect(screen.getByText("3 dari 15 minuman")).toBeTruthy();
+  fireEvent.click(chip(/^Non-kopi/));
+  expect(names()).toEqual(["Matcha Latte"]);
+  fireEvent.click(screen.getByRole("button", { name: "Hapus pencarian" }));
+  expect(names()).toHaveLength(5);
+  fireEvent.click(chip(/^Menu biasa/));
+  expect(names()).toHaveLength(12);
+  expect(names()).not.toContain("Classic Tea");
+  fireEvent.click(chip(/^Buku tamu/));
+  expect(names()).toHaveLength(15);
+  fireEvent.click(chip(/^Tanpa foto/));
+  expect(screen.getByRole("heading", { name: "Semua minuman sudah punya foto" })).toBeTruthy();
+  fireEvent.click(chip(/^Semua/));
+  fireEvent.change(search, { target: { value: "wedang" } });
+  expect(screen.getByRole("heading", { name: "Tidak ada minuman bernama “wedang”" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Tampilkan semua minuman" }));
+  expect(names()).toHaveLength(15);
+  expect((search as HTMLInputElement).value).toBe("");
+});
+
+it("F7 a long menu stays usable: 63 drinks, the ones without a photo get a cup on their kind's tint, and the search narrows them", async () => {
+  await open({ menu: "many" });
+  expect(rows()).toHaveLength(63);
+  expect(chip(/^Tanpa foto/).textContent).toBe("Tanpa foto48");
+  fireEvent.click(chip(/^Tanpa foto/));
+  expect(rows()).toHaveLength(48);
+  const first = row("Contoh Minuman 1");
+  expect(first.querySelector("img")).toBeNull();
+  const cup = first.querySelector("[data-empty]")!;
+  expect([cup.getAttribute("data-group"), cup.getAttribute("aria-hidden"), !!cup.querySelector("svg")]).toEqual(["kopi", "true", true]);
+  expect(row("Contoh Minuman 3").querySelector("[data-empty]")?.getAttribute("data-group")).toBe("non-kopi");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Cari minuman" }), { target: { value: "minuman 4" } });
+  expect(names()).toEqual(["Contoh Minuman 4", ...Array.from({ length: 9 }, (_, index) => `Contoh Minuman 4${index}`)]);
+});
+
+it("F7 a photo that does not load is replaced by the cup, never left broken", async () => {
+  await open();
+  const picture = row("Kopi Susu").querySelector("img")!;
+  fireEvent.error(picture);
+  expect(row("Kopi Susu").querySelector("img")).toBeNull();
+  expect(row("Kopi Susu").querySelector("[data-empty]")?.getAttribute("data-group")).toBe("kopi");
+});
+
+it("F7 the editor holds both ticks: a new drink starts in both, and what is unticked is saved", async () => {
+  const { api } = await open();
+  fireEvent.click(screen.getByRole("button", { name: "Tambah minuman" }));
+  const group = within(editor()).getByRole("group", { name: "Masuk menu mana" });
+  const [book, regular] = within(group).getAllByRole("checkbox") as HTMLInputElement[];
+  expect([book.checked, regular.checked]).toEqual([true, true]);
+  expect(within(group).getByText("Buku menu tamu di tablet GA, dan pesanan untuk Tamu.")).toBeTruthy();
+  type("Nama", "Teh Tarik");
+  fireEvent.click(book);
+  save();
+  await waitFor(() => expect(api.createDrink).toHaveBeenCalledWith({ name: "Teh Tarik", description: "", group: "kopi", temperatures: ["panas", "es"], active: true, guestBook: false, regular: true }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect([tickOf("Teh Tarik", "Buku tamu").checked, tickOf("Teh Tarik", "Menu biasa").checked]).toEqual([false, true]);
+  // An existing drink opens with its own ticks; unticking both says what that means.
+  fireEvent.click(within(row("Classic Tea")).getByRole("button", { name: "Ubah Classic Tea" }));
+  const boxes = within(within(editor()).getByRole("group", { name: "Masuk menu mana" })).getAllByRole("checkbox") as HTMLInputElement[];
+  expect(boxes.map(box => box.checked)).toEqual([true, false]);
+  fireEvent.click(boxes[0]);
+  expect(within(editor()).getByText("Tanpa centang, minuman ini tidak tampil di mana pun. Riwayatnya tetap ada.")).toBeTruthy();
+  save();
+  await waitFor(() => expect(api.updateDrink).toHaveBeenCalledWith("classic-tea", expect.objectContaining({ guestBook: false, regular: false })));
+});
+
+it("F7 before migration 202612030001: every drink in both menus, the ticks rest, and the page says what waits", async () => {
+  const { api } = await open({ menu: "places-waiting" });
+  expect(screen.getByRole("status").textContent).toBe("Menunggu migrasi 202612030001_coffee_menu_audience.sql. Sampai dijalankan, semua minuman tampil di Buku tamu dan Menu biasa, dan centangnya belum bisa diubah.");
+  expect(rows()).toHaveLength(15);
+  const tick = tickOf("Classic Tea", "Menu biasa");
+  expect([tick.checked, tick.disabled]).toEqual([true, true]);
+  fireEvent.click(tick);
+  expect(api.placeDrink).not.toHaveBeenCalled();
+  // The rest of the menu still works: add, change, hide.
+  expect(screen.getByRole("button", { name: "Tambah minuman" })).toBeTruthy();
+  fireEvent.click(within(row("Classic Tea")).getByRole("button", { name: "Ubah Classic Tea" }));
+  const group = within(editor()).getByRole("group", { name: "Masuk menu mana" }) as HTMLFieldSetElement;
+  expect(group.disabled).toBe(true);
+  expect(within(editor()).getByText("Menunggu migrasi: sampai dijalankan, semua minuman tampil di keduanya.")).toBeTruthy();
 });

@@ -14,7 +14,7 @@ export async function GET() {
   });
 }
 
-/** POST {name, description, group, temperatures, active}: a new drink at the end of the menu. Its slug is made from the name. */
+/** POST {name, description, group, temperatures, active, guestBook?, regular?}: a new drink at the end of the menu. Its slug is made from the name. */
 export async function POST(request: Request) {
   return handle(async () => {
     await requireApiAdmin();

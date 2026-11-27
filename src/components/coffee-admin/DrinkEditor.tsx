@@ -3,17 +3,22 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Check, Coffee, ImagePlus, Trash2, X } from "lucide-react";
 import { errorMessage } from "@/components/admin/shared/api";
-import type { DrinkGroup, Temperature } from "@/lib/coffee/menu";
+import { DRINK_GROUPS, DRINK_GROUP_LABEL, MENU_PLACES, PLACE_LABEL, type DrinkGroup, type MenuPlace, type Temperature } from "@/lib/coffee/menu";
 import type { AdminDrink } from "@/lib/coffee/types";
 import { fieldErrorsOf, type CoffeeAdminApi, type DrinkBody } from "./api";
 import { Layer } from "./Layer";
 import css from "./coffee-admin.module.css";
 
-/** The drink's photo in the list and the editor: square, or a cup when it has none. */
-export function DrinkThumb({ src, size }: { src: string | null; size: number }) {
-  if (!src) return <span className={css.menuThumb} style={{ width: size, height: size }} aria-hidden><Coffee size={Math.round(size / 2.4)} /></span>;
+/**
+ * The drink's photo in the list and the editor: square. A drink without one (or whose file does
+ * not load) gets a cup on its kind's tint instead, never a broken image. Decorative either way:
+ * the name is always written next to it.
+ */
+export function DrinkThumb({ src, size, group }: { src: string | null; size: number; group?: DrinkGroup }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!src || failed === src) return <span className={css.menuThumb} data-empty data-group={group} style={{ width: size, height: size }} aria-hidden><Coffee size={Math.round(size / 2.4)} /></span>;
   // eslint-disable-next-line @next/next/no-img-element -- a small square photo of the menu (a static file, the pengelola's upload, or a local preview)
-  return <img className={css.menuThumb} style={{ width: size, height: size }} src={src} alt="" width={size} height={size} loading="lazy" />;
+  return <img className={css.menuThumb} style={{ width: size, height: size }} src={src} alt="" width={size} height={size} loading="lazy" onError={() => setFailed(src)} />;
 }
 
 /** What the photo field takes; the server checks the file's first bytes, the size and crops it. */
@@ -28,9 +33,11 @@ const PHOTO_HELP = "JPG, PNG, atau WebP, paling besar 5 MB. Dipotong persegi di 
  * says what is wrong under itself; closing with something typed asks first.
  * Hapus is only offered for a drink no order ever used; one that was ordered can only be hidden,
  * and the panel says so. Both ask before they act.
+ * F7: "Masuk menu mana" holds the two ticks, Buku tamu and Menu biasa (a new drink starts in both).
+ * `places` false: migration 202612030001 has not run, so both stay on and rest.
  */
-export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
-  api: CoffeeAdminApi; drink: AdminDrink | null; onClose: () => void; onSaved: (drink: AdminDrink, message: string) => void; onRemoved: (drink: AdminDrink, message: string) => void;
+export function DrinkEditor({ api, drink, places = true, onClose, onSaved, onRemoved }: {
+  api: CoffeeAdminApi; drink: AdminDrink | null; places?: boolean; onClose: () => void; onSaved: (drink: AdminDrink, message: string) => void; onRemoved: (drink: AdminDrink, message: string) => void;
 }) {
   const titleId = useId(), uid = useId();
   const [name, setName] = useState(drink?.name ?? "");
@@ -38,6 +45,7 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
   const [group, setGroup] = useState<DrinkGroup>(drink?.group ?? "kopi");
   const [temperatures, setTemperatures] = useState<Temperature[]>(drink?.temperatures ?? ["panas", "es"]);
   const [active, setActive] = useState(drink?.active ?? true);
+  const [shows, setShows] = useState<Record<MenuPlace, boolean>>({ guestBook: drink?.guestBook ?? true, regular: drink?.regular ?? true });
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
@@ -79,7 +87,7 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
   const invalid = Object.values(errors).some(Boolean);
   const base = kept ?? drink;
   const touched = !!photo || name !== (base?.name ?? "") || description !== (base?.description ?? "") || group !== (base?.group ?? "kopi")
-    || active !== (base?.active ?? true) || temperatures.join() !== (base?.temperatures ?? ["panas", "es"]).join();
+    || active !== (base?.active ?? true) || shows.guestBook !== (base?.guestBook ?? true) || shows.regular !== (base?.regular ?? true) || temperatures.join() !== (base?.temperatures ?? ["panas", "es"]).join();
   const requestClose = () => {
     if (busy) return;
     if (touched) setAsking("discard");
@@ -92,12 +100,12 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
     setTried(true); setFailure("");
     if (invalid || busy) return;
     setServerErrors({});
-    const body: DrinkBody = { name: name.trim(), description: description.trim(), group, temperatures, active };
+    const body: DrinkBody = { name: name.trim(), description: description.trim(), group, temperatures, active, guestBook: shows.guestBook, regular: shows.regular };
     let saved = kept;
     let message = "";
     try {
       // The drink first (a new one needs its slug before a photo can belong to it), then the photo.
-      const changed = !saved || saved.name !== body.name || saved.description !== body.description || saved.group !== group || saved.active !== active || saved.temperatures.join() !== temperatures.join();
+      const changed = !saved || saved.name !== body.name || saved.description !== body.description || saved.group !== group || saved.active !== active || (saved.guestBook ?? true) !== shows.guestBook || (saved.regular ?? true) !== shows.regular || saved.temperatures.join() !== temperatures.join();
       if (changed) {
         setBusy("save");
         const done = saved ? await api.updateDrink(saved.slug, body) : await api.createDrink(body);
@@ -149,7 +157,7 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
         </div>
         <div className={css.sheetBody}>
           <div className={css.photoField}>
-            <DrinkThumb src={picture} size={96} />
+            <DrinkThumb src={picture} size={96} group={group} />
             <div className={css.photoText}>
               <span className={css.photoLabel} id={`${uid}-photo-label`}>Foto</span>
               <input ref={file} id={`${uid}-photo`} className={css.srOnly} type="file" accept={PHOTO_TYPES.join(",")} onChange={pick} tabIndex={-1} aria-hidden />
@@ -178,10 +186,10 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
           <fieldset className={css.fieldset}>
             <legend>Kelompok</legend>
             <div className={css.segmented}>
-              {(["kopi", "non-kopi"] as DrinkGroup[]).map(item => (
+              {DRINK_GROUPS.map(item => (
                 <label key={item} data-checked={group === item ? "true" : undefined}>
                   <input type="radio" name={`${uid}-group`} checked={group === item} onChange={() => setGroup(item)} />
-                  {item === "kopi" ? "Kopi" : "Non-kopi"}
+                  {DRINK_GROUP_LABEL[item]}
                 </label>
               ))}
             </div>
@@ -198,6 +206,23 @@ export function DrinkEditor({ api, drink, onClose, onSaved, onRemoved }: {
             {shown("temperatures")
               ? <p id={`${uid}-temp-error`} className={css.error}>{shown("temperatures")}</p>
               : <p id={`${uid}-temp-help`} className={css.small}>Suhu yang bisa dipilih bila opsi Suhu ditanyakan.</p>}
+          </fieldset>
+
+          <fieldset className={css.fieldset} disabled={!places} aria-describedby={`${uid}-places-help`}>
+            <legend>Masuk menu mana</legend>
+            <div className={css.placeRows}>
+              {MENU_PLACES.map(place => (
+                <label key={place} className={css.placeRow} data-rests={places ? undefined : "true"}>
+                  <input type="checkbox" checked={shows[place]} onChange={() => setShows(current => ({ ...current, [place]: !current[place] }))} />
+                  <span><strong>{PLACE_LABEL[place]}</strong><small>{place === "guestBook" ? "Buku menu tamu di tablet GA, dan pesanan untuk Tamu." : "Aplikasi karyawan, dan pesanan untuk Tim · rapat."}</small></span>
+                </label>
+              ))}
+            </div>
+            <p id={`${uid}-places-help`} className={css.small}>
+              {!places ? "Menunggu migrasi: sampai dijalankan, semua minuman tampil di keduanya."
+                : !shows.guestBook && !shows.regular ? "Tanpa centang, minuman ini tidak tampil di mana pun. Riwayatnya tetap ada."
+                : "Minuman hanya bisa dipesan dari tempat yang dicentang. Sembunyikan (di bawah) mematikannya di semua tempat."}
+            </p>
           </fieldset>
 
           <label className={`${css.switchRow} ${css.switchRowTop}`}>

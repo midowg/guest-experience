@@ -1,4 +1,10 @@
+import { MACHINE_MENU, type Drink } from "./menu";
 import type { QueueItem, QueueOrder } from "./types";
+
+/** A made-up drink without a photo, in both menus: the previews show the cup that stands in for a photo. */
+export const SAMPLE_NO_PHOTO: Drink = { slug: "contoh-teh-tarik", name: "Contoh Teh Tarik", description: "", group: "non-kopi", temperatures: ["panas", "es"], photo: null, active: true, guestBook: true, regular: true };
+/** The previews' menu: the owner's starting ticks (Menu biasa = what the office machine makes), and that drink. */
+export const PREVIEW_MENU: Drink[] = [...MACHINE_MENU, SAMPLE_NO_PHOTO];
 
 /* Made-up orders for the tests of the pure Coffee logic ("Contoh ..." people only). */
 

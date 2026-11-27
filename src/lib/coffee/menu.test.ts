@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SEED_DRINKS } from "../server/coffee/fake-db";
 import { claimText, meetingText } from "./copy-text";
 import { claim, item, meeting, person } from "./fixtures";
-import { ALL_OPTIONS, DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, NO_OPTIONS, asksIce, drinkIn, drinkLabel, drinkName, fillChoice, fitChoice, offered, optionsLabel, optionsTail, startChoice } from "./menu";
+import { ALL_OPTIONS, DEFAULT_OPTIONS, DRINKS, GUEST_BOOK_ONLY, LEGACY_OPTIONS, MACHINE_MENU, NO_OPTIONS, asksIce, drinkIn, drinkLabel, drinkName, fillChoice, fitChoice, groupsIn, offered, offeredTo, optionsLabel, optionsTail, placeOf, placesWords, showsIn, startChoice } from "./menu";
 import { pushFor } from "./notify";
 import { detailCells, expandRows } from "./recap";
 
@@ -89,6 +89,35 @@ describe("an order without options (a claim, by default)", () => {
     expect(pushFor("klaim_baru", order).body).toBe("Contoh · Latte Susu");
     const gone = claim("k3", 417, rina, "sudah-dihapus", { items: [item("a", "klaim", "sudah-dihapus", { ...bare, name: "Es Kopi Lama" })] });
     expect(expandRows([gone])[0].drink).toBe("Es Kopi Lama");
+  });
+});
+
+describe("where a drink shows (F7)", () => {
+  it("serves guests from the guest book, and claims and the team from the regular menu", () => {
+    expect([placeOf("tamu"), placeOf("klaim"), placeOf("tim")]).toEqual(["guestBook", "regular", "regular"]);
+    expect(offeredTo(MACHINE_MENU, "tamu")).toHaveLength(15);
+    expect(offeredTo(MACHINE_MENU, "klaim")).toHaveLength(12);
+    expect(MACHINE_MENU.filter(drink => !showsIn(drink, "regular")).map(drink => drink.slug).sort()).toEqual([...GUEST_BOOK_ONLY].sort());
+  });
+  it("reads a drink without ticks (a menu from before the migration) as shown in both", () => {
+    expect(DRINKS.every(drink => showsIn(drink, "guestBook") && showsIn(drink, "regular"))).toBe(true);
+    expect(offeredTo(DRINKS, "klaim")).toHaveLength(15);
+  });
+  it("offers a hidden drink to nobody, whatever is ticked, and a drink without ticks to nobody either", () => {
+    const menu = MACHINE_MENU.map(drink => drink.slug === "kopi-susu" ? { ...drink, active: false } : drink.slug === "espresso" ? { ...drink, guestBook: false, regular: false } : drink);
+    for (const who of ["klaim", "tim", "tamu"] as const) expect(offeredTo(menu, who).some(drink => ["kopi-susu", "espresso"].includes(drink.slug))).toBe(false);
+    expect(offered(menu).some(drink => drink.slug === "espresso")).toBe(true);
+  });
+  it("draws a tab only for a kind that has a drink", () => {
+    expect(groupsIn(DRINKS)).toEqual(["kopi", "non-kopi"]);
+    expect(groupsIn(DRINKS.filter(drink => drink.group === "non-kopi"))).toEqual(["non-kopi"]);
+    expect(groupsIn([])).toEqual([]);
+  });
+  it("says in words where a drink shows", () => {
+    expect(placesWords({})).toBe("tampil di Buku tamu dan Menu biasa");
+    expect(placesWords({ regular: false })).toBe("hanya tampil di Buku tamu");
+    expect(placesWords({ guestBook: false, regular: true })).toBe("hanya tampil di Menu biasa");
+    expect(placesWords({ guestBook: false, regular: false })).toBe("tidak tampil di menu mana pun");
   });
 });
 

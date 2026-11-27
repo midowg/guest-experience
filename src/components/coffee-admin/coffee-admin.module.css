@@ -308,7 +308,54 @@
 .menuText strong { font-size: 16px; overflow-wrap: anywhere; }
 .menuText > span { color: var(--ink-2); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menuText .menuMeta { color: var(--ink-3); }
+/* No photo (or one that did not load): a cup on the kind's tint. Decorative; the name is beside it. */
+.menuThumb[data-empty] { background: color-mix(in srgb, var(--ink-3) 14%, var(--surface)); color: var(--ink-2); }
+.menuThumb[data-empty][data-group="kopi"] { background: color-mix(in srgb, #b45309 16%, var(--surface)); color: color-mix(in srgb, #b45309 70%, var(--ink)); }
+.menuThumb[data-empty][data-group="non-kopi"] { background: color-mix(in srgb, #0d9488 16%, var(--surface)); color: color-mix(in srgb, #0d9488 70%, var(--ink)); }
 .menuList li[data-hidden] .menuThumb { opacity: .55; }
+/* F7: the bar to find a drink with (name, chips) stays in view while the list scrolls under it. */
+.menuPanel { padding-top: 0; scroll-margin-top: var(--menu-top, 0px); }
+.menuPanel .menuHead {
+  position: sticky; top: var(--menu-top, 0px); z-index: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 320px); align-items: center; gap: 10px 12px;
+  margin: 0 -16px 4px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); border-radius: 16px 16px 0 0; background: var(--surface);
+}
+.menuTitle { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.menuTitle .small { font-variant-numeric: tabular-nums; }
+.menuSearch { position: relative; display: flex; align-items: center; min-width: 0; }
+.menuSearch > svg { position: absolute; left: 12px; color: var(--ink-3); pointer-events: none; }
+.menuSearch input {
+  width: 100%; min-height: 44px; padding: 8px 44px 8px 38px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--surface); font-size: 15px;
+}
+.menuSearch input::-webkit-search-cancel-button { display: none; }
+.menuSearch .iconButton { position: absolute; right: 0; }
+.menuChips { grid-column: 1 / -1; }
+/* The two ticks of a row: where the drink shows. The whole label is the target (44 px high). */
+.ticks { display: flex; align-items: center; gap: 2px; flex: none; }
+.tick { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.tick:hover { background: var(--cs-hover); }
+.tick input, .placeRow input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--act); cursor: inherit; }
+.tick:has(input:checked) { color: var(--ink); }
+.tick:has(input:focus-visible), .placeRow:has(input:focus-visible) { outline: 3px solid var(--act); outline-offset: 2px; }
+.tick input:focus-visible, .placeRow input:focus-visible { outline: none; }
+.tick[data-rests], .placeRow[data-rests] { cursor: not-allowed; opacity: .6; }
+.tick[data-rests]:hover { background: none; }
+.menuNotes { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.menuNotes strong { color: var(--ink-2); }
+/* The editor's two ticks, each with what it means. */
+.placeRows { display: grid; gap: 4px; }
+.placeRow { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.placeRow > span { display: grid; min-width: 0; }
+.placeRow small { font-size: 13px; color: var(--ink-3); }
+.placeRow:has(input:checked) { border-color: var(--act); background: var(--act-c); }
+/* Below the wide layout the row's controls go under its text, so the name keeps the whole width. */
+@media (max-width: 1180px) {
+  .menuList li { flex-wrap: wrap; padding: 6px 0; }
+  .menuMain { flex-basis: 100%; }
+  .menuSide { flex: 1; flex-wrap: wrap; justify-content: flex-end; padding-left: 60px; margin-top: -6px; }
+  .menuSide .ticks { margin-right: auto; }
+}
+/* Under 64rem the console has a bar of its own stuck to the top (64 px): the list's bar sticks below it. */
+@media (max-width: 63.99rem) { .menuPanel { --menu-top: 64px; } }
 .menuList li[data-hidden] .menuText strong { color: var(--ink-2); }
 .menuSide { display: flex; align-items: center; gap: 8px; flex: none; }
 .menuActions { display: flex; align-items: center; }
@@ -485,9 +532,20 @@
   /* Menu: the row's controls go under its text, so the name keeps the whole width */
   .menuList li { flex-wrap: wrap; padding: 6px 0; }
   .menuMain { flex-basis: 100%; margin-left: 0; padding: 6px 0 0; min-height: 62px; align-items: flex-start; }
-  .menuSide { flex: 1; justify-content: space-between; padding-left: 68px; margin-top: -4px; }
+  .menuSide { flex: 1; flex-wrap: wrap; justify-content: space-between; row-gap: 0; padding-left: 60px; margin-top: -4px; }
+  .menuSide .ticks { flex-basis: 100%; }
+  .tick { min-height: 48px; padding: 0 8px; font-size: 15px; }
+  .menuSide .pill { margin-left: 8px; }
   .menuActions .iconButton { width: 48px; height: 48px; }
   .menuHead .chips { width: 100%; }
+  /* One row of chips that is swiped sideways, so the bar stays low while it sticks. */
+  /* On a phone only the search and the chips stay: the title's row slides under the console's bar. */
+  .menuPanel .menuHead { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 8px; top: calc(var(--menu-top, 0px) - 46px); }
+  .menuTitle { min-height: 26px; }
+  .menuChips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .menuChips::-webkit-scrollbar { display: none; }
+  .menuChips button { flex: none; }
+  .menuSearch input { min-height: 48px; font-size: 16px; }
   .photoField { gap: 12px; }
 }
 @keyframes rise { from { transform: translateY(32px); opacity: 0; } }
@@ -501,6 +559,7 @@
   .optionGroup { padding: 12px 12px 6px; }
   .tabIcon { width: 48px; }
   .menuSide { padding-left: 0; }
+  .menuSide .pill { margin-left: 0; }
   .tallyPanel > h2 { display: none; }
   .twoCol { grid-template-columns: minmax(0, 1fr); }
   .quotaRow { grid-template-columns: minmax(0, 1fr) 80px auto; }

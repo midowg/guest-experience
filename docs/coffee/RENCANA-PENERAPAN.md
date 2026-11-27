@@ -1021,3 +1021,69 @@ akses sungguhan tidak dijalankan (agen tidak memakai sandi): semuanya lewat tes 
 pratinjau. Tablet dan keyboard layar sungguhan tidak dipakai; ukuran 1280×800, 1024×768, 768×1024, 375
 dicek dengan layar tiruan di panel browser. Pengalihan tanpa sesi dicek dengan curl di server dev (jawaban
 200 berisi pengalihan yang dialirkan, seperti halaman Coffee lain yang punya `loading.tsx`).
+
+---
+
+## Catatan pelaksanaan F7: Buku tamu / Menu biasa, menu biasa mengikuti mesin JS Mini (27 Nov 2026)
+
+Aplikasi tayang dan migrasi 1 sampai 3 sudah berjalan di database asli, jadi semua perubahan skema ada di
+**`202612030001_coffee_menu_audience.sql`**. Skill desain: `ui-ux-pro-max` (kotak centang berlabel,
+sasaran 44/48 px, saringan chip, pencarian, bilah menempel). Tampilan mengikuti `docs/standar-admin.md` §3
+(saringan chip dengan jumlah, kolom cari, aksi di baris).
+
+**Perubahan lingkup dari pemilik selama pengerjaan (27 Nov):** rencana awal mengimpor 48 minuman kafe
+JumpStart dan menambah kelompok Cold brew, Teh, Jus. Dibatalkan dua kali: dulu ke mesin JS Biggie (satu
+minuman baru, Kopi Gula Aren), lalu ke **mesin JS Mini** (12 minuman, semuanya sudah ada). Hasil akhir:
+**tidak ada minuman baru, tidak ada kelompok baru**; yang dibuat adalah dua centang per minuman.
+
+**Yang dibuat**
+- `coffee_drinks.in_guest_book` dan `in_regular_menu`; di kode `Drink.guestBook` / `Drink.regular`
+  (tidak ada = true, supaya menu dari sebelum migrasi terbaca "di keduanya"). Pembantu murni di
+  `src/lib/coffee/menu.ts`: `placeOf` (tamu → Buku tamu; klaim dan tim → Menu biasa), `showsIn`,
+  `offeredTo(menu, audiens)`, `groupsIn`, `placesWords`, `GUEST_BOOK_ONLY`, `MACHINE_MENU`.
+- Penjaga di dua tempat: `settle()` (`src/lib/server/coffee/lines.ts`) dan kedua fungsi database.
+- `audienceReady()` di `store.ts`: pertanyaan yang sama dengan `menuReady()` kini meminta kedua kolom;
+  bila gagal bukan karena tabelnya tidak ada, tabelnya ditanyakan sendiri sekali (jadi menu tidak
+  pernah jatuh ke 15 minuman bawaan hanya karena kolom baru belum ada, apa pun kode galatnya). Setelah
+  migrasi 4 tetap satu pertanyaan; "ya" diingat selamanya, "belum" ditanya lagi tiap 30 detik. Selama belum: kolom tidak diminta, semua minuman di keduanya, menulis centang
+  "mati" dijawab 503 dengan nama migrasinya (bukan diam-diam dibuang).
+- API: `PATCH /api/admin/coffee/menu/[slug]` menerima `{ active?, guestBook?, regular? }` (minimal satu);
+  `POST`/`PUT` menerima `guestBook`, `regular` (bawaan true). `MenuData.places`.
+- Admin Menu: dua kotak centang per baris (optimistis, kembali bila ditolak, satu kiriman per centang),
+  kolom cari, chip Buku tamu / Menu biasa / Tanpa foto, bilah cari dan chip menempel saat daftar
+  digulir, panel minuman mendapat "Masuk menu mana". Baris menandai "Tanpa menu" bila tampil tetapi
+  tanpa centang.
+- Pembaca: aplikasi karyawan (Menu biasa), input cepat tablet (mengikuti "Ketuk untuk", dengan tulisan
+  "Menampilkan Buku tamu / Menu biasa"), dialog baris (tidak bisa dipindah ke audiens yang menunya tidak
+  memuat minuman itu), buku menu tamu (Buku tamu), Catat manual (daftar menurut jenis). Tab kelompok
+  hanya untuk kelompok yang punya minuman.
+- Cangkir pengganti foto mendapat warna kelompok (`data-group`) dan kini juga menggantikan foto yang
+  gagal dimuat (`onError`), di `DrinkPhoto`, `Photo` (tablet), `DrinkThumb` (admin).
+- Pratinjau: `PREVIEW_MENU` (centang awal + satu minuman rekaan tanpa foto); admin
+  `?menu=tunggu-tampil` (sebelum migrasi 4) dan `?menu=banyak` (63 minuman, 48 tanpa foto).
+
+**Keputusan agen**
+1. **Sembunyikan tidak dilebur** ke "tanpa centang". `active` tetap sakelar di atas kedua centang: arti
+   lama dan riwayat tidak berubah, dan menyembunyikan sementara tidak menghapus pilihan menunya.
+2. **Centang awal ditulis sekali** dengan penanda "kolomnya belum ada" (bukan baris penanda): satu
+   transaksi, tanpa kolom tambahan.
+3. Minuman yang ditambah pengelola sebelum migrasi mendapat kedua centang (hanya tiga slug yang dimatikan).
+4. Catat manual di server tetap menerima minuman menu apa pun (seperti sebelum F7); hanya daftar di
+   lembarnya yang mengikuti jenis.
+5. Penolakan audiens memakai kode yang sudah ada, `COFFEE_DRINK_GONE` (409 "Minuman ini sudah tidak ada
+   di menu…"), bukan kode baru.
+6. Di antrean, riwayat, dan kartu pesanan cangkirnya netral (pesanan tidak membawa kelompok minuman);
+   warna kelompok ada di layar yang memegang menu.
+7. Kelompok tidak diperluas (batasan `drink_group` tidak disentuh); baris chip gulir untuk 5 kelompok
+   tidak dibuat karena kelompoknya tetap dua.
+
+**Belum diuji (apa adanya)**
+- Migrasi 4 **belum dijalankan di Supabase**; hanya di PGlite (794 pemeriksaan).
+- Halaman asli setelah masuk tidak dibuka (agen tidak memakai sandi); browser hanya pada
+  `/dev-preview/coffee/nyata/…` di port 3210 dengan server tiruan.
+- Tablet dan HP sungguhan tidak dipakai; ukuran 1440, 768, 375, 320 (admin), 320 (karyawan), 1024×768
+  (tablet) dicek dengan layar tiruan panel browser. Editor di 375/320 dan pembaca layar sungguhan tidak dicek.
+- PostgREST asli menjawab kolom yang belum ada dengan 42703 (baca) dan PGRST204 (tulis): itu yang
+  ditiru `fake-db.ts`, belum dilihat di Supabase asli. Pembacaan tidak bergantung pada kodenya (diuji
+  dengan kode lain); penulisan centang sebelum migrasi dengan kode lain akan tampil sebagai galat
+  database biasa, bukan "menunggu migrasi" (layarnya memang tidak mengizinkan centang diubah saat itu).

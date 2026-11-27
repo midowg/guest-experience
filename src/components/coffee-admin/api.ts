@@ -1,6 +1,6 @@
 import { AdminApiError, adminRequest } from "@/components/admin/shared/api";
 import { browserDevice, type PushApi, type PushPort } from "@/components/coffee/usePush";
-import type { CoffeeOptions, Drink, DrinkGroup, Ice, Sugar, Temperature } from "@/lib/coffee/menu";
+import type { CoffeeOptions, Drink, DrinkGroup, Ice, MenuPlace, Sugar, Temperature } from "@/lib/coffee/menu";
 import type { CoffeePushInfo } from "@/lib/coffee/notify";
 import type { RecapSummary } from "@/lib/coffee/recap";
 import type { AdminDrink, CoffeePerson, CoffeeSettings, ItemFor, MenuData, QueueOrder, QueueState, RecapRow, Status } from "@/lib/coffee/types";
@@ -28,7 +28,7 @@ export type ManualBody = {
 };
 export type Done = { order: QueueOrder; message: string };
 /** Tambah / Ubah minuman: what the editor sends. */
-export type DrinkBody = { name: string; description: string; group: DrinkGroup; temperatures: Temperature[]; active: boolean };
+export type DrinkBody = { name: string; description: string; group: DrinkGroup; temperatures: Temperature[]; active: boolean; guestBook: boolean; regular: boolean };
 export type DrinkDone = { drink: AdminDrink; message: string };
 /** A record made by hand that the pengelola is about to cancel: its order, and the words the question shows. */
 export type CancelTarget = { id: string; title: string; claim: boolean };
@@ -51,6 +51,8 @@ export type CoffeeAdminApi = {
   updateDrink(slug: string, body: DrinkBody): Promise<DrinkDone>;
   /** Sembunyikan / Tampilkan. */
   showDrink(slug: string, active: boolean): Promise<DrinkDone>;
+  /** Where the drink shows (F7): tick or untick "Buku tamu" or "Menu biasa", from the list. */
+  placeDrink(slug: string, place: MenuPlace, on: boolean): Promise<DrinkDone>;
   /** Only a drink no order ever used; 409 otherwise. */
   deleteDrink(slug: string): Promise<{ message: string }>;
   /** The whole menu in its new order; answers the menu as it is afterwards. */
@@ -99,6 +101,7 @@ export const coffeeAdminClient: CoffeeAdminApi = {
   createDrink: body => drinkCall(coffeeAdminApi.menu, "POST", JSON.stringify(body)),
   updateDrink: (slug, body) => drinkCall(coffeeAdminApi.drink(slug), "PUT", JSON.stringify(body)),
   showDrink: (slug, active) => drinkCall(coffeeAdminApi.drink(slug), "PATCH", JSON.stringify({ active })),
+  placeDrink: (slug, place, on) => drinkCall(coffeeAdminApi.drink(slug), "PATCH", JSON.stringify({ [place]: on })),
   async deleteDrink(slug) { return { message: (await adminRequest(coffeeAdminApi.drink(slug), { method: "DELETE" })).message }; },
   async sortDrinks(slugs) { return (await adminRequest<MenuData>(coffeeAdminApi.menuOrder, { method: "PUT", body: JSON.stringify({ slugs }) })).data as MenuData; },
   uploadDrinkPhoto(slug, file) {

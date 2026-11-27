@@ -1,7 +1,7 @@
 import { AdminApiError } from "@/components/admin/shared/api";
 import { firstName } from "@/lib/coffee/access";
 import { claim, item, meeting, person } from "@/lib/coffee/fixtures";
-import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
+import { DEFAULT_OPTIONS, DRINKS, LEGACY_OPTIONS, MACHINE_MENU, MONTHLY_QUOTA, OTHER_DRINK, drinkIn, drinkLabel, placesWords, type CoffeeOptions, type Drink } from "@/lib/coffee/menu";
 import { claimNumbers, countsForQuota, previousMonth, wibDay, wibMonth } from "@/lib/coffee/quota";
 import { expandRows, filterRows, recapTitle, summarize } from "@/lib/coffee/recap";
 import { roomSpot } from "@/lib/coffee/rooms";
@@ -45,21 +45,28 @@ const byId = new Map(SAMPLE_PEOPLE.map(who => [who.id, who]));
 export type SampleServer = ReturnType<typeof createSampleServer>;
 
 const MENU_WAITS = "Fitur ini menunggu migrasi 202612020001_coffee_menu.sql.";
+const PLACES_WAIT = "Pilihan Buku tamu dan Menu biasa menunggu migrasi 202612030001_coffee_menu_audience.sql.";
+export type SampleMenu = "ready" | "waiting" | "empty" | "places-waiting" | "many";
 const PHOTO_KINDS = ["image/jpeg", "image/png", "image/webp"];
 
 /**
  * `clock`: the make-believe server's time (the tests hold it still). `menu`: "waiting" plays the
  * database before migration 202612020001 (the code's menu, read only, every option asked);
- * "empty" a menu with no drinks yet.
+ * "empty" a menu with no drinks yet; "places-waiting" the database before migration 202612030001
+ * (every drink in both menus, the two ticks cannot be saved); "many" a long menu (the 15 and 48
+ * made-up drinks without photos) to try the search and the filters on.
+ * With the menu ready, the drinks carry the owner's starting ticks (MACHINE_MENU).
  */
-export function createSampleServer(clock: () => number = Date.now, { menu: menuState = "ready" }: { menu?: "ready" | "waiting" | "empty" } = {}) {
+export function createSampleServer(clock: () => number = Date.now, { menu: menuState = "ready" }: { menu?: SampleMenu } = {}) {
   const menuReady = menuState !== "waiting";
+  const placesReady = menuReady && menuState !== "places-waiting";
   const iso = (msAgo: number) => new Date(clock() - msAgo).toISOString();
   const minute = 60_000, day = 86_400_000;
   let settings: CoffeeSettings = { ...MONTHLY_QUOTA };
   /** What each audience is asked with a drink, at the real defaults, and the menu (the code's 15 drinks). */
   let options: CoffeeOptions = menuReady ? { klaim: { ...DEFAULT_OPTIONS.klaim }, tim: { ...DEFAULT_OPTIONS.tim }, tamu: { ...DEFAULT_OPTIONS.tamu } } : { klaim: { ...LEGACY_OPTIONS.klaim }, tim: { ...LEGACY_OPTIONS.tim }, tamu: { ...LEGACY_OPTIONS.tamu } };
-  const menu: Drink[] = menuState === "empty" ? [] : DRINKS.map(drink => ({ ...drink }));
+  const menu: Drink[] = menuState === "empty" ? [] : (placesReady ? MACHINE_MENU : DRINKS).map(drink => ({ ...drink }));
+  if (menuState === "many") for (let n = 1; n <= 48; n++) menu.push({ slug: `contoh-minuman-${n}`, name: `Contoh Minuman ${n}`, description: "", group: n % 3 ? "kopi" : "non-kopi", temperatures: ["panas", "es"], photo: null, active: true, guestBook: n % 4 === 0, regular: true });
   /** Which drinks carry an uploaded photo, and who changed a drink last. */
   const uploaded = new Set<string>();
   const changed = new Map<string, { at: string; label: string }>();
@@ -222,20 +229,22 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
     },
     async settings() { return { settings, holders: HOLDERS, gaPin, ...drinkSettings() }; },
     async saveSettings(input) { settings = { ...input }; return { settings, holders: HOLDERS, gaPin, ...drinkSettings(), message: "Jatah disimpan." }; },
-    async menu(): Promise<MenuData> { return { ready: menuReady, drinks: menu.map(adminDrink) }; },
+    async menu(): Promise<MenuData> { return { ready: menuReady, places: placesReady, drinks: menu.map(adminDrink) }; },
     async createDrink(body) {
       const input = checked(body);
       const taken = new Set(menu.map(drink => drink.slug));
       const base = slugOf(input.name);
       let slug = base;
       for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 40 - String(n).length - 1)}-${n}`;
-      menu.push({ slug, name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, photo: null, active: input.active });
+      if (!placesReady && (!input.guestBook || !input.regular)) throw refusal(503, PLACES_WAIT);
+      menu.push({ slug, name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, photo: null, active: input.active, guestBook: input.guestBook, regular: input.regular });
       touch(slug);
       return { drink: found(slug), message: `${input.name} ditambahkan ke menu.` };
     },
     async updateDrink(slug, body) {
       const input = checked(body);
-      Object.assign(at(slug), { name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, active: input.active });
+      if (!placesReady && (!input.guestBook || !input.regular)) throw refusal(503, PLACES_WAIT);
+      Object.assign(at(slug), { name: input.name, description: input.description, group: input.group, temperatures: input.temperatures, active: input.active, guestBook: input.guestBook, regular: input.regular });
       touch(slug);
       return { drink: found(slug), message: `${input.name} disimpan.` };
     },
@@ -245,6 +254,14 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       drink.active = active;
       touch(slug);
       return { drink: found(slug), message: active ? `${drink.name} tampil lagi di menu.` : `${drink.name} disembunyikan. Tidak bisa dipesan, riwayatnya tetap ada.` };
+    },
+    async placeDrink(slug, place, on) {
+      if (!menuReady) throw refusal(503, MENU_WAITS);
+      if (!placesReady) throw refusal(503, PLACES_WAIT);
+      const drink = at(slug);
+      drink[place] = on;
+      touch(slug);
+      return { drink: found(slug), message: `${drink.name} kini ${placesWords(drink)}.` };
     },
     async deleteDrink(slug) {
       if (!menuReady) throw refusal(503, MENU_WAITS);
@@ -259,7 +276,7 @@ export function createSampleServer(clock: () => number = Date.now, { menu: menuS
       const placed = slugs.map(slug => menu.find(drink => drink.slug === slug)).filter((drink): drink is Drink => !!drink);
       const rest = menu.filter(drink => !placed.includes(drink));
       menu.splice(0, menu.length, ...placed, ...rest);
-      return { ready: true, drinks: menu.map(adminDrink) };
+      return { ready: true, places: placesReady, drinks: menu.map(adminDrink) };
     },
     async uploadDrinkPhoto(slug, file) {
       if (!menuReady) throw refusal(503, MENU_WAITS);

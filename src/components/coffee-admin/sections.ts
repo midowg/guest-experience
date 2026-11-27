@@ -22,6 +22,8 @@ export type CoffeeAdminSection = {
 export const COFFEE_ADMIN_LABEL = "WG Coffee";
 /** The migration the menu and the option switches wait for (said where they cannot be changed yet). */
 export const COFFEE_MENU_MIGRATION_NAME = "202612020001_coffee_menu.sql";
+/** F7: where each drink shows (Buku tamu, Menu biasa). */
+export const COFFEE_AUDIENCE_MIGRATION_NAME = "202612030001_coffee_menu_audience.sql";
 
 export const coffeeAdminSections: readonly CoffeeAdminSection[] = [
   { key: "antrean", label: "Antrean", group: "Pesanan", href: coffeeAdminPath.home, icon: Inbox, summary: "Pesanan menunggu, terlama di atas. Beli di aplikasi JumpStart, lalu tandai selesai. Terlihat oleh semua pemegang akses." },

@@ -27,7 +27,7 @@ pemilik sendiri. Aturan pemakaian sehari-hari: `docs/aturan-coffee.md`.
      hidup di memori (PGlite, Postgres versi WASM), di atas tabel `employees` dan `admin_grants` yang
      dibuat dari migrasi aslinya. Hasil: **keduanya berjalan tanpa galat, tidak ada SQL yang perlu
      diperbaiki**; dijalankan ulang 3 kali (tabel kosong dan sudah berisi) tetap aman, isi tabel, nomor
-     urut, PIN, dan akses tidak berubah. 325 pemeriksaan aturan lulus saat itu (715 sejak migrasi menu, lihat "Pembaruan 26 Nov") (jatah 4/2/2 per bulan WIB, kunci
+     urut, PIN, dan akses tidak berubah. 325 pemeriksaan aturan lulus saat itu (715 sejak migrasi menu, lihat "Pembaruan 26 Nov"; 794 sejak migrasi Buku tamu / Menu biasa, lihat "Pembaruan 27 Nov") (jatah 4/2/2 per bulan WIB, kunci
      kiriman, Catat manual, Batalkan catatan, Urungkan, pesanan rapat, Tambah lagi, PIN, notifikasi,
      akses admin, hak akses), dan hasilnya **sama** dengan tiruan yang dipakai tes (`fake-db.ts`).
      Ulangi kapan saja, tanpa memasang apa pun dan tanpa menyentuh database asli:
@@ -221,3 +221,85 @@ Kode lama (sebelum F6) tetap bisa membaca database yang sudah dimigrasi **selama
 tanpa opsi**. Setelah karyawan mengajukan klaim tanpa opsi, kode lama akan menampilkan baris itu
 dengan suhu kosong. Jadi bila kode harus dimundurkan: nyalakan dulu ketiga opsi untuk Karyawan di
 Pengaturan (dengan kode baru), baru mundurkan. Cara membatalkan migrasinya ada di kepala berkas SQL.
+
+## Pembaruan 27 Nov: menu mesin JS Mini dan pilihan Buku tamu / Menu biasa
+
+Keputusan pemilik 27 Nov 2026 (F7): tiap minuman punya **dua centang** di `/admin/coffee` → Menu,
+**Buku tamu** (buku menu tamu di tablet GA, dan baris Tamu) dan **Menu biasa** (aplikasi karyawan
+`/coffee`, klaim, dan baris Tim · rapat). Menu biasa mengikuti **mesin JumpStart JS Mini** di pantry
+(12 minuman, dibaca dari jumpstart.id/machine/2/menu), karena karyawan mengambil sendiri di mesin.
+**Tidak ada minuman yang ditambah atau dihapus**: ke-12 minuman mesin sudah ada di menu kita. Butuh
+satu migrasi baru; tiga migrasi yang sudah berjalan tidak diubah.
+
+### Yang harus dilakukan pemilik
+
+1. **Naikkan kode.** Otomatis saat cabang ini di-push ke `main` (tidak ada langkah lain).
+2. **Jalankan `supabase/migrations/202612030001_coffee_menu_audience.sql`** di SQL Editor Supabase (salin
+   seluruh isi berkas, Run). Satu kali cukup; dijalankan dua kali pun aman.
+3. **Buka `/admin/coffee` → Menu**, cek centangnya (tabel di bawah) dan ubah bila perlu.
+
+Kode dulu, baru migrasi. Aplikasi mengetahui migrasinya sendiri paling lama 30 detik kemudian.
+
+### Centang awal (ditulis sekali oleh migrasi)
+
+| Minuman | Buku tamu | Menu biasa |
+| --- | --- | --- |
+| Kopi Susu, Cappuccino, Café Latte, Café Mocha, Piccolo Latte, Matcha Espresso, Kopi Hitam, Americano, Espresso, Milk Chocolate, Matcha Latte, Dark Chocolate (12, dibuat mesin JS Mini) | ya | ya |
+| Cappuccino Double Shot, Cucumber Ice, Classic Tea (3, hanya di menu kertas) | ya | **tidak** |
+| Minuman lain yang sudah ditambah pengelola sebelum migrasi | ya | ya |
+
+Akibatnya bagi karyawan: tiga minuman itu **hilang dari aplikasi karyawan** dan tidak bisa diklaim atau
+dipesankan untuk Tim · rapat; tamu tetap bisa memesannya dari buku menu. Bila tidak cocok, centang
+"Menu biasa" pada minuman itu di Menu.
+
+### Sebelum dan sesudah migrasi dijalankan
+
+| | Sebelum `202612030001` dijalankan (kode baru sudah naik) | Sesudah |
+| --- | --- | --- |
+| Aplikasi karyawan | Seperti kemarin: 15 minuman | Hanya minuman Menu biasa (12) |
+| Tablet GA, input cepat | Seperti kemarin: semua minuman untuk Tamu dan Tim · rapat; ada tulisan kecil "Menampilkan Buku tamu / Menu biasa" | Tamu: Buku tamu (15); Tim · rapat: Menu biasa (12) |
+| Buku menu tamu | Seperti kemarin: 15 minuman | Hanya minuman Buku tamu (15, sama) |
+| Catat manual | Daftar semua minuman | Daftar mengikuti jenis; "Lainnya" tetap ada |
+| Menu (admin) | Cari, saringan, tambah, ubah, sembunyikan jalan; **kedua centang tampil tercentang tetapi belum bisa diubah**; tertulis "Menunggu migrasi 202612030001_coffee_menu_audience.sql" | Centang bisa diubah di daftar dan di panel |
+| Antrean, Rekap, notifikasi, pesanan lama | Tidak berubah | Tidak berubah |
+| Kesalahan 500 | Tidak ada: aplikasi memeriksa sendiri apakah kolomnya sudah ada | Tidak ada |
+
+### Apa yang dilakukan migrasi ini pada data yang sudah ada
+
+- **Tidak ada yang dihapus, tidak ada pesanan yang disentuh, tidak ada minuman yang ditambah.** Hanya dua
+  kolom baru di `coffee_drinks` (`in_guest_book`, `in_regular_menu`, keduanya wajib isi, bawaan `true`).
+- **Centang awal ditulis sekali saja.** Tiga baris di atas dimatikan di dalam blok yang juga menambah
+  kolomnya, dan blok itu hanya jalan selama kolom `in_regular_menu` belum ada. Seluruh berkas satu
+  transaksi, jadi "kolom ada" selalu berarti "centang awal sudah ditulis". Dijalankan lagi: bloknya
+  dilewati, **centang yang sudah diubah pengelola tidak kembali**, minuman yang sudah dihapus tidak kembali.
+- Dua fungsi (`coffee_submit_claim`, `coffee_submit_meeting`) diganti dengan tanda tangan yang sama dan
+  satu aturan tambahan: klaim dan baris Tim · rapat butuh minuman Menu biasa, baris Tamu butuh minuman
+  Buku tamu. Catat manual tetap boleh minuman menu apa pun.
+
+Diuji di Postgres dalam memori (PGlite) dengan memainkan urutan aslinya: pesanan lama, lalu menu yang
+sudah diubah pengelola (satu minuman berganti nama, satu dihapus, satu disembunyikan, satu milik
+pengelola sendiri), lalu migrasi 4 di atasnya, diulang dua kali, diulang lagi setelah centang diubah,
+lalu keempatnya berurutan. **794 pemeriksaan lulus, 0 gagal**
+(`npx --yes --package=@electric-sql/pglite node scripts/coffee-sql-check.mjs`). **Belum diuji:** di
+database Supabase asli, dan balapan sungguhan (dua transaksi bersamaan).
+
+### Jangan
+
+- **Jangan menjalankan lagi `202612010001_coffee.sql` atau `202612020001_coffee_menu.sql` setelah
+  `202612030001`.** Keduanya memuat versi lama kedua fungsi dan akan menimpanya: centangnya tetap,
+  tetapi database berhenti menjaganya (aplikasi masih menolak, penjaga kedua hilang). Bila terlanjur:
+  jalankan `202612030001_coffee_menu_audience.sql` sekali lagi (aman, centang tidak berubah).
+
+### Foto
+
+Belum ada minuman tanpa foto. Minuman yang nanti ditambah tanpa foto digambar cangkir di atas warna
+kelompoknya (Kopi atau Non-kopi) di semua layar; fotonya ditambah pemilik di **Menu → buka minumannya →
+Pilih foto / Ganti foto**. Saringan **Tanpa foto** di Menu menunjukkan mana yang belum.
+
+### Kalau harus mundur
+
+Kode lama (sebelum F7) tetap jalan di atas database yang sudah dimigrasi, dengan satu selisih: kode lama
+menampilkan ke-15 minuman di aplikasi karyawan, tetapi database menolak klaim tiga minuman khusus Buku
+tamu ("Minuman ini sudah tidak ada di menu"). Bila kode harus dimundurkan lama: centang "Menu biasa"
+pada ketiganya dulu (dengan kode baru), atau jalankan lagi dua blok fungsi dari
+`202612020001_coffee_menu.sql`. Cara membatalkan migrasinya ada di kepala berkas SQL.

@@ -14,6 +14,8 @@ import { createPrivilegedClient } from "../supabase/admin";
 export const COFFEE_MIGRATION = "202612010001_coffee.sql";
 /** F6: the menu in the database, the option switches, and the drink's name kept with each order. */
 export const COFFEE_MENU_MIGRATION = "202612020001_coffee_menu.sql";
+/** F7: where each drink shows (Buku tamu, Menu biasa). */
+export const COFFEE_AUDIENCE_MIGRATION = "202612030001_coffee_menu_audience.sql";
 type DbError = { code?: string; message?: string };
 
 /**
@@ -58,13 +60,30 @@ export type CoffeeActor = { employeeId: string | null; label: string };
  * owner has run it. Any other fault reads as "no" for now: the old way still works on the new schema.
  */
 const NOT_READY_FOR = 30_000;
-let menuSchema: { ready: boolean; at: number } | null = null;
-export async function menuReady(now = Date.now()): Promise<boolean> {
-  if (menuSchema && (menuSchema.ready || now - menuSchema.at < NOT_READY_FOR)) return menuSchema.ready;
+/**
+ * F7 adds a second step the same way: migration 202612030001 gives coffee_drinks its two "where it
+ * shows" columns. `audience` says they are there. One question answers both once that migration
+ * has run (and is then remembered for good); while it has not, a second question (once) settles
+ * whether the table is there at all, and the app behaves as before F7: every drink in both menus,
+ * and the ticks cannot be saved.
+ */
+let menuSchema: { ready: boolean; audience: boolean; at: number } | null = null;
+async function menuSchemaNow(now: number): Promise<{ ready: boolean; audience: boolean; at: number }> {
+  if (menuSchema && (menuSchema.audience || now - menuSchema.at < NOT_READY_FOR)) return menuSchema;
+  const whole = await db().from("coffee_drinks").select("slug,in_guest_book,in_regular_menu").limit(1);
+  if (!whole.error) return menuSchema = { ready: true, audience: true, at: now };
+  // No such table: migration 202612020001 has not run either.
+  if (missing(whole.error)) return menuSchema = { ready: false, audience: false, at: now };
+  // Anything else (42703: the two columns are not there yet) says nothing about the table itself. It
+  // was there the last time, or it is asked for on its own: the menu must never fall back to the
+  // code's only because the new columns are missing, whatever code that fault comes with.
+  if (menuSchema?.ready) return menuSchema = { ready: true, audience: false, at: now };
   const { error } = await db().from("coffee_drinks").select("slug").limit(1);
-  menuSchema = { ready: !error, at: now };
-  return menuSchema.ready;
+  return menuSchema = { ready: !error, audience: false, at: now };
 }
+export async function menuReady(now = Date.now()): Promise<boolean> { return (await menuSchemaNow(now)).ready; }
+/** Migration 202612030001 has run: drinks carry where they show, and the database enforces it. */
+export async function audienceReady(now = Date.now()): Promise<boolean> { return (await menuSchemaNow(now)).audience; }
 
 const ORDER_HEAD = "id,kind,number,round,parent_id,employee_id,person_name,person_group,person_position,person_bu,room,room_spot,guest,guest_count,status,reject_note,processed_by,processed_label,processed_at,created_label,manual,ordered_at,";
 const ITEM_COLUMNS = "id,for_whom,employee_id,person_name,person_group,person_position,person_bu,guest_name,drink_slug,drink_other,temperature,sugar,ice,qty,sort";
@@ -85,18 +104,22 @@ type ItemRow = {
  */
 export const MENU_KEEP_MS = 15_000;
 const DRINK_COLUMNS = "slug,name,description,drink_group,temperatures,photo_url,active";
-type DrinkRow = { slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; active: boolean };
+const PLACE_COLUMNS = ",in_guest_book,in_regular_menu";
+type DrinkRow = { slug: string; name: string; description: string | null; drink_group: DrinkGroup; temperatures: Temperature[] | null; photo_url: string | null; active: boolean; in_guest_book?: boolean | null; in_regular_menu?: boolean | null };
 let menuKept: { drinks: Drink[]; at: number } | null = null;
 /** Forget what is kept (after an edit; `schema` also asks again whether the migration has run: the tests). */
 export function forgetMenu(schema = false) { menuKept = null; if (schema) menuSchema = null; }
 export async function readMenu(fresh = false, now = Date.now()): Promise<Drink[]> {
   if (!fresh && menuKept && now - menuKept.at < MENU_KEEP_MS) return menuKept.drinks;
   if (!(await menuReady(now))) return DRINKS;
-  const { data, error } = await db().from("coffee_drinks").select(DRINK_COLUMNS).order("sort").order("name").limit(500);
+  // Before migration 202612030001 the two columns are not asked for, and every drink shows in both menus.
+  const places = await audienceReady(now);
+  const { data, error } = await db().from("coffee_drinks").select(`${DRINK_COLUMNS}${places ? PLACE_COLUMNS : ""}`).order("sort").order("name").limit(500);
   if (error) { if (missing(error)) return DRINKS; coffeeError(error); }
-  const drinks = ((data ?? []) as DrinkRow[]).map((row): Drink => ({
+  const drinks = ((data ?? []) as unknown as DrinkRow[]).map((row): Drink => ({
     slug: row.slug, name: row.name, description: row.description ?? "", group: row.drink_group,
     temperatures: row.temperatures?.length ? row.temperatures : ["panas"], photo: row.photo_url, active: row.active,
+    guestBook: row.in_guest_book ?? true, regular: row.in_regular_menu ?? true,
   }));
   menuKept = { drinks, at: now };
   return drinks;

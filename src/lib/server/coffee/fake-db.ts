@@ -12,6 +12,12 @@
  * With it false the stand-in answers like the database before that migration: no coffee_drinks,
  * the old functions (no drink check, ice "Normal" when none is sent). No imports here: the SQL
  * harness (scripts/coffee-sql-check.mjs) loads this file with plain Node.
+ *
+ * F7: `audienceMigrated` is migration 202612030001 (coffee_drinks.in_guest_book and
+ * in_regular_menu, and the two order functions enforcing them: a claim and a team member's line
+ * need a regular-menu drink, a guest's line a guest-book drink, Catat manual any drink). With it
+ * false, asking for or writing either column fails as on a database without them (42703 for a
+ * read, PGRST204 for a write), and the functions do not look at them.
  */
 type Row = Record<string, unknown>;
 type Failure = { code?: string; message: string };
@@ -23,6 +29,9 @@ const PUSH_TABLES = ["coffee_push_subscriptions", "coffee_push_sent"];
 /** Migration 202612020001 (the menu and the options). */
 const MENU_TABLES = ["coffee_drinks"];
 const MENU_FUNCTIONS = ["coffee_delete_drink", "coffee_sort_drinks", "coffee_drink_usage"];
+/** Migration 202612030001's two columns, and the drinks it takes out of the regular menu on its first run (the JS Mini machine does not make them). */
+const PLACE_COLUMNS = ["in_guest_book", "in_regular_menu"];
+export const GUEST_BOOK_ONLY_SLUGS = ["cappuccino-double-shot", "cucumber-ice", "classic-tea"];
 /** The 15 drinks the migration seeds (slug, name, group, hot and cold or one of them); a test holds this against src/lib/coffee/menu.ts. */
 export const SEED_DRINKS: [string, string, "kopi" | "non-kopi", string[]][] = [
   ["kopi-susu", "Kopi Susu", "kopi", ["panas", "es"]], ["cappuccino", "Cappuccino", "kopi", ["panas", "es"]], ["cafe-latte", "Café Latte", "kopi", ["panas", "es"]],
@@ -45,6 +54,8 @@ export function fakeDb() {
     pushMigrated: true,
     /** The menu migration ran (coffee_drinks, the option switches, drink_name, NULL options). */
     menuMigrated: true,
+    /** The "where it shows" migration ran (in_guest_book, in_regular_menu, enforced by the order functions). */
+    audienceMigrated: true,
     /** Skip the functions' first look for the key, so a repeated key meets the unique index. */
     race: false,
     /** consume_rate_limit's counters, by key. */
@@ -70,18 +81,24 @@ export function fakeDb() {
     let single = false;
     let window: [number, number] | null = null;
     let limit = Infinity;
+    let asked = "";
+    const noPlaces = table === "coffee_drinks" && !state.audienceMigrated;
     const run = (): Result => {
       state.calls.push(`${mode.kind}:${table}`);
       if (!state.migrated && COFFEE_TABLES.includes(table)) return absent(table);
       if (!state.pushMigrated && PUSH_TABLES.includes(table)) return absent(table);
       // Migration 3 stands on migration 1: without either, there is no menu.
       if ((!state.menuMigrated || !state.migrated) && MENU_TABLES.includes(table)) return absent(table);
+      // Before migration 202612030001: the two columns cannot be read (42703) or written (PGRST204).
+      if (noPlaces && PLACE_COLUMNS.some(column => asked.split(",").includes(column))) return { data: null, error: { code: "42703", message: "column coffee_drinks.in_guest_book does not exist" } };
+      const written: Row | null = mode.kind === "insert" || mode.kind === "upsert" ? mode.row : mode.kind === "update" ? mode.patch : null;
+      if (noPlaces && written && PLACE_COLUMNS.some(column => column in written)) return { data: null, error: { code: "PGRST204", message: "Could not find the 'in_guest_book' column of 'coffee_drinks' in the schema cache" } };
       if (mode.kind === "insert") {
         const { row } = mode;
         // coffee_drinks' primary key: one drink per slug.
         if (table === "coffee_drinks") {
           if (rows(table).some(item => item.slug === row.slug)) return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "coffee_drinks_pkey"' } };
-          const saved = { sort: 0, active: true, description: "", photo_url: null, photo_key: null, ...row };
+          const saved = { sort: 0, active: true, description: "", photo_url: null, photo_key: null, ...(state.audienceMigrated ? { in_guest_book: true, in_regular_menu: true } : {}), ...row };
           rows(table).push(saved);
           return { data: single ? { ...saved } : [{ ...saved }], error: null };
         }
@@ -120,7 +137,7 @@ export function fakeDb() {
       return { data: single ? shaped[0] ?? null : shaped, error: null };
     };
     const builder = {
-      select: () => builder,
+      select: (columns?: string) => { asked = (columns ?? "").replace(/\s/g, ""); return builder; },
       eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
       neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
       in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return builder; },
@@ -167,11 +184,13 @@ export function fakeDb() {
    * The drink check of the new functions: on the menu, shown unless recorded by hand, and in a
    * temperature it comes in. Answers the name to keep with the row, or the function's refusal.
    */
-  const drinkFor = (item: Row, manual: boolean): { name: string | null } | Result => {
+  const drinkFor = (item: Row, manual: boolean, place?: "in_guest_book" | "in_regular_menu"): { name: string | null } | Result => {
     if (!state.menuMigrated) return { name: null };
     if (item.slug === "lainnya") return manual ? { name: null } : fail("COFFEE_INVALID");
     const drink = rows("coffee_drinks").find(row => row.slug === item.slug);
     if (!drink || (!drink.active && !manual)) return fail("COFFEE_DRINK_GONE");
+    // F7: the drink must be ticked for the menu its audience is served from (not for Catat manual).
+    if (state.audienceMigrated && !manual && place && drink[place] === false) return fail("COFFEE_DRINK_GONE");
     if (item.temperature != null && !(drink.temperatures as string[]).includes(String(item.temperature))) return fail("COFFEE_INVALID");
     return { name: drink.name as string };
   };
@@ -195,7 +214,7 @@ export function fakeDb() {
       const at = String(args.p_at ?? state.now.toISOString());
       if (tooLate(at)) return fail("COFFEE_INVALID");
       if (!manual && (args.p_item as Row).slug === "lainnya") return fail("COFFEE_INVALID");
-      const drink = drinkFor(args.p_item as Row, manual);
+      const drink = drinkFor(args.p_item as Row, manual, "in_regular_menu");
       if (refusal(drink)) return drink;
       const person = employee(args.p_employee);
       if (!person) return fail("COFFEE_NOT_EMPLOYEE");
@@ -256,7 +275,7 @@ export function fakeDb() {
       // Line by line, in the function's own order: the drink first, then who it is for.
       const names: (string | null)[] = [];
       for (const [index, item] of items.entries()) {
-        const drink = drinkFor(item, manual);
+        const drink = drinkFor(item, manual, item.for === "tamu" ? "in_guest_book" : item.for === "tim" ? "in_regular_menu" : undefined);
         if (refusal(drink)) return drink;
         names.push(drink.name);
         if (item.for === "tim") { if (!team[index]) return fail("COFFEE_NOT_EMPLOYEE"); }
@@ -372,6 +391,8 @@ export function seedPeople(db: ReturnType<typeof fakeDb>) {
   }];
   db.state.tables.coffee_drinks = SEED_DRINKS.map(([slug, name, drink_group, temperatures], index) => ({
     slug, name, description: "", drink_group, temperatures: [...temperatures], photo_url: ["", "coffee", "drinks", `${slug}.jpg`].join("/"), photo_key: null, sort: (index + 1) * 10, active: true,
+    // Both ticks on, as on a database whose pengelola ticked everything; a test that is about the migration's defaults applies them itself (GUEST_BOOK_ONLY_SLUGS).
+    in_guest_book: true, in_regular_menu: true,
   }));
   db.state.tables.admin_grants = [{ employee_id: PEOPLE.dewi, apps: ["coffee", "hr"] }];
   db.state.tables.coffee_orders = [];

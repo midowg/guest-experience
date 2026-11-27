@@ -140,7 +140,33 @@ Suhu (Panas/Es), gula, dan takaran es **tidak selalu ditanya**. Pengelola mengat
 ## 10. Menu (sejak 26 Nov 2026)
 
 Pengelola mengelola minuman di `/admin/coffee` → **Menu**: tambah, ubah nama dan keterangan, Kopi atau
-Non-kopi, tersedia Panas/Es, ganti foto, atur urutan, sembunyikan, hapus.
+Non-kopi, tersedia Panas/Es, ganti foto, atur urutan, tampil di mana, sembunyikan, hapus.
+
+**Dua menu, satu daftar (sejak 27 Nov 2026).** Sumbernya dua: **menu kertas kantor** (15 minuman, difoto
+2 Nov 2026) dan **menu mesin JumpStart JS Mini di pantry** (12 minuman, dibaca 27 Nov 2026 dari
+jumpstart.id/machine/2/menu; semuanya sudah ada di menu kertas). Tiap minuman punya dua centang:
+
+| Centang | Tampil di | Bisa dipesan sebagai |
+| --- | --- | --- |
+| **Buku tamu** | Buku menu tamu di tablet GA; kisi minuman tablet saat "Ketuk untuk: Tamu" | Baris **Tamu** |
+| **Menu biasa** | Aplikasi karyawan `/coffee`; kisi minuman tablet saat "Ketuk untuk: Tim · rapat" | **Klaim** karyawan dan baris **Tim · rapat** |
+
+- **Bawaan pemilik:** Buku tamu = seluruh menu kertas (15). Menu biasa = yang dibuat mesin JS Mini (12),
+  karena karyawan mengambil sendiri di mesin: Kopi Susu, Cappuccino, Café Latte, Café Mocha, Piccolo
+  Latte, Matcha Espresso, Kopi Hitam, Americano, Espresso, Milk Chocolate, Matcha Latte, Dark Chocolate.
+  Tiga minuman kertas yang tidak dibuat mesin **hanya di Buku tamu**: Cappuccino Double Shot, Cucumber
+  Ice, Classic Tea. Minuman baru yang ditambah pengelola masuk keduanya kecuali centangnya dilepas.
+- **Centang diubah langsung di daftar** (tanpa membuka panel) atau di panel minuman ("Masuk menu mana").
+- **Server yang memutuskan**, di aplikasi dan sekali lagi di fungsi database: klaim dan baris Tim ·
+  rapat butuh minuman Menu biasa, baris Tamu butuh minuman Buku tamu; selain itu ditolak "Minuman ini
+  sudah tidak ada di menu".
+- **Sembunyikan tetap ada, di atas kedua centang:** tersembunyi = tidak tampil dan tidak bisa dipesan
+  di mana pun, tanpa mengubah centangnya (untuk yang sedang habis). Minuman **tanpa centang** juga tidak
+  tampil di mana pun (daftar menandainya "Tanpa menu"). Keduanya tetap ada di riwayat dan rekap.
+- **Catat manual** menawarkan daftar sesuai jenisnya (Tamu: Buku tamu; Klaim dan Tim · rapat: Menu
+  biasa) plus "Lainnya"; servernya tetap menerima minuman menu apa pun untuk catatan manual.
+- Kelompok tetap dua: **Kopi** dan **Non-kopi**. Tab kelompok hanya muncul bila ada minumannya di menu itu.
+- Daftar Menu bisa dicari menurut nama dan disaring: Kopi, Non-kopi, Buku tamu, Menu biasa, Tanpa foto, Tersembunyi.
 
 - **Urutan** di Menu = urutan di aplikasi karyawan, tablet GA, dan buku menu tamu.
 - **Sembunyikan**: minuman tidak bisa dipesan lagi (server menolak), tetapi tetap ada di riwayat dan
@@ -149,7 +175,8 @@ Non-kopi, tersedia Panas/Es, ganti foto, atur urutan, sembunyikan, hapus.
   ditolak atau dibatalkan) hanya bisa disembunyikan.
 - **Ganti nama tidak mengubah masa lalu:** pesanan menyimpan nama minuman saat dipesan.
 - **Foto:** JPG, PNG, atau WebP, paling besar 5 MB; dipotong persegi di tengah oleh server. Bukan SVG.
-  Foto unggahan yang lama dihapus saat diganti. Minuman tanpa foto digambar cangkir.
+  Foto unggahan yang lama dihapus saat diganti. Minuman tanpa foto (atau yang fotonya gagal dimuat)
+  digambar cangkir di atas warna kelompoknya, di semua layar.
 - Perubahan terlihat pengelola saat itu juga; di aplikasi karyawan dan tablet paling lama **15 detik**
   kemudian (plus saat layarnya membaca ulang).
 - "Lainnya (tulis sendiri)" tetap hanya ada di Catat manual; minuman tersembunyi masih bisa dicatat manual.

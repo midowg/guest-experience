@@ -5,6 +5,7 @@ import { GaApp } from "@/components/coffee/ga/GaApp";
 import { GaDenied } from "@/components/coffee/ga/GaAuth";
 import css from "@/components/coffee/ga/ga.module.css";
 import { SAMPLE_GA, createSampleGa } from "@/components/coffee/ga/sample";
+import { PREVIEW_MENU } from "@/lib/coffee/fixtures";
 import { samplePush } from "@/components/coffee/pushSample";
 import { ALL_OPTIONS, NO_OPTIONS } from "@/lib/coffee/menu";
 import type { CoffeePushState } from "@/lib/coffee/notify";
@@ -21,7 +22,7 @@ const OPTIONS = {
 
 export function GaPreview({ empty, slow, pin, held, push, options, denied = false }: { empty: boolean; slow: boolean; pin: boolean; held: boolean; push: CoffeePushState; options: keyof typeof OPTIONS; denied?: boolean }) {
   const [port] = useState(() => samplePush(push));
-  const [server] = useState(() => createSampleGa({ seeded: !empty, delay: slow ? 1500 : 0, pin: pin ? "1234" : "", options: OPTIONS[options] }));
+  const [server] = useState(() => createSampleGa({ seeded: !empty, delay: slow ? 1500 : 0, pin: pin ? "1234" : "", options: OPTIONS[options], menu: PREVIEW_MENU }));
   // Loaded in guest mode: no GA data comes with the page, only the menu and the options, as on the real one.
   const [initial] = useState(() => held ? server.held() : server.initial());
   const [said, setSaid] = useState("Data contoh, tidak tersimpan.");

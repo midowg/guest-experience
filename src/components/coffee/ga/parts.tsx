@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, Coffee, Minus, Plus } from "lucide-react";
+import type { DrinkGroup } from "@/lib/coffee/menu";
 import css from "./ga.module.css";
 
 /* Small pieces every screen of the tablet shares. */
@@ -20,12 +21,14 @@ export function useSettled(mark: unknown = 0): () => boolean {
 
 /**
  * A drink's photo (`src`: the menu's, a static file or the pengelola's upload). Decorative: the
- * name is always written next to it. A drink without one gets a cup in the same box.
+ * name is always written next to it. A drink without one, or whose photo does not load, gets a
+ * cup in the same box, on the tint of its kind (`group`) where that is known.
  */
-export function Photo({ src, width, height, className, alt = "" }: { src: string | null | undefined; width: number; height: number; className?: string; alt?: string }) {
-  if (!src) return <span className={`${css.noPhoto}${className ? ` ${className}` : ""}`} role={alt ? "img" : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}><Coffee aria-hidden size={Math.round(Math.min(width, height, 120) / 2.4)} /></span>;
+export function Photo({ src, width, height, className, alt = "", group }: { src: string | null | undefined; width: number; height: number; className?: string; alt?: string; group?: DrinkGroup }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!src || failed === src) return <span className={`${css.noPhoto}${className ? ` ${className}` : ""}`} data-group={group} role={alt ? "img" : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}><Coffee aria-hidden size={Math.round(Math.min(width, height, 120) / 2.4)} /></span>;
   // eslint-disable-next-line @next/next/no-img-element -- small square photos, sized here
-  return <img className={className} src={src} alt={alt} width={width} height={height} loading="lazy" draggable={false} />;
+  return <img className={className} src={src} alt={alt} width={width} height={height} loading="lazy" draggable={false} onError={() => setFailed(src)} />;
 }
 
 export function ScreenHead({ title, sub, onBack, backLabel, children }: { title: string; sub?: ReactNode; onBack: () => void; backLabel: string; children?: ReactNode }) {
@@ -62,6 +65,6 @@ export function Stepper({ value, min = 0, max, onChange, labelledBy, name }: { v
   );
 }
 
-export function Option({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" className={css.option} aria-pressed={on} onClick={onClick}>{children}</button>;
+export function Option({ on, onClick, disabled = false, children }: { on: boolean; onClick: () => void; disabled?: boolean; children: ReactNode }) {
+  return <button type="button" className={css.option} aria-pressed={on} disabled={disabled} onClick={onClick}>{children}</button>;
 }

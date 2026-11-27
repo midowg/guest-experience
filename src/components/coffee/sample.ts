@@ -1,4 +1,4 @@
-import { DRINKS, MONTHLY_QUOTA, NO_OPTIONS, OTHER_DRINK, drinkIn, type Drink, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
+import { DRINKS, MONTHLY_QUOTA, NO_OPTIONS, OTHER_DRINK, drinkIn, showsIn, type Drink, type DrinkOptions, type QuotaGroup } from "@/lib/coffee/menu";
 import { isDrinkIssue, settleLine } from "@/lib/coffee/schemas";
 import { claimNumbers, countsForQuota, wibMonth } from "@/lib/coffee/quota";
 import type { CoffeeMe, MyOrder, MyState } from "@/lib/coffee/types";
@@ -106,7 +106,7 @@ export function createSampleCoffee({ group = "karyawan", used = 0, ga = false, p
       if (again) return sent(answer(again, "Pengajuan terkirim."));
       // As the server: a hidden or unknown drink is gone (409); options that are off are dropped, ones that are on must be there.
       const drink = drinkIn(menu, body.slug);
-      if (!drink?.active) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
+      if (!drink?.active || !showsIn(drink, "regular")) throw new CoffeeApiError("Minuman ini sudah tidak ada di menu. Muat ulang halaman, lalu pilih yang lain.", 409);
       const choice = settleLine(body, drink, options);
       if (isDrinkIssue(choice)) throw new CoffeeApiError("Pilihan minuman berubah. Tutup lalu buka lagi minumannya, kemudian pilih ulang.", 422, { [choice.field]: [choice.message] });
       if (usedNow() >= quota) throw new CoffeeApiError("Jatah bulan ini sudah habis.", 409);

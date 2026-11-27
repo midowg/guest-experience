@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { CoffeeAdminApp } from "@/components/coffee-admin/CoffeeAdminApp";
 import css from "@/components/coffee-admin/coffee-admin.module.css";
-import { SAMPLE_ACTOR, createSampleServer } from "@/components/coffee-admin/sample";
+import { SAMPLE_ACTOR, createSampleServer, type SampleMenu } from "@/components/coffee-admin/sample";
+import { SAMPLE_NO_PHOTO } from "@/lib/coffee/fixtures";
 import { samplePush } from "@/components/coffee/pushSample";
 import type { CoffeePushState } from "@/lib/coffee/notify";
 import type { CoffeeAdminSectionKey } from "@/components/coffee-admin/sections";
 
 /** The real screen on the make-believe server, with two buttons that play the other people: an employee who claims, and a second pengelola. */
-export function AdminPreview({ view, now, routing, push, menu }: { view: CoffeeAdminSectionKey; now: string; routing: "history" | "memory"; push: CoffeePushState; menu: "ready" | "waiting" | "empty" }) {
+export function AdminPreview({ view, now, routing, push, menu }: { view: CoffeeAdminSectionKey; now: string; routing: "history" | "memory"; push: CoffeePushState; menu: SampleMenu }) {
   const [port] = useState(() => samplePush(push));
-  const [server] = useState(() => { const made = createSampleServer(Date.now, { menu }); made.seedManual(); return made; });
+  const [server] = useState(() => { const made = createSampleServer(Date.now, { menu }); made.seedManual(); if (menu === "ready") made.menu.push({ ...SAMPLE_NO_PHOTO }); return made; });
   const [note, setNote] = useState("Data contoh, tidak tersimpan.");
   const tools = (
     <div className={css.preview}>
