@@ -8,7 +8,8 @@ import { z } from "zod";
  * front page shows the default below. Pure, so it is tested without a server.
  */
 export const HOME_MENU_MIGRATION = "202611260002_home_menu.sql";
-export const HOME_APPS = ["wam", "wlm", "booking", "hr", "signage", "admin"] as const;
+// "coffee" (27 Nov 2026): WG Coffee joined the menu; a stored menu without it gets it at the end (readHomeMenu).
+export const HOME_APPS = ["wam", "wlm", "booking", "hr", "coffee", "signage", "admin"] as const;
 export type HomeApp = (typeof HOME_APPS)[number];
 
 export type HomeMenuItem = {
@@ -26,6 +27,8 @@ export const defaultHomeMenu: HomeMenuItem[] = [
     description: "Pesan ruang meeting kantor dan lihat jadwalnya, tanpa bentrok." },
   { app: "hr", shown: true, name: "WG People", what: "Absensi karyawan", account: "Akun WAM", tone: "#1551a0",
     description: "Absen masuk dan pulang dengan wajah dan titik kantor; nanti juga cuti dan lembur." },
+  { app: "coffee", shown: true, name: "WG Coffee", what: "Kopi kantor", account: "Akun WAM", tone: "#2f6b5a",
+    description: "Klaim minuman kantor dari HP dengan jatah per bulan, dan pesan minuman untuk rapat." },
   { app: "signage", shown: true, name: "Signage", what: "TV kantor", account: "Akun tim", tone: "#ea580c",
     description: "Atur tayangan di TV kantor: pengumuman, jadwal ruang, dan foto meeting." },
   { app: "admin", shown: true, name: "Journey Admin", what: "Untuk tim Werkudara", account: "Akun tim", tone: "#7c3aed",
@@ -33,7 +36,7 @@ export const defaultHomeMenu: HomeMenuItem[] = [
 ];
 /** What each app is, for the admin's list (fixed, not editable). */
 export const homeAppLabels: Record<HomeApp, string> = {
-  wam: "Aplikasi WAM (/wam)", wlm: "Aplikasi WLM (/wlm)", booking: "Booking Kantor (/booking)", hr: "Aplikasi HR (/hr)", signage: "Atur TV kantor (Admin WAM → TV)", admin: "Admin Journey (/admin)",
+  wam: "Aplikasi WAM (/wam)", wlm: "Aplikasi WLM (/wlm)", booking: "Booking Kantor (/booking)", hr: "Aplikasi HR (/hr)", coffee: "Aplikasi Coffee (/coffee)", signage: "Atur TV kantor (Admin WAM → TV)", admin: "Admin Journey (/admin)",
 };
 
 const text = (label: string, max: number) => z.string().trim().min(1, `Isi ${label}.`).max(max, `${label[0].toUpperCase()}${label.slice(1)} paling banyak ${max} huruf.`);
