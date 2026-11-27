@@ -1,12 +1,12 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { KaryawanAdminFrame } from "@/components/admin/karyawan/KaryawanAdminFrame";
-import { EmployeeDirectory } from "@/components/admin/super/EmployeeDirectory";
+import { EmployeeDirectory } from "@/components/admin/karyawan/EmployeeDirectory";
 import { PageHeader } from "@/components/console";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listEmployees } from "@/lib/server/employees";
 import { listJobs } from "@/lib/server/employee-jobs";
-import { leadData, managesWam, wamAccounts } from "./data";
+import { leadData, managesWam, wamAccounts } from "@/components/admin/karyawan/data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Data karyawan" };

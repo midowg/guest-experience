@@ -1,5 +1,5 @@
 import "server-only";
-import type { WamAccounts } from "@/components/admin/super/EmployeeDirectory";
+import type { WamAccounts } from "@/components/admin/karyawan/EmployeeDirectory";
 import type { LeadOptions, Leads } from "@/lib/pra-wam/leads";
 import { currentAdmin } from "@/lib/server/admin-session";
 import { actorHasApp } from "@/lib/server/admin-actor";

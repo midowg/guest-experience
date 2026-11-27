@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { KaryawanAdminFrame } from "@/components/admin/karyawan/KaryawanAdminFrame";
 import { PageHeader } from "@/components/console";
-import { EmployeeDirectory } from "@/components/admin/super/EmployeeDirectory";
+import { EmployeeDirectory } from "@/components/admin/karyawan/EmployeeDirectory";
 import type { Employee } from "@/lib/employees";
 
 export const dynamic = "force-dynamic";

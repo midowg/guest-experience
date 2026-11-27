@@ -1,6 +1,6 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { KaryawanAdminFrame } from "@/components/admin/karyawan/KaryawanAdminFrame";
-import { OrgChart } from "@/components/admin/super/OrgChart";
+import { OrgChart } from "@/components/admin/karyawan/OrgChart";
 import { PageHeader } from "@/components/console";
 import { buildOrg } from "@/lib/org";
 import { BUSINESS_UNITS, buCode, leadDepartments } from "@/lib/pra-wam/leads";
@@ -8,7 +8,7 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listEmployees } from "@/lib/server/employees";
 import { listJobs } from "@/lib/server/employee-jobs";
-import { leadData, wamAccounts } from "../data";
+import { leadData, wamAccounts } from "@/components/admin/karyawan/data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Struktur · Data karyawan" };
