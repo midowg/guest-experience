@@ -62,6 +62,8 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const [natural, setNatural] = useState<Record<string, [number, number]>>({});
   const [active, setActive] = useState(false);
   const showing = useRef("");
+  /** Whether this screen gets the phone's list, said with each ask (Pantauan tells a phone from a TV by it). */
+  const onPhone = useRef(false);
   /** The server's clock minus this TV's, so a TV with a wrong clock still draws "now" in the right place. */
   const offset = useRef(0);
   const size = useSyncExternalStore(onResize, screenSize, () => "1920x1080");
@@ -84,7 +86,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     const load = async () => {
       try {
         // With the screen's size and what it is showing, for Admin TV's Pantauan.
-        const response = await fetch(`${feedUrl}?w=${window.innerWidth}&h=${window.innerHeight}&item=${encodeURIComponent(showing.current)}`, { cache: "no-store", credentials: "same-origin" });
+        const response = await fetch(`${feedUrl}?w=${window.innerWidth}&h=${window.innerHeight}&item=${encodeURIComponent(showing.current)}${onPhone.current ? "&v=hp" : ""}`, { cache: "no-store", credentials: "same-origin" });
         if (stopped) return;
         if (response.status === 404) { setGone(true); return; }
         if (!response.ok) return;
@@ -174,6 +176,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const asked = useSyncExternalStore(onResize, () => new URLSearchParams(window.location.search).get("hp") === "1", () => false);
   const phone = asked || isPhoneScreen(width, height, touch);
   const stopped = paused && phone;
+  useEffect(() => { onPhone.current = phone; }, [phone]);
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
   const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length, isVideo = current?.kind === "video";
   useEffect(() => {
@@ -228,7 +231,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
           : current.kind === "pengumuman" ? <NotesSlide key={current.key} notes={feed.notes ?? []} clock={clock} />
           : current.kind === "teks" ? <TextSlide key={current.key} title={current.title} body={current.body} />
           : current.kind === "ultah" ? <BirthdaySlide key={current.key} birthday={current.birthday} />
-          : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} file={current.file} title={current.title} loop={count < 2} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
+          : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} file={current.file} title={current.title} loop={count < 2} sound={current.sound === true} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
           : current.kind === "sambutan" ? <WelcomeSlide key={current.key} welcome={current.welcome} design={current.design} />
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

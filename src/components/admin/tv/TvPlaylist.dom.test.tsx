@@ -6,6 +6,9 @@ import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { TvPlaylist } from "./TvPlaylist";
 
 afterEach(cleanup);
+// jsdom has no modal dialogs: a sheet is open when it has the attribute.
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 
 const always = { showFrom: null, showUntil: null, timeFrom: null, timeUntil: null, screenIds: [] as string[] };
 const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", videoFile: false, call: "", date: "", ...always, ...more });
@@ -33,65 +36,82 @@ const plain = (html: string) => html.replace(/_([A-Za-z][A-Za-z0-9]*)_[0-9a-f]{6
 function keep(name: string, container: HTMLElement) {
   const folder = process.env.TV_PLAYLIST_HTML;
   if (!folder) return;
-  const sheets = ["src/app/globals.css", "src/components/console/console.module.css", "src/components/admin/wam/akun/akun.module.css", "src/components/admin/tv/tv-playlist.module.css"]
+  const sheets = ["src/app/globals.css", "src/components/console/console.module.css", "src/components/admin/wam/akun/akun.module.css", "src/components/admin/wam-acara/isi/isi.module.css", "src/components/admin/tv/tv-playlist.module.css"]
     .map(path => readFileSync(path, "utf8")).join("\n");
   writeFileSync(`${folder}/${name}.html`, `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name}</title><style>${sheets}</style></head>`
     + `<body style="margin:0"><div class="themeAdmin canvas"><div class="panel"><div class="panelBody">${plain(container.innerHTML)}</div></div></div></body></html>`);
 }
 
 describe("Admin TV → Tayangan", () => {
-  it("shows every row as a card to read: its source, its name, and its duration, TVs and schedule as facts", () => {
+  it("shows every tayangan as one row: a picture of the slide, its name, one line of facts, its state", () => {
     const { container } = show();
-    const cards = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
-    expect(cards).toHaveLength(6);
-    expect(within(cards[0]).getByRole("heading", { name: "Kalender hari ini" })).toBeTruthy();
-    expect(cards[0].textContent).toContain("Dari WAM");
-    expect(cards[0].textContent).toContain("Durasi15 detik");
-    expect(cards[0].textContent).toContain("Tayang diSemua TV");
-    expect(cards[0].textContent).toContain("JadwalSetiap hari, sepanjang hari");
-    expect(cards[1].textContent).toContain("Disembunyikan");
-    expect(cards[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
-    expect(cards[5].textContent).toContain("Tayang diLobi");
-    expect(cards[5].textContent).toContain("Jadwal1 Des – 10 Des · 08.00–17.00");
-    expect(screen.getByText("5 tayang dari 6")).toBeTruthy();
-    expect(cards[4].textContent).toContain("DurasiSampai video selesai");
-    // Each card opens with a drawing of its slide; a typed one shows its own words in it.
-    expect(cards.every(card => !!card.querySelector("svg[viewBox='0 0 160 90']"))).toBe(true);
-    expect(cards[3].querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Satu");
+    const rows = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
+    expect(rows).toHaveLength(6);
+    expect(rows[0].textContent).toContain("Kalender hari ini");
+    expect(rows[0].textContent).toContain("Dari WAM · 15 detik · Semua TV · Setiap hari");
+    expect(rows[1].textContent).toContain("Disembunyikan");
+    expect(rows[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
+    expect(rows[4].textContent).toContain("Sampai video selesai · Semua TV · Setiap hari");
+    // Small chips say where each row plays: every row on the board, and on the one for old TVs unless that passes it over (a YouTube video).
+    expect(rows[0].textContent).toContain("TVLite");
+    expect(rows[4].textContent).toContain("TVTidak di lite");
+    expect(within(rows[4]).getByText("Tidak di lite").getAttribute("title")).toContain("YouTube");
+    expect(rows[5].textContent).toContain("Lobi · 1 Des – 10 Des · 08.00–17.00");
+    // Each row opens with a drawing of its slide; a typed one shows its own words in it.
+    expect(rows.every(item => !!item.querySelector("svg[viewBox='0 0 160 90']"))).toBe(true);
+    expect(rows[3].querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Satu");
     keep("daftar", container);
   });
 
-  it("keeps on a card only the arrows and Atur; the rest is inside Atur", () => {
+  it("has one main action, and filters by state with the number of each", () => {
+    show();
+    expect(screen.getByRole("button", { name: "Tambah tayangan" })).toBeTruthy();
+    const chips = within(screen.getByRole("group", { name: "Tampilkan" }));
+    expect(chips.getByRole("button", { name: "Semua 6" })).toBeTruthy();
+    expect(chips.getByRole("button", { name: "Tayang 5" })).toBeTruthy();
+    fireEvent.click(chips.getByRole("button", { name: "Disembunyikan 1" }));
+    const rows = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain("Kalender minggu ini");
+    // The order is changed where every row shows.
+    expect(screen.queryByRole("button", { name: /^Naikkan / })).toBeNull();
+  });
+
+  it("keeps on a row only the arrows; the row itself opens the rest", () => {
     show();
     for (const name of ["Naikkan", "Turunkan", "Atur"]) expect(screen.getAllByRole("button", { name: new RegExp(`^${name} `) })).toHaveLength(6);
     expect((screen.getByRole("button", { name: "Naikkan Kalender hari ini" }) as HTMLButtonElement).disabled).toBe(true);
     for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.queryByRole("button", { name })).toBeNull();
   });
 
-  it("opens one card at a time with its words, duration, schedule, TVs and actions", () => {
+  it("opens a tayangan in a sheet with its words, when and where it plays, and the other actions", () => {
     const { container } = show();
     fireEvent.click(screen.getByRole("button", { name: "Atur Contoh Satu" }));
-    expect((screen.getByLabelText("Nama tamu") as HTMLInputElement).value).toBe("Contoh Satu");
-    expect((screen.getByLabelText("Durasi tayang") as HTMLSelectElement).value).toBe("15");
+    const sheet = within(screen.getByRole("dialog", { name: "Contoh Satu" }));
+    expect((sheet.getByLabelText("Nama tamu") as HTMLInputElement).value).toBe("Contoh Satu");
+    expect((sheet.getByLabelText("Lama tayang") as HTMLSelectElement).value).toBe("15");
     // A typed welcome picks its design; it has no visit, so no cover photo to pick.
-    const design = screen.getByLabelText("Desain layar") as HTMLSelectElement;
+    const design = sheet.getByLabelText("Desain layar") as HTMLSelectElement;
     expect(design.value).toBe("werkudara");
     expect([...design.options].map(option => option.value)).toEqual(["werkudara", "polos"]);
-    for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.getByRole("button", { name })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Tayangkan sekarang" }));
-    expect((screen.getByLabelText("Lama") as HTMLSelectElement).value).toBe("15");
-    expect(screen.getByRole("button", { name: "Mulai tayangkan" })).toBeTruthy();
-    keep("sekarang", container);
+    for (const name of ["Isi", "Kapan tayang", "Di TV mana"]) expect(sheet.getByRole("group", { name })).toBeTruthy();
+    for (const name of ["Simpan", "Batal", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(sheet.getByRole("button", { name })).toBeTruthy();
+    // The order can be changed from here too: a phone's rows carry no arrows.
+    expect(screen.getByText(/^Urutan 4 dari 6 · /)).toBeTruthy();
+    expect((sheet.getByRole("button", { name: "Naikkan urutan" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(sheet.getByRole("button", { name: "Turunkan urutan" })).toBeTruthy();
+    fireEvent.click(sheet.getByRole("button", { name: "Tayangkan sekarang" }));
+    expect((sheet.getByLabelText("Lama") as HTMLSelectElement).value).toBe("15");
+    expect(sheet.getByRole("button", { name: "Mulai tayangkan" })).toBeTruthy();
+    keep("ubah", container);
+    fireEvent.click(sheet.getByRole("button", { name: "Batal" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^Atur Rapat bulanan/ }));
-    expect(screen.queryByLabelText("Nama tamu")).toBeNull();
     expect((screen.getByLabelText("Judul") as HTMLInputElement).value).toContain("Rapat bulanan");
     expect((screen.getByLabelText("Lobi") as HTMLInputElement).checked).toBe(true);
-    keep("ubah", container);
-    fireEvent.click(screen.getByRole("button", { name: /^Tutup Rapat bulanan/ }));
-    expect(screen.queryByLabelText("Judul")).toBeNull();
   });
 
-  it("offers Tayangkan lagi for a hidden card, and no Tayangkan sekarang before its migration", () => {
+  it("offers Tayangkan lagi for a hidden tayangan, and no Tayangkan sekarang before its migration", () => {
     show(admin({ welcomeReady: false }));
     fireEvent.click(screen.getByRole("button", { name: "Atur Kalender minggu ini" }));
     expect(screen.getByRole("button", { name: "Tayangkan lagi" })).toBeTruthy();
@@ -99,17 +119,55 @@ describe("Admin TV → Tayangan", () => {
     expect(screen.getByText(/menunggu migrasi 202611100008/)).toBeTruthy();
   });
 
-  it("adds through one card with a choice of four, the templates not yet in the list first", () => {
+  it("lets a video play with its sound, and keeps a file's length for old TVs", () => {
+    const data = admin();
+    const video = { ...data.items!.find(item => item.kind === "video")!, videoFile: true, body: "pra-wam/tv/video/contoh.mp4", sound: false, length: 95 };
+    const { container } = show({ ...data, soundReady: true, items: data.items!.map(item => (item.kind === "video" ? video : item)) });
+    fireEvent.click(screen.getByRole("button", { name: "Atur Annual Meeting 2025" }));
+    const sound = within(screen.getByRole("radiogroup", { name: "Suara video" }));
+    expect((sound.getByRole("radio", { name: /Tanpa suara/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(sound.getByRole("radio", { name: /Dengan suara/ }));
+    expect(screen.getByText(/tekan OK di remote sekali/)).toBeTruthy();
+    const length = screen.getByLabelText("Lama video (detik)") as HTMLInputElement;
+    expect(length.value).toBe("95");
+    // A length no video has is refused before it is sent.
+    fireEvent.change(length, { target: { value: "2" } });
+    expect(screen.getByText(/antara 3 dan 1.800 detik/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Simpan" }) as HTMLButtonElement).disabled).toBe(true);
+    keep("suara", container);
+  });
+
+  it("says that old TVs pass over a YouTube video", () => {
     show();
+    fireEvent.click(screen.getByRole("button", { name: "Atur Annual Meeting 2025" }));
+    expect(screen.getByText(/TV lama \(alamat \/lite\) melewati video YouTube/)).toBeTruthy();
+    expect(screen.queryByLabelText("Lama video (detik)")).toBeNull();
+  });
+
+  it("adds through one sheet that first asks what to add, in plain words", () => {
+    const { container } = show();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah tayangan" }));
+    const pick = () => screen.getByRole("dialog");
+    expect(within(pick()).getAllByRole("listitem")).toHaveLength(6);
+    keep("tambah", container);
+    const choose = (name: RegExp) => fireEvent.click(within(pick()).getByRole("button", { name }));
+    const back = () => fireEvent.click(within(pick()).getByRole("button", { name: "Jenis lain" }));
+
+    choose(/^Jadwal dan info otomatis/);
     expect(screen.getByRole("button", { name: "Tambah Timeline Pra WAM" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Tambah Kalender hari ini" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Sambutan" }));
+    back();
+
+    choose(/^Sambutan tamu/);
     const addGuest = screen.getByRole("button", { name: "Tambah sambutan" }) as HTMLButtonElement;
     expect(addGuest.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("Nama tamu"), { target: { value: "Contoh Tiga" } });
-    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Tiga");
+    expect(pick().querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Tiga");
     expect(addGuest.disabled).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Ulang tahun" }));
+    back();
+
+    choose(/^Ucapan ulang tahun/);
     const addBirthday = screen.getByRole("button", { name: "Tambah ucapan" }) as HTMLButtonElement;
     expect(addBirthday.disabled).toBe(true);
     // The photo is picked right here, before the greeting is added.
@@ -119,8 +177,10 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.change(screen.getByLabelText("Nama lengkap"), { target: { value: "Contoh Empat" } });
     fireEvent.change(screen.getByLabelText("Nama panggilan"), { target: { value: "Bu Contoh" } });
     expect(addBirthday.disabled).toBe(false);
-    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Happy Birthday Bu Contoh");
-    fireEvent.click(screen.getByRole("button", { name: "Video" }));
+    expect(pick().querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Happy Birthday Bu Contoh");
+    back();
+
+    choose(/^Video/);
     const addVideo = screen.getByRole("button", { name: "Tambah video" }) as HTMLButtonElement;
     fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://example.com/video" } });
     expect(addVideo.disabled).toBe(true);
@@ -128,8 +188,19 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://youtu.be/FWN1B1B7Gu8" } });
     expect(addVideo.disabled).toBe(false);
     expect(screen.getByRole("button", { name: "Unggah berkas video" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Gambar" }));
+    back();
+
+    choose(/^Gambar/);
     expect(screen.getByRole("button", { name: "Unggah gambar" })).toBeTruthy();
+    fireEvent.click(within(pick()).getByRole("button", { name: "Selesai" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("invites to add the first tayangan when the list is empty", () => {
+    show(admin({ items: [] }));
+    expect(screen.getByText(/Belum ada tayangan/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah tayangan pertama" }));
+    expect(screen.getByRole("dialog", { name: "Tambah tayangan" })).toBeTruthy();
   });
 
   it("says at the top what takes the TVs over, with the way to stop it", () => {
@@ -146,16 +217,16 @@ describe("a picture on a TV laid out in two rows", () => {
     return { ...data, items: [...data.items!, { ...data.items![0], id: "g", kind: "gambar" as const, title: "Rapat Contoh", slideId: "s1", strip: true }] };
   };
 
-  it("says where the picture goes and lets Atur move it, once TVs can be laid out so", () => {
+  it("says where the picture goes and lets its sheet move it, once TVs can be laid out so", () => {
     show(withPicture({ rowsReady: true }));
-    expect(screen.getByText("Baris foto bawah")).toBeTruthy();
+    expect(screen.getByText(/Baris foto bawah/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Atur Rapat Contoh" }));
     expect((screen.getByLabelText("Di TV dua baris") as HTMLSelectElement).value).toBe("bawah");
   });
 
   it("says nothing of it before that migration", () => {
     show(withPicture());
-    expect(screen.queryByText("Baris foto bawah")).toBeNull();
+    expect(screen.queryByText(/Baris foto bawah/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Atur Rapat Contoh" }));
     expect(screen.queryByLabelText("Di TV dua baris")).toBeNull();
   });

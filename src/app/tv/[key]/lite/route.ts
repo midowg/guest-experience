@@ -1,10 +1,11 @@
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { DEFAULT_WAM_LOOK } from "@/lib/pra-wam/theme";
-import { TV_DEFAULT_SETTINGS, weekOf, type TvFeed } from "@/lib/pra-wam/tv";
+import { looksLikeTvSlug, TV_DEFAULT_SETTINGS, weekOf, type TvFeed } from "@/lib/pra-wam/tv";
 import { liteAsk, tvLiteHtml, tvLiteNotice, tvLiteResponse } from "@/lib/pra-wam/tv-lite";
 import { tvApi, tvLitePath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { screenForKey, tvFeed } from "@/lib/server/pra-wam/tv";
+import { noteVisit } from "@/lib/server/pra-wam/tv-visits";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ key: string }> };
@@ -21,6 +22,7 @@ export async function GET(request: Request, { params }: Params) {
   const screen = await screenForKey(key).catch(() => null);
   if (!screen) return tvLiteResponse(tvLiteNotice("Alamat TV tidak ditemukan", "Periksa alamatnya di Admin TV → Layar TV."), 404);
   const now = new Date();
+  await noteVisit(request, { address: looksLikeTvSlug(key) ? tvLitePath(key) : "/tv/(tautan lama)/lite", version: "lite" }, now);
   const feed: TvFeed = await tvFeed(slideId => tvApi.image(key, slideId), now, { ...screen, layout: "penuh" }).catch(() => {
     const date = wibDate(now.toISOString());
     return { now: now.toISOString(), date, days: weekOf(date).map(day => ({ date: day, rooms: [] })), slides: [], settings: TV_DEFAULT_SETTINGS, look: DEFAULT_WAM_LOOK };

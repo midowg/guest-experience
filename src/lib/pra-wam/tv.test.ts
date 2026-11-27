@@ -596,3 +596,31 @@ describe("a TV laid out in two rows", () => {
     expect(tvItemPatchSchema.safeParse({ strip: true }).success).toBe(true);
   });
 });
+
+describe("a video with sound", () => {
+  it("carries the sound and a file's length from the feed to the item a TV plays", async () => {
+    const { playlistOf, TV_DEFAULT_SETTINGS } = await import("./tv");
+    const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+    const [file] = playlistOf({ ...base, playlist: [{ id: "v1", kind: "video", title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v1", sound: true, length: 95 }] });
+    expect(file).toMatchObject({ kind: "video", file: "/api/tv/video/v1", sound: true, length: 95 });
+    const [silent] = playlistOf({ ...base, playlist: [{ id: "v2", kind: "video", title: "Profil", body: "dQw4w9WgXcQ", seconds: 15 }] });
+    expect(silent).toMatchObject({ kind: "video", video: "dQw4w9WgXcQ" });
+    expect("sound" in silent).toBe(false);
+  });
+
+  it("takes a length a browser read only when a video can be that long", async () => {
+    const { videoSeconds } = await import("./tv");
+    expect(videoSeconds(94.2)).toBe(95);
+    expect([videoSeconds(Number.NaN), videoSeconds(Infinity), videoSeconds(1), videoSeconds(4000), videoSeconds("95")]).toEqual([null, null, null, null, null]);
+  });
+
+  it("accepts sound and a length on a row, a silent TV, and a length with an upload", async () => {
+    const { tvItemPatchSchema, tvScreenPatchSchema, tvVideoConfirmSchema } = await import("./tv");
+    expect(tvItemPatchSchema.safeParse({ sound: true, length: 95 }).success).toBe(true);
+    expect(tvItemPatchSchema.safeParse({ length: null }).success).toBe(true);
+    expect(tvItemPatchSchema.safeParse({ length: 2 }).success).toBe(false);
+    expect(tvScreenPatchSchema.safeParse({ sound: false }).success).toBe(true);
+    expect(tvScreenPatchSchema.safeParse({}).success).toBe(false);
+    expect(tvVideoConfirmSchema.safeParse({ mime: "video/mp4", size: 10, key: "k", token: "t", length: 95 }).success).toBe(true);
+  });
+});

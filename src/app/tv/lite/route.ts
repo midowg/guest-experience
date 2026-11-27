@@ -2,6 +2,7 @@ import { liteAsk, tvLiteHtml, tvLiteNotice, tvLiteResponse } from "@/lib/pra-wam
 import { tvHomeApi, tvLitePath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { tvFeed } from "@/lib/server/pra-wam/tv";
+import { noteVisit } from "@/lib/server/pra-wam/tv-visits";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   if (!isSupabaseConfigured()) return tvLiteResponse(tvLiteNotice("TV Announcement belum aktif", "Halaman ini belum disiapkan."), 404);
+  await noteVisit(request, { address: tvLitePath(null), version: "lite" });
   const feed = await tvFeed(tvHomeApi.image).catch(() => null);
   if (!feed) return tvLiteResponse(tvLiteNotice("Jadwal belum bisa dibaca", "Dicoba lagi dalam satu menit."), 503);
   return tvLiteResponse(tvLiteHtml(feed, { ask: liteAsk(request.url), path: item => tvLitePath(null, item) }));

@@ -61,3 +61,75 @@
 .template { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px 16px; align-items: center; padding: 12px; border: 1px dashed var(--cs-line); border-radius: 16px; }
 .template strong { font-size: 15px; }
 @media (min-width: 900px) { .template { grid-template-columns: 112px minmax(0, 1fr) auto; } }
+
+/* Layar TV: what each version of the board plays, side by side; and a TV's two addresses, each with its own Salin. */
+.versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 12px; }
+.versions > div { display: grid; align-content: start; gap: 4px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.versions p { margin: 0; color: var(--cs-muted); font-size: 14px; line-height: 1.5; }
+.versions .versionName { display: flex; align-items: center; gap: 8px; color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.versionName svg { flex: none; color: var(--cs-primary); }
+.addresses { display: grid; gap: 8px; min-width: 0; margin: 0; }
+.addresses > div { display: grid; gap: 4px; min-width: 0; }
+.addresses dt { color: var(--cs-muted); font-size: 13px; font-weight: 600; }
+.addresses dd { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: 0; }
+.addresses dd > button { min-height: 44px; }
+
+/* Pantauan → Siapa yang membuka: a week of days as bars, then one line per device. */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; max-width: 32rem; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.weekDay { display: grid; justify-items: center; gap: 4px; min-width: 0; }
+.weekCount { color: var(--cs-text); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.weekBar { display: flex; align-items: flex-end; width: 100%; max-width: 32px; height: 56px; border-radius: 8px; background: var(--cs-fill); overflow: hidden; }
+.weekBar i { display: block; width: 100%; min-height: 0; border-radius: 8px 8px 0 0; background: var(--cs-subtle); }
+.weekDay[data-today] .weekBar i { background: var(--cs-primary); }
+.weekName { color: var(--cs-muted); font-size: 12px; white-space: nowrap; }
+.weekDay[data-today] .weekName { color: var(--cs-text); font-weight: 700; }
+.visits { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.visit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.visitIcon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; background: var(--cs-primary-soft); color: var(--cs-primary); }
+.visitText { display: grid; gap: 2px; min-width: 0; color: var(--cs-muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.visitText strong { color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.visitText code { font-family: ui-monospace, monospace; font-size: 12px; color: var(--cs-text); }
+@media (max-width: 30rem) {
+  .visit { grid-template-columns: auto minmax(0, 1fr); }
+  .visit > :last-child { grid-column: 2; justify-self: start; }
+  .addresses dd { grid-template-columns: minmax(0, 1fr); }
+}
+
+/*
+ * Revision (27 Nov 2026, asked by the owner): tighter on a phone, no stack of big cards. What the
+ * two versions of the board play folds away under one line. An address is its label, the address
+ * and a small Salin on one line. The TVs and the devices are rows of one surface, not a card each.
+ */
+.fold { border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); }
+.fold summary { display: flex; align-items: center; min-height: 44px; padding: 0 12px; color: var(--cs-text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.fold summary:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; border-radius: 12px; }
+.fold dl { display: grid; gap: 12px; margin: 0; padding: 4px 12px 12px; }
+.fold dt { display: flex; align-items: center; gap: 8px; color: var(--cs-text); font-size: 14px; font-weight: 700; }
+.fold dt svg { flex: none; color: var(--cs-primary); }
+.fold dd { margin: 2px 0 0; color: var(--cs-muted); font-size: 13px; line-height: 1.5; }
+.created { gap: 8px; padding: 12px; }
+.addresses { gap: 6px; }
+.addresses > div { grid-template-columns: 7rem minmax(0, 1fr); align-items: center; gap: 8px; }
+.addresses dd { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.addresses .link { padding: 8px 10px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screens { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.screen { gap: 8px; padding: 12px; border: 0; border-radius: 0; background: transparent; }
+.screen + .screen { border-top: 1px solid var(--cs-line); }
+.week { gap: 6px; max-width: 24rem; padding: 10px 12px; border-radius: 12px; }
+.weekBar { max-width: 24px; height: 36px; border-radius: 6px; }
+.weekBar i { border-radius: 6px 6px 0 0; }
+.weekCount { font-size: 13px; }
+.weekName { font-size: 11px; }
+.visits { gap: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.visit { gap: 10px; padding: 8px 12px; border: 0; border-radius: 0; background: transparent; }
+.visit + .visit { border-top: 1px solid var(--cs-line); }
+.visitIcon { width: 36px; height: 36px; border-radius: 10px; }
+.visitText { font-size: 12px; }
+.visitText strong { font-size: 14px; }
+@media (max-width: 30rem) {
+  .addresses > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .addresses dd { grid-template-columns: minmax(0, 1fr) auto; }
+  .copyWord { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .visit { grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; }
+  .visit > :last-child { grid-column: auto; justify-self: end; }
+}

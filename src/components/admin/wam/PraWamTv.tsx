@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowDown, ArrowUp, Copy, ExternalLink, ImageUp, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, ExternalLink, ImageUp, MonitorPlay, RefreshCw, Tv } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, PageTabs, Pill, SectionToolbar, type Crumb } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
@@ -10,7 +10,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
 import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvModeLabels, tvModes, tvQrPositionLabels, tvQrPositions, tvSlugLimits, type TvQrPosition, type TvSettings } from "@/lib/pra-wam/tv";
-import { absolute, praWamTvApi, TV_HOME_PATH, tvAdminPath, tvPath, wamAdminPath } from "@/lib/routes";
+import { absolute, praWamTvApi, TV_HOME_PATH, tvAdminPath, tvLitePath, tvPath, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
 import css from "./tv-admin.module.css";
@@ -191,13 +191,24 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
       {view === "layar" && <section className={akun.section} aria-labelledby="tv-layar">
         <SectionToolbar title={<span id="tv-layar">Layar TV</span>} count={`${list.screens.length} TV`} />
         <p className={akun.lead}>Buka alamat di browser TV, lalu tekan Layar penuh. Alamat TV terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
+        <details className={css.fold} aria-label="Dua versi papan">
+          <summary>Apa beda papan biasa dan papan lite?</summary>
+          <dl>
+            <div><dt><MonitorPlay size={16} aria-hidden />Papan biasa</dt>
+              <dd>Untuk TV dan browser yang baru. Menayangkan semua tayangan: kalender, gambar, tulisan, sambutan, ulang tahun, video YouTube dan video berkas (bisa bersuara), susunan dua baris, dan kode QR.</dd></div>
+            <div><dt><Tv size={16} aria-hidden />Papan lite, untuk TV lama</dt>
+              <dd>Alamatnya sama, ditambah <code>/lite</code>. Pakai kalau papan biasa tidak mau terbuka di TV itu. Tanpa animasi, satu tayangan per muat halaman. Tidak menayangkan video YouTube, video berkas yang lamanya belum diisi, baris foto berjalan, dan kode QR.</dd></div>
+          </dl>
+        </details>
         <div className={css.created}>
           <p><strong>Alamat untuk semua TV.</strong> Cukup alamat ini di TV mana pun; isinya sama.</p>
-          <code className={css.link}>{absolute(origin, TV_HOME_PATH)}</code>
-          <div className={css.buttons}>
-            <ConsoleButton icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink("semua", absolute(origin, TV_HOME_PATH))}>{copied === "semua" ? "Tersalin" : "Salin alamat"}</ConsoleButton>
-          </div>
-          <p className={css.meta}>TV yang memakai alamat ini tidak tercatat di daftar di bawah. Beri TV alamat sendiri kalau ingin tahu TV mana yang menyala.</p>
+          <dl className={css.addresses}>
+            <div><dt>Papan biasa</dt><dd><code className={css.link}>{absolute(origin, TV_HOME_PATH)}</code>
+              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat papan biasa untuk semua TV" onClick={() => void copyLink("semua", absolute(origin, TV_HOME_PATH))}><span className={css.copyWord}>{copied === "semua" ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
+            <div><dt>TV lama (lite)</dt><dd><code className={css.link}>{absolute(origin, tvLitePath(null))}</code>
+              <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label="Salin alamat lite untuk semua TV" onClick={() => void copyLink("semua-lite", absolute(origin, tvLitePath(null)))}><span className={css.copyWord}>{copied === "semua-lite" ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
+          </dl>
+          <p className={css.meta}>TV yang memakai alamat umum tidak punya nama, tetapi perangkatnya tetap terlihat di Pantauan → Siapa yang membuka. Beri TV alamat sendiri kalau ingin mengaturnya satu per satu.</p>
         </div>
         {!list.slugReady && <Notice tone="warning">Alamat pendek menunggu migrasi {SLUG_MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, TV yang sudah ada tetap tayang di tautan panjangnya dan TV baru belum bisa ditambahkan.</Notice>}
         {list.screens.length === 0 ? <p className={akun.empty}>Belum ada TV dengan alamat sendiri.</p>
@@ -214,19 +225,25 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
                     onChange={change => setEditing({ id: screen.id, slug: change.target.value.toLowerCase() })} />
                   <span className={akun.hint}>{looksLikeTvSlug(edit.slug) ? addressOf(edit.slug) : "Huruf kecil, angka, dan tanda hubung; minimal 2 karakter."}</span>
                 </div>
-                : screen.slug && <code className={css.link}>{addressOf(screen.slug)}</code>}
+                : screen.slug && <dl className={css.addresses}>
+                  <div><dt>Papan biasa</dt><dd><code className={css.link}>{addressOf(screen.slug)}</code>
+                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat papan biasa ${screen.name}`} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}><span className={css.copyWord}>{copied === screen.id ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
+                  <div><dt>TV lama (lite)</dt><dd><code className={css.link}>{absolute(origin, tvLitePath(screen.slug))}</code>
+                    <ConsoleButton icon={<Copy size={18} aria-hidden />} aria-label={`Salin alamat lite ${screen.name}`} onClick={() => void copyLink(`${screen.id}-lite`, absolute(origin, tvLitePath(screen.slug)))}><span className={css.copyWord}>{copied === `${screen.id}-lite` ? "Tersalin" : "Salin"}</span></ConsoleButton></dd></div>
+                </dl>}
               {meta && <p className={css.meta}>{meta}</p>}
               <div className={css.buttons}>
                 {edit ? <>
                   <ConsoleButton disabled={!!busy} onClick={() => setEditing(null)}>Batal</ConsoleButton>
                   <ConsoleButton variant="primary" disabled={!!busy || !looksLikeTvSlug(edit.slug) || edit.slug === screen.slug} onClick={() => void saveSlug(screen, edit.slug)}>{busy === `alamat-${screen.id}` ? "Menyimpan…" : "Simpan alamat"}</ConsoleButton>
                 </> : <>
-                  {screen.slug && <ConsoleButton icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}>{copied === screen.id ? "Tersalin" : "Salin alamat"}</ConsoleButton>}
                   {list.slugReady && <ConsoleButton disabled={!!busy} onClick={() => setEditing({ id: screen.id, slug: screen.slug ?? suggestSlug(screen.name) })}>{screen.slug ? "Ubah alamat" : "Beri alamat pendek"}</ConsoleButton>}
                   {list.videoReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.playsVideo} title={screen.playsVideo ? "TV ini memutar tayangan video" : "TV ini melewati tayangan video"}
                     onClick={() => void run(`video-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ playsVideo: !screen.playsVideo }) })}>{screen.playsVideo ? "Video: diputar" : "Video: dilewati"}</ConsoleButton>}
                   {list.rowsReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.layout === "dua_baris"} title={screen.layout === "dua_baris" ? "Tayangan di atas, foto berjalan di bawah" : "Tayangan memakai seluruh layar"}
                     onClick={() => void run(`susunan-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ layout: screen.layout === "dua_baris" ? "penuh" : "dua_baris" }) })}>{screen.layout === "dua_baris" ? "Susunan: dua baris" : "Susunan: layar penuh"}</ConsoleButton>}
+                  {list.soundReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.sound !== false} title={screen.sound !== false ? "Video yang disetel Dengan suara terdengar di TV ini" : "TV ini selalu tanpa suara"}
+                    onClick={() => void run(`suara-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ sound: screen.sound === false }) })}>{screen.sound !== false ? "Suara: boleh" : "Suara: senyap"}</ConsoleButton>}
                   <ConsoleButton disabled={!!busy} onClick={() => void removeScreen(screen)}>{busy === `hapus-tv-${screen.id}` ? "Menghapus…" : "Hapus TV"}</ConsoleButton>
                 </>}
               </div>

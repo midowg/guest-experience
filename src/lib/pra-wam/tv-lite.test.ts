@@ -183,3 +183,31 @@ describe("the lite board for old TV browsers", () => {
     expect(tvLitePath("lobi", "item-1-v 2")).toBe("/tv/lobi/lite?s=item-1-v%202");
   });
 });
+
+describe("a video on the board for old TVs", () => {
+  const video = (more: Record<string, unknown> = {}) => ({ id: "v1", kind: "video" as const, title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v1", length: 95, ...more });
+  const text = { id: "t1", kind: "teks" as const, title: "Info", body: "Halo", seconds: 10 };
+  const path = (key: string) => `/tv/lite?s=${key}`;
+
+  it("plays a file whose length is known, and passes over a YouTube video or a file without one", () => {
+    expect(liteItems(feed({ playlist: [video(), text] })).map(item => item.kind)).toEqual(["video", "teks"]);
+    expect(liteItems(feed({ playlist: [video({ length: undefined }), text] })).map(item => item.kind)).toEqual(["teks"]);
+    expect(liteItems(feed({ playlist: [video({ src: undefined, body: "dQw4w9WgXcQ" }), text] })).map(item => item.kind)).toEqual(["teks"]);
+  });
+
+  it("stays on it for its length and a moment to start, silent unless the row and the TV say sound", () => {
+    const silent = tvLiteHtml(feed({ playlist: [video(), text] }), { ask: {}, path });
+    expect(silent).toContain('<video src="/api/tv/video/v1" autoplay muted playsinline');
+    expect(silent).toMatch(/http-equiv="refresh" content="99;url=\/tv\/lite\?s=/);
+    expect(silent).not.toMatch(/<script|<iframe/i);
+    const loud = tvLiteHtml(feed({ playlist: [video({ sound: true }), text] }), { ask: {}, path });
+    expect(loud).toContain('<video src="/api/tv/video/v1" autoplay playsinline');
+    expect(loud).toContain('data-sound="true"');
+  });
+
+  it("plays it over and over when it is alone in the list", () => {
+    const alone = tvLiteHtml(feed({ playlist: [video()] }), { ask: {}, path });
+    expect(alone).toContain(" loop ");
+    expect(alone).toContain('http-equiv="refresh" content="99"');
+  });
+});
