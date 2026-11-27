@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { wamAdminPath } from "@/lib/routes";
+import { areaOfPath } from "@/lib/admin-access";
 import { wamCrumbs, wamGroups, wamMenuKey, wamSection, wamSectionAt, wamSections } from "./sections";
 
 describe("Admin Pra WAM sections", () => {
@@ -95,9 +96,12 @@ describe("who may use Admin Pra WAM", () => {
     for (const file of files) expect(readFileSync(file, "utf8"), file).toContain("requireSuperAdmin()");
   });
 
-  it("keeps Data karyawan (NIP, personal details) with the super admin", () => {
+  // Since 27 Nov 2026 Data karyawan is its own admin app: the super admin, or whoever holds its grant
+  // (the "karyawan" area of src/lib/admin-access.ts), never Admin Pra WAM by itself.
+  it("keeps Data karyawan (NIP, personal details) with its own grant, not Admin Pra WAM's", () => {
     const files = routes(new URL("employees/", api));
     expect(files.length).toBeGreaterThan(0);
-    for (const file of files) expect(readFileSync(file, "utf8"), file).toContain("requireSuperAdmin()");
+    for (const file of files) expect(readFileSync(file, "utf8"), file).toContain("requireApiAdmin()");
+    expect(areaOfPath("/api/admin/employees")).toBe("karyawan");
   });
 });

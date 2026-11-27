@@ -3,7 +3,7 @@ import { listEmployees } from "@/lib/server/employees";
 import { readXlsx, XlsxError } from "@/lib/server/xlsx";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, success } from "@/lib/server/http";
-import { requireSuperAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -14,7 +14,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
  */
 export async function POST(request: Request) {
   return handle(async () => {
-    await requireSuperAdmin();
+    await requireApiAdmin();
     checkOrigin(request);
     const form = await request.formData().catch(() => { throw new ServiceError(400, "Unggahan tidak terbaca."); });
     const file = form.get("file");

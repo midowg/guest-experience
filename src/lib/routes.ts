@@ -132,7 +132,9 @@ export const adminEventsApi = "/api/admin/events";
 /** Studio Poster design library: the list, or one design by id. */
 /** Data karyawan: the list and import (super admin), the sheet check, or one person by id. */
 export const employeesApi = (part: "" | "parse" | string = "") => `/api/admin/employees${part ? `/${part}` : ""}`;
-export const EMPLOYEES_ADMIN = "/admin/super/karyawan";
+/** Data karyawan (27 Nov 2026): its own admin app, given per person (was /admin/super/karyawan, which redirects). */
+export const EMPLOYEES_ADMIN = "/admin/karyawan";
+export const employeesAdminPath = { home: EMPLOYEES_ADMIN, structure: `${EMPLOYEES_ADMIN}/struktur`, import: `${EMPLOYEES_ADMIN}/impor` } as const;
 export const posterDesignsApi = (id?: string) => `/api/admin/poster-designs${id ? `/${id}` : ""}`;
 /** Tim Werkudara: the list, or one member by id. */
 export const staffApi = (id?: string, query: Record<string, string> = {}) => {

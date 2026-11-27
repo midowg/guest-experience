@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_APPS, ADMIN_COFFEE_MIGRATION, adminAppHints, adminAppLabels, adminGrantSchema, areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminApp, type AdminGrant } from "./admin-access";
+import { ADMIN_APPS, ADMIN_COFFEE_MIGRATION, ADMIN_KARYAWAN_MIGRATION, adminAppHints, adminAppLabels, adminGrantSchema, areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminApp, type AdminGrant } from "./admin-access";
 
 describe("Kuesioner WAM, given on its own (14 Nov 2026)", () => {
   const g = (apps: AdminGrant["apps"]): AdminGrant => ({ employeeId: "e1", apps, allEvents: false, eventIds: [] });
@@ -52,7 +52,7 @@ describe("areaOfPath", () => {
     expect(areaOfPath("/admin/your-visit")).toBe("your_visit");
     expect(areaOfPath("/admin/acara/abc/rsvp")).toBe("events");
     expect(areaOfPath("/api/admin/events/abc")).toBe("events");
-    expect(areaOfPath("/api/admin/employees")).toBe("super");
+    expect(areaOfPath("/api/admin/employees")).toBe("karyawan");
     expect(areaOfPath("/api/admin/grants/abc")).toBe("super");
   });
   it("does not know other paths, or none", () => {
@@ -194,5 +194,32 @@ describe("two WAM admin doors (20 Nov 2026): Admin Pra WAM and Admin WAM 2026", 
     expect(adminAppLabels.wam).toBe("Admin Pra WAM");
     expect(adminAppLabels.wam_acara).toBe("WAM");
     expect(tidyGrant({ apps: ["wam_acara", "wam"], allEvents: false, eventIds: [] }).apps).toEqual(["wam", "wam_acara"]);
+  });
+});
+
+describe("Data karyawan as its own admin app (27 Nov 2026)", () => {
+  const grantOf = (apps: AdminApp[]): AdminGrant => ({ employeeId: "e", apps, allEvents: false, eventIds: [] });
+  it("puts /admin/karyawan, its old Super admin address and the employees API in one area", () => {
+    expect(areaOfPath("/admin/karyawan")).toBe("karyawan");
+    expect(areaOfPath("/admin/karyawan/struktur")).toBe("karyawan");
+    expect(areaOfPath("/admin/super/karyawan")).toBe("karyawan");
+    expect(areaOfPath("/api/admin/employees/parse")).toBe("karyawan");
+    expect(areaOfPath("/api/admin/employees/abc")).toBe("karyawan");
+    expect(areaOfPath("/admin/super/tim")).toBe("super");
+    expect(areaOfPath("/admin/karyawanx")).toBeNull();
+  });
+  it("opens only with its own grant, and shows its card then", () => {
+    expect(mayOpenArea(grantOf(["karyawan"]), "karyawan")).toBe(true);
+    expect(mayOpenArea(grantOf(["hr", "wam"]), "karyawan")).toBe(false);
+    expect(mayOpenArea(grantOf(["karyawan"]), "super")).toBe(false);
+    expect(showsAppCard({ apps: ["karyawan"] }, "karyawan")).toBe(true);
+    expect(showsAppCard({ apps: ["hr"] }, "karyawan")).toBe(false);
+    expect(showsAppCard(null, "karyawan")).toBe(true);
+  });
+  it("is named in Akses admin and waits for its migration", () => {
+    expect(adminAppLabels.karyawan).toBe("Data karyawan");
+    expect(ADMIN_APPS).toContain("karyawan");
+    expect(ADMIN_KARYAWAN_MIGRATION).toBe("202612040001_admin_grants_karyawan.sql");
+    expect(tidyGrant({ apps: ["karyawan", "acara"], allEvents: false, eventIds: [] }).apps).toEqual(["acara", "karyawan"]);
   });
 });

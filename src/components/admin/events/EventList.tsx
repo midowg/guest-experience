@@ -32,6 +32,7 @@ const appLooks: Record<StandaloneApp["key"], { logo?: string; mark: string; tone
   booking: { mark: "B", tone: "#0d9488" },
   tv: { mark: "TV", tone: "#ea580c" },
   wellbeing: { logo: "/wlm/icon-192.png", mark: "WLM", tone: "#e0457b" },
+  karyawan: { logo: "/data-karyawan/icon.svg", mark: "K", tone: "#4338ca" },
 };
 const kinds: Record<EventKind, string> = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing", panduan: "Panduan lokasi" };
 /** A colour per kind, behind an event that has no photo yet. */

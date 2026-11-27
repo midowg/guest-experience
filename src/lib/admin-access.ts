@@ -18,19 +18,22 @@ export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 // rundown, modules, Kuis live, penguji, Panitia WAM) at /admin/wam2026, given apart from Admin Pra WAM ("wam").
 // "hr" (20 Nov 2026, migration 202611200703): Admin WG People at /admin/hr (absensi, wajah, titik kantor).
 // "coffee" (25 Nov 2026, migration 202612010001): Pengelola WG Coffee at /admin/coffee (antrean, rekap, jatah).
-export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr", "coffee"] as const;
+// "karyawan" (27 Nov 2026, migration 202612040001): Data karyawan as its own admin app at /admin/karyawan (was in
+// Super admin): the list, Struktur, and Impor Excel. Admin only: there is no app for the employees themselves.
+export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "wam_acara", "kuesioner", "tv", "wellbeing", "hr", "coffee", "karyawan"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
 export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
 export const ADMIN_WELLBEING_MIGRATION = "202611160050_wellbeing.sql";
 export const ADMIN_WAM_ACARA_MIGRATION = "202611200603_admin_wam_acara.sql";
 export const ADMIN_HR_MIGRATION = "202611200703_admin_grants_hr.sql";
 export const ADMIN_COFFEE_MIGRATION = "202612010001_coffee.sql";
+export const ADMIN_KARYAWAN_MIGRATION = "202612040001_admin_grants_karyawan.sql";
 /** The two WAM admin doors' names, each in one place (change them here). */
 export const PRA_WAM_ADMIN_LABEL = "Admin Pra WAM";
 export const WAM_EVENT_ADMIN_LABEL = "WAM";
 export const adminAppLabels: Record<AdminApp, string> = {
   acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: PRA_WAM_ADMIN_LABEL, kuesioner: "Kuesioner WAM", tv: "TV kantor", wellbeing: "Wellbeing",
-  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People", coffee: "WG Coffee",
+  wam_acara: WAM_EVENT_ADMIN_LABEL, hr: "WG People", coffee: "WG Coffee", karyawan: "Data karyawan",
 };
 export const adminAppHints: Record<AdminApp, string> = {
   acara: "Undangan, kartu, e-guide, dan kunjungan: membuat acara dan membuka acara yang dipilih di bawah.",
@@ -42,6 +45,7 @@ export const adminAppHints: Record<AdminApp, string> = {
   wellbeing: "Program wellbeing kantor: periksa aktivitas, poin karyawan, tambah poin ke banyak orang, katalog kegiatan.",
   hr: "Admin WG People: absensi karyawan (yang perlu dicek, absen harian, catat manual), wajah terdaftar, dan titik kantor; nanti cuti dan lembur.",
   coffee: "Pengelola WG Coffee: antrean klaim dan pesanan rapat (selesai diproses, tolak, catat manual), rekap bulanan, dan jatah. Pemegangnya juga bisa membuka Mode GA.",
+  karyawan: "Data karyawan: tambah, ubah, dan hapus karyawan, struktur organisasi, dan impor Excel dari HR. Akun dan peran WAM serta impor unit tetap butuh Admin Pra WAM.",
   wam_acara: "Admin aplikasi acara WAM 2026: pengaturan, penguji, rundown, kamar, perjalanan, panduan, info acara, Awarding, Silent Meeting, Kuis live, dan Panitia WAM. Terpisah dari Admin Pra WAM.",
 };
 /** Opens the WAM questionnaire: only with its own grant. */
@@ -78,6 +82,8 @@ export function tidyGrant(input: AdminGrantInput): Omit<AdminGrant, "employeeId"
 export type AdminArea = AdminApp | "events" | "home" | "super";
 const areas: [RegExp, AdminArea][] = [
   [/^\/admin\/?$/, "home"],
+  // Data karyawan's old address (in Super admin) only redirects to the app.
+  [/^\/admin\/(karyawan|super\/karyawan)(\/|$)/, "karyawan"],
   [/^\/admin\/(super|akses)(\/|$)/, "super"],
   [/^\/admin\/wam2026(\/|$)/, "wam_acara"],
   [/^\/admin\/wam\/tv(\/|$)/, "tv"],
@@ -95,10 +101,11 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/api\/admin\/wellbeing(\/|$)/, "wellbeing"],
   [/^\/api\/admin\/hr(\/|$)/, "hr"],
   [/^\/api\/admin\/coffee(\/|$)/, "coffee"],
+  [/^\/api\/admin\/employees(\/|$)/, "karyawan"],
   [/^\/api\/admin\/wam\/questionnaire(\/|$)/, "kuesioner"],
   [/^\/api\/admin\/wam(\/|$)/, "wam"],
   [/^\/api\/admin\/(events|featured|photos|poster-designs|staff)(\/|$)/, "events"],
-  [/^\/api\/admin\/(employees|modules|templates|visibility|grants|home-style|wam2026-tampil)(\/|$)/, "super"],
+  [/^\/api\/admin\/(modules|templates|visibility|grants|home-style|wam2026-tampil)(\/|$)/, "super"],
 ];
 export function areaOfPath(path: string | null | undefined): AdminArea | null {
   if (!path) return null;
@@ -142,6 +149,7 @@ export function showsAppCard(grant: Pick<AdminGrant, "apps"> | null, key: string
   if (key === "wam_acara") return grant.apps.includes("wam_acara");
   if (key === "hr") return grant.apps.includes("hr");
   if (key === "coffee") return grant.apps.includes("coffee");
+  if (key === "karyawan") return grant.apps.includes("karyawan");
   return key === "tv" && grant.apps.includes("tv");
 }
 

@@ -7,6 +7,7 @@ import { MAX_JOBS, categoryLabels, employeeCategories, jobPostLabels, jobPosts, 
 import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, leadDepartments, type Leads } from "@/lib/pra-wam/leads";
 import { GENDERS, asGender, genderLabels } from "@/lib/pra-wam/call-name";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
+import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
 import css from "./employee-editor.module.css";
 
 export type EmployeeDraft = Omit<Employee, "id">;
@@ -35,7 +36,7 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
  * office that is no BU code is kept. GA and Intern (Status kerja) are one per person.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
-export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, units = {}, people = [], leads = {}, jobsReady = true, gmReady = true, saving, error, onSave, onDelete, onClose }: {
+export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, units = {}, people = [], leads = {}, jobsReady = true, gmReady = true, rolesLocked = false, saving, error, onSave, onDelete, onClose }: {
   /** The person to change; null adds a new one. */
   person: Employee | null;
   /** Their jobs, the Utama one first; a new person starts with one empty card. */
@@ -54,6 +55,8 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
   jobsReady?: boolean;
   /** False while GM, Tim and a HOD under their GM wait for migration 202611100002. */
   gmReady?: boolean;
+  /** BOD and Admin WAM shown but not changed (Data karyawan without Admin Pra WAM, 27 Nov 2026). */
+  rolesLocked?: boolean;
   saving: boolean;
   error: string;
   onSave: (draft: EmployeeDraft, jobs: EmployeeJob[], roles: PraWamRole[]) => void;
@@ -259,15 +262,16 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
           <p className={css.hint}>Diatur di sini saja; Admin WAM hanya memilih Panitia. BOD berdiri sendiri: bukan HOD atau Lead, dan bukan Panitia atau Admin WAM. HOD dan Lead dipilih di Posisi tiap pekerjaan.</p>
           <div className={css.roleTicks}>
             <label className={css.roleTick}>
-              <input type="checkbox" checked={isBod} disabled={!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin"))} onChange={() => toggleRole("bod")} />
+              <input type="checkbox" checked={isBod} disabled={rolesLocked || (!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")))} onChange={() => toggleRole("bod")} />
               <span>BOD<small>Melihat Ringkasan dan semua sesi, tanpa mengubah.</small></span>
             </label>
             <label className={css.roleTick}>
-              <input type="checkbox" checked={nextRoles.includes("admin")} disabled={isBod} onChange={() => toggleRole("admin")} />
+              <input type="checkbox" checked={nextRoles.includes("admin")} disabled={rolesLocked || isBod} onChange={() => toggleRole("admin")} />
               <span>Admin WAM<small>Mengatur aplikasi WAM: akun, ruang, acara.</small></span>
             </label>
           </div>
-          {!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "HOD atau Lead" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
+          {rolesLocked && <p className={css.hint}>BOD dan Admin WAM diubah oleh super admin atau pemegang {PRA_WAM_ADMIN_LABEL}.</p>}
+          {!rolesLocked && !isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "HOD atau Lead" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
         </fieldset>
 
         {/* Aktif and Hapus live here, not in the list's rows (9 Nov 2026). */}

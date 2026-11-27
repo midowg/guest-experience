@@ -3,19 +3,19 @@ import { employeeJobsSchema, employeePatchSchema } from "@/lib/employees";
 import { deleteEmployee, updateEmployee } from "@/lib/server/employees";
 import { JOBS_GM_MIGRATION, JOBS_MIGRATION, setJobs } from "@/lib/server/employee-jobs";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireSuperAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * PATCH: change one person's details (super admin). With `jobs` (Pekerjaan, 9 Nov 2026) their jobs
+ * PATCH: change one person's details (the super admin, or the Data karyawan grant). With `jobs` (Pekerjaan, 9 Nov 2026) their jobs
  * too: the Utama job goes to the employees columns and the HOD and Lead jobs to pw_leads; the reply
  * is then `{ employee, jobs, leads, migrated }` instead of the person alone.
  */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
-    await requireSuperAdmin();
+    await requireApiAdmin();
     checkOrigin(request);
     const id = validate(z.uuid(), (await params).id);
     const body = await readJson(request, 40_000);
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, { params }: Params) {
 /** DELETE: remove one person for good (super admin); refused for someone the apps already hold. */
 export async function DELETE(request: Request, { params }: Params) {
   return handle(async () => {
-    await requireSuperAdmin();
+    await requireApiAdmin();
     checkOrigin(request);
     await deleteEmployee(validate(z.uuid(), (await params).id));
     return success(null, "Karyawan dihapus.");

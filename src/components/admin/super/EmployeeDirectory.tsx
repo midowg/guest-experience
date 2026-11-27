@@ -40,7 +40,7 @@ const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "pang
  * more than one job (9 Nov 2026) shows the Utama one and "+1 pekerjaan". `wamAccounts` gives the
  * count of WAM accounts and "Buat akun" for everyone still missing one.
  */
-export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, jobs: initialJobs, jobsMigrated = true, gmMigrated = true, part = "daftar" }: {
+export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, jobs: initialJobs, jobsMigrated = true, gmMigrated = true, part = "daftar", wamManage = true }: {
   initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
   /** Who heads which departments and who is a Lead (6 and 9 Nov 2026), and the departments to pick from. */
   leads?: Record<string, Leads>; leadOptions?: LeadOptions;
@@ -52,6 +52,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   gmMigrated?: boolean;
   /** Which tab of Data karyawan: the list, or the Excel import. */
   part?: "daftar" | "impor";
+  /** False for a Data karyawan admin without Admin Pra WAM (27 Nov 2026): WAM accounts and roles are shown, not changed. */
+  wamManage?: boolean;
 }) {
   const [people, setPeople] = useState(initial);
   const [file, setFile] = useState<File | null>(null);
@@ -258,7 +260,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       {wamAccounts?.migrated && <div className="stack">
         <p><strong>Akun WAM:</strong> {activeWithAccount} dari {activeCount} karyawan aktif sudah punya akun. Peran diatur di Admin WAM.</p>
         {!wamAccounts.passwordReady && <Notice tone="warning">Password awal WAM belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
-        {canCreate.length > 0 && <div className={styles.qrActions}>
+        {wamManage && canCreate.length > 0 && <div className={styles.qrActions}>
           <Button type="button" variant="secondary" disabled={!!busy || !wamReady} onClick={() => createAccounts()}><UserPlus size={17} aria-hidden="true" /> {busy === "accounts" ? "Membuat akun…" : `Buat akun WAM untuk ${canCreate.length} karyawan`}</Button>
         </div>}
       </div>}
@@ -270,7 +272,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
         <Button type="button" disabled={!migrated || !!busy} onClick={() => { setEditorError(""); setEditor({ person: null }); }}><Plus size={18} aria-hidden="true" /> Tambah karyawan</Button>
       </div>
 
-      {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di atas, atau tambah satu per satu.</p>
+      {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di Impor Excel, atau tambah satu per satu.</p>
         : <div className={styles.tableWrap}><table className={styles.table}>
           <caption className="sr-only">Daftar karyawan</caption>
           <thead><tr><th scope="col">Karyawan</th><th scope="col">Departemen & jabatan</th><th scope="col">Business Unit</th><th scope="col">Kontak</th><th scope="col"><span className="sr-only">Aksi</span></th></tr></thead>
@@ -309,7 +311,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     </section>}
 
     {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} jobs={editor.person ? jobsOf(editor.person) : [blankJob()]}
-      roles={editor.person ? rolesOf(editor.person.id) : []} leads={leads} jobsReady={jobsMigrated} gmReady={gmMigrated}
+      roles={editor.person ? rolesOf(editor.person.id) : []} rolesLocked={!wamManage} leads={leads} jobsReady={jobsMigrated} gmReady={gmMigrated}
       departments={jobDepartments} units={units} saving={busy === "editor"} error={editorError}
       people={people.filter(item => item.active)}
       onSave={(draft, nextJobs, nextRoles) => void saveEditor(editor.person, draft, nextJobs, nextRoles)}

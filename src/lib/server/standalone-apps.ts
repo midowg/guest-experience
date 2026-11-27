@@ -2,12 +2,13 @@ import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { PRA_WAM_ADMIN_LABEL, WAM_EVENT_ADMIN_LABEL } from "@/lib/admin-access";
 import { mainWamModeLabels } from "@/lib/main-wam/types";
-import { BOOKING_PATH, bookingPath, COFFEE_PATH, coffeeAdminPath, coffeePath, HR_PATH, hrAdminPath, hrPath, mainWamAdminPath, praWamPath, wamAdminPath, WELLBEING_PATH, wellbeingAdminPath, wellbeingPath } from "@/lib/routes";
+import { BOOKING_PATH, bookingPath, COFFEE_PATH, coffeeAdminPath, coffeePath, employeesAdminPath, HR_PATH, hrAdminPath, hrPath, mainWamAdminPath, praWamPath, wamAdminPath, WELLBEING_PATH, wellbeingAdminPath, wellbeingPath } from "@/lib/routes";
 import { currentPhase } from "./pra-wam/events";
 import { openResetRequestCount } from "./pra-wam/reset-requests";
 import { readMainWamSettings } from "./main-wam/settings";
 import { waitingCount } from "./hr/attendance";
 import { waitingCount as coffeeWaitingCount } from "./coffee/queue";
+import { listEmployees } from "./employees";
 
 /**
  * The standalone apps (10 Nov 2026): the ones that run on their own at a fixed address, apart from
@@ -18,7 +19,7 @@ import { waitingCount as coffeeWaitingCount } from "./coffee/queue";
  * (key wam_acara): managed in Admin WAM 2026, given apart from Admin Pra WAM (the WAM card).
  */
 export type StandaloneApp = {
-  key: "wam" | "wam_acara" | "booking" | "tv" | "wellbeing" | "hr" | "coffee";
+  key: "wam" | "wam_acara" | "booking" | "tv" | "wellbeing" | "hr" | "coffee" | "karyawan";
   name: string;
   /** What kind of app, on its preview. */
   eyebrow: string;
@@ -37,13 +38,14 @@ export type StandaloneApp = {
 const short = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]> {
-  const [phase, resets, mainWam, hrWaiting, coffeeWaiting] = await Promise.all([
+  const [phase, resets, mainWam, hrWaiting, coffeeWaiting, people] = await Promise.all([
     currentPhase(wibDate(now.toISOString())).catch(() => null),
     openResetRequestCount().catch(() => null),
     readMainWamSettings().catch(() => null),
     waitingCount().catch(() => null),
     // Before migration 202612010001 (or on a database hiccup) the card simply shows no count.
     coffeeWaitingCount().catch(() => null),
+    listEmployees().then(({ employees }) => employees.filter(person => person.active).length).catch(() => null),
   ]);
   return [
     {
@@ -78,6 +80,14 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       description: "Karyawan mengajukan klaim minuman JumpStart dari HP dengan jatah per bulan; GA mengirim pesanan rapat untuk tamu dan tim. Pengelola memproses antrean, mencatat manual, dan mengunduh rekap.",
       open: { label: "Buka aplikasi", href: coffeePath.home }, manage: { label: "Kelola WG Coffee", href: coffeeAdminPath.home },
       ...(coffeeWaiting ? { waiting: { label: `${coffeeWaiting} pesanan menunggu diproses`, href: coffeeAdminPath.home } } : {}),
+    },
+    {
+      // Data karyawan (27 Nov 2026): admin only, so no address and no "Buka aplikasi"; it was in Super admin.
+      key: "karyawan", name: "Data karyawan", eyebrow: "Khusus admin",
+      status: people !== null ? `${people} karyawan aktif` : "Data karyawan bersama",
+      address: "",
+      description: "Satu daftar karyawan untuk semua aplikasi Journey: tambah, ubah, dan hapus karyawan, struktur organisasi, dan impor Excel dari HR.",
+      manage: { label: "Kelola Data karyawan", href: employeesAdminPath.home },
     },
     {
       key: "booking", name: "Booking Kantor", eyebrow: "Booking ruangan",

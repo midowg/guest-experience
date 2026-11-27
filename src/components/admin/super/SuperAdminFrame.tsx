@@ -1,19 +1,17 @@
 import type { ReactNode } from "react";
-import { Blocks, Crown, Dices, Home, KeyRound, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog, Users } from "lucide-react";
+import { Blocks, Crown, Dices, Home, KeyRound, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGroup } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
 import { PRA_WAM_ADMIN_LABEL } from "@/lib/admin-access";
-import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, EMPLOYEES_ADMIN, SUPER_ADMIN_HOME, superAdminPath, wamAdminPath } from "@/lib/routes";
+import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, SUPER_ADMIN_HOME, superAdminPath, wamAdminPath } from "@/lib/routes";
 
-export type SuperSection = "dashboard" | "tim" | "karyawan" | "templat" | "modul" | "admin" | "akses" | "voucher" | "beranda";
+export type SuperSection = "dashboard" | "tim" | "templat" | "modul" | "admin" | "akses" | "voucher" | "beranda";
 
 /** Every super admin place, in the side menu's groups (6 Nov 2026: they were links inside the dashboard). */
 const groups: { label: string; items: { key: SuperSection; label: string; href: string; icon: ReactNode }[] }[] = [
   { label: "Ringkasan", items: [{ key: "dashboard", label: "Dashboard", href: SUPER_ADMIN_HOME, icon: <LayoutDashboard size={20} /> }] },
-  { label: "Orang", items: [
-    { key: "tim", label: "Tim Werkudara", href: superAdminPath.team, icon: <UserCog size={20} /> },
-    { key: "karyawan", label: "Data karyawan", href: EMPLOYEES_ADMIN, icon: <Users size={20} /> },
-  ] },
+  // Data karyawan left for its own admin app on 27 Nov 2026 (/admin/karyawan, a card on Beranda).
+  { label: "Orang", items: [{ key: "tim", label: "Tim Werkudara", href: superAdminPath.team, icon: <UserCog size={20} /> }] },
   { label: "Acara", items: [
     { key: "templat", label: "Templat & acara", href: superAdminPath.templates, icon: <LayoutTemplate size={20} /> },
     { key: "modul", label: "Modul admin", href: superAdminPath.modules, icon: <Blocks size={20} /> },
