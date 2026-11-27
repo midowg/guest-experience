@@ -211,3 +211,23 @@ describe("a video on the board for old TVs", () => {
     expect(alone).toContain('http-equiv="refresh" content="99"');
   });
 });
+
+describe("a video's name on the board for old TVs", () => {
+  const video = (more: Record<string, unknown> = {}) => ({ id: "v1", kind: "video" as const, title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v1", length: 95, ...more });
+  const path = (key: string) => `/tv/lite?s=${key}`;
+
+  it("writes it in a corner, going by itself after a few seconds unless the row says all through", () => {
+    const first = tvLiteHtml(feed({ playlist: [video()] }), { ask: {}, path });
+    expect(first).toContain('<p class="chip" data-mode="awal">Profil</p>');
+    expect(first).toContain("chipaway .6s ease 6s");
+    expect(tvLiteHtml(feed({ playlist: [video({ titleShow: "terus" })] }), { ask: {}, path })).toContain('data-mode="terus">Profil</p>');
+    expect(tvLiteHtml(feed({ playlist: [video({ titleShow: "tidak" })] }), { ask: {}, path })).not.toContain('class="chip"');
+    expect(tvLiteHtml(feed({ playlist: [video({ title: "" })] }), { ask: {}, path })).not.toContain('class="chip"');
+  });
+
+  it("leaves out anything a name could use to run a script", () => {
+    const html = tvLiteHtml(feed({ playlist: [video({ title: "<img src=x onerror=alert(1)>" })] }), { ask: {}, path });
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+  });
+});

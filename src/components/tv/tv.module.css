@@ -373,6 +373,15 @@
 /* A video is not shown before it plays: the player's own play button and poster stay under the waiting screen. */
 .video iframe, .video video { opacity: 0; transition: opacity .4s ease-out; }
 .video[data-playing="true"] iframe, .video[data-playing="true"] video { opacity: 1; }
+/*
+ * A video's name (VideoSlide): a small chip in the top left corner, in the board's units, so it is
+ * the right size on a TV lying down and on one standing up. "awal" fades it out after six seconds
+ * (TV_TITLE_SECONDS); "terus" leaves it. Two lines at most; kept clear of the screen's edge.
+ */
+.videoChip { position: absolute; top: calc(3 * var(--u)); left: calc(3 * var(--u)); z-index: 2; display: -webkit-box; max-width: min(46%, calc(60 * var(--u))); margin: 0; overflow: hidden; padding: calc(1.2 * var(--u)) calc(2.4 * var(--u)); border-radius: calc(1.6 * var(--u)); background: rgb(0 0 0 / .68); color: #fff; font-size: calc(3.2 * var(--u)); font-weight: 700; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.videoChip[data-mode="awal"] { animation: chipAway .6s ease 6s forwards; }
+@keyframes chipAway { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .videoChip[data-mode="awal"] { animation-duration: .01s; } }
 /* A video asked to play with sound that this TV's browser keeps silent: how to turn the sound on, small, in a corner. */
 .soundHint { position: absolute; bottom: calc(3 * var(--u)); left: calc(3 * var(--u)); z-index: 2; max-width: 60%; margin: 0; padding: calc(1 * var(--u)) calc(1.8 * var(--u)); border-radius: calc(1.2 * var(--u)); background: rgb(0 0 0 / .72); color: #fff; font-size: calc(2 * var(--u)); font-weight: 600; line-height: 1.3; }
 

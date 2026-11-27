@@ -107,6 +107,29 @@ describe("the waiting screen and videos", () => {
     } finally { HTMLMediaElement.prototype.play = play; }
   });
 
+  it("puts the video's name in a corner once it plays: for a few seconds, all through, or never", () => {
+    const show = (titleShow?: "awal" | "terus" | "tidak", title = "Profil Werkudara") => {
+      const { container } = render(<VideoSlide video="" file="/api/tv/video/contoh" title={title} loop={false} titleShow={titleShow} onEnd={() => undefined} />);
+      fireEvent.playing(container.querySelector("video")!);
+      if (titleShow === "terus" && title.trim()) keep("video-judul", container);
+      return container.querySelector("[data-title='video']") as HTMLElement | null;
+    };
+    // Not before it plays: the waiting screen is not covered by it.
+    const waiting = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil Werkudara" loop={false} onEnd={() => undefined} />);
+    expect(waiting.container.querySelector("[data-title='video']")).toBeNull();
+    cleanup();
+    // A few seconds at the start is the default.
+    const first = show();
+    expect(first?.textContent).toBe("Profil Werkudara");
+    expect(first?.getAttribute("data-mode")).toBe("awal");
+    cleanup();
+    expect(show("terus")?.getAttribute("data-mode")).toBe("terus");
+    cleanup();
+    expect(show("tidak")).toBeNull();
+    cleanup();
+    expect(show("terus", "  ")).toBeNull();
+  });
+
   it("covers a YouTube video too until its player says it plays", () => {
     const { container } = render(<VideoSlide video="FWN1B1B7Gu8" title="Annual Meeting" loop={false} onEnd={() => undefined} />);
     expect(container.querySelector("iframe")?.getAttribute("src")).toContain("/embed/FWN1B1B7Gu8?autoplay=1&mute=1");

@@ -386,7 +386,9 @@ export type TvItem =
     /** Played with its sound, where this TV is allowed sound (26 Nov 2026); without it otherwise. */
     sound?: boolean;
     /** A file's length in seconds, when known: how long the board for old TVs stays on it. */
-    length?: number }
+    length?: number;
+    /** The video's name in a corner of the screen: never, for a few seconds at the start, or all through (27 Nov 2026). */
+    titleShow?: TvTitleShow }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -510,6 +512,18 @@ export type TvVideoStart = z.infer<typeof tvVideoStartSchema>;
  * for a YouTube video, that board passes the video over, as before.
  */
 export const tvVideoLength = { least: 3, most: 30 * 60 } as const;
+/*
+ * A video's name on the screen (27 Nov 2026, asked by the owner): many videos stand upright, so
+ * the screen has bars beside them and a corner for a small chip with the video's name. It is
+ * drawn in the screen's own units, so on every TV, standing or lying, it has the size that fits.
+ * "awal" (the default) shows it for the first seconds, "terus" all through, "tidak" never.
+ */
+export const tvTitleShows = ["awal", "terus", "tidak"] as const;
+export type TvTitleShow = typeof tvTitleShows[number];
+export const tvTitleShowLabels: Record<TvTitleShow, string> = { awal: "Sebentar di awal", terus: "Terus tampil", tidak: "Tidak ditampilkan" };
+export const tvTitleShow = (value: unknown): TvTitleShow => (value === "terus" || value === "tidak" ? value : "awal");
+/** How long "awal" keeps the chip, in seconds (the stylesheets of the board and of the board for old TVs draw it the same). */
+export const TV_TITLE_SECONDS = 6;
 /**
  * Whether a row plays on the board for old TVs (/tv/lite), and why not when it does not: that
  * board plays everything but a YouTube video and a video file whose length is not known.
@@ -537,7 +551,7 @@ export function sniffVideo(start: Uint8Array): TvVideoMime | null {
 /** A row as a TV gets it. `src` is a picture's address. */
 export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string; cut?: boolean;
   /** A video's: played with sound on this TV, and a file's length in seconds when known. */
-  sound?: boolean; length?: number };
+  sound?: boolean; length?: number; titleShow?: TvTitleShow };
 
 /*
  * A birthday greeting (migration 202611100012), after the team's own card ("WG Bday", a portrait
@@ -601,7 +615,7 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "", cut: !!item.src && item.cut === true } }] : [];
     // One picture per meeting photo; none, and the row is passed over.
     if (item.kind === "foto_meeting") return (feed.meetingPhotos ?? []).map(photo => ({ key: `${key}-${photo.id}`, kind: "gambar" as const, seconds: item.seconds, slide: { id: photo.id, title: photo.caption, seconds: item.seconds, src: photo.src } }));
-    const heard = item.sound ? { sound: true } : {};
+    const heard = { ...(item.sound ? { sound: true } : {}), titleShow: tvTitleShow(item.titleShow) };
     if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds, ...heard, ...(item.length ? { length: item.length } : {}) }];
     if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds, ...heard }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
@@ -644,7 +658,7 @@ export const tvItemPatchSchema = z.object({
   /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
   strip: z.boolean().optional(),
   /** A video's: whether it plays with its sound, and its length in seconds for the board for old TVs (null: not known). */
-  sound: z.boolean().optional(), length: videoLength.nullable().optional(),
+  sound: z.boolean().optional(), length: videoLength.nullable().optional(), titleShow: z.enum(tvTitleShows).optional(),
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });

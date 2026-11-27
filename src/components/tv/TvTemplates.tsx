@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
-import { fit, fitText, TV_VIDEO_MOST_MS, TV_VIDEO_START_MS, youtubeEmbed, type TvBirthday, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { fit, fitText, TV_VIDEO_MOST_MS, TV_VIDEO_START_MS, youtubeEmbed, type TvBirthday, type TvNote, type TvTimelineEntry, type TvTitleShow, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { TV_BIRTHDAY_CARD, TV_BIRTHDAY_FLOWERS, TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
 import "@fontsource/playfair-display/800.css";
 import "@fontsource/cormorant-garamond/600-italic.css";
@@ -128,7 +128,7 @@ export function TvLoader({ note }: { note: string }) {
  * that does not start in TV_VIDEO_START_MS is passed over too. With `loop` (the only thing in the
  * playlist, as when it takes the TV over) it repeats, and one that will not start says so.
  */
-export function VideoSlide({ video, file, title, loop, sound = false, onEnd }: { video: string; file?: string; title: string; loop: boolean; sound?: boolean; onEnd: () => void }) {
+export function VideoSlide({ video, file, title, loop, sound = false, titleShow = "awal", onEnd }: { video: string; file?: string; title: string; loop: boolean; sound?: boolean; titleShow?: TvTitleShow; onEnd: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const end = useRef(onEnd);
@@ -214,6 +214,8 @@ export function VideoSlide({ video, file, title, loop, sound = false, onEnd }: {
         onPlaying={play} onEnded={() => end.current()} onError={() => { if (loop) setStuck(true); else end.current(); }} />
       : <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />}
     {!playing && <TvLoader note={stuck ? "TV ini belum bisa memulai video sendiri" : "Menyiapkan video"} />}
+    {/* The video's name, small, in a corner: the screen has bars beside an upright video. Shown once it plays; "awal" lets it go by itself. */}
+    {playing && title.trim() && titleShow !== "tidak" && <p className={css.videoChip} data-mode={titleShow} data-title="video">{title}</p>}
     {playing && silenced && <p className={css.soundHint} role="note">Suara belum menyala. Tekan OK di remote atau klik layar sekali.</p>}
   </section>;
 }

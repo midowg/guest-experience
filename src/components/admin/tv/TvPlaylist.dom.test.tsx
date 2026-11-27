@@ -124,6 +124,11 @@ describe("Admin TV → Tayangan", () => {
     const video = { ...data.items!.find(item => item.kind === "video")!, videoFile: true, body: "pra-wam/tv/video/contoh.mp4", sound: false, length: 95 };
     const { container } = show({ ...data, soundReady: true, items: data.items!.map(item => (item.kind === "video" ? video : item)) });
     fireEvent.click(screen.getByRole("button", { name: "Atur Annual Meeting 2025" }));
+    // The video's name on the screen: a few seconds at the start unless said otherwise.
+    const naming = within(screen.getByRole("radiogroup", { name: "Judul video di layar" }));
+    expect((naming.getByRole("radio", { name: /Sebentar di awal/ }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(naming.getByRole("radio", { name: /Terus tampil/ }));
+    expect(screen.getByText(/chip kecil di pojok kiri atas/)).toBeTruthy();
     const sound = within(screen.getByRole("radiogroup", { name: "Suara video" }));
     expect((sound.getByRole("radio", { name: /Tanpa suara/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(sound.getByRole("radio", { name: /Dengan suara/ }));
