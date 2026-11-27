@@ -16,7 +16,7 @@ Isinya aturan yang **sudah diputuskan dan sudah ada di kode** sampai 6 Nov 2026.
 
 | Aturan | Rinciannya |
 | --- | --- |
-| Rilis | Setiap perubahan di-push ke `docs/rancangan-pra-wam` **dan** `HEAD:main` (remote `guest-experience`). Selesai berarti ketiga deploy Vercel berstatus sukses, lalu diperiksa di https://journey.werkudara.group. |
+| Rilis | Sejak 27 Nov 2026 (hemat build Vercel): setiap perubahan di-push ke `dev` (remote `guest-experience`), bukan ke `main` atau `docs/rancangan-pra-wam`. Produksi berubah hanya saat pemilik bilang "rilis": `npm run rilis` (lihat `AGENTS.md` → Alur push dan rilis). Selesai rilis berarti deploy Vercel `main` sukses, lalu diperiksa di https://journey.werkudara.group. |
 | Migrasi | Berkas di `supabase/migrations/` bertanda `LOCAL REVIEW ONLY`; **pemilik yang menjalankan** di Supabase SQL Editor. Kode harus tetap jalan sebelum migrasi diterapkan: baca kolom baru dengan cadangan (kolom belum ada → baca tanpa kolom itu, fitur baru belum tampil), dan beri pesan "menunggu migrasi …" saat menyimpan. |
 | Data produksi | Mengubah data produksi (peran, HOD, sapaan, booking uji) hanya dengan persetujuan eksplisit. Pemeriksaan baca-saja boleh lewat skrip sementara (`node --env-file=.env`), lalu skripnya dihapus. |
 | Server lokal | Jangan `npm run build` saat `next dev` jalan (port 3000/3001). Periksa port dulu; kalau dipakai, lewati build dan andalkan build Vercel. |

@@ -12,6 +12,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Gunakan subjek singkat dan jelas dalam bahasa Indonesia dengan awalan Conventional Commits, misalnya `feat: tambah formulir RSVP`, `fix: rapikan navigasi`, `refactor: sederhanakan editor`, `docs: perbarui panduan`, atau `chore: siapkan CI`. Kelompokkan perubahan berdasarkan tujuan; hindari nama agen, promosi, atau footer tambahan yang tidak diwajibkan instruksi sesi.
 
+## Alur push dan rilis (hemat build Vercel)
+
+Sejak 27 Nov 2026 Vercel hanya membangun branch `main` (`vercel.json` → `git.deploymentEnabled`); branch
+lain tidak pernah dideploy. Setiap build berbayar, jadi:
+
+- Kerja sehari-hari di-commit lalu di-push ke **`dev`** (`git push <remote> HEAD:dev`, setelah rebase ke
+  `<remote>/dev` terbaru). **Jangan push ke `main`.**
+- Sebelum push ke `dev`: cek tipe, tes yang terkait, dan `next build` lokal (gratis) tetap wajib.
+- Rilis ke produksi hanya saat pemilik bilang "rilis"/"deploy": `npm run rilis` (cek lengkap di salinan
+  bersih `dev`, tampilkan commit yang keluar, lalu `dev` → `main` fast-forward = satu build).
+  `npm run rilis -- --cek` hanya mengecek. Rincian di `scripts/rilis.mjs`.
+- Perbaikan darurat juga lewat `dev` lalu `npm run rilis`.
+
 ## Migrasi Supabase
 
 Semua file migrasi di `supabase/migrations/<aplikasi>/` (journey, karyawan, wam, wam-2026, tv, booking, wlm,

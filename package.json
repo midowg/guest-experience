@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "rilis": "node scripts/rilis.mjs",
     "wording": "node scripts/wording-from-xlsx.mjs",
     "poster:icons": "node scripts/poster-icons.mjs"
   },
